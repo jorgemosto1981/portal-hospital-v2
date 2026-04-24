@@ -4,7 +4,7 @@ Carpeta **hermana** de `../portal-hospital-v1/`: aquí vive el **proyecto Fireba
 
 ## App web V2 (Vite)
 
-En [`web/`](./web/) hay una app **React + Vite** que lee **`VITE_V2_*` desde `.env.v2.local` en la raíz** (Vite no carga ese nombre por defecto; `web/vite.config.js` lo inyecta) y el SDK compartido con alias `@portalV2` → `src/`.
+En [`web/`](./web/) hay una app **React + Vite** que lee **`VITE_V2_*` desde `.env.v2.local` en la raíz** (Vite no carga ese nombre por defecto; `web/vite.config.js` lo inyecta) y el SDK compartido con alias `@portalV2` → `src/`. Índice técnico: [`web/SCHEMA.md`](./web/SCHEMA.md). Reglas Cursor para esta app: [`.cursor/rules/portal-hospital-v2-web.mdc`](./.cursor/rules/portal-hospital-v2-web.mdc) · índice [`.cursorrules`](./.cursorrules).
 
 | Comando | Uso |
 |--------|-----|

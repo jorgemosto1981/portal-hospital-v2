@@ -1,0 +1,16 @@
+---
+description: App Vite React en web/ (Portal Hospital V2)
+globs: web/**
+alwaysApply: false
+---
+
+# App web `web/` — Portal Hospital V2
+
+- **Idioma:** español (UI, mensajes, comentarios de código en esta app).
+- **Comandos:** desde la raíz del repo, `npm run dev:web` · `npm run build:web` · `npm run preview:web`.
+- **Variables:** `VITE_V2_*` en **`.env.v2.local` en la raíz** del repo (`portal-hospital-v2/`); `web/vite.config.js` las inyecta. No duplicar secretos en `web/` salvo pruebas locales descartables.
+- **Firebase:** preferir **`import { … } from "@portalV2/firebaseConfig.v2.js"`** o una capa **`web/src/services/`** que envuelva el SDK; evitar lógica de negocio y llamadas directas repetidas a Firestore/Auth en componentes de presentación.
+- **Contrato de datos y permisos:** fuente de verdad en **`docs/v2/`**; índice rápido para esta app: **`web/SCHEMA.md`**. No inventar colecciones ni campos: seguir `MODULO_*_V2.md` y `ACCESO_Y_RULES_FIRESTORE_V2.md`.
+- **Independencia V1:** no conectar esta app al proyecto Firebase / Firestore / Auth de la V1.
+- **Estilos:** CSS modular por feature bajo `web/src/`; **mobile-first** y feedback claro (errores de red / permisos).
+- **Reglas globales del repo** (siempre): `.cursor/rules/portal-hospital-v2.mdc` · borrador extendido: `docs/v2/CURSOR_RULES_BORRADOR_V2.md`.

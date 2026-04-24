@@ -1,16 +1,22 @@
-# React + Vite
+# Portal Hospital V2 — app web (`web/`)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Front **React + Vite** del proyecto `portal-hospital-v2`. Variables Firebase `VITE_V2_*` en **`.env.v2.local`** en la **raíz del repo** (ver `SCHEMA.md`).
 
-Currently, two official plugins are available:
+## Comandos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Desde la raíz `portal-hospital-v2/`:
 
-## React Compiler
+- `npm run dev:web` — desarrollo (HMR)
+- `npm run build:web` — build → `web/dist/`
+- `npm run preview:web` — vista previa del build
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Desde esta carpeta: `npm run dev` / `npm run build`.
 
-## Expanding the ESLint configuration
+## Documentación
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **Esquema e integración:** [SCHEMA.md](./SCHEMA.md)
+- **Producto y datos:** [docs/v2/README.md](../docs/v2/README.md)
+
+## Plantilla Vite
+
+El proyecto se generó con el template oficial React + Vite; ESLint y opciones avanzadas siguen en `eslint.config.js` y en la [documentación de Vite](https://vite.dev/).
