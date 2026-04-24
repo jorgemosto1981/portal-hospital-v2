@@ -1,9 +1,36 @@
 rules_version = '2';
 
-// V2 — esquema distinto de V1 (personas, usuarios_cuenta, cfg_*, …).
-// Reemplazar por reglas según docs/v2/ACCESO_Y_RULES_FIRESTORE_V2.md antes de abrir tráfico a producción.
+// V2 — Fase 2 inicial: catálogos cfg_* (solo lectura, usuario autenticado) + lectura propia de usuarios_cuenta.
+// Matriz: docs/v2/ACCESO_Y_RULES_FIRESTORE_V2.md · ampliar con match por colección antes de abrir más tráfico.
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Catálogos volcados por seed:cfg (MODULO_CONFIGURACION_V2) — escritura solo Admin/seed.
+    match /cfg_estado_cuenta_acceso/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /cfg_estado_perfil_datos/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /cfg_tipo_evento/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Cuenta operativa: el agente solo lee su fila (auth_uid == sesión). Escrituras vía Callables/Admin.
+    match /usuarios_cuenta/{cuentaId} {
+      allow read: if signedIn() && resource.data.auth_uid == request.auth.uid;
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

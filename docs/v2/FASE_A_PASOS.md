@@ -25,6 +25,11 @@ En [Firebase Console](https://console.firebase.google.com/) → proyecto **porta
 - **Servicios:** `web/src/services/firebase.js` — única entrada recomendada al SDK V2 para componentes (`auth`, `db`, …).
 - **Features / componentes:** carpetas `web/src/features/` y `web/src/components/` (vacías al inicio; features por módulo cuando existan pantallas).
 
+## Fase 2 — Rules (primer corte)
+
+- **Repo:** `firebase-v2/firestore.rules` — lectura `cfg_estado_cuenta_acceso`, `cfg_estado_perfil_datos`, `cfg_tipo_evento` si `request.auth != null`; lectura `usuarios_cuenta/{id}` solo si `resource.data.auth_uid == request.auth.uid`; resto deny-all.
+- **Despliegue:** `npm run firebase:deploy:firestore` cuando el equipo apruebe subir a consola.
+
 ## Changelog
 
 | Fecha | Cambio |
@@ -32,3 +37,4 @@ En [Firebase Console](https://console.firebase.google.com/) → proyecto **porta
 | 2026-04-24 | Creación: checklist A.1, referencia A.2/A.3. |
 | 2026-04-24 | **A.1** completado en consola Firebase (checklist §A.1). |
 | 2026-04-24 | **A.2** `syncSessionClaims` implementado (`functions/index.js`). |
+| 2026-04-24 | **Fase 2 (parcial):** reglas `cfg_*` lectura autenticada + `usuarios_cuenta` lectura propia por `auth_uid`. |
