@@ -65,6 +65,7 @@ export default defineConfig(({ mode }) => ({
       "firebase/firestore": path.join(firebaseRoot, "firestore"),
       "firebase/storage": path.join(firebaseRoot, "storage"),
       "firebase/analytics": path.join(firebaseRoot, "analytics"),
+      "firebase/functions": path.join(firebaseRoot, "functions"),
     },
   },
   optimizeDeps: {
@@ -74,6 +75,7 @@ export default defineConfig(({ mode }) => ({
       "firebase/firestore",
       "firebase/storage",
       "firebase/analytics",
+      "firebase/functions",
     ],
   },
   server: {

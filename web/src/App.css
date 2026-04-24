@@ -51,3 +51,48 @@ dd {
 code {
   font-size: 0.9em;
 }
+
+.small {
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+.devPanel {
+  margin-top: 1.25rem;
+}
+
+.btnRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.btn {
+  font: inherit;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.35rem;
+  border: 1px solid #94a3b8;
+  background: #fff;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.callableOut {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 0.35rem;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  max-height: 14rem;
+}

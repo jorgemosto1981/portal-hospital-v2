@@ -18,6 +18,7 @@ En [Firebase Console](https://console.firebase.google.com/) → proyecto **porta
 - **Instalar dependencias:** `cd functions && npm install`
 - **Emulador (Functions + Firestore V2):** desde la raíz del repo: `npm run firebase:emulators:with-functions`
 - **Implementado:** `syncSessionClaims` lee `usuarios_cuenta` por `auth_uid`, valida `persona_id` y aplica `setCustomUserClaims` (`persona_id`, `cuenta_id` = id del doc) según `MODULO_LOGIN_V2.md` §3.3. *(24/04/2026.)*
+- **App web:** `web/src/services/functionsV2.js` + `callables.js`; pantalla de prueba en `App.jsx` (botones `healthV2` / `syncSessionClaims`). Emulador: ver `.env.v2.example` (`VITE_V2_USE_FUNCTIONS_EMULATOR`).
 
 ## A.3 — Estructura de la app `web/`
 
