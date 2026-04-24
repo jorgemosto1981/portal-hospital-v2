@@ -165,7 +165,7 @@ if (!gac) {
 console.log("\n--- 6) Comprobaciones solo en consola Firebase / GCP ---\n");
 manual("Authentication → método «Correo/contraseña» activado en proyecto portal-hospital-v2.");
 manual("Tras cambiar reglas en el repo: npm run firebase:deploy:firestore y verificar en consola que las reglas son las de V2.");
-manual("Decidir dónde corre el front (Vite): integrar en ../portal-hospital-v1/portal-hospital o nueva app en este repo (README + docs/v2/ARRANQUE_BD_Y_CODIGO_V2.md).");
+manual("Front Vite: app en `web/` (`npm run dev:web`) o integrar en ../portal-hospital-v1/portal-hospital (README + docs/v2/ARRANQUE_BD_Y_CODIGO_V2.md).");
 manual("Leer docs/v2/DESARROLLO_ORDEN_LOGIN_DATOS_V2.md e INFORME_MAESTRO_DESARROLLO_LOGIN_DATOS_V2.md §1–3 antes del primer PR de código.");
 
 console.log("\n=== Resumen ===\n");

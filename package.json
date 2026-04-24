@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "dev:web": "npm run dev --prefix web",
+    "build:web": "npm run build --prefix web",
+    "preview:web": "npm run preview --prefix web",
     "firebase": "firebase --config firebase-v2/firebase.json",
     "firebase:emulators": "firebase emulators:start --config firebase-v2/firebase.json",
     "firebase:deploy:firestore": "firebase deploy --project portal-hospital-v2 --config firebase-v2/firebase.json --only firestore:rules,firestore:indexes",
