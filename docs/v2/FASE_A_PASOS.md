@@ -27,7 +27,7 @@ En [Firebase Console](https://console.firebase.google.com/) → proyecto **porta
 
 ## Fase 2 — Rules (primer corte)
 
-- **Repo:** `firebase-v2/firestore.rules` — lectura `cfg_estado_cuenta_acceso`, `cfg_estado_perfil_datos`, `cfg_tipo_evento` si `request.auth != null`; lectura `usuarios_cuenta/{id}` solo si `resource.data.auth_uid == request.auth.uid`; resto deny-all.
+- **Repo:** `firebase-v2/firestore.rules` — lectura `cfg_estado_cuenta_acceso`, `cfg_estado_perfil_datos`, `cfg_tipo_evento` si `request.auth != null`; lectura `usuarios_cuenta/{id}` solo si `resource.data.auth_uid == request.auth.uid`; lectura `personas/{per_*}` solo si `request.auth.token.persona_id == personaId`; resto deny-all.
 - **Despliegue:** `npm run firebase:deploy:firestore` cuando el equipo apruebe subir a consola.
 
 ## Changelog
@@ -38,3 +38,4 @@ En [Firebase Console](https://console.firebase.google.com/) → proyecto **porta
 | 2026-04-24 | **A.1** completado en consola Firebase (checklist §A.1). |
 | 2026-04-24 | **A.2** `syncSessionClaims` implementado (`functions/index.js`). |
 | 2026-04-24 | **Fase 2 (parcial):** reglas `cfg_*` lectura autenticada + `usuarios_cuenta` lectura propia por `auth_uid`. |
+| 2026-04-24 | **Fase 2:** reglas `personas` lectura propia por custom claim `persona_id`. |

@@ -1,7 +1,7 @@
 rules_version = '2';
 
-// V2 — Fase 2 inicial: catálogos cfg_* (solo lectura, usuario autenticado) + lectura propia de usuarios_cuenta.
-// Matriz: docs/v2/ACCESO_Y_RULES_FIRESTORE_V2.md · ampliar con match por colección antes de abrir más tráfico.
+// V2 — Fase 2: cfg_* (lectura autenticada) + usuarios_cuenta (lectura propia por auth_uid) + personas (lectura propia por claim persona_id).
+// Matriz: docs/v2/ACCESO_Y_RULES_FIRESTORE_V2.md · claims: MODULO_LOGIN_V2 §3.3 (`syncSessionClaims`).
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -28,6 +28,12 @@ service cloud.firestore {
     // Cuenta operativa: el agente solo lee su fila (auth_uid == sesión). Escrituras vía Callables/Admin.
     match /usuarios_cuenta/{cuentaId} {
       allow read: if signedIn() && resource.data.auth_uid == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Ficha persona: id de documento = `per_<ULID>` = claim `persona_id` (tras syncSessionClaims + getIdToken(true)).
+    match /personas/{personaId} {
+      allow read: if signedIn() && request.auth.token.persona_id == personaId;
       allow write: if false;
     }
 
