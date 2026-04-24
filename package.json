@@ -4,12 +4,17 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "firebase": "firebase --config firebase-v2/firebase.json",
     "firebase:emulators": "firebase emulators:start --config firebase-v2/firebase.json",
     "firebase:deploy:firestore": "firebase deploy --project portal-hospital-v2 --config firebase-v2/firebase.json --only firestore:rules,firestore:indexes",
     "seed:cfg": "node scripts/seed-v2/seed-cfg.mjs",
     "firestore:create": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/seed-v2/crear-base-firestore.ps1"
   },
   "devDependencies": {
-    "firebase-admin": "^13.6.0"
+    "firebase-admin": "^13.6.0",
+    "firebase-tools": "^15.15.0"
+  },
+  "dependencies": {
+    "firebase": "^12.12.1"
   }
 }
