@@ -5,6 +5,35 @@
 
 ---
 
+## 0. Publicar el repo en un remoto (desde la PC actual)
+
+En el clon local **no había `git remote`** hasta que elijas un host (GitHub, GitLab, Azure DevOps, etc.) y crees un repositorio **vacío** (sin README si Git te lo pide y te complica el primer push).
+
+1. Creá el repositorio vacío en la web y copiá la URL **HTTPS** o **SSH** (ej. `https://github.com/TU_USUARIO/portal-hospital-v2.git`).
+2. En la raíz de `portal-hospital-v2` (PowerShell):
+
+```powershell
+cd "E:\web nueva\portal-hospital-v2"
+git remote add origin <PEGA_AQUÍ_LA_URL>
+git push -u origin master
+```
+
+- Si el remoto usa la rama por defecto **`main`** y la tuya local es **`master`**, usá una de estas opciones:
+  - `git push -u origin master:main` (sube `master` local a `main` remota), o
+  - `git branch -M main` y luego `git push -u origin main`.
+3. Iniciá sesión si Git pide credenciales (token personal en GitHub, no contraseña de cuenta en HTTPS).
+
+**En la otra PC** (tras el push):
+
+```bash
+git clone <MISMA_URL>
+cd portal-hospital-v2
+```
+
+Luego seguí la sección 1 (dependencias, `.env`, etc.).
+
+---
+
 ## 1. Cómo seguir en la otra máquina
 
 1. **Clonar** o **pull** del remoto: rama usada (p. ej. `master` / `main` según el remoto).
