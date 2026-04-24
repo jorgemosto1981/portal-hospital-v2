@@ -1,0 +1,27 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependencies
+node_modules/
+dist/
+dist-ssr/
+
+# Local env
+.env
+.env.*.local
+.env.local
+*.local
+
+# Firebase
+.firebase/
+firebase-debug.log
+
+# Service accounts (never commit)
+serviceAccountKey.json
+*-service-account*.json
+
+# OS
+.DS_Store
+Thumbs.db

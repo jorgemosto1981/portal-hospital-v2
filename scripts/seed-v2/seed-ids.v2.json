@@ -1,0 +1,22 @@
+{
+  "projectId": "portal-hospital-v2",
+  "nota": "Se regenera al ejecutar `npm run seed:v2:cfg` (mismas claves de documento que en seed-cfg.mjs).",
+  "cfg_estado_cuenta_acceso": [
+    "cfg_eca_pend_reg",
+    "cfg_eca_onb",
+    "cfg_eca_pend_mail",
+    "cfg_eca_activo",
+    "cfg_eca_bloq"
+  ],
+  "cfg_estado_perfil_datos": [
+    "cfg_epd_borr",
+    "cfg_epd_inc",
+    "cfg_epd_comp",
+    "cfg_epd_rec"
+  ],
+  "cfg_tipo_evento": [
+    "cfg_tev_dp_actualizado",
+    "cfg_tev_login",
+    "cfg_tev_consent"
+  ]
+}

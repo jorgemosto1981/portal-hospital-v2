@@ -1,0 +1,15 @@
+---
+description: Convenciones Portal Hospital V2 (React/Firebase, docs/v2, sin cruce con V1)
+alwaysApply: true
+---
+
+# Portal hospitalario — V2 (regla de proyecto)
+
+- **Idioma:** español. Contrato de producto y datos: **`docs/v2/`** (índice `docs/v2/README.md`). **No** usar el mismo Firestore/Auth de producción que la V1; **prohibido** leer/escribir datos de V1 desde despliegue V2.
+- **Ancla:** `persona_id` (`per_<ULID>`). No usar DNI, email o `auth_uid` como FK entre módulos salvo flujos Auth explícitos. Email de login = `usuarios_cuenta.username`.
+- **Listas de negocio:** `*_id` → `cfg_*` (sin strings mágicos de negocio en Firestore). Ver `MODULO_CONFIGURACION_V2.md` y módulos `MODULO_*_V2.md`.
+- **Cambios de schema, Rules o negocio transversal:** proponer RFC / impacto; no improvisar. Objetos transaccionales: SSoT y `eventos_ticket` con payload por **referencias** (B6).
+- **Transiciones** `estado_acceso` y `estado_perfil_datos` a estados finales: **solo Callable/backend** (D2). Reglas: `ACCESO_Y_RULES_FIRESTORE_V2.md` + `FLUJO_V2_LOGIN_Y_DATOS_PERSONALES.md` §5.
+- **Código:** feature-first; servicios (`src/services/` o equivalente) aíslan Firebase; UI sin logica de negocio en `App` masivo. Validación en cliente y en backend para operaciones sensibles.
+- **V1 en repo:** no romper "zonas protegidas" V1; desarrollo V2 en proyecto/bd V2. Laborales V2: `MODULO_DATOS_LABORALES_V2.md` (hlc/hld/hlg, gdt, efe, C10) — no el modelo de la V1.
+- **Documento completo (borrador):** `docs/v2/CURSOR_RULES_BORRADOR_V2.md`.

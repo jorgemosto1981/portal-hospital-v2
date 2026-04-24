@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "usuarios_cuenta",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado_acceso", "order": "ASCENDING" },
+        { "fieldPath": "actualizado_en", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventos_ticket",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "persona_id", "order": "ASCENDING" },
+        { "fieldPath": "ocurrido_en", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
