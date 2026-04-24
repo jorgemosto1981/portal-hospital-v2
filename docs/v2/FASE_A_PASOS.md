@@ -6,8 +6,8 @@ Orden alineado al plan acordado: **A.1 consola → A.2 Callables / claims → A.
 
 En [Firebase Console](https://console.firebase.google.com/) → proyecto **portal-hospital-v2** → **Build → Authentication** → **Sign-in method**:
 
-- [ ] **Correo electrónico / contraseña** habilitado (flujo paso B y login DNI→`username`+PIN según `MODULO_LOGIN_V2.md` §1.1–1.3).
-- [ ] Revisar políticas de **dominio** / lista blanca si el hospital las exige.
+- [x] **Correo electrónico / contraseña** habilitado (flujo paso B y login DNI→`username`+PIN según `MODULO_LOGIN_V2.md` §1.1–1.3). *(Completado 24/04/2026.)*
+- [x] Revisar políticas de **dominio** / lista blanca si el hospital las exige. *(Completado 24/04/2026.)*
 
 **Nota:** desplegar **Cloud Functions** en Firebase suele requerir plan **Blaze** (facturación). Si el proyecto está en Spark, los Callables no se despliegan hasta upgrade; el emulador local sí sirve para desarrollo.
 
@@ -29,3 +29,4 @@ En [Firebase Console](https://console.firebase.google.com/) → proyecto **porta
 | Fecha | Cambio |
 |-------|--------|
 | 2026-04-24 | Creación: checklist A.1, referencia A.2/A.3. |
+| 2026-04-24 | **A.1** completado en consola Firebase (checklist §A.1). |
