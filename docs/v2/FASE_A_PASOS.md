@@ -17,7 +17,7 @@ En [Firebase Console](https://console.firebase.google.com/) → proyecto **porta
 - **Config:** [`../../firebase-v2/firebase.json`](../../firebase-v2/firebase.json) incluye `functions` y emulador `functions` (puerto **5002**).
 - **Instalar dependencias:** `cd functions && npm install`
 - **Emulador (Functions + Firestore V2):** desde la raíz del repo: `npm run firebase:emulators:with-functions`
-- **Siguiente implementación real:** leer `usuarios_cuenta` por `auth_uid`, `getAuth().setCustomUserClaims(uid, { persona_id, cuenta_id })` según `MODULO_LOGIN_V2.md` §3.3.
+- **Implementado:** `syncSessionClaims` lee `usuarios_cuenta` por `auth_uid`, valida `persona_id` y aplica `setCustomUserClaims` (`persona_id`, `cuenta_id` = id del doc) según `MODULO_LOGIN_V2.md` §3.3. *(24/04/2026.)*
 
 ## A.3 — Estructura de la app `web/`
 
@@ -30,3 +30,4 @@ En [Firebase Console](https://console.firebase.google.com/) → proyecto **porta
 |-------|--------|
 | 2026-04-24 | Creación: checklist A.1, referencia A.2/A.3. |
 | 2026-04-24 | **A.1** completado en consola Firebase (checklist §A.1). |
+| 2026-04-24 | **A.2** `syncSessionClaims` implementado (`functions/index.js`). |
