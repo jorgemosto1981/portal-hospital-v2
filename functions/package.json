@@ -3,7 +3,7 @@
   "private": true,
   "description": "Cloud Functions V2 — Portal Hospital (callable health + syncSessionClaims stub)",
   "engines": {
-    "node": ">=20"
+    "node": "22"
   },
   "main": "index.js",
   "scripts": {
