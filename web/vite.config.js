@@ -7,6 +7,8 @@ import { defineConfig, loadEnv } from "vite";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
+/** Una sola copia del SDK (evita "Service firestore is not available" si `src/` resolviera `firebase` desde la raíz del repo). */
+const firebaseRoot = path.resolve(__dirname, "node_modules", "firebase");
 
 /**
  * Vite solo carga por defecto `.env`, `.env.local`, `.env.[mode]`, `.env.[mode].local`.
@@ -55,9 +57,24 @@ export default defineConfig(({ mode }) => ({
   /** También sirve para otros `.env*` estándar en la raíz. */
   envDir: repoRoot,
   resolve: {
+    dedupe: ["firebase"],
     alias: {
       "@portalV2": path.join(repoRoot, "src"),
+      "firebase/app": path.join(firebaseRoot, "app"),
+      "firebase/auth": path.join(firebaseRoot, "auth"),
+      "firebase/firestore": path.join(firebaseRoot, "firestore"),
+      "firebase/storage": path.join(firebaseRoot, "storage"),
+      "firebase/analytics": path.join(firebaseRoot, "analytics"),
     },
+  },
+  optimizeDeps: {
+    include: [
+      "firebase/app",
+      "firebase/auth",
+      "firebase/firestore",
+      "firebase/storage",
+      "firebase/analytics",
+    ],
   },
   server: {
     fs: {
