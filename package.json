@@ -7,6 +7,7 @@
     "firebase": "firebase --config firebase-v2/firebase.json",
     "firebase:emulators": "firebase emulators:start --config firebase-v2/firebase.json",
     "firebase:deploy:firestore": "firebase deploy --project portal-hospital-v2 --config firebase-v2/firebase.json --only firestore:rules,firestore:indexes",
+    "test:firestore:v2": "node scripts/seed-v2/test-firestore-v2-connection.mjs",
     "seed:cfg": "node scripts/seed-v2/seed-cfg.mjs",
     "firestore:create": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/seed-v2/crear-base-firestore.ps1"
   },
