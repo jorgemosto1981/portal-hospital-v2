@@ -21,6 +21,8 @@ firebase-debug.log
 # Service accounts (never commit)
 serviceAccountKey.json
 *-service-account*.json
+# Claves JSON descargadas desde GCP (patrón típico en la raíz de este repo)
+portal-hospital-v2-*.json
 
 # OS
 .DS_Store
