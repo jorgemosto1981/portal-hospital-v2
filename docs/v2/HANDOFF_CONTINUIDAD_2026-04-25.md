@@ -1,36 +1,20 @@
 # Continuidad de trabajo — Portal Hospital V2
 
 **Fecha de pausa:** 25 de abril de 2026.  
-**Motivo:** retomar mañana desde **otro PC** con el repo al día en Git.
+**Remoto publicado:** [jorgemosto1981/portal-hospital-v2](https://github.com/jorgemosto1981/portal-hospital-v2) — URL `https://github.com/jorgemosto1981/portal-hospital-v2.git`, rama **master** = `origin/master`. En otra PC: `git clone` + sección 1 (dependencias, `.env`).
 
 ---
 
-## 0. Publicar el repo en un remoto (desde la PC actual)
-
-En el clon local **no había `git remote`** hasta que elijas un host (GitHub, GitLab, Azure DevOps, etc.) y crees un repositorio **vacío** (sin README si Git te lo pide y te complica el primer push).
-
-1. Creá el repositorio vacío en la web y copiá la URL **HTTPS** o **SSH** (ej. `https://github.com/TU_USUARIO/portal-hospital-v2.git`).
-2. En la raíz de `portal-hospital-v2` (PowerShell):
-
-```powershell
-cd "E:\web nueva\portal-hospital-v2"
-git remote add origin <PEGA_AQUÍ_LA_URL>
-git push -u origin master
-```
-
-- Si el remoto usa la rama por defecto **`main`** y la tuya local es **`master`**, usá una de estas opciones:
-  - `git push -u origin master:main` (sube `master` local a `main` remota), o
-  - `git branch -M main` y luego `git push -u origin main`.
-3. Iniciá sesión si Git pide credenciales (token personal en GitHub, no contraseña de cuenta en HTTPS).
-
-**En la otra PC** (tras el push):
+## 0. Remoto (hecho) — comprobación
 
 ```bash
-git clone <MISMA_URL>
-cd portal-hospital-v2
+git remote -v
+# origin  https://github.com/jorgemosto1981/portal-hospital-v2.git (fetch/push)
 ```
 
-Luego seguí la sección 1 (dependencias, `.env`, etc.).
+Cambios nuevos: `git add` → `git commit` → `git push` · Otra PC: `git pull`.
+
+**Si hace falta otro clon** (sin historial de la máquina vieja), creá otra copia y volvé a los pasos de sección 1. Para un repo nuevo vacío en otra plataforma, se puede reutilizar el procedimiento: `git remote set-url` o añadir un segundo `remote` (p. ej. `backup`).
 
 ---
 
@@ -110,3 +94,11 @@ Están incorporadas o ampliadas en **`.cursor/rules/portal-hospital-v2-modo-atom
 ## 5. Comando sugerido para Git en la otra PC
 
 Tras clonar: `git pull` y, si aplica, `git checkout` a la rama con el commit de handoff. Ver mensaje de commit del 25/04/2026 que acompaña a este documento.
+
+---
+
+## 6. Cierre de entrega (sesión de preparación y sync)
+
+- **Código y docs** alineados al plan V2, **push** a GitHub realizado, **área de trabajo** sin cambios sin commitear (salvo `.env` local, credenciales y caché).  
+- **Siguiente fase** de producto: según `docs/v2/DESARROLLO_ORDEN_LOGIN_DATOS_V2.md` (pendientes: tests de reglas con JDK 21, IAM para callables en prod, `completarOnboardingDatos`, UI gating) — **solo** cuando confirmes en la otra PC que `git pull` + `npm run build:web` (y a la vez `dev:web` si aplica) funcionan.  
+- No hay tareas técnicas bloqueando el **uso del repo** para continuar; lo que queda es **entorno** (Node, env, JSON de servicio, Java para emulador) en cada máquina.

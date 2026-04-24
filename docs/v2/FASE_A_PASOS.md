@@ -45,3 +45,4 @@ En [Firebase Console](https://console.firebase.google.com/) → proyecto **porta
 | 2026-04-24 | **Bloque 1 (ritmo):** `test:firestore:rules` + `tests/firestore-rules.mjs` (matriz mínima cfg / personas / `usuarios_cuenta` / deny default). |
 | 2026-04-24 | **Bloque 2 (ritmo):** Callables `rrhhAltaAgente`, `registrarPrimerAcceso`; `syncSessionClaims` merge de claims; formularios en `PortalHome`. |
 | 2026-04-25 | Pausa handoff: reglas Cursor + `HANDOFF_CONTINUIDAD_2026-04-25.md`, tipos JSDoc `web/src/types/v2-entities.js`, UI home `text-xl` / `text-base` y foco `active`/`focus-visible` (sin hover). |
+| 2026-04-25 | **Cierre de entrega prep.:** remoto [GitHub `jorgemosto1981/portal-hospital-v2`](https://github.com/jorgemosto1981/portal-hospital-v2) (rama `master`); handoff actualizado (§0 remoto, §6 cierre). |
