@@ -24,6 +24,8 @@ Tras `npm install` en la raíz y **`cd web && npm install`** la primera vez (o s
 | `npm run test:firestore:v2` | Prueba cliente Firestore + `.env.v2.local` |
 | `npm run firebase:emulators` | Emulador Firestore (config `firebase-v2/firebase.json`) |
 | `npm run firebase:deploy:firestore` | Despliega reglas e índices al proyecto V2 en consola |
+| `npm run firebase:deploy:functions` | Despliega Cloud Functions (requiere plan Blaze) |
+| `npm run firebase:emulators:with-functions` | Emulador Firestore + Functions + UI (puertos 8092 / 5002 / 4002) |
 | `npm run seed:cfg` | Volcado de catálogos `cfg_*` (ver `docs/v2/MODULO_CONFIGURACION_V2.md`) — requiere `GOOGLE_APPLICATION_CREDENTIALS` |
 | `npm run firestore:create` | Windows: script gcloud para crear instancia Firestore (una vez) |
 

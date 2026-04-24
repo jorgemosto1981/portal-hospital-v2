@@ -2,6 +2,8 @@
 
 Referencia corta para quien codifica el front **Vite** de este repo. El contrato completo de datos sigue en **`docs/v2/`** (no duplicar aquí tablas extensas).
 
+**Plan de inicio (Fase A, paso a paso):** [`docs/v2/FASE_A_PASOS.md`](../docs/v2/FASE_A_PASOS.md).
+
 ## 1. Variables de entorno (cliente)
 
 Definidas en **`.env.v2.local`** en la **raíz** `portal-hospital-v2/` (no dentro de `web/`). Nombres obligatorios para `firebaseConfig.v2.js`:

@@ -26,6 +26,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./ACCESO_Y_RULES_FIRESTORE_V2.md) | Matriz de acceso, Callables, orientación Rules |
 | [`DESARROLLO_ORDEN_LOGIN_DATOS_V2.md`](./DESARROLLO_ORDEN_LOGIN_DATOS_V2.md) | Orden de fases 0–6 para codificar |
 | [`ARRANQUE_BD_Y_CODIGO_V2.md`](./ARRANQUE_BD_Y_CODIGO_V2.md) | **Checklist** para proyecto Firebase/BD nuevo + arranque de código (seguimiento) |
+| [`FASE_A_PASOS.md`](./FASE_A_PASOS.md) | **Fase A** — pasos iniciales (Auth consola, Functions stub, estructura `web/`) |
 | [`INFORME_MAESTRO_DESARROLLO_LOGIN_DATOS_V2.md`](./INFORME_MAESTRO_DESARROLLO_LOGIN_DATOS_V2.md) | Evaluación y frase de encargo |
 | [`V1_VS_V2_LOGIN_DATOS.md`](./V1_VS_V2_LOGIN_DATOS.md) | Lecciones desde la V1 (solo referencia; sin conexión técnica) |
 | [`PROPUESTA_ESTADOS_USUARIO_V2.md`](./PROPUESTA_ESTADOS_USUARIO_V2.md) | Estados de usuario (propuesta) |

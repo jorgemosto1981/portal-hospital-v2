@@ -1,7 +1,7 @@
 import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
-import { authV2, dbV2 } from "@portalV2/firebaseConfig.v2.js";
+import { authV2, dbV2 } from "./services/firebase.js";
 
 import "./App.css";
 
