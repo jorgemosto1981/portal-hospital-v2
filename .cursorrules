@@ -5,7 +5,9 @@ Las convenciones viven en **`.cursor/rules/`** (formato recomendado por Cursor):
 | Alcance | Archivo |
 |---------|-----------|
 | Todo el repo | `.cursor/rules/portal-hospital-v2.mdc` |
+| Modo atómico, mobile-first, UX táctil, capas, pausa | `.cursor/rules/portal-hospital-v2-modo-atomico-movil.mdc` (alwaysApply) |
 | Solo la app **Vite** bajo `web/` | `.cursor/rules/portal-hospital-v2-web.mdc` |
+| Handoff / otra PC | `docs/v2/HANDOFF_CONTINUIDAD_2026-04-25.md` |
 
 **Esquema / índice para el front:** `web/SCHEMA.md`  
 **Documentación de producto:** `docs/v2/README.md`  

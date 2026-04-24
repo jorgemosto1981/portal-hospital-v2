@@ -11,3 +11,13 @@ export function callHealthV2() {
 export function callSyncSessionClaims() {
   return httpsCallable(getFunctionsV2(), "syncSessionClaims")();
 }
+
+/** RRHH: alta mínima persona + cuenta (requiere `portal_role: "rrhh"` en el token vía consola/Admin). */
+export function callRrhhAltaAgente(data) {
+  return httpsCallable(getFunctionsV2(), "rrhhAltaAgente")(data);
+}
+
+/** Primer acceso: DNI + email + PIN 6 (no requiere sesión previa del agente en Auth). */
+export function callRegistroPrimerAcceso(data) {
+  return httpsCallable(getFunctionsV2(), "registrarPrimerAcceso")(data);
+}

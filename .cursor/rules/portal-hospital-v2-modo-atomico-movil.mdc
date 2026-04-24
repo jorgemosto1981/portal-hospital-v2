@@ -1,0 +1,47 @@
+---
+description: Modo atómico, mobile-first, UX táctil, capas (datos/UI) y flujo con pausa (V2)
+alwaysApply: true
+---
+
+# MODO: atómico, modular, mobile-first, datos vs UI, desarrollo lento
+
+## Estructura y capas (orden preferido en nuevas features)
+
+1. **Conexión y tipos:** una sola entrada de Firebase en `web/src/services/firebase.js` (y config `src/firebaseConfig.v2.js` vía `@portalV2`); esquemas o tipos en `web/src/types/` (JSDoc, TypeScript o Zod cuando se migre). **No** inventar segundas conexiones al SDK.
+2. **Lectura/escritura:** funciones o servicios pequeños que **solo** persistan o lean datos, **sin** layout ni componentes de marketing.
+3. **UI mínima:** botones, inputs y tarjetas **pequeñas**; sin “diseño de pantalla completa” hasta que el módulo lo pida.
+4. **Tamaño de archivos:** evitar módulos extensos. **Si un archivo pasa de ~100 líneas**, el responsable o el agente proponen separar (p. ej. `validators.js`, hook aparte, etc.).
+
+## Funciones y lógica
+
+- Preferir funciones **puras** y exportables; **una** responsabilidad clara por función.
+- Al implementar, **citar o referenciar** con @ el archivo de configuración o servicio real (p. ej. `@web/src/services/firebase.js`) para no desviar el contrato.
+
+## Progreso (humano a cargo)
+
+- **No** avanzar a otro módulo o fase hasta **confirmación explícita** de que el bloque actual se probó.
+- **Pausa de validación (recomendada al agente):** al cerrar un entregable, respetar si el usuario pide: *"Detente aquí. No escribas más código hasta que pruebe en el navegador o emulador."*
+
+## Mobile-first (web)
+
+- **Ancho lógico** ~**390px**; Tailwind; prefijos `sm:`+ solo cuando aporte.
+- **Táctil:** mín. **~44px** de alto en controles; `touch-manipulation` donde tenga sentido.
+- **No** basar el feedback principal en **`:hover`**. En teclado/ratón, **`active`**; en foco, **`focus`** y **`focus-visible:ring-...`** (accesible). Los botones e inputs usan `active:` y anillos de foco, no estados "solo con mouse".
+
+## Tipografía (evitar zoom forzado)
+
+- **Títulos:** **1.25rem** (en Tailwind default: `text-xl`).
+- **Cuerpo:** **1rem** (`text-base`).
+
+## Formularios móviles
+
+- Cada `input` con **inputMode** acorde: DNI y PIN → `inputMode="numeric"`, email → `type="email"`, etc., para abrir el teclado correcto en el móvil.
+
+## Estética (web)
+
+- **Sans** legible; **espacios** generosos; **paleta mínima** (p. ej. `slate`).
+
+## Sobre este repo
+
+- Estilos con **Tailwind**; evitar hojas CSS monolíticas.
+- Alineación de datos: `docs/v2/`, `web/SCHEMA.md`, módulos `MODULO_*_V2.md`. No inventar colecciones.
