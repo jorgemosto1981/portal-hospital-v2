@@ -26,3 +26,13 @@ export function callRegistroPrimerAcceso(data) {
 export function callResolverEmailLoginDni(data) {
   return httpsCallable(getFunctionsV2(), "resolverEmailLoginDni")(data);
 }
+
+/** RRHH: listar documentos de una colección de catálogo (incluye inactivos). */
+export function callListarColeccion(data) {
+  return httpsCallable(getFunctionsV2(), "listarColeccion")(data);
+}
+
+/** RRHH: guardar opción de catálogo (`set` + merge, id en mayúsculas). */
+export function callGuardarOpcion(data) {
+  return httpsCallable(getFunctionsV2(), "guardarOpcion")(data);
+}

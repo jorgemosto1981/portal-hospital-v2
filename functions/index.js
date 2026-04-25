@@ -4,7 +4,7 @@ const { createHash } = require("node:crypto");
 
 const { getApps, initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { ulid } = require("ulid");
@@ -48,6 +48,93 @@ function assertRrhh(request) {
   if (role !== "rrhh") {
     throw new HttpsError("permission-denied", "Solo personal autorizado (RRHH).");
   }
+}
+
+/** Colecciones de catálogo editables desde la app (alinear con `SECCIONES_CATALOGO_RRHH` en web). */
+const CFG_COLECCIONES_RRHH = new Set([
+  "cfg_estado_civil",
+  "cfg_sexo_genero",
+  "cfg_escalafon",
+  "cfg_agrupamiento",
+  "cfg_tipo_vinculo_laboral",
+  "cfg_cargo_funcional",
+  "grupos_de_trabajo",
+  "efectores",
+]);
+
+/**
+ * @param {unknown} collectionName
+ * @returns {string}
+ */
+function assertColeccionRrhh(collectionName) {
+  if (typeof collectionName !== "string" || !CFG_COLECCIONES_RRHH.has(collectionName.trim())) {
+    throw new HttpsError("invalid-argument", "Colección no permitida o inválida.");
+  }
+  return collectionName.trim();
+}
+
+/**
+ * @param {unknown} v
+ * @returns {unknown}
+ */
+function serializeFirestoreValue(v) {
+  if (v === null || v === undefined) return v;
+  if (typeof v === "object" && v !== null && typeof v.toDate === "function") {
+    try {
+      return v.toDate().toISOString();
+    } catch {
+      return null;
+    }
+  }
+  if (Array.isArray(v)) {
+    return v.map(serializeFirestoreValue);
+  }
+  if (typeof v === "object" && v.constructor === Object) {
+    const o = {};
+    for (const [k, val] of Object.entries(v)) {
+      o[k] = serializeFirestoreValue(val);
+    }
+    return o;
+  }
+  return v;
+}
+
+/**
+ * @param {string} id
+ */
+function normalizeCatalogDocId(id) {
+  if (typeof id !== "string" || !id.trim()) {
+    throw new HttpsError("invalid-argument", "El id es obligatorio.");
+  }
+  const u = id.trim().toUpperCase();
+  if (u.length > 240) {
+    throw new HttpsError("invalid-argument", "El id es demasiado largo.");
+  }
+  if (!/^[A-Z0-9_]+$/.test(u)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "El id solo puede contener letras (A–Z), números y guiones bajos.",
+    );
+  }
+  return u;
+}
+
+/**
+ * ISO string o null → Timestamp Firestore o null.
+ * @param {unknown} input
+ */
+function toTimestampOrNull(input) {
+  if (input == null || input === "") {
+    return null;
+  }
+  if (typeof input !== "string") {
+    throw new HttpsError("invalid-argument", "Formato de fecha no soportado.");
+  }
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) {
+    throw new HttpsError("invalid-argument", "Fecha inválida.");
+  }
+  return Timestamp.fromDate(d);
 }
 
 /**
@@ -465,4 +552,70 @@ exports.registrarPrimerAcceso = onCall(async (request) => {
     persona_id: personaId,
     cuenta_id: cuentaId,
   };
+});
+
+/**
+ * RRHH: lista todos los documentos de una colección de configuración (incluye inactivos).
+ */
+exports.listarColeccion = onCall(async (request) => {
+  assertRrhh(request);
+  const col = assertColeccionRrhh(request.data && request.data.collectionName);
+  const snap = await db.collection(col).get();
+  const items = snap.docs.map((doc) => {
+    const data = doc.data() || {};
+    const flat = serializeFirestoreValue(data);
+    const base = typeof flat === "object" && flat !== null && !Array.isArray(flat) ? flat : {};
+    return { ...base, id: doc.id };
+  });
+  return { items };
+});
+
+/**
+ * RRHH: alta/edición de un valor de catálogo (`set` con merge). El id se normaliza a MAYÚSCULAS.
+ */
+exports.guardarOpcion = onCall(async (request) => {
+  assertRrhh(request);
+  const col = assertColeccionRrhh(request.data && request.data.collectionName);
+  const datos =
+    request.data && request.data.datos && typeof request.data.datos === "object"
+      ? request.data.datos
+      : {};
+
+  const id = normalizeCatalogDocId(datos.id);
+  const nombre = typeof datos.nombre === "string" ? datos.nombre.trim() : "";
+  if (!nombre) {
+    throw new HttpsError("invalid-argument", "El nombre es obligatorio.");
+  }
+
+  const activo = datos.activo !== false;
+
+  const ref = db.collection(col).doc(id);
+  const exists = (await ref.get()).exists;
+
+  const payload = {
+    id,
+    nombre,
+    activo,
+    actualizado_en: FieldValue.serverTimestamp(),
+  };
+
+  if ("vigente_desde" in datos) {
+    payload.vigente_desde =
+      datos.vigente_desde == null || datos.vigente_desde === ""
+        ? null
+        : toTimestampOrNull(datos.vigente_desde);
+  }
+  if ("vigente_hasta" in datos) {
+    payload.vigente_hasta =
+      datos.vigente_hasta == null || datos.vigente_hasta === ""
+        ? null
+        : toTimestampOrNull(datos.vigente_hasta);
+  }
+
+  if (!exists) {
+    payload.creado_en = FieldValue.serverTimestamp();
+  }
+
+  await ref.set(payload, { merge: true });
+  return { ok: true, id };
 });
