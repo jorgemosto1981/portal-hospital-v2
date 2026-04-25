@@ -16,7 +16,8 @@
     "test:firestore:v2": "node scripts/seed-v2/test-firestore-v2-connection.mjs",
     "test:firestore:rules": "firebase --config firebase-v2/firebase.json emulators:exec --only firestore \"node tests/firestore-rules.mjs\"",
     "seed:cfg": "node scripts/seed-v2/seed-cfg.mjs",
-    "firestore:create": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/seed-v2/crear-base-firestore.ps1"
+    "firestore:create": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/seed-v2/crear-base-firestore.ps1",
+    "backup": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/crear-copia-seguridad.ps1"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.0",

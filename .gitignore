@@ -24,6 +24,9 @@ serviceAccountKey.json
 # Claves JSON descargadas desde GCP (patrón típico en la raíz de este repo)
 portal-hospital-v2-*.json
 
+# Copias de seguridad locales (no subir ZIPs)
+backups/*.zip
+
 # OS
 .DS_Store
 Thumbs.db

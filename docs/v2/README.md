@@ -4,6 +4,12 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 
 **Regla de arquitectura:** la V2 no comparte proyecto Firebase / datos ni código de despliegue con la V1; ver [`PLAN_MODULOS_V2.md`](./PLAN_MODULOS_V2.md). Config y despliegue Firestore **V2** en la raíz de este repo: carpeta [`firebase-v2/`](../firebase-v2/). V1: [`../portal-hospital-v1/portal-hospital/firebase.json`](../../../portal-hospital-v1/portal-hospital/firebase.json).
 
+### Módulo operativo y de asistencia (biblia de referencia)
+
+| Documento | Rol |
+|-----------|-----|
+| **[`ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md`](./ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md)** | **Entrada principal:** RDA, MDC, GSO, fusión 1:N, turnos nocturnos, jerarquía de verdad, identificadores y principios transversales |
+
 ## Índice rápido
 
 | Documento | Rol |

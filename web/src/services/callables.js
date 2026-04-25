@@ -21,3 +21,8 @@ export function callRrhhAltaAgente(data) {
 export function callRegistroPrimerAcceso(data) {
   return httpsCallable(getFunctionsV2(), "registrarPrimerAcceso")(data);
 }
+
+/** Resuelve email (username) para DNI; luego el cliente hace signIn con email+PIN. Sin sesión. */
+export function callResolverEmailLoginDni(data) {
+  return httpsCallable(getFunctionsV2(), "resolverEmailLoginDni")(data);
+}

@@ -1,3 +1,4 @@
+import AppBrandHeader from "./AppBrandHeader.jsx";
 import BottomNavigationBar from "./BottomNavigationBar.jsx";
 
 const DEFAULT_ACTIVE_TAB = "inicio";
@@ -22,10 +23,11 @@ export default function MobileLayout({
       >
         <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden md:flex-row md:items-stretch">
           <main
-            className="order-1 min-h-0 w-full min-w-0 flex-1 overflow-y-auto overscroll-y-contain md:order-2"
+            className="order-1 flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain md:order-2"
             id="app-main-scroll"
           >
-            {children}
+            <AppBrandHeader />
+            <div className="min-h-0 flex-1">{children}</div>
           </main>
           <BottomNavigationBar activeTab={activeTab} onTabChange={onTabChange} />
         </div>

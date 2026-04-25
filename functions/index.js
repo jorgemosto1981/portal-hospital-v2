@@ -23,6 +23,7 @@ const COL_PERSONAS = "personas";
 const COL_USUARIOS_CUENTA = "usuarios_cuenta";
 const COL_EVENTOS = "eventos_ticket";
 const COL_RATE_PRIMER_DNI = "_system_reg_primer_dni";
+const COL_RATE_LOGIN_DNI = "_system_rate_login_dni";
 
 const CFG_PEND_REG = "cfg_eca_pend_reg";
 const CFG_ONB = "cfg_eca_onb";
@@ -78,6 +79,77 @@ function validEmail(s) {
   if (typeof s !== "string" || s.length > 254) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
 }
+
+const MSG_LOGIN = "No se pudo iniciar sesión. Verificá DNI y PIN.";
+
+/**
+ * Rate limit independiente al de registro (colección distinta).
+ * @param {string} normalizedDni
+ */
+async function checkRateLoginDni(normalizedDni) {
+  const h = createHash("sha256").update(`login_dni:${normalizedDni}`).digest("hex");
+  const ref = db.collection(COL_RATE_LOGIN_DNI).doc(h);
+  const now = Date.now();
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const data = snap.exists ? snap.data() : {};
+    const attempts = Array.isArray(data.attempts) ? data.attempts : [];
+    const recent = attempts.filter((t) => typeof t === "number" && now - t < RATE_WINDOW_MS);
+    if (recent.length >= RATE_MAX) {
+      throw new HttpsError("resource-exhausted", MSG_LOGIN);
+    }
+    recent.push(now);
+    tx.set(
+      ref,
+      { attempts: recent, actualizado: FieldValue.serverTimestamp() },
+      { merge: true },
+    );
+  });
+}
+
+/**
+ * Resuelve el email de login a partir del DNI (sin enumerar detalles).
+ * El cliente hace luego `signInWithEmailAndPassword(email, pin)` — MODULO_LOGIN_V2 §1.1, §1.3.
+ */
+exports.resolverEmailLoginDni = onCall(async (request) => {
+  const d = request.data && typeof request.data === "object" ? request.data : {};
+  const dni = normalizeDni(d.dni);
+  if (!/^\d{6,12}$/.test(dni)) {
+    throw new HttpsError("invalid-argument", MSG_LOGIN);
+  }
+  await checkRateLoginDni(dni);
+  const psn = await db.collection(COL_PERSONAS).where("dni", "==", dni).limit(2).get();
+  if (psn.empty) {
+    throw new HttpsError("failed-precondition", MSG_LOGIN);
+  }
+  if (psn.size > 1) {
+    throw new HttpsError("internal", MSG_LOGIN);
+  }
+  const personaId = psn.docs[0].id;
+  const cSnap = await db
+    .collection(COL_USUARIOS_CUENTA)
+    .where("persona_id", "==", personaId)
+    .limit(2)
+    .get();
+  if (cSnap.empty) {
+    throw new HttpsError("failed-precondition", MSG_LOGIN);
+  }
+  if (cSnap.size > 1) {
+    throw new HttpsError("internal", MSG_LOGIN);
+  }
+  const cu = cSnap.docs[0].data() || {};
+  const uname = cu.username && String(cu.username).trim();
+  if (!uname || !validEmail(uname) || !cu.auth_uid) {
+    throw new HttpsError("failed-precondition", MSG_LOGIN);
+  }
+  if (cu.activo === false) {
+    throw new HttpsError("failed-precondition", MSG_LOGIN);
+  }
+  if (cu.estado_acceso === CFG_PEND_REG) {
+    throw new HttpsError("failed-precondition", MSG_LOGIN);
+  }
+  return { email: uname.toLowerCase() };
+});
 
 /** Comprobación de despliegue / emulador (sin auth). */
 exports.healthV2 = onCall(async () => ({
