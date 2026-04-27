@@ -12,6 +12,7 @@
     "firebase:emulators:with-functions": "firebase emulators:start --config firebase-v2/firebase.json --only firestore,functions,ui",
     "firebase:deploy:firestore": "firebase deploy --project portal-hospital-v2 --config firebase-v2/firebase.json --only firestore:rules,firestore:indexes",
     "firebase:deploy:functions": "firebase deploy --project portal-hospital-v2 --config firebase-v2/firebase.json --only functions",
+    "dev:set-rrhh-claims": "node scripts/dev-set-portal-role-rrhh.mjs",
     "verify:pre-coding": "node scripts/seed-v2/verify-pre-coding.mjs",
     "test:firestore:v2": "node scripts/seed-v2/test-firestore-v2-connection.mjs",
     "test:firestore:rules": "firebase --config firebase-v2/firebase.json emulators:exec --only firestore \"node tests/firestore-rules.mjs\"",

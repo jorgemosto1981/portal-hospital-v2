@@ -1,13 +1,24 @@
 import { useState } from "react";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+
 import MobileLayout from "./components/layout/MobileLayout.jsx";
 import LoginScreen from "./features/auth/LoginScreen.jsx";
+import LoginRoute from "./features/auth/LoginRoute.jsx";
+import RegistroVinculacion from "./features/auth/RegistroVinculacion.jsx";
+import VinculacionDni from "./features/auth/VinculacionDni.jsx";
 import { useAuthSession } from "./features/auth/useAuthSession.js";
+import OnboardingWizard from "./features/onboarding/OnboardingWizard.jsx";
+import AltaAgenteRRHH from "./features/rrhh/AltaAgenteRRHH.jsx";
+import MvpAccessGate from "./features/shell/MvpAccessGate.jsx";
 import TabContentHost from "./features/shell/TabContentHost.jsx";
 
 /** Solo desarrollo: en `.env.v2.local` → `VITE_BYPASS_AUTH=true` (nunca en producción). */
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
 
-export default function App() {
+/**
+ * Contenido principal: login o shell.
+ */
+function MainWithAuth() {
   const { user, authPending } = useAuthSession();
   const [activeTab, setActiveTab] = useState("inicio");
 
@@ -33,5 +44,34 @@ export default function App() {
     <MobileLayout activeTab={activeTab} onTabChange={setActiveTab} devBypassAuth={BYPASS_AUTH && !user}>
       <TabContentHost activeTab={activeTab} />
     </MobileLayout>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <MvpAccessGate>
+              <LoginRoute />
+            </MvpAccessGate>
+          }
+        />
+        <Route path="/registro" element={<RegistroVinculacion />} />
+        <Route path="/vinculacion" element={<VinculacionDni />} />
+        <Route path="/onboarding" element={<OnboardingWizard />} />
+        <Route path="/rrhh/alta" element={<AltaAgenteRRHH />} />
+        <Route
+          path="/*"
+          element={
+            <MvpAccessGate>
+              <MainWithAuth />
+            </MvpAccessGate>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }

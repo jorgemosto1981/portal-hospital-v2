@@ -147,6 +147,18 @@ export const SECCIONES_CATALOGO_RRHH = [
       },
     ],
   },
+  {
+    id: "acceso",
+    titulo: "Acceso e identidad digital",
+    items: [
+      {
+        key: "rol",
+        etiqueta: "Roles de aplicación",
+        collectionName: "cfg_rol",
+        idPrefix: "CFG_",
+      },
+    ],
+  },
 ];
 
 /** Mapa rápido `key` → ítem (primera coincidencia). */

@@ -25,6 +25,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Roles de aplicación (`usuarios_cuenta.role_ids[]` → `cfg_rol`); seed `scripts/seed-v2/seed-cfg.mjs`.
+    match /cfg_rol/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // Cuenta operativa: el agente solo lee su fila (auth_uid == sesión). Escrituras vía Callables/Admin.
     match /usuarios_cuenta/{cuentaId} {
       allow read: if signedIn() && resource.data.auth_uid == request.auth.uid;

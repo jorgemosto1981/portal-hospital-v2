@@ -36,3 +36,25 @@ export function callListarColeccion(data) {
 export function callGuardarOpcion(data) {
   return httpsCallable(getFunctionsV2(), "guardarOpcion")(data);
 }
+
+/** Catálogos de solo lectura para el wizard (provincia, localidad, parentesco, grupos). */
+export function callListarCatalogoOnboarding(data) {
+  return httpsCallable(getFunctionsV2(), "listarCatalogoOnboarding")(data);
+}
+
+/** Vincular sesión de Auth a legajo pre-alta por DNI. */
+export function callVincularCuentaConDni(data) {
+  return httpsCallable(getFunctionsV2(), "vincularCuentaConDni")(data);
+}
+
+export function callOnboardingMvpPasoA(data) {
+  return httpsCallable(getFunctionsV2(), "onboardingMvpPasoA")(data);
+}
+
+export function callOnboardingMvpDdjjFamiliar(data) {
+  return httpsCallable(getFunctionsV2(), "onboardingMvpDdjjFamiliar")(data);
+}
+
+export function callOnboardingMvpCompletar() {
+  return httpsCallable(getFunctionsV2(), "onboardingMvpCompletar")();
+}

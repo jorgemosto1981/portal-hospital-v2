@@ -155,6 +155,54 @@ const cfgEstadoCuentaAcceso = () => [
   },
 ];
 
+/**
+ * Roles de aplicación — `usuarios_cuenta.role_ids[]` (FK a documento).
+ * @see MODULO_CONFIGURACION_V2.md §5 (cfg_rol), MODULO_DATOS_PERSONALES_V2.md §3.7 (role_ids)
+ * @see docs/v2/CUESTIONES_ROLES_MENUS_ARQUITECTURA_V2.md
+ */
+const cfgRol = () => [
+  {
+    id: "CFG_RRHH",
+    data: {
+      ...base(),
+      codigo_interno: "RRHH",
+      titulo_ui: "Recursos Humanos",
+      nombre: "Recursos Humanos",
+      orden: 10,
+    },
+  },
+  {
+    id: "CFG_USUARIO",
+    data: {
+      ...base(),
+      codigo_interno: "USUARIO",
+      titulo_ui: "Usuario (agente estándar)",
+      nombre: "Usuario (agente estándar)",
+      orden: 20,
+    },
+  },
+  {
+    id: "CFG_MEDICO",
+    data: {
+      ...base(),
+      codigo_interno: "MEDICO",
+      titulo_ui: "Médico / auditoría clínica (según política)",
+      nombre: "Médico / auditoría clínica (según política)",
+      orden: 30,
+    },
+  },
+  {
+    id: "CFG_VISUALIZADOR",
+    data: {
+      ...base(),
+      codigo_interno: "VISUALIZADOR",
+      titulo_ui: "Visualizador (solo lectura)",
+      nombre: "Visualizador (solo lectura)",
+      orden: 40,
+    },
+  },
+];
+
 const cfgEstadoPerfilDatos = () => [
   {
     id: "cfg_epd_borr",
@@ -264,6 +312,7 @@ async function main() {
   await applyBatch(cfgEstadoCuentaAcceso(), "cfg_estado_cuenta_acceso");
   await applyBatch(cfgEstadoPerfilDatos(), "cfg_estado_perfil_datos");
   await applyBatch(cfgTipoEvento(), "cfg_tipo_evento");
+  await applyBatch(cfgRol(), "cfg_rol");
 
   const out = {
     projectId,
@@ -271,6 +320,7 @@ async function main() {
     cfg_estado_cuenta_acceso: cfgEstadoCuentaAcceso().map((x) => x.id),
     cfg_estado_perfil_datos: cfgEstadoPerfilDatos().map((x) => x.id),
     cfg_tipo_evento: cfgTipoEvento().map((x) => x.id),
+    cfg_rol: cfgRol().map((x) => x.id),
   };
 
   const outPath = join(__dirname, "seed-ids.v2.json");

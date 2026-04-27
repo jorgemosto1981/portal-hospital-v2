@@ -1,5 +1,6 @@
 import AppBrandHeader from "./AppBrandHeader.jsx";
 import BottomNavigationBar from "./BottomNavigationBar.jsx";
+import PublicAuthMenu from "./PublicAuthMenu.jsx";
 
 const DEFAULT_ACTIVE_TAB = "inicio";
 
@@ -28,6 +29,7 @@ export default function MobileLayout({
             className="order-1 flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain md:order-2"
             id="app-main-scroll"
           >
+            {devBypassAuth ? <PublicAuthMenu active="none" /> : null}
             <AppBrandHeader />
             {devBypassAuth && (
               <p

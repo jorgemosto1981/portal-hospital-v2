@@ -1,8 +1,10 @@
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { APP_TITLE, INSTITUTION_NAME, LOGO_SRC } from "../../constants/appBrand.js";
+import PublicAuthMenu from "../../components/layout/PublicAuthMenu.jsx";
 import { callResolverEmailLoginDni } from "../../services/callables.js";
 import { authV2 } from "../../services/firebase.js";
 import Card from "../../components/ui/Card.jsx";
@@ -67,8 +69,9 @@ export default function LoginScreen() {
   }
 
   return (
-    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-slate-100 px-4 py-8">
-      <div className="w-full max-w-sm">
+    <div className="flex min-h-dvh w-full flex-col bg-slate-100">
+      <PublicAuthMenu />
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center px-4 py-8">
         <div className="mb-6 flex flex-col items-center text-center">
           <img
             src={LOGO_SRC}
@@ -117,9 +120,13 @@ export default function LoginScreen() {
             </PrimaryButton>
           </form>
         </Card>
-        <p className="mt-6 text-center text-xs text-slate-500">
-          ¿Primer acceso? Completá el registro con DNI, correo y PIN que te indicó RRHH (flujo
-          &quot;primer acceso&quot; en desarrollo), o contactá a RRHH.
+        <p className="mt-4 text-center text-sm text-slate-600">
+          <Link to="/registro" className="font-medium text-blue-600">
+            Registro con email (empleados nuevos)
+          </Link>
+        </p>
+        <p className="mt-2 text-center text-xs text-slate-500">
+          Inicio con DNI+PIN: ya debés haber vinculado o completado &quot;primer acceso&quot; (Callable).
         </p>
       </div>
     </div>
