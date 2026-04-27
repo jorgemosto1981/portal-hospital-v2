@@ -42,6 +42,12 @@ function dateInputToIsoEnd(dateStr) {
   return d.toISOString();
 }
 
+function labelProvinciaEnTabla(provinciasList, provinciaId) {
+  if (!provinciaId) return "—";
+  const f = provinciasList.find((p) => p.id === provinciaId);
+  return f ? f.nombre : String(provinciaId);
+}
+
 function callableErrorMessage(err) {
   const raw = err && typeof err.message === "string" ? err.message : "";
   if (raw.includes("permission-denied") || raw.toLowerCase().includes("solo personal autorizado")) {
@@ -75,6 +81,11 @@ export default function Configuracion() {
   const [editVigDesde, setEditVigDesde] = useState("");
   const [editVigHasta, setEditVigHasta] = useState("");
   const [editDocId, setEditDocId] = useState("");
+  const [provincias, setProvincias] = useState([]);
+  const [addProvinciaId, setAddProvinciaId] = useState("");
+  const [editProvinciaId, setEditProvinciaId] = useState("");
+
+  const isLocalidad = itemActual.collectionName === "cfg_localidad";
 
   const recargar = useCallback(async () => {
     if (!user || !isRrhh) return;
@@ -121,10 +132,40 @@ export default function Configuracion() {
     recargar();
   }, [recargar]);
 
+  useEffect(() => {
+    if (!user || !isRrhh || !isLocalidad) {
+      setProvincias([]);
+      return;
+    }
+    let cancel = false;
+    (async () => {
+      try {
+        const list = await listarColeccion("cfg_provincia");
+        if (cancel) return;
+        const sorted = [...list].sort((a, b) => {
+          const na = String(a.nombre || a.id || "");
+          const nb = String(b.nombre || b.id || "");
+          return na.localeCompare(nb, "es", { sensitivity: "base" });
+        });
+        setProvincias(sorted);
+      } catch {
+        if (!cancel) setProvincias([]);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [user, isRrhh, isLocalidad]);
+
   const abrirAgregar = () => {
     idManualRef.current = false;
     setAddNombre("");
     setAddId(itemActual.idPrefix.toUpperCase());
+    if (isLocalidad) {
+      setAddProvinciaId(provincias[0]?.id ? String(provincias[0].id) : "");
+    } else {
+      setAddProvinciaId("");
+    }
     setModal("agregar");
   };
 
@@ -134,6 +175,7 @@ export default function Configuracion() {
     setEditActivo(row.activo !== false);
     setEditVigDesde(isoToDateInputValue(row.vigente_desde));
     setEditVigHasta(isoToDateInputValue(row.vigente_hasta));
+    setEditProvinciaId(row.provincia_id != null ? String(row.provincia_id) : "");
     setModal("editar");
   };
 
@@ -161,14 +203,25 @@ export default function Configuracion() {
       toast.error("Completá id y nombre.");
       return;
     }
+    if (isLocalidad) {
+      const pid = addProvinciaId.trim();
+      if (!pid) {
+        toast.error("Elegí la provincia de la localidad.");
+        return;
+      }
+    }
     try {
-      await guardarOpcion(itemActual.collectionName, {
+      const datos = {
         id,
         nombre,
         activo: true,
         vigente_desde: null,
         vigente_hasta: null,
-      });
+      };
+      if (isLocalidad) {
+        datos.provincia_id = addProvinciaId.trim().toUpperCase();
+      }
+      await guardarOpcion(itemActual.collectionName, datos);
       toast.success("Opción creada.");
       setModal("cerrado");
       await recargar();
@@ -184,14 +237,22 @@ export default function Configuracion() {
       toast.error("El nombre es obligatorio.");
       return;
     }
+    if (isLocalidad && !editProvinciaId.trim()) {
+      toast.error("Elegí la provincia de la localidad.");
+      return;
+    }
     try {
-      await guardarOpcion(itemActual.collectionName, {
+      const datos = {
         id: editDocId,
         nombre,
         activo: editActivo,
         vigente_desde: dateInputToIsoEnd(editVigDesde),
         vigente_hasta: dateInputToIsoEnd(editVigHasta),
-      });
+      };
+      if (isLocalidad) {
+        datos.provincia_id = editProvinciaId.trim().toUpperCase();
+      }
+      await guardarOpcion(itemActual.collectionName, datos);
       toast.success("Cambios guardados.");
       setModal("cerrado");
       await recargar();
@@ -313,6 +374,9 @@ export default function Configuracion() {
                 <tr className="border-b border-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-400">
                   <th className="px-4 py-3 md:px-5">ID</th>
                   <th className="px-4 py-3 md:px-5">Nombre</th>
+                  {isLocalidad && (
+                    <th className="px-4 py-3 md:px-5">Provincia</th>
+                  )}
                   <th className="px-4 py-3 md:px-5">Estado</th>
                   <th className="hidden px-4 py-3 sm:table-cell md:px-5">Vigencia</th>
                   <th className="px-4 py-3 text-right md:px-5"> </th>
@@ -321,14 +385,20 @@ export default function Configuracion() {
               <tbody className="divide-y divide-slate-100">
                 {loading && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-slate-500 md:px-5">
+                    <td
+                      colSpan={isLocalidad ? 6 : 5}
+                      className="px-4 py-10 text-center text-slate-500 md:px-5"
+                    >
                       Cargando…
                     </td>
                   </tr>
                 )}
                 {!loading && rows.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-slate-500 md:px-5">
+                    <td
+                      colSpan={isLocalidad ? 6 : 5}
+                      className="px-4 py-10 text-center text-slate-500 md:px-5"
+                    >
                       No hay documentos en esta colección.
                     </td>
                   </tr>
@@ -340,6 +410,16 @@ export default function Configuracion() {
                         {row.id}
                       </td>
                       <td className="px-4 py-3 text-slate-800 md:px-5">{row.nombre ?? "—"}</td>
+                      {isLocalidad && (
+                        <td className="max-w-[160px] px-4 py-3 text-sm text-slate-700 md:px-5">
+                          {labelProvinciaEnTabla(provincias, row.provincia_id)}
+                          {row.provincia_id && (
+                            <span className="mt-0.5 block font-mono text-[10px] text-slate-400">
+                              {row.provincia_id}
+                            </span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-3 md:px-5">
                         {row.activo !== false ? (
                           <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
@@ -422,6 +502,34 @@ export default function Configuracion() {
                   Sugerido desde el nombre. Podés ajustarlo antes de guardar.
                 </p>
               </div>
+              {isLocalidad && (
+                <div>
+                  <label
+                    className="block text-xs font-medium text-slate-600"
+                    htmlFor="add-provincia"
+                  >
+                    Provincia
+                  </label>
+                  <select
+                    id="add-provincia"
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none ring-blue-600 focus:ring-2"
+                    value={addProvinciaId}
+                    onChange={(e) => setAddProvinciaId(e.target.value)}
+                  >
+                    <option value="">Elegir provincia…</option>
+                    {provincias.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre ?? p.id}
+                      </option>
+                    ))}
+                  </select>
+                  {provincias.length === 0 && (
+                    <p className="mt-1 text-xs text-amber-800">
+                      Cargá provincias en el catálogo «Provincias» y volvé a intentar.
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -474,6 +582,29 @@ export default function Configuracion() {
                   onChange={(e) => setEditNombre(e.target.value)}
                 />
               </div>
+              {isLocalidad && (
+                <div>
+                  <label
+                    className="block text-xs font-medium text-slate-600"
+                    htmlFor="edit-provincia"
+                  >
+                    Provincia
+                  </label>
+                  <select
+                    id="edit-provincia"
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none ring-blue-600 focus:ring-2"
+                    value={editProvinciaId}
+                    onChange={(e) => setEditProvinciaId(e.target.value)}
+                  >
+                    <option value="">Elegir provincia…</option>
+                    {provincias.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre ?? p.id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
                 <input
                   type="checkbox"

@@ -15,8 +15,8 @@
 | Catálogos | `cfg_*` | Estados y listas cerradas como **`*_id`** → documento en `cfg_*`. |
 | Auditoría | `evt_<ULID>` | `eventos_ticket`; **`tipo_evento_id`** → `cfg_tipo_evento`. |
 | Grupo de trabajo (unidad / organigrama) | `gdt_<ULID>` | `grupos_de_trabajo`; árbol y asignación operativa (burbujeo, ticket). |
-| Efector (catálogo) | `efe_<ULID>` | `efectores`; **configurable**; `hlc_*` referencia **dos** (`efector_designacion_id`, `efector_cumplimiento_id`). Ver plan maestro §B y [`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md), [`DECISIONES_REVISION_PERSONALES_LABORALES_V2.md`](./DECISIONES_REVISION_PERSONALES_LABORALES_V2.md). |
-| Asignación laboral (cargo) | `hlc_<ULID>` | `historial_laboral_cargos` (+ `hld_*` / `hlg_*`); `persona_id`, FK a **`grupos_de_trabajo`** y **`efectores`**, vigencia, causal, carga en horas según el plan maestro. |
+| Efector (catálogo) | `CFG_EFE_*` (semilla) u `efe_<ULID>` (regla de alta) | **`cfg_efectores`**; **configurable** por ABM; `hlc_*` referencia **dos** documentos del catálogo (`efector_designacion_id`, `efector_cumplimiento_id`). La colección suelta `efectores` está **deprecada** en V2. Ver plan maestro §B y [`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md) §4.2, [`DECISIONES_REVISION_PERSONALES_LABORALES_V2.md`](./DECISIONES_REVISION_PERSONALES_LABORALES_V2.md). |
+| Asignación laboral (cargo) | `hlc_<ULID>` | `historial_laboral_cargos` (+ `hld_*` / `hlg_*`); `persona_id`, FK a **`grupos_de_trabajo`** y a **dos** ids de **`cfg_efectores`**, vigencia, causal, carga en horas según el plan maestro. |
 | Otros agregados | `<prefijo>_<ULID>` | Definir prefijo al añadir módulo (ticket, …). |
 
 **No usar** como clave primaria de enlace entre módulos: DNI, email, `auth_uid` (son datos de negocio o de proveedor, no ancla transversal).
@@ -61,4 +61,5 @@
 | 2026-04-22 | Prefijos **`grp_*`** y **`hlc_*`** (datos laborales V2). |
 | 2026-04-22 | §2: ids únicas en todo lo configurable; vigencia `vigente_desde` / `vigente_hasta` en `cfg_*`; sin borrado físico de catálogos (`activo` / vigencia). |
 | 2026-04-23 | Nomenclatura alineada a [`PLAN_DESARROLLO_VERSION2.md`](../../PLAN_DESARROLLO_VERSION2.md): `usuarios_cuenta`, `eventos_ticket`, `tickets`/`tkt_*`, `hlc_*` / historiales. Laboral: `grupos_de_trabajo` (`gdt_*`) y `efectores` (`efe_*`); se **rechaza** mezclar ambos en una sola colección `grupos`. |
+| 2026-04-27 | Catálogo de efectores canónico: **`cfg_efectores`**; sustitución documental de la fila bajo el nombre de colección `efectores`. |
 | 2026-04-23 | Título: “canónico” → convenciones transversales; política explícita de **sin aprobación final**; reemplazo ref. TAREA. |

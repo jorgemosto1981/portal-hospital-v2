@@ -4,11 +4,14 @@ import LoginScreen from "./features/auth/LoginScreen.jsx";
 import { useAuthSession } from "./features/auth/useAuthSession.js";
 import TabContentHost from "./features/shell/TabContentHost.jsx";
 
+/** Solo desarrollo: en `.env.v2.local` → `VITE_BYPASS_AUTH=true` (nunca en producción). */
+const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
+
 export default function App() {
   const { user, authPending } = useAuthSession();
   const [activeTab, setActiveTab] = useState("inicio");
 
-  if (authPending) {
+  if (!BYPASS_AUTH && authPending) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-slate-100">
         <div className="flex flex-col items-center gap-3 text-slate-600">
@@ -22,12 +25,12 @@ export default function App() {
     );
   }
 
-  if (!user) {
+  if (!BYPASS_AUTH && !user) {
     return <LoginScreen />;
   }
 
   return (
-    <MobileLayout activeTab={activeTab} onTabChange={setActiveTab}>
+    <MobileLayout activeTab={activeTab} onTabChange={setActiveTab} devBypassAuth={BYPASS_AUTH && !user}>
       <TabContentHost activeTab={activeTab} />
     </MobileLayout>
   );

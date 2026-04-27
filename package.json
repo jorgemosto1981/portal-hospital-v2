@@ -16,11 +16,14 @@
     "test:firestore:v2": "node scripts/seed-v2/test-firestore-v2-connection.mjs",
     "test:firestore:rules": "firebase --config firebase-v2/firebase.json emulators:exec --only firestore \"node tests/firestore-rules.mjs\"",
     "seed:cfg": "node scripts/seed-v2/seed-cfg.mjs",
+    "seed:configuracion": "node src/scripts/seedConfiguracion.mjs",
+    "db:purge-efectores-legacy": "node scripts/purge-efectores-legacy.mjs",
     "firestore:create": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/seed-v2/crear-base-firestore.ps1",
     "backup": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/crear-copia-seguridad.ps1"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.0",
+    "dotenv": "^17.4.2",
     "firebase-admin": "^13.6.0",
     "firebase-tools": "^15.15.0"
   },

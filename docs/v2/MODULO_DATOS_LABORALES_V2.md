@@ -8,6 +8,8 @@
 
 **Catálogos:** inventario `cfg_*` laborales en **§6**; incorporación formal al inventario global en [`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md) **§5.1**.
 
+**Acuerdo de alineación (abril 2026 — panel / ABM y una sola fuente de verdad):** el catálogo de **efectores institucionales** (lugares de designación y de cumplimiento) vive en la colección **`cfg_efectores`**, con la **misma gobernanza** que el resto de `cfg_*` (Database-First: sin listas fijas en código; altas desde módulo de configuración/RRHH; ids estables; vigencia y baja lógica según `MODULO_CONFIGURACION_V2` §1–§2). Los campos `efector_designacion_id` y `efector_cumplimiento_id` de `hlc_*` son **FK al `id` de documento** en `cfg_efectores/{id}`. La antigua colección suelta **`efectores`** queda **deprecada** para modelos y seeds nuevos (ver §4.2). El plan maestro y el Rulebook reflejan el mismo criterio.
+
 **Acceso (orientación):** transiciones sensibles en **Callables** + Rules restrictivas; ampliación laboral en [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./ACCESO_Y_RULES_FIRESTORE_V2.md) cuando se cierre el módulo.
 
 **Fecha:** 22 de abril de 2026.
@@ -16,12 +18,12 @@
 
 ## 1. Objetivo del módulo
 
-1. Persistir **cargos** del agente: **un** vínculo a unidad/organigrama vía **`grupos_de_trabajo` (`gdt_*`)**, **dos** referencias a **`efectores` (`efe_*`)** (designación normativa vs cumplimiento real de funciones), **cargo / función**, **vínculo**, **escalafón** (si aplica), **jornada**, **vigencia** (`fecha_desde` / `fecha_hasta`), **causal de fin** configurable y **carga horaria total** al cargo.
+1. Persistir **cargos** del agente: **un** vínculo a unidad/organigrama vía **`grupos_de_trabajo` (`gdt_*`)**, **dos** referencias a **efectores institucionales** (campos `efector_designacion_id` y `efector_cumplimiento_id` → documentos en **`cfg_efectores`**: designación normativa vs cumplimiento real de funciones), **cargo / función**, **vínculo**, **escalafón** (si aplica), **jornada**, **vigencia** (`fecha_desde` / `fecha_hasta`), **causal de fin** configurable y **carga horaria total** al cargo.
 2. Permitir **varios cargos activos en paralelo** para la misma `persona_id` (mismo hospital u otros efectores), con historial por filas cerradas (`fecha_hasta` + causal).
 3. Definir **activo laboralmente:** el agente lo está **si existe al menos un** `hlc_*` en estado **activo** y vigente (`fecha_hasta == null` o vigencia actual según regla de negocio) — sin depender de flags en `personas`. *Cruce con RRHH:* bajas laborales, deshabilitado y filtros de listados se documentan en [`CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md`](./CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md).
 4. Servir de **fuente de verdad** para Ticket / bandejas por **`persona_id`** + ids de efectores/unidad/cargo (**sin hardcode**; estados y causales = **`cfg_*`**).
 5. Registrar cambios en **`eventos_ticket`** (`evt_*`) con `tipo_evento_id` → `cfg_tipo_evento`.
-6. **Subnivel por grupo (`hlg_*`):** cada **asignación** del agente a un **grupo de trabajo** (`gdt_*`) concreto lleva **vigencia propia**, **`nivel_jerarquia_id`** (nivel en esa burbuja) y **carga horaria desagregada por día de semana** — **C10**; contrato **§4.4–4.5**.
+6. **Subnivel por grupo (`hlg_*`):** cada **asignación** del agente a un **grupo de trabajo** (`gdt_*`) concreto lleva **vigencia propia**, **`nivel_jerarquico`** (número **1–99**, jerarquía en esa burbuja; **no** es catálogo `cfg_*`) y **carga horaria desagregada por día de semana** — **C10**; contrato **§4.4–4.5**.
 
 ---
 
@@ -31,7 +33,7 @@
 |--------|---------------------------|
 | **Datos personales** | Identidad civil; **no** incluye cargos ni efectores. |
 | **Login** | `usuarios_cuenta`; **no** decide si el agente está laboralmente activo (eso es consulta sobre `hlc_*`). |
-| **Ticket / solicitudes** *(doc otra PC, más desarrollado)* | **Jerarquía y “jefe inmediato”:** se resuelven por **esquema de burbujeo**; el **nivel** comparable por persona **en cada grupo** está en **`hlg_*` → `nivel_jerarquia_id`** (catálogo). **No** se persiste `supervisor_persona_id` en `hlc_*` en V2. Mismos principios: **IDs** y `cfg_*`. Unificación con doc **al integrar** la otra PC (**§9**). |
+| **Ticket / solicitudes** *(doc otra PC, más desarrollado)* | **Jerarquía y “jefe inmediato”:** se resuelven por **esquema de burbujeo**; el **nivel** comparable por persona **en cada grupo** está en **`hlg_*.nivel_jerarquico`** (entero **1–99**; **no** hay colección `cfg_nivel_jerarquia`). **No** se persiste `supervisor_persona_id` en `hlc_*` en V2. Listas de negocio: **IDs** a `cfg_*` donde aplica; el nivel de jerarquía es **numérico** en asignación. Unificación con doc **al integrar** la otra PC (**§9**). |
 | **Configuración** | Catálogos `cfg_*` §6 (incl. causal de fin de cargo, tipos de acto de designación, etc.). **Impacto en sueldo** (diario, total, porcentaje, …) de licencias/artículos: **no** es liquidación de nómina; las opciones seleccionables viven en la **configuración del artículo** y catálogos del **módulo configuración** — ver Ticket / módulo artículos, **no** en el núcleo de `hlc_*`. |
 | **Nómina / liquidación** | **Fuera de alcance** de esta aplicación: el portal **no** liquida sueldos. |
 
@@ -40,8 +42,8 @@
 ## 3. Principios de modelado
 
 1. **`persona_id` única** por agente; **varios** `hlc_*` pueden estar **activos y vigentes a la vez** (mismo u otro efector, mismo u otro hospital según designación y cumplimiento).
-2. **Efector de designación** vs **efector de cumplimiento:** pueden coincidir o no. Ambos son **FK a `efectores.id` (`efe_*`)**; catálogo mantenible por **módulo configuración**; **no** texto libre. La igualdad **`efector_designacion_id` == `efector_cumplimiento_id`** es **señal explícita** para reglas (bandejas, informes, Ticket). *RFC:* fusión 1:1 con un nodo `gdt_*` si el hospital lo exige.
-3. **Grupos de trabajo** (`gdt_*`): el **organigrama** (servicio, sector, nodo de jerarquía). En `hlc_*`, **`grupo_de_trabajo_id`** fija el **encuadre principal** del acto; en **`hlg_*`**, **cada** vínculo persona–grupo tiene `grupo_de_trabajo_id`, **vigencia**, **`nivel_jerarquia_id`** y **carga por día** (**C10**). Un agente puede tener **varias** filas `hlg_*` (varias burbujas). **No** se mezcla `gdt_*` con el catálogo de efectores.
+2. **Efector de designación** vs **efector de cumplimiento:** pueden coincidir o no. Ambos son **FK al `id` de documento en `cfg_efectores`**; catálogo mantenible por **módulo de configuración / panel ABM**; **no** texto libre. La igualdad **`efector_designacion_id` == `efector_cumplimiento_id`** es **señal explícita** para reglas (bandejas, informes, Ticket). *RFC:* fusión 1:1 con un nodo `gdt_*` si el hospital lo exige.
+3. **Grupos de trabajo** (`gdt_*`): el **organigrama** (servicio, sector, nodo de jerarquía). En `hlc_*`, **`grupo_de_trabajo_id`** fija el **encuadre principal** del acto; en **`hlg_*`**, **cada** vínculo persona–grupo tiene `grupo_de_trabajo_id`, **vigencia**, **`nivel_jerarquico` (1–99)** y **carga por día** (**C10**). Un agente puede tener **varias** filas `hlg_*` (varias burbujas). **No** se mezcla `gdt_*` con el catálogo de efectores en **`cfg_efectores`**.
 4. **Listas cerradas** = **`*_id` → `cfg_*`**: cada valor con **id única**; textos y vigencias solo en el catálogo (**[`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md)** §1–§2). Causal de fin de vigencia = **`cfg_causal_fin_asignacion_laboral`** (u homónimo al fusionar Rulebook). **No** se borran filas de catálogo en producto: baja lógica y/o cierre de vigencia.
 5. **Referencias legales** de designación: van **asociadas a cada cargo** con `fecha_desde`; detallan la normativa que designa el cargo (estructura en **§4.3** / campo `referencias_normativa_designacion`).
 6. **No** persistir en `hlc_*` nombres de persona/servicio como SSoT: solo ids + joins.
@@ -54,7 +56,7 @@
 
 ### 4.1 `grupos_de_trabajo` — id `gdt_<ULID>`
 
-**Unidades de organigrama** (servicio, sector, nodo de jerarquía operativa). Alineado a [`PLAN_DESARROLLO_VERSION2.md`](../../PLAN_DESARROLLO_VERSION2.md) §B. **No** aloja el catálogo de efectores (eso es **`efectores`**).
+**Unidades de organigrama** (servicio, sector, nodo de jerarquía operativa). Alineado a [`PLAN_DESARROLLO_VERSION2.md`](../../PLAN_DESARROLLO_VERSION2.md) §B. **No** aloja el catálogo de efectores (eso es **`cfg_efectores`**; ver §4.2).
 
 | Campo | Tipo | Obl. | Descripción |
 |-------|------|------|-------------|
@@ -71,19 +73,21 @@
 
 **Índices sugeridos:** `parent_group_id` + `activo`; `codigo` único sparse.
 
-### 4.2 `efectores` — id `efe_<ULID>`
+### 4.2 `cfg_efectores` — catálogo de efectores (panel de configuración / ABM)
 
-**Catálogo** de lugares/efectores institucionales donde aplica la designación o el cumplimiento. Configurable (alta/edición vía módulo correspondiente); **ids estables** en `hlc_*` y Ticket.
+**Una sola fuente de verdad** en Firestore para el **ABM** y para los desplegables que alimentan `efector_designacion_id` y `efector_cumplimiento_id` en `hlc_*`. Sigue el contrato transversal de `cfg_*` (sin borrado físico; baja lógica y/o vigencia — [`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md) §1–§2). Los documentos almacenan, como mínimo, **`id`**, **`nombre`**, flags de producto; semillas iniciales pueden usar convención fija, p. ej. **`CFG_EFE_*`**.
+
+**Obsolescencia documentada:** en borradores previos el catálogo se nombraba como colección **`efectores`** con ids `efe_<ULID>`. Esa colección se declara **deprecada** para despliegues y código nuevos; **no** añadir documentos a `efectores` en entornos V2. Toda operación de catálogo pasa por **`cfg_efectores`**.
 
 | Campo | Tipo | Obl. | Descripción |
 |-------|------|------|-------------|
-| `id` | `efe_<ULID>` | **[O]** | |
-| `codigo` | string \| null | **[X]** | |
-| `nombre` | string | **[O]** | |
+| `id` | string (id de documento) | **[O]** | Estable: p. ej. `CFG_EFE_01_…` en semillas, o `efe_<ULID>` en altas gobernadas por Rulebook. |
+| `codigo` | string \| null | **[X]** | Código de negocio / legible en informes, si aplica. |
+| `nombre` | string | **[O]** | Etiqueta de UI. |
 | `es_efector_institucional` | boolean | **[O]** | Marca del efector “de este portal”; **a lo sumo** un `true` por despliegue, según validación. |
 | `activo` | boolean | **[O]** | |
-| `vigente_desde`, `vigente_hasta` | Timestamp \| null | **[O]** | |
-| `creado_en` / `actualizado_en` | Timestamp | **[O]** | |
+| `vigente_desde`, `vigente_hasta` | Timestamp \| null | alinear a §2 `MODULO_CONFIGURACION` | Cierre de vigencia para “no ofrecer en nuevas altas”, sin invalidar `*_id` ya guardados. |
+| `creado_en` / `actualizado_en` | Timestamp | **[O]** | (según cierre de implementación) |
 | `schema_version` | number | **[O]** | |
 
 **Índices sugeridos:** `activo` + `vigente_hasta`; `es_efector_institucional`.
@@ -96,8 +100,8 @@ Nivel 1 (cargo) — plan maestro §B. Cada documento = **un cargo** con su vigen
 |-------|------|------|-------------|
 | `persona_id` | string | **[O]** | FK `personas/{per_*}`. |
 | `grupo_de_trabajo_id` | string | **[O]** | FK **`gdt_*`**: dependencia / encuadre operativo del cargo. |
-| `efector_designacion_id` | string | **[O]** | FK **`efe_*`**: marco **normativo** de designación (valor **seleccionable** en catálogo). |
-| `efector_cumplimiento_id` | string | **[O]** | FK **`efe_*`**: lugar **real** de cumplimiento de funciones. |
+| `efector_designacion_id` | string | **[O]** | FK **documento en `cfg_efectores`**: marco **normativo** de designación (valor **seleccionable** en catálogo). |
+| `efector_cumplimiento_id` | string | **[O]** | FK **documento en `cfg_efectores`**: lugar **real** de cumplimiento de funciones. |
 | `cargo_funcional_id` | string | **[O]** | FK **`cfg_cargo_funcional`**. |
 | `tipo_vinculo_id` | string | **[O]** | FK **`cfg_tipo_vinculo_laboral`**. |
 | `escalafon_id` | string \| null | **[X]** | FK **`cfg_escalafon`**. |
@@ -108,7 +112,7 @@ Nivel 1 (cargo) — plan maestro §B. Cada documento = **un cargo** con su vigen
 | `estado_asignacion_id` | string | **[O]** | FK **`cfg_estado_asignacion_laboral`**. |
 | `carga_horaria_total` | number | **[O]** | Carga **total** del cargo en **horas** (*§4.5* reparte este total). |
 | `referencias_normativa_designacion` | array de map | **[O]** | Referencias legales del acto (cada ítem: **`tipo_acto_id`** → **`cfg_tipo_acto_designacion`**, `numero` string, `fecha` Timestamp, `detalle` string opcional). *Excepciones: ver decisión C3.* |
-| `nivel_jerarquico_numero` | number \| null | **[X]** | Opcional, **hint** a nivel cargo; el **nivel operativo en organigrama / burbuja** se define **por grupo** en **`hlg_*`** (`nivel_jerarquia_id`, **C10**). No sustituye el burbujeo de Ticket. |
+| `nivel_jerarquico_numero` | number \| null | **[X]** | Opcional, **hint** a nivel cargo; el **nivel operativo en organigrama / burbuja** se define **por grupo** en **`hlg_*.nivel_jerarquico` (1–99, C10).** No sustituye el burbujeo de Ticket. |
 | `es_asignacion_principal` | boolean | **[X]** | Hint UI / Ticket entre cargos vigentes. |
 | `observaciones_rrhh` | string \| null | **[X]** | |
 | `creado_por_persona_id` | string \| null | **[X]** | |
@@ -118,7 +122,7 @@ Nivel 1 (cargo) — plan maestro §B. Cada documento = **un cargo** con su vigen
 **Reglas de integridad**
 
 - **Varias vigentes:** permitido **N** `hlc_*` por `persona_id` con cierre abierto, según negocio.
-- **Designación vs cumplimiento:** mismos o distintos `efe_*`; señal de igualdad = reglas comunes a Ticket/informes.
+- **Designación vs cumplimiento:** mismos o distintos **ids** en `cfg_efectores`; señal de igualdad = reglas comunes a Ticket/informes.
 - **Cierre:** `fecha_hasta` exige **`causal_fin_asignacion_id`**.
 
 **Índices sugeridos:** `persona_id` + `fecha_hasta` + `estado_asignacion_id`; `efector_cumplimiento_id`; `efector_designacion_id`.
@@ -141,7 +145,7 @@ Nivel 2 y 3: el **contrato canónico** sigue en [`PLAN_DESARROLLO_VERSION2.md`](
 | `agrupamiento_id` | string \| null | **[X]** | |
 | `funcion_real_id` | string \| null | **[X]** | |
 | `muro_id` | string \| null | **[X]** | |
-| `nivel_jerarquico` | number \| null | **[X]** | *Legado / hint.* El **nivel de jerarquía** que gobierna **burbuja y Ticket** vive en **`hlg_*`**, **`nivel_jerarquia_id`** (**C10**). |
+| `nivel_jerarquico` | number \| null | **[X]** | Opcional en `hld_*` si el flujo lo usa. El nivel que gobierna **burbuja y Ticket** en contexto de grupo es **`hlg_*.nivel_jerarquico`** (1–99) (**C10**). Misma semántica: entero, sin catálogo. |
 | `carga_horaria_diaria` | number \| null | **[X]** | Deprecar a favor del desglose semanal en `hlg_*` salvo reglas que exijan un solo escalar. |
 | `fecha_inicio` / `fecha_fin` | Timestamp \| null | **[X]** | Periodo del bloque de datos; puede alinearse a vigencias de `hlg_*`. |
 | `activo` | boolean | **[O]** | |
@@ -160,7 +164,7 @@ Una fila = **asignación del `persona_id` a un `grupo_de_trabajo_id` concreto** 
 | `grupo_de_trabajo_id` | string | **[O]** | FK `gdt_*` (burbuja / unidad de organigrama). |
 | `fecha_inicio` | Timestamp | **[O]** | Inicio de la asignación a este grupo. |
 | `fecha_fin` | Timestamp \| null | **[C]** | `null` = vigente. |
-| `nivel_jerarquia_id` | string | **[O]** | FK **`cfg_nivel_jerarquia`**: nivel de jerarquía del agente **en este grupo** (no basta el opcional de `hlc_*`). Orden y etiquetas salen del catálogo. |
+| `nivel_jerarquico` | number | **[O]** | Entero **1–99**: jerarquía del agente **en este** `grupo_de_trabajo` (burbuja). **No** es colección `cfg_*`; la comparación en reglas (burbujeo, visibilidad) es **numérica** en Callables. Si coexisten con `hld_*.nivel_jerarquico` / `hlc_*.nivel_jerarquico_numero`, predomina **`hlg_*`** para organigrama (C10). |
 | `carga_por_dia_semana` | array de map | **[O]** | Desglose **día a día** (ver **§4.5**). Cada ítem: **`dia_semana_id`** (FK **`cfg_dia_semana`**, p. ej. lunes…domingo) y **`horas`** (number, p. ej. 4,5). **Uso posterior:** imputación, reglas de disponibilidad, franjas. |
 | `activo` | boolean | **[O]** | |
 | `creado_en` / `actualizado_en` | Timestamp | **[O]** | |
@@ -220,7 +224,7 @@ En este ejemplo, **`S_hlg` = 25,0** horas semanales. Si el `hlc_*` asociado tien
 
 ## 5. Eventos de auditoría
 
-Incluir: alta/edición/cierre de `hlc_*`, cambios estructurales en **`gdt_*`**, **`efe_*`**, `hlg_*` cuando aplique, modificaciones a `referencias_normativa_designacion` o a carga horaria.
+Incluir: alta/edición/cierre de `hlc_*`, cambios estructurales en **`gdt_*`**, catálogo **`cfg_efectores`**, `hlg_*` cuando aplique, modificaciones a `referencias_normativa_designacion` o a carga horaria.
 
 ---
 
@@ -229,7 +233,7 @@ Incluir: alta/edición/cierre de `hlc_*`, cambios estructurales en **`gdt_*`**, 
 | Catálogo / datos | Consumidor principal |
 |------------------|-------------------------|
 | Colección **`grupos_de_trabajo`** (no es `cfg_*`) | Estructura organigrama; `historial_laboral_cargos.grupo_de_trabajo_id`; `hlg_*.grupo_de_trabajo_id`. |
-| Colección **`efectores`** (no es `cfg_*`) | `efector_designacion_id`, `efector_cumplimiento_id` en `hlc_*`; **`es_efector_institucional`**. |
+| Colección **`cfg_efectores`** | `efector_designacion_id`, `efector_cumplimiento_id` en `hlc_*`; campo **`es_efector_institucional`** en el documento de efector. (La antigua colección `efectores` está **deprecada**; ver §4.2.) |
 | `cfg_tipo_grupo` | `grupos_de_trabajo.tipo_grupo_id` (si se tipifica el nodo). |
 | `cfg_cargo_funcional` | `historial_laboral_cargos.cargo_funcional_id` |
 | `cfg_tipo_vinculo_laboral` | `historial_laboral_cargos.tipo_vinculo_id` |
@@ -238,12 +242,12 @@ Incluir: alta/edición/cierre de `hlc_*`, cambios estructurales en **`gdt_*`**, 
 | `cfg_estado_asignacion_laboral` | `historial_laboral_cargos.estado_asignacion_id` |
 | **`cfg_causal_fin_asignacion_laboral`** | **`historial_laboral_cargos.causal_fin_asignacion_id`** (motivo de finalización; **configurable**). |
 | **`cfg_tipo_acto_designacion`** | **`referencias_normativa_designacion[].tipo_acto_id`** (decreto, resolución, etc.). |
-| **`cfg_nivel_jerarquia`** | **`historial_laboral_grupos.nivel_jerarquia_id`** (nivel en la burbuja, **C10**). |
 | **`cfg_dia_semana`** | Elementos de **`carga_por_dia_semana`**: `dia_semana_id` (patrón semanal de horas, **C10**). |
+| *(Nivel de jerarquía)* | *No aplica: **`hlg_*.nivel_jerarquico` (1–99)** y opcionalmente **`hld_*.nivel_jerarquico`**, sin `cfg_nivel_jerarquia`.* |
 
 **Impacto sueldo en licencias/artículos:** catálogos y opciones por artículo → **módulo configuración** + **Ticket** (no duplicar aquí la matriz de impacto diario/total/porcentaje).
 
-**Semilla:** ULID en despliegue; placeholders hasta script `seed-v2-laboral`.
+**Semilla:** `npm run seed:configuracion` (catálogos base) +, donde aplique, ULIDs; laboral avanzado §6 (5 colecciones) y `cfg_dia_semana` en el mismo script.
 
 ---
 
@@ -256,9 +260,9 @@ Igual que antes: tras Login/datos personales puede no existir `hlc_*` aún.
 ### 7.2 Alta / modificación por RRHH
 
 1. Selección de `persona_id`.
-2. Selección de documentos **`gdt_*`**, **`efe_*`** (altas = flujos **módulo configuración** u operativos acordados).
-3. Alta de **`hlc_*`** con `grupo_de_trabajo_id` y **dos** `efe_*` (designación y cumplimiento), fechas, **`carga_horaria_total`** en **horas**, referencias normativas.
-3bis. Asociar **`hld_*`** (si el flujo lo usa) y, por **cada grupo de trabajo (burbuja)** al que aplica el agente: **`hlg_*`** con `grupo_de_trabajo_id`, `fecha_inicio`/`fecha_fin`, **`nivel_jerarquia_id`**, **`carga_por_dia_semana`**, validado contra el total (C4/C10).
+2. Selección de documentos **`gdt_*`** y de efectores en **`cfg_efectores`** (altas = flujos **módulo configuración** u operativos acordados).
+3. Alta de **`hlc_*`** con `grupo_de_trabajo_id` y **dos** ids de **`cfg_efectores`** (designación y cumplimiento), fechas, **`carga_horaria_total`** en **horas**, referencias normativas.
+3bis. Asociar **`hld_*`** (si el flujo lo usa) y, por **cada grupo de trabajo (burbuja)** al que aplica el agente: **`hlg_*`** con `grupo_de_trabajo_id`, `fecha_inicio`/`fecha_fin`, **`nivel_jerarquico` (1–99)**, **`carga_por_dia_semana`**, validado contra el total (C4/C10).
 4. **Varios cargos paralelos:** nuevas filas **sin** cerrar las anteriores salvo que el acto administrativo sea reemplazo explícito (regla de negocio en Callable).
 5. **Cierre** de un cargo: `fecha_hasta`, `causal_fin_asignacion_id`, `estado_asignacion_id` finalizada + cierre o baja lógica de `hlg_*` asociados + `evt_*`.
 
@@ -266,16 +270,16 @@ Igual que antes: tras Login/datos personales puede no existir `hlc_*` aún.
 
 ## 8. Matriz de ownership *(borrador)*
 
-Agente lee lo propio; RRHH escribe **`hlc_*`**, `hld_*`/`hlg_*` y participa en criterios de **`gdt_*`**; **alta/estructura** de `gdt_*` y `efe_*` según roles. Catálogos/árbol los mantienen **administración / configuración** (no mezclar con edición masiva de cargos salvo política explícita).
+Agente lee lo propio; RRHH escribe **`hlc_*`**, `hld_*`/`hlg_*` y participa en criterios de **`gdt_*`**; **alta/estructura** de `gdt_*` y del catálogo **`cfg_efectores`** según roles. Catálogos/árbol los mantienen **administración / configuración** (no mezclar con edición masiva de cargos salvo política explícita).
 
 ---
 
 ## 9. Contrato con **Ticket** / otra PC
 
 - **Misma filosofía:** IDs, `cfg_*`, estados por id, sin hardcoding.
-- **Jerarquía / jefe inmediato:** lógica de **burbujeo** y comparación de **nivel** usando **`hlg_*.nivel_jerarquia_id` → `cfg_nivel_jerarquia`**; doc Ticket en otra PC; no `supervisor` en `hlc_*`/`hlg_*`.
-- **Datos que Ticket puede leer:** `persona_id`, `hlc_*` vigentes, `hlg_*` (nivel y carga por burbuja), resolución vía joins de **`gdt_*`**, **`efe_*`**, `cfg_*` y campos de cargo/causal.
-- **Otra PC / Ticket ya avanzado:** al **fusionar**, alinear nombres a **`grupos_de_trabajo`**, **`efectores`**, `hlc_*` (**§4.1–4.3**).
+- **Jerarquía / jefe inmediato:** lógica de **burbujeo** y comparación de **nivel** numérica con **`hlg_*.nivel_jerarquico` (1–99)**; **no** hay `cfg_nivel_jerarquia`. Doc Ticket en otra PC; no `supervisor` en `hlc_*`/`hlg_*`.
+- **Datos que Ticket puede leer:** `persona_id`, `hlc_*` vigentes, `hlg_*` (nivel y carga por burbuja), resolución vía joins de **`gdt_*`**, **`cfg_efectores`**, resto de `cfg_*` y campos de cargo/causal.
+- **Otra PC / Ticket ya avanzado:** al **fusionar**, alinear nombres a **`grupos_de_trabajo`**, **`cfg_efectores`** (sustituye referencias a la colección legacy `efectores` donde aún existan), `hlc_*` (**§4.1–4.3**).
 - **Mañana:** unificar nombres de campos/colecciones y prerequisitos de avisos con el documento Ticket ya desarrollado.
 
 ---
@@ -285,28 +289,28 @@ Agente lee lo propio; RRHH escribe **`hlc_*`**, `hld_*`/`hlg_*` y participa en c
 | Tema | Acuerdo |
 |------|----------|
 | Varios cargos vigentes | Sí; misma `persona_id`, varios `hlc_*` activos; mismo u otro hospital/efector. |
-| Efectores | Dos FK por cargo a **`efectores` (`efe_*`)**: designación y cumplimiento. Marca **efector institucional** = **`es_efector_institucional`** en documentos de **`efectores`**. |
+| Efectores | Dos FK por cargo a **`cfg_efectores`**: designación y cumplimiento. Marca **efector institucional** = **`es_efector_institucional`** en el documento de catálogo. |
 | Activo laboralmente | Al menos un `hlc_*` activo y vigente. |
 | Fechas y causal | `fecha_desde` / `fecha_hasta`; si hay fin, **causal** seleccionable desde **configuración** (`cfg_*`). |
 | Carga horaria | **`carga_horaria_total`**: **horas** a nivel `hlc_*`. **Reparto** y desglose **día a día** por **burbuja** en `hlg_*` (**`carga_por_dia_semana`**, §4.5; **C10**). Suma semanal reconciliable con el total. |
-| Nivel en organigrama | **Por `grupo_de_trabajo` en `hlg_*`:** `nivel_jerarquia_id` → `cfg_nivel_jerarquia` (C10). **No** sustituye a la lógica de burbujeo de Ticket, pero alimenta comparaciones y visibilidad. |
+| Nivel en organigrama | **Por `grupo_de_trabajo` en `hlg_*`:** `nivel_jerarquico` entero **1–99** (C10). **No** es catálogo. **No** sustituye a la lógica de burbujeo de Ticket, pero alimenta comparaciones y visibilidad. |
 | Jefe inmediato | **No** en `hlc_*` ni `hlg_*` como FK a persona; resolución en **Ticket** / burbujeo. |
 | Referencias legales | Por cargo, asociadas a la designación con `fecha_desde` → array **`referencias_normativa_designacion`**. |
 | Nómina | **No** liquida la app; impactos de sueldo vía **artículos/licencias** y **configuración**. |
 | Firebase PIN | Por ahora **solo** política mínima PIN 6; revisar en la práctica ([`RULEBOOK_V2.md`](./RULEBOOK_V2.md), [`MODULO_LOGIN_V2.md`](./MODULO_LOGIN_V2.md)). |
 
-**Cerrado (acuerdo con producto):** unidad de **`carga_horaria_total`** = **horas**. **Pendiente opcional (RFC):** 1:1 entre un `efe_*` y un `gdt_*`.
+**Cerrado (acuerdo con producto):** unidad de **`carga_horaria_total`** = **horas**. **Pendiente opcional (RFC):** 1:1 entre un efector en **`cfg_efectores`** y un `gdt_*`.
 
 ---
 
 ## 11. Checklist — cierre futuro del “plan doc” laboral
 
-- [x] Criterios de §10 registrados (unidad carga horaria = horas; `efe_*` + `gdt_*`; pendiente opcional fusión `efe_*`–`gdt_*`).
+- [x] Criterios de §10 registrados (unidad carga horaria = horas; `cfg_efectores` + `gdt_*`; pendiente opcional fusión efector–`gdt_*`).
 - [ ] Matriz de acceso y Callables (ampliación [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./ACCESO_Y_RULES_FIRESTORE_V2.md)).
-- [ ] Semilla §6 + **`cfg_causal_fin_*`** / **`cfg_tipo_acto_designacion`** en script y `MODULO_CONFIGURACION_V2` §5.1.
+- [x] Semilla mínima §6 (jornada, estados, causales, tipo acto, tipo grupo) en `npm run seed:configuracion` + panel; §5.1 alinear inventario.
 - [ ] Unificación explícita con doc **Ticket** de la otra PC.
 - [ ] Índices Firestore en emulador.
-- [x] **§4.4–4.5** y **C10:** `hlg_*` con `nivel_jerarquia_id` y `carga_por_dia_semana` + catálogos `cfg_nivel_jerarquia`, `cfg_dia_semana` (seeds y Rulebook al codificar).
+- [x] **§4.4–4.5** y **C10:** `hlg_*` con `nivel_jerarquico` (1–99) y `carga_por_dia_semana` + catálogo `cfg_dia_semana` (seed); **sin** `cfg_nivel_jerarquia` (nivel = número en documento).
 - [ ] Validación Callable: suma semanal `hlg_*` vs `carga_horaria_total` y solapes de fechas.
 
 ---
@@ -323,5 +327,7 @@ Agente lee lo propio; RRHH escribe **`hlc_*`**, `hld_*`/`hlg_*` y participa en c
 | 2026-04-22 | §1 ítem 3: enlace a estados RRHH (**activo / inactivo laboral / deshabilitado**) en [`CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md`](./CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md). |
 | 2026-04-23 | Cabecera: deja de decir “Login+personales ya cerrado”; *también pend. revisión global*. |
 | 2026-04-23 | **Dominio A2** [`DECISIONES_REVISION_PERSONALES_LABORALES_V2.md`](./DECISIONES_REVISION_PERSONALES_LABORALES_V2.md): `grupos_de_trabajo` (`gdt_*`) y `efectores` (`efe_*`); `hlc_*` con `grupo_de_trabajo_id` + `efector_designacion_id` + `efector_cumplimiento_id`. §4 = 4.1–4.5; inventario y §7–10 actualizados. |
-| 2026-04-23 | **C10:** `hlg_*` con `nivel_jerarquia_id` (nivel **por** grupo de trabajo) y `carga_por_dia_semana` (horas **por** día, `cfg_dia_semana`); tablas **§4.4.0–4.4.1** y **§4.5**; `cfg` §6; §1, §2, §3, §7.2, §9–10; `hld_*` ajuste `nivel_jerarquico` vs `hlg`. |
+| 2026-04-27 | **Una sola fuente de verdad (panel/ABM):** catálogo de efectores canónico = **`cfg_efectores`**; `efector_*_id` → `cfg_efectores/{id}`. Colección legacy **`efectores`** **deprecada**; §4.2, §1, §3, §5–7 y §9–10 alineados; plan maestro y Rulebook actualizados en el mismo criterio. |
+| 2026-04-27 | **Nivel de jerarquía:** deja de documentarse `cfg_nivel_jerarquia` / `nivel_jerarquia_id`. **`hlg_*.nivel_jerarquico`** (y opc. **`hld_*.nivel_jerarquico`**) = **número 1–99**; seeds laborales avanzados (`cfg_modalidad_jornada`, `cfg_estado_asignacion_laboral`, `cfg_causal_fin_asignacion_laboral`, `cfg_tipo_acto_designacion`, `cfg_tipo_grupo`) en `seed:configuracion` + panel. |
+| 2026-04-23 | **C10:** `hlg_*` con `nivel_jerarquico` / jerarquía **por** grupo de trabajo (antes redactado con catálogo; hoy entero 1–99) y `carga_por_dia_semana` (horas **por** día, `cfg_dia_semana`); tablas **§4.4.0–4.4.1** y **§4.5**; `cfg` §6; §1, §2, §3, §7.2, §9–10; `hld_*` ajuste `nivel_jerarquico` vs `hlg`. |
 | 2026-04-23 | **§4.5.1–4.5.2:** reconciliación `S_hlg` / `carga_horaria_total` (ε, uno o N `hlg_*`); ejemplo JSON; unidad = horas por semana en el cargo (salvo RFC). |

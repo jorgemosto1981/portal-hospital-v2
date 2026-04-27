@@ -3,11 +3,11 @@
  * @see docs/v2/MODULO_CONFIGURACION_V2.md §6
  * @see docs/v2/DESARROLLO_ORDEN_LOGIN_DATOS_V2.md Fase 1
  *
- * Uso (Windows PowerShell, desde la raíz `portal-hospital-v2/`):
- *   $env:GOOGLE_APPLICATION_CREDENTIALS="C:\ruta\service-account-v2.json"
- *   $env:FIREBASE_V2_PROJECT_ID="portal-hospital-v2"   # opcional; por defecto el `project_id` del JSON
- *   $env:FIREBASE_V2_FIRESTORE_DATABASE_ID="mibase"    # SOLO si tenés otra base además de la default; NO pongas "default" ni "(default)"
+ * Uso (desde la raíz `portal-hospital-v2/`):
+ *   Colocá `GOOGLE_APPLICATION_CREDENTIALS` en `.env.v2.local` (carga automática vía `../load-env-v2.mjs`) o en el shell.
  *   npm run seed:cfg
+ *
+ * Opcionales: FIREBASE_V2_PROJECT_ID, FIREBASE_V2_FIRESTORE_DATABASE_ID (solo base con nombre propio, no "default")
  *
  * La base predefinida se usa con `getFirestore()` sin segundo parámetro (no forzar id "(default)" en el SDK).
  * NOT_FOUND: suele faltar la base en GCP. **Crearla una vez:** `npm run firestore:create` (gcloud) o consola; luego este seed.
@@ -15,6 +15,7 @@
  * La cuenta de servicio debe ser de GCP del proyecto V2, rol adecuado p.ej. Cloud Datastore User o Owner.
  */
 
+import "../load-env-v2.mjs";
 import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";

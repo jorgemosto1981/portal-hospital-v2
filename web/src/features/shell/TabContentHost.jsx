@@ -1,13 +1,17 @@
 import Card from "../../components/ui/Card.jsx";
+import Configuracion from "../../pages/Configuracion.jsx";
 import PortalHome from "../home/PortalHome.jsx";
 
 /**
- * Muestra la pantalla activa (Inicio, Trámites, Perfil) según la navegación principal
+ * Muestra la pantalla activa (Inicio, Configuración, Trámites, Mi perfil) según la navegación principal
  * (barra inferior en móvil; sidebar a partir de `md`).
  */
 export default function TabContentHost({ activeTab }) {
   if (activeTab === "inicio") {
     return <PortalHome />;
+  }
+  if (activeTab === "configuracion") {
+    return <Configuracion />;
   }
   if (activeTab === "tramites") {
     return (

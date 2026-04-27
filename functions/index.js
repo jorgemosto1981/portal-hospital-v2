@@ -54,12 +54,22 @@ function assertRrhh(request) {
 const CFG_COLECCIONES_RRHH = new Set([
   "cfg_estado_civil",
   "cfg_sexo_genero",
+  "cfg_nacionalidad",
+  "cfg_provincia",
+  "cfg_localidad",
+  "cfg_nivel_estudios",
+  "cfg_parentesco",
   "cfg_escalafon",
   "cfg_agrupamiento",
   "cfg_tipo_vinculo_laboral",
   "cfg_cargo_funcional",
   "grupos_de_trabajo",
-  "efectores",
+  "cfg_efectores",
+  "cfg_modalidad_jornada",
+  "cfg_estado_asignacion_laboral",
+  "cfg_causal_fin_asignacion_laboral",
+  "cfg_tipo_acto_designacion",
+  "cfg_tipo_grupo",
 ]);
 
 /**
@@ -614,6 +624,18 @@ exports.guardarOpcion = onCall(async (request) => {
 
   if (!exists) {
     payload.creado_en = FieldValue.serverTimestamp();
+  }
+
+  if (col === "cfg_localidad" && "provincia_id" in datos) {
+    const raw = datos.provincia_id;
+    if (raw == null || raw === "") {
+      payload.provincia_id = null;
+    } else {
+      if (typeof raw !== "string") {
+        throw new HttpsError("invalid-argument", "provincia_id debe ser texto o vacío.");
+      }
+      payload.provincia_id = normalizeCatalogDocId(raw);
+    }
   }
 
   await ref.set(payload, { merge: true });

@@ -28,6 +28,42 @@ export const SECCIONES_CATALOGO_RRHH = [
     ],
   },
   {
+    id: "datos_personales",
+    titulo: "Personales (ficha, domicilio, formación, grupo familiar)",
+    items: [
+      {
+        key: "nacionalidad",
+        etiqueta: "Nacionalidades",
+        collectionName: "cfg_nacionalidad",
+        idPrefix: "CFG_NAC_",
+      },
+      {
+        key: "provincia",
+        etiqueta: "Provincias",
+        collectionName: "cfg_provincia",
+        idPrefix: "CFG_PROV_",
+      },
+      {
+        key: "localidad",
+        etiqueta: "Localidades",
+        collectionName: "cfg_localidad",
+        idPrefix: "CFG_LOC_",
+      },
+      {
+        key: "nivel_estudios",
+        etiqueta: "Nivel de estudios",
+        collectionName: "cfg_nivel_estudios",
+        idPrefix: "CFG_EST_",
+      },
+      {
+        key: "parentesco",
+        etiqueta: "Parentesco (familiares)",
+        collectionName: "cfg_parentesco",
+        idPrefix: "CFG_PAR_",
+      },
+    ],
+  },
+  {
     id: "laboral",
     titulo: "Laboral",
     items: [
@@ -58,6 +94,42 @@ export const SECCIONES_CATALOGO_RRHH = [
     ],
   },
   {
+    id: "laboral_avanzado",
+    titulo: "Laboral avanzado",
+    items: [
+      {
+        key: "modalidad_jornada",
+        etiqueta: "Modalidad de jornada",
+        collectionName: "cfg_modalidad_jornada",
+        idPrefix: "CFG_MOD_",
+      },
+      {
+        key: "estado_asignacion_laboral",
+        etiqueta: "Estado de asignación laboral",
+        collectionName: "cfg_estado_asignacion_laboral",
+        idPrefix: "CFG_EST_LAB_",
+      },
+      {
+        key: "causal_fin_asignacion_laboral",
+        etiqueta: "Causal de fin de asignación",
+        collectionName: "cfg_causal_fin_asignacion_laboral",
+        idPrefix: "CFG_CAU_FIN_",
+      },
+      {
+        key: "tipo_acto_designacion",
+        etiqueta: "Tipo de acto de designación",
+        collectionName: "cfg_tipo_acto_designacion",
+        idPrefix: "CFG_ACT_",
+      },
+      {
+        key: "tipo_grupo",
+        etiqueta: "Tipo de grupo de trabajo",
+        collectionName: "cfg_tipo_grupo",
+        idPrefix: "CFG_TGR_",
+      },
+    ],
+  },
+  {
     id: "estructura",
     titulo: "Estructura",
     items: [
@@ -70,8 +142,8 @@ export const SECCIONES_CATALOGO_RRHH = [
       {
         key: "efector",
         etiqueta: "Efectores",
-        collectionName: "efectores",
-        idPrefix: "EFE_",
+        collectionName: "cfg_efectores",
+        idPrefix: "CFG_EFE_",
       },
     ],
   },

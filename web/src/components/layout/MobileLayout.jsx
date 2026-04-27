@@ -11,6 +11,8 @@ export default function MobileLayout({
   children,
   activeTab = DEFAULT_ACTIVE_TAB,
   onTabChange,
+  /** Solo desarrollo: aviso cuando `VITE_BYPASS_AUTH=true` y no hay sesión. */
+  devBypassAuth = false,
 }) {
   return (
     <div
@@ -27,6 +29,15 @@ export default function MobileLayout({
             id="app-main-scroll"
           >
             <AppBrandHeader />
+            {devBypassAuth && (
+              <p
+                className="shrink-0 border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-center text-[11px] leading-tight text-amber-950"
+                role="status"
+              >
+                Modo sin login — <span className="font-mono">VITE_BYPASS_AUTH</span>. No usar en
+                producción.
+              </p>
+            )}
             <div className="min-h-0 flex-1">{children}</div>
           </main>
           <BottomNavigationBar activeTab={activeTab} onTabChange={onTabChange} />

@@ -119,7 +119,7 @@ Catálogo detallado y semilla laboral: [`MODULO_DATOS_LABORALES_V2.md`](./MODULO
 
 | Colección `cfg_*` | Consumidor principal |
 |-------------------|-------------------------|
-| **`efectores`** | **`historial_laboral_cargos.efector_designacion_id`**, **`efector_cumplimiento_id`**; campo **`es_efector_institucional`**. Ver [`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md) §4.2. |
+| **`cfg_efectores`** | **`historial_laboral_cargos.efector_designacion_id`**, **`efector_cumplimiento_id`**; campo **`es_efector_institucional`**. (La antigua fila bajo el nombre de colección `efectores` se **reemplaza** por esta: una sola fuente de verdad y ABM. Ver [`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md) §4.2; plan maestro §B.) |
 | **`grupos_de_trabajo`** | `historial_laboral_cargos.grupo_de_trabajo_id`; `historial_laboral_grupos.grupo_de_trabajo_id`. Ver módulo laboral §4.1. |
 | `cfg_tipo_grupo` | `grupos_de_trabajo.tipo_grupo_id` (si aplica) |
 | `cfg_cargo_funcional` | `historial_laboral_cargos.cargo_funcional_id` |
@@ -175,6 +175,8 @@ Catálogo detallado y semilla laboral: [`MODULO_DATOS_LABORALES_V2.md`](./MODULO
 | 2026-04-22 | **§5.1** inventario `cfg_*` datos laborales (enlace a `MODULO_DATOS_LABORALES_V2` §6). |
 | 2026-04-23 | §5.1: **`cfg_causal_fin_asignacion_laboral`**, **`cfg_tipo_acto_designacion`**. |
 | 2026-04-23 | §5.1: **`efectores`** + **`grupos_de_trabajo`** (sustituye enfoque previo con una sola colección `grupos` para organigrama+efectores; alineado plan maestro §B y [`DECISIONES_REVISION_PERSONALES_LABORALES_V2.md`](./DECISIONES_REVISION_PERSONALES_LABORALES_V2.md) A2). |
+| 2026-04-27 | §5.1: inventario actualizado a **`cfg_efectores`** como catálogo canónico; **`efectores`** deprecada para V2. |
+| 2026-04-27 | Alineación con módulo laboral: **nivel de jerarquía** = **`hlg_*.nivel_jerarquico` (1–99)**, **no** `cfg_nivel_jerarquia`. Semillas `cfg_modalidad_jornada`, `cfg_estado_asignacion_laboral`, `cfg_causal_fin_asignacion_laboral`, `cfg_tipo_acto_designacion`, `cfg_tipo_grupo` vía `npm run seed:configuracion` + panel **Laboral avanzado**. |
 | 2026-04-22 | §1–§2: ids únicas para todo lo seleccionable desde configuración; **`vigente_desde` / `vigente_hasta`** en catálogos; política **sin borrado físico** (`activo` / vigencia). |
 | 2026-04-22 | §5: filas tentativas **`cfg_estado_vida_agente_rrhh`**, **`cfg_motivo_baja_laboral`** (personas / RRHH; ver cuestiones estados laboral). |
 | 2026-04-23 | Cabecera: *plan documentación cerrado* → **avanzado; pend. revisión** (alineado plan maestro). |
