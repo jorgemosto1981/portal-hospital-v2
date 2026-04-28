@@ -37,6 +37,27 @@ function takeFirst(items, max = 5) {
   return Array.isArray(items) ? items.slice(0, max) : [];
 }
 
+function emptyCargaDia() {
+  return { dia_semana_id: "", horas: "" };
+}
+
+function normalizeCargaRowsFromRecord(rawCarga) {
+  if (!Array.isArray(rawCarga)) return [emptyCargaDia()];
+  if (rawCarga.length === 0) return [emptyCargaDia()];
+  return rawCarga.map((item) => {
+    if (item && typeof item === "object" && !Array.isArray(item)) {
+      return {
+        dia_semana_id: String(item.dia_semana_id || ""),
+        horas: item.horas == null ? "" : String(item.horas),
+      };
+    }
+    return {
+      dia_semana_id: "",
+      horas: item == null ? "" : String(item),
+    };
+  });
+}
+
 function normalizarWarnings(raw) {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -62,6 +83,7 @@ const COLECCIONES_FORM = [
   "cfg_modalidad_jornada",
   "cfg_causal_fin_asignacion_laboral",
   "cfg_tipo_acto_designacion",
+  "cfg_dia_semana",
 ];
 
 const AYUDA_CAMPOS = {
@@ -86,7 +108,7 @@ const AYUDA_CAMPOS = {
   funcion_real_id: "Función real desempeñada.",
   nivel_jerarquico: "Nivel jerárquico numérico (1 a 99).",
   dato_laboral_id: "Referencia al registro HLd del que depende este subnivel.",
-  carga_por_dia_semana: "Carga distribuida por día (Lun..Dom) separada por coma. Ej: 6,6,6,6,6,0,0",
+  carga_por_dia_semana: "Carga distribuida por día (seleccionar dia_semana_id + horas por fila).",
 };
 
 function crearIndicePorId(rows) {
@@ -113,6 +135,7 @@ export default function DatosLaborales() {
   const [registroEditId, setRegistroEditId] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+  const [cargaPorDiaRows, setCargaPorDiaRows] = useState([emptyCargaDia()]);
   const [formData, setFormData] = useState({
     persona_id: "",
     grupo_de_trabajo_id: "",
@@ -200,6 +223,7 @@ export default function DatosLaborales() {
   const opcionesModalidadJornada = rowsByCollection.cfg_modalidad_jornada || [];
   const opcionesCausalFinAsignacion = rowsByCollection.cfg_causal_fin_asignacion_laboral || [];
   const opcionesTipoActo = rowsByCollection.cfg_tipo_acto_designacion || [];
+  const opcionesDiaSemana = rowsByCollection.cfg_dia_semana || [];
   const registrosPorTipo = rowsByCollection[tipoAlta] || [];
   const hldSinCargo = hldRows.filter((row) => !idxHlc.has(String(row.cargo_id || "")));
   const hlgSinDato = hlgRows.filter((row) => !idxHld.has(String(row.dato_laboral_id || "")));
@@ -244,9 +268,27 @@ export default function DatosLaborales() {
     setFormData((prev) => ({ ...prev, [key]: value }));
   }
 
+  function onChangeCargaRow(idx, key, value) {
+    setCargaPorDiaRows((prev) =>
+      prev.map((row, rowIdx) => (rowIdx === idx ? { ...row, [key]: value } : row)),
+    );
+  }
+
+  function onAddCargaRow() {
+    setCargaPorDiaRows((prev) => [...prev, emptyCargaDia()]);
+  }
+
+  function onRemoveCargaRow(idx) {
+    setCargaPorDiaRows((prev) => {
+      const next = prev.filter((_, rowIdx) => rowIdx !== idx);
+      return next.length > 0 ? next : [emptyCargaDia()];
+    });
+  }
+
   useEffect(() => {
     setModoEdicion(false);
     setRegistroEditId("");
+    setCargaPorDiaRows([emptyCargaDia()]);
   }, [tipoAlta]);
 
   function cargarRegistroEnFormulario(record) {
@@ -261,8 +303,22 @@ export default function DatosLaborales() {
       estado_asignacion_id: String(record.estado_asignacion_id || ""),
       carga_horaria_total:
         record.carga_horaria_total == null ? "" : String(record.carga_horaria_total),
-      fecha_desde: isoToDateInput(String(record.fecha_desde || "")),
-      fecha_hasta: isoToDateInput(String(record.fecha_hasta || "")),
+      fecha_desde: isoToDateInput(
+        String(
+          record.fecha_desde ||
+            record.fecha_inicio ||
+            (datoRef && datoRef.fecha_inicio) ||
+            "",
+        ),
+      ),
+      fecha_hasta: isoToDateInput(
+        String(
+          record.fecha_hasta ||
+            record.fecha_fin ||
+            (datoRef && datoRef.fecha_fin) ||
+            "",
+        ),
+      ),
       cargo_id: String(record.cargo_id || (datoRef && datoRef.cargo_id) || ""),
       cargo_funcional_id: String(record.cargo_funcional_id || ""),
       tipo_vinculo_id: String(record.tipo_vinculo_id || ""),
@@ -295,16 +351,17 @@ export default function DatosLaborales() {
           "",
       ),
       categoria_id: String(record.categoria_id || ""),
-      rol_id: String(record.rol_id || ""),
+      rol_id: String(record.rol_id || (datoRef && datoRef.rol_id) || ""),
       escalafon_id: String(record.escalafon_id || ""),
       agrupamiento_id: String(record.agrupamiento_id || ""),
-      funcion_real_id: String(record.funcion_real_id || ""),
+      funcion_real_id: String(record.funcion_real_id || (datoRef && datoRef.funcion_real_id) || ""),
       nivel_jerarquico: record.nivel_jerarquico == null ? "" : String(record.nivel_jerarquico),
       dato_laboral_id: String(record.dato_laboral_id || ""),
       carga_por_dia_semana: Array.isArray(record.carga_por_dia_semana)
         ? record.carga_por_dia_semana.join(",")
         : "",
     }));
+    setCargaPorDiaRows(normalizeCargaRowsFromRecord(record.carga_por_dia_semana));
   }
 
   function camposRequeridosSegunTipo() {
@@ -355,17 +412,24 @@ export default function DatosLaborales() {
         return "En HLc, referencia normativa requiere fecha.";
       }
     }
-    if (tipoAlta === "historial_laboral_grupos" && formData.carga_por_dia_semana) {
-      const vals = String(formData.carga_por_dia_semana)
-        .split(",")
-        .map((x) => x.trim())
-        .filter(Boolean);
-      if (vals.length !== 7) {
-        return "carga_por_dia_semana debe tener 7 valores (Lun..Dom).";
+    if (tipoAlta === "historial_laboral_grupos") {
+      const rowsValidas = cargaPorDiaRows
+        .map((row) => ({
+          dia_semana_id: String(row.dia_semana_id || "").trim(),
+          horas: String(row.horas || "").trim(),
+        }))
+        .filter((row) => row.dia_semana_id || row.horas);
+      if (rowsValidas.length === 0) {
+        return "Completá al menos una fila de carga_por_dia_semana (día + horas).";
       }
-      const invalido = vals.some((x) => !Number.isFinite(Number(x)) || Number(x) < 0 || Number(x) > 24);
-      if (invalido) {
-        return "Cada valor de carga_por_dia_semana debe estar entre 0 y 24.";
+      const seen = new Set();
+      for (const row of rowsValidas) {
+        if (!row.dia_semana_id) return "Cada fila de carga_por_dia_semana requiere dia_semana_id.";
+        if (seen.has(row.dia_semana_id)) return `dia_semana_id duplicado en carga_por_dia_semana: ${row.dia_semana_id}.`;
+        seen.add(row.dia_semana_id);
+        if (!Number.isFinite(Number(row.horas)) || Number(row.horas) < 0 || Number(row.horas) > 24) {
+          return `Horas inválidas para ${row.dia_semana_id}. Debe estar entre 0 y 24.`;
+        }
       }
     }
     return "";
@@ -431,6 +495,12 @@ export default function DatosLaborales() {
           dato_laboral_id: hld.id,
           grupo_de_trabajo_id: formData.grupo_de_trabajo_id,
           nivel_jerarquico: formData.nivel_jerarquico || null,
+          carga_por_dia_semana: cargaPorDiaRows
+            .map((row) => ({
+              dia_semana_id: String(row.dia_semana_id || "").trim() || null,
+              horas: row.horas === "" ? null : Number(row.horas),
+            }))
+            .filter((row) => row.dia_semana_id && Number.isFinite(row.horas)),
           fecha_inicio: formData.fecha_desde || null,
           fecha_fin: formData.fecha_hasta || null,
         };
@@ -865,6 +935,50 @@ export default function DatosLaborales() {
                     className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
                   />
                   <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.nivel_jerarquico}</p>
+                </div>
+                <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <label className="block text-sm font-medium text-slate-700">carga_por_dia_semana</label>
+                    <button
+                      type="button"
+                      onClick={onAddCargaRow}
+                      className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700"
+                    >
+                      Agregar día
+                    </button>
+                  </div>
+                  <p className="mb-2 text-xs text-slate-500">{AYUDA_CAMPOS.carga_por_dia_semana}</p>
+                  <div className="space-y-2">
+                    {cargaPorDiaRows.map((row, idx) => (
+                      <div key={`carga-dia-${idx}`} className="grid gap-2 md:grid-cols-[1fr_140px_auto]">
+                        <select
+                          value={row.dia_semana_id}
+                          onChange={(e) => onChangeCargaRow(idx, "dia_semana_id", e.target.value)}
+                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                        >
+                          <option value="">Seleccionar día...</option>
+                          {opcionesDiaSemana.map((x) => (
+                            <option key={x.id} value={x.id}>
+                              {x.nombre || x.id}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          value={row.horas}
+                          onChange={(e) => onChangeCargaRow(idx, "horas", e.target.value)}
+                          placeholder="Horas (0..24)"
+                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => onRemoveCargaRow(idx)}
+                          className="h-11 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-700"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

@@ -225,6 +225,11 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
         return n != null ? n : 0;
       })
     : [];
+  for (const item of carga) {
+    if (item && typeof item === "object" && !Array.isArray(item)) {
+      await assertDocExistsOrNull("cfg_dia_semana", toNullableTrimmedString(item.dia_semana_id), "carga_por_dia_semana.dia_semana_id");
+    }
+  }
   const payload = {
     id,
     persona_id: personaId,

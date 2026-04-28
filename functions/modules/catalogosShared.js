@@ -30,6 +30,7 @@ const COLECCIONES_PUBLICAS_TEMPORALES = new Set([
   "cfg_tipo_vinculo_laboral",
   "cfg_modalidad_jornada",
   "cfg_causal_fin_asignacion_laboral",
+  "cfg_dia_semana",
   "cfg_tipo_acto_designacion",
   "cfg_motivo_baja_persona",
   "cfg_especialidad",
