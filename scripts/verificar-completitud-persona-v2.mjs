@@ -84,6 +84,23 @@ function hasValue(v) {
   return true;
 }
 
+function toComparableDate(v, fallbackOpenEnd = false) {
+  if (!hasValue(v)) {
+    return fallbackOpenEnd ? new Date("9999-12-31T00:00:00.000Z") : null;
+  }
+  const d = new Date(String(v));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function rangosSolapados(aDesde, aHasta, bDesde, bHasta) {
+  const iniA = toComparableDate(aDesde, false);
+  const iniB = toComparableDate(bDesde, false);
+  if (!iniA || !iniB) return false;
+  const finA = toComparableDate(aHasta, true);
+  const finB = toComparableDate(bHasta, true);
+  return iniA <= finB && iniB <= finA;
+}
+
 const personaSnap = await db.collection("personas").doc(personaId).get();
 if (!personaSnap.exists) {
   console.error(JSON.stringify({ ok: false, persona_id: personaId, error: "Persona no encontrada." }, null, 2));
@@ -125,6 +142,81 @@ if (consSnap.empty) {
   addIssue("low", "No hay consentimientos cargados.");
 }
 
+const cuentaSnap = await db.collection("usuarios_cuenta").where("persona_id", "==", personaId).limit(1).get();
+if (!cuentaSnap.empty) {
+  const estadoAccesoId = cuentaSnap.docs[0].get("estado_acceso_id") || null;
+  if ((persona.estado_perfil_datos_id || null) === "cfg_epd_comp" && estadoAccesoId !== "cfg_eca_activo") {
+    addIssue("high", "Desincronización: perfil completo requiere cuenta de acceso activa.", {
+      estado_perfil_datos_id: persona.estado_perfil_datos_id || null,
+      estado_acceso_id: estadoAccesoId,
+    });
+  }
+}
+
+const hlcSnap = await db.collection("historial_laboral_cargos").where("persona_id", "==", personaId).get();
+const hldSnap = await db.collection("historial_laboral_datos").where("persona_id", "==", personaId).get();
+const hlgSnap = await db.collection("historial_laboral_grupos").where("persona_id", "==", personaId).get();
+
+const hlcById = new Map(hlcSnap.docs.map((doc) => [doc.id, doc.data() || {}]));
+const hldById = new Map(hldSnap.docs.map((doc) => [doc.id, doc.data() || {}]));
+
+for (const hldDoc of hldSnap.docs) {
+  const cargoId = hldDoc.get("cargo_id") || null;
+  if (!cargoId || !hlcById.has(cargoId)) {
+    addIssue("high", "Cadena laboral incompleta: HLd referencia cargo inexistente o de otra persona.", {
+      hld_id: hldDoc.id,
+      cargo_id: cargoId,
+    });
+    continue;
+  }
+  const personaCargo = hlcById.get(cargoId)?.persona_id || null;
+  if (personaCargo !== personaId) {
+    addIssue("high", "Inconsistencia persona_id entre HLd y HLc.", {
+      hld_id: hldDoc.id,
+      cargo_id: cargoId,
+      persona_hld: personaId,
+      persona_hlc: personaCargo,
+    });
+  }
+}
+
+for (const hlgDoc of hlgSnap.docs) {
+  const datoLaboralId = hlgDoc.get("dato_laboral_id") || null;
+  if (!datoLaboralId || !hldById.has(datoLaboralId)) {
+    addIssue("high", "Cadena laboral incompleta: HLg referencia HLd inexistente o de otra persona.", {
+      hlg_id: hlgDoc.id,
+      dato_laboral_id: datoLaboralId,
+    });
+  }
+}
+
+for (let i = 0; i < hlcSnap.docs.length; i += 1) {
+  for (let j = i + 1; j < hlcSnap.docs.length; j += 1) {
+    const a = hlcSnap.docs[i];
+    const b = hlcSnap.docs[j];
+    if (rangosSolapados(a.get("fecha_desde"), a.get("fecha_hasta"), b.get("fecha_desde"), b.get("fecha_hasta"))) {
+      addIssue("medium", "Posible solape de vigencia entre cargos HLc.", {
+        hlc_a: a.id,
+        hlc_b: b.id,
+      });
+    }
+  }
+}
+
+const gfVersiones = new Set();
+for (const doc of gfSnap.docs) {
+  const version = Number(doc.get("declaracion_version"));
+  if (Number.isFinite(version) && version > 0) {
+    if (gfVersiones.has(version)) {
+      addIssue("high", "Duplicado de declaracion_version en DDJJ familiar.", {
+        declaracion_version: version,
+        doc_id: doc.id,
+      });
+    }
+    gfVersiones.add(version);
+  }
+}
+
 const resumen = {
   persona_id: personaId,
   estado_perfil_datos_id: persona.estado_perfil_datos_id || null,
@@ -132,6 +224,9 @@ const resumen = {
     formacion_agente: formSnap.size,
     declaraciones_grupo_familiar: gfSnap.size,
     consentimientos: consSnap.size,
+    historial_laboral_cargos: hlcSnap.size,
+    historial_laboral_datos: hldSnap.size,
+    historial_laboral_grupos: hlgSnap.size,
   },
   issues,
   ok: issues.filter((x) => x.level === "high").length === 0,

@@ -44,6 +44,12 @@ export const SECCIONES_CATALOGO_RRHH = [
         idPrefix: "CFG_PROV_",
       },
       {
+        key: "pais",
+        etiqueta: "Países",
+        collectionName: "cfg_pais",
+        idPrefix: "CFG_PAIS_",
+      },
+      {
         key: "localidad",
         etiqueta: "Localidades",
         collectionName: "cfg_localidad",
@@ -56,6 +62,24 @@ export const SECCIONES_CATALOGO_RRHH = [
         idPrefix: "CFG_EST_",
       },
       {
+        key: "especialidad",
+        etiqueta: "Especialidades",
+        collectionName: "cfg_especialidad",
+        idPrefix: "CFG_ESP_",
+      },
+      {
+        key: "colegio",
+        etiqueta: "Colegios",
+        collectionName: "cfg_colegio",
+        idPrefix: "CFG_COL_",
+      },
+      {
+        key: "jurisdiccion_matricula",
+        etiqueta: "Jurisdicciones de matrícula",
+        collectionName: "cfg_jurisdiccion_matricula",
+        idPrefix: "CFG_JUR_",
+      },
+      {
         key: "parentesco",
         etiqueta: "Parentesco (familiares)",
         collectionName: "cfg_parentesco",
@@ -66,6 +90,12 @@ export const SECCIONES_CATALOGO_RRHH = [
         etiqueta: "Estado de perfil de datos",
         collectionName: "cfg_estado_perfil_datos",
         idPrefix: "CFG_EPD_",
+      },
+      {
+        key: "motivo_baja_persona",
+        etiqueta: "Motivos de baja de persona",
+        collectionName: "cfg_motivo_baja_persona",
+        idPrefix: "CFG_MOT_BAJA_",
       },
     ],
   },

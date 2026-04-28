@@ -37,6 +37,19 @@ function takeFirst(items, max = 5) {
   return Array.isArray(items) ? items.slice(0, max) : [];
 }
 
+function normalizarWarnings(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((w) => {
+      if (!w || typeof w !== "object") return null;
+      const code = typeof w.code === "string" ? w.code.trim() : "";
+      const message = typeof w.message === "string" ? w.message.trim() : "";
+      if (!code && !message) return null;
+      return { code, message };
+    })
+    .filter(Boolean);
+}
+
 const COLECCIONES_FORM = [
   "personas",
   "cfg_estado_asignacion_laboral",
@@ -45,6 +58,10 @@ const COLECCIONES_FORM = [
   "cfg_categorias",
   "cfg_rol",
   "cfg_cargo_funcional",
+  "cfg_tipo_vinculo_laboral",
+  "cfg_modalidad_jornada",
+  "cfg_causal_fin_asignacion_laboral",
+  "cfg_tipo_acto_designacion",
 ];
 
 const AYUDA_CAMPOS = {
@@ -54,6 +71,10 @@ const AYUDA_CAMPOS = {
   efector_cumplimiento_id: "Efector donde cumple funciones efectivamente.",
   estado_asignacion_id: "Estado administrativo actual de la asignación.",
   cargo_funcional_id: "Cargo funcional del puesto (desde catálogo).",
+  tipo_vinculo_id: "Tipo de vínculo laboral del cargo según normativa.",
+  modalidad_jornada_id: "Modalidad de jornada aplicable al cargo.",
+  causal_fin_asignacion_id: "Motivo de finalización; obligatorio cuando se informa fecha_hasta.",
+  referencias_normativa_designacion: "Referencia legal del acto de designación del cargo.",
   categoria_id: "Categoría laboral del cargo (desde catálogo).",
   carga_horaria_total: "Carga horaria total del cargo (en horas).",
   fecha_desde: "Fecha de inicio de vigencia del registro.",
@@ -103,6 +124,13 @@ export default function DatosLaborales() {
     fecha_hasta: "",
     cargo_id: "",
     cargo_funcional_id: "",
+    tipo_vinculo_id: "",
+    modalidad_jornada_id: "",
+    causal_fin_asignacion_id: "",
+    referencia_tipo_acto_id: "",
+    referencia_numero: "",
+    referencia_fecha: "",
+    referencia_detalle: "",
     categoria_id: "",
     rol_id: "",
     escalafon_id: "",
@@ -168,6 +196,10 @@ export default function DatosLaborales() {
   const opcionesRol = rowsByCollection.cfg_rol || [];
   const opcionesCategorias = rowsByCollection.cfg_categorias || [];
   const opcionesFuncion = rowsByCollection.cfg_cargo_funcional || [];
+  const opcionesTipoVinculo = rowsByCollection.cfg_tipo_vinculo_laboral || [];
+  const opcionesModalidadJornada = rowsByCollection.cfg_modalidad_jornada || [];
+  const opcionesCausalFinAsignacion = rowsByCollection.cfg_causal_fin_asignacion_laboral || [];
+  const opcionesTipoActo = rowsByCollection.cfg_tipo_acto_designacion || [];
   const registrosPorTipo = rowsByCollection[tipoAlta] || [];
   const hldSinCargo = hldRows.filter((row) => !idxHlc.has(String(row.cargo_id || "")));
   const hlgSinDato = hlgRows.filter((row) => !idxHld.has(String(row.dato_laboral_id || "")));
@@ -186,6 +218,27 @@ export default function DatosLaborales() {
     hlcConGrupoInvalido.length +
     hlcConEfectorDesignacionInvalido.length +
     hlcConEfectorCumplimientoInvalido.length;
+  const hldByCargo = new Map();
+  hldRows.forEach((row) => {
+    const cargoId = String(row.cargo_id || "");
+    if (!cargoId) return;
+    const list = hldByCargo.get(cargoId) || [];
+    list.push(String(row.id));
+    hldByCargo.set(cargoId, list);
+  });
+  const hlgByHld = new Map();
+  hlgRows.forEach((row) => {
+    const hldId = String(row.dato_laboral_id || "");
+    if (!hldId) return;
+    hlgByHld.set(hldId, true);
+  });
+  const hlcActivosSinGrupo = hlcRows.filter((row) => {
+    const activo = row.activo !== false && !row.fecha_hasta;
+    if (!activo) return false;
+    const hldIds = hldByCargo.get(String(row.id || "")) || [];
+    if (hldIds.length === 0) return true;
+    return !hldIds.some((id) => hlgByHld.get(id));
+  });
 
   function onChangeField(key, value) {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -212,6 +265,35 @@ export default function DatosLaborales() {
       fecha_hasta: isoToDateInput(String(record.fecha_hasta || "")),
       cargo_id: String(record.cargo_id || (datoRef && datoRef.cargo_id) || ""),
       cargo_funcional_id: String(record.cargo_funcional_id || ""),
+      tipo_vinculo_id: String(record.tipo_vinculo_id || ""),
+      modalidad_jornada_id: String(record.modalidad_jornada_id || ""),
+      causal_fin_asignacion_id: String(record.causal_fin_asignacion_id || ""),
+      referencia_tipo_acto_id: String(
+        (Array.isArray(record.referencias_normativa_designacion) &&
+          record.referencias_normativa_designacion[0] &&
+          record.referencias_normativa_designacion[0].tipo_acto_id) ||
+          "",
+      ),
+      referencia_numero: String(
+        (Array.isArray(record.referencias_normativa_designacion) &&
+          record.referencias_normativa_designacion[0] &&
+          record.referencias_normativa_designacion[0].numero) ||
+          "",
+      ),
+      referencia_fecha: isoToDateInput(
+        String(
+          (Array.isArray(record.referencias_normativa_designacion) &&
+            record.referencias_normativa_designacion[0] &&
+            record.referencias_normativa_designacion[0].fecha) ||
+            "",
+        ),
+      ),
+      referencia_detalle: String(
+        (Array.isArray(record.referencias_normativa_designacion) &&
+          record.referencias_normativa_designacion[0] &&
+          record.referencias_normativa_designacion[0].detalle) ||
+          "",
+      ),
       categoria_id: String(record.categoria_id || ""),
       rol_id: String(record.rol_id || ""),
       escalafon_id: String(record.escalafon_id || ""),
@@ -255,6 +337,24 @@ export default function DatosLaborales() {
     if (formData.fecha_desde && formData.fecha_hasta && formData.fecha_desde > formData.fecha_hasta) {
       return "fecha_hasta no puede ser menor que fecha_desde.";
     }
+    if (
+      tipoAlta === "historial_laboral_cargos" &&
+      formData.fecha_hasta &&
+      !String(formData.causal_fin_asignacion_id || "").trim()
+    ) {
+      return "Si informás fecha_hasta en HLc, causal_fin_asignacion_id es obligatorio.";
+    }
+    if (tipoAlta === "historial_laboral_cargos") {
+      if (!String(formData.referencia_tipo_acto_id || "").trim()) {
+        return "En HLc, referencia normativa requiere tipo_acto_id.";
+      }
+      if (!String(formData.referencia_numero || "").trim()) {
+        return "En HLc, referencia normativa requiere número.";
+      }
+      if (!String(formData.referencia_fecha || "").trim()) {
+        return "En HLc, referencia normativa requiere fecha.";
+      }
+    }
     if (tipoAlta === "historial_laboral_grupos" && formData.carga_por_dia_semana) {
       const vals = String(formData.carga_por_dia_semana)
         .split(",")
@@ -282,6 +382,7 @@ export default function DatosLaborales() {
     setSaving(true);
     try {
       let r;
+      let warnings = [];
       if (tipoAlta === "historial_laboral_cargos") {
         const payload = {
           persona_id: formData.persona_id,
@@ -291,6 +392,17 @@ export default function DatosLaborales() {
           escalafon_id: formData.escalafon_id || null,
           agrupamiento_id: formData.agrupamiento_id || null,
           cargo_funcional_id: formData.cargo_funcional_id || null,
+          tipo_vinculo_id: formData.tipo_vinculo_id || null,
+          modalidad_jornada_id: formData.modalidad_jornada_id || null,
+          causal_fin_asignacion_id: formData.causal_fin_asignacion_id || null,
+          referencias_normativa_designacion: [
+            {
+              tipo_acto_id: formData.referencia_tipo_acto_id || null,
+              numero: formData.referencia_numero || null,
+              fecha: formData.referencia_fecha || null,
+              detalle: formData.referencia_detalle || null,
+            },
+          ],
           categoria_id: formData.categoria_id || null,
           carga_horaria_total: formData.carga_horaria_total || null,
           fecha_desde: formData.fecha_desde || null,
@@ -298,6 +410,7 @@ export default function DatosLaborales() {
         };
         if (modoEdicion && registroEditId) payload.id = registroEditId;
         r = await guardarRegistroLaboral("historial_laboral_cargos", payload);
+        warnings = normalizarWarnings(r && r.warnings);
       } else {
         const payloadHld = {
           persona_id: formData.persona_id,
@@ -312,6 +425,7 @@ export default function DatosLaborales() {
           payloadHld.id = formData.dato_laboral_id;
         }
         const hld = await guardarRegistroLaboral("historial_laboral_datos", payloadHld);
+        warnings = warnings.concat(normalizarWarnings(hld && hld.warnings));
         const payloadHlg = {
           persona_id: formData.persona_id,
           dato_laboral_id: hld.id,
@@ -322,8 +436,17 @@ export default function DatosLaborales() {
         };
         if (modoEdicion && registroEditId) payloadHlg.id = registroEditId;
         r = await guardarRegistroLaboral("historial_laboral_grupos", payloadHlg);
+        warnings = warnings.concat(normalizarWarnings(r && r.warnings));
       }
-      setSaveMsg(`Registro guardado correctamente: ${r.id || "(sin id)"}`);
+      const baseOk = `Registro guardado correctamente: ${r.id || "(sin id)"}`;
+      if (warnings.length === 0) {
+        setSaveMsg(baseOk);
+      } else {
+        const detalleWarnings = warnings
+          .map((w) => (w.code ? `${w.code}: ${w.message}` : w.message))
+          .join(" | ");
+        setSaveMsg(`${baseOk} | Advertencias: ${detalleWarnings}`);
+      }
       await cargarTodo();
     } catch (err) {
       setSaveMsg(err instanceof Error ? err.message : "No se pudo guardar el registro.");
@@ -558,6 +681,22 @@ export default function DatosLaborales() {
                   <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.agrupamiento_id}</p>
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-slate-700">tipo_vinculo_id</label>
+                  <select
+                    value={formData.tipo_vinculo_id}
+                    onChange={(e) => onChangeField("tipo_vinculo_id", e.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                  >
+                    <option value="">Seleccionar tipo de vínculo...</option>
+                    {opcionesTipoVinculo.map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.nombre || x.id}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.tipo_vinculo_id}</p>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-slate-700">categoria_id</label>
                   <select
                     value={formData.categoria_id}
@@ -588,6 +727,71 @@ export default function DatosLaborales() {
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.cargo_funcional_id}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">modalidad_jornada_id</label>
+                  <select
+                    value={formData.modalidad_jornada_id}
+                    onChange={(e) => onChangeField("modalidad_jornada_id", e.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                  >
+                    <option value="">Seleccionar modalidad...</option>
+                    {opcionesModalidadJornada.map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.nombre || x.id}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.modalidad_jornada_id}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    referencia normativa · tipo_acto_id *
+                  </label>
+                  <select
+                    value={formData.referencia_tipo_acto_id}
+                    onChange={(e) => onChangeField("referencia_tipo_acto_id", e.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                  >
+                    <option value="">Seleccionar tipo de acto...</option>
+                    {opcionesTipoActo.map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.nombre || x.id}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.referencias_normativa_designacion}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    referencia normativa · número *
+                  </label>
+                  <input
+                    value={formData.referencia_numero}
+                    onChange={(e) => onChangeField("referencia_numero", e.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    referencia normativa · fecha *
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.referencia_fecha}
+                    onChange={(e) => onChangeField("referencia_fecha", e.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    referencia normativa · detalle
+                  </label>
+                  <input
+                    value={formData.referencia_detalle}
+                    onChange={(e) => onChangeField("referencia_detalle", e.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700">carga_horaria_total</label>
@@ -694,13 +898,33 @@ export default function DatosLaborales() {
                 />
                 <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.fecha_hasta}</p>
               </div>
+              {tipoAlta === "historial_laboral_cargos" && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">causal_fin_asignacion_id</label>
+                  <select
+                    value={formData.causal_fin_asignacion_id}
+                    onChange={(e) => onChangeField("causal_fin_asignacion_id", e.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                  >
+                    <option value="">Seleccionar causal...</option>
+                    {opcionesCausalFinAsignacion.map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.nombre || x.id}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.causal_fin_asignacion_id}</p>
+                </div>
+              )}
             </div>
 
             {saveMsg && (
               <p
                 className={`rounded-lg px-3 py-2 text-sm ${
                   saveMsg.startsWith("Registro guardado")
-                    ? "bg-emerald-50 text-emerald-700"
+                    ? saveMsg.includes("Advertencias:")
+                      ? "bg-amber-50 text-amber-800"
+                      : "bg-emerald-50 text-emerald-700"
                     : "bg-rose-50 text-rose-700"
                 }`}
               >
@@ -746,6 +970,18 @@ export default function DatosLaborales() {
               {takeFirst(hldSinCargo).map((row) => (
                 <p key={row.id} className="mt-1 font-mono text-xs text-slate-600">
                   {row.id} {"->"} cargo_id: {formatValue(row.cargo_id)}
+                </p>
+              ))}
+            </div>
+
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                HLc activos sin grupo asignado (advertencia)
+              </p>
+              <p className="mt-1 text-xl font-semibold text-amber-800">{hlcActivosSinGrupo.length}</p>
+              {takeFirst(hlcActivosSinGrupo).map((row) => (
+                <p key={row.id} className="mt-1 font-mono text-xs text-amber-700">
+                  {row.id} {"->"} persona_id: {formatValue(row.persona_id)}
                 </p>
               ))}
             </div>

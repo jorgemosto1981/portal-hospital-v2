@@ -16,6 +16,31 @@ import {
 } from "../configuracionFormatters.js";
 import runtimeFlags from "../../../../../shared/runtimeFlags.json";
 
+const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const RX_GDT_ID_V2 = /^gdt_[0-9A-HJKMNP-TV-Z]{26}$/;
+
+function encodeBase32(num, len) {
+  let n = num;
+  let out = "";
+  for (let i = 0; i < len; i += 1) {
+    out = CROCKFORD[n % 32] + out;
+    n = Math.floor(n / 32);
+  }
+  return out;
+}
+
+function randomBase32(len) {
+  const bytes = new Uint8Array(len);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (let i = 0; i < len; i += 1) out += CROCKFORD[bytes[i] % 32];
+  return out;
+}
+
+function generateGdtIdV2() {
+  return `gdt_${encodeBase32(Date.now(), 10)}${randomBase32(16)}`;
+}
+
 export function useConfiguracionCatalogos() {
   const openAccessTemp = runtimeFlags.OPEN_ACCESS_TEMP === true;
   const [user, setUser] = useState(null);
@@ -119,7 +144,7 @@ export function useConfiguracionCatalogos() {
   function abrirAgregar() {
     idManualRef.current = false;
     setAddNombre("");
-    setAddId(isGrupoTrabajo ? itemActual.idPrefix : itemActual.idPrefix.toUpperCase());
+    setAddId(isGrupoTrabajo ? generateGdtIdV2() : itemActual.idPrefix.toUpperCase());
     if (isLocalidad) {
       setAddProvinciaId(provincias[0]?.id ? String(provincias[0].id) : "");
     } else {
@@ -142,7 +167,7 @@ export function useConfiguracionCatalogos() {
     setAddNombre(v);
     if (!idManualRef.current) {
       if (isGrupoTrabajo) {
-        setAddId(itemActual.idPrefix);
+        setAddId((prev) => (RX_GDT_ID_V2.test(prev) ? prev : generateGdtIdV2()));
         return;
       }
       if (!v.trim()) setAddId(itemActual.idPrefix.toUpperCase());
@@ -160,6 +185,9 @@ export function useConfiguracionCatalogos() {
     const id = isGrupoTrabajo ? addId.trim() : addId.trim().toUpperCase();
     const nombre = addNombre.trim();
     if (!id || !nombre) return toast.error("Completá id y nombre.");
+    if (isGrupoTrabajo && !RX_GDT_ID_V2.test(id)) {
+      return toast.error("ID inválido. Para grupos_de_trabajo usar gdt_<ULID>.");
+    }
     if (isLocalidad && !addProvinciaId.trim()) {
       return toast.error("Elegí la provincia de la localidad.");
     }

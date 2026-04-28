@@ -16,39 +16,63 @@ const COLECCIONES_CFG = [
   "cfg_nacionalidad",
   "cfg_sexo_genero",
   "cfg_provincia",
+  "cfg_pais",
   "cfg_localidad",
   "cfg_nivel_estudios",
   "cfg_parentesco",
+  "cfg_motivo_baja_persona",
   "cfg_estado_declaracion_ddjj",
   "cfg_tipo_consentimiento",
   "cfg_textos_legales",
   "cfg_idioma",
+  "cfg_especialidad",
+  "cfg_colegio",
+  "cfg_jurisdiccion_matricula",
 ];
 
 const HELP = {
   dni: "Documento del agente (solo números).",
   nombre: "Nombre legal del agente.",
   apellido: "Apellido legal del agente.",
+  cuil: "CUIL del agente (si está disponible).",
+  fecha_nacimiento: "Fecha de nacimiento declarada en ficha personal.",
+  nombre_completo_legal: "Se completa automáticamente uniendo nombre y apellido.",
+  lugar_nacimiento_id: "Lugar de nacimiento desde catálogo de localidades (opcional).",
+  lugar_nacimiento_texto: "Lugar de nacimiento en texto libre (opcional).",
+  activo: "Estado operativo de la persona en el padrón RRHH.",
+  motivo_baja_id: "Motivo de baja cuando activo=false (catálogo).",
   sexo_genero_id: "Identidad de género del catálogo oficial.",
   estado_civil_id: "Estado civil vigente del catálogo.",
   nacionalidad_id: "Nacionalidad según catálogo.",
   telefono_celular: "Teléfono principal para contacto operativo.",
   email_personal: "Correo personal de contacto (no reemplaza cuenta de acceso).",
+  telefono_fijo: "Teléfono fijo de contacto (opcional).",
+  recibe_notificaciones_sms: "Indica si habilita notificaciones por WhatsApp.",
   calle: "Calle del domicilio.",
   numero: "Altura / número del domicilio.",
+  piso: "Piso del domicilio (opcional).",
+  departamento: "Departamento del domicilio (opcional).",
   provincia_id: "Provincia del domicilio.",
+  pais_id: "País del domicilio.",
   localidad_id: "Localidad del domicilio (coherente con provincia).",
   codigo_postal: "Código postal del domicilio.",
+  referencia: "Referencia para ubicar el domicilio.",
   persona_id: "Identificador per_* del titular.",
   nivel_estudios_id: "Nivel de estudios desde catálogo.",
   titulo_completo: "Título alcanzado.",
   duracion_anios: "Duración total de la carrera/formación.",
   institucion: "Institución donde cursó o egresó.",
+  especialidad_id: "Especialidad del agente desde catálogo.",
+  colegio_id: "Colegio profesional desde catálogo.",
+  matricula_jurisdiccion_id: "Jurisdicción de matrícula desde catálogo.",
+  matricula_numero: "Número de matrícula profesional (texto o número según emisor).",
   estado_declaracion_id:
     "Estado DDJJ fijado en este módulo para alta operativa (presentada).",
   tipo_consentimiento_id: "Tipo de consentimiento desde catálogo.",
   version_id: "Versión de texto legal (catálogo de textos legales).",
   idioma_id: "Idioma del consentimiento (catálogo).",
+  texto_hash: "Hash técnico generado automáticamente desde cfg_textos_legales.",
+  foto_archivo: "Foto de rostro (seleccionable desde carpeta o cámara del dispositivo).",
   declaracion_version: "Versión del trámite DDJJ (número).",
   declaracion_jurada_aceptada: "Indica si el titular marcó aceptación de la DDJJ.",
   aceptada_en: "Fecha/hora de aceptación (si aplica).",
@@ -77,6 +101,19 @@ function toOpts(rows) {
   return (rows || []).map((r) => ({ value: String(r.id), label: String(r.nombre || r.id) }));
 }
 
+function normalizarWarnings(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((w) => {
+      if (!w || typeof w !== "object") return null;
+      const code = typeof w.code === "string" ? w.code.trim() : "";
+      const message = typeof w.message === "string" ? w.message.trim() : "";
+      if (!code && !message) return null;
+      return { code, message };
+    })
+    .filter(Boolean);
+}
+
 export default function DatosPersonales() {
   const [tipo, setTipo] = useState("personas");
   const [modoEdicion, setModoEdicion] = useState(false);
@@ -89,21 +126,40 @@ export default function DatosPersonales() {
     dni: "",
     nombre: "",
     apellido: "",
+    nombre_completo_legal: "",
+    cuil: "",
+    fecha_nacimiento: "",
+    lugar_nacimiento_id: "",
+    lugar_nacimiento_texto: "",
+    activo: true,
+    motivo_baja_id: "",
     sexo_genero_id: "",
     estado_civil_id: "",
     nacionalidad_id: "",
     telefono_celular: "",
+    telefono_fijo: "",
+    recibe_notificaciones_sms: false,
     email_personal: "",
     calle: "",
     numero: "",
+    piso: "",
+    departamento: "",
     provincia_id: "",
+    pais_id: "",
     localidad_id: "",
     codigo_postal: "",
+    referencia: "",
+    foto_file: null,
+    foto_file_name: "",
     persona_id: "",
     nivel_estudios_id: "",
     titulo_completo: "",
     duracion_anios: "",
     institucion: "",
+    matricula_numero: "",
+    especialidad_id: "",
+    colegio_id: "",
+    matricula_jurisdiccion_id: "",
     estado_declaracion_id: "",
     declaracion_version: "1",
     tipo_consentimiento_id: "",
@@ -146,6 +202,7 @@ export default function DatosPersonales() {
   const optsCivil = useMemo(() => toOpts(rowsByCol.cfg_estado_civil), [rowsByCol.cfg_estado_civil]);
   const optsNac = useMemo(() => toOpts(rowsByCol.cfg_nacionalidad), [rowsByCol.cfg_nacionalidad]);
   const optsProv = useMemo(() => toOpts(rowsByCol.cfg_provincia), [rowsByCol.cfg_provincia]);
+  const optsPais = useMemo(() => toOpts(rowsByCol.cfg_pais), [rowsByCol.cfg_pais]);
   const optsLoc = useMemo(() => toOpts(rowsByCol.cfg_localidad), [rowsByCol.cfg_localidad]);
   const optsNivel = useMemo(() => toOpts(rowsByCol.cfg_nivel_estudios), [rowsByCol.cfg_nivel_estudios]);
   const optsTipoConsent = useMemo(
@@ -158,6 +215,19 @@ export default function DatosPersonales() {
   );
   const optsIdioma = useMemo(() => toOpts(rowsByCol.cfg_idioma), [rowsByCol.cfg_idioma]);
   const optsParentesco = useMemo(() => toOpts(rowsByCol.cfg_parentesco), [rowsByCol.cfg_parentesco]);
+  const optsMotivoBaja = useMemo(
+    () => toOpts(rowsByCol.cfg_motivo_baja_persona),
+    [rowsByCol.cfg_motivo_baja_persona],
+  );
+  const optsEspecialidad = useMemo(
+    () => toOpts(rowsByCol.cfg_especialidad),
+    [rowsByCol.cfg_especialidad],
+  );
+  const optsColegio = useMemo(() => toOpts(rowsByCol.cfg_colegio), [rowsByCol.cfg_colegio]);
+  const optsJurisdiccionMatricula = useMemo(
+    () => toOpts(rowsByCol.cfg_jurisdiccion_matricula),
+    [rowsByCol.cfg_jurisdiccion_matricula],
+  );
   const nextDeclaracionVersion = useMemo(() => {
     if (tipo !== "declaraciones_grupo_familiar" || !form.persona_id) return "1";
     const rows = rowsByCol.declaraciones_grupo_familiar || [];
@@ -180,6 +250,11 @@ export default function DatosPersonales() {
   function setField(key, value) {
     setForm((p) => {
       const next = { ...p, [key]: value };
+      if (key === "nombre" || key === "apellido") {
+        const nombre = String(key === "nombre" ? value : next.nombre || "").trim();
+        const apellido = String(key === "apellido" ? value : next.apellido || "").trim();
+        next.nombre_completo_legal = [nombre, apellido].filter(Boolean).join(" ") || "";
+      }
       if (key === "persona_id" && tipo === "declaraciones_grupo_familiar" && !modoEdicion) {
         next.declaracion_version = "1";
       }
@@ -194,21 +269,44 @@ export default function DatosPersonales() {
       dni: String(r.dni || ""),
       nombre: String(r.nombre || ""),
       apellido: String(r.apellido || ""),
+      nombre_completo_legal: [String(r.nombre || "").trim(), String(r.apellido || "").trim()]
+        .filter(Boolean)
+        .join(" "),
+      cuil: String(r.cuil || ""),
+      fecha_nacimiento: String(r.fecha_nacimiento || ""),
+      lugar_nacimiento_id: String(r.lugar_nacimiento_id || ""),
+      lugar_nacimiento_texto: String(r.lugar_nacimiento_texto || ""),
+      activo: r.activo !== false,
+      motivo_baja_id: String(r.motivo_baja_id || ""),
       sexo_genero_id: String(r.sexo_genero_id || ""),
       estado_civil_id: String(r.estado_civil_id || ""),
       nacionalidad_id: String(r.nacionalidad_id || ""),
       telefono_celular: String((r.contacto && r.contacto.telefono_celular) || ""),
+      telefono_fijo: String((r.contacto && r.contacto.telefono_fijo) || ""),
+      recibe_notificaciones_sms: r.contacto && r.contacto.recibe_notificaciones_sms === true,
       email_personal: String((r.contacto && r.contacto.email_personal) || ""),
       calle: String((r.domicilio && r.domicilio.calle) || ""),
       numero: String((r.domicilio && r.domicilio.numero) || ""),
+      piso: String((r.domicilio && r.domicilio.piso) || ""),
+      departamento: String((r.domicilio && r.domicilio.departamento) || ""),
       provincia_id: String((r.domicilio && r.domicilio.provincia_id) || ""),
+      pais_id: String((r.domicilio && r.domicilio.pais_id) || ""),
       localidad_id: String((r.domicilio && r.domicilio.localidad_id) || ""),
       codigo_postal: String((r.domicilio && r.domicilio.codigo_postal) || ""),
+      referencia: String((r.domicilio && r.domicilio.referencia) || ""),
+      foto_file: null,
+      foto_file_name: String(
+        (r.foto_rostro && (r.foto_rostro.storage_path || r.foto_rostro.content_type)) || "",
+      ),
       persona_id: String(r.persona_id || r.titular_persona_id || ""),
       nivel_estudios_id: String(r.nivel_estudios_id || ""),
       titulo_completo: String(r.titulo_completo || ""),
       duracion_anios: r.duracion_anios == null ? "" : String(r.duracion_anios),
       institucion: String(r.institucion || ""),
+      matricula_numero: String(r.matricula_numero || ""),
+      especialidad_id: String(r.especialidad_id || ""),
+      colegio_id: String(r.colegio_id || ""),
+      matricula_jurisdiccion_id: String(r.matricula_jurisdiccion_id || ""),
       estado_declaracion_id: String(r.estado_declaracion_id || ""),
       tipo_consentimiento_id: String(r.tipo_consentimiento_id || ""),
       version_id: String(r.version_id || ""),
@@ -241,6 +339,9 @@ export default function DatosPersonales() {
         return "Completá dni, nombre y apellido.";
       }
       if (!/^\d{6,12}$/.test(form.dni.trim())) return "DNI inválido (6 a 12 dígitos).";
+      if (!form.activo && !String(form.motivo_baja_id || "").trim()) {
+        return "Si activo=false, motivo_baja_id es obligatorio.";
+      }
     }
     if (tipo === "formacion_agente" && !form.persona_id.trim()) {
       return "Completá persona_id para formación.";
@@ -286,25 +387,46 @@ export default function DatosPersonales() {
     setSaving(true);
     try {
       let datos = {};
+      let warnings = [];
       if (tipo === "personas") {
         datos = {
           dni: form.dni.trim(),
           nombre: form.nombre.trim(),
           apellido: form.apellido.trim(),
+          nombre_completo_legal: [form.nombre.trim(), form.apellido.trim()].filter(Boolean).join(" ") || null,
+          cuil: form.cuil.trim() || null,
+          fecha_nacimiento: form.fecha_nacimiento || null,
+          lugar_nacimiento_id: form.lugar_nacimiento_id || null,
+          lugar_nacimiento_texto: form.lugar_nacimiento_texto || null,
+          activo: form.activo === true,
+          motivo_baja_id: form.activo ? null : form.motivo_baja_id || null,
           sexo_genero_id: form.sexo_genero_id || null,
           estado_civil_id: form.estado_civil_id || null,
           nacionalidad_id: form.nacionalidad_id || null,
           contacto: {
             telefono_celular: form.telefono_celular || null,
+            telefono_fijo: form.telefono_fijo || null,
+            recibe_notificaciones_sms: form.recibe_notificaciones_sms === true,
             email_personal: form.email_personal || null,
           },
           domicilio: {
             calle: form.calle || null,
             numero: form.numero || null,
+            piso: form.piso || null,
+            departamento: form.departamento || null,
             provincia_id: form.provincia_id || null,
+            pais_id: form.pais_id || null,
             localidad_id: form.localidad_id || null,
             codigo_postal: form.codigo_postal || null,
+            referencia: form.referencia || null,
           },
+          foto_rostro: form.foto_file
+            ? {
+                storage_path: `local_upload://${form.foto_file.name || "foto"}`,
+                content_type: form.foto_file.type || null,
+                origen_captura: "adjunto_o_camara",
+              }
+            : null,
         };
       } else if (tipo === "formacion_agente") {
         datos = {
@@ -313,6 +435,10 @@ export default function DatosPersonales() {
           titulo_completo: form.titulo_completo || null,
           duracion_anios: form.duracion_anios || null,
           institucion: form.institucion || null,
+          matricula_numero: form.matricula_numero || null,
+          especialidad_id: form.especialidad_id || null,
+          colegio_id: form.colegio_id || null,
+          matricula_jurisdiccion_id: form.matricula_jurisdiccion_id || null,
         };
       } else if (tipo === "declaraciones_grupo_familiar") {
         const familiaresPayload = familiares
@@ -340,13 +466,21 @@ export default function DatosPersonales() {
           tipo_consentimiento_id: form.tipo_consentimiento_id,
           version_id: form.version_id,
           idioma_id: form.idioma_id || null,
-          texto_hash: form.version_id || "pendiente",
-          aceptado: false,
+          aceptado: true,
         };
       }
       if (modoEdicion && editId) datos.id = editId;
       const r = await guardarRegistroPersonal(tipo, datos);
-      setSaveMsg(`Guardado OK: ${r.id || "(sin id)"}`);
+      warnings = normalizarWarnings(r && r.warnings);
+      const baseOk = `Guardado OK: ${r.id || "(sin id)"}`;
+      if (warnings.length === 0) {
+        setSaveMsg(baseOk);
+      } else {
+        const detalleWarnings = warnings
+          .map((w) => (w.code ? `${w.code}: ${w.message}` : w.message))
+          .join(" | ");
+        setSaveMsg(`${baseOk} | Advertencias: ${detalleWarnings}`);
+      }
       await cargar();
     } catch (ex) {
       setSaveMsg(ex instanceof Error ? ex.message : "No se pudo guardar.");
@@ -449,6 +583,52 @@ export default function DatosPersonales() {
                       <p className="mt-1 text-xs text-slate-500">{HELP.apellido}</p>
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-slate-700">nombre_completo_legal</label>
+                      <input value={form.nombre_completo_legal} disabled className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none" />
+                      <p className="mt-1 text-xs text-slate-500">{HELP.nombre_completo_legal}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">cuil</label>
+                      <input value={form.cuil} onChange={(e) => setField("cuil", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+                      <p className="mt-1 text-xs text-slate-500">{HELP.cuil}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">fecha_nacimiento</label>
+                      <input type="date" value={form.fecha_nacimiento} onChange={(e) => setField("fecha_nacimiento", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+                      <p className="mt-1 text-xs text-slate-500">{HELP.fecha_nacimiento}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">lugar_nacimiento_id</label>
+                      <select value={form.lugar_nacimiento_id} onChange={(e) => setField("lugar_nacimiento_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+                        <option value="">Seleccionar...</option>
+                        {optsLoc.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                      <p className="mt-1 text-xs text-slate-500">{HELP.lugar_nacimiento_id}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">lugar_nacimiento_texto</label>
+                      <input value={form.lugar_nacimiento_texto} onChange={(e) => setField("lugar_nacimiento_texto", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+                      <p className="mt-1 text-xs text-slate-500">{HELP.lugar_nacimiento_texto}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">activo</label>
+                      <select value={form.activo ? "true" : "false"} onChange={(e) => setField("activo", e.target.value === "true")} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+                        <option value="true">Sí</option>
+                        <option value="false">No</option>
+                      </select>
+                      <p className="mt-1 text-xs text-slate-500">{HELP.activo}</p>
+                    </div>
+                    {!form.activo && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700">motivo_baja_id *</label>
+                        <select value={form.motivo_baja_id} onChange={(e) => setField("motivo_baja_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+                          <option value="">Seleccionar...</option>
+                          {optsMotivoBaja.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                        <p className="mt-1 text-xs text-slate-500">{HELP.motivo_baja_id}</p>
+                      </div>
+                    )}
+                    <div>
                       <label className="block text-sm font-medium text-slate-700">sexo_genero_id</label>
                       <select value={form.sexo_genero_id} onChange={(e) => setField("sexo_genero_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
                         <option value="">Seleccionar...</option>
@@ -478,6 +658,19 @@ export default function DatosPersonales() {
                       <p className="mt-1 text-xs text-slate-500">{HELP.telefono_celular}</p>
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-slate-700">telefono_fijo</label>
+                      <input value={form.telefono_fijo} onChange={(e) => setField("telefono_fijo", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+                      <p className="mt-1 text-xs text-slate-500">{HELP.telefono_fijo}</p>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={form.recibe_notificaciones_sms}
+                        onChange={(e) => setField("recibe_notificaciones_sms", e.target.checked)}
+                      />
+                      Recibe notificaciones por WhatsApp
+                    </label>
+                    <div>
                       <label className="block text-sm font-medium text-slate-700">email_personal</label>
                       <input value={form.email_personal} onChange={(e) => setField("email_personal", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
                       <p className="mt-1 text-xs text-slate-500">{HELP.email_personal}</p>
@@ -493,12 +686,30 @@ export default function DatosPersonales() {
                       <p className="mt-1 text-xs text-slate-500">{HELP.numero}</p>
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-slate-700">piso</label>
+                      <input value={form.piso} onChange={(e) => setField("piso", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+                      <p className="mt-1 text-xs text-slate-500">{HELP.piso}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">departamento</label>
+                      <input value={form.departamento} onChange={(e) => setField("departamento", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+                      <p className="mt-1 text-xs text-slate-500">{HELP.departamento}</p>
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-slate-700">provincia_id</label>
                       <select value={form.provincia_id} onChange={(e) => setField("provincia_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
                         <option value="">Seleccionar...</option>
                         {optsProv.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                       <p className="mt-1 text-xs text-slate-500">{HELP.provincia_id}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">pais_id</label>
+                      <select value={form.pais_id} onChange={(e) => setField("pais_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+                        <option value="">Seleccionar...</option>
+                        {optsPais.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                      <p className="mt-1 text-xs text-slate-500">{HELP.pais_id}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700">localidad_id</label>
@@ -512,6 +723,29 @@ export default function DatosPersonales() {
                       <label className="block text-sm font-medium text-slate-700">codigo_postal</label>
                       <input value={form.codigo_postal} onChange={(e) => setField("codigo_postal", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
                       <p className="mt-1 text-xs text-slate-500">{HELP.codigo_postal}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">referencia</label>
+                      <input value={form.referencia} onChange={(e) => setField("referencia", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+                      <p className="mt-1 text-xs text-slate-500">{HELP.referencia}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-slate-700">foto_rostro</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(e) => {
+                          const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                          setField("foto_file", file);
+                          setField("foto_file_name", file ? file.name : "");
+                        }}
+                        className="mt-1 block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border file:border-slate-300 file:bg-white file:px-3 file:py-2 file:text-sm file:font-semibold"
+                      />
+                      <p className="mt-1 text-xs text-slate-500">{HELP.foto_archivo}</p>
+                      {form.foto_file_name ? (
+                        <p className="mt-1 text-xs text-slate-600">Archivo seleccionado: {form.foto_file_name}</p>
+                      ) : null}
                     </div>
                   </>
                 )}
@@ -559,6 +793,35 @@ export default function DatosPersonales() {
                       <label className="block text-sm font-medium text-slate-700">institucion</label>
                       <input value={form.institucion} onChange={(e) => setField("institucion", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
                       <p className="mt-1 text-xs text-slate-500">{HELP.institucion}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">Nro de Matricula</label>
+                      <input value={form.matricula_numero} onChange={(e) => setField("matricula_numero", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+                      <p className="mt-1 text-xs text-slate-500">{HELP.matricula_numero}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">especialidad_id</label>
+                      <select value={form.especialidad_id} onChange={(e) => setField("especialidad_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+                        <option value="">Seleccionar...</option>
+                        {optsEspecialidad.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                      <p className="mt-1 text-xs text-slate-500">{HELP.especialidad_id}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">colegio_id</label>
+                      <select value={form.colegio_id} onChange={(e) => setField("colegio_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+                        <option value="">Seleccionar...</option>
+                        {optsColegio.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                      <p className="mt-1 text-xs text-slate-500">{HELP.colegio_id}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">matricula_jurisdiccion_id</label>
+                      <select value={form.matricula_jurisdiccion_id} onChange={(e) => setField("matricula_jurisdiccion_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+                        <option value="">Seleccionar...</option>
+                        {optsJurisdiccionMatricula.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                      <p className="mt-1 text-xs text-slate-500">{HELP.matricula_jurisdiccion_id}</p>
                     </div>
                   </>
                 )}
@@ -758,9 +1021,9 @@ export default function DatosPersonales() {
                 {tipo === "consentimientos" && (
                   <>
                     <p className="md:col-span-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
-                      Etapa base: esta pantalla registra referencia de consentimiento (persona/tipo/versión/idioma).
-                      La aceptación legal completa (`aceptado`, `aceptado_en`, hash final del texto) se desarrollará
-                      en un módulo específico en la siguiente etapa.
+                      Esta etapa registra consentimiento aceptado. El backend fija `aceptado=true`, completa
+                      `aceptado_en` automáticamente, calcula `texto_hash` desde `cfg_textos_legales` y bloquea
+                      cambios de campos legales en consentimientos ya aceptados.
                     </p>
                     <div>
                       <label className="block text-sm font-medium text-slate-700">tipo_consentimiento_id *</label>
@@ -816,7 +1079,15 @@ export default function DatosPersonales() {
             )}
 
             {saveMsg && (
-              <p className={`rounded-lg px-3 py-2 text-sm ${saveMsg.startsWith("Guardado OK") ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+              <p
+                className={`rounded-lg px-3 py-2 text-sm ${
+                  saveMsg.startsWith("Guardado OK")
+                    ? saveMsg.includes("Advertencias:")
+                      ? "bg-amber-50 text-amber-800"
+                      : "bg-emerald-50 text-emerald-700"
+                    : "bg-rose-50 text-rose-700"
+                }`}
+              >
                 {saveMsg}
               </p>
             )}
@@ -839,9 +1110,25 @@ export default function DatosPersonales() {
                   {loadingByCol[c] ? "Cargando..." : `Registros: ${(rowsByCol[c] || []).length}`}
                 </p>
                 {(rowsByCol[c] || []).slice(0, 3).map((r) => (
-                  <p key={r.id} className="mt-1 font-mono text-xs text-slate-600">
-                    {r.id}
-                  </p>
+                  <div key={r.id} className="mt-1 rounded-md border border-slate-200 bg-white px-2 py-1.5">
+                    <p className="font-mono text-xs text-slate-700">{r.id}</p>
+                    {c === "consentimientos" && (
+                      <>
+                        <p className="mt-0.5 text-[11px] text-slate-600">
+                          texto_hash:{" "}
+                          <span className="font-mono text-[10px] text-slate-500">
+                            {String(r.texto_hash || "—")}
+                          </span>
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-slate-600">
+                          aceptado_en:{" "}
+                          <span className="font-mono text-[10px] text-slate-500">
+                            {String(r.aceptado_en || "—")}
+                          </span>
+                        </p>
+                      </>
+                    )}
+                  </div>
                 ))}
               </div>
             ))}
