@@ -1,5 +1,47 @@
 # Handoff de sesión — 2026-04-28
 
+## Actualización (refactor UI) — 15:54
+
+- Commit previo funcional: `f0aa3af` (carga laboral por `cfg_dia_semana` y validaciones asociadas).
+- Commit de refactor estructural: `0aaa053`.
+- Objetivo: bajar complejidad de páginas monolíticas sin modificar comportamiento funcional.
+
+### Cambios principales
+
+1. **Modularización de `DatosLaborales`**
+   - Se extrajeron constantes y utilidades a:
+     - `web/src/pages/datos-laborales/constants.js`
+     - `web/src/pages/datos-laborales/utils.js`
+   - Se extrajeron secciones visuales a:
+     - `web/src/pages/datos-laborales/sections/ColeccionesLaboralesCards.jsx`
+     - `web/src/pages/datos-laborales/sections/IntegridadReferencialCard.jsx`
+     - `web/src/pages/datos-laborales/sections/FasesLaboralesTables.jsx`
+
+2. **Modularización de `DatosPersonales`**
+   - Se extrajeron constantes y utilidades a:
+     - `web/src/pages/datos-personales/constants.js`
+     - `web/src/pages/datos-personales/utils.js`
+   - Se extrajeron secciones/formularios a:
+     - `web/src/pages/datos-personales/sections/FormHeaderControls.jsx`
+     - `web/src/pages/datos-personales/sections/PersonaFields.jsx`
+     - `web/src/pages/datos-personales/sections/FormacionFields.jsx`
+     - `web/src/pages/datos-personales/sections/DdjjFields.jsx`
+     - `web/src/pages/datos-personales/sections/ConsentimientosFields.jsx`
+
+3. **Reducción de tamaño en páginas principales**
+   - `web/src/pages/DatosLaborales.jsx`: de ~1400 a ~980 líneas.
+   - `web/src/pages/DatosPersonales.jsx`: de ~1140 a ~555 líneas.
+
+4. **Validación técnica post-refactor**
+   - Revisión de lint en archivos editados: sin errores.
+   - No se reportaron cambios funcionales intencionales; refactor orientado a mantenibilidad.
+
+### Pendientes recomendados tras este refactor
+
+- Revisar consistencia de nombres de props para reducir acoplamiento entre secciones.
+- Evaluar extracción de hooks (`useDatosLaboralesState`, `useDatosPersonalesState`) para separar aún más UI vs lógica.
+- Agregar tests de humo de formularios críticos (HLc/HLg y DDJJ/consentimientos) para blindar futuras iteraciones.
+
 ## Estado de cierre de sesión
 
 - Commit de consolidación realizado: `ee378fb`
