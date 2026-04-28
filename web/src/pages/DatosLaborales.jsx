@@ -1,130 +1,18 @@
 import Card from "../components/ui/Card.jsx";
-import { DATOS_LABORALES_COLECCIONES } from "../constants/datosLaboralesSchema.js";
 import { guardarRegistroLaboral, listarColeccionLaboral } from "../services/datosLaboralesService.js";
 import { useCallback, useEffect, useState } from "react";
-
-function BadgeCampo({ campo }) {
-  return (
-    <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
-      {campo}
-    </span>
-  );
-}
-
-function formatValue(v) {
-  if (v == null) return "—";
-  if (Array.isArray(v)) return `[${v.length}]`;
-  if (typeof v === "object") return "{...}";
-  return String(v);
-}
-
-function formatCargaPorDia(v) {
-  if (!Array.isArray(v) || v.length === 0) return "—";
-  return v.map((x) => (x == null ? "-" : String(x))).join(" / ");
-}
-
-function isoToDateInput(iso) {
-  if (!iso || typeof iso !== "string") return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function takeFirst(items, max = 5) {
-  return Array.isArray(items) ? items.slice(0, max) : [];
-}
-
-function emptyCargaDia() {
-  return { dia_semana_id: "", horas: "" };
-}
-
-function normalizeCargaRowsFromRecord(rawCarga) {
-  if (!Array.isArray(rawCarga)) return [emptyCargaDia()];
-  if (rawCarga.length === 0) return [emptyCargaDia()];
-  return rawCarga.map((item) => {
-    if (item && typeof item === "object" && !Array.isArray(item)) {
-      return {
-        dia_semana_id: String(item.dia_semana_id || ""),
-        horas: item.horas == null ? "" : String(item.horas),
-      };
-    }
-    return {
-      dia_semana_id: "",
-      horas: item == null ? "" : String(item),
-    };
-  });
-}
-
-function normalizarWarnings(raw) {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .map((w) => {
-      if (!w || typeof w !== "object") return null;
-      const code = typeof w.code === "string" ? w.code.trim() : "";
-      const message = typeof w.message === "string" ? w.message.trim() : "";
-      if (!code && !message) return null;
-      return { code, message };
-    })
-    .filter(Boolean);
-}
-
-const COLECCIONES_FORM = [
-  "personas",
-  "cfg_estado_asignacion_laboral",
-  "cfg_escalafon",
-  "cfg_agrupamiento",
-  "cfg_categorias",
-  "cfg_rol",
-  "cfg_cargo_funcional",
-  "cfg_tipo_vinculo_laboral",
-  "cfg_modalidad_jornada",
-  "cfg_causal_fin_asignacion_laboral",
-  "cfg_tipo_acto_designacion",
-  "cfg_dia_semana",
-];
-
-const AYUDA_CAMPOS = {
-  persona_id: "Identificador único de persona (per_*). Ancla principal del legajo.",
-  grupo_de_trabajo_id: "Unidad operativa del organigrama donde se desempeña.",
-  efector_designacion_id: "Efector donde fue designado formalmente.",
-  efector_cumplimiento_id: "Efector donde cumple funciones efectivamente.",
-  estado_asignacion_id: "Estado administrativo actual de la asignación.",
-  cargo_funcional_id: "Cargo funcional del puesto (desde catálogo).",
-  tipo_vinculo_id: "Tipo de vínculo laboral del cargo según normativa.",
-  modalidad_jornada_id: "Modalidad de jornada aplicable al cargo.",
-  causal_fin_asignacion_id: "Motivo de finalización; obligatorio cuando se informa fecha_hasta.",
-  referencias_normativa_designacion: "Referencia legal del acto de designación del cargo.",
-  categoria_id: "Categoría laboral del cargo (desde catálogo).",
-  carga_horaria_total: "Carga horaria total del cargo (en horas).",
-  fecha_desde: "Fecha de inicio de vigencia del registro.",
-  fecha_hasta: "Fecha de fin de vigencia (vacío = abierto).",
-  cargo_id: "Referencia al registro HLc base del puesto.",
-  rol_id: "Rol funcional del agente en ese cargo.",
-  escalafon_id: "Escalafón administrativo/laboral del cargo.",
-  agrupamiento_id: "Agrupamiento laboral del cargo.",
-  funcion_real_id: "Función real desempeñada.",
-  nivel_jerarquico: "Nivel jerárquico numérico (1 a 99).",
-  dato_laboral_id: "Referencia al registro HLd del que depende este subnivel.",
-  carga_por_dia_semana: "Carga distribuida por día (seleccionar dia_semana_id + horas por fila).",
-};
-
-function crearIndicePorId(rows) {
-  const idx = new Map();
-  (rows || []).forEach((row) => {
-    if (row && row.id) idx.set(String(row.id), row);
-  });
-  return idx;
-}
-
-function labelDesdeIndice(idx, id, campo = "nombre") {
-  if (!id) return "—";
-  const row = idx.get(String(id));
-  if (!row) return String(id);
-  return row[campo] ? String(row[campo]) : String(id);
-}
+import { AYUDA_CAMPOS, COLECCIONES_FORM } from "./datos-laborales/constants.js";
+import ColeccionesLaboralesCards from "./datos-laborales/sections/ColeccionesLaboralesCards.jsx";
+import FasesLaboralesTables from "./datos-laborales/sections/FasesLaboralesTables.jsx";
+import IntegridadReferencialCard from "./datos-laborales/sections/IntegridadReferencialCard.jsx";
+import {
+  crearIndicePorId,
+  emptyCargaDia,
+  isoToDateInput,
+  labelDesdeIndice,
+  normalizarWarnings,
+  normalizeCargaRowsFromRecord,
+} from "./datos-laborales/utils.js";
 
 export default function DatosLaborales() {
   const [rowsByCollection, setRowsByCollection] = useState({});
@@ -1058,342 +946,34 @@ export default function DatosLaborales() {
           </form>
         </Card>
 
-        <Card className="px-4 py-4 md:px-5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-base font-semibold text-slate-900">Fase 1 · Paso 4/5 (Integridad referencial)</p>
-            <span
-              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
-                totalAlertasIntegridad > 0
-                  ? "bg-rose-50 text-rose-700 ring-rose-200"
-                  : "bg-emerald-50 text-emerald-700 ring-emerald-200"
-              }`}
-            >
-              {totalAlertasIntegridad > 0
-                ? `${totalAlertasIntegridad} alerta(s)`
-                : "Sin alertas de integridad"}
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-slate-600">
-            Control de cruces entre `hlc_*`, `hld_*`, `hlg_*`, `grupos_de_trabajo` y `cfg_efectores`.
-          </p>
+        <IntegridadReferencialCard
+          totalAlertasIntegridad={totalAlertasIntegridad}
+          hldSinCargo={hldSinCargo}
+          hlcActivosSinGrupo={hlcActivosSinGrupo}
+          hlgSinDato={hlgSinDato}
+          hlcConGrupoInvalido={hlcConGrupoInvalido}
+          hlcConEfectorDesignacionInvalido={hlcConEfectorDesignacionInvalido}
+          hlcConEfectorCumplimientoInvalido={hlcConEfectorCumplimientoInvalido}
+        />
 
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">HLd sin HLc (cargo_id)</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">{hldSinCargo.length}</p>
-              {takeFirst(hldSinCargo).map((row) => (
-                <p key={row.id} className="mt-1 font-mono text-xs text-slate-600">
-                  {row.id} {"->"} cargo_id: {formatValue(row.cargo_id)}
-                </p>
-              ))}
-            </div>
+        <ColeccionesLaboralesCards
+          loadingByCollection={loadingByCollection}
+          errorByCollection={errorByCollection}
+          rowsByCollection={rowsByCollection}
+        />
 
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
-                HLc activos sin grupo asignado (advertencia)
-              </p>
-              <p className="mt-1 text-xl font-semibold text-amber-800">{hlcActivosSinGrupo.length}</p>
-              {takeFirst(hlcActivosSinGrupo).map((row) => (
-                <p key={row.id} className="mt-1 font-mono text-xs text-amber-700">
-                  {row.id} {"->"} persona_id: {formatValue(row.persona_id)}
-                </p>
-              ))}
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                HLg sin HLd (dato_laboral_id)
-              </p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">{hlgSinDato.length}</p>
-              {takeFirst(hlgSinDato).map((row) => (
-                <p key={row.id} className="mt-1 font-mono text-xs text-slate-600">
-                  {row.id} {"->"} dato_laboral_id: {formatValue(row.dato_laboral_id)}
-                </p>
-              ))}
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                HLc con grupo no resoluble
-              </p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">{hlcConGrupoInvalido.length}</p>
-              {takeFirst(hlcConGrupoInvalido).map((row) => (
-                <p key={row.id} className="mt-1 font-mono text-xs text-slate-600">
-                  {row.id} {"->"} grupo: {formatValue(row.grupo_de_trabajo_id)}
-                </p>
-              ))}
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                HLc con efector no resoluble
-              </p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {hlcConEfectorDesignacionInvalido.length + hlcConEfectorCumplimientoInvalido.length}
-              </p>
-              {takeFirst(hlcConEfectorDesignacionInvalido).map((row) => (
-                <p key={`${row.id}-des`} className="mt-1 font-mono text-xs text-slate-600">
-                  {row.id} {"->"} efector_designacion_id: {formatValue(row.efector_designacion_id)}
-                </p>
-              ))}
-              {takeFirst(hlcConEfectorCumplimientoInvalido).map((row) => (
-                <p key={`${row.id}-cum`} className="mt-1 font-mono text-xs text-slate-600">
-                  {row.id} {"->"} efector_cumplimiento_id: {formatValue(row.efector_cumplimiento_id)}
-                </p>
-              ))}
-            </div>
-          </div>
-        </Card>
-
-        {DATOS_LABORALES_COLECCIONES.map((item) => (
-          <Card key={item.id} className="px-4 py-4 md:px-5">
-            <div className="flex flex-col gap-2">
-              <p className="text-base font-semibold text-slate-900">{item.titulo}</p>
-              <p className="text-sm text-slate-600">{item.descripcion}</p>
-              <div className="mt-1 flex flex-wrap gap-2">
-                {item.campos.map((campo) => (
-                  <BadgeCampo key={campo} campo={campo} />
-                ))}
-              </div>
-              <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Coleccion: {item.collectionName}
-                </p>
-                {loadingByCollection[item.collectionName] ? (
-                  <p className="mt-2 text-sm text-slate-600">Cargando registros...</p>
-                ) : errorByCollection[item.collectionName] ? (
-                  <p className="mt-2 text-sm text-rose-700">
-                    Error al leer: {errorByCollection[item.collectionName]}
-                  </p>
-                ) : (
-                  <>
-                    <p className="mt-2 text-sm text-slate-700">
-                      Registros encontrados:{" "}
-                      <span className="font-semibold">
-                        {(rowsByCollection[item.collectionName] || []).length}
-                      </span>
-                    </p>
-                    {(rowsByCollection[item.collectionName] || []).length > 0 ? (
-                      <div className="mt-2 space-y-1.5">
-                        {(rowsByCollection[item.collectionName] || []).slice(0, 3).map((row, idx) => (
-                          <div
-                            key={row.id || `${item.collectionName}-row-${idx}`}
-                            className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-700"
-                          >
-                            <p className="font-mono text-[11px] text-slate-500">{row.id}</p>
-                            <p className="mt-1">
-                              {item.campos
-                                .slice(1, 4)
-                                .map((campo) => `${campo}: ${formatValue(row[campo])}`)
-                                .join(" | ")}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="mt-2 text-sm text-slate-500">Sin documentos cargados aun.</p>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
-
-        <Card className="px-4 py-4 md:px-5">
-          <p className="text-base font-semibold text-slate-900">Fase 1 · Paso 1 (HLc + FK resueltas)</p>
-          <p className="mt-1 text-sm text-slate-600">
-            Vista operativa inicial de cargos laborales con resolución de grupo y efectores.
-          </p>
-          {loadingByCollection.historial_laboral_cargos ? (
-            <p className="mt-3 text-sm text-slate-500">Cargando cargos...</p>
-          ) : errorByCollection.historial_laboral_cargos ? (
-            <p className="mt-3 text-sm text-rose-700">
-              Error en `historial_laboral_cargos`: {errorByCollection.historial_laboral_cargos}
-            </p>
-          ) : hlcRows.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500">No hay cargos para mostrar.</p>
-          ) : (
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[980px] text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2">Cargo ID</th>
-                    <th className="px-3 py-2">Persona</th>
-                    <th className="px-3 py-2">Grupo</th>
-                    <th className="px-3 py-2">Efector designación</th>
-                    <th className="px-3 py-2">Efector cumplimiento</th>
-                    <th className="px-3 py-2">Estado asignación</th>
-                    <th className="px-3 py-2">Carga total</th>
-                    <th className="px-3 py-2">Desde</th>
-                    <th className="px-3 py-2">Hasta</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-                  {hlcRows.slice(0, 30).map((row, idx) => (
-                    <tr key={row.id || `hlc-row-${idx}`}>
-                      <td className="px-3 py-2 font-mono">{row.id}</td>
-                      <td className="px-3 py-2 font-mono">{formatValue(row.persona_id)}</td>
-                      <td className="px-3 py-2">
-                        {labelDesdeIndice(idxGrupos, row.grupo_de_trabajo_id)}
-                        <span className="ml-1 font-mono text-[10px] text-slate-400">
-                          ({formatValue(row.grupo_de_trabajo_id)})
-                        </span>
-                      </td>
-                      <td className="px-3 py-2">
-                        {labelDesdeIndice(idxEfectores, row.efector_designacion_id)}
-                        <span className="ml-1 font-mono text-[10px] text-slate-400">
-                          ({formatValue(row.efector_designacion_id)})
-                        </span>
-                      </td>
-                      <td className="px-3 py-2">
-                        {labelDesdeIndice(idxEfectores, row.efector_cumplimiento_id)}
-                        <span className="ml-1 font-mono text-[10px] text-slate-400">
-                          ({formatValue(row.efector_cumplimiento_id)})
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 font-mono">{formatValue(row.estado_asignacion_id)}</td>
-                      <td className="px-3 py-2">{formatValue(row.carga_horaria_total)}</td>
-                      <td className="px-3 py-2">{formatValue(row.fecha_desde)}</td>
-                      <td className="px-3 py-2">{formatValue(row.fecha_hasta)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-
-        <Card className="px-4 py-4 md:px-5">
-          <p className="text-base font-semibold text-slate-900">Fase 1 · Paso 2 (HLd + cruce con HLc)</p>
-          <p className="mt-1 text-sm text-slate-600">
-            Segundo nivel laboral (`historial_laboral_datos`) vinculado al cargo base por `cargo_id`.
-          </p>
-          {loadingByCollection.historial_laboral_datos ? (
-            <p className="mt-3 text-sm text-slate-500">Cargando datos laborales...</p>
-          ) : errorByCollection.historial_laboral_datos ? (
-            <p className="mt-3 text-sm text-rose-700">
-              Error en `historial_laboral_datos`: {errorByCollection.historial_laboral_datos}
-            </p>
-          ) : hldRows.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500">No hay datos laborales (hld_*) para mostrar.</p>
-          ) : (
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[980px] text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2">Dato ID</th>
-                    <th className="px-3 py-2">Cargo ID</th>
-                    <th className="px-3 py-2">Persona</th>
-                    <th className="px-3 py-2">Grupo (desde HLc)</th>
-                    <th className="px-3 py-2">Rol</th>
-                    <th className="px-3 py-2">Escalafón</th>
-                    <th className="px-3 py-2">Función real</th>
-                    <th className="px-3 py-2">Nivel jerárquico</th>
-                    <th className="px-3 py-2">Desde</th>
-                    <th className="px-3 py-2">Hasta</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-                  {hldRows.slice(0, 40).map((row, idx) => {
-                    const cargo = idxHlc.get(String(row.cargo_id || ""));
-                    return (
-                      <tr key={row.id || `hld-row-${idx}`}>
-                        <td className="px-3 py-2 font-mono">{row.id}</td>
-                        <td className="px-3 py-2 font-mono">{formatValue(row.cargo_id)}</td>
-                        <td className="px-3 py-2 font-mono">{formatValue(row.persona_id)}</td>
-                        <td className="px-3 py-2">
-                          {cargo
-                            ? labelDesdeIndice(idxGrupos, cargo.grupo_de_trabajo_id)
-                            : "Cargo no encontrado"}
-                          {cargo && (
-                            <span className="ml-1 font-mono text-[10px] text-slate-400">
-                              ({formatValue(cargo.grupo_de_trabajo_id)})
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 font-mono">{formatValue(row.rol_id)}</td>
-                        <td className="px-3 py-2 font-mono">{formatValue(row.escalafon_id)}</td>
-                        <td className="px-3 py-2 font-mono">{formatValue(row.funcion_real_id)}</td>
-                        <td className="px-3 py-2">{formatValue(row.nivel_jerarquico)}</td>
-                        <td className="px-3 py-2">{formatValue(row.fecha_inicio)}</td>
-                        <td className="px-3 py-2">{formatValue(row.fecha_fin)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-
-        <Card className="px-4 py-4 md:px-5">
-          <p className="text-base font-semibold text-slate-900">Fase 1 · Paso 3 (HLg + cruce con HLd/Grupo)</p>
-          <p className="mt-1 text-sm text-slate-600">
-            Tercer nivel laboral (`historial_laboral_grupos`) vinculado al dato laboral (`dato_laboral_id`) y
-            resolución de grupo operativo.
-          </p>
-          {loadingByCollection.historial_laboral_grupos ? (
-            <p className="mt-3 text-sm text-slate-500">Cargando grupos laborales...</p>
-          ) : errorByCollection.historial_laboral_grupos ? (
-            <p className="mt-3 text-sm text-rose-700">
-              Error en `historial_laboral_grupos`: {errorByCollection.historial_laboral_grupos}
-            </p>
-          ) : hlgRows.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500">No hay datos de grupos laborales (hlg_*) para mostrar.</p>
-          ) : (
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[1080px] text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2">Grupo laboral ID</th>
-                    <th className="px-3 py-2">Dato laboral ID</th>
-                    <th className="px-3 py-2">Cargo ID (desde HLd)</th>
-                    <th className="px-3 py-2">Persona</th>
-                    <th className="px-3 py-2">Grupo (HLg)</th>
-                    <th className="px-3 py-2">Grupo (desde HLc)</th>
-                    <th className="px-3 py-2">Nivel jerárquico</th>
-                    <th className="px-3 py-2">Carga por día</th>
-                    <th className="px-3 py-2">Desde</th>
-                    <th className="px-3 py-2">Hasta</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-                  {hlgRows.slice(0, 40).map((row, idx) => {
-                    const datoLaboral = idxHld.get(String(row.dato_laboral_id || ""));
-                    const cargo = datoLaboral ? idxHlc.get(String(datoLaboral.cargo_id || "")) : null;
-                    return (
-                      <tr key={row.id || `hlg-row-${idx}`}>
-                        <td className="px-3 py-2 font-mono">{row.id}</td>
-                        <td className="px-3 py-2 font-mono">{formatValue(row.dato_laboral_id)}</td>
-                        <td className="px-3 py-2 font-mono">{formatValue(datoLaboral && datoLaboral.cargo_id)}</td>
-                        <td className="px-3 py-2 font-mono">{formatValue(row.persona_id)}</td>
-                        <td className="px-3 py-2">
-                          {labelDesdeIndice(idxGrupos, row.grupo_de_trabajo_id)}
-                          <span className="ml-1 font-mono text-[10px] text-slate-400">
-                            ({formatValue(row.grupo_de_trabajo_id)})
-                          </span>
-                        </td>
-                        <td className="px-3 py-2">
-                          {cargo ? labelDesdeIndice(idxGrupos, cargo.grupo_de_trabajo_id) : "Sin cruce HLc"}
-                          {cargo && (
-                            <span className="ml-1 font-mono text-[10px] text-slate-400">
-                              ({formatValue(cargo.grupo_de_trabajo_id)})
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2">{formatValue(row.nivel_jerarquico)}</td>
-                        <td className="px-3 py-2 font-mono">{formatCargaPorDia(row.carga_por_dia_semana)}</td>
-                        <td className="px-3 py-2">{formatValue(row.fecha_inicio)}</td>
-                        <td className="px-3 py-2">{formatValue(row.fecha_fin)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
+        <FasesLaboralesTables
+          loadingByCollection={loadingByCollection}
+          errorByCollection={errorByCollection}
+          hlcRows={hlcRows}
+          hldRows={hldRows}
+          hlgRows={hlgRows}
+          idxGrupos={idxGrupos}
+          idxEfectores={idxEfectores}
+          idxHlc={idxHlc}
+          idxHld={idxHld}
+          labelDesdeIndice={labelDesdeIndice}
+        />
       </div>
     </div>
   );

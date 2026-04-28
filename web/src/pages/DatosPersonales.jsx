@@ -2,117 +2,18 @@ import Card from "../components/ui/Card.jsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { guardarRegistroPersonal, listarColeccionPersonal } from "../services/datosPersonalesService.js";
-const ESTADO_DDJJ_DEFAULT_PERSONALES = "CFG_DDJJ_03_PRESENTADA";
-
-const COLECCIONES_BASE = [
-  "personas",
-  "formacion_agente",
-  "declaraciones_grupo_familiar",
-  "consentimientos",
-];
-
-const COLECCIONES_CFG = [
-  "cfg_estado_civil",
-  "cfg_nacionalidad",
-  "cfg_sexo_genero",
-  "cfg_provincia",
-  "cfg_pais",
-  "cfg_localidad",
-  "cfg_nivel_estudios",
-  "cfg_parentesco",
-  "cfg_motivo_baja_persona",
-  "cfg_estado_declaracion_ddjj",
-  "cfg_tipo_consentimiento",
-  "cfg_textos_legales",
-  "cfg_idioma",
-  "cfg_especialidad",
-  "cfg_colegio",
-  "cfg_jurisdiccion_matricula",
-];
-
-const HELP = {
-  dni: "Documento del agente (solo números).",
-  nombre: "Nombre legal del agente.",
-  apellido: "Apellido legal del agente.",
-  cuil: "CUIL del agente (si está disponible).",
-  fecha_nacimiento: "Fecha de nacimiento declarada en ficha personal.",
-  nombre_completo_legal: "Se completa automáticamente uniendo nombre y apellido.",
-  lugar_nacimiento_id: "Lugar de nacimiento desde catálogo de localidades (opcional).",
-  lugar_nacimiento_texto: "Lugar de nacimiento en texto libre (opcional).",
-  activo: "Estado operativo de la persona en el padrón RRHH.",
-  motivo_baja_id: "Motivo de baja cuando activo=false (catálogo).",
-  sexo_genero_id: "Identidad de género del catálogo oficial.",
-  estado_civil_id: "Estado civil vigente del catálogo.",
-  nacionalidad_id: "Nacionalidad según catálogo.",
-  telefono_celular: "Teléfono principal para contacto operativo.",
-  email_personal: "Correo personal de contacto (no reemplaza cuenta de acceso).",
-  telefono_fijo: "Teléfono fijo de contacto (opcional).",
-  recibe_notificaciones_sms: "Indica si habilita notificaciones por WhatsApp.",
-  calle: "Calle del domicilio.",
-  numero: "Altura / número del domicilio.",
-  piso: "Piso del domicilio (opcional).",
-  departamento: "Departamento del domicilio (opcional).",
-  provincia_id: "Provincia del domicilio.",
-  pais_id: "País del domicilio.",
-  localidad_id: "Localidad del domicilio (coherente con provincia).",
-  codigo_postal: "Código postal del domicilio.",
-  referencia: "Referencia para ubicar el domicilio.",
-  persona_id: "Identificador per_* del titular.",
-  nivel_estudios_id: "Nivel de estudios desde catálogo.",
-  titulo_completo: "Título alcanzado.",
-  duracion_anios: "Duración total de la carrera/formación.",
-  institucion: "Institución donde cursó o egresó.",
-  especialidad_id: "Especialidad del agente desde catálogo.",
-  colegio_id: "Colegio profesional desde catálogo.",
-  matricula_jurisdiccion_id: "Jurisdicción de matrícula desde catálogo.",
-  matricula_numero: "Número de matrícula profesional (texto o número según emisor).",
-  estado_declaracion_id:
-    "Estado DDJJ fijado en este módulo para alta operativa (presentada).",
-  tipo_consentimiento_id: "Tipo de consentimiento desde catálogo.",
-  version_id: "Versión de texto legal (catálogo de textos legales).",
-  idioma_id: "Idioma del consentimiento (catálogo).",
-  texto_hash: "Hash técnico generado automáticamente desde cfg_textos_legales.",
-  foto_archivo: "Foto de rostro (seleccionable desde carpeta o cámara del dispositivo).",
-  declaracion_version: "Versión del trámite DDJJ (número).",
-  declaracion_jurada_aceptada: "Indica si el titular marcó aceptación de la DDJJ.",
-  aceptada_en: "Fecha/hora de aceptación (si aplica).",
-  parentesco_id: "Parentesco del familiar desde catálogo.",
-  familiar_nombre: "Nombre del familiar declarado.",
-  familiar_apellido: "Apellido del familiar declarado.",
-  familiar_dni: "DNI del familiar (si corresponde).",
-  familiar_fecha_nacimiento: "Fecha de nacimiento del familiar.",
-};
-
-function emptyFamiliar() {
-  return {
-    parentesco_id: "",
-    nombre: "",
-    apellido: "",
-    dni: "",
-    fecha_nacimiento: "",
-    convive: false,
-    dependiente: false,
-    discapacidad_declarada: false,
-    notas_titular: "",
-  };
-}
-
-function toOpts(rows) {
-  return (rows || []).map((r) => ({ value: String(r.id), label: String(r.nombre || r.id) }));
-}
-
-function normalizarWarnings(raw) {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .map((w) => {
-      if (!w || typeof w !== "object") return null;
-      const code = typeof w.code === "string" ? w.code.trim() : "";
-      const message = typeof w.message === "string" ? w.message.trim() : "";
-      if (!code && !message) return null;
-      return { code, message };
-    })
-    .filter(Boolean);
-}
+import {
+  COLECCIONES_BASE,
+  COLECCIONES_CFG,
+  ESTADO_DDJJ_DEFAULT_PERSONALES,
+  HELP,
+} from "./datos-personales/constants.js";
+import FormHeaderControls from "./datos-personales/sections/FormHeaderControls.jsx";
+import ConsentimientosFields from "./datos-personales/sections/ConsentimientosFields.jsx";
+import DdjjFields from "./datos-personales/sections/DdjjFields.jsx";
+import FormacionFields from "./datos-personales/sections/FormacionFields.jsx";
+import PersonaFields from "./datos-personales/sections/PersonaFields.jsx";
+import { emptyFamiliar, normalizarWarnings, toOpts } from "./datos-personales/utils.js";
 
 export default function DatosPersonales() {
   const [tipo, setTipo] = useState("personas");
@@ -506,248 +407,32 @@ export default function DatosPersonales() {
             catálogos en BD.
           </p>
           <form className="mt-4 space-y-4" onSubmit={onSave}>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">Colección</label>
-                <select
-                  value={tipo}
-                  onChange={(e) => setTipo(e.target.value)}
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                >
-                  <option value="personas">personas</option>
-                  <option value="formacion_agente">formacion_agente</option>
-                  <option value="declaraciones_grupo_familiar">declaraciones_grupo_familiar</option>
-                  <option value="consentimientos">consentimientos</option>
-                </select>
-              </div>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={modoEdicion}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setModoEdicion(checked);
-                    setEditId("");
-                    if (!checked) return;
-                    const first = registros[0];
-                    if (first && first.id) {
-                      setEditId(String(first.id));
-                      hydrateFrom(first);
-                    }
-                  }}
-                />
-                Editar existente
-              </label>
-            </div>
-
-            {modoEdicion && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Registro</label>
-                <select
-                  value={editId}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    setEditId(id);
-                    const item = registros.find((x) => String(x.id) === String(id));
-                    if (item) hydrateFrom(item);
-                  }}
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                >
-                  <option value="">Seleccionar registro...</option>
-                  {registros.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.id}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <FormHeaderControls
+              tipo={tipo}
+              setTipo={setTipo}
+              modoEdicion={modoEdicion}
+              setModoEdicion={setModoEdicion}
+              setEditId={setEditId}
+              registros={registros}
+              hydrateFrom={hydrateFrom}
+              editId={editId}
+            />
 
             {(tipo === "personas" || tipo === "formacion_agente" || tipo === "declaraciones_grupo_familiar" || tipo === "consentimientos") && (
               <div className="grid gap-3 md:grid-cols-2">
                 {tipo === "personas" && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">dni *</label>
-                      <input value={form.dni} onChange={(e) => setField("dni", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.dni}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">nombre *</label>
-                      <input value={form.nombre} onChange={(e) => setField("nombre", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.nombre}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">apellido *</label>
-                      <input value={form.apellido} onChange={(e) => setField("apellido", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.apellido}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">nombre_completo_legal</label>
-                      <input value={form.nombre_completo_legal} disabled className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.nombre_completo_legal}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">cuil</label>
-                      <input value={form.cuil} onChange={(e) => setField("cuil", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.cuil}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">fecha_nacimiento</label>
-                      <input type="date" value={form.fecha_nacimiento} onChange={(e) => setField("fecha_nacimiento", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.fecha_nacimiento}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">lugar_nacimiento_id</label>
-                      <select value={form.lugar_nacimiento_id} onChange={(e) => setField("lugar_nacimiento_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
-                        <option value="">Seleccionar...</option>
-                        {optsLoc.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.lugar_nacimiento_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">lugar_nacimiento_texto</label>
-                      <input value={form.lugar_nacimiento_texto} onChange={(e) => setField("lugar_nacimiento_texto", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.lugar_nacimiento_texto}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">activo</label>
-                      <select value={form.activo ? "true" : "false"} onChange={(e) => setField("activo", e.target.value === "true")} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
-                        <option value="true">Sí</option>
-                        <option value="false">No</option>
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.activo}</p>
-                    </div>
-                    {!form.activo && (
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700">motivo_baja_id *</label>
-                        <select value={form.motivo_baja_id} onChange={(e) => setField("motivo_baja_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
-                          <option value="">Seleccionar...</option>
-                          {optsMotivoBaja.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                        <p className="mt-1 text-xs text-slate-500">{HELP.motivo_baja_id}</p>
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">sexo_genero_id</label>
-                      <select value={form.sexo_genero_id} onChange={(e) => setField("sexo_genero_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
-                        <option value="">Seleccionar...</option>
-                        {optsSexo.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.sexo_genero_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">estado_civil_id</label>
-                      <select value={form.estado_civil_id} onChange={(e) => setField("estado_civil_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
-                        <option value="">Seleccionar...</option>
-                        {optsCivil.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.estado_civil_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">nacionalidad_id</label>
-                      <select value={form.nacionalidad_id} onChange={(e) => setField("nacionalidad_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
-                        <option value="">Seleccionar...</option>
-                        {optsNac.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.nacionalidad_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">telefono_celular</label>
-                      <input value={form.telefono_celular} onChange={(e) => setField("telefono_celular", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.telefono_celular}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">telefono_fijo</label>
-                      <input value={form.telefono_fijo} onChange={(e) => setField("telefono_fijo", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.telefono_fijo}</p>
-                    </div>
-                    <label className="flex items-center gap-2 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={form.recibe_notificaciones_sms}
-                        onChange={(e) => setField("recibe_notificaciones_sms", e.target.checked)}
-                      />
-                      Recibe notificaciones por WhatsApp
-                    </label>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">email_personal</label>
-                      <input value={form.email_personal} onChange={(e) => setField("email_personal", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.email_personal}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">calle</label>
-                      <input value={form.calle} onChange={(e) => setField("calle", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.calle}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">numero</label>
-                      <input value={form.numero} onChange={(e) => setField("numero", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.numero}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">piso</label>
-                      <input value={form.piso} onChange={(e) => setField("piso", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.piso}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">departamento</label>
-                      <input value={form.departamento} onChange={(e) => setField("departamento", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.departamento}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">provincia_id</label>
-                      <select value={form.provincia_id} onChange={(e) => setField("provincia_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
-                        <option value="">Seleccionar...</option>
-                        {optsProv.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.provincia_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">pais_id</label>
-                      <select value={form.pais_id} onChange={(e) => setField("pais_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
-                        <option value="">Seleccionar...</option>
-                        {optsPais.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.pais_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">localidad_id</label>
-                      <select value={form.localidad_id} onChange={(e) => setField("localidad_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
-                        <option value="">Seleccionar...</option>
-                        {optsLoc.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.localidad_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">codigo_postal</label>
-                      <input value={form.codigo_postal} onChange={(e) => setField("codigo_postal", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.codigo_postal}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">referencia</label>
-                      <input value={form.referencia} onChange={(e) => setField("referencia", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.referencia}</p>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-slate-700">foto_rostro</label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={(e) => {
-                          const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-                          setField("foto_file", file);
-                          setField("foto_file_name", file ? file.name : "");
-                        }}
-                        className="mt-1 block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border file:border-slate-300 file:bg-white file:px-3 file:py-2 file:text-sm file:font-semibold"
-                      />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.foto_archivo}</p>
-                      {form.foto_file_name ? (
-                        <p className="mt-1 text-xs text-slate-600">Archivo seleccionado: {form.foto_file_name}</p>
-                      ) : null}
-                    </div>
-                  </>
+                  <PersonaFields
+                    form={form}
+                    setField={setField}
+                    HELP={HELP}
+                    optsLoc={optsLoc}
+                    optsMotivoBaja={optsMotivoBaja}
+                    optsSexo={optsSexo}
+                    optsCivil={optsCivil}
+                    optsNac={optsNac}
+                    optsProv={optsProv}
+                    optsPais={optsPais}
+                  />
                 )}
 
                 {(tipo === "formacion_agente" || tipo === "declaraciones_grupo_familiar" || tipo === "consentimientos") && (
@@ -770,310 +455,40 @@ export default function DatosPersonales() {
                 )}
 
                 {tipo === "formacion_agente" && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">nivel_estudios_id</label>
-                      <select value={form.nivel_estudios_id} onChange={(e) => setField("nivel_estudios_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
-                        <option value="">Seleccionar...</option>
-                        {optsNivel.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.nivel_estudios_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">titulo_completo</label>
-                      <input value={form.titulo_completo} onChange={(e) => setField("titulo_completo", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.titulo_completo}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">duracion_anios</label>
-                      <input value={form.duracion_anios} onChange={(e) => setField("duracion_anios", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.duracion_anios}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">institucion</label>
-                      <input value={form.institucion} onChange={(e) => setField("institucion", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.institucion}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">Nro de Matricula</label>
-                      <input value={form.matricula_numero} onChange={(e) => setField("matricula_numero", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.matricula_numero}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">especialidad_id</label>
-                      <select value={form.especialidad_id} onChange={(e) => setField("especialidad_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
-                        <option value="">Seleccionar...</option>
-                        {optsEspecialidad.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.especialidad_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">colegio_id</label>
-                      <select value={form.colegio_id} onChange={(e) => setField("colegio_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
-                        <option value="">Seleccionar...</option>
-                        {optsColegio.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.colegio_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">matricula_jurisdiccion_id</label>
-                      <select value={form.matricula_jurisdiccion_id} onChange={(e) => setField("matricula_jurisdiccion_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
-                        <option value="">Seleccionar...</option>
-                        {optsJurisdiccionMatricula.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.matricula_jurisdiccion_id}</p>
-                    </div>
-                  </>
+                  <FormacionFields
+                    form={form}
+                    setField={setField}
+                    HELP={HELP}
+                    optsNivel={optsNivel}
+                    optsEspecialidad={optsEspecialidad}
+                    optsColegio={optsColegio}
+                    optsJurisdiccionMatricula={optsJurisdiccionMatricula}
+                  />
                 )}
 
                 {tipo === "declaraciones_grupo_familiar" && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">estado_declaracion_id (fijo)</label>
-                      <input
-                        value={ESTADO_DDJJ_DEFAULT_PERSONALES}
-                        disabled
-                        className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none"
-                      />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.estado_declaracion_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">declaracion_version (automática)</label>
-                      <input
-                        value={modoEdicion ? form.declaracion_version : nextDeclaracionVersion}
-                        disabled
-                        className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                      />
-                      <p className="mt-1 text-xs text-slate-500">{HELP.declaracion_version}</p>
-                    </div>
-                    <p className="md:col-span-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
-                      `declaracion_jurada_aceptada` y `aceptada_en` no se cargan manualmente en esta pantalla.
-                      Se resuelven por el flujo de validación/aceptación posterior según el estado DDJJ.
-                    </p>
-
-                    <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <div className="mb-2 flex items-center justify-between">
-                        <p className="text-sm font-semibold text-slate-900">Familiares declarados</p>
-                        <button
-                          type="button"
-                          onClick={() => setFamiliares((prev) => [...prev, emptyFamiliar()])}
-                          className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700"
-                        >
-                          Agregar familiar
-                        </button>
-                      </div>
-                      <div className="space-y-3">
-                        {familiares.map((f, idx) => (
-                          <div key={`fam-${idx}`} className="rounded-lg border border-slate-200 bg-white p-3">
-                            <div className="mb-2 flex items-center justify-between">
-                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                Familiar {idx + 1}
-                              </p>
-                              {familiares.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setFamiliares((prev) => prev.filter((_, i) => i !== idx))
-                                  }
-                                  className="text-xs font-semibold text-rose-600"
-                                >
-                                  Quitar
-                                </button>
-                              )}
-                            </div>
-                            <div className="grid gap-3 md:grid-cols-2">
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700">parentesco_id</label>
-                                <select
-                                  value={f.parentesco_id}
-                                  onChange={(e) =>
-                                    setFamiliares((prev) =>
-                                      prev.map((x, i) =>
-                                        i === idx ? { ...x, parentesco_id: e.target.value } : x,
-                                      ),
-                                    )
-                                  }
-                                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                                >
-                                  <option value="">Seleccionar...</option>
-                                  {optsParentesco.map((o) => (
-                                    <option key={o.value} value={o.value}>
-                                      {o.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700">dni</label>
-                                <input
-                                  value={f.dni}
-                                  onChange={(e) =>
-                                    setFamiliares((prev) =>
-                                      prev.map((x, i) => (i === idx ? { ...x, dni: e.target.value } : x)),
-                                    )
-                                  }
-                                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700">nombre</label>
-                                <input
-                                  value={f.nombre}
-                                  onChange={(e) =>
-                                    setFamiliares((prev) =>
-                                      prev.map((x, i) => (i === idx ? { ...x, nombre: e.target.value } : x)),
-                                    )
-                                  }
-                                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700">apellido</label>
-                                <input
-                                  value={f.apellido}
-                                  onChange={(e) =>
-                                    setFamiliares((prev) =>
-                                      prev.map((x, i) => (i === idx ? { ...x, apellido: e.target.value } : x)),
-                                    )
-                                  }
-                                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700">fecha_nacimiento</label>
-                                <input
-                                  type="date"
-                                  value={f.fecha_nacimiento}
-                                  onChange={(e) =>
-                                    setFamiliares((prev) =>
-                                      prev.map((x, i) =>
-                                        i === idx ? { ...x, fecha_nacimiento: e.target.value } : x,
-                                      ),
-                                    )
-                                  }
-                                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700">notas_titular</label>
-                                <input
-                                  value={f.notas_titular}
-                                  onChange={(e) =>
-                                    setFamiliares((prev) =>
-                                      prev.map((x, i) =>
-                                        i === idx ? { ...x, notas_titular: e.target.value } : x,
-                                      ),
-                                    )
-                                  }
-                                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                                />
-                              </div>
-                              <label className="flex items-center gap-2 text-sm text-slate-700">
-                                <input
-                                  type="checkbox"
-                                  checked={f.convive}
-                                  onChange={(e) =>
-                                    setFamiliares((prev) =>
-                                      prev.map((x, i) => (i === idx ? { ...x, convive: e.target.checked } : x)),
-                                    )
-                                  }
-                                />
-                                Convive
-                              </label>
-                              <label className="flex items-center gap-2 text-sm text-slate-700">
-                                <input
-                                  type="checkbox"
-                                  checked={f.dependiente}
-                                  onChange={(e) =>
-                                    setFamiliares((prev) =>
-                                      prev.map((x, i) =>
-                                        i === idx ? { ...x, dependiente: e.target.checked } : x,
-                                      ),
-                                    )
-                                  }
-                                />
-                                Dependiente
-                              </label>
-                              <label className="flex items-center gap-2 text-sm text-slate-700">
-                                <input
-                                  type="checkbox"
-                                  checked={f.discapacidad_declarada}
-                                  onChange={(e) =>
-                                    setFamiliares((prev) =>
-                                      prev.map((x, i) =>
-                                        i === idx
-                                          ? { ...x, discapacidad_declarada: e.target.checked }
-                                          : x,
-                                      ),
-                                    )
-                                  }
-                                />
-                                Discapacidad declarada
-                              </label>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
+                  <DdjjFields
+                    ESTADO_DDJJ_DEFAULT_PERSONALES={ESTADO_DDJJ_DEFAULT_PERSONALES}
+                    HELP={HELP}
+                    modoEdicion={modoEdicion}
+                    form={form}
+                    nextDeclaracionVersion={nextDeclaracionVersion}
+                    setFamiliares={setFamiliares}
+                    emptyFamiliar={emptyFamiliar}
+                    familiares={familiares}
+                    optsParentesco={optsParentesco}
+                  />
                 )}
 
                 {tipo === "consentimientos" && (
-                  <>
-                    <p className="md:col-span-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
-                      Esta etapa registra consentimiento aceptado. El backend fija `aceptado=true`, completa
-                      `aceptado_en` automáticamente, calcula `texto_hash` desde `cfg_textos_legales` y bloquea
-                      cambios de campos legales en consentimientos ya aceptados.
-                    </p>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">tipo_consentimiento_id *</label>
-                      <select
-                        value={form.tipo_consentimiento_id}
-                        onChange={(e) => setField("tipo_consentimiento_id", e.target.value)}
-                        className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                      >
-                        <option value="">Seleccionar...</option>
-                        {optsTipoConsent.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.tipo_consentimiento_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">version_id *</label>
-                      <select
-                        value={form.version_id}
-                        onChange={(e) => setField("version_id", e.target.value)}
-                        className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                      >
-                        <option value="">Seleccionar...</option>
-                        {optsTextosLegales.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.version_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">idioma_id</label>
-                      <select
-                        value={form.idioma_id}
-                        onChange={(e) => setField("idioma_id", e.target.value)}
-                        className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                      >
-                        <option value="">Seleccionar...</option>
-                        {optsIdioma.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="mt-1 text-xs text-slate-500">{HELP.idioma_id}</p>
-                    </div>
-                  </>
+                  <ConsentimientosFields
+                    form={form}
+                    setField={setField}
+                    HELP={HELP}
+                    optsTipoConsent={optsTipoConsent}
+                    optsTextosLegales={optsTextosLegales}
+                    optsIdioma={optsIdioma}
+                  />
                 )}
               </div>
             )}
