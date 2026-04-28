@@ -129,3 +129,41 @@
 - Aplicar migración de grupos:
   - `npm run db:migrate-grupos-trabajo-ids-v2`
 
+## Actualización (cierre operativo final) — 16:24
+
+### Qué se dejó terminado
+
+1. Se registraron acuerdos funcionales aprobados para próxima etapa en:
+   - `docs/v2/ACUERDOS_FUNCIONALES_LABORAL_CUENTAS_2026-04-28.md`
+2. Se alineó backend laboral a política de paralelos permitidos:
+   - `functions/modules/catalogosLaborales.js`
+   - Solapes `HLc` y `HLg` pasan de bloqueo a warning (`VAL-HLC-W001`, `VAL-HLG-W002`).
+3. Se actualizó matriz warning/error:
+   - `docs/v2/MATRIZ_WARN_ERROR_LABORAL_V2.md`
+4. Se amplió test ejecutable para validar paralelos permitidos:
+   - `tests/abm-validaciones-estrictas.mjs`
+
+### Estado exacto al cerrar
+
+- Personales/Laborales: cerrados y estables para continuar.
+- Solapes: permitidos según definición funcional, auditables por warning.
+- Reglas estrictas de obligatorios: vigentes en frontend + backend.
+- Última suite relevante a ejecutar al retomar:
+  - `npm run test:abm:estricto`
+
+### Qué sigue en próxima sesión (orden)
+
+1. Implementar vista timeline laboral por persona (`HLc -> HLd -> HLg`) con filtros:
+   - activos / cerrados / vigentes en fecha X / con conflicto.
+2. Implementar vista operativa por grupo (burbuja actual).
+3. Diseñar y aplicar flujo de baja de usuarios:
+   - deshabilitar, bloquear temporal, rehabilitar, revincular DNI/cuenta, invalidar sesión.
+4. Extender modelo `HLd` con:
+   - `modalidad_jornada_id`
+   - `regimen_horario_id` (o equivalente)
+   - `centro_costo_id` / imputación presupuestaria.
+5. Definir (pendiente) SLA final:
+   - cadena completa `HLg -> HLd -> HLc`,
+   - tolerancia de reconciliación horaria,
+   - criterio final de alertas críticas.
+

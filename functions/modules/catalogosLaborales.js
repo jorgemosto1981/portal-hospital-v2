@@ -149,9 +149,11 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       fechaHasta: payload.fecha_hasta,
     });
     if (solapeHlc) {
-      throw new HttpsError(
-        "failed-precondition",
-        `[VAL-HLC-008] Solape de vigencia HLc detectado para persona_id ${personaId} (conflicto con ${solapeHlc.id}).`,
+      pushWarning(
+        warnings,
+        "VAL-HLC-W001",
+        `Solape de vigencia HLc detectado para persona_id ${personaId} (conflicto con ${solapeHlc.id}).`,
+        { persona_id: personaId, id, conflictivo_id: solapeHlc.id, collection: colRaw },
       );
     }
     const ref = db.collection(colRaw).doc(id);
@@ -307,9 +309,11 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   });
   const solapeHlg = await findSolapeHlg({ id, personaId, grupoId, fechaInicio: payload.fecha_inicio, fechaFin: payload.fecha_fin });
   if (solapeHlg) {
-    throw new HttpsError(
-      "failed-precondition",
-      `[VAL-HLG-014] Solape de vigencia HLg detectado para persona_id ${personaId} y grupo_de_trabajo_id ${grupoId} (conflicto con ${solapeHlg.id}).`,
+    pushWarning(
+      warnings,
+      "VAL-HLG-W002",
+      `Solape de vigencia HLg detectado para persona_id ${personaId} y grupo_de_trabajo_id ${grupoId} (conflicto con ${solapeHlg.id}).`,
+      { persona_id: personaId, id, grupo_de_trabajo_id: grupoId, conflictivo_id: solapeHlg.id, collection: colRaw },
     );
   }
   const hasDiaSemanaObjects = payload.carga_por_dia_semana.some((x) => x && typeof x === "object" && !Array.isArray(x));

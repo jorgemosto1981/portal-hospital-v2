@@ -251,6 +251,68 @@ async function main() {
     );
   }
 
+  console.log("== Caso 8: HLc paralelo permitido (solape con warning) ==");
+  {
+    const r = await callCallable("guardarRegistroLaboralTemporal", {
+      collectionName: "historial_laboral_cargos",
+      datos: {
+        persona_id: personaLaboralId,
+        efector_designacion_id: efectorDesignacionId,
+        efector_cumplimiento_id: efectorCumplimientoId,
+        estado_asignacion_id: estadoAsignacionId,
+        escalafon_id: escalafonId,
+        agrupamiento_id: agrupamientoId,
+        categoria_id: categoriaId,
+        cargo_funcional_id: cargoFuncionalId,
+        tipo_vinculo_id: tipoVinculoId,
+        modalidad_jornada_id: modalidadJornadaId,
+        carga_horaria_total: 12,
+        fecha_desde: fechaA,
+        referencias_normativa_designacion: [
+          { tipo_acto_id: tipoActoId, numero: "124", fecha: fechaA },
+        ],
+      },
+    });
+    assert(
+      r.okHttp,
+      `Se esperaba HLc paralelo permitido. HTTP ${r.status}. Detalle: ${JSON.stringify(r.json)}`,
+    );
+  }
+
+  console.log("== Caso 9: HLg paralelo mismo grupo permitido (solape con warning) ==");
+  {
+    const rHld = await callCallable("guardarRegistroLaboralTemporal", {
+      collectionName: "historial_laboral_datos",
+      datos: {
+        persona_id: personaLaboralId,
+        cargo_id: cargoId,
+        rol_id: rolId,
+        funcion_real_id: funcionRealId,
+        nivel_jerarquico: 30,
+        fecha_inicio: fechaB,
+      },
+    });
+    assert(rHld.okHttp, `No se pudo crear HLd para test HLG paralelo. HTTP ${rHld.status}`);
+    const datoLaboralId = String(rHld.json?.result?.id || "");
+    const rHlg = await callCallable("guardarRegistroLaboralTemporal", {
+      collectionName: "historial_laboral_grupos",
+      datos: {
+        persona_id: personaLaboralId,
+        dato_laboral_id: datoLaboralId,
+        grupo_de_trabajo_id: grupoTrabajoId,
+        rol_id: rolId,
+        funcion_real_id: funcionRealId,
+        nivel_jerarquico: 30,
+        fecha_inicio: fechaB,
+        carga_por_dia_semana: [{ dia_semana_id: diaSemanaId, horas: 4 }],
+      },
+    });
+    assert(
+      rHlg.okHttp,
+      `Se esperaba HLG paralelo permitido. HTTP ${rHlg.status}. Detalle: ${JSON.stringify(rHlg.json)}`,
+    );
+  }
+
   console.log("OK: validaciones estrictas ABM verificadas.");
 }
 
