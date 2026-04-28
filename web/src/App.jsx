@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import MobileLayout from "./components/layout/MobileLayout.jsx";
 import LoginScreen from "./features/auth/LoginScreen.jsx";
@@ -11,18 +10,30 @@ import OnboardingWizard from "./features/onboarding/OnboardingWizard.jsx";
 import AltaAgenteRRHH from "./features/rrhh/AltaAgenteRRHH.jsx";
 import MvpAccessGate from "./features/shell/MvpAccessGate.jsx";
 import TabContentHost from "./features/shell/TabContentHost.jsx";
+import DatosLaborales from "./pages/DatosLaborales.jsx";
+import DatosPersonales from "./pages/DatosPersonales.jsx";
+import EstadoModulos from "./pages/EstadoModulos.jsx";
+import GrillaOperativa from "./pages/GrillaOperativa.jsx";
+import PantallasCatalogo from "./pages/PantallasCatalogo.jsx";
+import Perfil from "./pages/Perfil.jsx";
+import { MODULOS_PORTAL, resolverTabPorPath } from "./constants/modulosEstado.js";
+import runtimeFlags from "../../shared/runtimeFlags.json";
 
 /** Solo desarrollo: en `.env.v2.local` → `VITE_BYPASS_AUTH=true` (nunca en producción). */
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
+/** Temporal: acceso libre global (web + functions) desde un único flag. */
+const OPEN_ACCESS_TEMP = runtimeFlags.OPEN_ACCESS_TEMP === true;
 
 /**
  * Contenido principal: login o shell.
  */
 function MainWithAuth() {
   const { user, authPending } = useAuthSession();
-  const [activeTab, setActiveTab] = useState("inicio");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeTab = resolverTabPorPath(location.pathname);
 
-  if (!BYPASS_AUTH && authPending) {
+  if (!OPEN_ACCESS_TEMP && !BYPASS_AUTH && authPending) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-slate-100">
         <div className="flex flex-col items-center gap-3 text-slate-600">
@@ -36,12 +47,19 @@ function MainWithAuth() {
     );
   }
 
-  if (!BYPASS_AUTH && !user) {
+  if (!OPEN_ACCESS_TEMP && !BYPASS_AUTH && !user) {
     return <LoginScreen />;
   }
 
   return (
-    <MobileLayout activeTab={activeTab} onTabChange={setActiveTab} devBypassAuth={BYPASS_AUTH && !user}>
+    <MobileLayout
+      activeTab={activeTab}
+      onTabChange={(nextTab) => {
+        const m = MODULOS_PORTAL.find((x) => x.id === nextTab);
+        if (m) navigate(m.path);
+      }}
+      devBypassAuth={BYPASS_AUTH && !user}
+    >
       <TabContentHost activeTab={activeTab} />
     </MobileLayout>
   );
@@ -63,6 +81,55 @@ export default function App() {
         <Route path="/vinculacion" element={<VinculacionDni />} />
         <Route path="/onboarding" element={<OnboardingWizard />} />
         <Route path="/rrhh/alta" element={<AltaAgenteRRHH />} />
+        <Route
+          path="/grilla"
+          element={
+            <MvpAccessGate>
+              <GrillaOperativa />
+            </MvpAccessGate>
+          }
+        />
+        <Route
+          path="/perfil"
+          element={
+            <MvpAccessGate>
+              <DatosPersonales />
+            </MvpAccessGate>
+          }
+        />
+        <Route
+          path="/perfil/:personaId"
+          element={
+            <MvpAccessGate>
+              <Perfil />
+            </MvpAccessGate>
+          }
+        />
+        <Route
+          path="/laboral"
+          element={
+            <MvpAccessGate>
+              <DatosLaborales />
+            </MvpAccessGate>
+          }
+        />
+        <Route
+          path="/modulos"
+          element={
+            <MvpAccessGate>
+              <EstadoModulos />
+            </MvpAccessGate>
+          }
+        />
+        <Route
+          path="/pantallas"
+          element={
+            <MvpAccessGate>
+              <PantallasCatalogo />
+            </MvpAccessGate>
+          }
+        />
+        <Route path="/" element={<Navigate to="/inicio" replace />} />
         <Route
           path="/*"
           element={

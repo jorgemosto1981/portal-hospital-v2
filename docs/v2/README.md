@@ -22,7 +22,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md`](./CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md) | Estados agente: **activo laboral**, **inactivo laboral (baja)**, **deshabilitado**; RRHH; reactivación + login |
 | [`CURSOR_RULES_BORRADOR_V2.md`](./CURSOR_RULES_BORRADOR_V2.md) | **Borrador** reglas Cursor/convenciones de código V2 (referencia; basado en buenas prácticas de la V1 + `docs/v2`) |
 | [`RULEBOOK_V2.md`](./RULEBOOK_V2.md) | Convenciones transversales (IDs, estados, seguridad) — v0 |
-| [`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md) | Datos laborales — **borrador** (`grupos_de_trabajo` / `gdt_*`, `efectores` / `efe_*`, `hlc_*`, `hld_*` / `hlg_*`; carga en horas + §4.5) |
+| [`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md) | Datos laborales — **borrador** (`grupos_de_trabajo` / `gdt_*`, `cfg_efectores`, `hlc_*`, `hld_*` / `hlg_*`; carga en horas + §4.5). Clarificación UX: Nivel 1 = Cargo (`HLc`), Nivel 2 = Grupo (`HLg`), con `HLd` como detalle técnico opcional. |
 | [`MODULO_LOGIN_V2.md`](./MODULO_LOGIN_V2.md) | Login, estados de acceso, **DNI + PIN 6 + correo** |
 | [`MODULO_DATOS_PERSONALES_PLAN_DESARROLLO_UNIFICADO_V2.md`](./MODULO_DATOS_PERSONALES_PLAN_DESARROLLO_UNIFICADO_V2.md) | **Plan único** Datos personales: decisiones + flujo A–E + gating (V2) |
 | [`MODULO_DATOS_PERSONALES_V2.md`](./MODULO_DATOS_PERSONALES_V2.md) | Anexo: contrato `personas`, formación, DDJJ, campos (ítem a ítem) |

@@ -1,6 +1,7 @@
 import { DevCallablesPanel } from "./components/DevCallablesPanel.jsx";
 import { StatusSection } from "./components/StatusSection.jsx";
 import { usePortalHome } from "./hooks/usePortalHome.js";
+import { Link } from "react-router-dom";
 
 export default function PortalHome() {
   const p = usePortalHome();
@@ -12,6 +13,14 @@ export default function PortalHome() {
       <p className="mb-5 mt-1 text-base leading-relaxed text-slate-600 sm:mb-6 md:mb-6">
         Resumen de conexión y herramientas de desarrollo (Firebase en la raíz del repo).
       </p>
+      <div className="mb-4">
+        <Link
+          to="/pantallas"
+          className="inline-flex rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+        >
+          Ver todas las pantallas
+        </Link>
+      </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-3 lg:gap-6">
         <div className="min-w-0 md:min-h-0">
       <StatusSection

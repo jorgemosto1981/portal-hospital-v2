@@ -19,6 +19,9 @@
     "seed:cfg": "node scripts/seed-v2/seed-cfg.mjs",
     "seed:configuracion": "node src/scripts/seedConfiguracion.mjs",
     "db:purge-efectores-legacy": "node scripts/purge-efectores-legacy.mjs",
+    "db:migrate-grupos-trabajo-ids-v2:dry-run": "node scripts/migrate-grupos-trabajo-ids-v2.mjs --dry-run",
+    "db:migrate-grupos-trabajo-ids-v2": "node scripts/migrate-grupos-trabajo-ids-v2.mjs --apply",
+    "db:verificar-completitud-persona-v2": "node scripts/verificar-completitud-persona-v2.mjs",
     "firestore:create": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/seed-v2/crear-base-firestore.ps1",
     "backup": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/crear-copia-seguridad.ps1"
   },

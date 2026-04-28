@@ -14,7 +14,14 @@ let emulatorConnected;
 export function getFunctionsV2() {
   if (!instance) {
     instance = getFunctions(appV2, REGION);
-    if (import.meta.env.VITE_V2_USE_FUNCTIONS_EMULATOR === "true" && !emulatorConnected) {
+    const hostName = typeof window !== "undefined" ? window.location.hostname : "";
+    const isLocalHost =
+      hostName === "localhost" || hostName === "127.0.0.1" || hostName === "::1";
+    const shouldUseEmulator =
+      import.meta.env.VITE_V2_USE_FUNCTIONS_EMULATOR === "true" ||
+      (isLocalHost && import.meta.env.VITE_V2_USE_FUNCTIONS_EMULATOR !== "false");
+
+    if (shouldUseEmulator && !emulatorConnected) {
       const host = import.meta.env.VITE_V2_FUNCTIONS_EMULATOR_HOST || "127.0.0.1";
       const port = Number(import.meta.env.VITE_V2_FUNCTIONS_EMULATOR_PORT || "5002", 10);
       connectFunctionsEmulator(instance, host, port);

@@ -27,6 +27,36 @@
 
 ---
 
+## 1.1 Niveles operativos UX vs niveles técnicos BD (acuerdo abril 2026)
+
+Para evitar confusión en implementación y capacitación de usuarios, se define explícitamente:
+
+### Niveles operativos (pantalla / RRHH)
+
+1. **Nivel 1 = Cargo** (`hlc_*`)
+2. **Nivel 2 = Grupo de trabajo** (`hlg_*`)
+
+Estos son los dos niveles que debe entender el usuario final para carga y edición diaria.
+
+### Niveles técnicos (persistencia Firestore)
+
+- `historial_laboral_cargos` (`hlc_*`) = base del cargo.
+- `historial_laboral_datos` (`hld_*`) = capa técnica/intermedia de detalle del cargo.
+- `historial_laboral_grupos` (`hlg_*`) = capa operativa por grupo/burbuja (jerarquía + carga por día).
+
+**Regla de producto/documentación:** `hld_*` no se presenta como “nivel operativo” para RRHH general, sino como detalle técnico opcional cuando el caso lo requiera.
+
+### Orden recomendado de carga (UX)
+
+`HLc` -> (`HLd` opcional) -> `HLg`
+
+Con este flujo:
+- se reduce complejidad para RRHH,
+- se conserva trazabilidad técnica completa en BD,
+- y no se rompe compatibilidad con Ticket ni con integraciones futuras.
+
+---
+
 ## 2. Límites con otros módulos
 
 | Módulo | Qué aporta / qué consume |
@@ -266,6 +296,18 @@ Igual que antes: tras Login/datos personales puede no existir `hlc_*` aún.
 4. **Varios cargos paralelos:** nuevas filas **sin** cerrar las anteriores salvo que el acto administrativo sea reemplazo explícito (regla de negocio en Callable).
 5. **Cierre** de un cargo: `fecha_hasta`, `causal_fin_asignacion_id`, `estado_asignacion_id` finalizada + cierre o baja lógica de `hlg_*` asociados + `evt_*`.
 
+### 7.3 Flujo de interfaz recomendado (pantalla Datos Laborales)
+
+1. RRHH selecciona “Nivel 1 (Cargo)” y completa `HLc`.
+2. Si necesita detalle adicional de convenio/rol, completa `HLd` (opcional).
+3. Carga “Nivel 2 (Grupo de trabajo)” en `HLg`, incluyendo:
+   - `grupo_de_trabajo_id`,
+   - `nivel_jerarquico` (1–99),
+   - `carga_por_dia_semana`.
+4. El sistema valida integridad referencial y muestra alertas de inconsistencias.
+
+**Nota:** esta secuencia es de UX; la estructura de BD mantiene las 3 colecciones (`hlc`, `hld`, `hlg`).
+
 ---
 
 ## 8. Matriz de ownership *(borrador)*
@@ -331,3 +373,4 @@ Agente lee lo propio; RRHH escribe **`hlc_*`**, `hld_*`/`hlg_*` y participa en c
 | 2026-04-27 | **Nivel de jerarquía:** deja de documentarse `cfg_nivel_jerarquia` / `nivel_jerarquia_id`. **`hlg_*.nivel_jerarquico`** (y opc. **`hld_*.nivel_jerarquico`**) = **número 1–99**; seeds laborales avanzados (`cfg_modalidad_jornada`, `cfg_estado_asignacion_laboral`, `cfg_causal_fin_asignacion_laboral`, `cfg_tipo_acto_designacion`, `cfg_tipo_grupo`) en `seed:configuracion` + panel. |
 | 2026-04-23 | **C10:** `hlg_*` con `nivel_jerarquico` / jerarquía **por** grupo de trabajo (antes redactado con catálogo; hoy entero 1–99) y `carga_por_dia_semana` (horas **por** día, `cfg_dia_semana`); tablas **§4.4.0–4.4.1** y **§4.5**; `cfg` §6; §1, §2, §3, §7.2, §9–10; `hld_*` ajuste `nivel_jerarquico` vs `hlg`. |
 | 2026-04-23 | **§4.5.1–4.5.2:** reconciliación `S_hlg` / `carga_horaria_total` (ε, uno o N `hlg_*`); ejemplo JSON; unidad = horas por semana en el cargo (salvo RFC). |
+| 2026-04-28 | **Clarificación UX/BD:** se documentan **2 niveles operativos de pantalla** (Nivel 1 `HLc`, Nivel 2 `HLg`) y se mantiene `HLd` como capa técnica opcional, sin alterar el contrato de persistencia de 3 colecciones. |

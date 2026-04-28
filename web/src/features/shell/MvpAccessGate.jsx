@@ -5,8 +5,10 @@ import PublicAuthMenu from "../../components/layout/PublicAuthMenu.jsx";
 import { ESTADO_PEND_ONBOARDING, subscribePersonaById } from "../../services/personaService.js";
 import { useAuthSession } from "../auth/useAuthSession.js";
 import { useAuthClaims } from "../auth/useAuthClaims.js";
+import runtimeFlags from "../../../../shared/runtimeFlags.json";
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
+const OPEN_ACCESS_TEMP = runtimeFlags.OPEN_ACCESS_TEMP === true;
 
 const PUBLIC_NO_PERSONA = new Set(["/vinculacion", "/registro"]);
 
@@ -30,7 +32,7 @@ export default function MvpAccessGate({ children }) {
     return subscribePersonaById(pid, setPersona);
   }, [pid]);
 
-  if (BYPASS_AUTH) {
+  if (OPEN_ACCESS_TEMP || BYPASS_AUTH) {
     return children;
   }
   if (authPending) {

@@ -261,13 +261,6 @@ const CFG_TIPO_ACTO_DESIGNACION = [
   ["CFG_ACT_04_CONTRATO", "Contrato / Locación de Servicios"],
 ];
 
-const CFG_TIPO_GRUPO = [
-  ["CFG_TGR_01_SERVICIO", "Servicio Médico"],
-  ["CFG_TGR_02_SALA", "Sala de Internación"],
-  ["CFG_TGR_03_SECTOR", "Sector Administrativo/Apoyo"],
-  ["CFG_TGR_04_GUARDIA", "Guardia"],
-];
-
 async function main() {
   const app = getApp();
   const projectId = app.options?.projectId || "desconocido";
@@ -377,11 +370,6 @@ async function main() {
     batch.set(ref, docData(id, nombre), { merge: true });
   }
 
-  for (const [id, nombre] of CFG_TIPO_GRUPO) {
-    const ref = db.collection("cfg_tipo_grupo").doc(id);
-    batch.set(ref, docData(id, nombre), { merge: true });
-  }
-
   await batch.commit();
 
   const total =
@@ -403,8 +391,7 @@ async function main() {
     CFG_MODALIDAD_JORNADA.length +
     CFG_ESTADO_ASIGNACION_LABORAL.length +
     CFG_CAUSAL_FIN_ASIGNACION_LABORAL.length +
-    CFG_TIPO_ACTO_DESIGNACION.length +
-    CFG_TIPO_GRUPO.length;
+    CFG_TIPO_ACTO_DESIGNACION.length;
 
   const out = {
     ok: true,
@@ -430,7 +417,6 @@ async function main() {
       cfg_estado_asignacion_laboral: CFG_ESTADO_ASIGNACION_LABORAL.map(([id]) => id),
       cfg_causal_fin_asignacion_laboral: CFG_CAUSAL_FIN_ASIGNACION_LABORAL.map(([id]) => id),
       cfg_tipo_acto_designacion: CFG_TIPO_ACTO_DESIGNACION.map(([id]) => id),
-      cfg_tipo_grupo: CFG_TIPO_GRUPO.map(([id]) => id),
     },
     documentosEscritos: total,
   };

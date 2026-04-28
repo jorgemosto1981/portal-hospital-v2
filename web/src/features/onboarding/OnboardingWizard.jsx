@@ -1,201 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
-
 import Card from "../../components/ui/Card.jsx";
 import PrimaryButton from "../../components/ui/PrimaryButton.jsx";
-import {
-  callListarCatalogoOnboarding,
-  callOnboardingMvpCompletar,
-  callOnboardingMvpDdjjFamiliar,
-  callOnboardingMvpPasoA,
-} from "../../services/callables.js";
-import { normalizeDni } from "../../services/authService.js";
-import { ESTADO_ACTIVO_MVP, subscribePersonaById } from "../../services/personaService.js";
-import { useAuthSession } from "../auth/useAuthSession.js";
-import { useAuthClaims } from "../auth/useAuthClaims.js";
-
-/**
- * @typedef {{ id: string, nombre?: string }} CatItem
- */
-
-/**
- * @param {Record<string, unknown> | null} row
- * @param {string} key
- */
-function str(row, key) {
-  if (!row) return "";
-  const v = row[key];
-  return typeof v === "string" ? v : v != null ? String(v) : "";
-}
+import { useOnboardingWizard } from "./hooks/useOnboardingWizard.js";
 
 export default function OnboardingWizard() {
-  const { user } = useAuthSession();
-  const { claims } = useAuthClaims(user);
-  const nav = useNavigate();
-  const personaId = typeof claims?.persona_id === "string" ? /** @type {string} */ (claims.persona_id) : null;
-  const [persona, setPersona] = useState(/** @type {Record<string, unknown> | null} */ (null));
-  const [loading, setLoading] = useState(true);
-  const [prov, setProv] = useState(/** @type {CatItem[]} */ ([]));
-  const [loc, setLoc] = useState(/** @type {CatItem[]} */ ([]));
-  const [par, setPar] = useState(/** @type {CatItem[]} */ ([]));
-
-  const [contacto, setContacto] = useState({
-    email_personal: "",
-    telefono_celular: "",
-    telefono_fijo: "",
-    recibe_notificaciones_sms: false,
-  });
-  const [dom, setDom] = useState({
-    calle: "",
-    numero: "",
-    piso: "",
-    departamento: "",
-    codigo_postal: "",
-    provincia_id: "",
-    localidad_id: "",
-    referencia: "",
-  });
-  const [famRows, setFamRows] = useState(
-    /** @type {{ nombre: string, dni: string, parentesco_id: string }[]} */ ([
-      { nombre: "", dni: "", parentesco_id: "" },
-    ]),
-  );
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!personaId) {
-      return () => {};
-    }
-    return subscribePersonaById(personaId, setPersona);
-  }, [personaId]);
-
-  useEffect(() => {
-    let a = true;
-    void (async () => {
-      await Promise.resolve();
-      if (!a) return;
-      setLoading(true);
-      try {
-        const [r1, r2, r3] = await Promise.all([
-          callListarCatalogoOnboarding({ collectionName: "cfg_provincia" }),
-          callListarCatalogoOnboarding({ collectionName: "cfg_localidad" }),
-          callListarCatalogoOnboarding({ collectionName: "cfg_parentesco" }),
-        ]);
-        if (!a) return;
-        const pItems = (r1.data && r1.data.items) || [];
-        const lItems = (r2.data && r2.data.items) || [];
-        const sItems = (r3.data && r3.data.items) || [];
-        setProv(/** @type {CatItem[]} */ (pItems));
-        setLoc(/** @type {CatItem[]} */ (lItems));
-        setPar(/** @type {CatItem[]} */ (sItems));
-      } catch {
-        if (a) toast.error("No se pudieron cargar los catálogos. Reintentá.");
-      } finally {
-        if (a) setLoading(false);
-      }
-    })();
-    return () => {
-      a = false;
-    };
-  }, []);
-
-  const localidadesFiltradas = useMemo(() => {
-    if (!dom.provincia_id) return loc;
-    return loc.filter((l) => {
-      const r = /** @type {Record<string, unknown>} */ (l);
-      return str(r, "provincia_id") === dom.provincia_id;
-    });
-  }, [loc, dom.provincia_id]);
-
-  const effectivePersona = personaId ? persona : null;
-  const rawOnb =
-    effectivePersona && /** @type {Record<string, unknown>} */ (effectivePersona).onboarding_mvp;
-  const pOnb = rawOnb && typeof rawOnb === "object" ? rawOnb : null;
-  const doneA = Boolean(pOnb && pOnb.paso_a);
-  const doneB = Boolean(pOnb && pOnb.paso_b);
-  const step = !doneA ? 1 : !doneB ? 2 : 3;
-
-  useEffect(() => {
-    if (effectivePersona && str(/** @type {Record<string, unknown>} */ (effectivePersona), "estado") === ESTADO_ACTIVO_MVP) {
-      nav("/", { replace: true });
-    }
-  }, [effectivePersona, nav]);
-
-  async function guardarPasoA(e) {
-    e.preventDefault();
-    setSaving(true);
-    const t = toast.loading("Guardando contacto y domicilio…");
-    try {
-      const { data } = await callOnboardingMvpPasoA({ contacto, domicilio: { ...dom } });
-      if (data?.ok) {
-        toast.success("Datos guardados", { id: t });
-      } else {
-        throw new Error();
-      }
-    } catch (err) {
-      const m = (err && /** @type {{ message?: string }} */ (err).message) || "No se pudo guardar.";
-      toast.error(m, { id: t });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function updateFam(i, key, v) {
-    setFamRows((rows) => {
-      const n = rows.slice();
-      n[i] = { ...n[i], [key]: v };
-      return n;
-    });
-  }
-
-  async function guardarDdjj(e) {
-    e.preventDefault();
-    setSaving(true);
-    const t = toast.loading("Guardando declaración…");
-    const familiares = famRows
-      .map((r) => ({
-        nombre: r.nombre.trim(),
-        dni: normalizeDni(r.dni),
-        parentesco_id: r.parentesco_id.trim(),
-      }))
-      .filter((r) => r.nombre || r.dni || r.parentesco_id);
-    try {
-      const { data } = await callOnboardingMvpDdjjFamiliar({ familiares });
-      if (data?.ok) {
-        toast.success("Grupo familiar registrado", { id: t });
-      } else {
-        throw new Error();
-      }
-    } catch (err) {
-      const m = (err && /** @type {{ message?: string }} */ (err).message) || "Revisá los datos.";
-      toast.error(m, { id: t });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function finalizarMvp() {
-    setSaving(true);
-    const t = toast.loading("Habilitando acceso…");
-    try {
-      const { data } = await callOnboardingMvpCompletar();
-      if (data?.ok) {
-        if (user) {
-          await user.getIdToken(true);
-        }
-        toast.success("Tu ficha quedó activa", { id: t });
-        nav("/", { replace: true });
-      } else {
-        throw new Error();
-      }
-    } catch (err) {
-      const m = (err && /** @type {{ message?: string }} */ (err).message) || "No se pudo finalizar.";
-      toast.error(m, { id: t });
-    } finally {
-      setSaving(false);
-    }
-  }
+  const {
+    user,
+    personaId,
+    loading,
+    saving,
+    step,
+    prov,
+    par,
+    contacto,
+    dom,
+    famRows,
+    localidadesFiltradas,
+    setContacto,
+    setDom,
+    setFamRows,
+    updateFam,
+    guardarPasoA,
+    guardarDdjj,
+    finalizarMvp,
+  } = useOnboardingWizard();
 
   if (!user) {
     return <p className="p-6 text-center text-slate-500">Necesitás una sesión.</p>;

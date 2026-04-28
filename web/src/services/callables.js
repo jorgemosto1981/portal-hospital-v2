@@ -32,6 +32,21 @@ export function callListarColeccion(data) {
   return httpsCallable(getFunctionsV2(), "listarColeccion")(data);
 }
 
+/** Temporal: lectura pública acotada a colecciones laborales mientras se ajustan Rules. */
+export function callListarColeccionPublicaTemporal(data) {
+  return httpsCallable(getFunctionsV2(), "listarColeccionPublicaTemporal")(data);
+}
+
+/** Temporal: alta/edición de registros laborales (HLc/HLd/HLg) para carga operativa. */
+export function callGuardarRegistroLaboralTemporal(data) {
+  return httpsCallable(getFunctionsV2(), "guardarRegistroLaboralTemporal")(data);
+}
+
+/** Temporal: alta/edición de datos personales (persona, formación, DDJJ, consentimientos). */
+export function callGuardarRegistroPersonalTemporal(data) {
+  return httpsCallable(getFunctionsV2(), "guardarRegistroPersonalTemporal")(data);
+}
+
 /** RRHH: guardar opción de catálogo (`set` + merge, id en mayúsculas). */
 export function callGuardarOpcion(data) {
   return httpsCallable(getFunctionsV2(), "guardarOpcion")(data);

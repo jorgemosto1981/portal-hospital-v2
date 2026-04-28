@@ -61,6 +61,12 @@ export const SECCIONES_CATALOGO_RRHH = [
         collectionName: "cfg_parentesco",
         idPrefix: "CFG_PAR_",
       },
+      {
+        key: "estado_perfil_datos",
+        etiqueta: "Estado de perfil de datos",
+        collectionName: "cfg_estado_perfil_datos",
+        idPrefix: "CFG_EPD_",
+      },
     ],
   },
   {
@@ -121,12 +127,6 @@ export const SECCIONES_CATALOGO_RRHH = [
         collectionName: "cfg_tipo_acto_designacion",
         idPrefix: "CFG_ACT_",
       },
-      {
-        key: "tipo_grupo",
-        etiqueta: "Tipo de grupo de trabajo",
-        collectionName: "cfg_tipo_grupo",
-        idPrefix: "CFG_TGR_",
-      },
     ],
   },
   {
@@ -137,7 +137,7 @@ export const SECCIONES_CATALOGO_RRHH = [
         key: "grupo_trabajo",
         etiqueta: "Grupos de Trabajo",
         collectionName: "grupos_de_trabajo",
-        idPrefix: "GT_",
+        idPrefix: "gdt_",
       },
       {
         key: "efector",
@@ -156,6 +156,12 @@ export const SECCIONES_CATALOGO_RRHH = [
         etiqueta: "Roles de aplicación",
         collectionName: "cfg_rol",
         idPrefix: "CFG_",
+      },
+      {
+        key: "estado_cuenta_acceso",
+        etiqueta: "Estado de cuenta de acceso",
+        collectionName: "cfg_estado_cuenta_acceso",
+        idPrefix: "CFG_ECA_",
       },
     ],
   },
