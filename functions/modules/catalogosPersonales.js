@@ -15,7 +15,6 @@ const {
   resolveEstadoPerfilDatosIdDefault,
   assertConsistenciaEstadoPerfilCuenta,
   pushWarning,
-  hasFamiliarIncompleto,
 } = require("./catalogosShared");
 
 function buildTextoLegalCanonicalString(versionId, docData) {
@@ -66,6 +65,39 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
     const apellido = toNullableTrimmedString(datos.apellido);
     if (!dni || !nombre || !apellido) {
       throw new HttpsError("invalid-argument", "[VAL-PER-002] En personas son obligatorios: dni, nombre y apellido.");
+    }
+    const fechaNacimiento = toNullableTrimmedString(datos.fecha_nacimiento);
+    const lugarNacimientoId = toNullableTrimmedString(datos.lugar_nacimiento_id);
+    const sexoGeneroId = toNullableTrimmedString(datos.sexo_genero_id);
+    const estadoCivilId = toNullableTrimmedString(datos.estado_civil_id);
+    const nacionalidadId = toNullableTrimmedString(datos.nacionalidad_id);
+    const contactoTelefono = toNullableTrimmedString(datos.contacto && datos.contacto.telefono_celular);
+    const contactoEmail = toNullableTrimmedString(datos.contacto && datos.contacto.email_personal);
+    const domCalle = toNullableTrimmedString(datos.domicilio && datos.domicilio.calle);
+    const domNumero = toNullableTrimmedString(datos.domicilio && datos.domicilio.numero);
+    const domProvinciaId = toNullableTrimmedString(datos.domicilio && datos.domicilio.provincia_id);
+    const domPaisId = toNullableTrimmedString(datos.domicilio && datos.domicilio.pais_id);
+    const domLocalidadId = toNullableTrimmedString(datos.domicilio && datos.domicilio.localidad_id);
+    const domCodigoPostal = toNullableTrimmedString(datos.domicilio && datos.domicilio.codigo_postal);
+    if (
+      !fechaNacimiento ||
+      !lugarNacimientoId ||
+      !sexoGeneroId ||
+      !estadoCivilId ||
+      !nacionalidadId ||
+      !contactoTelefono ||
+      !contactoEmail ||
+      !domCalle ||
+      !domNumero ||
+      !domProvinciaId ||
+      !domPaisId ||
+      !domLocalidadId ||
+      !domCodigoPostal
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "[VAL-PER-005] En personas son obligatorios: fecha_nacimiento, lugar_nacimiento_id, sexo_genero_id, estado_civil_id, nacionalidad_id, contacto.telefono_celular, contacto.email_personal, domicilio.calle, domicilio.numero, domicilio.provincia_id, domicilio.pais_id, domicilio.localidad_id y domicilio.codigo_postal.",
+      );
     }
     const estadoPerfilDatosId = await resolveEstadoPerfilDatosIdDefault(datos.estado_perfil_datos_id);
     const motivoBajaId = toNullableTrimmedString(datos.motivo_baja_id);
@@ -180,11 +212,15 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
     const id = toNullableTrimmedString(datos.id) || `for_${ulid()}`;
     const personaId = toNullableTrimmedString(datos.persona_id);
     if (!personaId) throw new HttpsError("invalid-argument", "[VAL-FOR-001] En formacion_agente es obligatorio: persona_id.");
+    const nivelEstudiosId = toNullableTrimmedString(datos.nivel_estudios_id);
+    if (!nivelEstudiosId) {
+      throw new HttpsError("invalid-argument", "[VAL-FOR-002] En formacion_agente es obligatorio: nivel_estudios_id.");
+    }
     await assertDocExistsOrNull("personas", personaId, "persona_id");
     const payload = {
       id,
       persona_id: personaId,
-      nivel_estudios_id: toNullableTrimmedString(datos.nivel_estudios_id),
+      nivel_estudios_id: nivelEstudiosId,
       titulo_completo: toNullableTrimmedString(datos.titulo_completo),
       duracion_anios: toNumberOrNull(datos.duracion_anios),
       institucion: toNullableTrimmedString(datos.institucion),
@@ -203,14 +239,6 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
       payload.matricula_jurisdiccion_id,
       "matricula_jurisdiccion_id",
     );
-    if (!payload.nivel_estudios_id) {
-      pushWarning(warnings, "VAL-FOR-W001", "Formación registrada sin nivel_estudios_id.", {
-        persona_id: personaId,
-        id,
-        collection: colRaw,
-        campo: "nivel_estudios_id",
-      });
-    }
     const ref = db.collection(colRaw).doc(id);
     const exists = (await ref.get()).exists;
     if (!exists) payload.creado_en = now;
@@ -259,19 +287,23 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
       schema_version: 1,
     };
     if (!Array.isArray(payload.familiares) || payload.familiares.length === 0) {
-      pushWarning(warnings, "VAL-DDJJ-W001", "DDJJ guardada sin familiares declarados.", {
-        titular_persona_id: titularPersonaId,
-        id,
-        collection: colRaw,
-      });
+      throw new HttpsError(
+        "invalid-argument",
+        "[VAL-DDJJ-002] Debe informarse al menos un familiar en declaraciones_grupo_familiar.",
+      );
     }
-    const familiaresIncompletos = hasFamiliarIncompleto(payload.familiares);
+    const familiaresIncompletos = payload.familiares.some((f) => {
+      const parentesco = toNullableTrimmedString(f && f.parentesco_id);
+      const dni = toNullableTrimmedString(f && f.dni);
+      const nombreF = toNullableTrimmedString(f && f.nombre);
+      const apellidoF = toNullableTrimmedString(f && f.apellido);
+      const fechaNac = toNullableTrimmedString(f && f.fecha_nacimiento);
+      return !parentesco || !dni || !nombreF || !apellidoF || !fechaNac;
+    });
     if (familiaresIncompletos) {
-      pushWarning(
-        warnings,
-        "VAL-DDJJ-W002",
-        "DDJJ con al menos un familiar incompleto (requiere parentesco, nombre y apellido).",
-        { titular_persona_id: titularPersonaId, id, collection: colRaw },
+      throw new HttpsError(
+        "invalid-argument",
+        "[VAL-DDJJ-003] Cada familiar requiere: parentesco_id, dni, nombre, apellido y fecha_nacimiento.",
       );
     }
     if (!existing.exists) payload.creado_en = now;

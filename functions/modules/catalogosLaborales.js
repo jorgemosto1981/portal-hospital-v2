@@ -45,8 +45,34 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     const tipoVinculoId = toNullableTrimmedString(datos.tipo_vinculo_id);
     const modalidadJornadaId = toNullableTrimmedString(datos.modalidad_jornada_id);
     const causalFinAsignacionId = toNullableTrimmedString(datos.causal_fin_asignacion_id);
+    const estadoAsignacionId = toNullableTrimmedString(datos.estado_asignacion_id);
+    const escalafonId = toNullableTrimmedString(datos.escalafon_id);
+    const agrupamientoId = toNullableTrimmedString(datos.agrupamiento_id);
+    const categoriaId = toNullableTrimmedString(datos.categoria_id);
+    const cargoFuncionalId = toNullableTrimmedString(datos.cargo_funcional_id);
+    const cargaHorariaTotal = toNumberOrNull(datos.carga_horaria_total);
+    if (
+      !tipoVinculoId ||
+      !modalidadJornadaId ||
+      !estadoAsignacionId ||
+      !escalafonId ||
+      !agrupamientoId ||
+      !categoriaId ||
+      !cargoFuncionalId ||
+      cargaHorariaTotal == null
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "[VAL-HLC-007] En HLc son obligatorios: tipo_vinculo_id, modalidad_jornada_id, estado_asignacion_id, escalafon_id, agrupamiento_id, categoria_id, cargo_funcional_id y carga_horaria_total.",
+      );
+    }
     await assertDocExistsOrNull("cfg_tipo_vinculo_laboral", tipoVinculoId, "tipo_vinculo_id");
     await assertDocExistsOrNull("cfg_modalidad_jornada", modalidadJornadaId, "modalidad_jornada_id");
+    await assertDocExistsOrNull("cfg_estado_asignacion_laboral", estadoAsignacionId, "estado_asignacion_id");
+    await assertDocExistsOrNull("cfg_escalafon", escalafonId, "escalafon_id");
+    await assertDocExistsOrNull("cfg_agrupamiento", agrupamientoId, "agrupamiento_id");
+    await assertDocExistsOrNull("cfg_categorias", categoriaId, "categoria_id");
+    await assertDocExistsOrNull("cfg_cargo_funcional", cargoFuncionalId, "cargo_funcional_id");
     await assertDocExistsOrNull(
       "cfg_causal_fin_asignacion_laboral",
       causalFinAsignacionId,
@@ -85,16 +111,16 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       persona_id: personaId,
       efector_designacion_id: efDesignacionId,
       efector_cumplimiento_id: efCumplimientoId,
-      escalafon_id: toNullableTrimmedString(datos.escalafon_id),
-      agrupamiento_id: toNullableTrimmedString(datos.agrupamiento_id),
-      categoria_id: toNullableTrimmedString(datos.categoria_id),
-      cargo_funcional_id: toNullableTrimmedString(datos.cargo_funcional_id),
+      escalafon_id: escalafonId,
+      agrupamiento_id: agrupamientoId,
+      categoria_id: categoriaId,
+      cargo_funcional_id: cargoFuncionalId,
       tipo_vinculo_id: tipoVinculoId,
       modalidad_jornada_id: modalidadJornadaId,
       causal_fin_asignacion_id: causalFinAsignacionId,
       referencias_normativa_designacion: referenciasNormalizadas,
-      estado_asignacion_id: toNullableTrimmedString(datos.estado_asignacion_id),
-      carga_horaria_total: toNumberOrNull(datos.carga_horaria_total),
+      estado_asignacion_id: estadoAsignacionId,
+      carga_horaria_total: cargaHorariaTotal,
       fecha_desde: toNullableTrimmedString(datos.fecha_desde),
       fecha_hasta: toNullableTrimmedString(datos.fecha_hasta),
       activo: datos.activo !== false,
@@ -123,11 +149,9 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       fechaHasta: payload.fecha_hasta,
     });
     if (solapeHlc) {
-      pushWarning(
-        warnings,
-        "VAL-HLC-W001",
-        `Solape de vigencia HLc detectado para persona_id ${personaId} (conflicto con ${solapeHlc.id}).`,
-        { persona_id: personaId, id, conflictivo_id: solapeHlc.id, collection: colRaw },
+      throw new HttpsError(
+        "failed-precondition",
+        `[VAL-HLC-008] Solape de vigencia HLc detectado para persona_id ${personaId} (conflicto con ${solapeHlc.id}).`,
       );
     }
     const ref = db.collection(colRaw).doc(id);
@@ -175,16 +199,26 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
         `[VAL-HLD-001] persona_id inconsistente: HLd (${personaId}) no coincide con HLc (${cargoPersonaId}).`,
       );
     }
+    const rolId = toNullableTrimmedString(datos.rol_id);
+    const funcionRealId = toNullableTrimmedString(datos.funcion_real_id);
+    const nivelJerarquico = toNumberOrNull(datos.nivel_jerarquico);
+    const fechaInicio = toNullableTrimmedString(datos.fecha_inicio);
+    if (!rolId || !funcionRealId || nivelJerarquico == null || !fechaInicio) {
+      throw new HttpsError(
+        "invalid-argument",
+        "[VAL-HLD-002] En HLd son obligatorios: rol_id, funcion_real_id, nivel_jerarquico y fecha_inicio.",
+      );
+    }
     const payload = {
       id,
       persona_id: personaId,
       cargo_id: cargoId,
-      rol_id: toNullableTrimmedString(datos.rol_id),
+      rol_id: rolId,
       escalafon_id: toNullableTrimmedString(datos.escalafon_id),
       agrupamiento_id: toNullableTrimmedString(datos.agrupamiento_id),
-      funcion_real_id: toNullableTrimmedString(datos.funcion_real_id),
-      nivel_jerarquico: toNumberOrNull(datos.nivel_jerarquico),
-      fecha_inicio: toNullableTrimmedString(datos.fecha_inicio),
+      funcion_real_id: funcionRealId,
+      nivel_jerarquico: nivelJerarquico,
+      fecha_inicio: fechaInicio,
       fecha_fin: toNullableTrimmedString(datos.fecha_fin),
       activo: datos.activo !== false,
       actualizado_en: now,
@@ -243,6 +277,12 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     actualizado_en: now,
   };
   const warnings = [];
+  if (!Array.isArray(payload.carga_por_dia_semana) || payload.carga_por_dia_semana.length === 0) {
+    throw new HttpsError(
+      "invalid-argument",
+      "[VAL-HLG-013] carga_por_dia_semana es obligatoria y debe contener al menos un día.",
+    );
+  }
   if (!payload.fecha_inicio) {
     throw new HttpsError("invalid-argument", "[VAL-HLG-010] fecha_inicio es obligatoria en HLg.");
   }
@@ -267,20 +307,16 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   });
   const solapeHlg = await findSolapeHlg({ id, personaId, grupoId, fechaInicio: payload.fecha_inicio, fechaFin: payload.fecha_fin });
   if (solapeHlg) {
-    pushWarning(
-      warnings,
-      "VAL-HLG-W002",
-      `Solape de vigencia HLg detectado para persona_id ${personaId} y grupo_de_trabajo_id ${grupoId} (conflicto con ${solapeHlg.id}).`,
-      { persona_id: personaId, id, grupo_de_trabajo_id: grupoId, conflictivo_id: solapeHlg.id, collection: colRaw },
+    throw new HttpsError(
+      "failed-precondition",
+      `[VAL-HLG-014] Solape de vigencia HLg detectado para persona_id ${personaId} y grupo_de_trabajo_id ${grupoId} (conflicto con ${solapeHlg.id}).`,
     );
   }
   const hasDiaSemanaObjects = payload.carga_por_dia_semana.some((x) => x && typeof x === "object" && !Array.isArray(x));
   if (!hasDiaSemanaObjects) {
-    pushWarning(
-      warnings,
-      "VAL-HLG-W004",
-      "carga_por_dia_semana se guardó sin dia_semana_id por item (modo numérico).",
-      { persona_id: personaId, id, collection: colRaw },
+    throw new HttpsError(
+      "invalid-argument",
+      "[VAL-HLG-015] carga_por_dia_semana debe informar dia_semana_id por item (modo objeto).",
     );
   }
   const warningCarga = await buildWarningReconciliacionCarga({

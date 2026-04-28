@@ -1,7 +1,9 @@
 import Card from "../components/ui/Card.jsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 import { guardarRegistroPersonal, listarColeccionPersonal } from "../services/datosPersonalesService.js";
+import { storageV2 } from "../services/firebase.js";
 import {
   COLECCIONES_BASE,
   COLECCIONES_CFG,
@@ -52,6 +54,9 @@ export default function DatosPersonales() {
     referencia: "",
     foto_file: null,
     foto_file_name: "",
+    foto_storage_path: "",
+    foto_content_type: "",
+    foto_download_url: "",
     persona_id: "",
     nivel_estudios_id: "",
     titulo_completo: "",
@@ -199,6 +204,9 @@ export default function DatosPersonales() {
       foto_file_name: String(
         (r.foto_rostro && (r.foto_rostro.storage_path || r.foto_rostro.content_type)) || "",
       ),
+      foto_storage_path: String((r.foto_rostro && r.foto_rostro.storage_path) || ""),
+      foto_content_type: String((r.foto_rostro && r.foto_rostro.content_type) || ""),
+      foto_download_url: String((r.foto_rostro && r.foto_rostro.download_url) || ""),
       persona_id: String(r.persona_id || r.titular_persona_id || ""),
       nivel_estudios_id: String(r.nivel_estudios_id || ""),
       titulo_completo: String(r.titulo_completo || ""),
@@ -236,33 +244,62 @@ export default function DatosPersonales() {
 
   function validar() {
     if (tipo === "personas") {
-      if (!form.dni.trim() || !form.nombre.trim() || !form.apellido.trim()) {
-        return "Completá dni, nombre y apellido.";
+      const obligatorios = [
+        ["dni", form.dni],
+        ["nombre", form.nombre],
+        ["apellido", form.apellido],
+        ["fecha_nacimiento", form.fecha_nacimiento],
+        ["lugar_nacimiento_id", form.lugar_nacimiento_id],
+        ["sexo_genero_id", form.sexo_genero_id],
+        ["estado_civil_id", form.estado_civil_id],
+        ["nacionalidad_id", form.nacionalidad_id],
+        ["contacto.telefono_celular", form.telefono_celular],
+        ["contacto.email_personal", form.email_personal],
+        ["domicilio.calle", form.calle],
+        ["domicilio.numero", form.numero],
+        ["domicilio.provincia_id", form.provincia_id],
+        ["domicilio.pais_id", form.pais_id],
+        ["domicilio.localidad_id", form.localidad_id],
+        ["domicilio.codigo_postal", form.codigo_postal],
+      ].filter(([, v]) => !String(v || "").trim());
+      if (obligatorios.length > 0) {
+        return `Completá campos obligatorios en personas: ${obligatorios.map(([k]) => k).join(", ")}.`;
       }
       if (!/^\d{6,12}$/.test(form.dni.trim())) return "DNI inválido (6 a 12 dígitos).";
       if (!form.activo && !String(form.motivo_baja_id || "").trim()) {
         return "Si activo=false, motivo_baja_id es obligatorio.";
       }
     }
-    if (tipo === "formacion_agente" && !form.persona_id.trim()) {
-      return "Completá persona_id para formación.";
+    if (tipo === "formacion_agente") {
+      if (!form.persona_id.trim()) return "Completá persona_id para formación.";
+      if (!String(form.nivel_estudios_id || "").trim()) {
+        return "Completá nivel_estudios_id para formación.";
+      }
     }
     if (tipo === "declaraciones_grupo_familiar" && !form.persona_id.trim()) {
       return "Completá persona_id titular para DDJJ.";
     }
     if (tipo === "declaraciones_grupo_familiar") {
-      const hayFilaValida = familiares.some(
-        (f) => f.parentesco_id.trim() || f.nombre.trim() || f.apellido.trim(),
+      const filasConDatos = familiares.filter((f) =>
+        [f.parentesco_id, f.dni, f.nombre, f.apellido, f.fecha_nacimiento].some((v) => String(v || "").trim()),
       );
-      if (hayFilaValida) {
-        const invalida = familiares.some(
-          (f) =>
-            (f.parentesco_id.trim() || f.nombre.trim() || f.apellido.trim()) &&
-            (!f.parentesco_id.trim() || !f.nombre.trim() || !f.apellido.trim()),
-        );
-        if (invalida) {
-          return "Cada familiar cargado requiere parentesco_id, nombre y apellido.";
-        }
+      if (filasConDatos.length === 0) {
+        return "Debés cargar al menos un familiar en DDJJ.";
+      }
+      const invalida = filasConDatos.some(
+        (f) =>
+          !f.parentesco_id.trim() ||
+          !f.dni.trim() ||
+          !f.nombre.trim() ||
+          !f.apellido.trim() ||
+          !f.fecha_nacimiento.trim(),
+      );
+      if (invalida) {
+        return "Cada familiar requiere: parentesco_id, dni, nombre, apellido y fecha_nacimiento.";
+      }
+      const dniInvalido = filasConDatos.some((f) => !/^\d{6,12}$/.test(f.dni.trim()));
+      if (dniInvalido) {
+        return "Cada familiar debe tener DNI válido (6 a 12 dígitos).";
       }
     }
     if (tipo === "consentimientos" && !form.persona_id.trim()) {
@@ -275,6 +312,25 @@ export default function DatosPersonales() {
       return "Seleccioná version_id (texto legal) desde catálogo.";
     }
     return "";
+  }
+
+  async function subirFotoRostro(file, dni) {
+    const safeDni = String(dni || "sin-dni").replace(/[^\dA-Za-z_-]/g, "") || "sin-dni";
+    const safeName = String(file.name || "foto").replace(/[^\w.\-]/g, "_");
+    const path = `personas/foto_rostro/${safeDni}/${Date.now()}_${safeName}`;
+    const storageRef = ref(storageV2, path);
+    const snap = await uploadBytes(storageRef, file, {
+      contentType: file.type || "application/octet-stream",
+      cacheControl: "public,max-age=3600",
+    });
+    const downloadUrl = await getDownloadURL(snap.ref);
+    return {
+      storage_path: snap.metadata.fullPath || path,
+      content_type: snap.metadata.contentType || file.type || null,
+      download_url: downloadUrl,
+      origen_captura: "adjunto_o_camara",
+      subido_en: new Date().toISOString(),
+    };
   }
 
   async function onSave(e) {
@@ -290,6 +346,17 @@ export default function DatosPersonales() {
       let datos = {};
       let warnings = [];
       if (tipo === "personas") {
+        let fotoRostro = null;
+        if (form.foto_file) {
+          fotoRostro = await subirFotoRostro(form.foto_file, form.dni);
+        } else if (form.foto_storage_path || form.foto_content_type || form.foto_download_url) {
+          fotoRostro = {
+            storage_path: form.foto_storage_path || null,
+            content_type: form.foto_content_type || null,
+            download_url: form.foto_download_url || null,
+            origen_captura: "adjunto_o_camara",
+          };
+        }
         datos = {
           dni: form.dni.trim(),
           nombre: form.nombre.trim(),
@@ -321,13 +388,7 @@ export default function DatosPersonales() {
             codigo_postal: form.codigo_postal || null,
             referencia: form.referencia || null,
           },
-          foto_rostro: form.foto_file
-            ? {
-                storage_path: `local_upload://${form.foto_file.name || "foto"}`,
-                content_type: form.foto_file.type || null,
-                origen_captura: "adjunto_o_camara",
-              }
-            : null,
+          foto_rostro: fotoRostro,
         };
       } else if (tipo === "formacion_agente") {
         datos = {
@@ -343,7 +404,11 @@ export default function DatosPersonales() {
         };
       } else if (tipo === "declaraciones_grupo_familiar") {
         const familiaresPayload = familiares
-          .filter((f) => f.parentesco_id.trim() || f.nombre.trim() || f.apellido.trim())
+          .filter((f) =>
+            [f.parentesco_id, f.dni, f.nombre, f.apellido, f.fecha_nacimiento].some((v) =>
+              String(v || "").trim(),
+            ),
+          )
           .map((f) => ({
             parentesco_id: f.parentesco_id || null,
             nombre: f.nombre || null,

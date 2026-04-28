@@ -1,6 +1,7 @@
 import Card from "../components/ui/Card.jsx";
 import { guardarRegistroLaboral, listarColeccionLaboral } from "../services/datosLaboralesService.js";
 import { useCallback, useEffect, useState } from "react";
+import { DATOS_LABORALES_COLECCIONES } from "../constants/datosLaboralesSchema.js";
 import { AYUDA_CAMPOS, COLECCIONES_FORM } from "./datos-laborales/constants.js";
 import ColeccionesLaboralesCards from "./datos-laborales/sections/ColeccionesLaboralesCards.jsx";
 import FasesLaboralesTables from "./datos-laborales/sections/FasesLaboralesTables.jsx";
@@ -254,9 +255,30 @@ export default function DatosLaborales() {
 
   function camposRequeridosSegunTipo() {
     if (tipoAlta === "historial_laboral_cargos") {
-      return ["persona_id", "efector_designacion_id", "efector_cumplimiento_id"];
+      return [
+        "persona_id",
+        "efector_designacion_id",
+        "efector_cumplimiento_id",
+        "estado_asignacion_id",
+        "escalafon_id",
+        "agrupamiento_id",
+        "tipo_vinculo_id",
+        "categoria_id",
+        "cargo_funcional_id",
+        "modalidad_jornada_id",
+        "carga_horaria_total",
+        "fecha_desde",
+      ];
     }
-    return ["persona_id", "cargo_id", "grupo_de_trabajo_id"];
+    return [
+      "persona_id",
+      "cargo_id",
+      "grupo_de_trabajo_id",
+      "rol_id",
+      "funcion_real_id",
+      "nivel_jerarquico",
+      "fecha_desde",
+    ];
   }
 
   function validarFormulario() {

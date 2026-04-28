@@ -16,6 +16,7 @@
     "verify:pre-coding": "node scripts/seed-v2/verify-pre-coding.mjs",
     "test:firestore:v2": "node scripts/seed-v2/test-firestore-v2-connection.mjs",
     "test:firestore:rules": "firebase --config firebase-v2/firebase.json emulators:exec --only firestore \"node tests/firestore-rules.mjs\"",
+    "test:abm:estricto": "node tests/abm-validaciones-estrictas.mjs",
     "seed:cfg": "node scripts/seed-v2/seed-cfg.mjs",
     "seed:configuracion": "node src/scripts/seedConfiguracion.mjs",
     "db:purge-efectores-legacy": "node scripts/purge-efectores-legacy.mjs",
