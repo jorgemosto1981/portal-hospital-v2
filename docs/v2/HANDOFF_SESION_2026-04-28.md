@@ -461,3 +461,49 @@
 - Lint en archivos editados: sin errores.
 - Regresión ejecutada: `npm run test:abm:estricto` -> OK.
 
+## Registro para próxima sesión — prioridad de cierre de bloque
+
+### 1) Cierre obligatorio antes de avanzar
+
+- Revisar y validar end-to-end que `DatosPersonales`, `DatosLaborales` y `Alta de usuarios/RRHH` estén completamente:
+  - operativos,
+  - con validaciones funcionales y técnicas correctas,
+  - con comportamiento consistente en alta/edición/listado,
+  - sin regresiones en flujo real.
+- No avanzar a nuevo módulo hasta cerrar este bloque con verificación funcional completa.
+
+### 2) Checklist sugerido de validación (próxima sesión)
+
+- `DatosPersonales`:
+  - obligatorios por colección (`personas`, `formacion_agente`, `declaraciones_grupo_familiar`, `consentimientos`);
+  - validaciones de formato (DNI, familiares, catálogos);
+  - edición y guardado sin pérdida de datos.
+- `DatosLaborales`:
+  - consistencia HLc/HLd/HLg;
+  - warnings visibles (solape/desvío) y no bloqueantes;
+  - read-model operativo (`GrillaOperativa`) y exportaciones JSON/CSV.
+- `RRHH`:
+  - alta cáscara,
+  - gestión de estado de acceso,
+  - baja laboral,
+  - reinicio de vinculación/sesión.
+
+### 3) Evaluación para siguiente fase (Ticket/RDA)
+
+- Evaluar continuidad con pantalla de **construcción de artículos** (insumo para Ticket y RDA):
+  - definir parámetros funcionales,
+  - colecciones propias en Firestore V2,
+  - validaciones de negocio y técnicas,
+  - contratos de lectura/escritura.
+- Recomendación de proceso:
+  1. cerrar bloque Personales/Laborales/RRHH con acta de aceptación;
+  2. definir RFC mínimo del módulo artículos (modelo de datos + reglas + catálogos);
+  3. implementar MVP de pantalla + backend + validaciones;
+  4. recién después integrar ese módulo al flujo Ticket/RDA.
+
+### 4) Estado a evaluar al retomar
+
+- Madurez actual: base funcional estable + refactor modular avanzado.
+- Riesgo residual: falta cierre funcional formal de bloque (pruebas guiadas por escenarios de operación real).
+- Decisión pendiente de negocio: alcance exacto y modelo del módulo “artículos” para no duplicar lógica en Ticket/RDA.
+
