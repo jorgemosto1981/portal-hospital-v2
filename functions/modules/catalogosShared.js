@@ -29,6 +29,8 @@ const COLECCIONES_PUBLICAS_TEMPORALES = new Set([
   "cfg_cargo_funcional",
   "cfg_tipo_vinculo_laboral",
   "cfg_modalidad_jornada",
+  "cfg_regimen_horario",
+  "cfg_centro_costo",
   "cfg_causal_fin_asignacion_laboral",
   "cfg_dia_semana",
   "cfg_tipo_acto_designacion",
@@ -209,15 +211,17 @@ async function findSolapeHlc({ id, personaId, fechaDesde, fechaHasta }) {
   );
 }
 
-async function findSolapeHlg({ id, personaId, grupoId, fechaInicio, fechaFin }) {
-  const snap = await db
-    .collection("historial_laboral_grupos")
-    .where("persona_id", "==", personaId)
-    .where("grupo_de_trabajo_id", "==", grupoId)
-    .get();
+async function findSolapeHlgMismoCargo({ id, grupoId, cargoId, fechaInicio, fechaFin }) {
+  if (!grupoId || !cargoId) return null;
+  const hldSnap = await db.collection("historial_laboral_datos").where("cargo_id", "==", cargoId).get();
+  if (hldSnap.empty) return null;
+  const hldIds = hldSnap.docs.map((doc) => String(doc.id));
+  const snap = await db.collection("historial_laboral_grupos").where("grupo_de_trabajo_id", "==", grupoId).get();
   return (
     snap.docs.find((doc) => {
       if (doc.id === id) return false;
+      const datoLaboralId = toNullableTrimmedString(doc.get("dato_laboral_id"));
+      if (!datoLaboralId || !hldIds.includes(datoLaboralId)) return false;
       return hasRangoSolapado({
         desdeA: fechaInicio,
         hastaA: fechaFin,
@@ -254,16 +258,22 @@ async function assertHlgDentroDeHlc({ fechaInicioHlg, fechaFinHlg, fechaDesdeHlc
 
 async function buildWarningReconciliacionCarga({
   id,
-  datoLaboralId,
+  cargoId,
   cargaPorDiaSemanaActual,
   cargaHorariaTotalHlc,
   epsilon = 0.01,
 }) {
   const objetivo = toNumberOrNull(cargaHorariaTotalHlc);
   if (objetivo == null) return null;
-  const snap = await db.collection("historial_laboral_grupos").where("dato_laboral_id", "==", datoLaboralId).get();
+  if (!cargoId) return null;
+  const hldSnap = await db.collection("historial_laboral_datos").where("cargo_id", "==", cargoId).get();
+  if (hldSnap.empty) return null;
+  const hldIds = hldSnap.docs.map((doc) => String(doc.id));
+  const snap = await db.collection("historial_laboral_grupos").get();
   const acumuladoExistente = snap.docs.reduce((acc, doc) => {
     if (doc.id === id) return acc;
+    const datoLaboralId = toNullableTrimmedString(doc.get("dato_laboral_id"));
+    if (!datoLaboralId || !hldIds.includes(datoLaboralId)) return acc;
     return acc + sumCargaHorasSemanales(doc.get("carga_por_dia_semana"));
   }, 0);
   const total = acumuladoExistente + sumCargaHorasSemanales(cargaPorDiaSemanaActual);
@@ -280,11 +290,11 @@ async function assertConsistenciaEstadoPerfilCuenta(personaId, estadoPerfilDatos
   if (!personaId || !estadoPerfilDatosId) return;
   const cuentaSnap = await db.collection("usuarios_cuenta").where("persona_id", "==", personaId).limit(1).get();
   if (cuentaSnap.empty) return;
-  const estadoAccesoId = toNullableTrimmedString(cuentaSnap.docs[0].get("estado_acceso_id"));
+  const estadoAccesoId = toNullableTrimmedString(cuentaSnap.docs[0].get("estado_acceso"));
   if (estadoPerfilDatosId === ESTADO_PERFIL_COMPLETO && estadoAccesoId !== ESTADO_ACCESO_ACTIVO) {
     throw new HttpsError(
       "failed-precondition",
-      `[VAL-PER-003] Inconsistencia de estado: perfil completo (${ESTADO_PERFIL_COMPLETO}) requiere estado_acceso_id=${ESTADO_ACCESO_ACTIVO}.`,
+      `[VAL-PER-003] Inconsistencia de estado: perfil completo (${ESTADO_PERFIL_COMPLETO}) requiere estado_acceso=${ESTADO_ACCESO_ACTIVO}.`,
     );
   }
 }
@@ -318,7 +328,7 @@ module.exports = {
   assertDocExistsOrNull,
   resolveEstadoPerfilDatosIdDefault,
   findSolapeHlc,
-  findSolapeHlg,
+  findSolapeHlgMismoCargo,
   assertHlgDentroDeHlc,
   buildWarningReconciliacionCarga,
   assertConsistenciaEstadoPerfilCuenta,

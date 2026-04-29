@@ -1,0 +1,41 @@
+{
+  "generado_en": "2026-04-29T12:27:56.936Z",
+  "modo": "DRY_RUN",
+  "filtros": {
+    "solo_abiertos": true
+  },
+  "resumen": {
+    "total_hlc_sin_grupo": 2,
+    "candidato_unico": 0,
+    "ambiguo_multiples_grupos": 0,
+    "sin_candidato": 2,
+    "actualizados": 0
+  },
+  "candidato_unico": [],
+  "ambiguos": [],
+  "sin_candidato": [
+    {
+      "hlc_id": "hlc_01KQAR0XSM8GBJDKF9PPRGQ7CP",
+      "persona_id": "per_01KQAR0W2PQKFWX06QBC5T0KKT",
+      "fecha_desde": "2033-05-30",
+      "fecha_hasta": null,
+      "abierto": true,
+      "grupos_detectados": [],
+      "grupo_sugerido": null,
+      "resolucion": "SIN_CANDIDATO",
+      "evidencias": []
+    },
+    {
+      "hlc_id": "hlc_01KQAR1GGRZ140RAQQHC02N9BG",
+      "persona_id": "per_01KQAR1F3H47BPYGNW77X8ZP8T",
+      "fecha_desde": "2031-09-12",
+      "fecha_hasta": null,
+      "abierto": true,
+      "grupos_detectados": [],
+      "grupo_sugerido": null,
+      "resolucion": "SIN_CANDIDATO",
+      "evidencias": []
+    }
+  ],
+  "updates_aplicados": []
+}

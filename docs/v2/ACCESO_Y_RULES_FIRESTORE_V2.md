@@ -104,6 +104,12 @@ Ajustar según si los catálogos sensibles (p. ej. sexo/género) deben ocultarse
 - [ ] Callable `completarOnboardingDatos` con transacción persona + cuenta.
 - [ ] Tests de reglas (Firebase emulator) para: agente no escribe `personas` ajeno; no eleva `estado_acceso` a portal sin checklist.
 
+### Nota de normalización (A3)
+
+- El campo persistido canónico en `usuarios_cuenta` es **`estado_acceso`** (valor id `cfg_*`).
+- `estado_acceso_id` puede aparecer solo como **nombre de parámetro de entrada** en callables RRHH para expresar un id destino, pero **no** debe persistirse como campo en Firestore.
+- Recomendación operativa: en escrituras de cuenta, limpiar cualquier legado con `estado_acceso_id` para evitar deriva de esquema.
+
 ---
 
 ## 9. Changelog

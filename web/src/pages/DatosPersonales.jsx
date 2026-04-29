@@ -25,6 +25,8 @@ export default function DatosPersonales() {
   const [saveMsg, setSaveMsg] = useState("");
   const [rowsByCol, setRowsByCol] = useState({});
   const [loadingByCol, setLoadingByCol] = useState({});
+  const [progressByCol, setProgressByCol] = useState({});
+  const [durationByCol, setDurationByCol] = useState({});
   const [form, setForm] = useState({
     dni: "",
     nombre: "",
@@ -81,13 +83,19 @@ export default function DatosPersonales() {
       init[c] = true;
     });
     setLoadingByCol(init);
+    setProgressByCol({});
+    setDurationByCol({});
     await Promise.all(
       cols.map(async (c) => {
+        const startedAt = Date.now();
         try {
-          const rows = await listarColeccionPersonal(c, 120);
+          const rows = await listarColeccionPersonal(c, null, ({ loaded }) => {
+            setProgressByCol((p) => ({ ...p, [c]: loaded }));
+          });
           setRowsByCol((p) => ({ ...p, [c]: rows }));
         } finally {
           setLoadingByCol((p) => ({ ...p, [c]: false }));
+          setDurationByCol((p) => ({ ...p, [c]: Date.now() - startedAt }));
         }
       }),
     );
@@ -587,7 +595,9 @@ export default function DatosPersonales() {
               <div key={c} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{c}</p>
                 <p className="mt-1 text-sm text-slate-700">
-                  {loadingByCol[c] ? "Cargando..." : `Registros: ${(rowsByCol[c] || []).length}`}
+                  {loadingByCol[c]
+                    ? `Cargando...${Number(progressByCol[c] || 0) > 0 ? ` (${progressByCol[c]} cargados)` : ""}`
+                    : `Registros: ${(rowsByCol[c] || []).length}${Number(durationByCol[c] || 0) > 0 ? ` · ${durationByCol[c]} ms` : ""}`}
                 </p>
                 {(rowsByCol[c] || []).slice(0, 3).map((r) => (
                   <div key={r.id} className="mt-1 rounded-md border border-slate-200 bg-white px-2 py-1.5">

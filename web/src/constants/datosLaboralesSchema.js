@@ -57,6 +57,8 @@ export const DATOS_LABORALES_COLECCIONES = [
       "cargo_id",
       "persona_id",
       "rol_id",
+      "regimen_horario_id",
+      "centro_costo_id",
       "escalafon_id",
       "agrupamiento_id",
       "funcion_real_id",

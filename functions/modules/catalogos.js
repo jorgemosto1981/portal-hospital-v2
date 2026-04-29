@@ -6,7 +6,7 @@ const {
   listarCatalogoOnboarding,
   listarColeccionPublicaTemporal,
 } = require("./catalogosCore");
-const { guardarRegistroLaboralTemporal } = require("./catalogosLaborales");
+const { guardarRegistroLaboralTemporal, listarReadModelLaboralOperativoTemporal } = require("./catalogosLaborales");
 const { guardarRegistroPersonalTemporal } = require("./catalogosPersonales");
 
 module.exports = {
@@ -15,6 +15,7 @@ module.exports = {
   listarCatalogoOnboarding,
   listarColeccionPublicaTemporal,
   guardarRegistroLaboralTemporal,
+  listarReadModelLaboralOperativoTemporal,
   guardarRegistroPersonalTemporal,
 };
 

@@ -4,6 +4,7 @@ import DatosLaborales from "../../pages/DatosLaborales.jsx";
 import DatosPersonales from "../../pages/DatosPersonales.jsx";
 import EstadoModulos from "../../pages/EstadoModulos.jsx";
 import PantallasCatalogo from "../../pages/PantallasCatalogo.jsx";
+import AltaAgenteRRHH from "../rrhh/AltaAgenteRRHH.jsx";
 import PortalHome from "../home/PortalHome.jsx";
 
 /**
@@ -16,6 +17,9 @@ export default function TabContentHost({ activeTab }) {
   }
   if (activeTab === "laboral") {
     return <DatosLaborales />;
+  }
+  if (activeTab === "rrhh") {
+    return <AltaAgenteRRHH />;
   }
   if (activeTab === "configuracion") {
     return <Configuracion />;

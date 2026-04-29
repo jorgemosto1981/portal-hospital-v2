@@ -157,6 +157,18 @@ export const SECCIONES_CATALOGO_RRHH = [
         collectionName: "cfg_tipo_acto_designacion",
         idPrefix: "CFG_ACT_",
       },
+      {
+        key: "regimen_horario",
+        etiqueta: "Régimen horario",
+        collectionName: "cfg_regimen_horario",
+        idPrefix: "CFG_REG_HOR_",
+      },
+      {
+        key: "centro_costo",
+        etiqueta: "Centro de costo",
+        collectionName: "cfg_centro_costo",
+        idPrefix: "CFG_CEN_COST_",
+      },
     ],
   },
   {

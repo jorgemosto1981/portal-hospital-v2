@@ -1,0 +1,93 @@
+{
+  "generado_en": "2026-04-29T12:27:46.390Z",
+  "modo": "APPLY",
+  "filtros": {
+    "solo_abiertos": true
+  },
+  "resumen": {
+    "total_hlc_sin_grupo": 4,
+    "candidato_unico": 2,
+    "ambiguo_multiples_grupos": 0,
+    "sin_candidato": 2,
+    "actualizados": 2
+  },
+  "candidato_unico": [
+    {
+      "hlc_id": "hlc_01KQA3W1NJ9DMENKP5M6REJKPK",
+      "persona_id": "per_01KQA2TZ25AY9616DW3YPQJ47E",
+      "fecha_desde": "2026-02-25",
+      "fecha_hasta": null,
+      "abierto": true,
+      "grupos_detectados": [
+        "gdt_01KQA6QCA8TDQK9YBTHKYA4R2V"
+      ],
+      "grupo_sugerido": "gdt_01KQA6QCA8TDQK9YBTHKYA4R2V",
+      "resolucion": "CANDIDATO_UNICO",
+      "evidencias": [
+        {
+          "hld_id": "hld_01KQA3XCM65VR4SYMVSWC27CB9",
+          "hlg_id": "hlg_01KQA3XD0PHZB15ANWNM153BND",
+          "grupo_de_trabajo_id": "gdt_01KQA6QCA8TDQK9YBTHKYA4R2V",
+          "fecha_inicio": "2026-04-19",
+          "fecha_fin": "2026-04-29"
+        }
+      ]
+    },
+    {
+      "hlc_id": "hlc_01KQAQQT3H9AYBTMXV7NG2VDYH",
+      "persona_id": "per_01KQA2TZ25AY9616DW3YPQJ47E",
+      "fecha_desde": "2026-01-01",
+      "fecha_hasta": null,
+      "abierto": true,
+      "grupos_detectados": [
+        "gdt_01KQA6QCA8TDQK9YBTHKYA4R2V"
+      ],
+      "grupo_sugerido": "gdt_01KQA6QCA8TDQK9YBTHKYA4R2V",
+      "resolucion": "CANDIDATO_UNICO",
+      "evidencias": [
+        {
+          "hld_id": "hld_01KQAQQXJX5DBT1CG2WV3WTAB6",
+          "hlg_id": "hlg_01KQAQQXY2M5W268KE730RMH4Z",
+          "grupo_de_trabajo_id": "gdt_01KQA6QCA8TDQK9YBTHKYA4R2V",
+          "fecha_inicio": "2026-01-01",
+          "fecha_fin": ""
+        }
+      ]
+    }
+  ],
+  "ambiguos": [],
+  "sin_candidato": [
+    {
+      "hlc_id": "hlc_01KQAR0XSM8GBJDKF9PPRGQ7CP",
+      "persona_id": "per_01KQAR0W2PQKFWX06QBC5T0KKT",
+      "fecha_desde": "2033-05-30",
+      "fecha_hasta": null,
+      "abierto": true,
+      "grupos_detectados": [],
+      "grupo_sugerido": null,
+      "resolucion": "SIN_CANDIDATO",
+      "evidencias": []
+    },
+    {
+      "hlc_id": "hlc_01KQAR1GGRZ140RAQQHC02N9BG",
+      "persona_id": "per_01KQAR1F3H47BPYGNW77X8ZP8T",
+      "fecha_desde": "2031-09-12",
+      "fecha_hasta": null,
+      "abierto": true,
+      "grupos_detectados": [],
+      "grupo_sugerido": null,
+      "resolucion": "SIN_CANDIDATO",
+      "evidencias": []
+    }
+  ],
+  "updates_aplicados": [
+    {
+      "hlc_id": "hlc_01KQA3W1NJ9DMENKP5M6REJKPK",
+      "grupo_de_trabajo_id": "gdt_01KQA6QCA8TDQK9YBTHKYA4R2V"
+    },
+    {
+      "hlc_id": "hlc_01KQAQQT3H9AYBTMXV7NG2VDYH",
+      "grupo_de_trabajo_id": "gdt_01KQA6QCA8TDQK9YBTHKYA4R2V"
+    }
+  ]
+}

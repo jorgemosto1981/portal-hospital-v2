@@ -54,9 +54,12 @@ const CFG_COLECCIONES_RRHH = new Set([
   "grupos_de_trabajo",
   "cfg_efectores",
   "cfg_modalidad_jornada",
+  "cfg_regimen_horario",
+  "cfg_centro_costo",
   "cfg_estado_asignacion_laboral",
   "cfg_causal_fin_asignacion_laboral",
   "cfg_tipo_acto_designacion",
+  "usuarios_cuenta",
 ]);
 
 module.exports = {

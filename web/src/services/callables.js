@@ -17,6 +17,21 @@ export function callRrhhAltaAgente(data) {
   return httpsCallable(getFunctionsV2(), "rrhhAltaAgente")(data);
 }
 
+/** RRHH: actualizar estado de acceso de la cuenta por persona_id. */
+export function callRrhhActualizarEstadoCuentaAcceso(data) {
+  return httpsCallable(getFunctionsV2(), "rrhhActualizarEstadoCuentaAcceso")(data);
+}
+
+/** RRHH: aplicar baja laboral transaccional (cierra HLc vigentes + persona/cuenta). */
+export function callRrhhAplicarBajaLaboral(data) {
+  return httpsCallable(getFunctionsV2(), "rrhhAplicarBajaLaboral")(data);
+}
+
+/** RRHH: revoca sesión y reinicia vínculo Auth<->cuenta para re-vinculación por DNI. */
+export function callRrhhReiniciarVinculacionCuenta(data) {
+  return httpsCallable(getFunctionsV2(), "rrhhReiniciarVinculacionCuenta")(data);
+}
+
 /** Primer acceso: DNI + email + PIN 6 (no requiere sesión previa del agente en Auth). */
 export function callRegistroPrimerAcceso(data) {
   return httpsCallable(getFunctionsV2(), "registrarPrimerAcceso")(data);
@@ -40,6 +55,11 @@ export function callListarColeccionPublicaTemporal(data) {
 /** Temporal: alta/edición de registros laborales (HLc/HLd/HLg) para carga operativa. */
 export function callGuardarRegistroLaboralTemporal(data) {
   return httpsCallable(getFunctionsV2(), "guardarRegistroLaboralTemporal")(data);
+}
+
+/** Read-model laboral operativo (C1) para Ticket/RDA/Grilla, con filtros por fecha/persona/grupo. */
+export function callListarReadModelLaboralOperativoTemporal(data) {
+  return httpsCallable(getFunctionsV2(), "listarReadModelLaboralOperativoTemporal")(data);
 }
 
 /** Temporal: alta/edición de datos personales (persona, formación, DDJJ, consentimientos). */

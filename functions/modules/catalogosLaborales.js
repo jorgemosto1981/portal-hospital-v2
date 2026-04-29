@@ -12,12 +12,58 @@ const {
   isRangoInvalido,
   assertDocExistsOrNull,
   findSolapeHlc,
-  findSolapeHlg,
+  findSolapeHlgMismoCargo,
   assertHlgDentroDeHlc,
   buildWarningReconciliacionCarga,
   pushWarning,
   validarCargaPorDiaSemana,
 } = require("./catalogosShared");
+
+function toDateKey(value) {
+  const raw = toNullableTrimmedString(value);
+  if (!raw) return "";
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function vigenteEnFechaInclusiva(desde, hasta, fecha) {
+  if (!desde || !fecha) return false;
+  if (desde > fecha) return false;
+  if (hasta && hasta < fecha) return false;
+  return true;
+}
+
+function estadoOperativoDesdeRango(desde, hasta, fecha) {
+  if (!desde || !fecha) return "desconocido";
+  if (desde > fecha) return "pendiente";
+  if (hasta && hasta < fecha) return "no_vigente";
+  return "activo";
+}
+
+function estadoAdminDesdeFechaFin(hasta) {
+  return hasta ? "cerrado" : "abierto";
+}
+
+function sumarCargaSemanal(cargaPorDiaSemana) {
+  if (!Array.isArray(cargaPorDiaSemana)) return 0;
+  return cargaPorDiaSemana.reduce((acc, item) => {
+    const horas = item && typeof item === "object" && !Array.isArray(item) ? Number(item.horas) : Number(item);
+    return Number.isFinite(horas) ? acc + horas : acc;
+  }, 0);
+}
+
+function haySolapeInclusivo(aDesde, aHasta, bDesde, bHasta) {
+  if (!aDesde || !bDesde) return false;
+  const aFin = aHasta || "9999-12-31";
+  const bFin = bHasta || "9999-12-31";
+  return aDesde <= bFin && bDesde <= aFin;
+}
 
 const guardarRegistroLaboralTemporal = onCall(async (request) => {
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
@@ -32,14 +78,16 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   if (colRaw === "historial_laboral_cargos") {
     const id = toNullableTrimmedString(datos.id) || `hlc_${ulid()}`;
     const personaId = toNullableTrimmedString(datos.persona_id);
+    const grupoTrabajoId = toNullableTrimmedString(datos.grupo_de_trabajo_id);
     const efDesignacionId = toNullableTrimmedString(datos.efector_designacion_id);
     const efCumplimientoId = toNullableTrimmedString(datos.efector_cumplimiento_id);
-    if (!personaId || !efDesignacionId || !efCumplimientoId) {
+    if (!personaId || !grupoTrabajoId || !efDesignacionId || !efCumplimientoId) {
       throw new HttpsError(
         "invalid-argument",
-        "[VAL-HLC-002] En HLc son obligatorios: persona_id, efector_designacion_id y efector_cumplimiento_id.",
+        "[VAL-HLC-002] En HLc son obligatorios: persona_id, grupo_de_trabajo_id, efector_designacion_id y efector_cumplimiento_id.",
       );
     }
+    await assertDocExistsOrNull("grupos_de_trabajo", grupoTrabajoId, "grupo_de_trabajo_id");
     await assertDocExistsOrNull("cfg_efectores", efDesignacionId, "efector_designacion_id");
     await assertDocExistsOrNull("cfg_efectores", efCumplimientoId, "efector_cumplimiento_id");
     const tipoVinculoId = toNullableTrimmedString(datos.tipo_vinculo_id);
@@ -109,6 +157,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     const payload = {
       id,
       persona_id: personaId,
+      grupo_de_trabajo_id: grupoTrabajoId,
       efector_designacion_id: efDesignacionId,
       efector_cumplimiento_id: efCumplimientoId,
       escalafon_id: escalafonId,
@@ -216,6 +265,8 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       persona_id: personaId,
       cargo_id: cargoId,
       rol_id: rolId,
+      regimen_horario_id: toNullableTrimmedString(datos.regimen_horario_id),
+      centro_costo_id: toNullableTrimmedString(datos.centro_costo_id),
       escalafon_id: toNullableTrimmedString(datos.escalafon_id),
       agrupamiento_id: toNullableTrimmedString(datos.agrupamiento_id),
       funcion_real_id: funcionRealId,
@@ -225,6 +276,8 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       activo: datos.activo !== false,
       actualizado_en: now,
     };
+    await assertDocExistsOrNull("cfg_regimen_horario", payload.regimen_horario_id, "regimen_horario_id");
+    await assertDocExistsOrNull("cfg_centro_costo", payload.centro_costo_id, "centro_costo_id");
     const ref = db.collection(colRaw).doc(id);
     const exists = (await ref.get()).exists;
     if (!exists) payload.creado_en = now;
@@ -307,13 +360,19 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     fechaDesdeHlc: toNullableTrimmedString(cargoSnap.get("fecha_desde")),
     fechaHastaHlc: toNullableTrimmedString(cargoSnap.get("fecha_hasta")),
   });
-  const solapeHlg = await findSolapeHlg({ id, personaId, grupoId, fechaInicio: payload.fecha_inicio, fechaFin: payload.fecha_fin });
+  const solapeHlg = await findSolapeHlgMismoCargo({
+    id,
+    grupoId,
+    cargoId,
+    fechaInicio: payload.fecha_inicio,
+    fechaFin: payload.fecha_fin,
+  });
   if (solapeHlg) {
     pushWarning(
       warnings,
       "VAL-HLG-W002",
-      `Solape de vigencia HLg detectado para persona_id ${personaId} y grupo_de_trabajo_id ${grupoId} (conflicto con ${solapeHlg.id}).`,
-      { persona_id: personaId, id, grupo_de_trabajo_id: grupoId, conflictivo_id: solapeHlg.id, collection: colRaw },
+      `Solape de vigencia HLg detectado dentro del mismo cargo (${cargoId}) para grupo_de_trabajo_id ${grupoId} (conflicto con ${solapeHlg.id}).`,
+      { persona_id: personaId, cargo_id: cargoId, id, grupo_de_trabajo_id: grupoId, conflictivo_id: solapeHlg.id, collection: colRaw },
     );
   }
   const hasDiaSemanaObjects = payload.carga_por_dia_semana.some((x) => x && typeof x === "object" && !Array.isArray(x));
@@ -325,7 +384,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   }
   const warningCarga = await buildWarningReconciliacionCarga({
     id,
-    datoLaboralId,
+    cargoId,
     cargaPorDiaSemanaActual: payload.carga_por_dia_semana,
     cargaHorariaTotalHlc: cargoSnap.get("carga_horaria_total"),
   });
@@ -337,4 +396,154 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   return { ok: true, id, warnings };
 });
 
-module.exports = { guardarRegistroLaboralTemporal };
+const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
+  const data = request && request.data && typeof request.data === "object" ? request.data : {};
+  const personaId = toNullableTrimmedString(data.persona_id);
+  const grupoId = toNullableTrimmedString(data.grupo_de_trabajo_id);
+  const fechaCorte = toDateKey(data.fecha_corte) || new Date().toISOString().slice(0, 10);
+  const incluirNoVigentes = data.incluir_no_vigentes === true;
+
+  const [hlcSnap, hldSnap, hlgSnap, personasSnap, gruposSnap] = await Promise.all([
+    db.collection("historial_laboral_cargos").get(),
+    db.collection("historial_laboral_datos").get(),
+    db.collection("historial_laboral_grupos").get(),
+    db.collection("personas").get(),
+    db.collection("grupos_de_trabajo").get(),
+  ]);
+
+  const idxHlc = new Map();
+  hlcSnap.docs.forEach((doc) => idxHlc.set(doc.id, { id: doc.id, ...(doc.data() || {}) }));
+  const idxHld = new Map();
+  hldSnap.docs.forEach((doc) => idxHld.set(doc.id, { id: doc.id, ...(doc.data() || {}) }));
+  const idxPersonas = new Map();
+  personasSnap.docs.forEach((doc) => idxPersonas.set(doc.id, { id: doc.id, ...(doc.data() || {}) }));
+  const idxGrupos = new Map();
+  gruposSnap.docs.forEach((doc) => idxGrupos.set(doc.id, { id: doc.id, ...(doc.data() || {}) }));
+
+  const totalCargaPorCargo = new Map();
+  const hlgEnriquecidos = [];
+  hlgSnap.docs.forEach((doc) => {
+    const hlg = doc.data() || {};
+    const hld = idxHld.get(String(hlg.dato_laboral_id || ""));
+    const cargoId = toNullableTrimmedString(hld && hld.cargo_id);
+    const rowGrupoId = toNullableTrimmedString(hlg.grupo_de_trabajo_id);
+    const fechaInicio = toDateKey(hlg.fecha_inicio);
+    const fechaFin = toDateKey(hlg.fecha_fin);
+    hlgEnriquecidos.push({
+      id: doc.id,
+      hlg,
+      hld,
+      cargo_id: cargoId,
+      grupo_de_trabajo_id: rowGrupoId,
+      fecha_inicio: fechaInicio,
+      fecha_fin: fechaFin,
+    });
+    if (!cargoId) return;
+    totalCargaPorCargo.set(cargoId, Number(totalCargaPorCargo.get(cargoId) || 0) + sumarCargaSemanal(hlg.carga_por_dia_semana));
+  });
+
+  const idsConSolapeCargoGrupo = new Set();
+  const byCargoGrupo = new Map();
+  hlgEnriquecidos.forEach((row) => {
+    if (!row.cargo_id || !row.grupo_de_trabajo_id) return;
+    const k = `${row.cargo_id}::${row.grupo_de_trabajo_id}`;
+    const list = byCargoGrupo.get(k) || [];
+    list.push(row);
+    byCargoGrupo.set(k, list);
+  });
+  byCargoGrupo.forEach((list) => {
+    for (let i = 0; i < list.length; i += 1) {
+      for (let j = i + 1; j < list.length; j += 1) {
+        if (haySolapeInclusivo(list[i].fecha_inicio, list[i].fecha_fin, list[j].fecha_inicio, list[j].fecha_fin)) {
+          idsConSolapeCargoGrupo.add(list[i].id);
+          idsConSolapeCargoGrupo.add(list[j].id);
+        }
+      }
+    }
+  });
+
+  const items = [];
+  hlgEnriquecidos.forEach((row) => {
+    const { hlg, hld, cargo_id: cargoId, grupo_de_trabajo_id: rowGrupoId, fecha_inicio: fechaInicio, fecha_fin: fechaFin } = row;
+    const hlc = hld ? idxHlc.get(String(hld.cargo_id || "")) : null;
+    const rowPersonaId = toNullableTrimmedString(hlg.persona_id);
+    const vigente = vigenteEnFechaInclusiva(fechaInicio, fechaFin, fechaCorte);
+    const estadoOperativo = estadoOperativoDesdeRango(fechaInicio, fechaFin, fechaCorte);
+    const estadoAdmin = estadoAdminDesdeFechaFin(fechaFin);
+
+    if (personaId && rowPersonaId !== personaId) return;
+    if (grupoId && rowGrupoId !== grupoId) return;
+    if (!incluirNoVigentes && !vigente) return;
+
+    const persona = idxPersonas.get(rowPersonaId);
+    const grupo = idxGrupos.get(rowGrupoId);
+    const expectedCarga = hlc ? Number(hlc.carga_horaria_total) : null;
+    const totalCarga = Number(totalCargaPorCargo.get(String((hlc && hlc.id) || "")) || 0);
+    const warningCodes = [];
+    if (idsConSolapeCargoGrupo.has(row.id)) {
+      warningCodes.push("SOLAPE_CARGO_GRUPO");
+    }
+    if (hlc && Number.isFinite(expectedCarga) && Math.abs(totalCarga - expectedCarga) > 0.01) {
+      warningCodes.push("DESVIO_CARGA_NORMATIVA");
+    }
+
+    items.push({
+      persona_id: rowPersonaId || null,
+      persona_nombre: persona
+        ? `${String(persona.apellido || "").trim()} ${String(persona.nombre || "").trim()}`.trim()
+        : null,
+      grupo_de_trabajo_id: rowGrupoId || null,
+      grupo_nombre: grupo ? toNullableTrimmedString(grupo.nombre) : null,
+      fecha_corte: fechaCorte,
+      hlg_id: row.id,
+      hld_id: hld ? String(hld.id || "") : null,
+      hlc_id: hlc ? String(hlc.id || "") : null,
+      nivel_jerarquico: hlg.nivel_jerarquico == null ? null : Number(hlg.nivel_jerarquico),
+      vigente_en_fecha: vigente,
+      estado_operativo: estadoOperativo,
+      estado_admin: estadoAdmin,
+      fecha_inicio: fechaInicio || null,
+      fecha_fin: fechaFin || null,
+      regimen_horario_id: hld ? toNullableTrimmedString(hld.regimen_horario_id) : null,
+      centro_costo_id: hld ? toNullableTrimmedString(hld.centro_costo_id) : null,
+      carga_horas_semana_hlg: sumarCargaSemanal(hlg.carga_por_dia_semana),
+      carga_horas_total_hlc: Number.isFinite(expectedCarga) ? expectedCarga : null,
+      warning_codes: warningCodes,
+    });
+  });
+
+  items.sort((a, b) => {
+    const ga = String(a.grupo_de_trabajo_id || "");
+    const gb = String(b.grupo_de_trabajo_id || "");
+    if (ga !== gb) return ga.localeCompare(gb);
+    const na = Number.isFinite(a.nivel_jerarquico) ? a.nivel_jerarquico : 999;
+    const nb = Number.isFinite(b.nivel_jerarquico) ? b.nivel_jerarquico : 999;
+    if (na !== nb) return na - nb;
+    return String(a.persona_id || "").localeCompare(String(b.persona_id || ""));
+  });
+
+  return {
+    items,
+    resumen: {
+      total: items.length,
+      vigentes: items.filter((x) => x.estado_operativo === "activo").length,
+      no_vigentes: items.filter((x) => x.estado_operativo === "no_vigente").length,
+      pendientes: items.filter((x) => x.estado_operativo === "pendiente").length,
+      abiertos: items.filter((x) => x.estado_admin === "abierto").length,
+      cerrados: items.filter((x) => x.estado_admin === "cerrado").length,
+      warning_solape_cargo_grupo: items.filter((x) => Array.isArray(x.warning_codes) && x.warning_codes.includes("SOLAPE_CARGO_GRUPO")).length,
+      warning_desvio_carga: items.filter((x) => Array.isArray(x.warning_codes) && x.warning_codes.includes("DESVIO_CARGA_NORMATIVA")).length,
+    },
+    meta: {
+      fecha_corte: fechaCorte,
+      filtros: {
+        persona_id: personaId || null,
+        grupo_de_trabajo_id: grupoId || null,
+        incluir_no_vigentes: incluirNoVigentes,
+      },
+    },
+  };
+});
+
+module.exports = { guardarRegistroLaboralTemporal, listarReadModelLaboralOperativoTemporal };

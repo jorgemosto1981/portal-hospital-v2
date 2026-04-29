@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { createLogger } from "./utils/logger";
@@ -56,6 +56,22 @@ const dbV2 = getFirestore(appV2);
 const authV2 = getAuth(appV2);
 const storageV2 = getStorage(appV2);
 authV2.languageCode = "es";
+
+let firestoreEmulatorConnected = false;
+if (!firestoreEmulatorConnected && typeof window !== "undefined") {
+  const hostName = window.location.hostname || "";
+  const isLocalHost = hostName === "localhost" || hostName === "127.0.0.1" || hostName === "::1";
+  const shouldUseFirestoreEmulator =
+    import.meta.env.VITE_V2_USE_FIRESTORE_EMULATOR === "true" ||
+    (isLocalHost && import.meta.env.VITE_V2_USE_FIRESTORE_EMULATOR !== "false");
+
+  if (shouldUseFirestoreEmulator) {
+    const host = import.meta.env.VITE_V2_FIRESTORE_EMULATOR_HOST || "127.0.0.1";
+    const port = Number(import.meta.env.VITE_V2_FIRESTORE_EMULATOR_PORT || "8092", 10);
+    connectFirestoreEmulator(dbV2, host, port);
+    firestoreEmulatorConnected = true;
+  }
+}
 
 /** Analytics solo en navegador; puede quedar null si no hay `measurementId` o no hay soporte. */
 let analyticsV2 = null;

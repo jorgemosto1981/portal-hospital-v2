@@ -4,11 +4,12 @@ import { dbV2 } from "./firebase.js";
 import { callGuardarRegistroLaboralTemporal, callListarColeccionPublicaTemporal } from "./callables.js";
 
 /**
- * Lee una colección laboral de Firestore V2 con límite para vista web.
+ * Lee una colección laboral de Firestore V2.
+ * Para colecciones servidas por Callable se pagina automáticamente.
  * @param {string} collectionName
- * @param {number} maxRows
+ * @param {number|null} maxRows
  */
-export async function listarColeccionLaboral(collectionName, maxRows = 20) {
+export async function listarColeccionLaboral(collectionName, maxRows = null, onProgress) {
   const isCfg = String(collectionName).startsWith("cfg_");
   const isLaboralCore = [
     "grupos_de_trabajo",
@@ -19,13 +20,39 @@ export async function listarColeccionLaboral(collectionName, maxRows = 20) {
   ].includes(String(collectionName));
 
   if (isCfg || isLaboralCore) {
-    const r = await callListarColeccionPublicaTemporal({ collectionName });
-    const data = r && r.data && typeof r.data === "object" ? r.data : {};
-    const items = Array.isArray(data.items) ? data.items : [];
-    return items.slice(0, maxRows).map((item) => ({ ...item }));
+    const targetMax =
+      Number.isFinite(maxRows) && maxRows > 0 ? Math.trunc(maxRows) : Number.POSITIVE_INFINITY;
+    const pageSize = 200;
+    let pageToken = null;
+    let hasMore = true;
+    const items = [];
+    while (hasMore && items.length < targetMax) {
+      const r = await callListarColeccionPublicaTemporal({
+        collectionName,
+        pageSize,
+        pageToken,
+      });
+      const data = r && r.data && typeof r.data === "object" ? r.data : {};
+      const chunk = Array.isArray(data.items) ? data.items : [];
+      items.push(...chunk.map((item) => ({ ...item })));
+      if (typeof onProgress === "function") {
+        onProgress({
+          collectionName,
+          loaded: items.length,
+          pageSize,
+          hasMore,
+          pageToken,
+        });
+      }
+      hasMore = data.hasMore === true;
+      pageToken = typeof data.nextPageToken === "string" ? data.nextPageToken : null;
+      if (!pageToken) hasMore = false;
+      if (chunk.length === 0) hasMore = false;
+    }
+    return Number.isFinite(targetMax) ? items.slice(0, targetMax) : items;
   }
 
-  const safeLimit = Number.isFinite(maxRows) ? Math.max(1, Math.min(100, maxRows)) : 20;
+  const safeLimit = Number.isFinite(maxRows) ? Math.max(1, Math.min(1000, maxRows)) : 1000;
   const ref = collection(dbV2, collectionName);
   const snap = await getDocs(query(ref, limit(safeLimit)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));

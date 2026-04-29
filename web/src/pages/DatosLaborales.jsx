@@ -1,14 +1,20 @@
 import Card from "../components/ui/Card.jsx";
 import { guardarRegistroLaboral, listarColeccionLaboral } from "../services/datosLaboralesService.js";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DATOS_LABORALES_COLECCIONES } from "../constants/datosLaboralesSchema.js";
 import { AYUDA_CAMPOS, COLECCIONES_FORM } from "./datos-laborales/constants.js";
 import ColeccionesLaboralesCards from "./datos-laborales/sections/ColeccionesLaboralesCards.jsx";
 import FasesLaboralesTables from "./datos-laborales/sections/FasesLaboralesTables.jsx";
 import IntegridadReferencialCard from "./datos-laborales/sections/IntegridadReferencialCard.jsx";
+import TimelineLaboralPersonaCard from "./datos-laborales/sections/TimelineLaboralPersonaCard.jsx";
+import VistaOperativaGrupoCard from "./datos-laborales/sections/VistaOperativaGrupoCard.jsx";
 import {
+  buildVistaGrupoItems,
+  buildTimelineItemsByPersona,
   crearIndicePorId,
   emptyCargaDia,
+  filterTimelineItemsAdvanced,
+  filterTimelineItems,
   isoToDateInput,
   labelDesdeIndice,
   normalizarWarnings,
@@ -18,6 +24,8 @@ import {
 export default function DatosLaborales() {
   const [rowsByCollection, setRowsByCollection] = useState({});
   const [loadingByCollection, setLoadingByCollection] = useState({});
+  const [progressByCollection, setProgressByCollection] = useState({});
+  const [durationByCollection, setDurationByCollection] = useState({});
   const [errorByCollection, setErrorByCollection] = useState({});
   const [tipoAlta, setTipoAlta] = useState("historial_laboral_cargos");
   const [modoEdicion, setModoEdicion] = useState(false);
@@ -25,6 +33,19 @@ export default function DatosLaborales() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [cargaPorDiaRows, setCargaPorDiaRows] = useState([emptyCargaDia()]);
+  const [timelinePersonaId, setTimelinePersonaId] = useState("");
+  const [timelineFiltro, setTimelineFiltro] = useState("todos");
+  const [timelineFecha, setTimelineFecha] = useState("");
+  const [timelineTipoTramo, setTimelineTipoTramo] = useState("todos");
+  const [timelineGrupoId, setTimelineGrupoId] = useState("");
+  const [timelineEstadoAsignacionId, setTimelineEstadoAsignacionId] = useState("");
+  const [timelineNivelMin, setTimelineNivelMin] = useState("");
+  const [timelineNivelMax, setTimelineNivelMax] = useState("");
+  const [timelineOnlySinReferencias, setTimelineOnlySinReferencias] = useState(false);
+  const [timelineOnlySolape, setTimelineOnlySolape] = useState(false);
+  const [timelineWarningTipo, setTimelineWarningTipo] = useState("todos");
+  const [grupoVistaId, setGrupoVistaId] = useState("");
+  const [grupoVistaFecha, setGrupoVistaFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [formData, setFormData] = useState({
     persona_id: "",
     grupo_de_trabajo_id: "",
@@ -45,6 +66,8 @@ export default function DatosLaborales() {
     referencia_detalle: "",
     categoria_id: "",
     rol_id: "",
+    regimen_horario_id: "",
+    centro_costo_id: "",
     escalafon_id: "",
     agrupamiento_id: "",
     funcion_real_id: "",
@@ -63,11 +86,16 @@ export default function DatosLaborales() {
       initialLoading[collectionName] = true;
     });
     setLoadingByCollection(initialLoading);
+    setProgressByCollection({});
+    setDurationByCollection({});
 
     await Promise.all(
       collections.map(async (collectionName) => {
+        const startedAt = Date.now();
         try {
-          const rows = await listarColeccionLaboral(collectionName, 80);
+          const rows = await listarColeccionLaboral(collectionName, null, ({ loaded }) => {
+            setProgressByCollection((prev) => ({ ...prev, [collectionName]: loaded }));
+          });
           setRowsByCollection((prev) => ({ ...prev, [collectionName]: rows }));
           setErrorByCollection((prev) => ({ ...prev, [collectionName]: "" }));
         } catch (e) {
@@ -76,6 +104,7 @@ export default function DatosLaborales() {
           setErrorByCollection((prev) => ({ ...prev, [collectionName]: msg }));
         } finally {
           setLoadingByCollection((prev) => ({ ...prev, [collectionName]: false }));
+          setDurationByCollection((prev) => ({ ...prev, [collectionName]: Date.now() - startedAt }));
         }
       }),
     );
@@ -97,6 +126,9 @@ export default function DatosLaborales() {
   const hlgRows = rowsByCollection.historial_laboral_grupos || [];
   const idxEfectores = crearIndicePorId(rowsByCollection.cfg_efectores || []);
   const idxGrupos = crearIndicePorId(rowsByCollection.grupos_de_trabajo || []);
+  const idxPersonas = crearIndicePorId(rowsByCollection.personas || []);
+  const idxRoles = crearIndicePorId(rowsByCollection.cfg_rol || []);
+  const idxFunciones = crearIndicePorId(rowsByCollection.cfg_cargo_funcional || []);
   const idxHlc = crearIndicePorId(hlcRows);
   const idxHld = crearIndicePorId(hldRows);
   const opcionesGrupos = rowsByCollection.grupos_de_trabajo || [];
@@ -112,8 +144,170 @@ export default function DatosLaborales() {
   const opcionesModalidadJornada = rowsByCollection.cfg_modalidad_jornada || [];
   const opcionesCausalFinAsignacion = rowsByCollection.cfg_causal_fin_asignacion_laboral || [];
   const opcionesTipoActo = rowsByCollection.cfg_tipo_acto_designacion || [];
+  const opcionesRegimenHorario = rowsByCollection.cfg_regimen_horario || [];
+  const opcionesCentroCosto = rowsByCollection.cfg_centro_costo || [];
   const opcionesDiaSemana = rowsByCollection.cfg_dia_semana || [];
   const registrosPorTipo = rowsByCollection[tipoAlta] || [];
+  const opcionesCargoHlcFiltradas = useMemo(() => {
+    if (!formData.persona_id) return hlcRows;
+    const personaId = String(formData.persona_id);
+    return hlcRows.filter((row) => String(row.persona_id || "") === personaId);
+  }, [hlcRows, formData.persona_id]);
+  const opcionesCargoHlcDetalladas = useMemo(
+    () =>
+      opcionesCargoHlcFiltradas.map((cargo) => {
+        const cargoFuncional = labelDesdeIndice(idxFunciones, cargo.cargo_funcional_id);
+        const grupo = labelDesdeIndice(idxGrupos, cargo.grupo_de_trabajo_id);
+        const efectorDes = labelDesdeIndice(idxEfectores, cargo.efector_designacion_id);
+        const efectorCum = labelDesdeIndice(idxEfectores, cargo.efector_cumplimiento_id);
+        const desde = cargo.fecha_desde || "—";
+        const hasta = cargo.fecha_hasta || "abierto";
+        const estado = cargo.estado_asignacion_id || "—";
+        return {
+          id: cargo.id,
+          label:
+            `${cargo.id} | ${cargoFuncional} | ${grupo} | ` +
+            `ED:${efectorDes} EC:${efectorCum} | ${desde} -> ${hasta} | estado:${estado}`,
+        };
+      }),
+    [opcionesCargoHlcFiltradas, idxFunciones, idxGrupos, idxEfectores],
+  );
+  function personaLabel(personaId) {
+    const raw = String(personaId || "").trim();
+    if (!raw) return "—";
+    const row = idxPersonas.get(raw);
+    if (!row) return raw;
+    const apellido = String(row.apellido || "").trim();
+    const nombre = String(row.nombre || "").trim();
+    const full = [apellido, nombre].filter(Boolean).join(" ").trim();
+    return full ? `${raw} (${full})` : raw;
+  }
+  const registrosEdicionDetallados = useMemo(() => {
+    return registrosPorTipo.map((x) => {
+      if (tipoAlta === "historial_laboral_cargos") {
+        const persona = personaLabel(x.persona_id);
+        const cargoFuncional = labelDesdeIndice(idxFunciones, x.cargo_funcional_id);
+        const grupo = labelDesdeIndice(idxGrupos, x.grupo_de_trabajo_id);
+        const desde = x.fecha_desde || "—";
+        const hasta = x.fecha_hasta || "abierto";
+        return {
+          id: x.id,
+          label: `${x.id} | persona:${persona} | cargo:${cargoFuncional} | grupo:${grupo} | ${desde} -> ${hasta}`,
+        };
+      }
+      const persona = personaLabel(x.persona_id);
+      const grupo = labelDesdeIndice(idxGrupos, x.grupo_de_trabajo_id);
+      const nivel = x.nivel_jerarquico == null ? "—" : String(x.nivel_jerarquico);
+      const desde = x.fecha_inicio || "—";
+      const hasta = x.fecha_fin || "abierto";
+      const dato = x.dato_laboral_id || "—";
+      const datoLaboral = idxHld.get(String(x.dato_laboral_id || ""));
+      const cargo = datoLaboral ? idxHlc.get(String(datoLaboral.cargo_id || "")) : null;
+      const cargoFuncional = cargo
+        ? labelDesdeIndice(idxFunciones, cargo.cargo_funcional_id)
+        : "—";
+      return {
+        id: x.id,
+        label:
+          `${x.id} | persona:${persona} | grupo:${grupo} | cargo:${cargoFuncional} | ` +
+          `nivel:${nivel} | hld:${dato} | ${desde} -> ${hasta}`,
+      };
+    });
+  }, [registrosPorTipo, tipoAlta, idxPersonas, idxFunciones, idxGrupos, idxHld, idxHlc]);
+  const timelineItemsBase = useMemo(
+    () =>
+      buildTimelineItemsByPersona({
+        personaId: timelinePersonaId,
+        hlcRows,
+        hldRows,
+        hlgRows,
+        idxHlc,
+        idxHld,
+        idxGrupos,
+        idxEfectores,
+        idxPersonas,
+        idxRoles,
+        idxFunciones,
+      }),
+    [
+      timelinePersonaId,
+      hlcRows,
+      hldRows,
+      hlgRows,
+      idxHlc,
+      idxHld,
+      idxGrupos,
+      idxEfectores,
+      idxPersonas,
+      idxRoles,
+      idxFunciones,
+    ],
+  );
+  const timelineItems = useMemo(() => {
+    const base = filterTimelineItems(timelineItemsBase, {
+      filtro: timelineFiltro,
+      fecha: timelineFecha,
+    });
+    return filterTimelineItemsAdvanced(base, {
+      tipo: timelineTipoTramo,
+      grupoId: timelineGrupoId,
+      estadoAsignacionId: timelineEstadoAsignacionId,
+      nivelMin: timelineNivelMin,
+      nivelMax: timelineNivelMax,
+      onlySinReferencias: timelineOnlySinReferencias,
+      onlySolape: timelineOnlySolape,
+      warningTipo: timelineWarningTipo,
+    });
+  }, [
+    timelineItemsBase,
+    timelineFiltro,
+    timelineFecha,
+    timelineTipoTramo,
+    timelineGrupoId,
+    timelineEstadoAsignacionId,
+    timelineNivelMin,
+    timelineNivelMax,
+    timelineOnlySinReferencias,
+    timelineOnlySolape,
+    timelineWarningTipo,
+  ]);
+  const timelineResumen = useMemo(() => {
+    const base = {
+      total: timelineItemsBase.length,
+      activos: 0,
+      cerrados: 0,
+      conflictos: 0,
+      hlc: 0,
+      hld: 0,
+      hlg: 0,
+      warningSolapeCargoGrupo: 0,
+      warningDesvioCargaNormativa: 0,
+    };
+    timelineItemsBase.forEach((item) => {
+      if (item.estado === "activo") base.activos += 1;
+      if (item.hasta) base.cerrados += 1;
+      if ((item.conflictos || []).length > 0) base.conflictos += 1;
+      if (item.tipo === "HLc") base.hlc += 1;
+      if (item.tipo === "HLd") base.hld += 1;
+      if (item.tipo === "HLg") base.hlg += 1;
+      const codes = Array.isArray(item.warning_codes) ? item.warning_codes : [];
+      if (codes.includes("SOLAPE_CARGO_GRUPO")) base.warningSolapeCargoGrupo += 1;
+      if (codes.includes("DESVIO_CARGA_NORMATIVA")) base.warningDesvioCargaNormativa += 1;
+    });
+    return base;
+  }, [timelineItemsBase]);
+  const vistaGrupoItems = useMemo(
+    () =>
+      buildVistaGrupoItems({
+        grupoId: grupoVistaId,
+        fechaCorte: grupoVistaFecha,
+        hlgRows,
+        idxPersonas,
+        idxHld,
+        idxHlc,
+      }),
+    [grupoVistaId, grupoVistaFecha, hlgRows, idxPersonas, idxHld, idxHlc],
+  );
   const hldSinCargo = hldRows.filter((row) => !idxHlc.has(String(row.cargo_id || "")));
   const hlgSinDato = hlgRows.filter((row) => !idxHld.has(String(row.dato_laboral_id || "")));
   const hlcConGrupoInvalido = hlcRows.filter(
@@ -153,8 +347,35 @@ export default function DatosLaborales() {
     return !hldIds.some((id) => hlgByHld.get(id));
   });
 
+  useEffect(() => {
+    if (timelinePersonaId) return;
+    const first = opcionesPersonas[0];
+    if (first && first.id) setTimelinePersonaId(String(first.id));
+  }, [timelinePersonaId, opcionesPersonas]);
+
+  useEffect(() => {
+    if (grupoVistaId) return;
+    const first = opcionesGrupos[0];
+    if (first && first.id) setGrupoVistaId(String(first.id));
+  }, [grupoVistaId, opcionesGrupos]);
+
   function onChangeField(key, value) {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+    setFormData((prev) => {
+      if (key === "fecha_desde") {
+        const nextDesde = String(value || "");
+        const nextHasta =
+          prev.fecha_hasta && nextDesde && prev.fecha_hasta < nextDesde ? "" : prev.fecha_hasta;
+        return { ...prev, fecha_desde: nextDesde, fecha_hasta: nextHasta };
+      }
+      if (key === "fecha_hasta") {
+        const nextHasta = String(value || "");
+        if (nextHasta && prev.fecha_desde && nextHasta < prev.fecha_desde) {
+          return { ...prev, fecha_hasta: "" };
+        }
+        return { ...prev, fecha_hasta: nextHasta };
+      }
+      return { ...prev, [key]: value };
+    });
   }
 
   function onChangeCargaRow(idx, key, value) {
@@ -174,11 +395,65 @@ export default function DatosLaborales() {
     });
   }
 
+  function abrirEdicionDesdeTimeline(item) {
+    if (!item || !item.id) return;
+    if (item.tipo === "HLc") {
+      const target = hlcRows.find((x) => String(x.id) === String(item.id));
+      if (!target) return;
+      setTipoAlta("historial_laboral_cargos");
+      setModoEdicion(true);
+      setRegistroEditId(String(target.id));
+      cargarRegistroEnFormulario(target);
+      return;
+    }
+    if (item.tipo === "HLg") {
+      const target = hlgRows.find((x) => String(x.id) === String(item.id));
+      if (!target) return;
+      setTipoAlta("historial_laboral_grupos");
+      setModoEdicion(true);
+      setRegistroEditId(String(target.id));
+      cargarRegistroEnFormulario(target);
+      return;
+    }
+    const hlgVinculado = hlgRows.find((x) => String(x.dato_laboral_id || "") === String(item.id));
+    if (!hlgVinculado) return;
+    setTipoAlta("historial_laboral_grupos");
+    setModoEdicion(true);
+    setRegistroEditId(String(hlgVinculado.id));
+    cargarRegistroEnFormulario(hlgVinculado);
+  }
+
+  function limpiarFiltrosTimeline() {
+    setTimelineFiltro("todos");
+    setTimelineFecha("");
+    setTimelineTipoTramo("todos");
+    setTimelineGrupoId("");
+    setTimelineEstadoAsignacionId("");
+    setTimelineNivelMin("");
+    setTimelineNivelMax("");
+    setTimelineOnlySinReferencias(false);
+    setTimelineOnlySolape(false);
+    setTimelineWarningTipo("todos");
+  }
+
   useEffect(() => {
     setModoEdicion(false);
     setRegistroEditId("");
     setCargaPorDiaRows([emptyCargaDia()]);
   }, [tipoAlta]);
+
+  useEffect(() => {
+    if (tipoAlta !== "historial_laboral_grupos") return;
+    if (!formData.cargo_id) return;
+    const cargo = idxHlc.get(String(formData.cargo_id));
+    if (!cargo) {
+      setFormData((prev) => ({ ...prev, cargo_id: "" }));
+      return;
+    }
+    if (formData.persona_id && String(cargo.persona_id || "") !== String(formData.persona_id)) {
+      setFormData((prev) => ({ ...prev, cargo_id: "" }));
+    }
+  }, [tipoAlta, formData.cargo_id, formData.persona_id, idxHlc]);
 
   function cargarRegistroEnFormulario(record) {
     if (!record || typeof record !== "object") return;
@@ -241,6 +516,8 @@ export default function DatosLaborales() {
       ),
       categoria_id: String(record.categoria_id || ""),
       rol_id: String(record.rol_id || (datoRef && datoRef.rol_id) || ""),
+      regimen_horario_id: String(record.regimen_horario_id || (datoRef && datoRef.regimen_horario_id) || ""),
+      centro_costo_id: String(record.centro_costo_id || (datoRef && datoRef.centro_costo_id) || ""),
       escalafon_id: String(record.escalafon_id || ""),
       agrupamiento_id: String(record.agrupamiento_id || ""),
       funcion_real_id: String(record.funcion_real_id || (datoRef && datoRef.funcion_real_id) || ""),
@@ -257,6 +534,7 @@ export default function DatosLaborales() {
     if (tipoAlta === "historial_laboral_cargos") {
       return [
         "persona_id",
+        "grupo_de_trabajo_id",
         "efector_designacion_id",
         "efector_cumplimiento_id",
         "estado_asignacion_id",
@@ -360,6 +638,7 @@ export default function DatosLaborales() {
       if (tipoAlta === "historial_laboral_cargos") {
         const payload = {
           persona_id: formData.persona_id,
+          grupo_de_trabajo_id: formData.grupo_de_trabajo_id,
           efector_designacion_id: formData.efector_designacion_id,
           efector_cumplimiento_id: formData.efector_cumplimiento_id,
           estado_asignacion_id: formData.estado_asignacion_id || null,
@@ -390,6 +669,8 @@ export default function DatosLaborales() {
           persona_id: formData.persona_id,
           cargo_id: formData.cargo_id,
           rol_id: formData.rol_id || null,
+          regimen_horario_id: formData.regimen_horario_id || null,
+          centro_costo_id: formData.centro_costo_id || null,
           funcion_real_id: formData.funcion_real_id || null,
           nivel_jerarquico: formData.nivel_jerarquico || null,
           fecha_inicio: formData.fecha_desde || null,
@@ -530,9 +811,9 @@ export default function DatosLaborales() {
                     className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
                   >
                     <option value="">Seleccionar registro...</option>
-                    {registrosPorTipo.map((x) => (
+                    {registrosEdicionDetallados.map((x) => (
                       <option key={x.id} value={x.id}>
-                        {x.id}
+                        {x.label}
                       </option>
                     ))}
                   </select>
@@ -558,9 +839,13 @@ export default function DatosLaborales() {
                 <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.persona_id}</p>
               </div>
 
-              {tipoAlta === "historial_laboral_grupos" && (
+              {(tipoAlta === "historial_laboral_grupos" || tipoAlta === "historial_laboral_cargos") && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">grupo_de_trabajo_id *</label>
+                  <label className="block text-sm font-medium text-slate-700">
+                    {tipoAlta === "historial_laboral_cargos"
+                      ? "grupo_de_trabajo_id (encuadre principal HLc) *"
+                      : "grupo_de_trabajo_id *"}
+                  </label>
                   <select
                     value={formData.grupo_de_trabajo_id}
                     onChange={(e) => onChangeField("grupo_de_trabajo_id", e.target.value)}
@@ -796,9 +1081,9 @@ export default function DatosLaborales() {
                     className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
                   >
                     <option value="">Seleccionar cargo HLc...</option>
-                    {hlcRows.map((x) => (
+                    {opcionesCargoHlcDetalladas.map((x) => (
                       <option key={x.id} value={x.id}>
-                        {x.id}
+                        {x.label}
                       </option>
                     ))}
                   </select>
@@ -819,6 +1104,38 @@ export default function DatosLaborales() {
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.rol_id}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">regimen_horario_id</label>
+                  <select
+                    value={formData.regimen_horario_id}
+                    onChange={(e) => onChangeField("regimen_horario_id", e.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                  >
+                    <option value="">Seleccionar régimen...</option>
+                    {opcionesRegimenHorario.map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.nombre || x.id}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.regimen_horario_id}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">centro_costo_id</label>
+                  <select
+                    value={formData.centro_costo_id}
+                    onChange={(e) => onChangeField("centro_costo_id", e.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                  >
+                    <option value="">Seleccionar centro de costo...</option>
+                    {opcionesCentroCosto.map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.nombre || x.id}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.centro_costo_id}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700">funcion_real_id</label>
@@ -918,6 +1235,7 @@ export default function DatosLaborales() {
                   type="date"
                   value={formData.fecha_hasta}
                   onChange={(e) => onChangeField("fecha_hasta", e.target.value)}
+                  min={formData.fecha_desde || undefined}
                   className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
                 />
                 <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.fecha_hasta}</p>
@@ -978,8 +1296,52 @@ export default function DatosLaborales() {
           hlcConEfectorCumplimientoInvalido={hlcConEfectorCumplimientoInvalido}
         />
 
+        <TimelineLaboralPersonaCard
+          opcionesPersonas={opcionesPersonas}
+          personaId={timelinePersonaId}
+          onPersonaChange={setTimelinePersonaId}
+          filtro={timelineFiltro}
+          onFiltroChange={setTimelineFiltro}
+          fechaCorte={timelineFecha}
+          onFechaCorteChange={setTimelineFecha}
+          items={timelineItems}
+          resumen={timelineResumen}
+          onAbrirEdicion={abrirEdicionDesdeTimeline}
+          tipoTramo={timelineTipoTramo}
+          onTipoTramoChange={setTimelineTipoTramo}
+          grupoId={timelineGrupoId}
+          onGrupoIdChange={setTimelineGrupoId}
+          grupos={opcionesGrupos}
+          estadoAsignacionId={timelineEstadoAsignacionId}
+          onEstadoAsignacionIdChange={setTimelineEstadoAsignacionId}
+          estadosAsignacion={opcionesEstadoAsignacion}
+          nivelMin={timelineNivelMin}
+          nivelMax={timelineNivelMax}
+          onNivelMinChange={setTimelineNivelMin}
+          onNivelMaxChange={setTimelineNivelMax}
+          onlySinReferencias={timelineOnlySinReferencias}
+          onOnlySinReferenciasChange={setTimelineOnlySinReferencias}
+          onlySolape={timelineOnlySolape}
+          onOnlySolapeChange={setTimelineOnlySolape}
+          warningTipo={timelineWarningTipo}
+          onWarningTipoChange={setTimelineWarningTipo}
+          totalBase={timelineItemsBase.length}
+          onLimpiarFiltros={limpiarFiltrosTimeline}
+        />
+
+        <VistaOperativaGrupoCard
+          grupos={opcionesGrupos}
+          grupoId={grupoVistaId}
+          onGrupoIdChange={setGrupoVistaId}
+          fechaCorte={grupoVistaFecha}
+          onFechaCorteChange={setGrupoVistaFecha}
+          items={vistaGrupoItems}
+        />
+
         <ColeccionesLaboralesCards
           loadingByCollection={loadingByCollection}
+          progressByCollection={progressByCollection}
+          durationByCollection={durationByCollection}
           errorByCollection={errorByCollection}
           rowsByCollection={rowsByCollection}
         />

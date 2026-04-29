@@ -152,7 +152,7 @@ async function main() {
     });
     const msg = String(r.json?.error?.message || "");
     assert(!r.okHttp, "Se esperaba error en HLc incompleto.");
-    assert(msg.includes("[VAL-HLC-007]"), `Error inesperado: ${msg}`);
+    assert(msg.includes("[VAL-HLC-002]"), `Error inesperado: ${msg}`);
   }
 
   console.log("== Caso 5: HLc válido mínimo estricto ==");
@@ -162,6 +162,7 @@ async function main() {
       collectionName: "historial_laboral_cargos",
       datos: {
         persona_id: personaLaboralId,
+        grupo_de_trabajo_id: grupoTrabajoId,
         efector_designacion_id: efectorDesignacionId,
         efector_cumplimiento_id: efectorCumplimientoId,
         estado_asignacion_id: estadoAsignacionId,
@@ -257,6 +258,7 @@ async function main() {
       collectionName: "historial_laboral_cargos",
       datos: {
         persona_id: personaLaboralId,
+        grupo_de_trabajo_id: grupoTrabajoId,
         efector_designacion_id: efectorDesignacionId,
         efector_cumplimiento_id: efectorCumplimientoId,
         estado_asignacion_id: estadoAsignacionId,

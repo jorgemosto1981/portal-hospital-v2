@@ -31,6 +31,16 @@ const ICONS_BY_ID = {
       strokeWidth={1.5}
     />
   ),
+  rrhh: () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M18 7.5h-3.75m0 0A1.125 1.125 0 1 0 12 7.5m2.25 0A1.125 1.125 0 1 1 12 7.5m0 0H6m12 9h-3.75m0 0A1.125 1.125 0 1 0 12 16.5m2.25 0A1.125 1.125 0 1 1 12 16.5m0 0H6"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
   perfil: () => (
     <path
       strokeLinecap="round"

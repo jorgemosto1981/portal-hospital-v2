@@ -7,7 +7,6 @@ import RegistroVinculacion from "./features/auth/RegistroVinculacion.jsx";
 import VinculacionDni from "./features/auth/VinculacionDni.jsx";
 import { useAuthSession } from "./features/auth/useAuthSession.js";
 import OnboardingWizard from "./features/onboarding/OnboardingWizard.jsx";
-import AltaAgenteRRHH from "./features/rrhh/AltaAgenteRRHH.jsx";
 import MvpAccessGate from "./features/shell/MvpAccessGate.jsx";
 import TabContentHost from "./features/shell/TabContentHost.jsx";
 import DatosLaborales from "./pages/DatosLaborales.jsx";
@@ -80,7 +79,6 @@ export default function App() {
         <Route path="/registro" element={<RegistroVinculacion />} />
         <Route path="/vinculacion" element={<VinculacionDni />} />
         <Route path="/onboarding" element={<OnboardingWizard />} />
-        <Route path="/rrhh/alta" element={<AltaAgenteRRHH />} />
         <Route
           path="/grilla"
           element={

@@ -10,6 +10,7 @@ Estado: **actualizada** según acuerdos funcionales 2026-04-28.
 ## Resultado final
 
 - **Error (bloquea guardado)**
+  - `VAL-HLC-002`: faltan obligatorios base en HLc (`persona_id`, `grupo_de_trabajo_id`, efectores).
   - `VAL-HLC-001`: falta `fecha_desde` en HLc.
   - `VAL-HLC-003`: rango inválido en HLc.
   - `VAL-HLC-004`: `fecha_hasta` informada sin `causal_fin_asignacion_id`.
@@ -25,9 +26,17 @@ Estado: **actualizada** según acuerdos funcionales 2026-04-28.
 
 - **Warning (no bloquea guardado)**
   - `VAL-HLC-W001`: solape de vigencia HLc para misma persona (paralelo permitido, revisar operativamente).
-  - `VAL-HLG-W002`: solape de vigencia HLg para misma persona+grupo (paralelo permitido, revisar operativamente).
+  - `VAL-HLG-W002`: solape de vigencia HLg para mismo `cargo_id` + mismo `grupo_de_trabajo_id` (warning informativo; permitido entre cargos distintos de la misma persona).
   - `VAL-HLC-W005`: cargo activo sin grupo de trabajo asignado aún.
-  - Warning de reconciliación de carga horaria (`buildWarningReconciliacionCarga`): diferencia entre carga semanal informada y carga total del HLc.
+  - Warning de reconciliación de carga horaria (`buildWarningReconciliacionCarga`): diferencia entre suma semanal operativa (`HLg`) y carga normativa del cargo (`HLc`), sin bloqueo.
+
+## Alineación UI (B1/B2)
+
+- La UI de `DatosLaborales` expone estos warnings como filtros y conteos auditables.
+- Códigos funcionales mostrados:
+  - `SOLAPE_CARGO_GRUPO`: equivalente operativo de `VAL-HLG-W002`.
+  - `DESVIO_CARGA_NORMATIVA`: warning informativo de reconciliación `HLg` vs `HLc`.
+- Ambos se tratan como **informativos/no bloqueantes**; no impiden guardado ni edición.
 
 ## Nota de implementación
 

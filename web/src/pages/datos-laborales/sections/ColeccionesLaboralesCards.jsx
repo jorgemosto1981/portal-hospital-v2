@@ -10,7 +10,13 @@ function BadgeCampo({ campo }) {
   );
 }
 
-export default function ColeccionesLaboralesCards({ loadingByCollection, errorByCollection, rowsByCollection }) {
+export default function ColeccionesLaboralesCards({
+  loadingByCollection,
+  progressByCollection,
+  durationByCollection,
+  errorByCollection,
+  rowsByCollection,
+}) {
   return (
     <>
       {DATOS_LABORALES_COLECCIONES.map((item) => (
@@ -28,7 +34,12 @@ export default function ColeccionesLaboralesCards({ loadingByCollection, errorBy
                 Coleccion: {item.collectionName}
               </p>
               {loadingByCollection[item.collectionName] ? (
-                <p className="mt-2 text-sm text-slate-600">Cargando registros...</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Cargando registros...
+                  {Number(progressByCollection[item.collectionName] || 0) > 0
+                    ? ` (${progressByCollection[item.collectionName]} cargados)`
+                    : ""}
+                </p>
               ) : errorByCollection[item.collectionName] ? (
                 <p className="mt-2 text-sm text-rose-700">
                   Error al leer: {errorByCollection[item.collectionName]}
@@ -40,6 +51,9 @@ export default function ColeccionesLaboralesCards({ loadingByCollection, errorBy
                     <span className="font-semibold">
                       {(rowsByCollection[item.collectionName] || []).length}
                     </span>
+                    {Number(durationByCollection[item.collectionName] || 0) > 0
+                      ? ` · ${durationByCollection[item.collectionName]} ms`
+                      : ""}
                   </p>
                   {(rowsByCollection[item.collectionName] || []).length > 0 ? (
                     <div className="mt-2 space-y-1.5">

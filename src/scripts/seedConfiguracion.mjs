@@ -261,6 +261,20 @@ const CFG_TIPO_ACTO_DESIGNACION = [
   ["CFG_ACT_04_CONTRATO", "Contrato / Locación de Servicios"],
 ];
 
+const CFG_REGIMEN_HORARIO = [
+  ["CFG_REG_HOR_01_DIURNO", "Diurno"],
+  ["CFG_REG_HOR_02_NOCTURNO", "Nocturno"],
+  ["CFG_REG_HOR_03_MIXTO", "Mixto"],
+  ["CFG_REG_HOR_04_GUARDIAS", "Guardias"],
+];
+
+const CFG_CENTRO_COSTO = [
+  ["CFG_CEN_COST_01_ASISTENCIAL", "Asistencial"],
+  ["CFG_CEN_COST_02_ADMINISTRATIVO", "Administrativo"],
+  ["CFG_CEN_COST_03_GUARDIA", "Guardia"],
+  ["CFG_CEN_COST_04_APOYO_DIAGNOSTICO", "Apoyo diagnóstico"],
+];
+
 async function main() {
   const app = getApp();
   const projectId = app.options?.projectId || "desconocido";
@@ -369,6 +383,14 @@ async function main() {
     const ref = db.collection("cfg_tipo_acto_designacion").doc(id);
     batch.set(ref, docData(id, nombre), { merge: true });
   }
+  for (const [id, nombre] of CFG_REGIMEN_HORARIO) {
+    const ref = db.collection("cfg_regimen_horario").doc(id);
+    batch.set(ref, docData(id, nombre), { merge: true });
+  }
+  for (const [id, nombre] of CFG_CENTRO_COSTO) {
+    const ref = db.collection("cfg_centro_costo").doc(id);
+    batch.set(ref, docData(id, nombre), { merge: true });
+  }
 
   await batch.commit();
 
@@ -391,7 +413,9 @@ async function main() {
     CFG_MODALIDAD_JORNADA.length +
     CFG_ESTADO_ASIGNACION_LABORAL.length +
     CFG_CAUSAL_FIN_ASIGNACION_LABORAL.length +
-    CFG_TIPO_ACTO_DESIGNACION.length;
+    CFG_TIPO_ACTO_DESIGNACION.length +
+    CFG_REGIMEN_HORARIO.length +
+    CFG_CENTRO_COSTO.length;
 
   const out = {
     ok: true,
@@ -417,6 +441,8 @@ async function main() {
       cfg_estado_asignacion_laboral: CFG_ESTADO_ASIGNACION_LABORAL.map(([id]) => id),
       cfg_causal_fin_asignacion_laboral: CFG_CAUSAL_FIN_ASIGNACION_LABORAL.map(([id]) => id),
       cfg_tipo_acto_designacion: CFG_TIPO_ACTO_DESIGNACION.map(([id]) => id),
+      cfg_regimen_horario: CFG_REGIMEN_HORARIO.map(([id]) => id),
+      cfg_centro_costo: CFG_CENTRO_COSTO.map(([id]) => id),
     },
     documentosEscritos: total,
   };

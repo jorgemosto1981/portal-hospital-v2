@@ -8,6 +8,7 @@ export const ESTADOS_MODULO = {
 export const MODULOS_PORTAL = [
   { id: "inicio", label: "Inicio", path: "/inicio", estado: ESTADOS_MODULO.ACTIVO },
   { id: "laboral", label: "Laboral", path: "/laboral", estado: ESTADOS_MODULO.MVP },
+  { id: "rrhh", label: "RRHH", path: "/rrhh/alta", estado: ESTADOS_MODULO.ACTIVO },
   { id: "configuracion", label: "Config", path: "/configuracion", estado: ESTADOS_MODULO.ACTIVO },
   { id: "perfil", label: "Perfil", path: "/perfil", estado: ESTADOS_MODULO.MVP },
   { id: "pantallas", label: "Pantallas", path: "/pantallas", estado: ESTADOS_MODULO.ACTIVO },
@@ -24,6 +25,7 @@ export const MODULOS_V2_ESTADO = [
 ];
 
 export function resolverTabPorPath(pathname) {
+  if (pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/configuracion")) return "configuracion";
   if (pathname.startsWith("/laboral")) return "laboral";
   if (pathname.startsWith("/perfil")) return "perfil";

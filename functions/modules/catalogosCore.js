@@ -1,6 +1,7 @@
 "use strict";
 
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
+const { FieldPath } = require("firebase-admin/firestore");
 const { db, FieldValue } = require("./shared/context");
 const runtimeFlags = require("../../shared/runtimeFlags.json");
 const {
@@ -77,14 +78,28 @@ const listarColeccionPublicaTemporal = onCall(async (request) => {
   if (typeof colRaw !== "string" || !COLECCIONES_PUBLICAS_TEMPORALES.has(colRaw.trim())) {
     throw new HttpsError("invalid-argument", "[VAL-CFG-003] Colección no permitida en acceso temporal.");
   }
-  const snap = await db.collection(colRaw.trim()).get();
+  const col = colRaw.trim();
+  const pageSizeRaw = Number(request.data && request.data.pageSize);
+  const pageSize = Number.isFinite(pageSizeRaw) ? Math.max(1, Math.min(500, Math.trunc(pageSizeRaw))) : 200;
+  const pageTokenRaw = request.data && request.data.pageToken;
+  const pageToken = typeof pageTokenRaw === "string" ? pageTokenRaw.trim() : "";
+
+  let q = db.collection(col).orderBy(FieldPath.documentId()).limit(pageSize);
+  if (pageToken) q = q.startAfter(pageToken);
+  const snap = await q.get();
   const items = snap.docs.map((doc) => {
     const data = doc.data() || {};
     const flat = serializeFirestoreValue(data);
     const base = typeof flat === "object" && flat !== null && !Array.isArray(flat) ? flat : {};
     return { ...base, id: doc.id };
   });
-  return { items };
+  const lastDoc = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null;
+  const hasMore = snap.size === pageSize;
+  return {
+    items,
+    hasMore,
+    nextPageToken: hasMore && lastDoc ? String(lastDoc.id) : null,
+  };
 });
 
 module.exports = {

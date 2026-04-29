@@ -144,11 +144,11 @@ if (consSnap.empty) {
 
 const cuentaSnap = await db.collection("usuarios_cuenta").where("persona_id", "==", personaId).limit(1).get();
 if (!cuentaSnap.empty) {
-  const estadoAccesoId = cuentaSnap.docs[0].get("estado_acceso_id") || null;
+  const estadoAccesoId = cuentaSnap.docs[0].get("estado_acceso") || null;
   if ((persona.estado_perfil_datos_id || null) === "cfg_epd_comp" && estadoAccesoId !== "cfg_eca_activo") {
     addIssue("high", "Desincronización: perfil completo requiere cuenta de acceso activa.", {
       estado_perfil_datos_id: persona.estado_perfil_datos_id || null,
-      estado_acceso_id: estadoAccesoId,
+      estado_acceso: estadoAccesoId,
     });
   }
 }

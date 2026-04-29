@@ -123,7 +123,17 @@ const registrarPrimerAcceso = onCall(async (request) => {
       if (p0.estado && p0.estado !== ESTADO_PENDIENTE_ONBOARDING) {
         throw new HttpsError("failed-precondition", MSG_REG_GENERICO);
       }
-      tx.set(cuentaRef, { auth_uid: newUid, username: emailNorm, estado_acceso: CFG_ONB, actualizado_en: FieldValue.serverTimestamp() }, { merge: true });
+      tx.set(
+        cuentaRef,
+        {
+          auth_uid: newUid,
+          username: emailNorm,
+          estado_acceso: CFG_ONB,
+          estado_acceso_id: FieldValue.delete(),
+          actualizado_en: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
       tx.update(personaRef, {
         "metadata.auth_vinculado": true,
         "metadata.vinculado_en": FieldValue.serverTimestamp(),
@@ -148,7 +158,13 @@ const registrarPrimerAcceso = onCall(async (request) => {
     userAfter = await auth.getUser(newUid);
   } catch {
     const rev = db.batch();
-    rev.update(cuentaRef, { auth_uid: null, username: null, estado_acceso: CFG_PEND_REG, actualizado_en: FieldValue.serverTimestamp() });
+    rev.update(cuentaRef, {
+      auth_uid: null,
+      username: null,
+      estado_acceso: CFG_PEND_REG,
+      estado_acceso_id: FieldValue.delete(),
+      actualizado_en: FieldValue.serverTimestamp(),
+    });
     rev.delete(db.collection(COL_EVENTOS).doc(evtId));
     await rev.commit();
     try { await auth.deleteUser(newUid); } catch {}
@@ -159,7 +175,13 @@ const registrarPrimerAcceso = onCall(async (request) => {
     await auth.setCustomUserClaims(newUid, { ...prev, persona_id: personaId, cuenta_id: cuentaId });
   } catch {
     const rev = db.batch();
-    rev.update(cuentaRef, { auth_uid: null, username: null, estado_acceso: CFG_PEND_REG, actualizado_en: FieldValue.serverTimestamp() });
+    rev.update(cuentaRef, {
+      auth_uid: null,
+      username: null,
+      estado_acceso: CFG_PEND_REG,
+      estado_acceso_id: FieldValue.delete(),
+      actualizado_en: FieldValue.serverTimestamp(),
+    });
     rev.delete(db.collection(COL_EVENTOS).doc(evtId));
     await rev.commit();
     try { await auth.deleteUser(newUid); } catch {}

@@ -167,3 +167,261 @@
    - tolerancia de reconciliación horaria,
    - criterio final de alertas críticas.
 
+## Actualización continuidad — 2026-04-29 (RRHH + laboral)
+
+### Implementado en esta sesión
+
+1. **Timeline laboral por persona (HLc -> HLd -> HLg)**
+   - Filtros: activos, cerrados, vigentes en fecha X, conflicto.
+   - Filtros avanzados: tipo de tramo, grupo, estado de asignación, nivel min/max, sin referencias, solo solapes.
+   - Regla de vigencia explícita en UI: intervalo **inclusivo** `[fecha_desde, fecha_hasta]`.
+   - Etiquetas enriquecidas con IDs + nombres para lectura operativa.
+
+2. **Vista operativa por grupo (burbuja)**
+   - Selector de grupo + fecha de corte.
+   - Orden por `nivel_jerarquico`, estado en fecha y resumen de vigencias.
+
+3. **Escalabilidad de lecturas**
+   - `listarColeccionPublicaTemporal` con paginación (`pageSize`, `pageToken`, `hasMore`, `nextPageToken`).
+   - Frontend sin límites fijos de filas: carga paginada automática.
+   - Progreso incremental (`N cargados`) y duración por colección (`ms`) en UI.
+
+4. **RRHH — operación de cuentas/estados**
+   - Nuevo callable: `rrhhActualizarEstadoCuentaAcceso`.
+   - Nuevo callable: `rrhhAplicarBajaLaboral`.
+   - Nuevo callable: `rrhhReiniciarVinculacionCuenta`.
+   - Expuestos en UI RRHH con formularios dedicados.
+   - Menú/tab `RRHH` conectado en navegación principal.
+   - En modo temporal (`OPEN_ACCESS_TEMP=true`) se permite acceso RRHH sin sesión.
+
+5. **Reglas de negocio cerradas en sesión**
+   - **Baja laboral**: requiere cerrar primero periodos `HLg` abiertos; luego se permite cierre de `HLc`.
+   - **Reinicio de vinculación**: `estado_acceso_id` destino es seleccionable (no fijo).
+
+### Humo ejecutado y resultado
+
+1. **Alta RRHH**
+   - Resultado: OK.
+   - Evidencia: `Creado per_01KQCFP6X2W9V6YZRC8AN112BV — Cuenta usr_01KQCFP6X3ZHEXQRE7HPRFGWMB`.
+
+2. **Gestión de acceso**
+   - Resultado: OK.
+   - Evidencia: transición aplicada a `cfg_eca_bloq`.
+
+3. **Reinicio de vinculación**
+   - Resultado: OK.
+   - Evidencia: `Vinculación reiniciada. estado_acceso=cfg_eca_onb`.
+
+4. **Baja laboral**
+   - Resultado esperado validado en ambos caminos:
+     - bloqueada si hay `HLg` vigentes,
+     - aplicada correctamente cuando no quedan `HLg` abiertos.
+
+### Pendientes recomendados (siguiente sesión)
+
+1. Consolidar criterio de solapes:
+   - mantener warning informativo (`VAL-HLG-W002`) para paralelos permitidos,
+   - documentar explícitamente casos que sí deben escalar a bloqueo.
+
+2. Extensión `HLd` pendiente del plan:
+   - `modalidad_jornada_id`,
+   - `regimen_horario_id` (o equivalente),
+   - `centro_costo_id`.
+
+3. Definición SLA operacional final:
+   - reconciliación `HLg/HLd/HLc`,
+   - umbrales de alertas críticas y tratamiento.
+
+## Actualización continuidad — 2026-04-29 (estados de grupo + fecha_hasta)
+
+### 1) Revisión de estados para grupo de trabajo (HLg) contra documental V2
+
+- Se verificó contrato en `MODULO_DATOS_LABORALES_V2.md` + acuerdos `ACUERDOS_FUNCIONALES_LABORAL_CUENTAS_2026-04-28.md`.
+- Confirmación: en V2 el estado operativo del tramo de grupo (`HLg`) se deriva de vigencia (`fecha_inicio`/`fecha_fin`) en modo inclusivo, y no de un catálogo específico de estado en `HLg`.
+- Catálogo vigente `cfg_estado_asignacion_laboral` (hoy usado en HLc): `Activa`, `Suspendida`, `Finalizada`.
+
+### 2) Cobertura de combinaciones y semántica de nombres
+
+- Cobertura técnica actual: suficiente para ciclo base del cargo (`HLc`) y para lectura por vigencia en grupo (`HLg`).
+- Riesgo semántico detectado: `Activa` en HLc puede convivir con tramos HLg cerrados o futuros, generando dudas operativas si no se comunica como “estado del cargo” vs “estado del tramo”.
+- Recomendación registrada:
+  - mantener `cfg_estado_asignacion_laboral` como estado de cargo;
+  - en vista de grupo mostrar etiquetas derivadas por vigencia (`Vigente`, `Cerrada`, `Pendiente`) calculadas por fecha inclusiva;
+  - evaluar en RFC si se requiere un catálogo adicional específico para estados administrativos de tramo HLg.
+
+### 3) Regla aplicada a edición de fechas (`fecha_hasta`)
+
+- Implementado en UI de `DatosLaborales`:
+  - el datepicker de `fecha_hasta` usa `min=fecha_desde`;
+  - si se mueve `fecha_desde` hacia adelante y deja inválida `fecha_hasta`, se limpia automáticamente;
+  - si se intenta cargar `fecha_hasta < fecha_desde`, se descarta en estado local;
+  - se mantiene validación final de formulario con mensaje explícito.
+
+### 4) Resultado
+
+- Se evita selección de días previos en calendario cuando existe `fecha_desde`.
+- Se mantiene consistencia en alta/edición HLc y HLg.
+- Queda trazabilidad documental de criterio de estados y de la regla de fechas.
+
+## Actualización continuidad — 2026-04-29 (decisiones funcionales cerradas HLC/HLD/HLG)
+
+### Decisiones aplicadas
+
+1. `HLc.grupo_de_trabajo_id` pasa a obligatorio real (frontend + backend).
+2. Reconciliación de carga: referencia normativa en HLc vs operativo en HLg, solo warning informativo si difieren (sin bloqueo ni acciones automáticas).
+3. Extensión HLd incorporada para próximos módulos:
+   - `regimen_horario_id`
+   - `centro_costo_id`
+4. Normalización de consistencia de cuenta:
+   - chequeos internos sobre `usuarios_cuenta.estado_acceso` (no `estado_acceso_id`).
+5. Solapes:
+   - criterio warning (no bloqueante),
+   - warning de solape HLg aplicado dentro del mismo cargo (`cargo_id`) + mismo grupo,
+   - permitido repetir grupo entre cargos distintos de la misma `persona_id`.
+
+### Impacto técnico implementado
+
+- Backend laboral (`guardarRegistroLaboralTemporal`):
+  - exige `grupo_de_trabajo_id` en HLc y valida referencia a `grupos_de_trabajo`.
+  - persiste `grupo_de_trabajo_id` en HLc.
+  - warning de solape HLg restringido a “mismo cargo + mismo grupo”.
+  - reconciliación horaria HLg vs HLc calculada a nivel cargo (sumatoria de HLg asociados), con warning informativo.
+- Frontend `DatosLaborales`:
+  - selector de `grupo_de_trabajo_id` habilitado también en HLc.
+  - HLd incorpora edición/guardado de `regimen_horario_id` y `centro_costo_id`.
+
+### Regularización de históricos HLc sin grupo (cierre operativo)
+
+- Se creó script específico:
+  - `scripts/auditar-regularizar-hlc-sin-grupo.mjs`
+  - comando npm: `db:auditar-hlc-sin-grupo`
+- Modo por defecto: `DRY_RUN` (solo auditoría).
+- Modo `--apply`: regulariza automáticamente casos con candidato único inferido por cadena `HLc -> HLd -> HLg`.
+- Se agregó modo puntual para casos manuales:
+  - `--hlc-id <id> --grupo-id <gdt_...> [--apply]`.
+
+#### Resultado aplicado en sesión
+
+- Se regularizaron los HLc abiertos pendientes asignando `Sala Internación 1` (`gdt_01KQA6QCA8TDQK9YBTHKYA4R2V`).
+- Verificación final `--solo-abiertos`:
+  - `total_hlc_sin_grupo = 0`.
+- Auditoría global (abiertos + cerrados):
+  - persisten históricos cerrados sin grupo, clasificados para tratamiento posterior (sin impacto operativo inmediato).
+
+### Cierre A2 — catálogos HLd para próximos módulos
+
+- Se agregaron catálogos:
+  - `cfg_regimen_horario`
+  - `cfg_centro_costo`
+- Seed aplicado (`seed:configuracion`) con ids iniciales para ambos catálogos.
+- Configuración maestra habilitada para alta/edición de ambos (`Configuración -> Laboral avanzado`).
+- `DatosLaborales` (HLd) actualizado a selects (no texto libre) para:
+  - `regimen_horario_id`
+  - `centro_costo_id`
+- Backend laboral valida FK de ambos campos al guardar HLd.
+
+### Avance A3 — normalización `estado_acceso`
+
+- Se corrigió script de verificación de completitud para usar `usuarios_cuenta.estado_acceso` (campo persistido canónico).
+- Se agregó script de auditoría/normalización:
+  - `scripts/auditar-normalizar-estado-acceso.mjs`
+  - comando npm: `db:normalizar-estado-acceso`
+- Función:
+  - detecta campo legacy `estado_acceso_id` en `usuarios_cuenta`,
+  - en modo `--apply` copia a `estado_acceso` cuando falte y elimina campo legacy,
+  - reporta conflictos si ambos campos difieren.
+- Estado actual (dry-run en sesión): sin registros legacy detectados.
+- Hardening adicional aplicado:
+  - escrituras de `usuarios_cuenta` en `login`, `onboarding` y `rrhh` limpian explícitamente `estado_acceso_id` (campo legacy) y persisten solo `estado_acceso`.
+- Documentación de acceso/rules actualizada:
+  - `estado_acceso_id` queda reservado como nombre de parámetro de entrada en callables RRHH; no persiste en Firestore.
+
+## Actualización continuidad — 2026-04-29 (B1/B2 warnings operativos en UI)
+
+### Implementado
+
+1. Se incorporó visualización explícita de warnings operativos en `DatosLaborales`:
+   - `SOLAPE_CARGO_GRUPO` (solape en mismo `cargo_id` + mismo `grupo_de_trabajo_id`).
+   - `DESVIO_CARGA_NORMATIVA` (diferencia entre total operativo HLg y carga normativa HLc).
+2. Se agregaron filtros por tipo de warning y conteos visibles en:
+   - Timeline laboral por persona.
+   - Vista operativa por grupo.
+3. Se agregó columna de warnings en tabla de vista por grupo para trazabilidad operativa.
+
+### Criterio funcional ratificado (B2)
+
+- Ambos warnings son **informativos/no bloqueantes**.
+- No frenan guardado ni edición.
+- Su objetivo es auditoría operativa y soporte de decisión en RRHH.
+
+## Actualización continuidad — 2026-04-29 (C1 read-model operativo unificado)
+
+### Implementado (primera versión funcional)
+
+1. Nuevo callable backend:
+   - `listarReadModelLaboralOperativoTemporal`
+   - archivo: `functions/modules/catalogosLaborales.js`
+2. Exposición del callable en módulo de catálogos:
+   - `functions/modules/catalogos.js`
+3. Wrapper frontend:
+   - `web/src/services/callables.js`
+   - `web/src/services/readModelLaboralService.js`
+4. Integración inicial en pantalla:
+   - `web/src/pages/GrillaOperativa.jsx`
+
+### Cobertura de datos del read-model
+
+- Cadena consolidada `HLg -> HLd -> HLc`.
+- Campos base para consumo transversal (Ticket/RDA/grilla):
+  - `persona_id`, `persona_nombre`
+  - `grupo_de_trabajo_id`, `grupo_nombre`
+  - `hlg_id`, `hld_id`, `hlc_id`
+  - `nivel_jerarquico`
+  - `fecha_inicio`, `fecha_fin`, `vigente_en_fecha`
+  - `regimen_horario_id`, `centro_costo_id`
+  - `carga_horas_semana_hlg`, `carga_horas_total_hlc`
+  - `warning_codes` (incluye `DESVIO_CARGA_NORMATIVA`)
+
+### Filtros soportados
+
+- `fecha_corte` (inclusive, default hoy)
+- `persona_id` (opcional)
+- `grupo_de_trabajo_id` (opcional)
+- `incluir_no_vigentes` (default false)
+
+### Extensión C1.1 (auditoría exportable)
+
+- `GrillaOperativa` incorpora filtro local por tipo de warning:
+  - `DESVIO_CARGA_NORMATIVA`
+- Se agregó exportación de resultados filtrados:
+  - JSON (`read-model-laboral-<fecha>.json`)
+  - CSV (`read-model-laboral-<fecha>.csv`)
+- Objetivo: facilitar auditoría externa para análisis operativo Ticket/RDA sin consultas manuales ad hoc.
+
+### Extensión C1.2 (warnings backend unificados)
+
+- El read-model backend incorpora ambos warnings operativos en `warning_codes`:
+  - `SOLAPE_CARGO_GRUPO`
+  - `DESVIO_CARGA_NORMATIVA`
+- `resumen` del callable ahora devuelve conteos por ambos tipos.
+- `GrillaOperativa` permite filtrar y visualizar ambos warnings desde origen.
+
+### Extensión C1.3 (estado operativo derivado unificado)
+
+- El read-model backend agrega `estado_operativo` por item:
+  - `pendiente` (inicio futuro respecto a fecha de corte)
+  - `activo` (vigente en fecha de corte)
+  - `no_vigente` (finalizado antes de fecha de corte)
+- `resumen` incorpora contador `pendientes`.
+- `GrillaOperativa` muestra `estado_operativo` en tabla y en la exportación CSV.
+
+### Extensión C1.4 (estado administrativo unificado)
+
+- El read-model backend agrega `estado_admin` por item:
+  - `abierto` (sin `fecha_fin`)
+  - `cerrado` (con `fecha_fin`)
+- `resumen` incorpora:
+  - `abiertos`
+  - `cerrados`
+- `GrillaOperativa` muestra `estado_admin` en tabla y exportación JSON/CSV.
+

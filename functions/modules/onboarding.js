@@ -90,7 +90,17 @@ const vincularCuentaConDni = onCall(async (request) => {
     if (c0.auth_uid && c0.auth_uid !== uid) {
       throw new HttpsError("failed-precondition", "La cuenta se actualizó mientras tanto; reintentá.");
     }
-    tx.set(cuentaRef, { auth_uid: uid, username: emailNorm, estado_acceso: CFG_ONB, actualizado_en: FieldValue.serverTimestamp() }, { merge: true });
+    tx.set(
+      cuentaRef,
+      {
+        auth_uid: uid,
+        username: emailNorm,
+        estado_acceso: CFG_ONB,
+        estado_acceso_id: FieldValue.delete(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
     tx.update(personaRef, {
       "metadata.auth_vinculado": true,
       "metadata.vinculado_en": FieldValue.serverTimestamp(),
@@ -226,7 +236,10 @@ const onboardingMvpCompletar = onCall(async (request) => {
   const cuentaId = cSnap.docs[0].id;
   const ts = FieldValue.serverTimestamp();
   await ref.set({ estado: ESTADO_ACTIVO_MVP, estado_perfil_datos_id: CFG_EPD_COMP, perfil_completitud_version: 1, actualizado_en: ts }, { merge: true });
-  await cr.set({ estado_acceso: CFG_ECA_ACTIVO, actualizado_en: ts }, { merge: true });
+  await cr.set(
+    { estado_acceso: CFG_ECA_ACTIVO, estado_acceso_id: FieldValue.delete(), actualizado_en: ts },
+    { merge: true },
+  );
   const uid = request.auth.uid;
   const user = await auth.getUser(uid);
   const prev = user.customClaims && typeof user.customClaims === "object" ? { ...user.customClaims } : {};
