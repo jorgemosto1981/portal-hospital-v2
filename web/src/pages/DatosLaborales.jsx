@@ -1,13 +1,15 @@
 import Card from "../components/ui/Card.jsx";
-import { guardarRegistroLaboral, listarColeccionLaboral } from "../services/datosLaboralesService.js";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { DATOS_LABORALES_COLECCIONES } from "../constants/datosLaboralesSchema.js";
-import { AYUDA_CAMPOS, COLECCIONES_FORM } from "./datos-laborales/constants.js";
+import { guardarRegistroLaboral } from "../services/datosLaboralesService.js";
+import { useEffect, useMemo, useState } from "react";
+import { AYUDA_CAMPOS, COLECCIONES_FORM, INITIAL_FORM_DATA_LABORAL } from "./datos-laborales/constants.js";
 import ColeccionesLaboralesCards from "./datos-laborales/sections/ColeccionesLaboralesCards.jsx";
 import FasesLaboralesTables from "./datos-laborales/sections/FasesLaboralesTables.jsx";
 import IntegridadReferencialCard from "./datos-laborales/sections/IntegridadReferencialCard.jsx";
 import TimelineLaboralPersonaCard from "./datos-laborales/sections/TimelineLaboralPersonaCard.jsx";
 import VistaOperativaGrupoCard from "./datos-laborales/sections/VistaOperativaGrupoCard.jsx";
+import { useDatosLaboralesCollections } from "./datos-laborales/useDatosLaboralesCollections.js";
+import { buildFormDataFromRecord, validateLaboralForm } from "./datos-laborales/formLogic.js";
+import { buildHlcPayload, buildHldPayload, buildHlgPayload } from "./datos-laborales/payloadBuilders.js";
 import {
   buildVistaGrupoItems,
   buildTimelineItemsByPersona,
@@ -15,18 +17,26 @@ import {
   emptyCargaDia,
   filterTimelineItemsAdvanced,
   filterTimelineItems,
-  isoToDateInput,
   labelDesdeIndice,
   normalizarWarnings,
-  normalizeCargaRowsFromRecord,
+  updateFormDataField,
+  updateCargaPorDiaRow,
+  addCargaPorDiaRow,
+  removeCargaPorDiaRow,
+  buildRegistrosEdicionDetallados,
+  buildTimelineResumen,
+  buildIntegridadLaboral,
 } from "./datos-laborales/utils.js";
 
 export default function DatosLaborales() {
-  const [rowsByCollection, setRowsByCollection] = useState({});
-  const [loadingByCollection, setLoadingByCollection] = useState({});
-  const [progressByCollection, setProgressByCollection] = useState({});
-  const [durationByCollection, setDurationByCollection] = useState({});
-  const [errorByCollection, setErrorByCollection] = useState({});
+  const {
+    rowsByCollection,
+    loadingByCollection,
+    progressByCollection,
+    durationByCollection,
+    errorByCollection,
+    cargarTodo,
+  } = useDatosLaboralesCollections();
   const [tipoAlta, setTipoAlta] = useState("historial_laboral_cargos");
   const [modoEdicion, setModoEdicion] = useState(false);
   const [registroEditId, setRegistroEditId] = useState("");
@@ -46,80 +56,7 @@ export default function DatosLaborales() {
   const [timelineWarningTipo, setTimelineWarningTipo] = useState("todos");
   const [grupoVistaId, setGrupoVistaId] = useState("");
   const [grupoVistaFecha, setGrupoVistaFecha] = useState(() => new Date().toISOString().slice(0, 10));
-  const [formData, setFormData] = useState({
-    persona_id: "",
-    grupo_de_trabajo_id: "",
-    efector_designacion_id: "",
-    efector_cumplimiento_id: "",
-    estado_asignacion_id: "",
-    carga_horaria_total: "",
-    fecha_desde: "",
-    fecha_hasta: "",
-    cargo_id: "",
-    cargo_funcional_id: "",
-    tipo_vinculo_id: "",
-    modalidad_jornada_id: "",
-    causal_fin_asignacion_id: "",
-    referencia_tipo_acto_id: "",
-    referencia_numero: "",
-    referencia_fecha: "",
-    referencia_detalle: "",
-    categoria_id: "",
-    rol_id: "",
-    regimen_horario_id: "",
-    centro_costo_id: "",
-    escalafon_id: "",
-    agrupamiento_id: "",
-    funcion_real_id: "",
-    nivel_jerarquico: "",
-    dato_laboral_id: "",
-    carga_por_dia_semana: "",
-  });
-
-  const cargarTodo = useCallback(async () => {
-    const initialLoading = {};
-    const collections = [
-      ...DATOS_LABORALES_COLECCIONES.map((item) => item.collectionName),
-      ...COLECCIONES_FORM,
-    ];
-    collections.forEach((collectionName) => {
-      initialLoading[collectionName] = true;
-    });
-    setLoadingByCollection(initialLoading);
-    setProgressByCollection({});
-    setDurationByCollection({});
-
-    await Promise.all(
-      collections.map(async (collectionName) => {
-        const startedAt = Date.now();
-        try {
-          const rows = await listarColeccionLaboral(collectionName, null, ({ loaded }) => {
-            setProgressByCollection((prev) => ({ ...prev, [collectionName]: loaded }));
-          });
-          setRowsByCollection((prev) => ({ ...prev, [collectionName]: rows }));
-          setErrorByCollection((prev) => ({ ...prev, [collectionName]: "" }));
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : "Error de lectura.";
-          setRowsByCollection((prev) => ({ ...prev, [collectionName]: [] }));
-          setErrorByCollection((prev) => ({ ...prev, [collectionName]: msg }));
-        } finally {
-          setLoadingByCollection((prev) => ({ ...prev, [collectionName]: false }));
-          setDurationByCollection((prev) => ({ ...prev, [collectionName]: Date.now() - startedAt }));
-        }
-      }),
-    );
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      await cargarTodo();
-      if (cancelled) return;
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [cargarTodo]);
+  const [formData, setFormData] = useState(() => ({ ...INITIAL_FORM_DATA_LABORAL }));
 
   const hlcRows = rowsByCollection.historial_laboral_cargos || [];
   const hldRows = rowsByCollection.historial_laboral_datos || [];
@@ -172,46 +109,15 @@ export default function DatosLaborales() {
       }),
     [opcionesCargoHlcFiltradas, idxFunciones, idxGrupos, idxEfectores],
   );
-  function personaLabel(personaId) {
-    const raw = String(personaId || "").trim();
-    if (!raw) return "—";
-    const row = idxPersonas.get(raw);
-    if (!row) return raw;
-    const apellido = String(row.apellido || "").trim();
-    const nombre = String(row.nombre || "").trim();
-    const full = [apellido, nombre].filter(Boolean).join(" ").trim();
-    return full ? `${raw} (${full})` : raw;
-  }
   const registrosEdicionDetallados = useMemo(() => {
-    return registrosPorTipo.map((x) => {
-      if (tipoAlta === "historial_laboral_cargos") {
-        const persona = personaLabel(x.persona_id);
-        const cargoFuncional = labelDesdeIndice(idxFunciones, x.cargo_funcional_id);
-        const grupo = labelDesdeIndice(idxGrupos, x.grupo_de_trabajo_id);
-        const desde = x.fecha_desde || "—";
-        const hasta = x.fecha_hasta || "abierto";
-        return {
-          id: x.id,
-          label: `${x.id} | persona:${persona} | cargo:${cargoFuncional} | grupo:${grupo} | ${desde} -> ${hasta}`,
-        };
-      }
-      const persona = personaLabel(x.persona_id);
-      const grupo = labelDesdeIndice(idxGrupos, x.grupo_de_trabajo_id);
-      const nivel = x.nivel_jerarquico == null ? "—" : String(x.nivel_jerarquico);
-      const desde = x.fecha_inicio || "—";
-      const hasta = x.fecha_fin || "abierto";
-      const dato = x.dato_laboral_id || "—";
-      const datoLaboral = idxHld.get(String(x.dato_laboral_id || ""));
-      const cargo = datoLaboral ? idxHlc.get(String(datoLaboral.cargo_id || "")) : null;
-      const cargoFuncional = cargo
-        ? labelDesdeIndice(idxFunciones, cargo.cargo_funcional_id)
-        : "—";
-      return {
-        id: x.id,
-        label:
-          `${x.id} | persona:${persona} | grupo:${grupo} | cargo:${cargoFuncional} | ` +
-          `nivel:${nivel} | hld:${dato} | ${desde} -> ${hasta}`,
-      };
+    return buildRegistrosEdicionDetallados({
+      registrosPorTipo,
+      tipoAlta,
+      idxPersonas,
+      idxFunciones,
+      idxGrupos,
+      idxHld,
+      idxHlc,
     });
   }, [registrosPorTipo, tipoAlta, idxPersonas, idxFunciones, idxGrupos, idxHld, idxHlc]);
   const timelineItemsBase = useMemo(
@@ -272,29 +178,7 @@ export default function DatosLaborales() {
     timelineWarningTipo,
   ]);
   const timelineResumen = useMemo(() => {
-    const base = {
-      total: timelineItemsBase.length,
-      activos: 0,
-      cerrados: 0,
-      conflictos: 0,
-      hlc: 0,
-      hld: 0,
-      hlg: 0,
-      warningSolapeCargoGrupo: 0,
-      warningDesvioCargaNormativa: 0,
-    };
-    timelineItemsBase.forEach((item) => {
-      if (item.estado === "activo") base.activos += 1;
-      if (item.hasta) base.cerrados += 1;
-      if ((item.conflictos || []).length > 0) base.conflictos += 1;
-      if (item.tipo === "HLc") base.hlc += 1;
-      if (item.tipo === "HLd") base.hld += 1;
-      if (item.tipo === "HLg") base.hlg += 1;
-      const codes = Array.isArray(item.warning_codes) ? item.warning_codes : [];
-      if (codes.includes("SOLAPE_CARGO_GRUPO")) base.warningSolapeCargoGrupo += 1;
-      if (codes.includes("DESVIO_CARGA_NORMATIVA")) base.warningDesvioCargaNormativa += 1;
-    });
-    return base;
+    return buildTimelineResumen(timelineItemsBase);
   }, [timelineItemsBase]);
   const vistaGrupoItems = useMemo(
     () =>
@@ -308,44 +192,27 @@ export default function DatosLaborales() {
       }),
     [grupoVistaId, grupoVistaFecha, hlgRows, idxPersonas, idxHld, idxHlc],
   );
-  const hldSinCargo = hldRows.filter((row) => !idxHlc.has(String(row.cargo_id || "")));
-  const hlgSinDato = hlgRows.filter((row) => !idxHld.has(String(row.dato_laboral_id || "")));
-  const hlcConGrupoInvalido = hlcRows.filter(
-    (row) => row.grupo_de_trabajo_id && !idxGrupos.has(String(row.grupo_de_trabajo_id)),
+  const {
+    hldSinCargo,
+    hlgSinDato,
+    hlcConGrupoInvalido,
+    hlcConEfectorDesignacionInvalido,
+    hlcConEfectorCumplimientoInvalido,
+    totalAlertasIntegridad,
+    hlcActivosSinGrupo,
+  } = useMemo(
+    () =>
+      buildIntegridadLaboral({
+        hlcRows,
+        hldRows,
+        hlgRows,
+        idxHlc,
+        idxHld,
+        idxGrupos,
+        idxEfectores,
+      }),
+    [hlcRows, hldRows, hlgRows, idxHlc, idxHld, idxGrupos, idxEfectores],
   );
-  const hlcConEfectorDesignacionInvalido = hlcRows.filter(
-    (row) => row.efector_designacion_id && !idxEfectores.has(String(row.efector_designacion_id)),
-  );
-  const hlcConEfectorCumplimientoInvalido = hlcRows.filter(
-    (row) => row.efector_cumplimiento_id && !idxEfectores.has(String(row.efector_cumplimiento_id)),
-  );
-  const totalAlertasIntegridad =
-    hldSinCargo.length +
-    hlgSinDato.length +
-    hlcConGrupoInvalido.length +
-    hlcConEfectorDesignacionInvalido.length +
-    hlcConEfectorCumplimientoInvalido.length;
-  const hldByCargo = new Map();
-  hldRows.forEach((row) => {
-    const cargoId = String(row.cargo_id || "");
-    if (!cargoId) return;
-    const list = hldByCargo.get(cargoId) || [];
-    list.push(String(row.id));
-    hldByCargo.set(cargoId, list);
-  });
-  const hlgByHld = new Map();
-  hlgRows.forEach((row) => {
-    const hldId = String(row.dato_laboral_id || "");
-    if (!hldId) return;
-    hlgByHld.set(hldId, true);
-  });
-  const hlcActivosSinGrupo = hlcRows.filter((row) => {
-    const activo = row.activo !== false && !row.fecha_hasta;
-    if (!activo) return false;
-    const hldIds = hldByCargo.get(String(row.id || "")) || [];
-    if (hldIds.length === 0) return true;
-    return !hldIds.some((id) => hlgByHld.get(id));
-  });
 
   useEffect(() => {
     if (timelinePersonaId) return;
@@ -360,39 +227,19 @@ export default function DatosLaborales() {
   }, [grupoVistaId, opcionesGrupos]);
 
   function onChangeField(key, value) {
-    setFormData((prev) => {
-      if (key === "fecha_desde") {
-        const nextDesde = String(value || "");
-        const nextHasta =
-          prev.fecha_hasta && nextDesde && prev.fecha_hasta < nextDesde ? "" : prev.fecha_hasta;
-        return { ...prev, fecha_desde: nextDesde, fecha_hasta: nextHasta };
-      }
-      if (key === "fecha_hasta") {
-        const nextHasta = String(value || "");
-        if (nextHasta && prev.fecha_desde && nextHasta < prev.fecha_desde) {
-          return { ...prev, fecha_hasta: "" };
-        }
-        return { ...prev, fecha_hasta: nextHasta };
-      }
-      return { ...prev, [key]: value };
-    });
+    setFormData((prev) => updateFormDataField(prev, key, value));
   }
 
   function onChangeCargaRow(idx, key, value) {
-    setCargaPorDiaRows((prev) =>
-      prev.map((row, rowIdx) => (rowIdx === idx ? { ...row, [key]: value } : row)),
-    );
+    setCargaPorDiaRows((prev) => updateCargaPorDiaRow(prev, idx, key, value));
   }
 
   function onAddCargaRow() {
-    setCargaPorDiaRows((prev) => [...prev, emptyCargaDia()]);
+    setCargaPorDiaRows((prev) => addCargaPorDiaRow(prev));
   }
 
   function onRemoveCargaRow(idx) {
-    setCargaPorDiaRows((prev) => {
-      const next = prev.filter((_, rowIdx) => rowIdx !== idx);
-      return next.length > 0 ? next : [emptyCargaDia()];
-    });
+    setCargaPorDiaRows((prev) => removeCargaPorDiaRow(prev, idx));
   }
 
   function abrirEdicionDesdeTimeline(item) {
@@ -456,171 +303,18 @@ export default function DatosLaborales() {
   }, [tipoAlta, formData.cargo_id, formData.persona_id, idxHlc]);
 
   function cargarRegistroEnFormulario(record) {
-    if (!record || typeof record !== "object") return;
-    const datoRef = idxHld.get(String(record.dato_laboral_id || ""));
-    setFormData((prev) => ({
-      ...prev,
-      persona_id: String(record.persona_id || ""),
-      grupo_de_trabajo_id: String(record.grupo_de_trabajo_id || ""),
-      efector_designacion_id: String(record.efector_designacion_id || ""),
-      efector_cumplimiento_id: String(record.efector_cumplimiento_id || ""),
-      estado_asignacion_id: String(record.estado_asignacion_id || ""),
-      carga_horaria_total:
-        record.carga_horaria_total == null ? "" : String(record.carga_horaria_total),
-      fecha_desde: isoToDateInput(
-        String(
-          record.fecha_desde ||
-            record.fecha_inicio ||
-            (datoRef && datoRef.fecha_inicio) ||
-            "",
-        ),
-      ),
-      fecha_hasta: isoToDateInput(
-        String(
-          record.fecha_hasta ||
-            record.fecha_fin ||
-            (datoRef && datoRef.fecha_fin) ||
-            "",
-        ),
-      ),
-      cargo_id: String(record.cargo_id || (datoRef && datoRef.cargo_id) || ""),
-      cargo_funcional_id: String(record.cargo_funcional_id || ""),
-      tipo_vinculo_id: String(record.tipo_vinculo_id || ""),
-      modalidad_jornada_id: String(record.modalidad_jornada_id || ""),
-      causal_fin_asignacion_id: String(record.causal_fin_asignacion_id || ""),
-      referencia_tipo_acto_id: String(
-        (Array.isArray(record.referencias_normativa_designacion) &&
-          record.referencias_normativa_designacion[0] &&
-          record.referencias_normativa_designacion[0].tipo_acto_id) ||
-          "",
-      ),
-      referencia_numero: String(
-        (Array.isArray(record.referencias_normativa_designacion) &&
-          record.referencias_normativa_designacion[0] &&
-          record.referencias_normativa_designacion[0].numero) ||
-          "",
-      ),
-      referencia_fecha: isoToDateInput(
-        String(
-          (Array.isArray(record.referencias_normativa_designacion) &&
-            record.referencias_normativa_designacion[0] &&
-            record.referencias_normativa_designacion[0].fecha) ||
-            "",
-        ),
-      ),
-      referencia_detalle: String(
-        (Array.isArray(record.referencias_normativa_designacion) &&
-          record.referencias_normativa_designacion[0] &&
-          record.referencias_normativa_designacion[0].detalle) ||
-          "",
-      ),
-      categoria_id: String(record.categoria_id || ""),
-      rol_id: String(record.rol_id || (datoRef && datoRef.rol_id) || ""),
-      regimen_horario_id: String(record.regimen_horario_id || (datoRef && datoRef.regimen_horario_id) || ""),
-      centro_costo_id: String(record.centro_costo_id || (datoRef && datoRef.centro_costo_id) || ""),
-      escalafon_id: String(record.escalafon_id || ""),
-      agrupamiento_id: String(record.agrupamiento_id || ""),
-      funcion_real_id: String(record.funcion_real_id || (datoRef && datoRef.funcion_real_id) || ""),
-      nivel_jerarquico: record.nivel_jerarquico == null ? "" : String(record.nivel_jerarquico),
-      dato_laboral_id: String(record.dato_laboral_id || ""),
-      carga_por_dia_semana: Array.isArray(record.carga_por_dia_semana)
-        ? record.carga_por_dia_semana.join(",")
-        : "",
-    }));
-    setCargaPorDiaRows(normalizeCargaRowsFromRecord(record.carga_por_dia_semana));
-  }
-
-  function camposRequeridosSegunTipo() {
-    if (tipoAlta === "historial_laboral_cargos") {
-      return [
-        "persona_id",
-        "grupo_de_trabajo_id",
-        "efector_designacion_id",
-        "efector_cumplimiento_id",
-        "estado_asignacion_id",
-        "escalafon_id",
-        "agrupamiento_id",
-        "tipo_vinculo_id",
-        "categoria_id",
-        "cargo_funcional_id",
-        "modalidad_jornada_id",
-        "carga_horaria_total",
-        "fecha_desde",
-      ];
-    }
-    return [
-      "persona_id",
-      "cargo_id",
-      "grupo_de_trabajo_id",
-      "rol_id",
-      "funcion_real_id",
-      "nivel_jerarquico",
-      "fecha_desde",
-    ];
+    const next = buildFormDataFromRecord({ record, idxHld, prevFormData: formData });
+    if (!next) return;
+    setFormData(next.formData);
+    setCargaPorDiaRows(next.cargaPorDiaRows);
   }
 
   function validarFormulario() {
-    const faltantes = camposRequeridosSegunTipo().filter((k) => !String(formData[k] || "").trim());
-    if (faltantes.length > 0) {
-      return `Completá los campos obligatorios: ${faltantes.join(", ")}`;
-    }
-    if (formData.persona_id && !/^per_/i.test(formData.persona_id.trim())) {
-      return "persona_id debe comenzar con per_.";
-    }
-    if (formData.carga_horaria_total) {
-      const n = Number(formData.carga_horaria_total);
-      if (!Number.isFinite(n) || n < 0 || n > 168) {
-        return "carga_horaria_total debe ser un número entre 0 y 168.";
-      }
-    }
-    if (formData.nivel_jerarquico) {
-      const n = Number(formData.nivel_jerarquico);
-      if (!Number.isInteger(n) || n < 1 || n > 99) {
-        return "nivel_jerarquico debe ser un entero entre 1 y 99.";
-      }
-    }
-    if (formData.fecha_desde && formData.fecha_hasta && formData.fecha_desde > formData.fecha_hasta) {
-      return "fecha_hasta no puede ser menor que fecha_desde.";
-    }
-    if (
-      tipoAlta === "historial_laboral_cargos" &&
-      formData.fecha_hasta &&
-      !String(formData.causal_fin_asignacion_id || "").trim()
-    ) {
-      return "Si informás fecha_hasta en HLc, causal_fin_asignacion_id es obligatorio.";
-    }
-    if (tipoAlta === "historial_laboral_cargos") {
-      if (!String(formData.referencia_tipo_acto_id || "").trim()) {
-        return "En HLc, referencia normativa requiere tipo_acto_id.";
-      }
-      if (!String(formData.referencia_numero || "").trim()) {
-        return "En HLc, referencia normativa requiere número.";
-      }
-      if (!String(formData.referencia_fecha || "").trim()) {
-        return "En HLc, referencia normativa requiere fecha.";
-      }
-    }
-    if (tipoAlta === "historial_laboral_grupos") {
-      const rowsValidas = cargaPorDiaRows
-        .map((row) => ({
-          dia_semana_id: String(row.dia_semana_id || "").trim(),
-          horas: String(row.horas || "").trim(),
-        }))
-        .filter((row) => row.dia_semana_id || row.horas);
-      if (rowsValidas.length === 0) {
-        return "Completá al menos una fila de carga_por_dia_semana (día + horas).";
-      }
-      const seen = new Set();
-      for (const row of rowsValidas) {
-        if (!row.dia_semana_id) return "Cada fila de carga_por_dia_semana requiere dia_semana_id.";
-        if (seen.has(row.dia_semana_id)) return `dia_semana_id duplicado en carga_por_dia_semana: ${row.dia_semana_id}.`;
-        seen.add(row.dia_semana_id);
-        if (!Number.isFinite(Number(row.horas)) || Number(row.horas) < 0 || Number(row.horas) > 24) {
-          return `Horas inválidas para ${row.dia_semana_id}. Debe estar entre 0 y 24.`;
-        }
-      }
-    }
-    return "";
+    return validateLaboralForm({
+      tipoAlta,
+      formData,
+      cargaPorDiaRows,
+    });
   }
 
   async function onGuardarRegistro(e) {
@@ -636,66 +330,20 @@ export default function DatosLaborales() {
       let r;
       let warnings = [];
       if (tipoAlta === "historial_laboral_cargos") {
-        const payload = {
-          persona_id: formData.persona_id,
-          grupo_de_trabajo_id: formData.grupo_de_trabajo_id,
-          efector_designacion_id: formData.efector_designacion_id,
-          efector_cumplimiento_id: formData.efector_cumplimiento_id,
-          estado_asignacion_id: formData.estado_asignacion_id || null,
-          escalafon_id: formData.escalafon_id || null,
-          agrupamiento_id: formData.agrupamiento_id || null,
-          cargo_funcional_id: formData.cargo_funcional_id || null,
-          tipo_vinculo_id: formData.tipo_vinculo_id || null,
-          modalidad_jornada_id: formData.modalidad_jornada_id || null,
-          causal_fin_asignacion_id: formData.causal_fin_asignacion_id || null,
-          referencias_normativa_designacion: [
-            {
-              tipo_acto_id: formData.referencia_tipo_acto_id || null,
-              numero: formData.referencia_numero || null,
-              fecha: formData.referencia_fecha || null,
-              detalle: formData.referencia_detalle || null,
-            },
-          ],
-          categoria_id: formData.categoria_id || null,
-          carga_horaria_total: formData.carga_horaria_total || null,
-          fecha_desde: formData.fecha_desde || null,
-          fecha_hasta: formData.fecha_hasta || null,
-        };
-        if (modoEdicion && registroEditId) payload.id = registroEditId;
+        const payload = buildHlcPayload({ formData, modoEdicion, registroEditId });
         r = await guardarRegistroLaboral("historial_laboral_cargos", payload);
         warnings = normalizarWarnings(r && r.warnings);
       } else {
-        const payloadHld = {
-          persona_id: formData.persona_id,
-          cargo_id: formData.cargo_id,
-          rol_id: formData.rol_id || null,
-          regimen_horario_id: formData.regimen_horario_id || null,
-          centro_costo_id: formData.centro_costo_id || null,
-          funcion_real_id: formData.funcion_real_id || null,
-          nivel_jerarquico: formData.nivel_jerarquico || null,
-          fecha_inicio: formData.fecha_desde || null,
-          fecha_fin: formData.fecha_hasta || null,
-        };
-        if (modoEdicion && registroEditId && formData.dato_laboral_id) {
-          payloadHld.id = formData.dato_laboral_id;
-        }
+        const payloadHld = buildHldPayload({ formData, modoEdicion, registroEditId });
         const hld = await guardarRegistroLaboral("historial_laboral_datos", payloadHld);
         warnings = warnings.concat(normalizarWarnings(hld && hld.warnings));
-        const payloadHlg = {
-          persona_id: formData.persona_id,
-          dato_laboral_id: hld.id,
-          grupo_de_trabajo_id: formData.grupo_de_trabajo_id,
-          nivel_jerarquico: formData.nivel_jerarquico || null,
-          carga_por_dia_semana: cargaPorDiaRows
-            .map((row) => ({
-              dia_semana_id: String(row.dia_semana_id || "").trim() || null,
-              horas: row.horas === "" ? null : Number(row.horas),
-            }))
-            .filter((row) => row.dia_semana_id && Number.isFinite(row.horas)),
-          fecha_inicio: formData.fecha_desde || null,
-          fecha_fin: formData.fecha_hasta || null,
-        };
-        if (modoEdicion && registroEditId) payloadHlg.id = registroEditId;
+        const payloadHlg = buildHlgPayload({
+          formData,
+          hldId: hld.id,
+          cargaPorDiaRows,
+          modoEdicion,
+          registroEditId,
+        });
         r = await guardarRegistroLaboral("historial_laboral_grupos", payloadHlg);
         warnings = warnings.concat(normalizarWarnings(r && r.warnings));
       }

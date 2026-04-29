@@ -9,6 +9,7 @@ import {
   COLECCIONES_CFG,
   ESTADO_DDJJ_DEFAULT_PERSONALES,
   HELP,
+  INITIAL_FORM_DATA_PERSONALES,
 } from "./datos-personales/constants.js";
 import FormHeaderControls from "./datos-personales/sections/FormHeaderControls.jsx";
 import ConsentimientosFields from "./datos-personales/sections/ConsentimientosFields.jsx";
@@ -16,6 +17,12 @@ import DdjjFields from "./datos-personales/sections/DdjjFields.jsx";
 import FormacionFields from "./datos-personales/sections/FormacionFields.jsx";
 import PersonaFields from "./datos-personales/sections/PersonaFields.jsx";
 import { emptyFamiliar, normalizarWarnings, toOpts } from "./datos-personales/utils.js";
+import {
+  buildDatosPayload,
+  hydrateDatosPersonales,
+  updateDatosPersonalesField,
+  validateDatosPersonales,
+} from "./datos-personales/formLogic.js";
 
 export default function DatosPersonales() {
   const [tipo, setTipo] = useState("personas");
@@ -27,53 +34,7 @@ export default function DatosPersonales() {
   const [loadingByCol, setLoadingByCol] = useState({});
   const [progressByCol, setProgressByCol] = useState({});
   const [durationByCol, setDurationByCol] = useState({});
-  const [form, setForm] = useState({
-    dni: "",
-    nombre: "",
-    apellido: "",
-    nombre_completo_legal: "",
-    cuil: "",
-    fecha_nacimiento: "",
-    lugar_nacimiento_id: "",
-    lugar_nacimiento_texto: "",
-    activo: true,
-    motivo_baja_id: "",
-    sexo_genero_id: "",
-    estado_civil_id: "",
-    nacionalidad_id: "",
-    telefono_celular: "",
-    telefono_fijo: "",
-    recibe_notificaciones_sms: false,
-    email_personal: "",
-    calle: "",
-    numero: "",
-    piso: "",
-    departamento: "",
-    provincia_id: "",
-    pais_id: "",
-    localidad_id: "",
-    codigo_postal: "",
-    referencia: "",
-    foto_file: null,
-    foto_file_name: "",
-    foto_storage_path: "",
-    foto_content_type: "",
-    foto_download_url: "",
-    persona_id: "",
-    nivel_estudios_id: "",
-    titulo_completo: "",
-    duracion_anios: "",
-    institucion: "",
-    matricula_numero: "",
-    especialidad_id: "",
-    colegio_id: "",
-    matricula_jurisdiccion_id: "",
-    estado_declaracion_id: "",
-    declaracion_version: "1",
-    tipo_consentimiento_id: "",
-    version_id: "",
-    idioma_id: "",
-  });
+  const [form, setForm] = useState(() => ({ ...INITIAL_FORM_DATA_PERSONALES }));
   const [familiares, setFamiliares] = useState([emptyFamiliar()]);
 
   const cargar = useCallback(async () => {
@@ -162,164 +123,18 @@ export default function DatosPersonales() {
   );
 
   function setField(key, value) {
-    setForm((p) => {
-      const next = { ...p, [key]: value };
-      if (key === "nombre" || key === "apellido") {
-        const nombre = String(key === "nombre" ? value : next.nombre || "").trim();
-        const apellido = String(key === "apellido" ? value : next.apellido || "").trim();
-        next.nombre_completo_legal = [nombre, apellido].filter(Boolean).join(" ") || "";
-      }
-      if (key === "persona_id" && tipo === "declaraciones_grupo_familiar" && !modoEdicion) {
-        next.declaracion_version = "1";
-      }
-      return next;
-    });
+    setForm((p) => updateDatosPersonalesField({ prevForm: p, key, value, tipo, modoEdicion }));
   }
 
   function hydrateFrom(r) {
-    if (!r || typeof r !== "object") return;
-    setForm((p) => ({
-      ...p,
-      dni: String(r.dni || ""),
-      nombre: String(r.nombre || ""),
-      apellido: String(r.apellido || ""),
-      nombre_completo_legal: [String(r.nombre || "").trim(), String(r.apellido || "").trim()]
-        .filter(Boolean)
-        .join(" "),
-      cuil: String(r.cuil || ""),
-      fecha_nacimiento: String(r.fecha_nacimiento || ""),
-      lugar_nacimiento_id: String(r.lugar_nacimiento_id || ""),
-      lugar_nacimiento_texto: String(r.lugar_nacimiento_texto || ""),
-      activo: r.activo !== false,
-      motivo_baja_id: String(r.motivo_baja_id || ""),
-      sexo_genero_id: String(r.sexo_genero_id || ""),
-      estado_civil_id: String(r.estado_civil_id || ""),
-      nacionalidad_id: String(r.nacionalidad_id || ""),
-      telefono_celular: String((r.contacto && r.contacto.telefono_celular) || ""),
-      telefono_fijo: String((r.contacto && r.contacto.telefono_fijo) || ""),
-      recibe_notificaciones_sms: r.contacto && r.contacto.recibe_notificaciones_sms === true,
-      email_personal: String((r.contacto && r.contacto.email_personal) || ""),
-      calle: String((r.domicilio && r.domicilio.calle) || ""),
-      numero: String((r.domicilio && r.domicilio.numero) || ""),
-      piso: String((r.domicilio && r.domicilio.piso) || ""),
-      departamento: String((r.domicilio && r.domicilio.departamento) || ""),
-      provincia_id: String((r.domicilio && r.domicilio.provincia_id) || ""),
-      pais_id: String((r.domicilio && r.domicilio.pais_id) || ""),
-      localidad_id: String((r.domicilio && r.domicilio.localidad_id) || ""),
-      codigo_postal: String((r.domicilio && r.domicilio.codigo_postal) || ""),
-      referencia: String((r.domicilio && r.domicilio.referencia) || ""),
-      foto_file: null,
-      foto_file_name: String(
-        (r.foto_rostro && (r.foto_rostro.storage_path || r.foto_rostro.content_type)) || "",
-      ),
-      foto_storage_path: String((r.foto_rostro && r.foto_rostro.storage_path) || ""),
-      foto_content_type: String((r.foto_rostro && r.foto_rostro.content_type) || ""),
-      foto_download_url: String((r.foto_rostro && r.foto_rostro.download_url) || ""),
-      persona_id: String(r.persona_id || r.titular_persona_id || ""),
-      nivel_estudios_id: String(r.nivel_estudios_id || ""),
-      titulo_completo: String(r.titulo_completo || ""),
-      duracion_anios: r.duracion_anios == null ? "" : String(r.duracion_anios),
-      institucion: String(r.institucion || ""),
-      matricula_numero: String(r.matricula_numero || ""),
-      especialidad_id: String(r.especialidad_id || ""),
-      colegio_id: String(r.colegio_id || ""),
-      matricula_jurisdiccion_id: String(r.matricula_jurisdiccion_id || ""),
-      estado_declaracion_id: String(r.estado_declaracion_id || ""),
-      tipo_consentimiento_id: String(r.tipo_consentimiento_id || ""),
-      version_id: String(r.version_id || ""),
-      idioma_id: String(r.idioma_id || r.idioma || ""),
-      declaracion_version:
-        r.declaracion_version == null ? "1" : String(r.declaracion_version),
-    }));
-    if (Array.isArray(r.familiares) && r.familiares.length > 0) {
-      setFamiliares(
-        r.familiares.map((f) => ({
-          parentesco_id: String(f.parentesco_id || ""),
-          nombre: String(f.nombre || ""),
-          apellido: String(f.apellido || ""),
-          dni: String(f.dni || ""),
-          fecha_nacimiento: String(f.fecha_nacimiento || ""),
-          convive: f.convive === true,
-          dependiente: f.dependiente === true,
-          discapacidad_declarada: f.discapacidad_declarada === true,
-          notas_titular: String(f.notas_titular || ""),
-        })),
-      );
-    } else {
-      setFamiliares([emptyFamiliar()]);
-    }
+    const next = hydrateDatosPersonales({ record: r, prevForm: form, emptyFamiliar });
+    if (!next) return;
+    setForm(next.form);
+    setFamiliares(next.familiares);
   }
 
   function validar() {
-    if (tipo === "personas") {
-      const obligatorios = [
-        ["dni", form.dni],
-        ["nombre", form.nombre],
-        ["apellido", form.apellido],
-        ["fecha_nacimiento", form.fecha_nacimiento],
-        ["lugar_nacimiento_id", form.lugar_nacimiento_id],
-        ["sexo_genero_id", form.sexo_genero_id],
-        ["estado_civil_id", form.estado_civil_id],
-        ["nacionalidad_id", form.nacionalidad_id],
-        ["contacto.telefono_celular", form.telefono_celular],
-        ["contacto.email_personal", form.email_personal],
-        ["domicilio.calle", form.calle],
-        ["domicilio.numero", form.numero],
-        ["domicilio.provincia_id", form.provincia_id],
-        ["domicilio.pais_id", form.pais_id],
-        ["domicilio.localidad_id", form.localidad_id],
-        ["domicilio.codigo_postal", form.codigo_postal],
-      ].filter(([, v]) => !String(v || "").trim());
-      if (obligatorios.length > 0) {
-        return `Completá campos obligatorios en personas: ${obligatorios.map(([k]) => k).join(", ")}.`;
-      }
-      if (!/^\d{6,12}$/.test(form.dni.trim())) return "DNI inválido (6 a 12 dígitos).";
-      if (!form.activo && !String(form.motivo_baja_id || "").trim()) {
-        return "Si activo=false, motivo_baja_id es obligatorio.";
-      }
-    }
-    if (tipo === "formacion_agente") {
-      if (!form.persona_id.trim()) return "Completá persona_id para formación.";
-      if (!String(form.nivel_estudios_id || "").trim()) {
-        return "Completá nivel_estudios_id para formación.";
-      }
-    }
-    if (tipo === "declaraciones_grupo_familiar" && !form.persona_id.trim()) {
-      return "Completá persona_id titular para DDJJ.";
-    }
-    if (tipo === "declaraciones_grupo_familiar") {
-      const filasConDatos = familiares.filter((f) =>
-        [f.parentesco_id, f.dni, f.nombre, f.apellido, f.fecha_nacimiento].some((v) => String(v || "").trim()),
-      );
-      if (filasConDatos.length === 0) {
-        return "Debés cargar al menos un familiar en DDJJ.";
-      }
-      const invalida = filasConDatos.some(
-        (f) =>
-          !f.parentesco_id.trim() ||
-          !f.dni.trim() ||
-          !f.nombre.trim() ||
-          !f.apellido.trim() ||
-          !f.fecha_nacimiento.trim(),
-      );
-      if (invalida) {
-        return "Cada familiar requiere: parentesco_id, dni, nombre, apellido y fecha_nacimiento.";
-      }
-      const dniInvalido = filasConDatos.some((f) => !/^\d{6,12}$/.test(f.dni.trim()));
-      if (dniInvalido) {
-        return "Cada familiar debe tener DNI válido (6 a 12 dígitos).";
-      }
-    }
-    if (tipo === "consentimientos" && !form.persona_id.trim()) {
-      return "Completá persona_id para consentimiento.";
-    }
-    if (tipo === "consentimientos" && !form.tipo_consentimiento_id.trim()) {
-      return "Seleccioná tipo_consentimiento_id desde catálogo.";
-    }
-    if (tipo === "consentimientos" && !form.version_id.trim()) {
-      return "Seleccioná version_id (texto legal) desde catálogo.";
-    }
-    return "";
+    return validateDatosPersonales({ tipo, form, familiares });
   }
 
   async function subirFotoRostro(file, dni) {
@@ -353,8 +168,8 @@ export default function DatosPersonales() {
     try {
       let datos = {};
       let warnings = [];
+      let fotoRostro = null;
       if (tipo === "personas") {
-        let fotoRostro = null;
         if (form.foto_file) {
           fotoRostro = await subirFotoRostro(form.foto_file, form.dni);
         } else if (form.foto_storage_path || form.foto_content_type || form.foto_download_url) {
@@ -365,85 +180,16 @@ export default function DatosPersonales() {
             origen_captura: "adjunto_o_camara",
           };
         }
-        datos = {
-          dni: form.dni.trim(),
-          nombre: form.nombre.trim(),
-          apellido: form.apellido.trim(),
-          nombre_completo_legal: [form.nombre.trim(), form.apellido.trim()].filter(Boolean).join(" ") || null,
-          cuil: form.cuil.trim() || null,
-          fecha_nacimiento: form.fecha_nacimiento || null,
-          lugar_nacimiento_id: form.lugar_nacimiento_id || null,
-          lugar_nacimiento_texto: form.lugar_nacimiento_texto || null,
-          activo: form.activo === true,
-          motivo_baja_id: form.activo ? null : form.motivo_baja_id || null,
-          sexo_genero_id: form.sexo_genero_id || null,
-          estado_civil_id: form.estado_civil_id || null,
-          nacionalidad_id: form.nacionalidad_id || null,
-          contacto: {
-            telefono_celular: form.telefono_celular || null,
-            telefono_fijo: form.telefono_fijo || null,
-            recibe_notificaciones_sms: form.recibe_notificaciones_sms === true,
-            email_personal: form.email_personal || null,
-          },
-          domicilio: {
-            calle: form.calle || null,
-            numero: form.numero || null,
-            piso: form.piso || null,
-            departamento: form.departamento || null,
-            provincia_id: form.provincia_id || null,
-            pais_id: form.pais_id || null,
-            localidad_id: form.localidad_id || null,
-            codigo_postal: form.codigo_postal || null,
-            referencia: form.referencia || null,
-          },
-          foto_rostro: fotoRostro,
-        };
-      } else if (tipo === "formacion_agente") {
-        datos = {
-          persona_id: form.persona_id.trim(),
-          nivel_estudios_id: form.nivel_estudios_id || null,
-          titulo_completo: form.titulo_completo || null,
-          duracion_anios: form.duracion_anios || null,
-          institucion: form.institucion || null,
-          matricula_numero: form.matricula_numero || null,
-          especialidad_id: form.especialidad_id || null,
-          colegio_id: form.colegio_id || null,
-          matricula_jurisdiccion_id: form.matricula_jurisdiccion_id || null,
-        };
-      } else if (tipo === "declaraciones_grupo_familiar") {
-        const familiaresPayload = familiares
-          .filter((f) =>
-            [f.parentesco_id, f.dni, f.nombre, f.apellido, f.fecha_nacimiento].some((v) =>
-              String(v || "").trim(),
-            ),
-          )
-          .map((f) => ({
-            parentesco_id: f.parentesco_id || null,
-            nombre: f.nombre || null,
-            apellido: f.apellido || null,
-            dni: f.dni || null,
-            fecha_nacimiento: f.fecha_nacimiento || null,
-            convive: f.convive === true,
-            dependiente: f.dependiente === true,
-            discapacidad_declarada: f.discapacidad_declarada === true,
-            notas_titular: f.notas_titular || null,
-          }));
-        datos = {
-          titular_persona_id: form.persona_id.trim(),
-          estado_declaracion_id: ESTADO_DDJJ_DEFAULT_PERSONALES,
-          declaracion_version: modoEdicion ? Number(form.declaracion_version || 1) : null,
-          familiares: familiaresPayload,
-        };
-      } else {
-        datos = {
-          persona_id: form.persona_id.trim(),
-          tipo_consentimiento_id: form.tipo_consentimiento_id,
-          version_id: form.version_id,
-          idioma_id: form.idioma_id || null,
-          aceptado: true,
-        };
       }
-      if (modoEdicion && editId) datos.id = editId;
+      datos = buildDatosPayload({
+        tipo,
+        form,
+        familiares,
+        modoEdicion,
+        editId,
+        estadoDdjjDefault: ESTADO_DDJJ_DEFAULT_PERSONALES,
+        fotoRostro,
+      });
       const r = await guardarRegistroPersonal(tipo, datos);
       warnings = normalizarWarnings(r && r.warnings);
       const baseOk = `Guardado OK: ${r.id || "(sin id)"}`;

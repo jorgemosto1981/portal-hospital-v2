@@ -28,6 +28,35 @@ export function emptyCargaDia() {
   return { dia_semana_id: "", horas: "" };
 }
 
+export function updateFormDataField(prev, key, value) {
+  if (key === "fecha_desde") {
+    const nextDesde = String(value || "");
+    const nextHasta = prev.fecha_hasta && nextDesde && prev.fecha_hasta < nextDesde ? "" : prev.fecha_hasta;
+    return { ...prev, fecha_desde: nextDesde, fecha_hasta: nextHasta };
+  }
+  if (key === "fecha_hasta") {
+    const nextHasta = String(value || "");
+    if (nextHasta && prev.fecha_desde && nextHasta < prev.fecha_desde) {
+      return { ...prev, fecha_hasta: "" };
+    }
+    return { ...prev, fecha_hasta: nextHasta };
+  }
+  return { ...prev, [key]: value };
+}
+
+export function updateCargaPorDiaRow(rows, idx, key, value) {
+  return rows.map((row, rowIdx) => (rowIdx === idx ? { ...row, [key]: value } : row));
+}
+
+export function addCargaPorDiaRow(rows) {
+  return [...rows, emptyCargaDia()];
+}
+
+export function removeCargaPorDiaRow(rows, idx) {
+  const next = rows.filter((_, rowIdx) => rowIdx !== idx);
+  return next.length > 0 ? next : [emptyCargaDia()];
+}
+
 export function normalizeCargaRowsFromRecord(rawCarga) {
   if (!Array.isArray(rawCarga)) return [emptyCargaDia()];
   if (rawCarga.length === 0) return [emptyCargaDia()];
@@ -487,4 +516,141 @@ export function buildVistaGrupoItems({
       if (na !== nb) return na - nb;
       return a.persona_label.localeCompare(b.persona_label);
     });
+}
+
+export function personaLabelFromIndex(idxPersonas, personaId) {
+  const raw = String(personaId || "").trim();
+  if (!raw) return "—";
+  const row = idxPersonas && idxPersonas.get ? idxPersonas.get(raw) : null;
+  if (!row) return raw;
+  const apellido = String(row.apellido || "").trim();
+  const nombre = String(row.nombre || "").trim();
+  const full = [apellido, nombre].filter(Boolean).join(" ").trim();
+  return full ? `${raw} (${full})` : raw;
+}
+
+export function buildRegistrosEdicionDetallados({
+  registrosPorTipo,
+  tipoAlta,
+  idxPersonas,
+  idxFunciones,
+  idxGrupos,
+  idxHld,
+  idxHlc,
+}) {
+  const rows = Array.isArray(registrosPorTipo) ? registrosPorTipo : [];
+  return rows.map((x) => {
+    if (tipoAlta === "historial_laboral_cargos") {
+      const persona = personaLabelFromIndex(idxPersonas, x.persona_id);
+      const cargoFuncional = labelDesdeIndice(idxFunciones, x.cargo_funcional_id);
+      const grupo = labelDesdeIndice(idxGrupos, x.grupo_de_trabajo_id);
+      const desde = x.fecha_desde || "—";
+      const hasta = x.fecha_hasta || "abierto";
+      return {
+        id: x.id,
+        label: `${x.id} | persona:${persona} | cargo:${cargoFuncional} | grupo:${grupo} | ${desde} -> ${hasta}`,
+      };
+    }
+    const persona = personaLabelFromIndex(idxPersonas, x.persona_id);
+    const grupo = labelDesdeIndice(idxGrupos, x.grupo_de_trabajo_id);
+    const nivel = x.nivel_jerarquico == null ? "—" : String(x.nivel_jerarquico);
+    const desde = x.fecha_inicio || "—";
+    const hasta = x.fecha_fin || "abierto";
+    const dato = x.dato_laboral_id || "—";
+    const datoLaboral = idxHld.get(String(x.dato_laboral_id || ""));
+    const cargo = datoLaboral ? idxHlc.get(String(datoLaboral.cargo_id || "")) : null;
+    const cargoFuncional = cargo ? labelDesdeIndice(idxFunciones, cargo.cargo_funcional_id) : "—";
+    return {
+      id: x.id,
+      label:
+        `${x.id} | persona:${persona} | grupo:${grupo} | cargo:${cargoFuncional} | ` +
+        `nivel:${nivel} | hld:${dato} | ${desde} -> ${hasta}`,
+    };
+  });
+}
+
+export function buildTimelineResumen(items) {
+  const base = {
+    total: Array.isArray(items) ? items.length : 0,
+    activos: 0,
+    cerrados: 0,
+    conflictos: 0,
+    hlc: 0,
+    hld: 0,
+    hlg: 0,
+    warningSolapeCargoGrupo: 0,
+    warningDesvioCargaNormativa: 0,
+  };
+  (items || []).forEach((item) => {
+    if (item.estado === "activo") base.activos += 1;
+    if (item.hasta) base.cerrados += 1;
+    if ((item.conflictos || []).length > 0) base.conflictos += 1;
+    if (item.tipo === "HLc") base.hlc += 1;
+    if (item.tipo === "HLd") base.hld += 1;
+    if (item.tipo === "HLg") base.hlg += 1;
+    const codes = Array.isArray(item.warning_codes) ? item.warning_codes : [];
+    if (codes.includes("SOLAPE_CARGO_GRUPO")) base.warningSolapeCargoGrupo += 1;
+    if (codes.includes("DESVIO_CARGA_NORMATIVA")) base.warningDesvioCargaNormativa += 1;
+  });
+  return base;
+}
+
+export function buildIntegridadLaboral({
+  hlcRows,
+  hldRows,
+  hlgRows,
+  idxHlc,
+  idxHld,
+  idxGrupos,
+  idxEfectores,
+}) {
+  const hldSinCargo = (hldRows || []).filter((row) => !idxHlc.has(String(row.cargo_id || "")));
+  const hlgSinDato = (hlgRows || []).filter((row) => !idxHld.has(String(row.dato_laboral_id || "")));
+  const hlcConGrupoInvalido = (hlcRows || []).filter(
+    (row) => row.grupo_de_trabajo_id && !idxGrupos.has(String(row.grupo_de_trabajo_id)),
+  );
+  const hlcConEfectorDesignacionInvalido = (hlcRows || []).filter(
+    (row) => row.efector_designacion_id && !idxEfectores.has(String(row.efector_designacion_id)),
+  );
+  const hlcConEfectorCumplimientoInvalido = (hlcRows || []).filter(
+    (row) => row.efector_cumplimiento_id && !idxEfectores.has(String(row.efector_cumplimiento_id)),
+  );
+  const totalAlertasIntegridad =
+    hldSinCargo.length +
+    hlgSinDato.length +
+    hlcConGrupoInvalido.length +
+    hlcConEfectorDesignacionInvalido.length +
+    hlcConEfectorCumplimientoInvalido.length;
+
+  const hldByCargo = new Map();
+  (hldRows || []).forEach((row) => {
+    const cargoId = String(row.cargo_id || "");
+    if (!cargoId) return;
+    const list = hldByCargo.get(cargoId) || [];
+    list.push(String(row.id));
+    hldByCargo.set(cargoId, list);
+  });
+  const hlgByHld = new Map();
+  (hlgRows || []).forEach((row) => {
+    const hldId = String(row.dato_laboral_id || "");
+    if (!hldId) return;
+    hlgByHld.set(hldId, true);
+  });
+  const hlcActivosSinGrupo = (hlcRows || []).filter((row) => {
+    const activo = row.activo !== false && !row.fecha_hasta;
+    if (!activo) return false;
+    const hldIds = hldByCargo.get(String(row.id || "")) || [];
+    if (hldIds.length === 0) return true;
+    return !hldIds.some((id) => hlgByHld.get(id));
+  });
+
+  return {
+    hldSinCargo,
+    hlgSinDato,
+    hlcConGrupoInvalido,
+    hlcConEfectorDesignacionInvalido,
+    hlcConEfectorCumplimientoInvalido,
+    totalAlertasIntegridad,
+    hlcActivosSinGrupo,
+  };
 }

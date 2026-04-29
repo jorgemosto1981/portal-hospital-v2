@@ -425,3 +425,39 @@
   - `cerrados`
 - `GrillaOperativa` muestra `estado_admin` en tabla y exportación JSON/CSV.
 
+## Actualización continuidad — 2026-04-29 (refactor modular sin cambio funcional)
+
+### Objetivo
+
+- Reducir tamaño de pantallas críticas y separar responsabilidades (estado, validación, payload, UI) sin cambiar reglas de negocio ni contratos backend.
+
+### Refactor aplicado
+
+1. `DatosLaborales`:
+   - Hook de carga extraído: `web/src/pages/datos-laborales/useDatosLaboralesCollections.js`
+   - Lógica de formulario/validación extraída: `web/src/pages/datos-laborales/formLogic.js`
+   - Builders de payload extraídos: `web/src/pages/datos-laborales/payloadBuilders.js`
+   - Utilidades ampliadas en `web/src/pages/datos-laborales/utils.js` para resumen/integridad/listados.
+   - `web/src/pages/DatosLaborales.jsx` reducido y más orquestador.
+
+2. `DatosPersonales`:
+   - Estado inicial de formulario movido a `web/src/pages/datos-personales/constants.js` (`INITIAL_FORM_DATA_PERSONALES`).
+   - Lógica de formulario extraída: `web/src/pages/datos-personales/formLogic.js`
+   - `web/src/pages/DatosPersonales.jsx` simplificado (set/hydrate/validate/build payload).
+
+3. `RRHH`:
+   - Helpers y payloads extraídos: `web/src/features/rrhh/utils.js`
+   - UI separada en secciones: `web/src/features/rrhh/sections/RrhhForms.jsx`
+   - `web/src/features/rrhh/AltaAgenteRRHH.jsx` enfocado en estado/orquestación.
+
+### Resultado de tamaño (aprox. tras refactor)
+
+- `web/src/pages/DatosLaborales.jsx`: ~1365 -> ~1058
+- `web/src/pages/DatosPersonales.jsx`: ~631 -> ~376
+- `web/src/features/rrhh/AltaAgenteRRHH.jsx`: mantiene alto, pero con UI/payload utilitarios externos y menor complejidad cognitiva.
+
+### Verificación post-refactor
+
+- Lint en archivos editados: sin errores.
+- Regresión ejecutada: `npm run test:abm:estricto` -> OK.
+
