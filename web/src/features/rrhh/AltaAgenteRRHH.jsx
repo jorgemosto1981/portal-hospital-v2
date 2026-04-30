@@ -330,6 +330,17 @@ export default function AltaAgenteRRHH() {
           Cáscara en PENDIENTE_ONBOARDING. El <strong>rol de aplicación</strong> se guarda en
           <code className="mx-1 text-xs">usuarios_cuenta.role_ids</code> (catálogo <code className="text-xs">cfg_rol</code>).
         </p>
+        <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3 text-xs text-slate-600">
+          <p><strong>Objetivo:</strong> administrar altas, acceso, bajas y re-vinculación de cuentas.</p>
+          <p><strong>Resultado:</strong> cambios persistidos en persona, cuenta y trazabilidad RRHH.</p>
+          <p><strong>Cuándo usar:</strong> tareas administrativas sobre agentes por persona_id.</p>
+        </div>
+        <div className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-3 text-xs text-slate-600">
+          <p><strong>Alta agente:</strong> crea persona + cuenta pendiente.</p>
+          <p><strong>Gestión de acceso:</strong> bloquea/rehabilita ingreso.</p>
+          <p><strong>Baja laboral:</strong> cierra HLc vigentes y aplica baja.</p>
+          <p><strong>Reinicio de vinculación:</strong> desvincula Auth para repetir vínculo por DNI.</p>
+        </div>
         {!user && OPEN_ACCESS_TEMP && (
           <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
             Modo temporal habilitado: acceso RRHH sin sesión (solo entorno de desarrollo).

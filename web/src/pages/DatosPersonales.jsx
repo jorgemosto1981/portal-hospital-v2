@@ -217,6 +217,11 @@ export default function DatosPersonales() {
           <p className="mt-2 text-sm text-slate-600">
             Pantalla operativa de datos personales con conexión directa a Firestore (sin datos ficticios).
           </p>
+          <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3 text-xs text-slate-600">
+            <p><strong>Objetivo:</strong> mantener ficha personal, formación, DDJJ y consentimientos.</p>
+            <p><strong>Resultado:</strong> perfil actualizado y validado según catálogos V2.</p>
+            <p><strong>Cuándo usar:</strong> alta, actualización o corrección de datos personales por persona_id.</p>
+          </div>
         </Card>
 
         <Card className="px-4 py-4 md:px-5">

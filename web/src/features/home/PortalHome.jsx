@@ -11,7 +11,7 @@ export default function PortalHome() {
         Inicio
       </h1>
       <p className="mb-5 mt-1 text-base leading-relaxed text-slate-600 sm:mb-6 md:mb-6">
-        Resumen de conexión y herramientas de desarrollo (Firebase en la raíz del repo).
+        Resumen de conexión y diagnóstico técnico (Firebase en la raíz del repo).
       </p>
       <div className="mb-4">
         <Link
@@ -36,14 +36,10 @@ export default function PortalHome() {
         callableOp={p.callableOp}
         callableMsg={p.callableMsg}
         callableBusy={p.callableBusy}
-        rrhh={p.rrhh}
-            reg={p.reg}
-            onHealth={p.runHealth}
-            onSync={p.runSyncClaims}
-            onRrhh={p.runRrhhAlta}
-            onPasoB={p.runPasoB}
-            hasUser={!!p.user}
-          />
+        onHealth={p.runHealth}
+        onSync={p.runSyncClaims}
+        hasUser={!!p.user}
+      />
         </div>
       </div>
     </div>

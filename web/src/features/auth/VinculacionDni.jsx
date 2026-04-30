@@ -36,7 +36,12 @@ export default function VinculacionDni() {
       <PublicAuthMenu />
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center px-4 py-8">
         <h1 className="mb-2 text-center text-lg font-semibold">Vincular con tu legajo</h1>
-        <p className="mb-4 text-center text-sm text-slate-500">Ingresá el DNI que te dio de alta RRHH</p>
+        <p className="mb-2 text-center text-sm text-slate-500">Ingresá el DNI que te dio de alta RRHH</p>
+        <div className="mb-4 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600">
+          <p><strong>Objetivo:</strong> vincular tu sesión actual a la ficha RRHH.</p>
+          <p><strong>Resultado:</strong> se asigna persona_id a tu cuenta.</p>
+          <p><strong>Cuándo usar:</strong> después de crear cuenta, si aún no estás vinculado.</p>
+        </div>
         <Card className="p-5 sm:p-6">
           <form onSubmit={onVincular} className="space-y-3 text-sm">
             <input

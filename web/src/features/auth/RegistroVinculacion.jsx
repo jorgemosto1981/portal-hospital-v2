@@ -77,10 +77,18 @@ export default function RegistroVinculacion() {
             decoding="async"
           />
           <h1 className="text-lg font-semibold text-slate-900">Registro — {APP_TITLE}</h1>
+          <div className="mt-2 max-w-xs rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600">
+            <p><strong>Objetivo:</strong> crear y vincular cuenta inicial.</p>
+            <p><strong>Resultado:</strong> cuenta asociada a tu persona_id.</p>
+            <p><strong>Cuándo usar:</strong> primer ingreso de agente nuevo.</p>
+          </div>
         </div>
 
         {step === 1 ? (
           <Card className="p-5 sm:p-6">
+            <p className="mb-3 text-sm text-slate-600">
+              <strong>Opción: Crear cuenta.</strong> Genera tus credenciales de acceso en Auth.
+            </p>
             <form onSubmit={onCreateAccount} className="space-y-3 text-sm">
               <label className="block font-medium text-slate-700">Correo</label>
               <input
@@ -111,7 +119,9 @@ export default function RegistroVinculacion() {
 
         {step === 2 ? (
           <Card className="p-5 sm:p-6">
-            <p className="mb-3 text-sm text-slate-600">Ingresá el DNI que te dio de alta RRHH para este hospital.</p>
+            <p className="mb-3 text-sm text-slate-600">
+              <strong>Opción: Vincular DNI.</strong> Asocia tu cuenta creada con la ficha cargada por RRHH.
+            </p>
             <form onSubmit={onVincular} className="space-y-3 text-sm">
               <label className="block font-medium text-slate-700">DNI (solo números)</label>
               <input

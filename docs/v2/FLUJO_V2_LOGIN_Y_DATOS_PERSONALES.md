@@ -62,6 +62,13 @@ Resumen alineado a [`MODULO_DATOS_PERSONALES_V2.md`](./MODULO_DATOS_PERSONALES_V
 
 **Regla de producto:** entre **B** y **C** el usuario **sí** tiene sesión válida, pero el **router** lo mantiene fuera del menú principal hasta cumplir **C** (y la transición de `estado_acceso` a *activo portal*). La **DDJJ (D)** no bloquea el menú salvo cambio explícito de política documentado en Login §4.4.
 
+### 4.1 Flujo oficial de primer acceso (decisión operativa)
+
+- Flujo oficial para agente nuevo: **`/registro` -> `/vinculacion` -> `/onboarding`**.
+- La pantalla **`/inicio`** queda para diagnóstico técnico y no para ejecutar operaciones de negocio RRHH.
+- La operación administrativa de alta permanece en **`/rrhh/alta`**.
+- Si existiera un camino alternativo técnico (por callable), se considera contingencia de soporte y no flujo funcional principal.
+
 ---
 
 ## 5. Gating: menú principal y login
@@ -255,3 +262,4 @@ Las siguientes decisiones son **normativas para implementación** salvo que el h
 | 2026-04-22 | **Regla estricta** en §1: sin conexión V1↔V2 ni migración de datos. |
 | 2026-04-22 | Doc V2 en `docs/v2/`; §1 tabla Login: **DNI + PIN 6 + correo** (`MODULO_LOGIN_V2` §1.1). |
 | 2026-04-23 | §4 paso **A:** `declaraciones_grupo_familiar` pasa a **obligatoria** en el alta (B7; plan [`MODULO_DATOS_PERSONALES_PLAN_DESARROLLO_UNIFICADO_V2.md`](./MODULO_DATOS_PERSONALES_PLAN_DESARROLLO_UNIFICADO_V2.md)). |
+| 2026-04-30 | §4.1 decisión operativa: flujo oficial de primer acceso ` /registro -> /vinculacion -> /onboarding`; `/inicio` sin operación de negocio RRHH. |

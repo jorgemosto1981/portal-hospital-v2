@@ -82,6 +82,11 @@ export default function LoginScreen() {
           />
           <h1 className="text-lg font-semibold text-slate-900">{APP_TITLE}</h1>
           <p className="mt-1 text-sm text-slate-500">Iniciá sesión con DNI y PIN</p>
+          <div className="mt-2 max-w-xs rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600">
+            <p><strong>Objetivo:</strong> ingresar con cuenta ya activa.</p>
+            <p><strong>Resultado:</strong> acceso al portal según estado de cuenta.</p>
+            <p><strong>Cuándo usar:</strong> después de vinculación y onboarding inicial.</p>
+          </div>
         </div>
         <Card className="p-5 sm:p-6">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -126,7 +131,7 @@ export default function LoginScreen() {
           </Link>
         </p>
         <p className="mt-2 text-center text-xs text-slate-500">
-          Inicio con DNI+PIN: ya debés haber vinculado o completado &quot;primer acceso&quot; (Callable).
+          Flujo oficial de alta inicial: Registro -> Vinculación DNI -> Onboarding.
         </p>
       </div>
     </div>

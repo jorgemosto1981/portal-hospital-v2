@@ -41,6 +41,11 @@ export default function OnboardingWizard() {
       <div className="mx-auto w-full max-w-lg">
         <h1 className="text-xl font-semibold tracking-tight">Onboarding</h1>
         <p className="mt-1 text-sm text-slate-500">Completá la ficha para acceder a todas las funciones.</p>
+        <div className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600">
+          <p><strong>Objetivo:</strong> completar requisitos iniciales del perfil.</p>
+          <p><strong>Resultado:</strong> habilitación de acceso completo al portal.</p>
+          <p><strong>Cuándo usar:</strong> inmediatamente después de vincular DNI.</p>
+        </div>
 
         <div className="mb-4 mt-4 flex gap-2 text-sm">
           {["Contacto y domicilio", "Grupo familiar", "Habilitar"].map((l, i) => (

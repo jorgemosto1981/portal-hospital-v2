@@ -61,6 +61,11 @@ export default function Configuracion() {
           <span className="font-mono text-slate-700">portal_role: &quot;rrhh&quot;</span> pueden listar y
           guardar.
         </p>
+        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
+          <p><strong>Objetivo:</strong> administrar catálogos institucionales cfg_* en una sola pantalla.</p>
+          <p><strong>Resultado:</strong> opciones vigentes para formularios RRHH, personales y laborales.</p>
+          <p><strong>Cuándo usar:</strong> altas, bajas lógicas o ajustes de catálogos maestros.</p>
+        </div>
         {openAccessTemp && (
           <p className="mt-2 text-xs text-amber-700">
             Modo temporal activo: lectura de catálogos habilitada sin login RRHH.

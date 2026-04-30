@@ -146,6 +146,11 @@ export default function GrillaOperativa() {
       <p className="mt-2 text-sm text-slate-600">
         Read-model laboral unificado para Ticket/RDA/Grilla mensual (persona, cargo, grupo, vigencia y carga).
       </p>
+      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
+        <p><strong>Objetivo:</strong> consultar vista operativa consolidada por fecha/persona/grupo.</p>
+        <p><strong>Resultado:</strong> lectura unificada de estado operativo, admin y warnings laborales.</p>
+        <p><strong>Cuándo usar:</strong> análisis rápido, control diario y exportación para auditoría.</p>
+      </div>
 
       <div className="mt-3 grid gap-3 md:grid-cols-5">
         <input type="date" value={fechaCorte} onChange={(e) => setFechaCorte(e.target.value)} className="h-11 rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />

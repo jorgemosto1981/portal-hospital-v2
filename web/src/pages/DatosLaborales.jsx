@@ -373,6 +373,11 @@ export default function DatosLaborales() {
             Vista de referencia del contrato vigente en V2 para las colecciones y campos del modulo
             laboral. Esta pantalla consulta Firestore en vivo.
           </p>
+          <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3 text-xs text-slate-600">
+            <p><strong>Objetivo:</strong> registrar y auditar historial laboral por persona_id.</p>
+            <p><strong>Resultado:</strong> HLc/HLd/HLg consistentes para operación y trazabilidad.</p>
+            <p><strong>Cuándo usar:</strong> gestión RRHH de altas, cambios, cierres y controles laborales.</p>
+          </div>
         </Card>
 
         <Card className="px-4 py-4 md:px-5">
