@@ -17,9 +17,11 @@ export function getFunctionsV2() {
     const hostName = typeof window !== "undefined" ? window.location.hostname : "";
     const isLocalHost =
       hostName === "localhost" || hostName === "127.0.0.1" || hostName === "::1";
-    const shouldUseEmulator =
-      import.meta.env.VITE_V2_USE_FUNCTIONS_EMULATOR === "true" ||
-      (isLocalHost && import.meta.env.VITE_V2_USE_FUNCTIONS_EMULATOR !== "false");
+    // En entorno local, usamos emulador por defecto para evitar CORS/404 hacia cloudfunctions.net.
+    // Solo se desactiva explícitamente con VITE_V2_FORCE_CLOUD_FUNCTIONS=true.
+    const forceCloud =
+      import.meta.env.VITE_V2_FORCE_CLOUD_FUNCTIONS === "true";
+    const shouldUseEmulator = isLocalHost && !forceCloud;
 
     if (shouldUseEmulator && !emulatorConnected) {
       const host = import.meta.env.VITE_V2_FUNCTIONS_EMULATOR_HOST || "127.0.0.1";
