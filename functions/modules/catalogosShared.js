@@ -13,6 +13,7 @@ const COLECCIONES_PUBLICAS_TEMPORALES = new Set([
   "formacion_agente",
   "declaraciones_grupo_familiar",
   "consentimientos",
+  "eventos_ticket",
   "cfg_estado_civil",
   "cfg_nacionalidad",
   "cfg_sexo_genero",

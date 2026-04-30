@@ -1,6 +1,7 @@
 export default function ConsentimientosFields({
   form,
   setField,
+  disabled = false,
   HELP,
   optsTipoConsent,
   optsTextosLegales,
@@ -18,7 +19,8 @@ export default function ConsentimientosFields({
         <select
           value={form.tipo_consentimiento_id}
           onChange={(e) => setField("tipo_consentimiento_id", e.target.value)}
-          className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+          disabled={disabled}
+          className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
         >
           <option value="">Seleccionar...</option>
           {optsTipoConsent.map((o) => (
@@ -34,7 +36,8 @@ export default function ConsentimientosFields({
         <select
           value={form.version_id}
           onChange={(e) => setField("version_id", e.target.value)}
-          className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+          disabled={disabled}
+          className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
         >
           <option value="">Seleccionar...</option>
           {optsTextosLegales.map((o) => (
@@ -50,7 +53,8 @@ export default function ConsentimientosFields({
         <select
           value={form.idioma_id}
           onChange={(e) => setField("idioma_id", e.target.value)}
-          className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+          disabled={disabled}
+          className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
         >
           <option value="">Seleccionar...</option>
           {optsIdioma.map((o) => (

@@ -152,6 +152,7 @@ export function buildDatosPayload({
   editId,
   estadoDdjjDefault,
   fotoRostro,
+  accionHabilitada,
 }) {
   let datos = {};
   if (tipo === "personas") {
@@ -187,6 +188,7 @@ export function buildDatosPayload({
         referencia: form.referencia || null,
       },
       foto_rostro: fotoRostro,
+      accion_habilitada: accionHabilitada || null,
     };
   } else if (tipo === "formacion_agente") {
     datos = {

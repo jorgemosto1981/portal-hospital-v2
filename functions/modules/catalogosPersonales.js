@@ -5,7 +5,7 @@ const { ulid } = require("ulid");
 const { createHash } = require("node:crypto");
 const { db, FieldValue } = require("./shared/context");
 const runtimeFlags = require("../../shared/runtimeFlags.json");
-const { assertRrhh } = require("./shared/helpers");
+const { assertRrhh, assertAgenteConPersonaId } = require("./shared/helpers");
 const {
   COLECCIONES_ESCRITURA_PERSONAL_TEMPORAL,
   ESTADO_DDJJ_DEFAULT_PERSONALES,
@@ -16,6 +16,92 @@ const {
   assertConsistenciaEstadoPerfilCuenta,
   pushWarning,
 } = require("./catalogosShared");
+
+const MSG_PERSONAS_SENSIBLE_ROL =
+  "[AUTH-PER-001] Campo no editable por rol: solo RRHH puede modificar dni, nombre, apellido, activo y motivo_baja_id.";
+const MSG_ACCION_REQUERIDA_ROL =
+  "[AUTH-PER-004] Para actualizar datos personales debés habilitar una acción permitida (domicilio o teléfonos).";
+const MSG_ACCION_CAMPO_NO_PERMITIDO =
+  "[AUTH-PER-005] La acción habilitada no permite modificar uno o más campos enviados.";
+
+const ACCION_CAMBIO_DOMICILIO = "informar_cambio_domicilio";
+const ACCION_CAMBIO_TELEFONOS = "informar_cambio_telefonos";
+const ACCIONES_PERSONA_HABILITABLES = new Set([ACCION_CAMBIO_DOMICILIO, ACCION_CAMBIO_TELEFONOS]);
+const CAMPOS_POR_ACCION = {
+  [ACCION_CAMBIO_DOMICILIO]: new Set([
+    "domicilio.calle",
+    "domicilio.numero",
+    "domicilio.piso",
+    "domicilio.departamento",
+    "domicilio.provincia_id",
+    "domicilio.pais_id",
+    "domicilio.localidad_id",
+    "domicilio.codigo_postal",
+    "domicilio.referencia",
+  ]),
+  [ACCION_CAMBIO_TELEFONOS]: new Set([
+    "contacto.telefono_celular",
+    "contacto.telefono_fijo",
+    "contacto.recibe_notificaciones_sms",
+  ]),
+};
+
+function isRrhhActor(request) {
+  const role = request && request.auth && request.auth.token && request.auth.token.portal_role;
+  return role === "rrhh";
+}
+
+function getActorPersonaId(request) {
+  const pid = request && request.auth && request.auth.token && request.auth.token.persona_id;
+  return typeof pid === "string" && pid.trim() ? pid.trim() : null;
+}
+
+function hasSensitivePersonaMutation({ existing, incoming }) {
+  if (!existing) return false;
+  const normalizeBool = (v, fallbackTrue = true) => (v === false ? false : fallbackTrue ? true : false);
+  const pairs = [
+    [toNullableTrimmedString(existing.dni), toNullableTrimmedString(incoming.dni)],
+    [toNullableTrimmedString(existing.nombre), toNullableTrimmedString(incoming.nombre)],
+    [toNullableTrimmedString(existing.apellido), toNullableTrimmedString(incoming.apellido)],
+    [normalizeBool(existing.activo), normalizeBool(incoming.activo)],
+    [toNullableTrimmedString(existing.motivo_baja_id), toNullableTrimmedString(incoming.motivo_baja_id)],
+  ];
+  return pairs.some(([prev, next]) => prev !== next);
+}
+
+function buildPersonaComparable(data) {
+  const src = data && typeof data === "object" ? data : {};
+  const contacto = src.contacto && typeof src.contacto === "object" ? src.contacto : {};
+  const domicilio = src.domicilio && typeof src.domicilio === "object" ? src.domicilio : {};
+  return {
+    "contacto.telefono_celular": toNullableTrimmedString(contacto.telefono_celular),
+    "contacto.telefono_fijo": toNullableTrimmedString(contacto.telefono_fijo),
+    "contacto.recibe_notificaciones_sms": contacto.recibe_notificaciones_sms === true,
+    "domicilio.calle": toNullableTrimmedString(domicilio.calle),
+    "domicilio.numero": toNullableTrimmedString(domicilio.numero),
+    "domicilio.piso": toNullableTrimmedString(domicilio.piso),
+    "domicilio.departamento": toNullableTrimmedString(domicilio.departamento),
+    "domicilio.provincia_id": toNullableTrimmedString(domicilio.provincia_id),
+    "domicilio.pais_id": toNullableTrimmedString(domicilio.pais_id),
+    "domicilio.localidad_id": toNullableTrimmedString(domicilio.localidad_id),
+    "domicilio.codigo_postal": toNullableTrimmedString(domicilio.codigo_postal),
+    "domicilio.referencia": toNullableTrimmedString(domicilio.referencia),
+    dni: toNullableTrimmedString(src.dni),
+    nombre: toNullableTrimmedString(src.nombre),
+    apellido: toNullableTrimmedString(src.apellido),
+    activo: src.activo !== false,
+    motivo_baja_id: toNullableTrimmedString(src.motivo_baja_id),
+  };
+}
+
+function diffPersonaFields(prevData, nextData) {
+  const prev = buildPersonaComparable(prevData);
+  const next = buildPersonaComparable(nextData);
+  const keys = Object.keys(next);
+  return keys
+    .filter((key) => prev[key] !== next[key])
+    .map((key) => ({ campo: key, anterior: prev[key] ?? null, nuevo: next[key] ?? null }));
+}
 
 function buildTextoLegalCanonicalString(versionId, docData) {
   const raw = docData && typeof docData === "object" ? docData : {};
@@ -39,6 +125,72 @@ function buildTextoLegalCanonicalString(versionId, docData) {
 function sha256Hex(value) {
   return createHash("sha256").update(String(value || ""), "utf8").digest("hex");
 }
+
+const registrarNotificacionCambioDatosPersonales = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Se requiere sesión.");
+  const actorPersonaId = assertAgenteConPersonaId(request);
+  const data = request.data && typeof request.data === "object" ? request.data : {};
+  const personaId = toNullableTrimmedString(data.persona_id) || actorPersonaId;
+  if (personaId !== actorPersonaId) {
+    throw new HttpsError("permission-denied", "[AUTH-PER-006] Solo podés notificar cambios sobre tu propia persona.");
+  }
+  const coleccion = toNullableTrimmedString(data.coleccion_objetivo);
+  const accion = toNullableTrimmedString(data.accion) || "notificar_cambio";
+  const allowed = new Set(["personas", "formacion_agente", "declaraciones_grupo_familiar"]);
+  if (!coleccion || !allowed.has(coleccion)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "[VAL-PER-007] coleccion_objetivo inválida. Permitidas: personas, formacion_agente, declaraciones_grupo_familiar.",
+    );
+  }
+  const now = FieldValue.serverTimestamp();
+  const eventoId = `evt_${ulid()}`;
+  const typeMap = {
+    personas: "EVT_DATOS_NOTIF_CAMBIO_FOTO",
+    formacion_agente: "EVT_DATOS_NOTIF_CAMBIO_FORMACION",
+    declaraciones_grupo_familiar: "EVT_DATOS_NOTIF_CAMBIO_DDJJ",
+  };
+  const payload = {
+    id: eventoId,
+    tipo_evento_id: typeMap[coleccion] || "EVT_DATOS_NOTIF_CAMBIO",
+    persona_id: personaId,
+    actor_persona_id: actorPersonaId,
+    ocurrido_en: now,
+    estado_bandeja_rrhh: "pendiente_revision",
+    payload: {
+      accion,
+      coleccion_objetivo: coleccion,
+      motivo: toNullableTrimmedString(data.motivo),
+    },
+    schema_version: 1,
+  };
+  await db.collection("eventos_ticket").doc(eventoId).set(payload, { merge: true });
+  return { ok: true, id: eventoId };
+});
+
+const rrhhMarcarEventoDatosPersonalesVisto = onCall(async (request) => {
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
+  const data = request.data && typeof request.data === "object" ? request.data : {};
+  const eventoId = toNullableTrimmedString(data.evento_id);
+  if (!eventoId) {
+    throw new HttpsError("invalid-argument", "[VAL-PER-008] evento_id es obligatorio.");
+  }
+  const ref = db.collection("eventos_ticket").doc(eventoId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", `[VAL-PER-009] Evento inexistente: ${eventoId}.`);
+  }
+  await ref.set(
+    {
+      estado_bandeja_rrhh: "visto",
+      tomado_conocimiento_en: FieldValue.serverTimestamp(),
+      tomado_conocimiento_por_persona_id: getActorPersonaId(request),
+      actualizado_en: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+  return { ok: true, id: eventoId };
+});
 
 function buildNombreCompletoLegal(nombre, apellido) {
   const n = toNullableTrimmedString(nombre);
@@ -103,6 +255,20 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
     const motivoBajaId = toNullableTrimmedString(datos.motivo_baja_id);
     const activo = datos.activo !== false;
     await assertDocExistsOrNull("cfg_motivo_baja_persona", motivoBajaId, "motivo_baja_id");
+    const ref = db.collection(colRaw).doc(id);
+    const existingSnap = await ref.get();
+    const existingData = existingSnap.exists ? existingSnap.data() || {} : null;
+    const actorIsRrhh = isRrhhActor(request);
+    const actorPersonaId = getActorPersonaId(request);
+    if (!actorIsRrhh && request.auth) {
+      if (!existingSnap.exists) {
+        throw new HttpsError("permission-denied", "[AUTH-PER-002] Solo RRHH puede dar de alta registros en personas.");
+      }
+      if (actorPersonaId !== id) {
+        throw new HttpsError("permission-denied", "[AUTH-PER-003] Solo podés actualizar tu propio registro en personas.");
+      }
+    }
+
     const payload = {
       persona_id: id,
       dni,
@@ -178,6 +344,29 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
       actualizado_en: now,
       schema_version: 1,
     };
+    if (!actorIsRrhh && request.auth && hasSensitivePersonaMutation({ existing: existingData, incoming: payload })) {
+      throw new HttpsError("permission-denied", MSG_PERSONAS_SENSIBLE_ROL);
+    }
+    const accionHabilitada = toNullableTrimmedString(datos.accion_habilitada);
+    let cambiosAuditados = null;
+    if (!actorIsRrhh && request.auth) {
+      if (!accionHabilitada || !ACCIONES_PERSONA_HABILITABLES.has(accionHabilitada)) {
+        throw new HttpsError("permission-denied", MSG_ACCION_REQUERIDA_ROL);
+      }
+      const cambios = diffPersonaFields(existingData || {}, payload);
+      if (cambios.length === 0) {
+        throw new HttpsError(
+          "failed-precondition",
+          "[VAL-PER-006] No se detectaron cambios para aplicar en la acción habilitada.",
+        );
+      }
+      const camposPermitidos = CAMPOS_POR_ACCION[accionHabilitada] || new Set();
+      const hayCampoNoPermitido = cambios.some((c) => !camposPermitidos.has(c.campo));
+      if (hayCampoNoPermitido) {
+        throw new HttpsError("permission-denied", MSG_ACCION_CAMPO_NO_PERMITIDO);
+      }
+      cambiosAuditados = cambios;
+    }
     if (!activo && !motivoBajaId) {
       throw new HttpsError(
         "invalid-argument",
@@ -201,10 +390,29 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
       );
     }
     await assertConsistenciaEstadoPerfilCuenta(id, estadoPerfilDatosId);
-    const ref = db.collection(colRaw).doc(id);
-    const exists = (await ref.get()).exists;
+    const exists = existingSnap.exists;
     if (!exists) payload.creado_en = now;
     await ref.set(payload, { merge: true });
+    if (!actorIsRrhh && request.auth && cambiosAuditados && cambiosAuditados.length > 0) {
+      const eventoId = `evt_${ulid()}`;
+      const eventoPayload = {
+        id: eventoId,
+        tipo_evento_id:
+          accionHabilitada === ACCION_CAMBIO_DOMICILIO
+            ? "EVT_DATOS_CAMBIO_DOMICILIO"
+            : "EVT_DATOS_CAMBIO_TELEFONOS",
+        persona_id: id,
+        actor_persona_id: actorPersonaId,
+        ocurrido_en: now,
+        estado_bandeja_rrhh: "pendiente_revision",
+        payload: {
+          accion: accionHabilitada,
+          cambios: cambiosAuditados,
+        },
+        schema_version: 1,
+      };
+      await db.collection("eventos_ticket").doc(eventoId).set(eventoPayload, { merge: true });
+    }
     return { ok: true, id, warnings };
   }
 
@@ -368,4 +576,8 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
   return { ok: true, id, warnings };
 });
 
-module.exports = { guardarRegistroPersonalTemporal };
+module.exports = {
+  guardarRegistroPersonalTemporal,
+  registrarNotificacionCambioDatosPersonales,
+  rrhhMarcarEventoDatosPersonalesVisto,
+};

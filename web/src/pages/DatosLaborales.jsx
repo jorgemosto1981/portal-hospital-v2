@@ -85,6 +85,11 @@ export default function DatosLaborales() {
   const opcionesCentroCosto = rowsByCollection.cfg_centro_costo || [];
   const opcionesDiaSemana = rowsByCollection.cfg_dia_semana || [];
   const registrosPorTipo = rowsByCollection[tipoAlta] || [];
+  const registrosPorTipoFiltrados = useMemo(() => {
+    const pid = String(formData.persona_id || "").trim();
+    if (!pid) return [];
+    return registrosPorTipo.filter((r) => String(r.persona_id || "") === pid);
+  }, [registrosPorTipo, formData.persona_id]);
   const opcionesCargoHlcFiltradas = useMemo(() => {
     if (!formData.persona_id) return hlcRows;
     const personaId = String(formData.persona_id);
@@ -111,7 +116,7 @@ export default function DatosLaborales() {
   );
   const registrosEdicionDetallados = useMemo(() => {
     return buildRegistrosEdicionDetallados({
-      registrosPorTipo,
+      registrosPorTipo: registrosPorTipoFiltrados,
       tipoAlta,
       idxPersonas,
       idxFunciones,
@@ -119,7 +124,7 @@ export default function DatosLaborales() {
       idxHld,
       idxHlc,
     });
-  }, [registrosPorTipo, tipoAlta, idxPersonas, idxFunciones, idxGrupos, idxHld, idxHlc]);
+  }, [registrosPorTipoFiltrados, tipoAlta, idxPersonas, idxFunciones, idxGrupos, idxHld, idxHlc]);
   const timelineItemsBase = useMemo(
     () =>
       buildTimelineItemsByPersona({
@@ -302,6 +307,15 @@ export default function DatosLaborales() {
     }
   }, [tipoAlta, formData.cargo_id, formData.persona_id, idxHlc]);
 
+  useEffect(() => {
+    if (!modoEdicion) return;
+    if (!registroEditId) return;
+    const exists = registrosPorTipoFiltrados.some((r) => String(r.id) === String(registroEditId));
+    if (!exists) {
+      setRegistroEditId("");
+    }
+  }, [modoEdicion, registroEditId, registrosPorTipoFiltrados]);
+
   function cargarRegistroEnFormulario(record) {
     const next = buildFormDataFromRecord({ record, idxHld, prevFormData: formData });
     if (!next) return;
@@ -431,7 +445,7 @@ export default function DatosLaborales() {
               </select>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
               <label className="flex items-center gap-2 text-sm text-slate-700">
                 <input
                   type="checkbox"
@@ -441,7 +455,7 @@ export default function DatosLaborales() {
                     setModoEdicion(checked);
                     setRegistroEditId("");
                     if (!checked) return;
-                    const first = registrosPorTipo[0];
+                    const first = registrosPorTipoFiltrados[0];
                     if (first && first.id) {
                       setRegistroEditId(String(first.id));
                       cargarRegistroEnFormulario(first);
@@ -450,6 +464,11 @@ export default function DatosLaborales() {
                 />
                 Editar registro existente
               </label>
+              {modoEdicion && !formData.persona_id && (
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  Seleccioná primero un <span className="font-semibold">persona_id</span> para listar registros.
+                </p>
+              )}
               {modoEdicion && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700">Registro a editar</label>
@@ -474,7 +493,7 @@ export default function DatosLaborales() {
               )}
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-slate-700">persona_id *</label>
                 <select
@@ -513,7 +532,7 @@ export default function DatosLaborales() {
             </div>
 
             {tipoAlta === "historial_laboral_cargos" && (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-slate-700">efector_designacion_id *</label>
                   <select
@@ -737,7 +756,7 @@ export default function DatosLaborales() {
             )}
 
             {tipoAlta === "historial_laboral_grupos" && (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-slate-700">cargo_id *</label>
                   <select

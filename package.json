@@ -26,6 +26,7 @@
     "db:auditar-filtros-laborales": "node scripts/auditar-filtros-laborales.mjs",
     "db:auditar-hlc-sin-grupo": "node scripts/auditar-regularizar-hlc-sin-grupo.mjs",
     "db:normalizar-estado-acceso": "node scripts/auditar-normalizar-estado-acceso.mjs",
+    "db:cleanup-usuarios-test": "node scripts/cleanup-usuarios-test.mjs",
     "firestore:create": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/seed-v2/crear-base-firestore.ps1",
     "backup": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/crear-copia-seguridad.ps1"
   },

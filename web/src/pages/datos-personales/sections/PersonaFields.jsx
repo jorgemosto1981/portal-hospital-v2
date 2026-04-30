@@ -2,6 +2,7 @@ export default function PersonaFields({
   form,
   setField,
   lockSensitiveFields = false,
+  canEditField = () => true,
   HELP,
   optsLoc,
   optsMotivoBaja,
@@ -11,6 +12,9 @@ export default function PersonaFields({
   optsProv,
   optsPais,
 }) {
+  const baseCls =
+    "mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500";
+
   return (
     <>
       <div>
@@ -50,17 +54,17 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">cuil</label>
-        <input value={form.cuil} onChange={(e) => setField("cuil", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input value={form.cuil} onChange={(e) => setField("cuil", e.target.value)} disabled={!canEditField("cuil")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.cuil}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">fecha_nacimiento</label>
-        <input type="date" value={form.fecha_nacimiento} onChange={(e) => setField("fecha_nacimiento", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input type="date" value={form.fecha_nacimiento} onChange={(e) => setField("fecha_nacimiento", e.target.value)} disabled={!canEditField("fecha_nacimiento")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.fecha_nacimiento}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">lugar_nacimiento_id</label>
-        <select value={form.lugar_nacimiento_id} onChange={(e) => setField("lugar_nacimiento_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+        <select value={form.lugar_nacimiento_id} onChange={(e) => setField("lugar_nacimiento_id", e.target.value)} disabled={!canEditField("lugar_nacimiento_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsLoc.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -68,7 +72,7 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">lugar_nacimiento_texto</label>
-        <input value={form.lugar_nacimiento_texto} onChange={(e) => setField("lugar_nacimiento_texto", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input value={form.lugar_nacimiento_texto} onChange={(e) => setField("lugar_nacimiento_texto", e.target.value)} disabled={!canEditField("lugar_nacimiento_texto")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.lugar_nacimiento_texto}</p>
       </div>
       <div>
@@ -101,7 +105,7 @@ export default function PersonaFields({
       )}
       <div>
         <label className="block text-sm font-medium text-slate-700">sexo_genero_id</label>
-        <select value={form.sexo_genero_id} onChange={(e) => setField("sexo_genero_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+        <select value={form.sexo_genero_id} onChange={(e) => setField("sexo_genero_id", e.target.value)} disabled={!canEditField("sexo_genero_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsSexo.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -109,7 +113,7 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">estado_civil_id</label>
-        <select value={form.estado_civil_id} onChange={(e) => setField("estado_civil_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+        <select value={form.estado_civil_id} onChange={(e) => setField("estado_civil_id", e.target.value)} disabled={!canEditField("estado_civil_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsCivil.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -117,7 +121,7 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">nacionalidad_id</label>
-        <select value={form.nacionalidad_id} onChange={(e) => setField("nacionalidad_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+        <select value={form.nacionalidad_id} onChange={(e) => setField("nacionalidad_id", e.target.value)} disabled={!canEditField("nacionalidad_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsNac.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -125,12 +129,12 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">telefono_celular</label>
-        <input value={form.telefono_celular} onChange={(e) => setField("telefono_celular", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input value={form.telefono_celular} onChange={(e) => setField("telefono_celular", e.target.value)} disabled={!canEditField("telefono_celular")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.telefono_celular}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">telefono_fijo</label>
-        <input value={form.telefono_fijo} onChange={(e) => setField("telefono_fijo", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input value={form.telefono_fijo} onChange={(e) => setField("telefono_fijo", e.target.value)} disabled={!canEditField("telefono_fijo")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.telefono_fijo}</p>
       </div>
       <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -138,37 +142,38 @@ export default function PersonaFields({
           type="checkbox"
           checked={form.recibe_notificaciones_sms}
           onChange={(e) => setField("recibe_notificaciones_sms", e.target.checked)}
+          disabled={!canEditField("recibe_notificaciones_sms")}
         />
         Recibe notificaciones por WhatsApp
       </label>
       <div>
         <label className="block text-sm font-medium text-slate-700">email_personal</label>
-        <input value={form.email_personal} onChange={(e) => setField("email_personal", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input value={form.email_personal} onChange={(e) => setField("email_personal", e.target.value)} disabled={!canEditField("email_personal")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.email_personal}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">calle</label>
-        <input value={form.calle} onChange={(e) => setField("calle", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input value={form.calle} onChange={(e) => setField("calle", e.target.value)} disabled={!canEditField("calle")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.calle}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">numero</label>
-        <input value={form.numero} onChange={(e) => setField("numero", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input value={form.numero} onChange={(e) => setField("numero", e.target.value)} disabled={!canEditField("numero")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.numero}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">piso</label>
-        <input value={form.piso} onChange={(e) => setField("piso", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input value={form.piso} onChange={(e) => setField("piso", e.target.value)} disabled={!canEditField("piso")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.piso}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">departamento</label>
-        <input value={form.departamento} onChange={(e) => setField("departamento", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input value={form.departamento} onChange={(e) => setField("departamento", e.target.value)} disabled={!canEditField("departamento")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.departamento}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">provincia_id</label>
-        <select value={form.provincia_id} onChange={(e) => setField("provincia_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+        <select value={form.provincia_id} onChange={(e) => setField("provincia_id", e.target.value)} disabled={!canEditField("provincia_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsProv.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -176,7 +181,7 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">pais_id</label>
-        <select value={form.pais_id} onChange={(e) => setField("pais_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+        <select value={form.pais_id} onChange={(e) => setField("pais_id", e.target.value)} disabled={!canEditField("pais_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsPais.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -184,7 +189,7 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">localidad_id</label>
-        <select value={form.localidad_id} onChange={(e) => setField("localidad_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+        <select value={form.localidad_id} onChange={(e) => setField("localidad_id", e.target.value)} disabled={!canEditField("localidad_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsLoc.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -192,12 +197,12 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">codigo_postal</label>
-        <input value={form.codigo_postal} onChange={(e) => setField("codigo_postal", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input value={form.codigo_postal} onChange={(e) => setField("codigo_postal", e.target.value)} disabled={!canEditField("codigo_postal")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.codigo_postal}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">referencia</label>
-        <input value={form.referencia} onChange={(e) => setField("referencia", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input value={form.referencia} onChange={(e) => setField("referencia", e.target.value)} disabled={!canEditField("referencia")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.referencia}</p>
       </div>
       <div className="md:col-span-2">
@@ -211,6 +216,7 @@ export default function PersonaFields({
             setField("foto_file", file);
             setField("foto_file_name", file ? file.name : "");
           }}
+          disabled={!canEditField("foto_archivo")}
           className="mt-1 block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border file:border-slate-300 file:bg-white file:px-3 file:py-2 file:text-sm file:font-semibold"
         />
         <p className="mt-1 text-xs text-slate-500">{HELP.foto_archivo}</p>

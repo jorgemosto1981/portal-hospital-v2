@@ -40,7 +40,8 @@ export default function VinculacionDni() {
         <div className="mb-4 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600">
           <p><strong>Objetivo:</strong> vincular tu sesión actual a la ficha RRHH.</p>
           <p><strong>Resultado:</strong> se asigna persona_id a tu cuenta.</p>
-          <p><strong>Cuándo usar:</strong> después de crear cuenta, si aún no estás vinculado.</p>
+          <p><strong>Cuándo usar:</strong> solo en recuperación excepcional.</p>
+          <p><strong>Flujo principal:</strong> para altas nuevas usá siempre <span className="font-semibold">/registro</span> (DNI + correo + PIN en una sola pantalla).</p>
         </div>
         <Card className="p-5 sm:p-6">
           <form onSubmit={onVincular} className="space-y-3 text-sm">

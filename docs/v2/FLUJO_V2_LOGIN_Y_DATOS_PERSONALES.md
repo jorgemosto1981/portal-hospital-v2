@@ -57,7 +57,7 @@ Resumen alineado a [`MODULO_DATOS_PERSONALES_V2.md`](./MODULO_DATOS_PERSONALES_V
 | **A** | Alta RRHH | RRHH | Sesión RRHH | Backoffice | `personas` mínima + `usuarios_cuenta` con `estado_acceso` = *pendiente registro*; `auth_uid` **null**; **obligatorio** crear `declaraciones_grupo_familiar` (`gf_*`) con `estado_declaracion_id` = *no iniciada* (u otro en `cfg_estado_declaracion_ddjj`) — criterio **B7**; plan unificado: [`MODULO_DATOS_PERSONALES_PLAN_DESARROLLO_UNIFICADO_V2.md`](./MODULO_DATOS_PERSONALES_PLAN_DESARROLLO_UNIFICADO_V2.md). |
 | **B** | Primer acceso | Agente | Flujo **DNI** (custom) → alta email/password en Auth | Wizard “crear credenciales” | Auth: usuario creado; `usuarios_cuenta`: `auth_uid`, `username`, `estado_acceso` = *onboarding datos*; **no** escribir email en `personas`. |
 | **C** | Onboarding datos personales | Agente | Sesión **ya autenticada** (post B) | Wizard ficha + formación + consentimientos obligatorios | `personas`, `formacion_agente`, `consentimientos`; al validar checklist: `estado_perfil_datos_id` = *completo*; luego transición cuenta → *activo portal*. |
-| **D** | DDJJ grupo familiar | Agente | Misma sesión u otro momento | Flujo DDJJ o “omitir por ahora” | `declaraciones_grupo_familiar` + `estado_declaracion_id` siempre consultable; opcional `evt_*`. |
+| **D** | DDJJ grupo familiar | Agente | Misma sesión u otro momento | Flujo DDJJ o “omitir por ahora” | `declaraciones_grupo_familiar` + `estado_declaracion_id` siempre consultable; opcional `evt_*`. Si se carga en onboarding, validar campos mínimos por familiar según contrato; si se omite, registrar estado explícito de omisión. |
 | **E** | Portal operativo | Agente | Login email/password habitual | Menú principal + módulos | Lecturas; transiciones de estado solo por reglas de negocio (bloqueos, etc.). |
 
 **Regla de producto:** entre **B** y **C** el usuario **sí** tiene sesión válida, pero el **router** lo mantiene fuera del menú principal hasta cumplir **C** (y la transición de `estado_acceso` a *activo portal*). La **DDJJ (D)** no bloquea el menú salvo cambio explícito de política documentado en Login §4.4.
@@ -67,7 +67,18 @@ Resumen alineado a [`MODULO_DATOS_PERSONALES_V2.md`](./MODULO_DATOS_PERSONALES_V
 - Flujo oficial para agente nuevo: **`/registro` -> `/vinculacion` -> `/onboarding`**.
 - La pantalla **`/inicio`** queda para diagnóstico técnico y no para ejecutar operaciones de negocio RRHH.
 - La operación administrativa de alta permanece en **`/rrhh/alta`**.
+- La bandeja dedicada RRHH para toma de conocimiento de datos personales queda en **`/rrhh/notificaciones-datos-personales`**.
 - Si existiera un camino alternativo técnico (por callable), se considera contingencia de soporte y no flujo funcional principal.
+
+### 4.2 Post-onboarding: edición usuario acotada y notificación RRHH
+
+- Fuera del onboarding, rol usuario mantiene la ficha en solo lectura por defecto.
+- Solo se habilita edición por acción explícita en `personas`:
+  - `informar_cambio_domicilio` -> campos de domicilio.
+  - `informar_cambio_telefonos` -> teléfonos/contacto.
+- `foto_rostro`, `formacion_agente` y `declaraciones_grupo_familiar` quedan en solo visualización para rol usuario; para cambios se usa botón de notificación a RRHH.
+- `consentimientos` se visualiza pero no se edita ni revoca desde esta pantalla.
+- Cada cambio o notificación genera `eventos_ticket` con `estado_bandeja_rrhh: pendiente_revision` para toma de conocimiento.
 
 ---
 
@@ -263,3 +274,5 @@ Las siguientes decisiones son **normativas para implementación** salvo que el h
 | 2026-04-22 | Doc V2 en `docs/v2/`; §1 tabla Login: **DNI + PIN 6 + correo** (`MODULO_LOGIN_V2` §1.1). |
 | 2026-04-23 | §4 paso **A:** `declaraciones_grupo_familiar` pasa a **obligatoria** en el alta (B7; plan [`MODULO_DATOS_PERSONALES_PLAN_DESARROLLO_UNIFICADO_V2.md`](./MODULO_DATOS_PERSONALES_PLAN_DESARROLLO_UNIFICADO_V2.md)). |
 | 2026-04-30 | §4.1 decisión operativa: flujo oficial de primer acceso ` /registro -> /vinculacion -> /onboarding`; `/inicio` sin operación de negocio RRHH. |
+| 2026-04-30 | Paso C / edición posterior: campos sensibles de `personas` (`dni`, `nombre`, `apellido`, `activo`, `motivo_baja_id`) quedan bloqueados a no-RRHH también en backend; UI solo refleja el bloqueo. |
+| 2026-04-30 | §4.1 y §4.2: se documenta bandeja RRHH `/rrhh/notificaciones-datos-personales` y la restricción post-onboarding para rol usuario (acción habilitada solo domicilio/teléfonos; formación/DDJJ/foto/consentimientos en solo visualización con notificación a RRHH). |

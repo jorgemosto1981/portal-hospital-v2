@@ -32,14 +32,25 @@ export default function TimelineLaboralPersonaCard({
   totalBase,
   onLimpiarFiltros,
 }) {
+  const personaSeleccionada = opcionesPersonas.find((p) => String(p.id || "") === String(personaId || ""));
+  const personaLabel = personaSeleccionada
+    ? `${String(personaSeleccionada.id || "")} · ${String(personaSeleccionada.apellido || "").trim()} ${String(
+        personaSeleccionada.nombre || "",
+      ).trim()}`.trim()
+    : String(personaId || "");
+  const grupoSeleccionado = grupos.find((g) => String(g.id || "") === String(grupoId || ""));
+  const grupoLabel = grupoSeleccionado
+    ? `${String(grupoSeleccionado.id || "")} · ${String(grupoSeleccionado.nombre || "").trim()}`
+    : String(grupoId || "");
+
   const chipsActivos = [];
-  if (personaId) chipsActivos.push(`Persona: ${personaId}`);
+  if (personaId) chipsActivos.push(`Persona: ${personaLabel}`);
   if (filtro && filtro !== "todos") chipsActivos.push(`Filtro: ${filtro}`);
   if ((filtro === "vigentes" || filtro === "no_vigentes") && fechaCorte) {
     chipsActivos.push(`Fecha X: ${fechaCorte}`);
   }
   if (tipoTramo && tipoTramo !== "todos") chipsActivos.push(`Tipo: ${tipoTramo}`);
-  if (grupoId) chipsActivos.push(`Grupo: ${grupoId}`);
+  if (grupoId) chipsActivos.push(`Grupo: ${grupoLabel}`);
   if (estadoAsignacionId) chipsActivos.push(`Estado asignacion: ${estadoAsignacionId}`);
   if (nivelMin) chipsActivos.push(`Nivel min: ${nivelMin}`);
   if (nivelMax) chipsActivos.push(`Nivel max: ${nivelMax}`);
@@ -68,7 +79,9 @@ export default function TimelineLaboralPersonaCard({
             <option value="">Seleccionar persona...</option>
             {opcionesPersonas.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.nombre || p.apellido ? `${p.apellido || ""} ${p.nombre || ""} (${p.id})` : p.id}
+                {p.nombre || p.apellido
+                  ? `${p.id} · ${p.apellido || ""} ${p.nombre || ""}`.trim()
+                  : p.id}
               </option>
             ))}
           </select>

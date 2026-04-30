@@ -7,7 +7,11 @@ const {
   listarColeccionPublicaTemporal,
 } = require("./catalogosCore");
 const { guardarRegistroLaboralTemporal, listarReadModelLaboralOperativoTemporal } = require("./catalogosLaborales");
-const { guardarRegistroPersonalTemporal } = require("./catalogosPersonales");
+const {
+  guardarRegistroPersonalTemporal,
+  registrarNotificacionCambioDatosPersonales,
+  rrhhMarcarEventoDatosPersonalesVisto,
+} = require("./catalogosPersonales");
 
 module.exports = {
   listarColeccion,
@@ -17,5 +21,7 @@ module.exports = {
   guardarRegistroLaboralTemporal,
   listarReadModelLaboralOperativoTemporal,
   guardarRegistroPersonalTemporal,
+  registrarNotificacionCambioDatosPersonales,
+  rrhhMarcarEventoDatosPersonalesVisto,
 };
 

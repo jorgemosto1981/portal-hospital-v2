@@ -2,16 +2,24 @@ import Card from "../components/ui/Card.jsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
-import { guardarRegistroPersonal, listarColeccionPersonal } from "../services/datosPersonalesService.js";
+import {
+  guardarRegistroPersonal,
+  listarColeccionPersonal,
+  registrarNotificacionCambioDatosPersonales,
+} from "../services/datosPersonalesService.js";
 import { storageV2 } from "../services/firebase.js";
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
 import {
+  ACCIONES_PERMITIDAS_USUARIO,
+  ACCION_CAMBIO_DOMICILIO,
+  ACCION_CAMBIO_TELEFONOS,
   COLECCIONES_BASE,
   COLECCIONES_CFG,
   ESTADO_DDJJ_DEFAULT_PERSONALES,
   HELP,
   INITIAL_FORM_DATA_PERSONALES,
+  MSG_CAMPO_NO_EDITABLE_ROL,
 } from "./datos-personales/constants.js";
 import FormHeaderControls from "./datos-personales/sections/FormHeaderControls.jsx";
 import ConsentimientosFields from "./datos-personales/sections/ConsentimientosFields.jsx";
@@ -29,8 +37,10 @@ import {
 export default function DatosPersonales() {
   const { user } = useAuthSession();
   const { claims } = useAuthClaims(user);
+  const personaIdClaim = String((claims && claims.persona_id) || "").trim();
   const isRrhh = claims && claims.portal_role === "rrhh";
   const lockSensitivePersonaFields = !isRrhh;
+  const [accionHabilitada, setAccionHabilitada] = useState("");
   const [tipo, setTipo] = useState("personas");
   const [modoEdicion, setModoEdicion] = useState(false);
   const [editId, setEditId] = useState("");
@@ -76,7 +86,18 @@ export default function DatosPersonales() {
     setModoEdicion(false);
     setEditId("");
     setSaveMsg("");
+    setAccionHabilitada("");
   }, [tipo]);
+
+  useEffect(() => {
+    setEditId("");
+  }, [form.persona_id, tipo]);
+
+  useEffect(() => {
+    if (isRrhh) return;
+    if (!personaIdClaim) return;
+    setForm((prev) => (String(prev.persona_id || "").trim() ? prev : { ...prev, persona_id: personaIdClaim }));
+  }, [isRrhh, personaIdClaim]);
 
   const registros = rowsByCol[tipo] || [];
   const optsSexo = useMemo(() => toOpts(rowsByCol.cfg_sexo_genero), [rowsByCol.cfg_sexo_genero]);
@@ -127,6 +148,97 @@ export default function DatosPersonales() {
       })),
     [rowsByCol.personas],
   );
+  const personaLabelById = useMemo(() => {
+    const m = new Map();
+    optsPersonas.forEach((o) => m.set(String(o.value), String(o.label)));
+    return m;
+  }, [optsPersonas]);
+  const registrosFiltradosPorPersona = useMemo(() => {
+    const pid = String(form.persona_id || "").trim();
+    if (!pid) return [];
+    if (tipo === "personas") {
+      return registros.filter((r) => String(r.id || "") === pid);
+    }
+    if (tipo === "declaraciones_grupo_familiar") {
+      return registros.filter((r) => String(r.titular_persona_id || "") === pid);
+    }
+    return registros.filter((r) => String(r.persona_id || "") === pid);
+  }, [registros, tipo, form.persona_id]);
+  const registrosFiltradosOptions = useMemo(() => {
+    return registrosFiltradosPorPersona.map((r) => {
+      const pidRaw =
+        tipo === "personas"
+          ? String(r.id || "")
+          : tipo === "declaraciones_grupo_familiar"
+            ? String(r.titular_persona_id || "")
+            : String(r.persona_id || "");
+      const personaLabel = personaLabelById.get(pidRaw) || pidRaw || "sin persona";
+      return {
+        id: String(r.id || ""),
+        label: `${String(r.id || "")} · ${personaLabel}`,
+      };
+    });
+  }, [registrosFiltradosPorPersona, tipo, personaLabelById]);
+
+  const camposEditablesPorAccion = useMemo(() => {
+    if (isRrhh) return null;
+    if (accionHabilitada === ACCION_CAMBIO_DOMICILIO) {
+      return new Set([
+        "calle",
+        "numero",
+        "piso",
+        "departamento",
+        "provincia_id",
+        "pais_id",
+        "localidad_id",
+        "codigo_postal",
+        "referencia",
+      ]);
+    }
+    if (accionHabilitada === ACCION_CAMBIO_TELEFONOS) {
+      return new Set(["telefono_celular", "telefono_fijo", "recibe_notificaciones_sms"]);
+    }
+    return new Set();
+  }, [accionHabilitada, isRrhh]);
+
+  const eventosPersona = useMemo(() => {
+    if (!form.persona_id) return [];
+    const all = rowsByCol.eventos_ticket || [];
+    return all
+      .filter((e) => String(e.persona_id || "") === String(form.persona_id || ""))
+      .filter(
+        (e) =>
+          String(e.tipo_evento_id || "").startsWith("EVT_DATOS_CAMBIO_") ||
+          String(e.tipo_evento_id || "").startsWith("EVT_DATOS_NOTIF_"),
+      )
+      .sort((a, b) => String(b.ocurrido_en || "").localeCompare(String(a.ocurrido_en || "")))
+      .slice(0, 10);
+  }, [rowsByCol.eventos_ticket, form.persona_id]);
+
+  async function onNotificarCambio(coleccionObjetivo, accion) {
+    setSaveMsg("");
+    if (!form.persona_id) {
+      setSaveMsg("Seleccioná persona_id antes de notificar cambios.");
+      return;
+    }
+    try {
+      await registrarNotificacionCambioDatosPersonales({
+        persona_id: form.persona_id,
+        coleccion_objetivo: coleccionObjetivo,
+        accion,
+      });
+      setSaveMsg("Notificación registrada para toma de conocimiento RRHH.");
+      await cargar();
+    } catch (ex) {
+      const msg = ex instanceof Error ? ex.message : "No se pudo registrar la notificación.";
+      setSaveMsg(msg);
+    }
+  }
+
+  function canEditPersonaField(field) {
+    if (isRrhh) return true;
+    return camposEditablesPorAccion.has(field);
+  }
 
   function setField(key, value) {
     setForm((p) => updateDatosPersonalesField({ prevForm: p, key, value, tipo, modoEdicion }));
@@ -165,6 +277,14 @@ export default function DatosPersonales() {
   async function onSave(e) {
     e.preventDefault();
     setSaveMsg("");
+    if (!isRrhh && (tipo === "formacion_agente" || tipo === "declaraciones_grupo_familiar" || tipo === "consentimientos")) {
+      setSaveMsg("Esta colección es de solo visualización para rol usuario. Usá el botón de notificación a RRHH.");
+      return;
+    }
+    if (tipo === "personas" && !isRrhh && !accionHabilitada) {
+      setSaveMsg("Primero seleccioná una acción para habilitar la edición de datos personales.");
+      return;
+    }
     const err = validar();
     if (err) {
       setSaveMsg(err);
@@ -195,6 +315,7 @@ export default function DatosPersonales() {
         editId,
         estadoDdjjDefault: ESTADO_DDJJ_DEFAULT_PERSONALES,
         fotoRostro,
+        accionHabilitada: tipo === "personas" ? accionHabilitada : null,
       });
       const r = await guardarRegistroPersonal(tipo, datos);
       warnings = normalizarWarnings(r && r.warnings);
@@ -207,9 +328,21 @@ export default function DatosPersonales() {
           .join(" | ");
         setSaveMsg(`${baseOk} | Advertencias: ${detalleWarnings}`);
       }
+      if (tipo === "personas" && !isRrhh) {
+        setAccionHabilitada("");
+      }
       await cargar();
     } catch (ex) {
-      setSaveMsg(ex instanceof Error ? ex.message : "No se pudo guardar.");
+      const msg = ex instanceof Error ? ex.message : "No se pudo guardar.";
+      if (String(msg).includes("[AUTH-PER-001]")) {
+        setSaveMsg(MSG_CAMPO_NO_EDITABLE_ROL);
+      } else if (String(msg).includes("[AUTH-PER-004]") || String(msg).includes("[AUTH-PER-005]")) {
+        setSaveMsg(
+          "Acción no válida para guardar cambios. Primero habilitá la acción correspondiente y editá solo los campos permitidos.",
+        );
+      } else {
+        setSaveMsg(msg);
+      }
     } finally {
       setSaving(false);
     }
@@ -238,29 +371,104 @@ export default function DatosPersonales() {
           </p>
           {lockSensitivePersonaFields && (
             <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Perfil usuario: los campos de identidad base y estado administrativo se muestran en modo solo
-              lectura; esos cambios los gestiona RRHH.
+              Perfil usuario: {MSG_CAMPO_NO_EDITABLE_ROL}
             </p>
+          )}
+          {!isRrhh && tipo === "personas" && (
+            <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-3 text-xs text-blue-800">
+              <p className="font-semibold">Acciones para solicitar cambios (usuario)</p>
+              <p className="mt-1">
+                Seleccioná una acción para habilitar edición de campos puntuales. RRHH recibe la novedad en su bandeja.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {ACCIONES_PERMITIDAS_USUARIO.map((acc) => (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    onClick={() => setAccionHabilitada(acc.id)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold ${
+                      accionHabilitada === acc.id
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-blue-300 bg-white text-blue-700"
+                    }`}
+                  >
+                    Habilitar: {acc.titulo}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2">
+                Acción activa:{" "}
+                <span className="font-semibold">
+                  {ACCIONES_PERMITIDAS_USUARIO.find((x) => x.id === accionHabilitada)?.titulo || "ninguna"}
+                </span>
+              </p>
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() => onNotificarCambio("personas", "notificar_cambio_foto_rostro")}
+                  className="rounded-lg border border-blue-300 bg-white px-3 py-2 text-xs font-semibold text-blue-700"
+                >
+                  Notificar cambio de foto (solo RRHH modifica)
+                </button>
+              </div>
+            </div>
+          )}
+          {!isRrhh && tipo === "formacion_agente" && (
+            <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-900">
+              <p className="font-semibold">Formación del agente: solo visualización para usuario.</p>
+              <button
+                type="button"
+                onClick={() => onNotificarCambio("formacion_agente", "notificar_cambio_formacion")}
+                className="mt-2 rounded-lg border border-amber-300 bg-white px-3 py-2 font-semibold text-amber-800"
+              >
+                Notificar cambio de formación a RRHH
+              </button>
+            </div>
+          )}
+          {!isRrhh && tipo === "declaraciones_grupo_familiar" && (
+            <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-900">
+              <p className="font-semibold">DDJJ familiar: solo visualización para usuario.</p>
+              <button
+                type="button"
+                onClick={() =>
+                  onNotificarCambio("declaraciones_grupo_familiar", "notificar_actualizacion_ddjj_familiar")
+                }
+                className="mt-2 rounded-lg border border-amber-300 bg-white px-3 py-2 font-semibold text-amber-800"
+              >
+                Notificar actualización DDJJ a RRHH
+              </button>
+            </div>
+          )}
+          {!isRrhh && tipo === "consentimientos" && (
+            <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-700">
+              Consentimientos visibles para consulta. Si necesitás cambios, comunicate con RRHH.
+            </div>
           )}
           <form className="mt-4 space-y-4" onSubmit={onSave}>
             <FormHeaderControls
               tipo={tipo}
               setTipo={setTipo}
+              personaId={form.persona_id}
+              setPersonaId={(value) => setField("persona_id", value)}
+              personaOptions={optsPersonas}
+              showPersonaSelector={isRrhh}
               modoEdicion={modoEdicion}
               setModoEdicion={setModoEdicion}
               setEditId={setEditId}
-              registros={registros}
+              registros={registrosFiltradosPorPersona}
+              registrosOptions={registrosFiltradosOptions}
               hydrateFrom={hydrateFrom}
               editId={editId}
             />
 
             {(tipo === "personas" || tipo === "formacion_agente" || tipo === "declaraciones_grupo_familiar" || tipo === "consentimientos") && (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
                 {tipo === "personas" && (
                   <PersonaFields
                     form={form}
                     setField={setField}
                     lockSensitiveFields={lockSensitivePersonaFields}
+                    canEditField={canEditPersonaField}
                     HELP={HELP}
                     optsLoc={optsLoc}
                     optsMotivoBaja={optsMotivoBaja}
@@ -272,29 +480,11 @@ export default function DatosPersonales() {
                   />
                 )}
 
-                {(tipo === "formacion_agente" || tipo === "declaraciones_grupo_familiar" || tipo === "consentimientos") && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700">persona_id *</label>
-                    <select
-                      value={form.persona_id}
-                      onChange={(e) => setField("persona_id", e.target.value)}
-                      className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                    >
-                      <option value="">Seleccionar persona...</option>
-                      {optsPersonas.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="mt-1 text-xs text-slate-500">{HELP.persona_id}</p>
-                  </div>
-                )}
-
                 {tipo === "formacion_agente" && (
                   <FormacionFields
                     form={form}
                     setField={setField}
+                    disabled={!isRrhh}
                     HELP={HELP}
                     optsNivel={optsNivel}
                     optsEspecialidad={optsEspecialidad}
@@ -314,6 +504,7 @@ export default function DatosPersonales() {
                     emptyFamiliar={emptyFamiliar}
                     familiares={familiares}
                     optsParentesco={optsParentesco}
+                    disabled={!isRrhh}
                   />
                 )}
 
@@ -325,6 +516,7 @@ export default function DatosPersonales() {
                     optsTipoConsent={optsTipoConsent}
                     optsTextosLegales={optsTextosLegales}
                     optsIdioma={optsIdioma}
+                    disabled={!isRrhh}
                   />
                 )}
               </div>
@@ -352,6 +544,7 @@ export default function DatosPersonales() {
           </form>
         </Card>
 
+        {isRrhh && (
         <Card className="px-4 py-4 md:px-5">
           <p className="text-base font-semibold text-slate-900">Colecciones y registros (vista rápida)</p>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -388,6 +581,41 @@ export default function DatosPersonales() {
             ))}
           </div>
         </Card>
+        )}
+        {tipo === "personas" && form.persona_id && (
+          <Card className="px-4 py-4 md:px-5">
+            <p className="text-base font-semibold text-slate-900">Eventos recientes de auditoría</p>
+            <p className="mt-1 text-sm text-slate-600">
+              Últimos cambios informados por acción (valor anterior y nuevo por campo).
+            </p>
+            {isRrhh ? (
+              <p className="mt-1 text-xs text-slate-500">
+                Mostrando eventos vinculados a este <span className="font-semibold">persona_id</span>. La vista total RRHH se concentra en la bandeja de notificaciones.
+              </p>
+            ) : null}
+            <div className="mt-3 space-y-2">
+              {eventosPersona.length === 0 ? (
+                <p className="text-sm text-slate-500">Sin eventos recientes para esta persona.</p>
+              ) : (
+                eventosPersona.map((evt) => (
+                  <div key={evt.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
+                    <p className="font-mono text-slate-700">{evt.id}</p>
+                    <p className="text-slate-600">
+                      {String(evt.tipo_evento_id || "—")} · {String(evt.ocurrido_en || "—")}
+                    </p>
+                    {Array.isArray(evt.payload?.cambios) &&
+                      evt.payload.cambios.slice(0, 5).map((c, i) => (
+                        <p key={`${evt.id}-${i}`} className="text-slate-600">
+                          {String(c.campo || "campo")}: {String(c.anterior ?? "null")} {"->"}{" "}
+                          {String(c.nuevo ?? "null")}
+                        </p>
+                      ))}
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );

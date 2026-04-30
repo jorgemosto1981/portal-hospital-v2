@@ -130,7 +130,8 @@ Flujo de negocio **definido a nivel producto** (22/04/2026; revisable). La imple
 1. **Después** del bloque de datos personales obligatorios, el titular puede **cargar la DDJJ de grupo familiar en el mismo flujo de onboarding o en un momento posterior**.
 2. **Criterio de bloqueo del menú principal:** la **DDJJ familiar no bloquea** el acceso a menúes una vez cumplido el onboarding de **datos personales** (el usuario puede usar el portal sin haber cerrado la DDJJ).
 3. **Registro obligatorio del “estado DDJJ” para el futuro:** aunque sea **opcional en el primer login**, el sistema debe **persistir** de forma consultable si el titular **completó / envió** una DDJJ aceptable o si **omitió explícitamente** “por ahora” (con marca de tiempo y, si aplica, usuario). Ese registro es el que usará el **módulo Ticket / Solicitudes** para exigir DDJJ **completada** antes de abrir ciertos tipos de solicitud (reglas en configuración de tickets, no hardcodeadas). Detalle en [`MODULO_DATOS_PERSONALES_V2.md`](./MODULO_DATOS_PERSONALES_V2.md) **§2.1** (DDJJ) y colección **`declaraciones_grupo_familiar`** (§7).
-4. Si el hospital decidiera en el futuro **bloquear menúes** hasta DDJJ, se documentará como cambio de política y se ajustará la §5.
+4. Si el titular decide cargar DDJJ en onboarding, cada familiar debe cumplir los campos exigidos por el contrato vigente (parentesco, identidad y datos mínimos definidos para `familiares[]`). Si no desea cargarla en ese momento, se registra la omisión explícita y puede continuar al paso de habilitación.
+5. Si el hospital decidiera en el futuro **bloquear menúes** hasta DDJJ, se documentará como cambio de política y se ajustará la §5.
 
 ### 4.5 Acceso a la app y menúes
 

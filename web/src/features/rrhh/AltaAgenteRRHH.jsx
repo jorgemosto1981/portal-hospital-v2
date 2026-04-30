@@ -350,6 +350,14 @@ export default function AltaAgenteRRHH() {
           <Link to="/" className="text-sm text-blue-600">
             Volver a la app
           </Link>
+          <span className="mx-2 text-slate-300">|</span>
+          <Link to="/rrhh/notificaciones-datos-personales" className="text-sm text-blue-600">
+            Ver notificaciones de datos personales
+          </Link>
+          <span className="mx-2 text-slate-300">|</span>
+          <Link to="/rrhh/seguimiento-enrolamiento" className="text-sm text-blue-600">
+            Ver seguimiento de enrolamiento
+          </Link>
         </div>
 
         {load ? (

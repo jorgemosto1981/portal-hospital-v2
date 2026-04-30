@@ -67,6 +67,12 @@ const syncSessionClaims = onCall(async (request) => {
 });
 
 const registrarPrimerAcceso = onCall(async (request) => {
+  if (request.auth) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Este endpoint solo admite alta inicial sin sesión activa. Si ya iniciaste sesión, usá vinculación por DNI (soporte).",
+    );
+  }
   const d = request.data && typeof request.data === "object" ? request.data : {};
   const dni = normalizeDni(d.dni);
   const email = typeof d.email === "string" ? d.email.trim() : "";

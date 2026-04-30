@@ -58,7 +58,7 @@ export default function PublicAuthMenu({ active: activeProp }) {
             className={active === "vinculacion" ? ACTIVE : INACTIVE}
             aria-current={active === "vinculacion" ? "page" : undefined}
           >
-            Vinculación
+            Vinculación (soporte)
           </Link>
         </li>
         <li className="hidden text-slate-300 sm:mx-1 sm:inline" aria-hidden>

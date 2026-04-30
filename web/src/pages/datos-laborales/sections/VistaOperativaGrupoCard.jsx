@@ -9,6 +9,11 @@ export default function VistaOperativaGrupoCard({
   onFechaCorteChange,
   items,
 }) {
+  const grupoSeleccionado = grupos.find((g) => String(g.id || "") === String(grupoId || ""));
+  const grupoLabel = grupoSeleccionado
+    ? `${String(grupoSeleccionado.id || "")} · ${String(grupoSeleccionado.nombre || "").trim()}`
+    : String(grupoId || "");
+
   const [filtroEstado, setFiltroEstado] = useState("todos");
   const [personaQuery, setPersonaQuery] = useState("");
   const [nivelMin, setNivelMin] = useState("");
@@ -52,7 +57,7 @@ export default function VistaOperativaGrupoCard({
   const activos = itemsFiltrados.filter((x) => x.activo_en_fecha).length;
   const noVigentes = itemsFiltrados.length - activos;
   const chipsActivos = [];
-  if (grupoId) chipsActivos.push(`Grupo: ${grupoId}`);
+  if (grupoId) chipsActivos.push(`Grupo: ${grupoLabel}`);
   if (fechaCorte) chipsActivos.push(`Fecha corte: ${fechaCorte}`);
   if (filtroEstado !== "todos") chipsActivos.push(`Estado HLg: ${filtroEstado}`);
   if (personaQuery) chipsActivos.push(`Persona: ${personaQuery}`);
@@ -87,7 +92,7 @@ export default function VistaOperativaGrupoCard({
             <option value="">Todos los grupos</option>
             {grupos.map((g) => (
               <option key={g.id} value={g.id}>
-                {g.id} ({g.nombre || "sin nombre"})
+                {g.id} · {g.nombre || "sin nombre"}
               </option>
             ))}
           </select>

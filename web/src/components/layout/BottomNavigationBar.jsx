@@ -1,4 +1,6 @@
 import { MODULOS_PORTAL } from "../../constants/modulosEstado.js";
+import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
+import { useAuthSession } from "../../features/auth/useAuthSession.js";
 
 const ICONS_BY_ID = {
   inicio: () => (
@@ -85,6 +87,11 @@ const tabs = MODULOS_PORTAL.map((m) => ({
  * — md+ — lg+: columna, ancho fijo, reemplaza el “menú inferior” por navegación lateral.
  */
 export default function BottomNavigationBar({ activeTab, onTabChange, className = "" }) {
+  const { user } = useAuthSession();
+  const { claims } = useAuthClaims(user);
+  const isRrhh = claims?.portal_role === "rrhh";
+  const visibleTabs = tabs.filter((tab) => (tab.id === "laboral" ? isRrhh : true));
+
   return (
     <nav
       className={[
@@ -107,7 +114,7 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
           "md:mx-0 md:max-w-none md:h-auto md:min-h-0 md:w-full md:flex-1 md:flex-col md:items-stretch md:gap-0.5 md:px-2",
         ].join(" ")}
       >
-        {tabs.map((tab) => {
+        {visibleTabs.map((tab) => {
           const active = activeTab === tab.id;
           return (
             <li key={tab.id} className="min-w-0 flex-1 md:w-full md:flex-none">

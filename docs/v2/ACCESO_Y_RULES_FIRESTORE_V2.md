@@ -63,6 +63,9 @@ Leyenda: **S** servidor (Admin SDK / función privilegiada); **C** cliente auten
 Opción **recomendada** (balance simplicidad / seguridad):
 
 - El cliente **sí** puede actualizar campos “de ficha” (`domicilio`, `contacto`, `fecha_nacimiento`, …) **mientras** `request.auth` esté vinculado a esa `persona_id`.
+- Para `personas`, los campos sensibles de identidad/estado administrativo (`dni`, `nombre`, `apellido`, `activo`, `motivo_baja_id`) quedan reservados a RRHH. En V2 se validan en backend y cualquier intento no RRHH se rechaza con `permission-denied`.
+- Para rol usuario, edición de `personas` queda además acotada por acción (`accion_habilitada`) y solo permite sets de campos definidos (domicilio o teléfonos). Cambios fuera del set se rechazan en backend.
+- En `formacion_agente`, `declaraciones_grupo_familiar` y `consentimientos`, fuera del onboarding el usuario opera en solo visualización desde pantalla de datos personales; cambios se canalizan por eventos de notificación RRHH.
 - El cliente **no** puede establecer directamente `estado_perfil_datos_id` al id “completo” ni `usuarios_cuenta.estado_acceso` a *activo portal*: eso solo vía Callable **`completarOnboardingDatos`** que:
   1. Revalida checklist servidor.
   2. Escribe en **transacción** `personas.estado_perfil_datos_id` + `usuarios_cuenta.estado_acceso` + timestamps + `evt_*`.
@@ -121,3 +124,5 @@ Ajustar según si los catálogos sensibles (p. ej. sexo/género) deben ocultarse
 | 2026-04-23 | Changelog: “plan doc cerrado” → P1/seguridad como documentación *avanzada*, sin cierre final. |
 | 2026-04-22 | Cabecera: **ámbito solo V2**; sin acceso a datos de la V1 (`PLAN_MODULOS_V2`). |
 | 2026-04-22 | Nota **§1.1 Login:** validación PIN 6 y rate limit en Callables paso B. |
+| 2026-04-30 | §5: explicitado bloqueo por actor en `personas` para campos sensibles (`dni`, `nombre`, `apellido`, `activo`, `motivo_baja_id`), validado en backend (no solo UI). |
+| 2026-04-30 | §5: agregado control por `accion_habilitada` para edición de `personas` en rol usuario y canal de notificación RRHH para cambios post-onboarding en foto/formación/DDJJ/consentimientos. |

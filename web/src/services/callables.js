@@ -67,6 +67,16 @@ export function callGuardarRegistroPersonalTemporal(data) {
   return httpsCallable(getFunctionsV2(), "guardarRegistroPersonalTemporal")(data);
 }
 
+/** Usuario: notifica a RRHH cambios de datos personales sin edición directa. */
+export function callRegistrarNotificacionCambioDatosPersonales(data) {
+  return httpsCallable(getFunctionsV2(), "registrarNotificacionCambioDatosPersonales")(data);
+}
+
+/** RRHH: marca una notificación de datos personales como vista. */
+export function callRrhhMarcarEventoDatosPersonalesVisto(data) {
+  return httpsCallable(getFunctionsV2(), "rrhhMarcarEventoDatosPersonalesVisto")(data);
+}
+
 /** RRHH: guardar opción de catálogo (`set` + merge, id en mayúsculas). */
 export function callGuardarOpcion(data) {
   return httpsCallable(getFunctionsV2(), "guardarOpcion")(data);
@@ -88,6 +98,10 @@ export function callOnboardingMvpPasoA(data) {
 
 export function callOnboardingMvpDdjjFamiliar(data) {
   return httpsCallable(getFunctionsV2(), "onboardingMvpDdjjFamiliar")(data);
+}
+
+export function callOnboardingMvpOmitirDdjjFamiliar() {
+  return httpsCallable(getFunctionsV2(), "onboardingMvpOmitirDdjjFamiliar")();
 }
 
 export function callOnboardingMvpCompletar() {

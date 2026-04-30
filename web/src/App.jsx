@@ -5,6 +5,7 @@ import LoginScreen from "./features/auth/LoginScreen.jsx";
 import LoginRoute from "./features/auth/LoginRoute.jsx";
 import RegistroVinculacion from "./features/auth/RegistroVinculacion.jsx";
 import VinculacionDni from "./features/auth/VinculacionDni.jsx";
+import { useAuthClaims } from "./features/auth/useAuthClaims.js";
 import { useAuthSession } from "./features/auth/useAuthSession.js";
 import OnboardingWizard from "./features/onboarding/OnboardingWizard.jsx";
 import MvpAccessGate from "./features/shell/MvpAccessGate.jsx";
@@ -13,8 +14,10 @@ import DatosLaborales from "./pages/DatosLaborales.jsx";
 import DatosPersonales from "./pages/DatosPersonales.jsx";
 import EstadoModulos from "./pages/EstadoModulos.jsx";
 import GrillaOperativa from "./pages/GrillaOperativa.jsx";
+import NotificacionesEventosDatosPersonalesRRHH from "./pages/NotificacionesEventosDatosPersonalesRRHH.jsx";
 import PantallasCatalogo from "./pages/PantallasCatalogo.jsx";
 import Perfil from "./pages/Perfil.jsx";
+import SeguimientoEnrolamientoUsuariosRRHH from "./pages/SeguimientoEnrolamientoUsuariosRRHH.jsx";
 import { MODULOS_PORTAL, resolverTabPorPath } from "./constants/modulosEstado.js";
 import runtimeFlags from "../../shared/runtimeFlags.json";
 
@@ -64,6 +67,32 @@ function MainWithAuth() {
   );
 }
 
+function RequireRrhh({ children }) {
+  const { user, authPending } = useAuthSession();
+  const { claims, claimsLoading } = useAuthClaims(user);
+
+  if (authPending || claimsLoading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-slate-100 text-sm text-slate-500">
+        Validando permisos RRHH...
+      </div>
+    );
+  }
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (claims?.portal_role !== "rrhh") {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-slate-100 px-4">
+        <div className="w-full max-w-md rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+          Esta pantalla es de acceso exclusivo para el rol RRHH.
+        </div>
+      </div>
+    );
+  }
+  return children;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -107,7 +136,9 @@ export default function App() {
           path="/laboral"
           element={
             <MvpAccessGate>
-              <DatosLaborales />
+              <RequireRrhh>
+                <DatosLaborales />
+              </RequireRrhh>
             </MvpAccessGate>
           }
         />
@@ -116,6 +147,26 @@ export default function App() {
           element={
             <MvpAccessGate>
               <EstadoModulos />
+            </MvpAccessGate>
+          }
+        />
+        <Route
+          path="/rrhh/notificaciones-datos-personales"
+          element={
+            <MvpAccessGate>
+              <RequireRrhh>
+                <NotificacionesEventosDatosPersonalesRRHH />
+              </RequireRrhh>
+            </MvpAccessGate>
+          }
+        />
+        <Route
+          path="/rrhh/seguimiento-enrolamiento"
+          element={
+            <MvpAccessGate>
+              <RequireRrhh>
+                <SeguimientoEnrolamientoUsuariosRRHH />
+              </RequireRrhh>
             </MvpAccessGate>
           }
         />

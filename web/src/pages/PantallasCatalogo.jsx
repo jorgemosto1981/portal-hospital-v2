@@ -11,6 +11,10 @@ export default function PantallasCatalogo() {
           <p className="mt-2 text-sm text-slate-600">
             Acceso directo a todas las pantallas detectadas en el código web actual.
           </p>
+          <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            Referencia de estado: <strong>activo</strong> = ruta principal; <strong>activo-soporte</strong> =
+            contingencia/recuperación.
+          </p>
         </Card>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

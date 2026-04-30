@@ -8,6 +8,7 @@ export default function DdjjFields({
   emptyFamiliar,
   familiares,
   optsParentesco,
+  disabled = false,
 }) {
   return (
     <>
@@ -39,8 +40,9 @@ export default function DdjjFields({
           <p className="text-sm font-semibold text-slate-900">Familiares declarados</p>
           <button
             type="button"
+            disabled={disabled}
             onClick={() => setFamiliares((prev) => [...prev, emptyFamiliar()])}
-            className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700"
+            className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 disabled:opacity-50"
           >
             Agregar familiar
           </button>
@@ -55,10 +57,11 @@ export default function DdjjFields({
                 {familiares.length > 1 && (
                   <button
                     type="button"
+                    disabled={disabled}
                     onClick={() =>
                       setFamiliares((prev) => prev.filter((_, i) => i !== idx))
                     }
-                    className="text-xs font-semibold text-rose-600"
+                    className="text-xs font-semibold text-rose-600 disabled:opacity-50"
                   >
                     Quitar
                   </button>
@@ -76,7 +79,8 @@ export default function DdjjFields({
                         ),
                       )
                     }
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                    disabled={disabled}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
                   >
                     <option value="">Seleccionar...</option>
                     {optsParentesco.map((o) => (
@@ -95,7 +99,8 @@ export default function DdjjFields({
                         prev.map((x, i) => (i === idx ? { ...x, dni: e.target.value } : x)),
                       )
                     }
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                    disabled={disabled}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
                 <div>
@@ -107,7 +112,8 @@ export default function DdjjFields({
                         prev.map((x, i) => (i === idx ? { ...x, nombre: e.target.value } : x)),
                       )
                     }
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                    disabled={disabled}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
                 <div>
@@ -119,7 +125,8 @@ export default function DdjjFields({
                         prev.map((x, i) => (i === idx ? { ...x, apellido: e.target.value } : x)),
                       )
                     }
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                    disabled={disabled}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
                 <div>
@@ -134,7 +141,8 @@ export default function DdjjFields({
                         ),
                       )
                     }
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                    disabled={disabled}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
                 <div>
@@ -148,13 +156,15 @@ export default function DdjjFields({
                         ),
                       )
                     }
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                    disabled={disabled}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
                 <label className="flex items-center gap-2 text-sm text-slate-700">
                   <input
                     type="checkbox"
                     checked={f.convive}
+                    disabled={disabled}
                     onChange={(e) =>
                       setFamiliares((prev) =>
                         prev.map((x, i) => (i === idx ? { ...x, convive: e.target.checked } : x)),
@@ -167,6 +177,7 @@ export default function DdjjFields({
                   <input
                     type="checkbox"
                     checked={f.dependiente}
+                    disabled={disabled}
                     onChange={(e) =>
                       setFamiliares((prev) =>
                         prev.map((x, i) =>
@@ -181,6 +192,7 @@ export default function DdjjFields({
                   <input
                     type="checkbox"
                     checked={f.discapacidad_declarada}
+                    disabled={disabled}
                     onChange={(e) =>
                       setFamiliares((prev) =>
                         prev.map((x, i) =>

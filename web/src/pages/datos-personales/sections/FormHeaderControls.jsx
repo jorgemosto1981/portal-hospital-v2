@@ -1,10 +1,15 @@
 export default function FormHeaderControls({
   tipo,
   setTipo,
+  personaId,
+  setPersonaId,
+  personaOptions,
+  showPersonaSelector = true,
   modoEdicion,
   setModoEdicion,
   setEditId,
   registros,
+  registrosOptions,
   hydrateFrom,
   editId,
 }) {
@@ -24,6 +29,32 @@ export default function FormHeaderControls({
             <option value="consentimientos">consentimientos</option>
           </select>
         </div>
+        {showPersonaSelector ? (
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+              persona_id (filtro de edición)
+            </label>
+            <select
+              value={personaId}
+              onChange={(e) => setPersonaId(e.target.value)}
+              className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+            >
+              <option value="">Seleccionar persona...</option>
+              {(personaOptions || []).map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">persona_id</p>
+            <p className="mt-1 text-sm font-semibold text-slate-700">{personaId || "sin persona vinculada"}</p>
+          </div>
+        )}
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input
             type="checkbox"
@@ -33,7 +64,7 @@ export default function FormHeaderControls({
               setModoEdicion(checked);
               setEditId("");
               if (!checked) return;
-              const first = registros[0];
+              const first = (registros || [])[0];
               if (first && first.id) {
                 setEditId(String(first.id));
                 hydrateFrom(first);
@@ -42,6 +73,11 @@ export default function FormHeaderControls({
           />
           Editar existente
         </label>
+        {modoEdicion && !personaId ? (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Seleccioná primero un <span className="font-semibold">persona_id</span> para listar registros a editar.
+          </p>
+        ) : null}
       </div>
 
       {modoEdicion && (
@@ -58,9 +94,9 @@ export default function FormHeaderControls({
             className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
           >
             <option value="">Seleccionar registro...</option>
-            {registros.map((r) => (
+            {(registrosOptions || []).map((r) => (
               <option key={r.id} value={r.id}>
-                {r.id}
+                {r.label}
               </option>
             ))}
           </select>

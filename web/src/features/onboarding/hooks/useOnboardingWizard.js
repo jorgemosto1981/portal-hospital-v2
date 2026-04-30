@@ -6,6 +6,7 @@ import {
   callListarCatalogoOnboarding,
   callOnboardingMvpCompletar,
   callOnboardingMvpDdjjFamiliar,
+  callOnboardingMvpOmitirDdjjFamiliar,
   callOnboardingMvpPasoA,
 } from "../../../services/callables.js";
 import { normalizeDni } from "../../../services/authService.js";
@@ -17,6 +18,15 @@ function str(row, key) {
   if (!row) return "";
   const v = row[key];
   return typeof v === "string" ? v : v != null ? String(v) : "";
+}
+
+const RX_NOMBRE = /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü' ]+$/;
+const PARENTESCO_OTROS_ID = "CFG_PAR_OTROS";
+
+function isParentescoOtros(parCatalog, parentescoId) {
+  const id = (parentescoId || "").trim();
+  if (!id) return false;
+  return id.toUpperCase() === PARENTESCO_OTROS_ID;
 }
 
 export function useOnboardingWizard() {
@@ -47,7 +57,31 @@ export function useOnboardingWizard() {
     localidad_id: "",
     referencia: "",
   });
-  const [famRows, setFamRows] = useState([{ nombre: "", dni: "", parentesco_id: "" }]);
+  const [famRows, setFamRows] = useState([
+    {
+      nombre: "",
+      apellido: "",
+      dni: "",
+      fecha_nacimiento: "",
+      parentesco_id: "",
+      parentesco_otro_detalle: "",
+      convive: true,
+      domicilio_familiar: "",
+      dependiente: false,
+      detalle_dependencia: "",
+      discapacidad_declarada: false,
+    },
+  ]);
+  const [ddjjAceptada, setDdjjAceptada] = useState(false);
+  const [ddjjStage, setDdjjStage] = useState("choice");
+
+  useEffect(() => {
+    const emailSesion = (user && user.email ? String(user.email).trim().toLowerCase() : "") || "";
+    if (!emailSesion) return;
+    setContacto((prev) =>
+      prev.email_personal === emailSesion ? prev : { ...prev, email_personal: emailSesion },
+    );
+  }, [user]);
 
   useEffect(() => {
     if (!personaId) return () => {};
@@ -88,7 +122,7 @@ export function useOnboardingWizard() {
   const rawOnb = effectivePersona && effectivePersona.onboarding_mvp;
   const pOnb = rawOnb && typeof rawOnb === "object" ? rawOnb : null;
   const doneA = Boolean(pOnb && pOnb.paso_a);
-  const doneB = Boolean(pOnb && pOnb.paso_b);
+  const doneB = Boolean(pOnb && (pOnb.paso_b || pOnb.paso_b_omitido));
   const step = !doneA ? 1 : !doneB ? 2 : 3;
 
   useEffect(() => {
@@ -120,19 +154,139 @@ export function useOnboardingWizard() {
     });
   }
 
+  function iniciarDdjjAhora() {
+    setDdjjAceptada(false);
+    setDdjjStage("edit");
+  }
+
+  function cerrarDdjjParaRevision() {
+    const rows = famRows.filter(
+      (r) =>
+        (r.nombre || "").trim() ||
+        (r.apellido || "").trim() ||
+        (r.dni || "").trim() ||
+        (r.fecha_nacimiento || "").trim() ||
+        (r.parentesco_id || "").trim(),
+    );
+    if (rows.length < 1) {
+      toast.error("Agregá al menos un integrante para cerrar la DDJJ.");
+      return false;
+    }
+    for (const r of rows) {
+      if (
+        !(r.nombre || "").trim() ||
+        !(r.apellido || "").trim() ||
+        !normalizeDni(r.dni) ||
+        !(r.fecha_nacimiento || "").trim() ||
+        !(r.parentesco_id || "").trim()
+      ) {
+        toast.error("Cada integrante requiere nombre, apellido, DNI, fecha de nacimiento y parentesco.");
+        return false;
+      }
+      if (!RX_NOMBRE.test((r.nombre || "").trim()) || !RX_NOMBRE.test((r.apellido || "").trim())) {
+        toast.error("Nombre y apellido solo admiten letras y espacios.");
+        return false;
+      }
+      if (!/^\d{6,12}$/.test(normalizeDni(r.dni))) {
+        toast.error("DNI inválido: usá solo números (6 a 12 dígitos).");
+        return false;
+      }
+      if (r.convive === false && !(r.domicilio_familiar || "").trim()) {
+        toast.error("Si no convive, debés informar el domicilio del familiar.");
+        return false;
+      }
+      if (isParentescoOtros(par, r.parentesco_id) && !(r.parentesco_otro_detalle || "").trim()) {
+        toast.error("Si seleccionás parentesco 'Otros', debés completar el detalle.");
+        return false;
+      }
+      if (r.dependiente === true && !(r.detalle_dependencia || "").trim()) {
+        toast.error("Si es dependiente, debés informar el detalle de dependencia.");
+        return false;
+      }
+    }
+    setDdjjStage("review");
+    return true;
+  }
+
+  function volverEdicionDdjj() {
+    setDdjjStage("edit");
+  }
+
+  function quitarIntegrante(index) {
+    setFamRows((rows) => {
+      const next = rows.filter((_, i) => i !== index);
+      if (next.length > 0) return next;
+      setDdjjStage("edit");
+      return [
+        {
+          nombre: "",
+          apellido: "",
+          dni: "",
+          fecha_nacimiento: "",
+          parentesco_id: "",
+          parentesco_otro_detalle: "",
+          convive: true,
+          domicilio_familiar: "",
+          dependiente: false,
+          detalle_dependencia: "",
+          discapacidad_declarada: false,
+        },
+      ];
+    });
+  }
+
   async function guardarDdjj(e) {
     e.preventDefault();
     setSaving(true);
     const t = toast.loading("Guardando declaración…");
     const familiares = famRows
-      .map((r) => ({ nombre: r.nombre.trim(), dni: normalizeDni(r.dni), parentesco_id: r.parentesco_id.trim() }))
-      .filter((r) => r.nombre || r.dni || r.parentesco_id);
+      .map((r) => ({
+        nombre: r.nombre.trim(),
+        apellido: (r.apellido || "").trim(),
+        dni: normalizeDni(r.dni),
+        fecha_nacimiento: (r.fecha_nacimiento || "").trim(),
+        parentesco_id: r.parentesco_id.trim(),
+        parentesco_otro_detalle: (r.parentesco_otro_detalle || "").trim(),
+        convive: r.convive === true,
+        domicilio_familiar: (r.domicilio_familiar || "").trim(),
+        dependiente: r.dependiente === true,
+        dependiente_detalle: (r.detalle_dependencia || "").trim(),
+        discapacidad_declarada: r.discapacidad_declarada === true,
+      }))
+      .filter(
+        (r) =>
+          r.nombre ||
+          r.apellido ||
+          r.dni ||
+          r.fecha_nacimiento ||
+          r.parentesco_id ||
+          r.parentesco_otro_detalle ||
+          r.domicilio_familiar ||
+          r.dependiente_detalle,
+      );
     try {
-      const { data } = await callOnboardingMvpDdjjFamiliar({ familiares });
+      const { data } = await callOnboardingMvpDdjjFamiliar({
+        familiares,
+        declaracion_jurada_aceptada: ddjjAceptada === true,
+      });
       if (data?.ok) toast.success("Grupo familiar registrado", { id: t });
       else throw new Error();
     } catch (err) {
       toast.error((err && err.message) || "Revisá los datos.", { id: t });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function omitirDdjj() {
+    setSaving(true);
+    const t = toast.loading("Guardando decisión…");
+    try {
+      const { data } = await callOnboardingMvpOmitirDdjjFamiliar();
+      if (data?.ok) toast.success("Podrás completar la DDJJ más adelante.", { id: t });
+      else throw new Error();
+    } catch (err) {
+      toast.error((err && err.message) || "No se pudo guardar la decisión.", { id: t });
     } finally {
       setSaving(false);
     }
@@ -157,6 +311,9 @@ export function useOnboardingWizard() {
   return {
     user,
     personaId,
+    personaNombre: str(effectivePersona || {}, "nombre"),
+    personaApellido: str(effectivePersona || {}, "apellido"),
+    personaDni: str(effectivePersona || {}, "dni"),
     loading,
     saving,
     step,
@@ -165,13 +322,21 @@ export function useOnboardingWizard() {
     contacto,
     dom,
     famRows,
+    ddjjAceptada,
+    ddjjStage,
     localidadesFiltradas,
     setContacto,
     setDom,
     setFamRows,
+    setDdjjAceptada,
     updateFam,
+    iniciarDdjjAhora,
+    cerrarDdjjParaRevision,
+    volverEdicionDdjj,
+    quitarIntegrante,
     guardarPasoA,
     guardarDdjj,
+    omitirDdjj,
     finalizarMvp,
   };
 }

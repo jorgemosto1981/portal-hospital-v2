@@ -1,10 +1,27 @@
 export const ESTADO_DDJJ_DEFAULT_PERSONALES = "CFG_DDJJ_03_PRESENTADA";
+export const MSG_CAMPO_NO_EDITABLE_ROL =
+  "Campo no editable por rol: solo RRHH puede modificar dni, nombre, apellido, activo y motivo_baja_id.";
+export const ACCION_CAMBIO_DOMICILIO = "informar_cambio_domicilio";
+export const ACCION_CAMBIO_TELEFONOS = "informar_cambio_telefonos";
+export const ACCIONES_PERMITIDAS_USUARIO = [
+  {
+    id: ACCION_CAMBIO_DOMICILIO,
+    titulo: "Informar cambio de domicilio",
+    descripcion: "Habilita edición de calle, número, localidad, provincia, país y referencia.",
+  },
+  {
+    id: ACCION_CAMBIO_TELEFONOS,
+    titulo: "Informar cambio de teléfonos de contacto",
+    descripcion: "Habilita edición de teléfono celular, fijo y preferencia de notificaciones.",
+  },
+];
 
 export const COLECCIONES_BASE = [
   "personas",
   "formacion_agente",
   "declaraciones_grupo_familiar",
   "consentimientos",
+  "eventos_ticket",
 ];
 
 export const COLECCIONES_CFG = [
