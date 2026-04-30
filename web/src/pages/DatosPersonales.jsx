@@ -4,6 +4,8 @@ import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 import { guardarRegistroPersonal, listarColeccionPersonal } from "../services/datosPersonalesService.js";
 import { storageV2 } from "../services/firebase.js";
+import { useAuthClaims } from "../features/auth/useAuthClaims.js";
+import { useAuthSession } from "../features/auth/useAuthSession.js";
 import {
   COLECCIONES_BASE,
   COLECCIONES_CFG,
@@ -25,6 +27,10 @@ import {
 } from "./datos-personales/formLogic.js";
 
 export default function DatosPersonales() {
+  const { user } = useAuthSession();
+  const { claims } = useAuthClaims(user);
+  const isRrhh = claims && claims.portal_role === "rrhh";
+  const lockSensitivePersonaFields = !isRrhh;
   const [tipo, setTipo] = useState("personas");
   const [modoEdicion, setModoEdicion] = useState(false);
   const [editId, setEditId] = useState("");
@@ -230,6 +236,12 @@ export default function DatosPersonales() {
             Elegí colección objetivo y completá los campos requeridos. Los seleccionables se cargan desde
             catálogos en BD.
           </p>
+          {lockSensitivePersonaFields && (
+            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Perfil usuario: los campos de identidad base y estado administrativo se muestran en modo solo
+              lectura; esos cambios los gestiona RRHH.
+            </p>
+          )}
           <form className="mt-4 space-y-4" onSubmit={onSave}>
             <FormHeaderControls
               tipo={tipo}
@@ -248,6 +260,7 @@ export default function DatosPersonales() {
                   <PersonaFields
                     form={form}
                     setField={setField}
+                    lockSensitiveFields={lockSensitivePersonaFields}
                     HELP={HELP}
                     optsLoc={optsLoc}
                     optsMotivoBaja={optsMotivoBaja}

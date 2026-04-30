@@ -31,7 +31,7 @@ export const AYUDA_CAMPOS = {
   fecha_desde: "Fecha de inicio de vigencia del registro.",
   fecha_hasta: "Fecha de fin de vigencia (vacío = abierto).",
   cargo_id: "Referencia al registro HLc base del puesto.",
-  rol_id: "Rol funcional del agente en ese cargo.",
+  rol_id: "Rol de la persona en el cargo base (HLc).",
   regimen_horario_id: "Régimen horario de referencia para procesos futuros (Ticket/RDA/grillas).",
   centro_costo_id: "Centro de costo o imputación presupuestaria del dato laboral.",
   escalafon_id: "Escalafón administrativo/laboral del cargo.",

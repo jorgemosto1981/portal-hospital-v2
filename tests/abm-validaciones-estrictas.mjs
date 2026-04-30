@@ -152,7 +152,7 @@ async function main() {
     });
     const msg = String(r.json?.error?.message || "");
     assert(!r.okHttp, "Se esperaba error en HLc incompleto.");
-    assert(msg.includes("[VAL-HLC-002]"), `Error inesperado: ${msg}`);
+    assert(msg.includes("[VAL-HLC-007]"), `Error inesperado: ${msg}`);
   }
 
   console.log("== Caso 5: HLc válido mínimo estricto ==");
@@ -169,6 +169,7 @@ async function main() {
         escalafon_id: escalafonId,
         agrupamiento_id: agrupamientoId,
         categoria_id: categoriaId,
+        rol_id: rolId,
         cargo_funcional_id: cargoFuncionalId,
         tipo_vinculo_id: tipoVinculoId,
         modalidad_jornada_id: modalidadJornadaId,
@@ -194,7 +195,6 @@ async function main() {
       datos: {
         persona_id: personaLaboralId,
         cargo_id: cargoId,
-        rol_id: rolId,
         funcion_real_id: funcionRealId,
         nivel_jerarquico: 10,
         fecha_inicio: fechaB,
@@ -225,7 +225,6 @@ async function main() {
       datos: {
         persona_id: personaLaboralId,
         cargo_id: cargoId,
-        rol_id: rolId,
         funcion_real_id: funcionRealId,
         nivel_jerarquico: 20,
         fecha_inicio: fechaB,
@@ -265,6 +264,7 @@ async function main() {
         escalafon_id: escalafonId,
         agrupamiento_id: agrupamientoId,
         categoria_id: categoriaId,
+        rol_id: rolId,
         cargo_funcional_id: cargoFuncionalId,
         tipo_vinculo_id: tipoVinculoId,
         modalidad_jornada_id: modalidadJornadaId,
@@ -288,7 +288,6 @@ async function main() {
       datos: {
         persona_id: personaLaboralId,
         cargo_id: cargoId,
-        rol_id: rolId,
         funcion_real_id: funcionRealId,
         nivel_jerarquico: 30,
         fecha_inicio: fechaB,

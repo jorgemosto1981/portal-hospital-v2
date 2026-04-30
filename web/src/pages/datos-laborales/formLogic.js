@@ -71,7 +71,7 @@ export function requiredFieldsByTipo(tipoAlta) {
   if (tipoAlta === "historial_laboral_cargos") {
     return [
       "persona_id",
-      "grupo_de_trabajo_id",
+      "rol_id",
       "efector_designacion_id",
       "efector_cumplimiento_id",
       "estado_asignacion_id",
@@ -89,7 +89,6 @@ export function requiredFieldsByTipo(tipoAlta) {
     "persona_id",
     "cargo_id",
     "grupo_de_trabajo_id",
-    "rol_id",
     "funcion_real_id",
     "nivel_jerarquico",
     "fecha_desde",

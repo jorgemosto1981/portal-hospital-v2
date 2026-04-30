@@ -101,7 +101,7 @@ export default function FasesLaboralesTables({
                   <th className="px-3 py-2">Cargo ID</th>
                   <th className="px-3 py-2">Persona</th>
                   <th className="px-3 py-2">Grupo (desde HLc)</th>
-                  <th className="px-3 py-2">Rol</th>
+                  <th className="px-3 py-2">Rol (desde HLc)</th>
                   <th className="px-3 py-2">Escalafón</th>
                   <th className="px-3 py-2">Función real</th>
                   <th className="px-3 py-2">Nivel jerárquico</th>
@@ -127,7 +127,7 @@ export default function FasesLaboralesTables({
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2 font-mono">{formatValue(row.rol_id)}</td>
+                      <td className="px-3 py-2 font-mono">{formatValue(cargo && cargo.rol_id)}</td>
                       <td className="px-3 py-2 font-mono">{formatValue(row.escalafon_id)}</td>
                       <td className="px-3 py-2 font-mono">{formatValue(row.funcion_real_id)}</td>
                       <td className="px-3 py-2">{formatValue(row.nivel_jerarquico)}</td>

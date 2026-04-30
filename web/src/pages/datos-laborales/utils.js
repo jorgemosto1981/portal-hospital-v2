@@ -279,7 +279,7 @@ export function buildTimelineItemsByPersona({
         secundario:
           `Persona: ${personaIdNombre(idxPersonas, row.persona_id)} · ` +
           `Cargo: ${row.cargo_id || "—"} · ` +
-          `Rol: ${labelIdNombre(idxRoles, row.rol_id)} · ` +
+          `Rol: ${labelIdNombre(idxRoles, cargo && cargo.rol_id)} · ` +
           `Funcion: ${labelIdNombre(idxFunciones, row.funcion_real_id)}`,
         conflictos,
         warning_codes: warningCodes,

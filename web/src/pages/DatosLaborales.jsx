@@ -492,13 +492,9 @@ export default function DatosLaborales() {
                 <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.persona_id}</p>
               </div>
 
-              {(tipoAlta === "historial_laboral_grupos" || tipoAlta === "historial_laboral_cargos") && (
+              {tipoAlta === "historial_laboral_grupos" && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    {tipoAlta === "historial_laboral_cargos"
-                      ? "grupo_de_trabajo_id (encuadre principal HLc) *"
-                      : "grupo_de_trabajo_id *"}
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700">grupo_de_trabajo_id *</label>
                   <select
                     value={formData.grupo_de_trabajo_id}
                     onChange={(e) => onChangeField("grupo_de_trabajo_id", e.target.value)}
@@ -549,6 +545,22 @@ export default function DatosLaborales() {
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.efector_cumplimiento_id}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">rol_id</label>
+                  <select
+                    value={formData.rol_id}
+                    onChange={(e) => onChangeField("rol_id", e.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                  >
+                    <option value="">Seleccionar rol...</option>
+                    {opcionesRol.map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.nombre || x.id}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.rol_id}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700">estado_asignacion_id</label>
@@ -741,22 +753,6 @@ export default function DatosLaborales() {
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.cargo_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">rol_id</label>
-                  <select
-                    value={formData.rol_id}
-                    onChange={(e) => onChangeField("rol_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar rol...</option>
-                    {opcionesRol.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.rol_id}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700">regimen_horario_id</label>

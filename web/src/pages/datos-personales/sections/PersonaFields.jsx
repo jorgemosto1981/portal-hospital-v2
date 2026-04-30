@@ -1,6 +1,7 @@
 export default function PersonaFields({
   form,
   setField,
+  lockSensitiveFields = false,
   HELP,
   optsLoc,
   optsMotivoBaja,
@@ -14,17 +15,32 @@ export default function PersonaFields({
     <>
       <div>
         <label className="block text-sm font-medium text-slate-700">dni *</label>
-        <input value={form.dni} onChange={(e) => setField("dni", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input
+          value={form.dni}
+          onChange={(e) => setField("dni", e.target.value)}
+          disabled={lockSensitiveFields}
+          className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
+        />
         <p className="mt-1 text-xs text-slate-500">{HELP.dni}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">nombre *</label>
-        <input value={form.nombre} onChange={(e) => setField("nombre", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input
+          value={form.nombre}
+          onChange={(e) => setField("nombre", e.target.value)}
+          disabled={lockSensitiveFields}
+          className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
+        />
         <p className="mt-1 text-xs text-slate-500">{HELP.nombre}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">apellido *</label>
-        <input value={form.apellido} onChange={(e) => setField("apellido", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2" />
+        <input
+          value={form.apellido}
+          onChange={(e) => setField("apellido", e.target.value)}
+          disabled={lockSensitiveFields}
+          className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
+        />
         <p className="mt-1 text-xs text-slate-500">{HELP.apellido}</p>
       </div>
       <div>
@@ -57,7 +73,12 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">activo</label>
-        <select value={form.activo ? "true" : "false"} onChange={(e) => setField("activo", e.target.value === "true")} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+        <select
+          value={form.activo ? "true" : "false"}
+          onChange={(e) => setField("activo", e.target.value === "true")}
+          disabled={lockSensitiveFields}
+          className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
+        >
           <option value="true">Sí</option>
           <option value="false">No</option>
         </select>
@@ -66,7 +87,12 @@ export default function PersonaFields({
       {!form.activo && (
         <div>
           <label className="block text-sm font-medium text-slate-700">motivo_baja_id *</label>
-          <select value={form.motivo_baja_id} onChange={(e) => setField("motivo_baja_id", e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2">
+          <select
+            value={form.motivo_baja_id}
+            onChange={(e) => setField("motivo_baja_id", e.target.value)}
+            disabled={lockSensitiveFields}
+            className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
+          >
             <option value="">Seleccionar...</option>
             {optsMotivoBaja.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>

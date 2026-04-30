@@ -129,11 +129,12 @@ Nivel 1 (cargo) — plan maestro §B. Cada documento = **un cargo** con su vigen
 | Campo | Tipo | Obl. | Descripción |
 |-------|------|------|-------------|
 | `persona_id` | string | **[O]** | FK `personas/{per_*}`. |
-| `grupo_de_trabajo_id` | string | **[O]** | FK **`gdt_*`**: dependencia / encuadre operativo del cargo. |
+| `grupo_de_trabajo_id` | string \| null | **[X]** | Campo legado/opcional en HLc; el encuadre operativo se define en `hlg_*`. |
 | `efector_designacion_id` | string | **[O]** | FK **documento en `cfg_efectores`**: marco **normativo** de designación (valor **seleccionable** en catálogo). |
 | `efector_cumplimiento_id` | string | **[O]** | FK **documento en `cfg_efectores`**: lugar **real** de cumplimiento de funciones. |
 | `cargo_funcional_id` | string | **[O]** | FK **`cfg_cargo_funcional`**. |
 | `tipo_vinculo_id` | string | **[O]** | FK **`cfg_tipo_vinculo_laboral`**. |
+| `rol_id` | string | **[O]** | FK `cfg_rol`; rol base de la persona en el cargo (SoT para validaciones). |
 | `escalafon_id` | string \| null | **[X]** | FK **`cfg_escalafon`**. |
 | `modalidad_jornada_id` | string \| null | **[X]** | FK **`cfg_modalidad_jornada`**. |
 | `fecha_desde` | Timestamp | **[O]** | Inicio del cargo. |
@@ -170,7 +171,6 @@ Nivel 2 y 3: el **contrato canónico** sigue en [`PLAN_DESARROLLO_VERSION2.md`](
 | `id` | `hld_<ULID>` | **[O]** | |
 | `cargo_id` | string | **[O]** | FK `historial_laboral_cargos.id` (`hlc_*`). |
 | `persona_id` | string | **[O]** | FK `personas`. |
-| `rol_id` | string \| null | **[X]** | FK `cfg_*` si aplica. |
 | `escalafon_id` | string \| null | **[X]** | Opcional; puede duplicar o precisar el de `hlc_*` según reglas. |
 | `agrupamiento_id` | string \| null | **[X]** | |
 | `funcion_real_id` | string \| null | **[X]** | |
@@ -262,7 +262,7 @@ Incluir: alta/edición/cierre de `hlc_*`, cambios estructurales en **`gdt_*`**, 
 
 | Catálogo / datos | Consumidor principal |
 |------------------|-------------------------|
-| Colección **`grupos_de_trabajo`** (no es `cfg_*`) | Estructura organigrama; `historial_laboral_cargos.grupo_de_trabajo_id`; `hlg_*.grupo_de_trabajo_id`. |
+| Colección **`grupos_de_trabajo`** (no es `cfg_*`) | Estructura organigrama y encuadre operativo principal en `hlg_*.grupo_de_trabajo_id` (HLc lo puede conservar como legado opcional). |
 | Colección **`cfg_efectores`** | `efector_designacion_id`, `efector_cumplimiento_id` en `hlc_*`; campo **`es_efector_institucional`** en el documento de efector. (La antigua colección `efectores` está **deprecada**; ver §4.2.) |
 | `cfg_tipo_grupo` | `grupos_de_trabajo.tipo_grupo_id` (si se tipifica el nodo). |
 | `cfg_cargo_funcional` | `historial_laboral_cargos.cargo_funcional_id` |

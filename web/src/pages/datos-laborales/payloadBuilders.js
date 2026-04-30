@@ -5,7 +5,8 @@ function toNull(value) {
 export function buildHlcPayload({ formData, modoEdicion, registroEditId }) {
   const payload = {
     persona_id: formData.persona_id,
-    grupo_de_trabajo_id: formData.grupo_de_trabajo_id,
+    grupo_de_trabajo_id: toNull(formData.grupo_de_trabajo_id),
+    rol_id: toNull(formData.rol_id),
     efector_designacion_id: formData.efector_designacion_id,
     efector_cumplimiento_id: formData.efector_cumplimiento_id,
     estado_asignacion_id: toNull(formData.estado_asignacion_id),
@@ -36,7 +37,6 @@ export function buildHldPayload({ formData, modoEdicion, registroEditId }) {
   const payload = {
     persona_id: formData.persona_id,
     cargo_id: formData.cargo_id,
-    rol_id: toNull(formData.rol_id),
     regimen_horario_id: toNull(formData.regimen_horario_id),
     centro_costo_id: toNull(formData.centro_costo_id),
     funcion_real_id: toNull(formData.funcion_real_id),

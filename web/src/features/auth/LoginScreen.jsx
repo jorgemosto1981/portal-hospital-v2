@@ -131,7 +131,7 @@ export default function LoginScreen() {
           </Link>
         </p>
         <p className="mt-2 text-center text-xs text-slate-500">
-          Flujo oficial de alta inicial: Registro -> Vinculación DNI -> Onboarding.
+          Flujo oficial de alta inicial: Registro {"->"} Vinculación DNI {"->"} Onboarding.
         </p>
       </div>
     </div>

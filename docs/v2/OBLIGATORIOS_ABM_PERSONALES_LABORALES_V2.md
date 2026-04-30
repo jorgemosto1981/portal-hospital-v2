@@ -69,6 +69,7 @@ Reglas adicionales:
 - `agrupamiento_id`
 - `tipo_vinculo_id`
 - `categoria_id`
+- `rol_id`
 - `cargo_funcional_id`
 - `modalidad_jornada_id`
 - `carga_horaria_total`
@@ -91,7 +92,6 @@ Para crear/editar subnivel operativo:
 En `historial_laboral_datos` (HLd):
 - `persona_id`
 - `cargo_id`
-- `rol_id`
 - `funcion_real_id`
 - `nivel_jerarquico`
 - `fecha_inicio`

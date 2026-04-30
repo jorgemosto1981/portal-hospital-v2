@@ -79,12 +79,13 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     const id = toNullableTrimmedString(datos.id) || `hlc_${ulid()}`;
     const personaId = toNullableTrimmedString(datos.persona_id);
     const grupoTrabajoId = toNullableTrimmedString(datos.grupo_de_trabajo_id);
+    const rolId = toNullableTrimmedString(datos.rol_id);
     const efDesignacionId = toNullableTrimmedString(datos.efector_designacion_id);
     const efCumplimientoId = toNullableTrimmedString(datos.efector_cumplimiento_id);
-    if (!personaId || !grupoTrabajoId || !efDesignacionId || !efCumplimientoId) {
+    if (!personaId || !efDesignacionId || !efCumplimientoId) {
       throw new HttpsError(
         "invalid-argument",
-        "[VAL-HLC-002] En HLc son obligatorios: persona_id, grupo_de_trabajo_id, efector_designacion_id y efector_cumplimiento_id.",
+        "[VAL-HLC-002] En HLc son obligatorios: persona_id, efector_designacion_id y efector_cumplimiento_id.",
       );
     }
     await assertDocExistsOrNull("grupos_de_trabajo", grupoTrabajoId, "grupo_de_trabajo_id");
@@ -106,12 +107,13 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       !escalafonId ||
       !agrupamientoId ||
       !categoriaId ||
+      !rolId ||
       !cargoFuncionalId ||
       cargaHorariaTotal == null
     ) {
       throw new HttpsError(
         "invalid-argument",
-        "[VAL-HLC-007] En HLc son obligatorios: tipo_vinculo_id, modalidad_jornada_id, estado_asignacion_id, escalafon_id, agrupamiento_id, categoria_id, cargo_funcional_id y carga_horaria_total.",
+        "[VAL-HLC-007] En HLc son obligatorios: tipo_vinculo_id, modalidad_jornada_id, estado_asignacion_id, escalafon_id, agrupamiento_id, categoria_id, rol_id, cargo_funcional_id y carga_horaria_total.",
       );
     }
     await assertDocExistsOrNull("cfg_tipo_vinculo_laboral", tipoVinculoId, "tipo_vinculo_id");
@@ -163,6 +165,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       escalafon_id: escalafonId,
       agrupamiento_id: agrupamientoId,
       categoria_id: categoriaId,
+      rol_id: rolId,
       cargo_funcional_id: cargoFuncionalId,
       tipo_vinculo_id: tipoVinculoId,
       modalidad_jornada_id: modalidadJornadaId,
@@ -250,21 +253,19 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
         `[VAL-HLD-001] persona_id inconsistente: HLd (${personaId}) no coincide con HLc (${cargoPersonaId}).`,
       );
     }
-    const rolId = toNullableTrimmedString(datos.rol_id);
     const funcionRealId = toNullableTrimmedString(datos.funcion_real_id);
     const nivelJerarquico = toNumberOrNull(datos.nivel_jerarquico);
     const fechaInicio = toNullableTrimmedString(datos.fecha_inicio);
-    if (!rolId || !funcionRealId || nivelJerarquico == null || !fechaInicio) {
+    if (!funcionRealId || nivelJerarquico == null || !fechaInicio) {
       throw new HttpsError(
         "invalid-argument",
-        "[VAL-HLD-002] En HLd son obligatorios: rol_id, funcion_real_id, nivel_jerarquico y fecha_inicio.",
+        "[VAL-HLD-002] En HLd son obligatorios: funcion_real_id, nivel_jerarquico y fecha_inicio.",
       );
     }
     const payload = {
       id,
       persona_id: personaId,
       cargo_id: cargoId,
-      rol_id: rolId,
       regimen_horario_id: toNullableTrimmedString(datos.regimen_horario_id),
       centro_costo_id: toNullableTrimmedString(datos.centro_costo_id),
       escalafon_id: toNullableTrimmedString(datos.escalafon_id),
@@ -507,6 +508,7 @@ const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
       fecha_fin: fechaFin || null,
       regimen_horario_id: hld ? toNullableTrimmedString(hld.regimen_horario_id) : null,
       centro_costo_id: hld ? toNullableTrimmedString(hld.centro_costo_id) : null,
+      rol_id: hlc ? toNullableTrimmedString(hlc.rol_id) : null,
       carga_horas_semana_hlg: sumarCargaSemanal(hlg.carga_por_dia_semana),
       carga_horas_total_hlc: Number.isFinite(expectedCarga) ? expectedCarga : null,
       warning_codes: warningCodes,
