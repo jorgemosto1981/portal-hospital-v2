@@ -6,6 +6,8 @@ setGlobalOptions({
   region: "southamerica-east1",
   memory: "512MiB",
   timeoutSeconds: 120,
+  /** Necesario para callables desde el navegador (OPTIONS sin auth); si falta, CORS muestra 403. */
+  invoker: "public",
 });
 
 const login = require("./modules/login");

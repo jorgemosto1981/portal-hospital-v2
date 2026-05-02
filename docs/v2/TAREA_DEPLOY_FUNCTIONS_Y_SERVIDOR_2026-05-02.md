@@ -58,6 +58,10 @@ Firebase CLI exige que `functions.source` esté **dentro** del directorio que co
 
 Mensaje eventual de la CLI sobre **política de limpieza de artefactos** (Artifact Registry): opcional ejecutar `firebase functions:artifacts:setpolicy` en el proyecto; no impide el servicio de las funciones.
 
+### 403 en `OPTIONS` + “CORS Missing Allow Origin” (callables)
+
+Si el preflight devuelve **403** y el navegador se queja de CORS, suele ser **IAM de Cloud Run** (el OPTIONS no lleva token de Firebase): el frontend no llega a ejecutar la callable. En Gen2, declarar en [`functions/index.js`](../../functions/index.js) `setGlobalOptions({ …, invoker: "public" })` para que los servicios Cloud Run acepten invocación pública en el borde; la **autorización de negocio** sigue en el código (`assertRrhh`, tokens, etc.).
+
 ---
 
 ## 4. Servidor de desarrollo (Vite)
