@@ -61,6 +61,7 @@ const rrhhAltaAgente = onCall(async (request) => {
     creado_en: ts,
     actualizado_en: ts,
   });
+  // Documento nuevo: no usar FieldValue.delete() aquí (set sin merge falla en Firestore).
   batch.set(db.collection(COL_USUARIOS_CUENTA).doc(usrId), {
     persona_id: perId,
     auth_uid: null,
@@ -68,7 +69,6 @@ const rrhhAltaAgente = onCall(async (request) => {
     username: null,
     activo: true,
     estado_acceso: CFG_PEND_REG,
-    estado_acceso_id: FieldValue.delete(),
     role_ids: roleIds,
     creado_en: ts,
     actualizado_en: ts,

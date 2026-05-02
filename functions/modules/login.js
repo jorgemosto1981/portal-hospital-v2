@@ -103,7 +103,7 @@ const registrarPrimerAcceso = onCall(async (request) => {
 
   try {
     await auth.getUserByEmail(emailNorm);
-    throw new HttpsError("failed-precondition", MSG_REG_GENERICO);
+    throw new HttpsError("failed-precondition", MSG_REG_GENERICO, { redirect_login: true });
   } catch (e) {
     if (e instanceof HttpsError) throw e;
     if (!(e && e.code === "auth/user-not-found")) throw new HttpsError("internal", MSG_REG_GENERICO);
@@ -114,7 +114,9 @@ const registrarPrimerAcceso = onCall(async (request) => {
     const rec = await auth.createUser({ email: emailNorm, password: pin, emailVerified: false });
     newUid = rec.uid;
   } catch (e) {
-    if (e && e.code === "auth/email-already-exists") throw new HttpsError("failed-precondition", MSG_REG_GENERICO);
+    if (e && e.code === "auth/email-already-exists") {
+      throw new HttpsError("failed-precondition", MSG_REG_GENERICO, { redirect_login: true });
+    }
     throw new HttpsError("internal", MSG_REG_GENERICO);
   }
 

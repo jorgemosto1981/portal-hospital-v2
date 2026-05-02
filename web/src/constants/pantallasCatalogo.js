@@ -10,7 +10,7 @@ export const PANTALLAS_CATALOGO = [
   { id: "rrhh-notif-datos", titulo: "RRHH notificaciones datos personales", path: "/rrhh/notificaciones-datos-personales", estado: "activo", fuente: "web/src/pages/NotificacionesEventosDatosPersonalesRRHH.jsx" },
   { id: "rrhh-seg-enrol", titulo: "RRHH seguimiento enrolamiento", path: "/rrhh/seguimiento-enrolamiento", estado: "activo", fuente: "web/src/pages/SeguimientoEnrolamientoUsuariosRRHH.jsx" },
   { id: "login", titulo: "Login", path: "/login", estado: "activo", fuente: "web/src/features/auth/LoginRoute.jsx" },
-  { id: "registro", titulo: "Registro primer acceso", path: "/registro", estado: "activo", fuente: "web/src/features/auth/RegistroVinculacion.jsx" },
+  { id: "registro", titulo: "Registro primer acceso", path: "/login?alta=1", estado: "activo", fuente: "web/src/features/auth/AccesoPortal.jsx" },
   { id: "vinculacion", titulo: "Vinculación por DNI (soporte)", path: "/vinculacion", estado: "activo-soporte", fuente: "web/src/features/auth/VinculacionDni.jsx" },
   { id: "modulos", titulo: "Estado de módulos", path: "/modulos", estado: "activo", fuente: "web/src/pages/EstadoModulos.jsx" },
   { id: "pantallas", titulo: "Catálogo de pantallas", path: "/pantallas", estado: "activo", fuente: "web/src/pages/PantallasCatalogo.jsx" },

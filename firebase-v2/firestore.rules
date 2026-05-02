@@ -1,7 +1,10 @@
 rules_version = '2';
 
-// V2 — Fase 2: cfg_* (lectura autenticada) + usuarios_cuenta (lectura propia por auth_uid) + personas (lectura propia por claim persona_id).
-// Matriz: docs/v2/ACCESO_Y_RULES_FIRESTORE_V2.md · claims: MODULO_LOGIN_V2 §3.3 (`syncSessionClaims`).
+// V2 — Colecciones no públicas; acceso mínimo autenticado por ruta.
+// Agentes: lectura/escritura solo en personas/{su persona_id} (claim syncSessionClaims).
+// Catálogos cfg_* y grupos: lectura si hay sesión; escritura solo Admin/Callables.
+// historial_laboral_cargos: lectura de filas donde persona_id == claim (p. ej. legajo en portal).
+// Matriz: docs/v2/ACCESO_Y_RULES_FIRESTORE_V2.md · MODULO_LOGIN_V2 §3.3
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -9,7 +12,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Catálogos volcados por seed:cfg (MODULO_CONFIGURACION_V2) — escritura solo Admin/seed.
+    function ownsPersona(personaId) {
+      return signedIn() && request.auth.token.persona_id == personaId;
+    }
+
+    // Catálogos volcados por seed (MODULO_CONFIGURACION_V2) — escritura solo Admin/seed.
     match /cfg_estado_cuenta_acceso/{docId} {
       allow read: if signedIn();
       allow write: if false;
@@ -25,8 +32,28 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Roles de aplicación (`usuarios_cuenta.role_ids[]` → `cfg_rol`); seed `scripts/seed-v2/seed-cfg.mjs`.
     match /cfg_rol/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Catálogos usados en onboarding (listarCatalogoOnboarding) — mismo criterio: solo lectura autenticada.
+    match /cfg_provincia/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /cfg_localidad/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /cfg_parentesco/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /grupos_de_trabajo/{docId} {
       allow read: if signedIn();
       allow write: if false;
     }
@@ -37,10 +64,33 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Ficha persona: id de documento = `per_<ULID>` = claim `persona_id` (tras syncSessionClaims + getIdToken(true)).
+    // Ficha persona: id = claim persona_id (tras registrarPrimerAcceso + syncSessionClaims + getIdToken(true)).
     match /personas/{personaId} {
-      allow read: if signedIn() && request.auth.token.persona_id == personaId;
+      allow read: if ownsPersona(personaId);
+      allow create: if ownsPersona(personaId);
+      allow update: if ownsPersona(personaId);
+      allow delete: if false;
+    }
+
+    // Cargos del legajo visibles solo si pertenecen a la persona de la sesión.
+    match /historial_laboral_cargos/{cargoId} {
+      allow read: if signedIn()
+        && resource.data.persona_id is string
+        && resource.data.persona_id == request.auth.token.persona_id;
       allow write: if false;
+    }
+
+    // Eventos y rate limits: solo backend (Admin SDK).
+    match /eventos_ticket/{docId} {
+      allow read, write: if false;
+    }
+
+    match /_system_reg_primer_dni/{docId} {
+      allow read, write: if false;
+    }
+
+    match /_system_rate_login_dni/{docId} {
+      allow read, write: if false;
     }
 
     match /{document=**} {

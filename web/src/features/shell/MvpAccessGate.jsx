@@ -10,7 +10,7 @@ import runtimeFlags from "../../../../shared/runtimeFlags.json";
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
 const OPEN_ACCESS_TEMP = runtimeFlags.OPEN_ACCESS_TEMP === true;
 
-const PUBLIC_NO_PERSONA = new Set(["/vinculacion", "/registro"]);
+const PUBLIC_NO_PERSONA = new Set(["/vinculacion", "/registro", "/login"]);
 
 /**
  * Pivote MVP: exige vinculación (claim `persona_id`) y bloquea en el wizard mientras el legajo

@@ -5,26 +5,28 @@ const BASE =
 const INACTIVE = `${BASE} text-slate-800 hover:bg-slate-100`;
 const ACTIVE = `${BASE} bg-blue-100 text-blue-900`;
 
-/** @param {string} pathname */
-function deriveActive(pathname) {
-  if (pathname === "/registro") return "registro";
+/** @param {string} pathname @param {string} search */
+function deriveActive(pathname, search) {
   if (pathname === "/vinculacion") return "vinculacion";
-  if (pathname === "/login" || pathname === "/") return "login";
+  if (pathname === "/login") {
+    return new URLSearchParams(search).get("alta") === "1" ? "registro" : "login";
+  }
+  if (pathname === "/registro") return "registro";
+  if (pathname === "/") return "login";
   return "login";
 }
 
 /**
- * Menú horizontal: acceso, registro y vinculación (pantallas públicas previas al shell).
+ * Menú horizontal: acceso unificado en `/login`, primer acceso, vinculación e inicio del portal.
  * @param {{ active?: "login" | "registro" | "vinculacion" | "none" }} p
- * — Si `active` se omite, se infiere con la ruta actual. Usá `active="none"` (p. ej. shell con `VITE_BYPASS_AUTH`).
  */
 export default function PublicAuthMenu({ active: activeProp }) {
-  const { pathname } = useLocation();
-  const active = activeProp === undefined ? deriveActive(pathname) : activeProp;
+  const { pathname, search } = useLocation();
+  const active = activeProp === undefined ? deriveActive(pathname, search) : activeProp;
 
   return (
     <nav
-      className="relative z-30 w-full shrink-0 border-b border-slate-200 bg-white shadow-sm"
+      className="relative z-30 w-full shrink-0 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-sm"
       aria-label="Menú de acceso e identidad"
     >
       <ul className="mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-x-1 gap-y-2 px-2 py-2.5 sm:min-h-[2.75rem] sm:gap-0 sm:px-3">
@@ -42,11 +44,11 @@ export default function PublicAuthMenu({ active: activeProp }) {
         </li>
         <li>
           <Link
-            to="/registro"
+            to="/login?alta=1"
             className={active === "registro" ? ACTIVE : INACTIVE}
             aria-current={active === "registro" ? "page" : undefined}
           >
-            Registro
+            Primer acceso
           </Link>
         </li>
         <li className="hidden text-slate-300 sm:mx-1 sm:inline" aria-hidden>
@@ -65,8 +67,8 @@ export default function PublicAuthMenu({ active: activeProp }) {
           ·
         </li>
         <li>
-          <Link to="/" className={INACTIVE}>
-            Inicio
+          <Link to="/inicio" className={INACTIVE}>
+            Inicio portal
           </Link>
         </li>
       </ul>

@@ -19,7 +19,7 @@ export function needsMvpOnboardingPath(p, user) {
 }
 
 /**
- * Suscripción a `personas/{personaId}` (requiere claim y reglas; escritura solo Callables).
+ * Suscripción a `personas/{personaId}` (requiere claim persona_id y reglas Firestore).
  * @param {string | null} personaId
  * @param {(data: import("firebase/firestore").DocumentData | null) => void} onData
  * @returns {() => void}

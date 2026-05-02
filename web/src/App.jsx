@@ -1,9 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import MobileLayout from "./components/layout/MobileLayout.jsx";
-import LoginScreen from "./features/auth/LoginScreen.jsx";
 import LoginRoute from "./features/auth/LoginRoute.jsx";
-import RegistroVinculacion from "./features/auth/RegistroVinculacion.jsx";
 import VinculacionDni from "./features/auth/VinculacionDni.jsx";
 import { useAuthClaims } from "./features/auth/useAuthClaims.js";
 import { useAuthSession } from "./features/auth/useAuthSession.js";
@@ -50,7 +48,9 @@ function MainWithAuth() {
   }
 
   if (!OPEN_ACCESS_TEMP && !BYPASS_AUTH && !user) {
-    return <LoginScreen />;
+    const pathWithQuery = `${location.pathname || "/inicio"}${location.search || ""}`;
+    const dest = `/login?redirect=${encodeURIComponent(pathWithQuery)}`;
+    return <Navigate to={dest} replace />;
   }
 
   return (
@@ -105,7 +105,7 @@ export default function App() {
             </MvpAccessGate>
           }
         />
-        <Route path="/registro" element={<RegistroVinculacion />} />
+        <Route path="/registro" element={<Navigate to="/login?alta=1" replace />} />
         <Route path="/vinculacion" element={<VinculacionDni />} />
         <Route path="/onboarding" element={<OnboardingWizard />} />
         <Route
