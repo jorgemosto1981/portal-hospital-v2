@@ -190,7 +190,7 @@ export default function AccesoPortal() {
             <p className="font-semibold text-slate-800">Tu cuenta ya está vinculada.</p>
             <p className="mt-1 text-slate-600">Podés ir al inicio del portal.</p>
             <div className="mt-3">
-              <PrimaryButton type="button" onClick={() => nav("/inicio", { replace: true })} className="w-full">
+              <PrimaryButton type="button" onClick={() => nav("/portal/home", { replace: true })} className="w-full">
                 Ir al inicio
               </PrimaryButton>
             </div>
@@ -205,7 +205,7 @@ export default function AccesoPortal() {
                 Vinculación por DNI
               </PrimaryButton>
               <Link
-                to="/inicio"
+                to="/portal/home"
                 className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:flex-1"
               >
                 Ir al inicio
@@ -370,7 +370,7 @@ export default function AccesoPortal() {
           <span className="mx-2 text-slate-300" aria-hidden>
             ·
           </span>
-          <Link to="/inicio" className="font-medium text-slate-700 hover:underline">
+          <Link to="/portal/home" className="font-medium text-slate-700 hover:underline">
             Ir al inicio del portal
           </Link>
         </p>

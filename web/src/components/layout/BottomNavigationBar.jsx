@@ -1,6 +1,7 @@
 import { MODULOS_PORTAL } from "../../constants/modulosEstado.js";
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
+import { MANAGEMENT_PORTAL_ROLES } from "../../features/routing/portalRole.js";
 
 const ICONS_BY_ID = {
   inicio: () => (
@@ -88,9 +89,9 @@ const tabs = MODULOS_PORTAL.map((m) => ({
  */
 export default function BottomNavigationBar({ activeTab, onTabChange, className = "" }) {
   const { user } = useAuthSession();
-  const { claims } = useAuthClaims(user);
-  const isRrhh = claims?.portal_role === "rrhh";
-  const visibleTabs = tabs.filter((tab) => (tab.id === "laboral" ? isRrhh : true));
+  const { hasPortalRoles } = useAuthClaims(user);
+  const canManagement = hasPortalRoles(MANAGEMENT_PORTAL_ROLES);
+  const visibleTabs = tabs.filter((tab) => (tab.id === "rrhh" ? canManagement : true));
 
   return (
     <nav

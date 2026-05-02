@@ -47,8 +47,9 @@ const CAMPOS_POR_ACCION = {
 };
 
 function isRrhhActor(request) {
-  const role = request && request.auth && request.auth.token && request.auth.token.portal_role;
-  return role === "rrhh";
+  const roleRaw = request && request.auth && request.auth.token && request.auth.token.portal_role;
+  const role = typeof roleRaw === "string" ? roleRaw.trim().toLowerCase() : "";
+  return role === "rrhh" || role === "admin";
 }
 
 function getActorPersonaId(request) {

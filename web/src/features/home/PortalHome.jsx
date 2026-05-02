@@ -99,7 +99,7 @@ export default function PortalHome() {
       </Card>
       <div className="mb-4">
         <Link
-          to="/pantallas"
+          to="/portal/pantallas"
           className="inline-flex rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
         >
           Ver todas las pantallas

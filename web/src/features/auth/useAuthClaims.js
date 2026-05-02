@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { hasAnyPortalRole, normalizePortalRole } from "../routing/portalRole.js";
 
 /**
  * @param {import("@firebase/auth").User | null} user
@@ -32,8 +34,18 @@ export function useAuthClaims(user) {
     };
   }, [user]);
 
+  const claims = user ? tokenClaims : null;
+  const portalRole = useMemo(() => normalizePortalRole(claims), [claims]);
+  const hasPortalRoles = useCallback(
+    (/** @type {readonly string[]} */ allowed) => hasAnyPortalRole(claims, allowed),
+    [claims],
+  );
+
   return {
-    claims: user ? tokenClaims : null,
+    claims,
     claimsLoading: user ? internalLoading : false,
+    /** Rol del token normalizado (`rrhh`, `admin`, …) o `null`. */
+    portalRole,
+    hasPortalRoles,
   };
 }

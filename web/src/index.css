@@ -6,6 +6,9 @@
 }
 
 @layer base {
+  html {
+    @apply min-h-dvh;
+  }
   body {
     @apply m-0 min-h-dvh bg-slate-50 font-sans text-slate-900 antialiased;
   }

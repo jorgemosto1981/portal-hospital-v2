@@ -1,21 +1,14 @@
 import { Navigate, useSearchParams } from "react-router-dom";
 import { useMemo } from "react";
 
+import { safeRedirectPath } from "../routing/redirectPaths.js";
 import { useAuthSession } from "./useAuthSession.js";
 import AccesoPortal from "./AccesoPortal.jsx";
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
 
-/** @param {string | null} raw */
-function safeRedirectPath(raw) {
-  if (!raw || typeof raw !== "string") return "/inicio";
-  const t = raw.trim();
-  if (!t.startsWith("/") || t.startsWith("//")) return "/inicio";
-  return t;
-}
-
 /**
- * Ruta `/login`: acceso unificado (sesión + primer registro). Si ya hay sesión, redirige a `redirect` o `/inicio`.
+ * Ruta `/login`: acceso unificado (sesión + primer registro). Si ya hay sesión, redirige a `redirect` o `/portal/home`.
  */
 export default function LoginRoute() {
   const { user, authPending } = useAuthSession();

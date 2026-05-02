@@ -15,6 +15,7 @@ import {
   isoToDateInputValue,
 } from "../configuracionFormatters.js";
 import runtimeFlags from "../../../../../shared/runtimeFlags.json";
+import { hasAnyPortalRole, MANAGEMENT_PORTAL_ROLES } from "../../routing/portalRole.js";
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const RX_GDT_ID_V2 = /^gdt_[0-9A-HJKMNP-TV-Z]{26}$/;
@@ -102,7 +103,7 @@ export function useConfiguracionCatalogos() {
       }
       try {
         const t = await u.getIdTokenResult(true);
-        setIsRrhh(t.claims && t.claims.portal_role === "rrhh");
+        setIsRrhh(hasAnyPortalRole(t.claims, MANAGEMENT_PORTAL_ROLES));
       } catch {
         setIsRrhh(false);
       } finally {

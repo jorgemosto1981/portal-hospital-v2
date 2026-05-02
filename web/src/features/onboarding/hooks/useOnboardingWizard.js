@@ -127,7 +127,7 @@ export function useOnboardingWizard() {
 
   useEffect(() => {
     if (effectivePersona && str(effectivePersona, "estado") === ESTADO_ACTIVO_MVP) {
-      nav("/inicio", { replace: true });
+      nav("/portal/home", { replace: true });
     }
   }, [effectivePersona, nav]);
 
@@ -300,7 +300,7 @@ export function useOnboardingWizard() {
       if (!data?.ok) throw new Error();
       if (user) await user.getIdToken(true);
       toast.success("Tu ficha quedó activa", { id: t });
-      nav("/inicio", { replace: true });
+      nav("/portal/home", { replace: true });
     } catch (err) {
       toast.error((err && err.message) || "No se pudo finalizar.", { id: t });
     } finally {

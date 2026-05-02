@@ -67,7 +67,7 @@ export default function PublicAuthMenu({ active: activeProp }) {
           ·
         </li>
         <li>
-          <Link to="/inicio" className={INACTIVE}>
+          <Link to="/portal/home" className={INACTIVE}>
             Inicio portal
           </Link>
         </li>

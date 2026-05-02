@@ -181,6 +181,10 @@ Marcá cada ítem antes del go-live.
 | RRHH alta | `web/src/features/rrhh/AltaAgenteRRHH.jsx`, `functions/modules/rrhh.js` |
 | Logout en shell | `web/src/components/layout/AppBrandHeader.jsx` |
 | Hosting / despliegue | `firebase.json` (sección `hosting`), `web/dist` (artefacto de `npm run build` en `web/`) |
+| Rutas V2 + guards | `web/src/App.jsx`, `web/src/features/routing/RouteGuards.jsx`, `PortalLayout.jsx`, `redirectPaths.js` |
+| Roles portal (claims) | `web/src/features/routing/portalRole.js`, `useAuthClaims.js`, `BottomNavigationBar.jsx` |
+| Layout / scroll móvil | `web/src/components/layout/MobileLayout.jsx`, `web/src/index.css` |
+| RRHH en Functions | `functions/modules/shared/helpers.js` (`assertRrhh`), `functions/modules/catalogosPersonales.js` (`isRrhhActor`) |
 
 ---
 
@@ -190,6 +194,7 @@ Marcá cada ítem antes del go-live.
 |-------|--------|
 | 2026-05-02 | Primera versión — auditoría pre-producción Fase 1. |
 | 2026-05-02 | Cierre de ciclo: semáforos y checklist alineados a flags `false`, login DNI + claims, logout header, Firebase Storage/Hosting/artefactos documentados. |
+| 2026-05-02 | Rutas bajo `/portal/*`, guards (`PublicRoute`, `ProtectedRoute`, `RoleGuard`), normalización de `portal_role` + rol `admin`; scroll móvil en layout; redirecciones legacy; despliegue hosting+functions documentado. |
 
 ---
 
@@ -204,5 +209,21 @@ Marcá cada ítem antes del go-live.
 | Hosting | Añadido en `firebase.json`; build `web/` → `firebase deploy --only hosting`. |
 | Functions — limpieza imágenes | `firebase functions:artifacts:setpolicy --location southamerica-east1 --force` (no usar solo default `us-central1` si las funciones están en Sao Paulo). |
 | PowerShell | Listas en `--only`: usar comillas, p. ej. `--only "firestore,functions"`. |
+| Rutas portal | Contenido autenticado bajo **`/portal/*`** (`home`, `laboral`, `perfil`, `configuracion`, etc.); **`/portal/rrhh/*`** protegido con claims `rrhh` o `admin`. Redirecciones desde `/inicio`, `/perfil`, `/laboral`, `/rrhh/...` hacia equivalentes `/portal/...`. |
+| Claims RRHH | Cliente: `portalRole.js` + `hasPortalRoles` en `useAuthClaims`; pestaña RRHH en nav solo si rol de gestión; **no** ocultar Laboral a agentes (corrección de filtro invertido en `BottomNavigationBar`). Servidor: `assertRrhh` / actor RRHH aceptan `admin`. Tras cambiar claims en Auth: refrescar token o re-login. |
+| Deploy reciente | `firebase deploy --only "hosting,functions"` tras cambios de rutas y Functions. |
 
 **Nota:** `web/dist` suele estar en `.gitignore`; el origen de verdad del front es el código en `web/src` más el build reproducible con variables de entorno de producción.
+
+---
+
+## 10. Esquema de rutas V2 (referencia rápida)
+
+| Ruta | Guard |
+|------|--------|
+| `/` | Redirige a `/login` o `/portal/home` según sesión. |
+| `/login`, flujo registro vía query | `MvpAccessGate` + `PublicRoute` (si hay sesión → destino seguro de `redirect` o `/portal/home`). |
+| `/vinculacion` | Pública (soporte), sin prefijo portal. |
+| `/onboarding` | `MvpAccessGate` + `ProtectedRoute`. |
+| `/portal/*` | `MvpAccessGate` + `ProtectedRoute` + `PortalLayout` (shell + tabs). |
+| `/portal/rrhh/*` | Además `RoleGuard` con roles `rrhh`, `admin`. |

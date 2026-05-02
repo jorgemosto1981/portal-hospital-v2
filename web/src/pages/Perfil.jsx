@@ -101,7 +101,7 @@ export default function Perfil() {
         </p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link
-            to="/"
+            to="/portal/home"
             className="inline-flex justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
           >
             Volver al inicio
@@ -111,7 +111,7 @@ export default function Perfil() {
             className="inline-flex justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
             onClick={() => {
               clearLastPersonaIdForDemo();
-              navigate("/perfil", { replace: true });
+              navigate("/portal/perfil", { replace: true });
             }}
           >
             Ingresar otro ID
@@ -131,7 +131,7 @@ export default function Perfil() {
           <code>historial_laboral_cargos</code> (<code>persona_id</code> + <code>activo</code>).
         </p>
         <Link
-          to="/"
+          to="/portal/home"
           className="mt-6 inline-flex justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
         >
           Volver al inicio
@@ -171,7 +171,7 @@ export default function Perfil() {
               type="button"
               onClick={() => {
                 clearLastPersonaIdForDemo();
-                navigate("/perfil", { replace: true });
+                navigate("/portal/perfil", { replace: true });
               }}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
             >

@@ -30,8 +30,9 @@ function assertRrhh(request) {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Se requiere sesión.");
   }
-  const role = request.auth.token && request.auth.token.portal_role;
-  if (role !== "rrhh") {
+  const roleRaw = request.auth.token && request.auth.token.portal_role;
+  const role = typeof roleRaw === "string" ? roleRaw.trim().toLowerCase() : "";
+  if (role !== "rrhh" && role !== "admin") {
     throw new HttpsError("permission-denied", "Solo personal autorizado (RRHH).");
   }
 }

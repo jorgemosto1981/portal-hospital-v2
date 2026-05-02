@@ -36,9 +36,9 @@ import {
 
 export default function DatosPersonales() {
   const { user } = useAuthSession();
-  const { claims } = useAuthClaims(user);
+  const { claims, hasPortalRoles } = useAuthClaims(user);
   const personaIdClaim = String((claims && claims.persona_id) || "").trim();
-  const isRrhh = claims && claims.portal_role === "rrhh";
+  const isRrhh = hasPortalRoles(["rrhh", "admin"]);
   const lockSensitivePersonaFields = !isRrhh;
   const [accionHabilitada, setAccionHabilitada] = useState("");
   const [tipo, setTipo] = useState("personas");

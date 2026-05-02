@@ -70,7 +70,9 @@ export default function MvpAccessGate({ children }) {
   if (p && p.estado === ESTADO_PEND_ONBOARDING) {
     const m = p.metadata;
     if (m && /** @type {{ auth_vinculado?: boolean }} */ (m).auth_vinculado) {
-      if (location.pathname !== "/onboarding" && !location.pathname.startsWith("/onboarding/")) {
+      const onOnboarding =
+        location.pathname === "/onboarding" || location.pathname.startsWith("/onboarding/");
+      if (!onOnboarding) {
         return <Navigate to="/onboarding" replace />;
       }
     }
