@@ -60,7 +60,18 @@ Mensaje eventual de la CLI sobre **política de limpieza de artefactos** (Artifa
 
 ### 403 en `OPTIONS` + “CORS Missing Allow Origin” (callables)
 
-Si el preflight devuelve **403** y el navegador se queja de CORS, suele ser **IAM de Cloud Run** (el OPTIONS no lleva token de Firebase): el frontend no llega a ejecutar la callable. En Gen2, declarar en [`functions/index.js`](../../functions/index.js) `setGlobalOptions({ …, invoker: "public" })` para que los servicios Cloud Run acepten invocación pública en el borde; la **autorización de negocio** sigue en el código (`assertRrhh`, tokens, etc.).
+Si el preflight devuelve **403** y el navegador se queja de CORS, suele ser **IAM de Cloud Run** (el OPTIONS no lleva token de Firebase): el frontend no llega a ejecutar la callable.
+
+- `setGlobalOptions({ invoker: "public" })` en [`functions/index.js`](../../functions/index.js) es correcto a nivel SDK, pero **la CLI de Firebase al actualizar funciones Gen2 no siempre vuelve a aplicar el invoker en callables** (en `firebase-tools`, `create` llama a `setInvokerCreate` para callables; el flujo de **update** no incluye esa rama). Si el servicio quedó sin `allUsers` + `roles/run.invoker`, el 403 persiste.
+
+**Arreglo operativo (una vez o tras cada deploy si hiciste cambios manuales de IAM):**
+
+1. Instalar [Google Cloud SDK](https://cloud.google.com/sdk) y autenticarse: `gcloud auth login`, `gcloud config set project portal-hospital-v2`.
+2. Desde la raíz del repo: **`npm run firebase:grant-callables-invoker`** — ejecuta `gcloud run services add-iam-policy-binding` por cada callable (nombre de servicio = id de función en minúsculas, p. ej. `listarColeccion` → `listarcoleccion`).
+
+Si una **política de organización** impide `allUsers`, el script fallará: hay que pedir excepción al administrador de GCP o usar otra estrategia (invoker solo a cuentas conocidas no sirve para el preflight del navegador sin token en OPTIONS; las callables desde web suelen requerir invoker público en el borde).
+
+**Consola (alternativa manual):** Cloud Run → servicio (p. ej. `listarcoleccion`) → pestaña **Seguridad / Permisos** → añadir invocador **público** (`allUsers` con rol **Cloud Run Invoker**).
 
 ---
 

@@ -10,6 +10,7 @@
     "firebase": "firebase",
     "firebase:deploy:firestore": "firebase deploy --project portal-hospital-v2 --only firestore:rules,firestore:indexes",
     "firebase:deploy:functions": "node scripts/firebase-deploy-functions.mjs",
+    "firebase:grant-callables-invoker": "node scripts/grant-cloud-run-invoker-callables.mjs",
     "dev:set-rrhh-claims": "node scripts/dev-set-portal-role-rrhh.mjs",
     "verify:pre-coding": "node scripts/seed-v2/verify-pre-coding.mjs",
     "test:firestore:v2": "node scripts/seed-v2/test-firestore-v2-connection.mjs",
