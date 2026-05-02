@@ -58,20 +58,48 @@ Firebase CLI exige que `functions.source` esté **dentro** del directorio que co
 
 Mensaje eventual de la CLI sobre **política de limpieza de artefactos** (Artifact Registry): opcional ejecutar `firebase functions:artifacts:setpolicy` en el proyecto; no impide el servicio de las funciones.
 
-### 403 en `OPTIONS` + “CORS Missing Allow Origin” (callables)
+### 403 Forbidden en `OPTIONS` + “CORS Missing Allow Origin” (callables Gen 2) — **SSoT / solución definitiva**
 
-Si el preflight devuelve **403** y el navegador se queja de CORS, suele ser **IAM de Cloud Run** (el OPTIONS no lleva token de Firebase): el frontend no llega a ejecutar la callable.
+Este apartado es la **fuente única de verdad** para el incidente de red/IAM que afectó a **`listarColeccionPublicaTemporal`** y al resto de **callables** desplegadas como **Cloud Functions v2** (backend **Cloud Run**).
 
-- `setGlobalOptions({ invoker: "public" })` en [`functions/index.js`](../../functions/index.js) es correcto a nivel SDK, pero **la CLI de Firebase al actualizar funciones Gen2 no siempre vuelve a aplicar el invoker en callables** (en `firebase-tools`, `create` llama a `setInvokerCreate` para callables; el flujo de **update** no incluye esa rama). Si el servicio quedó sin `allUsers` + `roles/run.invoker`, el 403 persiste.
+#### El problema
 
-**Arreglo operativo (una vez o tras cada deploy si hiciste cambios manuales de IAM):**
+- Al desplegar **Cloud Functions v2 (Gen 2)**, cada callable vive como **servicio Cloud Run**. Por defecto (o tras ciertos redeploys), la **invocación anónima en el borde** puede quedar restringida.
+- El navegador envía un **preflight `OPTIONS`** antes del `POST` de la callable. Ese `OPTIONS` **no incluye** el token de Firebase Auth.
+- Si Cloud Run rechaza la petición en el borde, la respuesta suele ser **`403 Forbidden`** **sin** cabeceras CORS adecuadas. **Vite, Firefox y otros clientes muestran entonces “CORS Missing Allow Origin”**, lo que es **engañoso**: no es un fallo de configuración CORS en el frontend, sino de **permisos IAM del servicio** (`roles/run.invoker` / acceso público al endpoint HTTP).
+- En el código del repo, `setGlobalOptions({ invoker: "public" })` en [`functions/index.js`](../../functions/index.js) es deseable, pero **no sustituye** garantizar en GCP que el servicio Cloud Run asociado acepte tráfico público en el borde (ver comportamiento de la CLI en redeploys; el invoker puede no re-aplicarse en todos los casos).
 
-1. Instalar [Google Cloud SDK](https://cloud.google.com/sdk) y autenticarse: `gcloud auth login`, `gcloud config set project portal-hospital-v2`.
-2. Desde la raíz del repo: **`npm run firebase:grant-callables-invoker`** — ejecuta `gcloud run services add-iam-policy-binding` por cada callable (nombre de servicio = id de función en minúsculas, p. ej. `listarColeccion` → `listarcoleccion`).
+#### La solución implementada (producción)
 
-Si una **política de organización** impide `allUsers`, el script fallará: hay que pedir excepción al administrador de GCP o usar otra estrategia (invoker solo a cuentas conocidas no sirve para el preflight del navegador sin token en OPTIONS; las callables desde web suelen requerir invoker público en el borde).
+- Se **descartó** el uso de **`gcloud` CLI** en el entorno local (instalación / PATH / fricción operativa).
+- Se aplicó la corrección por **interfaz gráfica (GUI)** de Google Cloud Console.
 
-**Consola (alternativa manual):** Cloud Run → servicio (p. ej. `listarcoleccion`) → pestaña **Seguridad / Permisos** → añadir invocador **público** (`allUsers` con rol **Cloud Run Invoker**).
+#### Ruta y pasos exactos (GUI)
+
+1. Abrir la consola: **https://console.cloud.google.com/run** (proyecto **`portal-hospital-v2`**).
+2. En el menú lateral, en **Cloud Run**, ir a **“Servicios”** para ver la lista de servicios (cada callable Gen 2 aparece como servicio; el nombre suele ser el **id de función en minúsculas**, p. ej. `listarcoleccionpublicatemporal` para `listarColeccionPublicaTemporal`).
+3. **Seleccionar** el servicio afectado (repetir para cada callable que deba ser invocada desde el navegador, p. ej. `listarcoleccion`, `listarcoleccionpublicatemporal`, etc.).
+4. Ir a la pestaña **“Seguridad”** (Security).
+5. En la sección **“Autenticación”**, activar **“Permite el acceso público”** (mensaje equivalente: que **no** se exijan verificaciones de autenticación en el **borde** de Cloud Run para invocar la URL).
+6. **Guardar** y confirmar en el cuadro de diálogo (p. ej. **“Permitir acceso público”** / Allow unauthenticated invocations).
+
+#### Efecto técnico
+
+- La consola asigna el rol **`roles/run.invoker`** al miembro **`allUsers`** (o la política equivalente de “acceso público” en el servicio).
+- El **preflight `OPTIONS`** puede completarse; el **`POST`** de la callable llega al runtime de Firebase Functions, donde **sí** se valida **Firebase Auth** y la lógica de negocio (`assertRrhh`, claims, etc.) **por dentro** de la función.
+
+#### Alternativa con CLI (opcional)
+
+- Quien disponga de **Google Cloud SDK** puede usar el script del repo: **`npm run firebase:grant-callables-invoker`** ([`scripts/grant-cloud-run-invoker-callables.mjs`](../../scripts/grant-cloud-run-invoker-callables.mjs)), equivalente a enlazar `allUsers` con `roles/run.invoker` por servicio.
+- Si una **política de organización** impide `allUsers`, la GUI o el script fallarán: requiere intervención del administrador de la organización/proyecto.
+
+#### Estado (post-fix)
+
+- **Resuelto de forma manual vía GUI** (2026-05-02): infraestructura **testeada y operativa**; callables invocables desde **`npm run dev:web`** (`http://localhost:5173`) sin el falso error CORS por 403 en `OPTIONS`.
+
+### Continuidad: UI ticketera Fase 2
+
+Con cliente ↔ Cloud Functions ↔ Firestore **verificados** y **sin mocks de negocio** en los flujos ya implementados (ver §5), la **Fase 2 (ticketera)** puede retomarse asumiendo **conexión directa a la BD** mediante el SDK y **callables** reales; las pantallas nuevas deben seguir el mismo criterio (sin datos ficticios, sin emuladores en el cliente V2).
 
 ---
 
@@ -117,7 +145,8 @@ Revisión puntual del código al cerrar la tarea:
 | Variables web | `.env.v2.local` (plantilla `.env.v2.example`) |
 | Deploy functions | `npm run firebase:deploy:functions` |
 | Flags runtime (Functions + sync con front) | [`functions/modules/shared/runtimeFlags.json`](../../functions/modules/shared/runtimeFlags.json), [`shared/runtimeFlags.json`](../../shared/runtimeFlags.json) |
+| IAM callables Gen 2 (403 / CORS falso) | §3 “403 Forbidden…” (SSoT GUI); script opcional `npm run firebase:grant-callables-invoker` |
 
 ---
 
-*Última actualización del documento: 2026-05-02 — tarea de deploy y corrección `runtimeFlags` cerrada; verificación BD real / sin mocks en §5.*
+*Última actualización del documento: 2026-05-02 — deploy, `runtimeFlags`, IAM Cloud Run (403/callables) documentado en §3 SSoT; BD real / sin mocks §5; continuidad ticketera §3.*
