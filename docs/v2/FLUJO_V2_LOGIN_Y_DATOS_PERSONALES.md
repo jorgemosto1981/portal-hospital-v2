@@ -212,7 +212,7 @@ Prioridad orientativa: **P0** bloquea implementación segura o coherente; **P1**
 | **Gating sin hardcodear strings** | Cerrado como diseño | Flags en [`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md) §2.1–§2.2 y §3; pseudocódigo §5.2 de este documento sigue siendo **ilustrativo** — en código usar flags cargados por `*_id`. |
 | **`signIn` vs paso A** | Cerrado en contrato | [`MODULO_LOGIN_V2.md`](./MODULO_LOGIN_V2.md) §1.3; reforzado en [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./ACCESO_Y_RULES_FIRESTORE_V2.md) §2 y §6 (`permite_login_email_password` en cfg). |
 
-**Pendiente implementación (no solo doc):** reglas `.rules` concretas, emulador y Callables desplegados según [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./ACCESO_Y_RULES_FIRESTORE_V2.md) §8.
+**Pendiente implementación (no solo doc):** reglas `.rules` concretas y **Cloud Functions** desplegadas según [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./ACCESO_Y_RULES_FIRESTORE_V2.md) §8 (stack oficial del repo: proyecto Firebase en la nube, sin Firebase Local Emulator Suite en el cliente).
 
 ### P1 — Seguridad y operación *(definido en documentación 22/04/2026; pendiente de revisión global)*
 

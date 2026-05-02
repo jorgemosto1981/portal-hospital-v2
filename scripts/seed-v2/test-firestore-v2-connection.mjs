@@ -1,6 +1,6 @@
 /**
  * Prueba de conectividad Firestore V2 (SDK cliente + credenciales web en .env.v2.local).
- * Con reglas deny-all, una lectura debe fallar con permission-denied — eso confirma proyecto + API + reglas.
+ * Siempre contra el proyecto en la nube. Con reglas deny-all, una lectura puede fallar con permission-denied.
  *
  * Uso (desde la raíz portal-hospital-v2/):
  *   npm run test:firestore:v2
@@ -11,7 +11,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, connectFirestoreEmulator } from "firebase/firestore";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, "..", "..");
@@ -70,18 +70,9 @@ const firebaseConfig = {
   measurementId: env.VITE_V2_FIREBASE_MEASUREMENT_ID || undefined,
 };
 
-const USE_EMULATOR = process.env.FIRESTORE_V2_USE_EMULATOR === "1";
-const EMULATOR_HOST = process.env.FIRESTORE_V2_EMULATOR_HOST || "127.0.0.1";
-const EMULATOR_PORT = Number(process.env.FIRESTORE_V2_EMULATOR_PORT || "8092", 10);
-
 const appName = "portal-hospital-v2-test-cli";
 const app = initializeApp(firebaseConfig, appName);
 const db = getFirestore(app);
-
-if (USE_EMULATOR) {
-  connectFirestoreEmulator(db, EMULATOR_HOST, EMULATOR_PORT);
-  console.log(`[test-firestore-v2] Emulador: ${EMULATOR_HOST}:${EMULATOR_PORT}`);
-}
 
 const probeRef = doc(db, "_connectivity_probe", "ping");
 
@@ -131,11 +122,9 @@ try {
 
   if (code === "unavailable" || /offline|network/i.test(msg)) {
     console.error("[test-firestore-v2] El SDK reportó indisponible / offline:", msg);
-    if (!USE_EMULATOR) {
-      console.error(
-        "  Si en la consola del SDK aparece «5 NOT_FOUND» antes de este mensaje, en proyectos nuevos suele faltar **crear la base Firestore (Native)** en GCP. Consola Firebase → Firestore → Crear base, o `npm run firestore:create` (gcloud). Ver docs/v2/ARRANQUE_BD_Y_CODIGO_V2.md.",
-      );
-    }
+    console.error(
+      "  Si en la consola del SDK aparece «5 NOT_FOUND» antes de este mensaje, en proyectos nuevos suele faltar **crear la base Firestore (Native)** en GCP.",
+    );
     process.exit(1);
   }
 

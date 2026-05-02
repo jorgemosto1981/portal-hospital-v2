@@ -1,6 +1,6 @@
 # Portal Hospital — versión 2 (recursos aislados)
 
-Carpeta **hermana** de `../portal-hospital-v1/`: aquí vive el **proyecto Firebase `portal-hospital-v2`**, la documentación de producto en `docs/v2/`, los scripts de semilla, reglas/índices bajo `firebase-v2/`, y el módulo [`src/firebaseConfig.v2.js`](./src/firebaseConfig.v2.js) (cliente web; depende de [`src/utils/logger.js`](./src/utils/logger.js) copiado desde la V1).
+Carpeta **hermana** de `../portal-hospital-v1/`: aquí vive el **proyecto Firebase `portal-hospital-v2`**, la documentación de producto en `docs/v2/`, los scripts de semilla, reglas/índices bajo `firebase-v2/`, [`firebase.json`](./firebase.json) en la **raíz** (deploy de Functions + rutas a esas reglas), y el módulo [`src/firebaseConfig.v2.js`](./src/firebaseConfig.v2.js) (cliente web; depende de [`src/utils/logger.js`](./src/utils/logger.js) copiado desde la V1).
 
 ## App web V2 (Vite)
 
@@ -21,11 +21,11 @@ Tras `npm install` en la raíz y **`cd web && npm install`** la primera vez (o s
 | Comando | Uso |
 |--------|-----|
 | `npm run verify:pre-coding` | Checklist previa al código |
-| `npm run test:firestore:v2` | Prueba cliente Firestore + `.env.v2.local` |
-| `npm run firebase:emulators` | Emulador Firestore (config `firebase-v2/firebase.json`) |
+| `npm run test:firestore:v2` | Prueba cliente Firestore contra la nube + `.env.v2.local` |
 | `npm run firebase:deploy:firestore` | Despliega reglas e índices al proyecto V2 en consola |
-| `npm run firebase:deploy:functions` | Despliega Cloud Functions (requiere plan Blaze) |
-| `npm run firebase:emulators:with-functions` | Emulador Firestore + Functions + UI (puertos 8092 / 5002 / 4002) |
+| `npm run firebase:deploy:functions` | Despliega Cloud Functions (plan Blaze; script con `FUNCTIONS_DISCOVERY_TIMEOUT=60`) |
+
+Si Cloud Build falla con **missing permission on the build service account**, seguí [Solución de problemas de Cloud Functions — cuenta de servicio de compilación](https://cloud.google.com/functions/docs/troubleshooting#build-service-account) en la consola GCP (propietario del proyecto o administrador IAM).
 | `npm run seed:cfg` | Volcado de catálogos `cfg_*` (ver `docs/v2/MODULO_CONFIGURACION_V2.md`) — requiere `GOOGLE_APPLICATION_CREDENTIALS` |
 | `npm run firestore:create` | Windows: script gcloud para crear instancia Firestore (una vez) |
 

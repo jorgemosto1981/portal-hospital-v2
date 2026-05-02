@@ -2,7 +2,7 @@
  * Pruebas rápidas de validaciones estrictas ABM (personales/laborales).
  *
  * Requisitos:
- * - Emulador de functions corriendo en 127.0.0.1:5002
+ * - Emulador de functions corriendo en 127.0.0.1:5012 (firebase-v2/firebase.json)
  * - Proyecto emulado: portal-hospital-v2
  * - OPEN_ACCESS_TEMP=true
  *
@@ -10,7 +10,7 @@
  *   node tests/abm-validaciones-estrictas.mjs
  */
 
-const BASE = "http://127.0.0.1:5002/portal-hospital-v2/southamerica-east1";
+const BASE = "http://127.0.0.1:5012/portal-hospital-v2/southamerica-east1";
 
 async function callCallable(name, data) {
   const res = await fetch(`${BASE}/${name}`, {

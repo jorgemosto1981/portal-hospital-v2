@@ -160,6 +160,30 @@ const cfgEstadoCuentaAcceso = () => [
  * @see MODULO_CONFIGURACION_V2.md §5 (cfg_rol), MODULO_DATOS_PERSONALES_V2.md §3.7 (role_ids)
  * @see docs/v2/CUESTIONES_ROLES_MENUS_ARQUITECTURA_V2.md
  */
+/** Mínimos para que Configuración (pestaña por defecto: estado civil) no arranque vacía. */
+const cfgEstadoCivil = () => [
+  {
+    id: "CFG_EST_CIVIL_SOLTERO",
+    data: {
+      ...base(),
+      codigo_interno: "SOLTERO",
+      nombre: "Soltero/a",
+      titulo_ui: "Soltero/a",
+      orden: 10,
+    },
+  },
+  {
+    id: "CFG_EST_CIVIL_CASADO",
+    data: {
+      ...base(),
+      codigo_interno: "CASADO",
+      nombre: "Casado/a",
+      titulo_ui: "Casado/a",
+      orden: 20,
+    },
+  },
+];
+
 const cfgRol = () => [
   {
     id: "CFG_RRHH",
@@ -276,6 +300,111 @@ const cfgTipoEvento = () => [
   },
 ];
 
+/** Una fila de catálogo cfg_* con nombre/código (demostración local). */
+function cfgRow(id, codigo_interno, nombre, orden = 10, extra = {}) {
+  return {
+    id,
+    data: {
+      ...base(),
+      codigo_interno,
+      nombre,
+      titulo_ui: nombre,
+      orden,
+      ...extra,
+    },
+  };
+}
+
+/** Catálogos adicionales de `configuracionCatalogos.js` — mínimos para listas no vacías en Configuración. */
+const cfgSexoGenero = () => [
+  cfgRow("CFG_GEN_M", "M", "Masculino", 10),
+  cfgRow("CFG_GEN_F", "F", "Femenino", 20),
+];
+
+const cfgNacionalidad = () => [cfgRow("CFG_NAC_ARG", "ARG", "Argentina", 10)];
+
+const cfgPais = () => [cfgRow("CFG_PAIS_ARG", "ARG", "Argentina", 10)];
+
+const cfgProvincia = () => [
+  cfgRow("CFG_PROV_BA", "BA", "Buenos Aires", 10),
+  cfgRow("CFG_PROV_CABA", "CABA", "Ciudad Autónoma de Buenos Aires", 20),
+];
+
+const cfgLocalidad = () => [
+  cfgRow("CFG_LOC_LA_PLATA", "LA_PLATA", "La Plata", 10, { provincia_id: "CFG_PROV_BA" }),
+];
+
+const cfgNivelEstudios = () => [
+  cfgRow("CFG_EST_SEC", "SECUNDARIO", "Secundario completo", 10),
+  cfgRow("CFG_EST_UNI", "UNIVERSITARIO", "Universitario", 20),
+];
+
+const cfgEspecialidad = () => [cfgRow("CFG_ESP_CLIN", "CLINICA_MEDICA", "Clínica médica", 10)];
+
+const cfgColegio = () => [cfgRow("CFG_COL_CMP", "CMP", "Colegio de Médicos — demo", 10)];
+
+const cfgJurisdiccionMatricula = () => [
+  cfgRow("CFG_JUR_PBA", "PBA", "Provincia de Buenos Aires", 10),
+];
+
+const cfgParentesco = () => [
+  cfgRow("CFG_PAR_HIJO", "HIJO", "Hijo/a", 10),
+  cfgRow("CFG_PAR_CONY", "CONYUGE", "Cónyuge", 20),
+];
+
+const cfgMotivoBajaPersona = () => [
+  cfgRow("CFG_MOT_BAJA_FIN", "FIN_CONTRATO", "Fin de contrato", 10),
+];
+
+const cfgEscalafon = () => [cfgRow("CFG_ESC_X", "GENERAL", "Escalafón general", 10)];
+
+const cfgAgrupamiento = () => [cfgRow("CFG_AGR_PROF", "PROF", "Profesional", 10)];
+
+const cfgTipoVinculoLaboral = () => [
+  cfgRow("CFG_VIN_PERM", "PERMANENTE", "Permanente", 10),
+];
+
+const cfgCargoFuncional = () => [cfgRow("CFG_CF_MED", "MEDICO", "Médico", 10)];
+
+const cfgModalidadJornada = () => [
+  cfgRow("CFG_MOD_FULL", "COMPLETA", "Jornada completa", 10),
+];
+
+const cfgEstadoAsignacionLaboral = () => [
+  cfgRow("CFG_EST_LAB_VIG", "VIGENTE", "Vigente", 10),
+];
+
+const cfgCausalFinAsignacionLaboral = () => [
+  cfgRow("CFG_CAU_FIN_FIN", "FIN_VIGENCIA", "Fin de vigencia", 10),
+];
+
+const cfgTipoActoDesignacion = () => [
+  cfgRow("CFG_ACT_DEC", "DECRETO", "Decreto", 10),
+];
+
+const cfgRegimenHorario = () => [
+  cfgRow("CFG_REG_HOR_48", "48_HS", "48 horas semanales", 10),
+];
+
+const cfgCentroCosto = () => [
+  cfgRow("CFG_CEN_COST_CTE", "CTE001", "Centro de costo demo", 10),
+];
+
+const cfgEfectores = () => [
+  cfgRow("CFG_EFE_HOSP", "HOSP_DEMO", "Hospital demo", 10),
+];
+
+const gruposDeTrabajoSeed = () => [
+  {
+    id: "gdt_seed_demo_cfg",
+    data: {
+      ...base(),
+      id: "gdt_seed_demo_cfg",
+      nombre: "Grupo demo (seed cfg)",
+    },
+  },
+];
+
 function applyBatch(items, col) {
   const b = db.batch();
   for (const { id, data } of items) {
@@ -313,6 +442,31 @@ async function main() {
   await applyBatch(cfgEstadoPerfilDatos(), "cfg_estado_perfil_datos");
   await applyBatch(cfgTipoEvento(), "cfg_tipo_evento");
   await applyBatch(cfgRol(), "cfg_rol");
+  await applyBatch(cfgEstadoCivil(), "cfg_estado_civil");
+
+  await applyBatch(cfgSexoGenero(), "cfg_sexo_genero");
+  await applyBatch(cfgNacionalidad(), "cfg_nacionalidad");
+  await applyBatch(cfgPais(), "cfg_pais");
+  await applyBatch(cfgProvincia(), "cfg_provincia");
+  await applyBatch(cfgLocalidad(), "cfg_localidad");
+  await applyBatch(cfgNivelEstudios(), "cfg_nivel_estudios");
+  await applyBatch(cfgEspecialidad(), "cfg_especialidad");
+  await applyBatch(cfgColegio(), "cfg_colegio");
+  await applyBatch(cfgJurisdiccionMatricula(), "cfg_jurisdiccion_matricula");
+  await applyBatch(cfgParentesco(), "cfg_parentesco");
+  await applyBatch(cfgMotivoBajaPersona(), "cfg_motivo_baja_persona");
+  await applyBatch(cfgEscalafon(), "cfg_escalafon");
+  await applyBatch(cfgAgrupamiento(), "cfg_agrupamiento");
+  await applyBatch(cfgTipoVinculoLaboral(), "cfg_tipo_vinculo_laboral");
+  await applyBatch(cfgCargoFuncional(), "cfg_cargo_funcional");
+  await applyBatch(cfgModalidadJornada(), "cfg_modalidad_jornada");
+  await applyBatch(cfgEstadoAsignacionLaboral(), "cfg_estado_asignacion_laboral");
+  await applyBatch(cfgCausalFinAsignacionLaboral(), "cfg_causal_fin_asignacion_laboral");
+  await applyBatch(cfgTipoActoDesignacion(), "cfg_tipo_acto_designacion");
+  await applyBatch(cfgRegimenHorario(), "cfg_regimen_horario");
+  await applyBatch(cfgCentroCosto(), "cfg_centro_costo");
+  await applyBatch(cfgEfectores(), "cfg_efectores");
+  await applyBatch(gruposDeTrabajoSeed(), "grupos_de_trabajo");
 
   const out = {
     projectId,
@@ -321,6 +475,7 @@ async function main() {
     cfg_estado_perfil_datos: cfgEstadoPerfilDatos().map((x) => x.id),
     cfg_tipo_evento: cfgTipoEvento().map((x) => x.id),
     cfg_rol: cfgRol().map((x) => x.id),
+    cfg_estado_civil: cfgEstadoCivil().map((x) => x.id),
   };
 
   const outPath = join(__dirname, "seed-ids.v2.json");

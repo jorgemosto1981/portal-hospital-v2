@@ -34,8 +34,9 @@ export default function RegistroVinculacion() {
       toast.error("Ingresá un DNI con 6 a 12 dígitos.");
       return;
     }
-    if (password.length < 6) {
-      toast.error("La contraseña debe tener al menos 6 caracteres (Firebase).");
+    const pinDigits = String(password || "").replace(/\D/g, "").slice(0, 6);
+    if (!/^\d{6}$/.test(pinDigits)) {
+      toast.error("El PIN debe ser exactamente 6 dígitos numéricos (lo exige el servidor en primer acceso).");
       return;
     }
     setBusy(true);
@@ -48,8 +49,8 @@ export default function RegistroVinculacion() {
         return;
       }
       const emailNorm = String(email || "").trim().toLowerCase();
-      await callRegistroPrimerAcceso({ dni: d, email: emailNorm, pin: password });
-      await signInWithEmailAndPassword(authV2, emailNorm, password);
+      await callRegistroPrimerAcceso({ dni: d, email: emailNorm, pin: pinDigits });
+      await signInWithEmailAndPassword(authV2, emailNorm, pinDigits);
       if (authV2.currentUser) await authV2.currentUser.getIdToken(true);
       toast.success("Registro completado. Continuá con el onboarding.", { id: t });
       nav("/onboarding", { replace: true });
@@ -149,7 +150,7 @@ export default function RegistroVinculacion() {
               <p className="-mt-2 text-xs text-slate-500">
                 Usá un correo de uso habitual y al que tengas acceso directo.
               </p>
-              <label className="block font-medium text-slate-700">PIN / contraseña (mín. 6)</label>
+              <label className="block font-medium text-slate-700">PIN (6 dígitos)</label>
               <div className="flex items-center gap-2">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -157,7 +158,9 @@ export default function RegistroVinculacion() {
                   required
                   className="w-full rounded-xl border border-slate-200 px-3 py-2.5"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => setPassword(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  inputMode="numeric"
+                  maxLength={6}
                   disabled={busy}
                 />
                 <button
@@ -169,7 +172,7 @@ export default function RegistroVinculacion() {
                 </button>
               </div>
               <p className="-mt-2 text-xs text-slate-500">
-                El usuario de ingreso es tu DNI; este PIN/contraseña es la clave de acceso.
+                Mismo formato que el login: exactamente 6 dígitos (contraseña en Firebase Auth).
               </p>
               <PrimaryButton type="submit" disabled={busy} className="!mt-4 w-full">
                 {busy ? "Procesando…" : "Crear y vincular cuenta"}

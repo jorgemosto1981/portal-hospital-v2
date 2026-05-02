@@ -29,7 +29,7 @@ Plantilla: `../.env.v2.example`.
 
 `web/vite.config.js`: `envDir` raíz, alias `@portalV2`, `dedupe`/`alias` de `firebase/*` para un solo SDK.
 
-**Callables:** `web/src/services/functionsV2.js` + `callables.js` (`healthV2`, `syncSessionClaims`). Emulador: variables en `.env.v2.example` (`VITE_V2_USE_FUNCTIONS_EMULATOR`).
+**Callables:** `web/src/services/functionsV2.js` + `callables.js` (`healthV2`, `syncSessionClaims`) contra **Cloud Functions** desplegadas en `southamerica-east1`.
 
 ## 3. Esquema Firestore (canónico en docs)
 

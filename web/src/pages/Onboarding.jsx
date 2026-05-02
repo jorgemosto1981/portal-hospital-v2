@@ -1,15 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
+import { useAuthSession } from "../features/auth/useAuthSession.js";
+import { callListarCatalogoOnboarding, callListarColeccionPublicaTemporal } from "../services/callables.js";
 import { crearLegajoInicial } from "../services/onboardingService.js";
 import { setLastPersonaIdForDemo } from "../utils/legajoStorage.js";
-
-/** Mock hasta exista el ABM de grupos por RRHH (`grupos_de_trabajo`). */
-const GRUPOS_MOCK = [
-  { id: "gdt_SALA4", nombre: "Internación Sala 4" },
-  { id: "gdt_GUARDIA", nombre: "Guardia médica" },
-];
 
 function normalizarDniInput(value) {
   return value.replace(/\D/g, "").slice(0, 8);
@@ -17,11 +13,58 @@ function normalizarDniInput(value) {
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { user } = useAuthSession();
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [dni, setDni] = useState("");
-  const [grupoDeTrabajoId, setGrupoDeTrabajoId] = useState(GRUPOS_MOCK[0]?.id ?? "");
+  const [grupoDeTrabajoId, setGrupoDeTrabajoId] = useState("");
+  const [grupos, setGrupos] = useState([]);
+  const [gruposEstado, setGruposEstado] = useState({ status: "loading", message: "Cargando grupos de trabajo…" });
   const [enviando, setEnviando] = useState(false);
+
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      setGruposEstado({ status: "loading", message: "Cargando grupos de trabajo…" });
+      try {
+        const run = user
+          ? () => callListarCatalogoOnboarding({ collectionName: "grupos_de_trabajo" })
+          : () => callListarColeccionPublicaTemporal({ collectionName: "grupos_de_trabajo", pageSize: 200 });
+        const { data } = await run();
+        if (cancel) return;
+        const items = Array.isArray(data?.items) ? data.items : [];
+        setGrupos(items);
+        if (items.length === 0) {
+          setGruposEstado({
+            status: "idle",
+            message:
+              "No hay grupos de trabajo en el catálogo. Cargá catálogos (RRHH) o comprobá permisos y despliegue de Cloud Functions.",
+          });
+        } else {
+          setGruposEstado({ status: "success", message: "" });
+        }
+      } catch (e) {
+        if (cancel) return;
+        setGrupos([]);
+        setGruposEstado({
+          status: "error",
+          message: e?.message || "No se pudieron cargar los grupos de trabajo desde el servidor.",
+        });
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!grupos.length) return;
+    const ids = new Set(grupos.map((g) => g.id));
+    if (!grupoDeTrabajoId || !ids.has(grupoDeTrabajoId)) {
+      const first = grupos[0];
+      if (first?.id) setGrupoDeTrabajoId(first.id);
+    }
+  }, [grupos, grupoDeTrabajoId]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -43,6 +86,9 @@ export default function Onboarding() {
     toast.success(`Legajo creado: ${resultado.personaId}`);
     navigate("/", { replace: true });
   }
+
+  const gruposCargando = gruposEstado.status === "loading";
+  const sinGrupos = !gruposCargando && grupos.length === 0;
 
   return (
     <div className="min-h-dvh bg-slate-50 px-4 py-8 text-slate-900">
@@ -123,34 +169,49 @@ export default function Onboarding() {
               <label htmlFor="onb-grupo" className="mb-1.5 block text-sm font-medium text-slate-700">
                 Grupo de trabajo
               </label>
+              {gruposEstado.status === "error" ? (
+                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  {gruposEstado.message}
+                </p>
+              ) : null}
+              {gruposEstado.status === "idle" && gruposEstado.message && grupos.length === 0 ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  {gruposEstado.message}
+                </p>
+              ) : null}
               <select
                 id="onb-grupo"
                 name="grupo_de_trabajo_id"
                 value={grupoDeTrabajoId}
                 onChange={(ev) => setGrupoDeTrabajoId(ev.target.value)}
-                className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-base text-slate-900 outline-none transition-shadow focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
-                required
+                disabled={gruposCargando || sinGrupos}
+                className="mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-base text-slate-900 outline-none transition-shadow focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 disabled:cursor-not-allowed disabled:opacity-60"
+                required={!sinGrupos}
               >
-                {GRUPOS_MOCK.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.nombre}
-                  </option>
-                ))}
+                {gruposCargando ? (
+                  <option value="">Cargando…</option>
+                ) : (
+                  grupos.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {typeof g.nombre === "string" && g.nombre.trim() ? g.nombre : g.id}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
           </div>
 
           <p className="mt-4 text-xs leading-relaxed text-slate-500">
-            Al confirmar se crean dos documentos en Firestore (`personas` y `historial_laboral_cargos`) en un
-            mismo batch. Requiere reglas que permitan escritura para tu usuario de prueba.
+            Al confirmar se crean dos documentos en Firestore (`personas` y `historial_laboral_cargos`) en un mismo
+            batch. Deben existir reglas y permisos acordes para tu usuario.
           </p>
 
           <button
             type="submit"
-            disabled={enviando}
+            disabled={enviando || gruposCargando || sinGrupos}
             className="mt-6 w-full rounded-xl bg-blue-600 py-3.5 text-base font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {enviando ? "Guardando…" : "Crear legajo"}
+            {enviando ? "Guardando…" : gruposCargando ? "Cargando grupos…" : "Crear legajo"}
           </button>
         </form>
       </div>

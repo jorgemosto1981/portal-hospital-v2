@@ -351,7 +351,7 @@ Agente lee lo propio; RRHH escribe **`hlc_*`**, `hld_*`/`hlg_*` y participa en c
 - [ ] Matriz de acceso y Callables (ampliación [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./ACCESO_Y_RULES_FIRESTORE_V2.md)).
 - [x] Semilla mínima §6 (jornada, estados, causales, tipo acto, tipo grupo) en `npm run seed:configuracion` + panel; §5.1 alinear inventario.
 - [ ] Unificación explícita con doc **Ticket** de la otra PC.
-- [ ] Índices Firestore en emulador.
+- [ ] Índices Firestore desplegados y validados en el proyecto (consola / `firebase-v2/firestore.indexes.json`).
 - [x] **§4.4–4.5** y **C10:** `hlg_*` con `nivel_jerarquico` (1–99) y `carga_por_dia_semana` + catálogo `cfg_dia_semana` (seed); **sin** `cfg_nivel_jerarquia` (nivel = número en documento).
 - [ ] Validación Callable: suma semanal `hlg_*` vs `carga_horaria_total` y solapes de fechas.
 

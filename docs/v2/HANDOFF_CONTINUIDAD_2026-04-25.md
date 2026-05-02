@@ -24,18 +24,18 @@ Cambios nuevos: `git add` → `git commit` → `git push` · Otra PC: `git pull`
 2. En la **raíz** `portal-hospital-v2/`: `npm install`.
 3. En `web/`: `npm install` (si no instala en monorepo único, la raíz suele alcanzar; si no, `npm install --prefix web`).
 4. En `functions/`: `npm install --prefix functions`.
-5. Copiar/crear **`.env.v2.local` en la raíz** (no se versiona) con `VITE_V2_FIREBASE_*` y opciones de emulador. Plantilla: `.env.v2.example` en el repo.
+5. Copiar/crear **`.env.v2.local` en la raíz** (no se versiona) con `VITE_V2_FIREBASE_*` (proyecto en la nube). Plantilla: `.env.v2.example` en el repo.
 6. Para **seed o Admin** en scripts: `GOOGLE_APPLICATION_CREDENTIALS` = ruta al JSON de servicio (no subir a Git).
-7. **JDK 21+** en PATH si vas a `npm run test:firestore:rules` o emulador de Firestore (el emulador dejó de aceptar Java 8; ver sección 4).
+7. **JDK / CLI:** solo si tu flujo personal usa herramientas que lo requieran; para la app web basta Node + `.env.v2.local`.
 8. Revisar reglas de Cursor: `.cursor/rules/` (especialmente `portal-hospital-v2-modo-atomico-movil.mdc`).
 
 **Comandos frecuentes (desde la raíz del repo):**
 
 - `npm run dev:web` — app en Vite.  
 - `npm run build:web` — build.  
-- `npm run test:firestore:rules` — pruebas de reglas (requiere JDK 21+ y Firebase CLI).  
+- `npm run test:firestore:v2` — prueba conectividad del cliente Firestore contra el proyecto remoto (`.env.v2.local`).  
 - `npm run verify:pre-coding` — chequeo de estructura y conexión.  
-- `npm run firebase:emulators:with-functions` — emulador Firestore + Functions.
+- `npm run firebase:deploy:functions` — despliega Cloud Functions al proyecto V2 (plan Blaze según consola).
 
 ---
 
@@ -48,7 +48,7 @@ Están incorporadas o ampliadas en **`.cursor/rules/portal-hospital-v2-modo-atom
 - **Tipografía:** títulos **1.25rem** (`text-xl` en Tailwind), cuerpo **1rem** (`text-base`); evitar forzar zoom.  
 - **Táctil:** no depender de **hover**; **active** y **focus** / `focus-visible` en botones e inputs.  
 - **Formularios:** `inputMode` adecuado: `numeric` (DNI, PIN), `email` (correos), etc.  
-- **Pausa de validación (humano ↔ agente):** al probar, pedir: *"Detente aquí. No escribas más código hasta que pruebe en navegador/emulador."*  
+- **Pausa de validación (humano ↔ agente):** al probar, pedir: *"Detente aquí. No escribas más código hasta que pruebe en navegador contra el proyecto en la nube."*  
 - **Referencias a archivos** con @ en Cursor al pedir lógica (evitar conexiones inventadas).  
 - **Refactor:** archivos &gt; ~**100 líneas** — separar en validación (`validators.js`), hooks, etc.
 
@@ -59,7 +59,7 @@ Están incorporadas o ampliadas en **`.cursor/rules/portal-hospital-v2-modo-atom
 ### Infra y Firebase
 
 - Proyecto V2, reglas iniciales `firebase-v2/firestore.rules` (cfg, `usuarios_cuenta`, `personas` + deny by default), índices, scripts `seed:cfg`, `verify:pre-coding`, despliegue documentado.  
-- **Bloque 1:** pruebas de reglas con `@firebase/rules-unit-testing`, script `npm run test:firestore:rules` y archivo `tests/firestore-rules.mjs` (sujeto a **JDK 21+** en la máquina de desarrollo).
+- **Bloque 1:** archivo `tests/firestore-rules.mjs` con `@firebase/rules-unit-testing` disponible para quien configure su propio flujo; conectividad documentada vía `npm run test:firestore:v2`.
 
 ### Cloud Functions (`functions/index.js`)
 
@@ -84,7 +84,6 @@ Están incorporadas o ampliadas en **`.cursor/rules/portal-hospital-v2-modo-atom
 
 ## 4. Pendiente / riesgos conocidos
 
-- **Emulador Firestore / pruebas de reglas** en Windows con **Java 8** fallan; hace falta **JDK 21+**.  
 - **Invocación pública** de `registrarPrimerAcceso` en GCF2 puede requerir **ajuste IAM** en producción (mencionado en `FASE_A_PASOS.md`).  
 - Asignar claim **`portal_role: "rrhh"`** a usuarios de prueba (solo **Admin SDK** o script, no desde la consola básica de Auth).  
 - **Pausa explícita:** el siguiente lote de código debería empezar solo tras **confirmar en la otra PC** que el pull y `npm run build:web` / prueba local funcionan.
@@ -100,5 +99,5 @@ Tras clonar: `git pull` y, si aplica, `git checkout` a la rama con el commit de 
 ## 6. Cierre de entrega (sesión de preparación y sync)
 
 - **Código y docs** alineados al plan V2, **push** a GitHub realizado, **área de trabajo** sin cambios sin commitear (salvo `.env` local, credenciales y caché).  
-- **Siguiente fase** de producto: según `docs/v2/DESARROLLO_ORDEN_LOGIN_DATOS_V2.md` (pendientes: tests de reglas con JDK 21, IAM para callables en prod, `completarOnboardingDatos`, UI gating) — **solo** cuando confirmes en la otra PC que `git pull` + `npm run build:web` (y a la vez `dev:web` si aplica) funcionan.  
-- No hay tareas técnicas bloqueando el **uso del repo** para continuar; lo que queda es **entorno** (Node, env, JSON de servicio, Java para emulador) en cada máquina.
+- **Siguiente fase** de producto: según `docs/v2/DESARROLLO_ORDEN_LOGIN_DATOS_V2.md` (pendientes: matriz de reglas / IAM para callables en prod, `completarOnboardingDatos`, UI gating) — **solo** cuando confirmes en la otra PC que `git pull` + `npm run build:web` (y a la vez `dev:web` si aplica) funcionan.  
+- No hay tareas técnicas bloqueando el **uso del repo** para continuar; lo que queda es **entorno** (Node, `.env.v2.local`, JSON de servicio para seeds) en cada máquina.

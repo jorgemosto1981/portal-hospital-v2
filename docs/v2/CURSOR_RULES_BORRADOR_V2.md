@@ -96,7 +96,7 @@
 
 - Transiciones a **`estado_acceso`** “finales” y **`estado_perfil_datos_id`** a “completo” = **solo servidor** (Admin SDK / Callable) — **D2**, [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./ACCESO_Y_RULES_FIRESTORE_V2.md), [`FLUJO_V2_LOGIN_Y_DATOS_PERSONALES.md`](./FLUJO_V2_LOGIN_Y_DATOS_PERSONALES.md) §5.
 - El **cliente** no debe poder ponerse a sí mismo *activo portal* ni alterar `auth_uid` arbitrariamente.
-- **Rules:** deny by default; tests en emulador antes de producción (Fase 2 del orden de desarrollo).
+- **Rules:** deny by default; validación de reglas antes de producción (Fase 2 del orden de desarrollo), contra el proyecto en la nube o con la suite que el equipo defina (`@firebase/rules-unit-testing`, etc.).
 - **PIN 6, rate limit,** mensajes genéricos ante error en primer acceso: módulo Login y flujo V2.
 
 ---

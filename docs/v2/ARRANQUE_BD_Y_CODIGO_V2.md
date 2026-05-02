@@ -1,6 +1,6 @@
 # Arranque: BD nueva y código V2 (seguimiento)
 
-**Propósito:** ir **cerrando de uno en uno** los requisitos para levantar un **proyecto Firebase / Firestore V2** y poder **ejecutar** la app (emulador o staging) con el **vertical login + datos personales**, sin mezclar con V1.
+**Propósito:** ir **cerrando de uno en uno** los requisitos para levantar un **proyecto Firebase / Firestore V2** y poder **ejecutar** la app contra el **proyecto en la nube** (entorno de staging o producción según política del hospital) con el **vertical login + datos personales**, sin mezclar con V1. El cliente y los scripts oficiales del repo **no** usan Firebase Local Emulator Suite.
 
 **Orden de trabajo canónico:** [`DESARROLLO_ORDEN_LOGIN_DATOS_V2.md`](./DESARROLLO_ORDEN_LOGIN_DATOS_V2.md).
 
@@ -36,17 +36,17 @@
 4. **Proyecto activo en el CLI (V2):** en la raíz de `portal-hospital-v2` ya figura [`.firebaserc`](../../.firebaserc) con `portal-hospital-v2` como `default` (`firebase use` sin argumentos, o `firebase use default`).
 5. **Despliegue solo V2 (no toca el `firebase.json` de V1** en `portal-hospital-v1`):  
    `firebase deploy --config firebase-v2/firebase.json --only firestore:rules,firestore:indexes` (o `npm run firebase:deploy:firestore` en esta raíz)
-6. **Emulador V2 (puertos 8092 / 4002 para no chocar con otras instancias):**  
-   `npm run firebase:emulators` (equivalente a `firebase emulators:start --config firebase-v2/firebase.json`)  
-   Requisito: **JDK 21+** para el emulador de Firestore (mensaje de `firebase-tools` si la JVM es antigua).  
-   Si el CLI muestra *Invalid project id: PORTAL* u otro id equivocado, asegurá de estar en la raíz de **`portal-hospital-v2`**; el de V1 está en [`../portal-hospital-v1/portal-hospital/`](../../../portal-hospital-v1/portal-hospital/) (`portal-hospital-rrhh` en [`.firebaserc`](../../../portal-hospital-v1/portal-hospital/.firebaserc) de esa carpeta).  
-   Las rutas de `firestore.rules` e `indexes` en ese JSON son relativas a `firebase-v2/`.
+6. **Probar conectividad y desplegar backend:**  
+   - Cliente Firestore / proyecto: `npm run test:firestore:v2` (lee `.env.v2.local`, habla con Firestore **remoto**).  
+   - Reglas e índices: seguir usando `npm run firebase:deploy:firestore` desde la raíz de **`portal-hospital-v2`**.  
+   - **Cloud Functions:** `npm run firebase:deploy:functions` (plan Blaze según consola). La app web invoca callables en **southamerica-east1** del mismo `projectId`.  
+   Si el CLI muestra *Invalid project id: PORTAL* u otro id equivocado, asegurá de estar en la raíz de **`portal-hospital-v2`**; el de V1 está en [`../portal-hospital-v1/portal-hospital/`](../../../portal-hospital-v1/portal-hospital/). Las rutas de `firestore.rules` e `indexes` en `firebase-v2/firebase.json` son relativas a `firebase-v2/`.
 
 #### Archivos
 
 | Ruta | Rol |
 |------|-----|
-| [`firebase-v2/firebase.json`](../../firebase-v2/firebase.json) | Config Firestore + emulador V2 |
+| [`firebase-v2/firebase.json`](../../firebase-v2/firebase.json) | Config Firestore, Storage y Functions (deploy); sin bloque `emulators` en el flujo estándar del repo |
 | [`firebase-v2/firestore.rules`](../../firebase-v2/firestore.rules) | **Deny-all** hasta Fase 2; luego alinear a `ACCESO_Y_RULES_FIRESTORE_V2` |
 | [`.firebaserc`](../../.firebaserc) (raíz `portal-hospital-v2`) | Proyecto `default` → `portal-hospital-v2` |
 | [`../portal-hospital-v1/portal-hospital/firebase.json`](../../../portal-hospital-v1/portal-hospital/firebase.json) (V1) | **Solo despliegue / emulación V1**; no modificar al trabajar en V2 |
@@ -71,10 +71,10 @@
 - [x] **Índices** compuestos mínimos en [`firebase-v2/firestore.indexes.json`](../../firebase-v2/firestore.indexes.json) (`usuarios_cuenta` por `estado_acceso`+`actualizado_en`; `eventos_ticket` por `persona_id`+`ocurrido_en`). **Despliegue:** `npm run firebase:deploy:firestore`. Las consultas de igualdad simple por `auth_uid` / `persona_id` usan índice automático.
 - [x] **Seed** idempotente: [`scripts/seed-v2/seed-cfg.mjs`](../../scripts/seed-v2/seed-cfg.mjs) + [`scripts/seed-v2/seed-ids.v2.json`](../../scripts/seed-v2/seed-ids.v2.json) — `cfg_estado_cuenta_acceso`, `cfg_estado_perfil_datos`, `cfg_tipo_evento` según [`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md) §6. **Ejecución:** `GOOGLE_APPLICATION_CREDENTIALS` apuntando al JSON de una cuenta de servicio del **proyecto V2** + `npm run seed:cfg`. **Si el seed devuelve 5 NOT_FOUND:** creá la base Firestore **Native** en [Firestore (GCP)](https://console.cloud.google.com/firestore/databases?project=portal-hospital-v2). **No** pongas `FIREBASE_V2_FIRESTORE_DATABASE_ID=default` (dejá el env vacío para la base canónica; el script usa `getFirestore()` sin id). Solo definí esa variable si tenés **otra** base con nombre distinto.
 
-### Fase 2 — reglas, emulador, tests
+### Fase 2 — reglas y validación
 
 - [ ] `firestore.rules` según [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./ACCESO_Y_RULES_FIRESTORE_V2.md).
-- [ ] Emulador + tests mínimos (sin producción “abierta” antes de esto — criterio en `DESARROLLO_ORDEN` §1.1).
+- [ ] Validación de reglas y matriz de acceso acordada con el equipo (sin abrir producción “a ciegas” antes de cerrar criterios — ver `DESARROLLO_ORDEN` §1.1). Opcional: suite con `@firebase/rules-unit-testing` en [`tests/firestore-rules.mjs`](../../tests/firestore-rules.mjs) si el equipo la ejecuta en su propio flujo (no hay script npm dedicado en la raíz del repo).
 
 ### Fase 3+ (siguiente bloque de código)
 
@@ -117,8 +117,9 @@ Si el log muestra **`project=portal-hospital-v2`** y aun así falla, **no es el 
 
 | Fecha | Cambio |
 |-------|--------|
+| 2026-05-02 | Documentación alineada a **solo nube**: sin pasos de Firebase Local Emulator Suite; conectividad vía `test:firestore:v2` y deploy de rules/functions. |
 | 2026-04-23 | Creación: checklist; F0.1 marcado hecho; 0.2/0.3 pendentes o documentales. |
-| 2026-04-23 | **Inicio Firebase V2 en repo:** carpeta `firebase-v2/` (`firebase.json`, reglas deny-all, índices vacíos, emulador 8092/4002); `.firebaserc` (V2); sección de inicialización y deploy con `--config firebase-v2/firebase.json`. |
+| 2026-04-23 | **Inicio Firebase V2 en repo:** carpeta `firebase-v2/` (`firebase.json`, reglas deny-all, índices vacíos); `.firebaserc` (V2); sección de inicialización y deploy con `--config firebase-v2/firebase.json`. |
 | 2026-04-23 | Proyecto **`portal-hospital-v2`** creado en consola: sección **Qué hacer ahora**, checklist 0.2 actualizado, nota de `.env` distinto para front V2. |
 | 2026-04-24 | **Raíces `portal-hospital-v1` / `portal-hospital-v2`:** recursos V2 en carpeta hermana; ver [README V2](../../README.md) (integración con el front de V1). *Histórico 2026-04-23:* `src/firebaseConfig.v2.js`, `.env.v2.example`, `.env.v2.local` con `VITE_V2_FIREBASE_*` en un solo repo. |
 | 2026-04-23 | *Histórico* **Front V2 (monorepo):** `npm run dev:v2` en Vite (antes de separar carpetas). |

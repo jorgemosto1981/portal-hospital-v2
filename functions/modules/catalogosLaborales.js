@@ -3,7 +3,7 @@
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { ulid } = require("ulid");
 const { db, FieldValue } = require("./shared/context");
-const runtimeFlags = require("../../shared/runtimeFlags.json");
+const runtimeFlags = require("./shared/runtimeFlags.json");
 const { assertRrhh } = require("./shared/helpers");
 const {
   COLECCIONES_ESCRITURA_LABORAL_TEMPORAL,

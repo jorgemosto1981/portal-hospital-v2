@@ -4,7 +4,7 @@ const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { ulid } = require("ulid");
 const { createHash } = require("node:crypto");
 const { db, FieldValue } = require("./shared/context");
-const runtimeFlags = require("../../shared/runtimeFlags.json");
+const runtimeFlags = require("./shared/runtimeFlags.json");
 const { assertRrhh, assertAgenteConPersonaId } = require("./shared/helpers");
 const {
   COLECCIONES_ESCRITURA_PERSONAL_TEMPORAL,

@@ -9,7 +9,7 @@ import { horarioPlantillaOnboardingGenerico } from "./horarioPlantillaDefault.js
  * @property {string} nombre
  * @property {string} apellido
  * @property {string} dni  Dígitos solamente (se normaliza en servicio).
- * @property {string} grupo_de_trabajo_id  FK `grupos_de_trabajo` (`gdt_*` o mock de prueba).
+ * @property {string} grupo_de_trabajo_id  FK `grupos_de_trabajo` (`gdt_*`).
  */
 
 /**

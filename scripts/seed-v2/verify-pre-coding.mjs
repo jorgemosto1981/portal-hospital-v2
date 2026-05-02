@@ -63,7 +63,7 @@ function mustExist(rel, label) {
 console.log("\n=== Portal Hospital V2 — verificación previa al código ===\n");
 
 console.log("--- 1) Estructura del repo ---\n");
-mustExist("firebase-v2/firebase.json", "Config Firebase");
+mustExist("firebase.json", "Config Firebase (raíz; functions + rutas a firebase-v2/)");
 mustExist("firebase-v2/firestore.rules", "Reglas Firestore");
 mustExist("firebase-v2/firestore.indexes.json", "Índices Firestore");
 mustExist("src/firebaseConfig.v2.js", "Cliente web V2");

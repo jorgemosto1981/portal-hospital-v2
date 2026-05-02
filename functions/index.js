@@ -1,7 +1,12 @@
 "use strict";
 
 const { setGlobalOptions } = require("firebase-functions/v2");
-setGlobalOptions({ region: "southamerica-east1" });
+/** Más memoria / tiempo de arranque para Cloud Run (evita fallos de healthcheck en cold start con Admin SDK). */
+setGlobalOptions({
+  region: "southamerica-east1",
+  memory: "512MiB",
+  timeoutSeconds: 120,
+});
 
 const login = require("./modules/login");
 const rrhh = require("./modules/rrhh");

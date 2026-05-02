@@ -3,7 +3,7 @@
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { ulid } = require("ulid");
 const { auth, db, FieldValue } = require("./shared/context");
-const runtimeFlags = require("../../shared/runtimeFlags.json");
+const runtimeFlags = require("./shared/runtimeFlags.json");
 const {
   COL_EVENTOS,
   CFG_ONB,

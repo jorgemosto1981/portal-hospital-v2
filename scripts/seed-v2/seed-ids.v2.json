@@ -1,6 +1,6 @@
 {
   "projectId": "portal-hospital-v2",
-  "generado": "2026-04-30T09:28:36.077Z",
+  "generado": "2026-05-02T10:39:24.535Z",
   "cfg_estado_cuenta_acceso": [
     "cfg_eca_pend_reg",
     "cfg_eca_onb",
@@ -24,5 +24,9 @@
     "CFG_USUARIO",
     "CFG_MEDICO",
     "CFG_VISUALIZADOR"
+  ],
+  "cfg_estado_civil": [
+    "CFG_EST_CIVIL_SOLTERO",
+    "CFG_EST_CIVIL_CASADO"
   ]
 }

@@ -2,7 +2,7 @@
 
 Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/`). La documentación histórica de la **versión 1** está en [`../portal-hospital-v1/portal-hospital/docs/referencia_v1/`](../../../portal-hospital-v1/portal-hospital/docs/referencia_v1/) (solo consulta). Mapa de la raíz V2: [README de `portal-hospital-v2`](../../README.md).
 
-**Regla de arquitectura:** la V2 no comparte proyecto Firebase / datos ni código de despliegue con la V1; ver [`PLAN_MODULOS_V2.md`](./PLAN_MODULOS_V2.md). Config y despliegue Firestore **V2** en la raíz de este repo: carpeta [`firebase-v2/`](../firebase-v2/). V1: [`../portal-hospital-v1/portal-hospital/firebase.json`](../../../portal-hospital-v1/portal-hospital/firebase.json).
+**Regla de arquitectura:** la V2 no comparte proyecto Firebase / datos ni código de despliegue con la V1; ver [`PLAN_MODULOS_V2.md`](./PLAN_MODULOS_V2.md). Config de deploy en la raíz: [`firebase.json`](../../firebase.json) (reglas/índices en [`firebase-v2/`](../../firebase-v2/), código en [`functions/`](../../functions)). V1: [`../portal-hospital-v1/portal-hospital/firebase.json`](../../../portal-hospital-v1/portal-hospital/firebase.json).
 
 ### Módulo operativo y de asistencia (biblia de referencia)
 
@@ -32,6 +32,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./ACCESO_Y_RULES_FIRESTORE_V2.md) | Matriz de acceso, Callables, orientación Rules |
 | [`DESARROLLO_ORDEN_LOGIN_DATOS_V2.md`](./DESARROLLO_ORDEN_LOGIN_DATOS_V2.md) | Orden de fases 0–6 para codificar |
 | [`ARRANQUE_BD_Y_CODIGO_V2.md`](./ARRANQUE_BD_Y_CODIGO_V2.md) | **Checklist** para proyecto Firebase/BD nuevo + arranque de código (seguimiento) |
+| [`TAREA_DEPLOY_FUNCTIONS_Y_SERVIDOR_2026-05-02.md`](./TAREA_DEPLOY_FUNCTIONS_Y_SERVIDOR_2026-05-02.md) | **Seguimiento:** `firebase.json` en raíz, deploy Blaze/Functions, IAM Cloud Build, `dev:web` |
 | [`FASE_A_PASOS.md`](./FASE_A_PASOS.md) | **Fase A** — pasos iniciales (Auth consola, Functions stub, estructura `web/`) |
 | [`INFORME_MAESTRO_DESARROLLO_LOGIN_DATOS_V2.md`](./INFORME_MAESTRO_DESARROLLO_LOGIN_DATOS_V2.md) | Evaluación y frase de encargo |
 | [`V1_VS_V2_LOGIN_DATOS.md`](./V1_VS_V2_LOGIN_DATOS.md) | Lecciones desde la V1 (solo referencia; sin conexión técnica) |

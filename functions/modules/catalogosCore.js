@@ -3,7 +3,7 @@
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { FieldPath } = require("firebase-admin/firestore");
 const { db, FieldValue } = require("./shared/context");
-const runtimeFlags = require("../../shared/runtimeFlags.json");
+const runtimeFlags = require("./shared/runtimeFlags.json");
 const {
   assertColeccionOnboardingLectura,
   assertColeccionRrhh,

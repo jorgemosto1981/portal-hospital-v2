@@ -15,12 +15,8 @@ export function DevCallablesPanel({
     <section className="mt-4 rounded-xl border border-slate-200/80 bg-slate-50/80 p-4 sm:mt-5 sm:p-5">
       <h2 className="mb-1 text-xl font-semibold text-slate-800">Desarrollo — callables</h2>
       <p className="mb-3 text-base leading-relaxed text-slate-600">
-        Panel técnico de diagnóstico. El alta RRHH y el primer acceso se operan desde sus pantallas oficiales.
-      </p>
-      <p className="mb-3 text-base leading-relaxed text-slate-600">
-        Emulador: <code className="text-sm">.env.v2.local</code> →{" "}
-        <code className="text-sm">VITE_V2_USE_FUNCTIONS_EMULATOR=true</code> y{" "}
-        <code className="text-sm">npm run firebase:emulators:with-functions</code>
+        Panel técnico de diagnóstico contra <strong>Cloud Functions</strong> desplegadas. El alta RRHH y el primer
+        acceso se operan desde sus pantallas oficiales.
       </p>
       {callableOp?.status && callableOp.status !== "idle" ? (
         <div className="mb-4 w-full min-w-0 rounded-xl border border-slate-200 bg-white p-3">

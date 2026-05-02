@@ -5,8 +5,8 @@ export default function Inicio() {
     <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm md:p-8">
       <h1 className="text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">Inicio</h1>
       <p className="mt-3 max-w-prose text-sm leading-relaxed text-slate-500">
-        Pantalla dummy de la Fase A. Aquí vivirá el resumen del portal cuando conectemos datos reales. Por
-        ahora sirve para validar navegación, scroll y el layout responsivo sin Firebase.
+        Punto de entrada del portal. El resumen operativo se completará con datos en vivo desde Firebase cuando las
+        vistas estén enlazadas a las colecciones y callables correspondientes.
       </p>
       <div className="mt-6">
         <Link
