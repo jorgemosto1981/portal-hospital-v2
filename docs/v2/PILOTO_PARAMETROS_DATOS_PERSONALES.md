@@ -85,17 +85,24 @@ Convención:
 
 ## 6. Estado en URL (contrato mínimo)
 
+**Implementado (fase 1):** `?tipo=` y, para **RRHH**, `?persona_id=per_…` se leen y escriben en `/portal/perfil` (sincronizados con el selector de colección y el filtro de persona). El agente no debe usar `persona_id` en URL para saltarse otro legajo: solo RRHH aplica el valor de query al estado.
+
 Ejemplo estable para compartir y refrescar sin perder contexto:
 
 ```text
 /portal/perfil?tipo=consentimientos&persona_id=per_XXXX
+```
+
+Pendiente de otras fases (fechas en listados de eventos, etc.):
+
+```text
 /portal/perfil?tipo=eventos_ticket&desde=2026-05-01&hasta=2026-05-31
 ```
 
 Reglas:
 
 - Parámetros **desconocidos** se ignoran (no rompen la vista).
-- Al cambiar `tipo`, resetear filtros que no aplican (p. ej. fechas al salir de `eventos_ticket`).
+- Al cambiar `tipo`, resetear filtros que no aplican (p. ej. fechas al salir de `eventos_ticket`) — *pendiente cuando exista `tipo=eventos_ticket` en el selector*.
 - **No** persistir PIN ni datos sensibles en query.
 
 ---

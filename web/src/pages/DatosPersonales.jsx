@@ -1,5 +1,6 @@
 import Card from "../components/ui/Card.jsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 import {
@@ -20,6 +21,7 @@ import {
   HELP,
   INITIAL_FORM_DATA_PERSONALES,
   MSG_CAMPO_NO_EDITABLE_ROL,
+  TIPOS_DATOS_PERSONALES_URL,
 } from "./datos-personales/constants.js";
 import FormHeaderControls from "./datos-personales/sections/FormHeaderControls.jsx";
 import ConsentimientosFields from "./datos-personales/sections/ConsentimientosFields.jsx";
@@ -34,14 +36,23 @@ import {
   validateDatosPersonales,
 } from "./datos-personales/formLogic.js";
 
+const TIPOS_URL_SET = new Set(TIPOS_DATOS_PERSONALES_URL);
+
+function readTipoFromSearchOnce() {
+  if (typeof window === "undefined") return "personas";
+  const t = new URLSearchParams(window.location.search).get("tipo");
+  return t && TIPOS_URL_SET.has(t) ? t : "personas";
+}
+
 export default function DatosPersonales() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuthSession();
   const { claims, hasPortalRoles } = useAuthClaims(user);
   const personaIdClaim = String((claims && claims.persona_id) || "").trim();
   const isRrhh = hasPortalRoles(["rrhh", "admin"]);
   const lockSensitivePersonaFields = !isRrhh;
   const [accionHabilitada, setAccionHabilitada] = useState("");
-  const [tipo, setTipo] = useState("personas");
+  const [tipo, setTipo] = useState(readTipoFromSearchOnce);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [editId, setEditId] = useState("");
   const [saving, setSaving] = useState(false);
@@ -81,6 +92,38 @@ export default function DatosPersonales() {
   useEffect(() => {
     void cargar();
   }, [cargar]);
+
+  /** Sincroniza `tipo` si el usuario usa atrás/adelante del navegador. */
+  useEffect(() => {
+    const t = searchParams.get("tipo");
+    if (t && TIPOS_URL_SET.has(t) && t !== tipo) {
+      setTipo(t);
+    }
+  }, [searchParams, tipo]);
+
+  /** RRHH: `persona_id` en URL (solo lectura de query; no aplicable a agente). */
+  useEffect(() => {
+    if (!isRrhh) return;
+    const pid = String(searchParams.get("persona_id") || "").trim();
+    if (!pid || !/^per_/i.test(pid)) return;
+    setForm((prev) => (String(prev.persona_id || "").trim() === pid ? prev : { ...prev, persona_id: pid }));
+  }, [searchParams, isRrhh]);
+
+  /** Escribe `?tipo=` y opcionalmente `persona_id=` (RRHH). Comparación semántica evita bucles por orden de query. */
+  useEffect(() => {
+    const wantTipo = tipo;
+    const wantPid =
+      isRrhh && String(form.persona_id || "").trim() ? String(form.persona_id).trim() : null;
+    const hasTipo = searchParams.get("tipo");
+    const hasPid = searchParams.get("persona_id") || null;
+    if (hasTipo === wantTipo && (wantPid === null ? !hasPid : hasPid === wantPid)) {
+      return;
+    }
+    const next = new URLSearchParams();
+    next.set("tipo", wantTipo);
+    if (wantPid) next.set("persona_id", wantPid);
+    setSearchParams(next, { replace: true });
+  }, [tipo, form.persona_id, isRrhh, searchParams, setSearchParams]);
 
   useEffect(() => {
     setModoEdicion(false);

@@ -24,6 +24,14 @@ export const COLECCIONES_BASE = [
   "eventos_ticket",
 ];
 
+/** Valores permitidos para `?tipo=` en `/portal/perfil` (selector de colección en UI). */
+export const TIPOS_DATOS_PERSONALES_URL = [
+  "personas",
+  "formacion_agente",
+  "declaraciones_grupo_familiar",
+  "consentimientos",
+];
+
 export const COLECCIONES_CFG = [
   "cfg_estado_civil",
   "cfg_nacionalidad",
