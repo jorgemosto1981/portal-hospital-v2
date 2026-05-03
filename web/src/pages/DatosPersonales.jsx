@@ -35,6 +35,12 @@ import {
   updateDatosPersonalesField,
   validateDatosPersonales,
 } from "./datos-personales/formLogic.js";
+import {
+  eventoEnRangoAuditoria,
+  mesEnCursoRangoLocal,
+  normalizarDesdeHasta,
+  parseYmd,
+} from "./datos-personales/fechaFiltroUtils.js";
 
 const TIPOS_URL_SET = new Set(TIPOS_DATOS_PERSONALES_URL);
 
@@ -50,8 +56,9 @@ export default function DatosPersonales() {
   const { claims, hasPortalRoles } = useAuthClaims(user);
   const personaIdClaim = String((claims && claims.persona_id) || "").trim();
   const isRrhh = hasPortalRoles(["rrhh", "admin"]);
-  const lockSensitivePersonaFields = !isRrhh;
   const [accionHabilitada, setAccionHabilitada] = useState("");
+  /** Usuario: siempre; RRHH: solo en modo “acción” (mismo circuito de notificación que usuario). */
+  const lockSensitivePersonaFields = !isRrhh || Boolean(accionHabilitada);
   const [tipo, setTipo] = useState(readTipoFromSearchOnce);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [editId, setEditId] = useState("");
@@ -109,21 +116,70 @@ export default function DatosPersonales() {
     setForm((prev) => (String(prev.persona_id || "").trim() === pid ? prev : { ...prev, persona_id: pid }));
   }, [searchParams, isRrhh]);
 
-  /** Escribe `?tipo=` y opcionalmente `persona_id=` (RRHH). Comparación semántica evita bucles por orden de query. */
+  /** Escribe `?tipo=`, `persona_id` (RRHH), `desde` y `hasta` (mes en curso por defecto). */
   useEffect(() => {
+    const def = mesEnCursoRangoLocal();
     const wantTipo = tipo;
     const wantPid =
       isRrhh && String(form.persona_id || "").trim() ? String(form.persona_id).trim() : null;
+    let wantDesde = parseYmd(searchParams.get("desde")) ?? def.desde;
+    let wantHasta = parseYmd(searchParams.get("hasta")) ?? def.hasta;
+    const nh = normalizarDesdeHasta(wantDesde, wantHasta);
+    if (nh) {
+      wantDesde = nh.desde;
+      wantHasta = nh.hasta;
+    }
+
     const hasTipo = searchParams.get("tipo");
     const hasPid = searchParams.get("persona_id") || null;
-    if (hasTipo === wantTipo && (wantPid === null ? !hasPid : hasPid === wantPid)) {
+    const hasDesde = searchParams.get("desde");
+    const hasHasta = searchParams.get("hasta");
+
+    if (
+      hasTipo === wantTipo &&
+      (wantPid === null ? !hasPid : hasPid === wantPid) &&
+      hasDesde === wantDesde &&
+      hasHasta === wantHasta
+    ) {
       return;
     }
+
     const next = new URLSearchParams();
     next.set("tipo", wantTipo);
     if (wantPid) next.set("persona_id", wantPid);
+    next.set("desde", wantDesde);
+    next.set("hasta", wantHasta);
     setSearchParams(next, { replace: true });
   }, [tipo, form.persona_id, isRrhh, searchParams, setSearchParams]);
+
+  const rangoEventos = useMemo(() => {
+    const def = mesEnCursoRangoLocal();
+    const d = parseYmd(searchParams.get("desde")) ?? def.desde;
+    const h = parseYmd(searchParams.get("hasta")) ?? def.hasta;
+    return normalizarDesdeHasta(d, h) ?? def;
+  }, [searchParams]);
+
+  const commitEventosQuery = useCallback(
+    (/** @type {{ desde?: string, hasta?: string }} */ partial) => {
+      const def = mesEnCursoRangoLocal();
+      const next = new URLSearchParams(searchParams);
+      next.set("tipo", tipo);
+      if (isRrhh && String(form.persona_id || "").trim()) {
+        next.set("persona_id", String(form.persona_id).trim());
+      } else {
+        next.delete("persona_id");
+      }
+      const desde = partial.desde ?? parseYmd(searchParams.get("desde")) ?? def.desde;
+      const hasta = partial.hasta ?? parseYmd(searchParams.get("hasta")) ?? def.hasta;
+      const n = normalizarDesdeHasta(desde, hasta);
+      if (n) {
+        next.set("desde", n.desde);
+        next.set("hasta", n.hasta);
+      }
+      setSearchParams(next, { replace: true });
+    },
+    [form.persona_id, isRrhh, searchParams, setSearchParams, tipo],
+  );
 
   useEffect(() => {
     setModoEdicion(false);
@@ -224,7 +280,6 @@ export default function DatosPersonales() {
   }, [registrosFiltradosPorPersona, tipo, personaLabelById]);
 
   const camposEditablesPorAccion = useMemo(() => {
-    if (isRrhh) return null;
     if (accionHabilitada === ACCION_CAMBIO_DOMICILIO) {
       return new Set([
         "calle",
@@ -242,11 +297,12 @@ export default function DatosPersonales() {
       return new Set(["telefono_celular", "telefono_fijo", "recibe_notificaciones_sms"]);
     }
     return new Set();
-  }, [accionHabilitada, isRrhh]);
+  }, [accionHabilitada]);
 
   const eventosPersona = useMemo(() => {
     if (!form.persona_id) return [];
     const all = rowsByCol.eventos_ticket || [];
+    const { desde, hasta } = rangoEventos;
     return all
       .filter((e) => String(e.persona_id || "") === String(form.persona_id || ""))
       .filter(
@@ -254,9 +310,10 @@ export default function DatosPersonales() {
           String(e.tipo_evento_id || "").startsWith("EVT_DATOS_CAMBIO_") ||
           String(e.tipo_evento_id || "").startsWith("EVT_DATOS_NOTIF_"),
       )
+      .filter((e) => eventoEnRangoAuditoria(e, desde, hasta))
       .sort((a, b) => String(b.ocurrido_en || "").localeCompare(String(a.ocurrido_en || "")))
-      .slice(0, 10);
-  }, [rowsByCol.eventos_ticket, form.persona_id]);
+      .slice(0, 80);
+  }, [rowsByCol.eventos_ticket, form.persona_id, rangoEventos]);
 
   async function onNotificarCambio(coleccionObjetivo, accion) {
     setSaveMsg("");
@@ -279,7 +336,8 @@ export default function DatosPersonales() {
   }
 
   function canEditPersonaField(field) {
-    if (isRrhh) return true;
+    if (isRrhh && !accionHabilitada) return true;
+    if (!accionHabilitada) return false;
     return camposEditablesPorAccion.has(field);
   }
 
@@ -371,7 +429,7 @@ export default function DatosPersonales() {
           .join(" | ");
         setSaveMsg(`${baseOk} | Advertencias: ${detalleWarnings}`);
       }
-      if (tipo === "personas" && !isRrhh) {
+      if (tipo === "personas" && accionHabilitada) {
         setAccionHabilitada("");
       }
       await cargar();
@@ -414,14 +472,16 @@ export default function DatosPersonales() {
           </p>
           {lockSensitivePersonaFields && (
             <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Perfil usuario: {MSG_CAMPO_NO_EDITABLE_ROL}
+              {!isRrhh ? `Perfil usuario: ${MSG_CAMPO_NO_EDITABLE_ROL}` : `Modo acción (igual que usuario): ${MSG_CAMPO_NO_EDITABLE_ROL}`}
             </p>
           )}
-          {!isRrhh && tipo === "personas" && (
+          {tipo === "personas" && (
             <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-3 text-xs text-blue-800">
-              <p className="font-semibold">Acciones para solicitar cambios (usuario)</p>
+              <p className="font-semibold">Acciones para solicitar cambios (con notificación a bandeja)</p>
               <p className="mt-1">
-                Seleccioná una acción para habilitar edición de campos puntuales. RRHH recibe la novedad en su bandeja.
+                Elegí una acción para editar solo esos datos y disparar el circuito de novedades. Personal de RRHH también
+                puede usarlo para sus propios datos particulares; si preferís editar todo sin restricción, activá edición
+                administrativa (solo RRHH).
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {ACCIONES_PERMITIDAS_USUARIO.map((acc) => (
@@ -438,11 +498,28 @@ export default function DatosPersonales() {
                     Habilitar: {acc.titulo}
                   </button>
                 ))}
+                {isRrhh ? (
+                  <button
+                    type="button"
+                    onClick={() => setAccionHabilitada("")}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold ${
+                      !accionHabilitada
+                        ? "border-emerald-600 bg-emerald-600 text-white"
+                        : "border-emerald-300 bg-white text-emerald-800"
+                    }`}
+                  >
+                    Edición administrativa (todos los campos)
+                  </button>
+                ) : null}
               </div>
               <p className="mt-2">
                 Acción activa:{" "}
                 <span className="font-semibold">
-                  {ACCIONES_PERMITIDAS_USUARIO.find((x) => x.id === accionHabilitada)?.titulo || "ninguna"}
+                  {accionHabilitada
+                    ? ACCIONES_PERMITIDAS_USUARIO.find((x) => x.id === accionHabilitada)?.titulo || accionHabilitada
+                    : isRrhh
+                      ? "ninguna (edición completa RRHH)"
+                      : "ninguna"}
                 </span>
               </p>
               <div className="mt-2">
@@ -451,14 +528,18 @@ export default function DatosPersonales() {
                   onClick={() => onNotificarCambio("personas", "notificar_cambio_foto_rostro")}
                   className="rounded-lg border border-blue-300 bg-white px-3 py-2 text-xs font-semibold text-blue-700"
                 >
-                  Notificar cambio de foto (solo RRHH modifica)
+                  Notificar cambio de foto de rostro
                 </button>
               </div>
             </div>
           )}
-          {!isRrhh && tipo === "formacion_agente" && (
+          {tipo === "formacion_agente" && (
             <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-900">
-              <p className="font-semibold">Formación del agente: solo visualización para usuario.</p>
+              <p className="font-semibold">
+                {isRrhh
+                  ? "Formación: como RRHH podés editar el formulario o registrar una notificación (p. ej. datos propios)."
+                  : "Formación del agente: solo visualización para usuario."}
+              </p>
               <button
                 type="button"
                 onClick={() => onNotificarCambio("formacion_agente", "notificar_cambio_formacion")}
@@ -468,9 +549,13 @@ export default function DatosPersonales() {
               </button>
             </div>
           )}
-          {!isRrhh && tipo === "declaraciones_grupo_familiar" && (
+          {tipo === "declaraciones_grupo_familiar" && (
             <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-900">
-              <p className="font-semibold">DDJJ familiar: solo visualización para usuario.</p>
+              <p className="font-semibold">
+                {isRrhh
+                  ? "DDJJ familiar: como RRHH podés editar o registrar una notificación según corresponda."
+                  : "DDJJ familiar: solo visualización para usuario."}
+              </p>
               <button
                 type="button"
                 onClick={() =>
@@ -482,9 +567,16 @@ export default function DatosPersonales() {
               </button>
             </div>
           )}
-          {!isRrhh && tipo === "consentimientos" && (
+          {tipo === "consentimientos" && (
             <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-700">
-              Consentimientos visibles para consulta. Si necesitás cambios, comunicate con RRHH.
+              {isRrhh ? (
+                <p>
+                  Consentimientos: como RRHH podés editarlos en el formulario. Los usuarios solo consultan; si necesitan
+                  cambios deben gestionarlo con RRHH.
+                </p>
+              ) : (
+                <p>Consentimientos visibles para consulta. Si necesitás cambios, comunicate con RRHH.</p>
+              )}
             </div>
           )}
           <form className="mt-4 space-y-4" onSubmit={onSave}>
@@ -636,9 +728,50 @@ export default function DatosPersonales() {
                 Mostrando eventos vinculados a este <span className="font-semibold">persona_id</span>. La vista total RRHH se concentra en la bandeja de notificaciones.
               </p>
             ) : null}
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+              <label className="flex flex-col gap-1 text-xs text-slate-600">
+                Desde
+                <input
+                  type="date"
+                  className="rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900"
+                  value={rangoEventos.desde}
+                  onChange={(e) => {
+                    const def = mesEnCursoRangoLocal();
+                    commitEventosQuery({
+                      desde: e.target.value || def.desde,
+                      hasta: rangoEventos.hasta,
+                    });
+                  }}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-slate-600">
+                Hasta
+                <input
+                  type="date"
+                  className="rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900"
+                  value={rangoEventos.hasta}
+                  onChange={(e) => {
+                    const def = mesEnCursoRangoLocal();
+                    commitEventosQuery({
+                      desde: rangoEventos.desde,
+                      hasta: e.target.value || def.hasta,
+                    });
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-50"
+                onClick={() => commitEventosQuery(mesEnCursoRangoLocal())}
+              >
+                Mes en curso
+              </button>
+            </div>
             <div className="mt-3 space-y-2">
               {eventosPersona.length === 0 ? (
-                <p className="text-sm text-slate-500">Sin eventos recientes para esta persona.</p>
+                <p className="text-sm text-slate-500">
+                  Sin eventos en el rango de fechas seleccionado (por defecto, mes en curso).
+                </p>
               ) : (
                 eventosPersona.map((evt) => (
                   <div key={evt.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs">

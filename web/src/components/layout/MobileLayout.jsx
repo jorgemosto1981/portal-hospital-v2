@@ -9,6 +9,7 @@ const DEFAULT_ACTIVE_TAB = "inicio";
  * **sidebar** (mismo componente, clases distintas). `lg+` aún más ancho útil en el marco.
  * Scroll: el contenido entre cabecera y barra vive en un único contenedor `overflow-y-auto`
  * para que en móviles el desplazamiento vertical no quede bloqueado.
+ * `overflow-anchor: none` evita avisos de Chrome (“anclaje deshabilitado…”) con HMR/contenido dinámico.
  */
 export default function MobileLayout({
   children,
@@ -42,7 +43,7 @@ export default function MobileLayout({
                 producción.
               </p>
             )}
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain [overflow-anchor:none]">
               {children}
             </div>
           </main>

@@ -25,7 +25,7 @@ Fijar **reglas únicas** sobre:
 | **Carga** | Paralela de **todas** las colecciones base + cfg al montar (`listarColeccionPersonal` por colección). |
 | **Tipos** | Selector `tipo`: personas, formacion_agente, declaraciones_grupo_familiar, consentimientos, eventos_ticket (+ datos de catálogo en memoria). |
 | **Usuario no RRHH** | Campos sensibles de `personas` bloqueados; flujos “informar cambio domicilio / teléfonos”; posible **notificación** a RRHH en lugar de ABM directo. |
-| **RRHH** | Puede editar campos que el agente no; elige `persona_id` entre filas cargadas. |
+| **RRHH** | Puede editar campos que el agente no; elige `persona_id` entre filas cargadas. Puede usar **el mismo flujo de acciones/notificación que el usuario** (p. ej. datos propios) o **edición administrativa** sin acción restringida. |
 
 ---
 
@@ -62,7 +62,7 @@ Convención:
 
 | Parámetro | Cuándo | Notas |
 |-----------|--------|--------|
-| **Ventana de fechas** | Solo en vistas donde exista campo fecha relevante listado (p. ej. **eventos_ticket**, eventualmente histórico de consentimientos) | Default: **mes en curso**; máximo retrospective según rol (agente vs RRHH) definido en servidor. |
+| **Ventana de fechas** | Listado de **eventos de auditoría** en la tarjeta bajo ficha `personas` (fuente: colección `eventos_ticket` en memoria) | **Implementado (2026-05-02):** query `?desde=&hasta=`; default **mes en curso**; filtro en cliente. Máximo retrospectivo en servidor: **pendiente** de negocio. |
 | **Texto libre** | Búsqueda por id parcial o descripción | Solo si el listado supera umbral (ver §5). |
 
 ### 4.3 No aplican por naturaleza
@@ -87,22 +87,20 @@ Convención:
 
 **Implementado (fase 1):** `?tipo=` y, para **RRHH**, `?persona_id=per_…` se leen y escriben en `/portal/perfil` (sincronizados con el selector de colección y el filtro de persona). El agente no debe usar `persona_id` en URL para saltarse otro legajo: solo RRHH aplica el valor de query al estado.
 
-Ejemplo estable para compartir y refrescar sin perder contexto:
+**Implementado (2026-05-02):** `?desde=YYYY-MM-DD&hasta=YYYY-MM-DD` para la **ventana de eventos de auditoría** en ficha `personas` (default mes en curso si faltan). Aplican junto con `tipo` y `persona_id`.
+
+Ejemplos estables:
 
 ```text
 /portal/perfil?tipo=consentimientos&persona_id=per_XXXX
-```
-
-Pendiente de otras fases (fechas en listados de eventos, etc.):
-
-```text
-/portal/perfil?tipo=eventos_ticket&desde=2026-05-01&hasta=2026-05-31
+/portal/perfil?tipo=personas&desde=2026-05-01&hasta=2026-05-31
+/portal/perfil?tipo=personas&persona_id=per_XXXX&desde=2026-05-01&hasta=2026-05-31
 ```
 
 Reglas:
 
 - Parámetros **desconocidos** se ignoran (no rompen la vista).
-- Al cambiar `tipo`, resetear filtros que no aplican (p. ej. fechas al salir de `eventos_ticket`) — *pendiente cuando exista `tipo=eventos_ticket` en el selector*.
+- Al cambiar `tipo`, **fechas** siguen en la URL pero el filtrado de eventos solo aplica con `tipo=personas` y `persona_id` cargado; *reset explícito al cambiar de pestaña: opcional / futuro*.
 - **No** persistir PIN ni datos sensibles en query.
 
 ---
@@ -142,6 +140,7 @@ Cuando Datos personales cumpla lo acordado arriba, copiar este bloque por pantal
 ## 10. Referencias en código
 
 - Pantalla: `web/src/pages/DatosPersonales.jsx`
+- Filtros de fechas (auditoría): `web/src/pages/datos-personales/fechaFiltroUtils.js`
 - Constantes y colecciones: `web/src/pages/datos-personales/constants.js`
 - Servicio listado/guardado: `web/src/services/datosPersonalesService.js`
 - Callable backend: `functions/modules/catalogosPersonales.js` (reglas por rol)
