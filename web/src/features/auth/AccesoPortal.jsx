@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
@@ -49,6 +49,20 @@ export default function AccesoPortal() {
   useEffect(() => {
     setTab(tabFromUrl);
   }, [tabFromUrl]);
+
+  const idleToastShown = useRef(false);
+  useEffect(() => {
+    if (searchParams.get("motivo") !== "inactividad") {
+      idleToastShown.current = false;
+      return;
+    }
+    if (idleToastShown.current) return;
+    idleToastShown.current = true;
+    toast("Tu sesión se cerró por inactividad (15 minutos sin uso).", { icon: "⏱️" });
+    const next = new URLSearchParams(searchParams);
+    next.delete("motivo");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const setTabLogin = useCallback(() => {
     setTab("login");

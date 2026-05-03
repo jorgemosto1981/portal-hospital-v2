@@ -19,10 +19,10 @@ export default function VinculacionDni() {
   const { user } = useAuthSession();
   const { claims } = useAuthClaims(user);
 
-  /** Si el token ya recibió `persona_id` (p. ej. tras sync en otro paso), salir de esta pantalla. */
+  /** Misma regla que `MvpAccessGate`: con `persona_id` en el token, el portal aplica. */
   useEffect(() => {
     const pid = typeof claims?.persona_id === "string" ? claims.persona_id.trim() : "";
-    if (user && pid.startsWith("per_")) {
+    if (user && pid.length > 0) {
       nav("/portal/home", { replace: true });
     }
   }, [user, claims, nav]);

@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from "react-router-dom";
 
 import LoginRoute from "./features/auth/LoginRoute.jsx";
+import IdleSessionGuard from "./features/auth/IdleSessionGuard.jsx";
 import { useAuthSession } from "./features/auth/useAuthSession.js";
 import VinculacionDni from "./features/auth/VinculacionDni.jsx";
 import OnboardingWizard from "./features/onboarding/OnboardingWizard.jsx";
@@ -54,6 +55,7 @@ function AuthedGateLayout() {
 export default function App() {
   return (
     <BrowserRouter>
+      <IdleSessionGuard />
       <Routes>
         <Route path="/" element={<RootRedirect />} />
 
