@@ -5,6 +5,7 @@ const { FieldPath } = require("firebase-admin/firestore");
 const { db, FieldValue } = require("./shared/context");
 const runtimeFlags = require("./shared/runtimeFlags.json");
 const {
+  assertAgenteConPersonaId,
   assertColeccionOnboardingLectura,
   assertColeccionRrhh,
   assertRrhh,
@@ -72,11 +73,35 @@ const listarCatalogoOnboarding = onCall(async (request) => {
   return { items };
 });
 
+function mapDocToItem(doc) {
+  const data = doc.data() || {};
+  const flat = serializeFirestoreValue(data);
+  const base = typeof flat === "object" && flat !== null && !Array.isArray(flat) ? flat : {};
+  return { ...base, id: doc.id };
+}
+
+/**
+ * Listados masivos para pantallas de datos laborales/personales.
+ * - OPEN_ACCESS_TEMP: comportamiento legacy (sin sesión; solo desarrollo).
+ * - Producción: RRHH/admin ve todo el catálogo; agente solo filas de su `persona_id` donde aplica.
+ */
 const listarColeccionPublicaTemporal = onCall(async (request) => {
-  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) throw new HttpsError("permission-denied", "[VAL-CFG-002] Acceso temporal deshabilitado.");
+  const open = runtimeFlags.OPEN_ACCESS_TEMP === true;
+  let agentPersonaId = null;
+  if (!open) {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Se requiere sesión para consultar colecciones.");
+    }
+    const roleRaw = request.auth.token && request.auth.token.portal_role;
+    const role = typeof roleRaw === "string" ? roleRaw.trim().toLowerCase() : "";
+    if (role !== "rrhh" && role !== "admin") {
+      agentPersonaId = assertAgenteConPersonaId(request);
+    }
+  }
+
   const colRaw = request.data && request.data.collectionName;
   if (typeof colRaw !== "string" || !COLECCIONES_PUBLICAS_TEMPORALES.has(colRaw.trim())) {
-    throw new HttpsError("invalid-argument", "[VAL-CFG-003] Colección no permitida en acceso temporal.");
+    throw new HttpsError("invalid-argument", "[VAL-CFG-003] Colección no permitida en listado temporal.");
   }
   const col = colRaw.trim();
   const pageSizeRaw = Number(request.data && request.data.pageSize);
@@ -84,15 +109,40 @@ const listarColeccionPublicaTemporal = onCall(async (request) => {
   const pageTokenRaw = request.data && request.data.pageToken;
   const pageToken = typeof pageTokenRaw === "string" ? pageTokenRaw.trim() : "";
 
+  if (!open && agentPersonaId) {
+    if (col === "historial_laboral_cargos" || col === "historial_laboral_datos" || col === "historial_laboral_grupos") {
+      const snap = await db.collection(col).where("persona_id", "==", agentPersonaId).limit(pageSize).get();
+      const items = snap.docs.map(mapDocToItem);
+      return { items, hasMore: false, nextPageToken: null };
+    }
+    if (col === "personas") {
+      const doc = await db.collection("personas").doc(agentPersonaId).get();
+      const items = doc.exists ? [mapDocToItem(doc)] : [];
+      return { items, hasMore: false, nextPageToken: null };
+    }
+    if (col === "formacion_agente" || col === "consentimientos") {
+      const snap = await db.collection(col).where("persona_id", "==", agentPersonaId).limit(pageSize).get();
+      const items = snap.docs.map(mapDocToItem);
+      return { items, hasMore: false, nextPageToken: null };
+    }
+    if (col === "declaraciones_grupo_familiar") {
+      const snap = await db
+        .collection(col)
+        .where("titular_persona_id", "==", agentPersonaId)
+        .limit(pageSize)
+        .get();
+      const items = snap.docs.map(mapDocToItem);
+      return { items, hasMore: false, nextPageToken: null };
+    }
+    if (col === "eventos_ticket") {
+      return { items: [], hasMore: false, nextPageToken: null };
+    }
+  }
+
   let q = db.collection(col).orderBy(FieldPath.documentId()).limit(pageSize);
   if (pageToken) q = q.startAfter(pageToken);
   const snap = await q.get();
-  const items = snap.docs.map((doc) => {
-    const data = doc.data() || {};
-    const flat = serializeFirestoreValue(data);
-    const base = typeof flat === "object" && flat !== null && !Array.isArray(flat) ? flat : {};
-    return { ...base, id: doc.id };
-  });
+  const items = snap.docs.map(mapDocToItem);
   const lastDoc = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null;
   const hasMore = snap.size === pageSize;
   return {
