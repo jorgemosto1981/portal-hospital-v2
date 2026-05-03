@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import PublicAuthMenu from "../../components/layout/PublicAuthMenu.jsx";
+import { useAuthClaims } from "./useAuthClaims.js";
+import { useAuthSession } from "./useAuthSession.js";
 import { normalizeDni, vincularCuentaPorDni } from "../../services/authService.js";
 import Card from "../../components/ui/Card.jsx";
 import PrimaryButton from "../../components/ui/PrimaryButton.jsx";
@@ -14,6 +16,16 @@ export default function VinculacionDni() {
   const [dni, setDni] = useState("");
   const [busy, setBusy] = useState(false);
   const nav = useNavigate();
+  const { user } = useAuthSession();
+  const { claims } = useAuthClaims(user);
+
+  /** Si el token ya recibió `persona_id` (p. ej. tras sync en otro paso), salir de esta pantalla. */
+  useEffect(() => {
+    const pid = typeof claims?.persona_id === "string" ? claims.persona_id.trim() : "";
+    if (user && pid.startsWith("per_")) {
+      nav("/portal/home", { replace: true });
+    }
+  }, [user, claims, nav]);
 
   async function onVincular(e) {
     e.preventDefault();

@@ -13,6 +13,21 @@ const OPEN_ACCESS_TEMP = runtimeFlags.OPEN_ACCESS_TEMP === true;
 
 const PUBLIC_NO_PERSONA = new Set(["/vinculacion", "/registro", "/login"]);
 
+const MSG_SIN_CADENA_LABORAL =
+  "No tenés un legajo laboral activo completo (asignación HLc → puesto HLd → grupo HLg) con vigencia a hoy. " +
+  "Solicitá a Recursos Humanos la carga o la corrección, o abrí Datos laborales si tu rol lo permite.";
+
+/**
+ * Bloquea solo si el token ya trae `cargo_activo: false` (p. ej. tras syncSessionClaims).
+ * Tokens sin la clave siguen circulando hasta el próximo sync (migración suave).
+ * @param {Record<string, unknown> | null | undefined} claims
+ */
+function shouldBlockMissingLaborChain(claims) {
+  if (!claims || typeof claims !== "object") return false;
+  if (!Object.prototype.hasOwnProperty.call(claims, "cargo_activo")) return false;
+  return claims.cargo_activo !== true;
+}
+
 /**
  * Pivote MVP: exige vinculación (claim `persona_id`) y bloquea en el wizard mientras el legajo
  * siga en PENDIENTE_ONBOARDING con ficha vinculada.
@@ -71,7 +86,37 @@ export default function MvpAccessGate({ children }) {
     ) {
       return children;
     }
+    /** Datos laborales: el formulario elige `persona_id`; hace falta sesión Auth aunque el token aún no tenga vínculo DNI→persona. */
+    if (location.pathname.startsWith("/portal/laboral")) {
+      return children;
+    }
     return <Navigate to="/vinculacion" replace state={{ from: location.pathname }} />;
+  }
+
+  const isMgmt = hasAnyPortalRole(claims, MANAGEMENT_PORTAL_ROLES);
+  if (!isMgmt && shouldBlockMissingLaborChain(claims)) {
+    const p0 = /** @type {Record<string, unknown> | null} */ (effectivePersona);
+    const pendiente = p0 && p0.estado === ESTADO_PEND_ONBOARDING;
+    const onOnboarding =
+      location.pathname === "/onboarding" || location.pathname.startsWith("/onboarding/");
+    if (onOnboarding && (!p0 || pendiente)) {
+      return children;
+    }
+    const onLaboral = location.pathname.includes("/portal/laboral");
+    if (onLaboral) {
+      return children;
+    }
+    return (
+      <div className="flex min-h-dvh w-full flex-col bg-slate-100">
+        <PublicAuthMenu active="none" />
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 text-center">
+          <p className="max-w-md text-sm text-slate-700">{MSG_SIN_CADENA_LABORAL}</p>
+          <p className="text-xs text-slate-500">
+            Tras corregir datos, ejecutá &quot;syncSessionClaims&quot; o cerrá sesión y volvé a entrar para actualizar el token.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const p = /** @type {Record<string, unknown> | null} */ (effectivePersona);

@@ -14,7 +14,7 @@ const {
   COL_USUARIOS_CUENTA,
   ESTADO_PENDIENTE_ONBOARDING,
 } = require("./shared/constants");
-const { assertRrhh, normalizeDni, resolveRoleIdsRrhhAlta } = require("./shared/helpers");
+const { assertRrhh, normalizeDni } = require("./shared/helpers");
 
 const rrhhAltaAgente = onCall(async (request) => {
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
@@ -37,7 +37,6 @@ const rrhhAltaAgente = onCall(async (request) => {
   if (!(await gref.get()).exists) {
     throw new HttpsError("not-found", "El grupo de trabajo no existe o fue dado de baja.");
   }
-  const roleIds = await resolveRoleIdsRrhhAlta(d.role_ids);
   const q = await db.collection(COL_PERSONAS).where("dni", "==", dni).limit(3).get();
   if (!q.empty) throw new HttpsError("already-exists", "Ya existe una persona con ese DNI.");
 
@@ -69,7 +68,6 @@ const rrhhAltaAgente = onCall(async (request) => {
     username: null,
     activo: true,
     estado_acceso: CFG_PEND_REG,
-    role_ids: roleIds,
     creado_en: ts,
     actualizado_en: ts,
   });

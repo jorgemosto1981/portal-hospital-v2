@@ -9,6 +9,7 @@ const {
   assertColeccionOnboardingLectura,
   assertColeccionRrhh,
   assertRrhh,
+  tokenHasRrhhAccess,
   normalizeCatalogDocId,
   serializeFirestoreValue,
   toTimestampOrNull,
@@ -92,9 +93,7 @@ const listarColeccionPublicaTemporal = onCall(async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Se requiere sesión para consultar colecciones.");
     }
-    const roleRaw = request.auth.token && request.auth.token.portal_role;
-    const role = typeof roleRaw === "string" ? roleRaw.trim().toLowerCase() : "";
-    if (role !== "rrhh" && role !== "admin") {
+    if (!tokenHasRrhhAccess(request.auth.token)) {
       agentPersonaId = assertAgenteConPersonaId(request);
     }
   }

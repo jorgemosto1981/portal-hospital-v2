@@ -5,7 +5,7 @@ const { ulid } = require("ulid");
 const { createHash } = require("node:crypto");
 const { db, FieldValue } = require("./shared/context");
 const runtimeFlags = require("./shared/runtimeFlags.json");
-const { assertRrhh, assertAgenteConPersonaId } = require("./shared/helpers");
+const { assertRrhh, assertAgenteConPersonaId, tokenHasRrhhAccess } = require("./shared/helpers");
 const {
   COLECCIONES_ESCRITURA_PERSONAL_TEMPORAL,
   ESTADO_DDJJ_DEFAULT_PERSONALES,
@@ -47,9 +47,8 @@ const CAMPOS_POR_ACCION = {
 };
 
 function isRrhhActor(request) {
-  const roleRaw = request && request.auth && request.auth.token && request.auth.token.portal_role;
-  const role = typeof roleRaw === "string" ? roleRaw.trim().toLowerCase() : "";
-  return role === "rrhh" || role === "admin";
+  const token = request && request.auth && request.auth.token;
+  return tokenHasRrhhAccess(token);
 }
 
 function getActorPersonaId(request) {

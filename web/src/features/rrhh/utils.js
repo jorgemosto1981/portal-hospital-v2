@@ -1,5 +1,3 @@
-export const DEFAULT_ROL_ID = "CFG_USUARIO";
-
 export function etiquetaCatalogo(item) {
   if (!item) return "";
   if (typeof item.titulo_ui === "string" && item.titulo_ui) return item.titulo_ui;
@@ -27,14 +25,13 @@ export function isValidPersonaId(personaId) {
   return /^per_/i.test(String(personaId || "").trim());
 }
 
-export function buildAltaAgentePayload({ dni, nombre, apellido, grupoId, nivel, rolId }) {
+export function buildAltaAgentePayload({ dni, nombre, apellido, grupoId, nivel }) {
   return {
     dni: normalizeDni(dni),
     nombre: String(nombre || "").trim(),
     apellido: String(apellido || "").trim(),
     grupo_de_trabajo_id: grupoId,
     nivel_jerarquico: Math.min(99, Math.max(1, Math.floor(nivel) || 1)),
-    role_ids: [rolId],
   };
 }
 

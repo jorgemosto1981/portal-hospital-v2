@@ -45,15 +45,28 @@ export default function SeguimientoEnrolamientoUsuariosRRHH() {
   async function cargar() {
     setLoading(true);
     try {
-      const [rp, ru, re] = await Promise.all([
+      const [rp, ru, re, rh] = await Promise.all([
         callListarColeccion({ collectionName: "personas" }),
         callListarColeccion({ collectionName: "usuarios_cuenta" }),
         callListarColeccion({ collectionName: "eventos_ticket" }),
+        callListarColeccion({ collectionName: "historial_laboral_cargos" }),
       ]);
       const personas = rp?.data?.items || [];
       const cuentas = ru?.data?.items || [];
       const eventos = re?.data?.items || [];
+      const hlcs = rh?.data?.items || [];
       const cuentaByPersona = new Map(cuentas.map((c) => [String(c.persona_id || ""), c]));
+
+      /** Distinct `cfg_rol` refs desde HLc por persona (modelo V2 canónico). */
+      const rolIdsPorPersona = new Map();
+      for (const row of hlcs) {
+        const pid = String(row.persona_id || "").trim();
+        if (!pid) continue;
+        const rid = String(row.rol_id || "").trim();
+        if (!rid) continue;
+        if (!rolIdsPorPersona.has(pid)) rolIdsPorPersona.set(pid, new Set());
+        rolIdsPorPersona.get(pid).add(rid);
+      }
 
       const eventosByPersona = new Map();
       for (const e of eventos) {
@@ -66,6 +79,7 @@ export default function SeguimientoEnrolamientoUsuariosRRHH() {
       const out = personas.map((p) => {
         const personaId = String(p.id || "");
         const cuenta = cuentaByPersona.get(personaId) || null;
+        const hlcRolIds = Array.from(rolIdsPorPersona.get(personaId) || []).sort();
         const estado = resolveEstadoFila(p, cuenta);
         const evs = (eventosByPersona.get(personaId) || []).sort((a, b) =>
           toIsoLike(b.ocurrido_en || b.creado_en).localeCompare(toIsoLike(a.ocurrido_en || a.creado_en)),
@@ -95,7 +109,7 @@ export default function SeguimientoEnrolamientoUsuariosRRHH() {
           auth_uid: cuenta ? String(cuenta.auth_uid || "") : "",
           username: cuenta ? String(cuenta.username || "") : "",
           estado_acceso: cuenta ? String(cuenta.estado_acceso || "") : "",
-          role_ids: Array.isArray(cuenta?.role_ids) ? cuenta.role_ids.map((r) => String(r)) : [],
+          hlc_rol_ids: hlcRolIds,
           actor_primer_acceso: evPrimerAcceso ? String(evPrimerAcceso.actor_uid || evPrimerAcceso.actor_persona_id || "") : "",
           fecha_primer_acceso: evPrimerAcceso ? toIsoLike(evPrimerAcceso.ocurrido_en || evPrimerAcceso.creado_en) : "",
           actor_completado: evCompleto ? String(evCompleto.actor_uid || evCompleto.actor_persona_id || "") : "",
@@ -121,7 +135,10 @@ export default function SeguimientoEnrolamientoUsuariosRRHH() {
     const base = !t
       ? rows
       : rows.filter((r) =>
-      [r.persona_id, r.dni, r.apellido, r.nombre, r.username, r.estado].join(" ").toLowerCase().includes(t),
+      [r.persona_id, r.dni, r.apellido, r.nombre, r.username, r.estado, ...(r.hlc_rol_ids || [])]
+          .join(" ")
+          .toLowerCase()
+          .includes(t),
     );
     if (estadoFiltro === "TODOS") return base;
     return base.filter((r) => r.estado === estadoFiltro);
@@ -162,7 +179,7 @@ export default function SeguimientoEnrolamientoUsuariosRRHH() {
       "cuenta_id",
       "auth_uid",
       "username",
-      "role_ids",
+      "hlc_rol_ids",
       "vinculado",
       "paso_a",
       "paso_b",
@@ -189,7 +206,7 @@ export default function SeguimientoEnrolamientoUsuariosRRHH() {
           r.cuenta_id,
           r.auth_uid,
           r.username,
-          r.role_ids.join("|"),
+          r.hlc_rol_ids.join("|"),
           r.onboarding_vinculado ? "si" : "no",
           r.onboarding_paso_a ? "si" : "no",
           r.onboarding_paso_b ? "si" : "no",
@@ -223,7 +240,9 @@ export default function SeguimientoEnrolamientoUsuariosRRHH() {
             Seguimiento de enrolamiento de usuarios para RRHH
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            Estado operativo de altas y enrolamiento por persona, con detalle de vínculo Auth, onboarding y cuenta.
+            Estado operativo de altas y enrolamiento por persona, con vínculo Auth, onboarding y cuenta. El perfil de
+            aplicación se infiere desde <span className="font-mono text-xs">historial_laboral_cargos.rol_id</span>{" "}
+            (cfg_rol); ya no se muestra <span className="font-mono text-xs">usuarios_cuenta.role_ids</span>.
           </p>
           <p className="mt-1 text-xs text-slate-500">
             Total: <strong>{resumen.total}</strong> · No iniciado: <strong>{resumen.NO_INICIADO}</strong> · Parcial:{" "}
@@ -238,7 +257,7 @@ export default function SeguimientoEnrolamientoUsuariosRRHH() {
               type="text"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar por persona_id, DNI, apellido, nombre o username..."
+              placeholder="Buscar por persona_id, DNI, apellido, nombre, username, id cfg_rol en HLc…"
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:max-w-xl"
             />
             <div className="flex items-center gap-2">
@@ -302,8 +321,8 @@ export default function SeguimientoEnrolamientoUsuariosRRHH() {
                     estado_perfil_datos_id: {r.estado_perfil_datos_id || "—"}
                   </p>
                   <p className="text-slate-600">
-                    Auth UID: {r.auth_uid || "—"} · username: {r.username || "—"} · role_ids:{" "}
-                    {r.role_ids.length ? r.role_ids.join(", ") : "—"}
+                    Auth UID: {r.auth_uid || "—"} · username: {r.username || "—"} · rol(es) HLc (cfg_rol):{" "}
+                    {r.hlc_rol_ids.length ? r.hlc_rol_ids.join(", ") : "—"}
                   </p>
                   <p className="text-slate-600">
                     Vinculado: {r.onboarding_vinculado ? "sí" : "no"} · paso A: {r.onboarding_paso_a ? "sí" : "no"} ·

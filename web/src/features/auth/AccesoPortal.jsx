@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 import { APP_TITLE, INSTITUTION_NAME, LOGO_SRC } from "../../constants/appBrand.js";
+import { safeRedirectPath } from "../routing/redirectPaths.js";
 import PublicAuthMenu from "../../components/layout/PublicAuthMenu.jsx";
 import {
   callRegistroPrimerAcceso,
@@ -111,6 +112,7 @@ export default function AccesoPortal() {
       }
       setFeedbackLogin({ status: "success", message: "Sesión iniciada correctamente" });
       toast.success("Bienvenido", { id: t });
+      nav(safeRedirectPath(searchParams.get("redirect")), { replace: true });
     } catch (err) {
       const code = err?.code;
       const isAuth = code && String(code).startsWith("auth/");

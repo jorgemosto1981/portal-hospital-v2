@@ -7,12 +7,12 @@ export function callHealthV2() {
   return httpsCallable(getFunctionsV2(), "healthV2")();
 }
 
-/** Sincroniza `persona_id` / `cuenta_id` en custom claims (requiere usuario autenticado). */
+/** Sincroniza claims de sesión: `persona_id`, `cuenta_id`, perfil laboral (`perfil_rol_id`, `cargo_activo`, …). */
 export function callSyncSessionClaims() {
   return httpsCallable(getFunctionsV2(), "syncSessionClaims")();
 }
 
-/** RRHH: alta mínima persona + cuenta (requiere `portal_role: "rrhh"` en el token vía consola/Admin). */
+/** RRHH: alta mínima persona + cuenta (Callable verifica `portal_role` o `perfil_rol_id` CFG_RRHH en token). */
 export function callRrhhAltaAgente(data) {
   return httpsCallable(getFunctionsV2(), "rrhhAltaAgente")(data);
 }

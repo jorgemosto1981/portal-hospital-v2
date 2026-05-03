@@ -21,6 +21,7 @@ const {
   normalizeDni,
   validEmail,
 } = require("./shared/helpers");
+const { applyLaborAwareSessionClaims } = require("./shared/authClaims");
 
 const PARENTESCO_OTROS_ID = "CFG_PAR_OTROS";
 
@@ -117,9 +118,7 @@ const vincularCuentaConDni = onCall(async (request) => {
     });
   });
 
-  const userAfter = await auth.getUser(uid);
-  const prev = userAfter.customClaims && typeof userAfter.customClaims === "object" ? { ...userAfter.customClaims } : {};
-  await auth.setCustomUserClaims(uid, { ...prev, persona_id: personaId, cuenta_id: cuentaId });
+  await applyLaborAwareSessionClaims(uid, personaId, cuentaId);
   return { ok: true, persona_id: personaId, cuenta_id: cuentaId };
 });
 
@@ -364,9 +363,7 @@ const onboardingMvpCompletar = onCall(async (request) => {
     { merge: true },
   );
   const uid = request.auth.uid;
-  const user = await auth.getUser(uid);
-  const prev = user.customClaims && typeof user.customClaims === "object" ? { ...user.customClaims } : {};
-  await auth.setCustomUserClaims(uid, { ...prev, persona_id: pid, cuenta_id: cuentaId });
+  await applyLaborAwareSessionClaims(uid, pid, cuentaId);
   return { ok: true, persona_id: pid, cuenta_id: cuentaId };
 });
 

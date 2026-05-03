@@ -26,15 +26,27 @@ function validEmail(s) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
 }
 
+/**
+ * Misma política que assertRrhh: `portal_role` rrhh/admin o `perfil_rol_id` CFG_RRHH (HLc).
+ * @param {unknown} token - `request.auth.token`
+ */
+function tokenHasRrhhAccess(token) {
+  if (!token || typeof token !== "object") return false;
+  const roleRaw = token.portal_role;
+  const role = typeof roleRaw === "string" ? roleRaw.trim().toLowerCase() : "";
+  if (role === "rrhh" || role === "admin") return true;
+  const perfil = typeof token.perfil_rol_id === "string" ? token.perfil_rol_id.trim().toUpperCase() : "";
+  return perfil === "CFG_RRHH";
+}
+
 function assertRrhh(request) {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Se requiere sesión.");
   }
-  const roleRaw = request.auth.token && request.auth.token.portal_role;
-  const role = typeof roleRaw === "string" ? roleRaw.trim().toLowerCase() : "";
-  if (role !== "rrhh" && role !== "admin") {
-    throw new HttpsError("permission-denied", "Solo personal autorizado (RRHH).");
+  if (tokenHasRrhhAccess(request.auth.token)) {
+    return;
   }
+  throw new HttpsError("permission-denied", "Solo personal autorizado (RRHH).");
 }
 
 function assertAgenteConPersonaId(request) {
@@ -191,6 +203,7 @@ async function checkRateLoginDni(normalizedDni) {
 module.exports = {
   normalizeDni,
   validEmail,
+  tokenHasRrhhAccess,
   assertRrhh,
   assertAgenteConPersonaId,
   assertColeccionOnboardingLectura,

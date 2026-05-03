@@ -9,16 +9,12 @@ export function AltaAgenteForm({
   setNombre,
   apellido,
   setApellido,
-  rolId,
-  setRolId,
-  roles,
   grupoId,
   setGrupoId,
   grupos,
   nivel,
   setNivel,
   busy,
-  etiquetaCatalogo,
 }) {
   return (
     <Card className="p-5 sm:p-6">
@@ -50,26 +46,6 @@ export function AltaAgenteForm({
             onChange={(e) => setApellido(e.target.value)}
             required
           />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Rol de aplicación</label>
-          <p className="mb-1 text-xs text-slate-500">
-            Definido en <code>cfg_rol</code> (V2). Un rol por cáscara en este formulario; la cuenta puede
-            ampliarse luego vía administración.
-          </p>
-          <select
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-            value={rolId}
-            onChange={(e) => setRolId(e.target.value)}
-            required
-          >
-            <option value="">{roles.length ? "Elegir…" : "Sembrá cfg_rol (npm run seed:cfg)"}</option>
-            {roles.map((r) => (
-              <option key={r.id} value={r.id}>
-                {etiquetaCatalogo(r)}
-              </option>
-            ))}
-          </select>
         </div>
         <div>
           <label className="text-sm font-medium">Grupo de trabajo</label>

@@ -1,19 +1,15 @@
-import { Navigate, useSearchParams } from "react-router-dom";
-import { useMemo } from "react";
-
-import { safeRedirectPath } from "../routing/redirectPaths.js";
 import { useAuthSession } from "./useAuthSession.js";
 import AccesoPortal from "./AccesoPortal.jsx";
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
 
 /**
- * Ruta `/login`: acceso unificado (sesión + primer registro). Si ya hay sesión, redirige a `redirect` o `/portal/home`.
+ * Ruta `/login`: acceso unificado (sesión + primer registro).
+ * No redirigir automáticamente por tener sesión: evita carrera con `syncSessionClaims` en el login;
+ * la navegación post-ingreso la dispara `AccesoPortal` tras sync OK (o el usuario usa “Ir al inicio”).
  */
 export default function LoginRoute() {
-  const { user, authPending } = useAuthSession();
-  const [searchParams] = useSearchParams();
-  const afterLogin = useMemo(() => safeRedirectPath(searchParams.get("redirect")), [searchParams]);
+  const { authPending } = useAuthSession();
 
   if (!BYPASS_AUTH && authPending) {
     return (
@@ -27,10 +23,6 @@ export default function LoginRoute() {
         </div>
       </div>
     );
-  }
-
-  if (!BYPASS_AUTH && user) {
-    return <Navigate to={afterLogin} replace />;
   }
 
   return <AccesoPortal />;

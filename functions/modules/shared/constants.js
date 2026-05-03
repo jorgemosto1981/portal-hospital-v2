@@ -60,6 +60,10 @@ const CFG_COLECCIONES_RRHH = new Set([
   "cfg_causal_fin_asignacion_laboral",
   "cfg_tipo_acto_designacion",
   "usuarios_cuenta",
+  /** Lecturas RRHH · seguimiento enrolamiento y perfil laboral (HLc). */
+  COL_PERSONAS,
+  COL_EVENTOS,
+  "historial_laboral_cargos",
 ]);
 
 module.exports = {

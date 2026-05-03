@@ -65,8 +65,17 @@ function haySolapeInclusivo(aDesde, aHasta, bDesde, bHasta) {
   return aDesde <= bFin && bDesde <= aFin;
 }
 
+/** Solo desarrollo / carga puntual: permite HL sin claim RRHH (véase runtimeFlags y LABORAL_ESCRITURA_SIN_RRHH en .env). */
+function laboralEscrituraSinAssertRrhh() {
+  if (runtimeFlags.OPEN_ACCESS_TEMP === true) return true;
+  if (runtimeFlags.LABORAL_ESCRITURA_SIN_RRHH === true) return true;
+  const v = process.env.LABORAL_ESCRITURA_SIN_RRHH;
+  if (v === "1" || v === "true") return true;
+  return false;
+}
+
 const guardarRegistroLaboralTemporal = onCall(async (request) => {
-  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
+  if (!laboralEscrituraSinAssertRrhh()) assertRrhh(request);
   const d = request.data && typeof request.data === "object" ? request.data : {};
   const colRaw = typeof d.collectionName === "string" ? d.collectionName.trim() : "";
   if (!COLECCIONES_ESCRITURA_LABORAL_TEMPORAL.has(colRaw)) {
@@ -398,7 +407,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
 });
 
 const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
-  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
+  if (!laboralEscrituraSinAssertRrhh()) assertRrhh(request);
   const data = request && request.data && typeof request.data === "object" ? request.data : {};
   const personaId = toNullableTrimmedString(data.persona_id);
   const grupoId = toNullableTrimmedString(data.grupo_de_trabajo_id);

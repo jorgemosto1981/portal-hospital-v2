@@ -17,7 +17,6 @@ import {
   buildAltaAgentePayload,
   buildBajaLaboralPayload,
   buildReinicioPayload,
-  DEFAULT_ROL_ID,
   etiquetaCatalogo,
   etiquetaPersona,
   isValidPersonaId,
@@ -35,14 +34,12 @@ const OPEN_ACCESS_TEMP = runtimeFlags.OPEN_ACCESS_TEMP === true;
 export default function AltaAgenteRRHH() {
   const { user } = useAuthSession();
   const [grupos, setGrupos] = useState(/** @type {{ id: string, nombre?: string }[]} */ ([]));
-  const [roles, setRoles] = useState(/** @type {{ id: string, nombre?: string, titulo_ui?: string }[]} */ ([]));
   const [personas, setPersonas] = useState(/** @type {{ id: string, nombre?: string, apellido?: string, dni?: string }[]} */ ([]));
   const [personasConCuentaIds, setPersonasConCuentaIds] = useState(/** @type {Set<string>} */ (new Set()));
   const [dni, setDni] = useState("");
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [grupoId, setGrupoId] = useState("");
-  const [rolId, setRolId] = useState(DEFAULT_ROL_ID);
   const [nivel, setNivel] = useState(10);
   const [estadosCuentaAcceso, setEstadosCuentaAcceso] = useState(
     /** @type {{ id: string, nombre?: string, titulo_ui?: string }[]} */ ([]),
@@ -80,31 +77,17 @@ export default function AltaAgenteRRHH() {
     setLoad(true);
     Promise.all([
       callListarColeccion({ collectionName: "grupos_de_trabajo" }),
-      callListarColeccion({ collectionName: "cfg_rol" }),
       callListarColeccion({ collectionName: "cfg_estado_cuenta_acceso" }),
       callListarColeccion({ collectionName: "cfg_causal_fin_asignacion_laboral" }),
       callListarColeccion({ collectionName: "cfg_motivo_baja_persona" }),
       callListarColeccion({ collectionName: "usuarios_cuenta" }),
       callListarColeccionPublicaTemporal({ collectionName: "personas", pageSize: 200 }),
     ])
-      .then(([rG, rR, rEca, rCausal, rMotivosBaja, rUsuariosCuenta, rPersonas]) => {
+      .then(([rG, rEca, rCausal, rMotivosBaja, rUsuariosCuenta, rPersonas]) => {
         if (!a) return;
         const itemsG = (rG && rG.data && rG.data.items) || [];
         setGrupos(itemsG.filter((it) => it.activo !== false));
         setGrupoId((prev) => (prev && prev.length ? prev : (itemsG[0] && itemsG[0].id) || ""));
-
-        const itemsR = (rR && rR.data && rR.data.items) || [];
-        const rOk = itemsR.filter((it) => it.activo !== false);
-        setRoles(rOk);
-        setRolId((prev) => {
-          if (rOk.some((x) => x.id === prev)) {
-            return prev;
-          }
-          if (rOk.some((x) => x.id === DEFAULT_ROL_ID)) {
-            return DEFAULT_ROL_ID;
-          }
-          return (rOk[0] && rOk[0].id) || "";
-        });
 
         const itemsEca = (rEca && rEca.data && rEca.data.items) || [];
         const ecaOk = itemsEca.filter((it) => it.activo !== false);
@@ -154,7 +137,10 @@ export default function AltaAgenteRRHH() {
         if (!a) return;
         const code = (e && /** @type {{ code?: string }} */ (e).code) || "";
         if (String(code).includes("permission") || String(code).includes("PERMISSION")) {
-          toast.error("Sin permiso de RRHH (revisá el claim `portal_role: rrhh`).", { duration: 6_000 });
+          toast.error(
+            "Sin permiso de RRHH: necesitás cadena laboral con rol CFG_RRHH en HLc o claims portal_role rrhh/admin.",
+            { duration: 8_000 },
+          );
         } else {
           toast.error("No se pudo cargar el formulario (grupos / roles).");
         }
@@ -179,27 +165,22 @@ export default function AltaAgenteRRHH() {
       toast.error("Seleccioná un grupo de trabajo.");
       return;
     }
-    if (!rolId) {
-      toast.error("Seleccioná el rol de aplicación (cfg_rol).");
-      return;
-    }
     setBusy(true);
     const t = toast.loading("Dando de alta cáscara de agente…");
     try {
       const { data } = await callRrhhAltaAgente(
-        buildAltaAgentePayload({ dni, nombre, apellido, grupoId, nivel, rolId }),
+        buildAltaAgentePayload({ dni, nombre, apellido, grupoId, nivel }),
       );
       if (data?.ok) {
         toast.success(`Creado ${data.persona_id} — ` + `Cuenta ${data.cuenta_id}`, { id: t, duration: 5_000 });
         setDni("");
         setNombre("");
         setApellido("");
-        setRolId(roles.some((x) => x.id === DEFAULT_ROL_ID) ? DEFAULT_ROL_ID : rolId);
       } else {
         throw new Error();
       }
     } catch (err) {
-      const msg = (err && /** @type {{ message?: string }} */ (err).message) || "Revisá DNI, roles o permisos";
+      const msg = (err && /** @type {{ message?: string }} */ (err).message) || "Revisá DNI o permisos de RRHH";
       toast.error(String(msg), { id: t });
     } finally {
       setBusy(false);
@@ -327,8 +308,9 @@ export default function AltaAgenteRRHH() {
       <div className="mx-auto w-full max-w-md">
         <h1 className="text-2xl font-semibold">Pre-alta (RRHH)</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Cáscara en PENDIENTE_ONBOARDING. El <strong>rol de aplicación</strong> se guarda en
-          <code className="mx-1 text-xs">usuarios_cuenta.role_ids</code> (catálogo <code className="text-xs">cfg_rol</code>).
+          Cáscara en PENDIENTE_ONBOARDING. El <strong>rol operativo</strong> proviene del{" "}
+          <code className="text-xs">rol_id</code> en <strong>HLc</strong> (cadena HLc → HLd → HLg); completá el legajo
+          en <strong>Datos laborales</strong> para que el agente reciba claims coherentes.
         </p>
         <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3 text-xs text-slate-600">
           <p><strong>Objetivo:</strong> administrar altas, acceso, bajas y re-vinculación de cuentas.</p>
@@ -361,7 +343,7 @@ export default function AltaAgenteRRHH() {
         </div>
 
         {load ? (
-          <p className="text-sm text-slate-500">Cargando catálogos (grupos, roles)…</p>
+          <p className="text-sm text-slate-500">Cargando catálogos (grupos)…</p>
         ) : (
           <>
             <AltaAgenteForm
@@ -372,16 +354,12 @@ export default function AltaAgenteRRHH() {
               setNombre={setNombre}
               apellido={apellido}
               setApellido={setApellido}
-              rolId={rolId}
-              setRolId={setRolId}
-              roles={roles}
               grupoId={grupoId}
               setGrupoId={setGrupoId}
               grupos={grupos}
               nivel={nivel}
               setNivel={setNivel}
               busy={busy}
-              etiquetaCatalogo={etiquetaCatalogo}
             />
 
             <EstadoCuentaForm

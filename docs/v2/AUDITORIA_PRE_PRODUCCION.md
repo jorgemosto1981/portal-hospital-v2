@@ -3,7 +3,8 @@
 **Rol:** auditoría de arquitectura y seguridad sobre el codebase actual.  
 **Alcance:** Alta (RRHH), Registro / primer acceso, Login, seguridad (Firestore + entorno), sesión / expiración, UX en formularios críticos.  
 **Fecha de referencia:** 2026-05-02.  
-**Cierre de ciclo (misma fecha):** flags de acceso temporal en `false`, login DNI con `callSyncSessionClaims` + `getIdToken(true)`, logout global en header, Firebase Storage habilitado, Hosting configurado y desplegado, política de artefactos Functions en `southamerica-east1`.
+**Última actualización documental / código alineado:** 2026-05-03 — claims laborales unificados (`applyLaborAwareSessionClaims` en onboarding y login).  
+**Cierre de ciclo (2026-05-02):** flags de acceso temporal en `false`, login DNI con `callSyncSessionClaims` + `getIdToken(true)`, logout global en header, Firebase Storage habilitado, Hosting configurado y desplegado, política de artefactos Functions en `southamerica-east1`.
 
 ---
 
@@ -39,6 +40,7 @@
 
 **Onboarding**  
 - `MvpAccessGate` fuerza `/onboarding` si la persona está `PENDIENTE_ONBOARDING` y `metadata.auth_vinculado`.  
+- **Actualizado (2026-05-03):** tras **`vincularCuentaConDni`** y **`onboardingMvpCompletar`**, los custom claims se actualizan con la **misma** lógica laboral que `syncSessionClaims` (`applyLaborAwareSessionClaims` en `functions/modules/shared/authClaims.js`), no solo `persona_id`/`cuenta_id`.  
 - Si el usuario **abandona** el wizard, no se observa “reset automático” de datos (decisión de producto ya alineada); puede volver a entrar por ruta protegida mientras el estado lo permita.
 
 ### 2.3 Cuellos de botella / callejones sin salida
@@ -53,7 +55,8 @@
 ### 2.4 Brechas (gaps)
 
 1. ~~**Post-login DNI:**~~ **Cerrado en código:** reconciliación vía `callSyncSessionClaims` + `getIdToken(true)` en login DNI.  
-2. **Documentación operativa:** el orden “cuándo forzar `getIdToken(true)`” sigue repartido entre registro, login y `vincularCuentaPorDni`; conviene una guía breve en README o doc de auth.
+2. ~~**Claims tras onboarding / vínculo DNI:**~~ **Cerrado en código (2026-05-03):** `applyLaborAwareSessionClaims` reutiliza el cálculo de `syncSessionClaims` (perfil HL + `portal_role`).  
+3. **Documentación operativa:** el orden “cuándo forzar `getIdToken(true)`” está descrito en `MODULO_LOGIN_V2.md` §3.3 y en esta auditoría §2.2; una guía README única sigue siendo opcional.
 
 ---
 

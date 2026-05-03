@@ -15,6 +15,7 @@ const {
   ESTADO_PENDIENTE_ONBOARDING,
 } = require("./shared/constants");
 const { checkRateLoginDni, checkRatePrimerDni, normalizeDni, validEmail } = require("./shared/helpers");
+const { applyLaborAwareSessionClaims } = require("./shared/authClaims");
 
 const resolverEmailLoginDni = onCall(async (request) => {
   const d = request.data && typeof request.data === "object" ? request.data : {};
@@ -60,10 +61,16 @@ const syncSessionClaims = onCall(async (request) => {
   const personaId = typeof data.persona_id === "string" ? data.persona_id.trim() : "";
   if (!personaId) throw new HttpsError("failed-precondition", "La cuenta no tiene persona_id; no se pueden establecer claims.");
   if (data.auth_uid !== uid) throw new HttpsError("internal", "auth_uid del documento no coincide con la sesión.");
-  const user = await auth.getUser(uid);
-  const prev = user.customClaims && typeof user.customClaims === "object" ? { ...user.customClaims } : {};
-  await auth.setCustomUserClaims(uid, { ...prev, persona_id: personaId, cuenta_id: cuentaId });
-  return { ok: true, persona_id: personaId, cuenta_id: cuentaId };
+  const { profile } = await applyLaborAwareSessionClaims(uid, personaId, cuentaId);
+  return {
+    ok: true,
+    persona_id: personaId,
+    cuenta_id: cuentaId,
+    perfil_rol_id: profile.perfil_rol_id || null,
+    cargo_activo: profile.cargo_activo === true,
+    labor_rol_conflicto: profile.rol_conflicto === true,
+    fecha_referencia_laboral: profile.fecha_referencia || null,
+  };
 });
 
 const registrarPrimerAcceso = onCall(async (request) => {
@@ -178,9 +185,8 @@ const registrarPrimerAcceso = onCall(async (request) => {
     try { await auth.deleteUser(newUid); } catch {}
     throw new HttpsError("internal", MSG_REG_GENERICO);
   }
-  const prev = userAfter.customClaims && typeof userAfter.customClaims === "object" ? { ...userAfter.customClaims } : {};
   try {
-    await auth.setCustomUserClaims(newUid, { ...prev, persona_id: personaId, cuenta_id: cuentaId });
+    await applyLaborAwareSessionClaims(newUid, personaId, cuentaId);
   } catch {
     const rev = db.batch();
     rev.update(cuentaRef, {

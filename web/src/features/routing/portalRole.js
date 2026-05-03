@@ -16,6 +16,8 @@ function asLowerString(v) {
  */
 export function normalizePortalRole(claims) {
   if (!claims || typeof claims !== "object") return null;
+  const pr = typeof claims.perfil_rol_id === "string" ? claims.perfil_rol_id.trim().toUpperCase() : "";
+  if (pr === "CFG_RRHH") return "rrhh";
   const direct =
     asLowerString(claims.portal_role) ||
     asLowerString(claims.portalRole) ||
