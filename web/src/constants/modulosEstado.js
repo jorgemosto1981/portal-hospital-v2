@@ -5,14 +5,95 @@ export const ESTADOS_MODULO = {
   LEGACY: "legacy",
 };
 
+/**
+ * Bloques del menú raíz: encadenamiento lógico por paquete de rol (producto).
+ * Los ítems de {@link MODULOS_PORTAL} referencian `grupo` por id.
+ */
+export const GRUPOS_MENU_RAIZ = [
+  {
+    id: "usuario",
+    titulo: "Rol usuario",
+    descripcion: "Agente: inicio del portal y datos personales propios.",
+  },
+  {
+    id: "jefe",
+    titulo: "Rol jefe",
+    descripcion: "Jerarquía: supervisión — vista operativa / equipo (grilla).",
+  },
+  {
+    id: "rrhh",
+    titulo: "Rol RRHH",
+    descripcion: "Gestión: datos laborales, módulo RRHH, catálogos y referencias técnicas.",
+  },
+  {
+    id: "medico",
+    titulo: "Rol médico",
+    descripcion: "Área clínica (ítems de menú pendientes de asignar).",
+  },
+  {
+    id: "visualizador",
+    titulo: "Rol visualizador",
+    descripcion: "Consulta / auditoría (ítems de menú pendientes de asignar).",
+  },
+];
+
 export const MODULOS_PORTAL = [
-  { id: "inicio", label: "Inicio", path: "/portal/home", estado: ESTADOS_MODULO.ACTIVO },
-  { id: "laboral", label: "Laboral", path: "/portal/laboral", estado: ESTADOS_MODULO.MVP },
-  { id: "rrhh", label: "RRHH", path: "/portal/rrhh/alta", estado: ESTADOS_MODULO.ACTIVO },
-  { id: "configuracion", label: "Config", path: "/portal/configuracion", estado: ESTADOS_MODULO.ACTIVO },
-  { id: "perfil", label: "Perfil", path: "/portal/perfil", estado: ESTADOS_MODULO.MVP },
-  { id: "pantallas", label: "Pantallas", path: "/portal/pantallas", estado: ESTADOS_MODULO.ACTIVO },
-  { id: "modulos", label: "Módulos", path: "/portal/modulos", estado: ESTADOS_MODULO.ACTIVO },
+  {
+    id: "inicio",
+    label: "Inicio",
+    path: "/portal/home",
+    estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "usuario",
+  },
+  {
+    id: "laboral",
+    label: "Laboral",
+    path: "/portal/laboral",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
+    id: "grilla",
+    label: "Grilla",
+    path: "/portal/grilla",
+    estado: ESTADOS_MODULO.BORRADOR,
+    grupo: "jefe",
+  },
+  {
+    id: "rrhh",
+    label: "RRHH",
+    path: "/portal/rrhh/alta",
+    estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "rrhh",
+  },
+  {
+    id: "configuracion",
+    label: "Config",
+    path: "/portal/configuracion",
+    estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "rrhh",
+  },
+  {
+    id: "perfil",
+    label: "Perfil",
+    path: "/portal/perfil",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "usuario",
+  },
+  {
+    id: "pantallas",
+    label: "Pantallas",
+    path: "/portal/pantallas",
+    estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "rrhh",
+  },
+  {
+    id: "modulos",
+    label: "Módulos",
+    path: "/portal/modulos",
+    estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "rrhh",
+  },
 ];
 
 export const MODULOS_V2_ESTADO = [
@@ -30,6 +111,7 @@ export const MODULOS_V2_ESTADO = [
 export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
+  if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla";
   if (pathname.startsWith("/portal/laboral") || pathname.startsWith("/laboral")) return "laboral";
   if (pathname.startsWith("/portal/perfil") || pathname.startsWith("/perfil")) return "perfil";
   if (pathname.startsWith("/portal/pantallas") || pathname.startsWith("/pantallas")) return "pantallas";

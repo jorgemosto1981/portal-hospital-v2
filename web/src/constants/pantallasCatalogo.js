@@ -1,3 +1,24 @@
+/**
+ * Desde el catálogo `/portal/pantallas`, el rol RRHH entra por la **rama inicial** de cada bloque
+ * (sin saltar a subpantallas). Las rutas “reales” siguen en `path` para referencia.
+ */
+export const RRHH_RAMA_INICIAL_PORTAL = "/portal/rrhh/alta";
+
+/**
+ * @param {{ path: string, id?: string }} p — ítem de {@link PANTALLAS_CATALOGO}
+ * @returns {string} destino del enlace “Abrir” para flujo RRHH
+ */
+export function pathCatalogoRrhh(p) {
+  const raw = typeof p.path === "string" ? p.path : "";
+  if (raw.startsWith("/portal/rrhh/") && raw !== RRHH_RAMA_INICIAL_PORTAL) {
+    return RRHH_RAMA_INICIAL_PORTAL;
+  }
+  if (p.id === "perfil-legajo") {
+    return RRHH_RAMA_INICIAL_PORTAL;
+  }
+  return raw || "/portal/home";
+}
+
 export const PANTALLAS_CATALOGO = [
   { id: "inicio", titulo: "Inicio", path: "/portal/home", estado: "activo", fuente: "web/src/features/home/PortalHome.jsx" },
   { id: "laboral", titulo: "Datos laborales", path: "/portal/laboral", estado: "mvp", fuente: "web/src/pages/DatosLaborales.jsx" },
