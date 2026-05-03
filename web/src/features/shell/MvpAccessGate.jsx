@@ -5,6 +5,7 @@ import PublicAuthMenu from "../../components/layout/PublicAuthMenu.jsx";
 import { ESTADO_PEND_ONBOARDING, subscribePersonaById } from "../../services/personaService.js";
 import { useAuthSession } from "../auth/useAuthSession.js";
 import { useAuthClaims } from "../auth/useAuthClaims.js";
+import { hasAnyPortalRole, MANAGEMENT_PORTAL_ROLES } from "../routing/portalRole.js";
 import runtimeFlags from "../../../../shared/runtimeFlags.json";
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
@@ -61,6 +62,13 @@ export default function MvpAccessGate({ children }) {
   }
   if (!pid) {
     if (PUBLIC_NO_PERSONA.has(location.pathname)) {
+      return children;
+    }
+    /** RRHH/admin puede operar sin legajo `persona_id` en el token (solo claims de rol). El portal de gestión sigue bajo `/portal/*`. */
+    if (
+      hasAnyPortalRole(claims, MANAGEMENT_PORTAL_ROLES) &&
+      location.pathname.startsWith("/portal")
+    ) {
       return children;
     }
     return <Navigate to="/vinculacion" replace state={{ from: location.pathname }} />;
