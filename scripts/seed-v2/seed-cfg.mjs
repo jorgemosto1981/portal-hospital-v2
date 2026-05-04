@@ -272,21 +272,124 @@ const cfgEstadoPerfilDatos = () => [
 
 const cfgTipoEvento = () => [
   {
-    id: "cfg_tev_dp_actualizado",
-    data: {
-      ...base(),
-      codigo_interno: "PERSONA_DATOS_ACTUALIZADOS",
-      titulo_ui: "Datos de persona actualizados",
-      orden: 20,
-    },
-  },
-  {
     id: "cfg_tev_login",
     data: {
       ...base(),
       codigo_interno: "SESION_INICIO",
       titulo_ui: "Inicio de sesión (auditoría)",
+      nombre: "Inicio de sesión",
       orden: 10,
+      evento_id: "EVT_LOGIN",
+    },
+  },
+  {
+    id: "cfg_tev_datos_notif_cambio_ddjj",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_NOTIF_CAMBIO_DDJJ",
+      titulo_ui: "Notificación de cambio en DDJJ",
+      nombre: "Notificación cambio DDJJ",
+      orden: 40,
+      evento_id: "EVT_DATOS_NOTIF_CAMBIO_DDJJ",
+    },
+  },
+  {
+    id: "cfg_tev_datos_notif_cambio_generico",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_NOTIF_CAMBIO_GENERICO",
+      titulo_ui: "Notificación de cambio genérico de datos",
+      nombre: "Notificación cambio genérico",
+      orden: 50,
+      evento_id: "EVT_DATOS_NOTIF_CAMBIO",
+    },
+  },
+  {
+    id: "cfg_tev_datos_actualiza_personas",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ACTUALIZA_PERSONAS",
+      titulo_ui: "Actualización de datos personales",
+      nombre: "Actualización personas",
+      orden: 80,
+      evento_id: "EVT_DATOS_ACTUALIZA_PERSONAS",
+    },
+  },
+  {
+    id: "cfg_tev_datos_alta_personas",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ALTA_PERSONAS",
+      titulo_ui: "Alta de persona",
+      nombre: "Alta personas",
+      orden: 90,
+      evento_id: "EVT_DATOS_ALTA_PERSONAS",
+    },
+  },
+  {
+    id: "cfg_tev_datos_actualiza_formacion",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ACTUALIZA_FORMACION",
+      titulo_ui: "Actualización de formación del agente",
+      nombre: "Actualización formación",
+      orden: 100,
+      evento_id: "EVT_DATOS_ACTUALIZA_FORMACION",
+    },
+  },
+  {
+    id: "cfg_tev_datos_alta_formacion",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ALTA_FORMACION",
+      titulo_ui: "Alta de formación del agente",
+      nombre: "Alta formación",
+      orden: 110,
+      evento_id: "EVT_DATOS_ALTA_FORMACION",
+    },
+  },
+  {
+    id: "cfg_tev_datos_actualiza_ddjj",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ACTUALIZA_DDJJ",
+      titulo_ui: "Actualización de DDJJ grupo familiar",
+      nombre: "Actualización DDJJ",
+      orden: 120,
+      evento_id: "EVT_DATOS_ACTUALIZA_DDJJ",
+    },
+  },
+  {
+    id: "cfg_tev_datos_alta_ddjj",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ALTA_DDJJ",
+      titulo_ui: "Alta de DDJJ grupo familiar",
+      nombre: "Alta DDJJ",
+      orden: 130,
+      evento_id: "EVT_DATOS_ALTA_DDJJ",
+    },
+  },
+  {
+    id: "cfg_tev_datos_actualiza_consentimiento",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ACTUALIZA_CONSENTIMIENTO",
+      titulo_ui: "Actualización de consentimiento",
+      nombre: "Actualización consentimiento",
+      orden: 140,
+      evento_id: "EVT_DATOS_ACTUALIZA_CONSENTIMIENTO",
+    },
+  },
+  {
+    id: "cfg_tev_datos_alta_consentimiento",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ALTA_CONSENTIMIENTO",
+      titulo_ui: "Alta de consentimiento",
+      nombre: "Alta consentimiento",
+      orden: 150,
+      evento_id: "EVT_DATOS_ALTA_CONSENTIMIENTO",
     },
   },
   {
@@ -295,9 +398,23 @@ const cfgTipoEvento = () => [
       ...base(),
       codigo_interno: "CONSENTIMIENTO_ACEPTADO",
       titulo_ui: "Consentimiento aceptado o actualizado",
-      orden: 30,
+      nombre: "Consentimiento aceptado",
+      orden: 160,
+      evento_id: "EVT_CONSENTIMIENTO_ACEPTADO",
     },
   },
+];
+
+const cfgEstadoBandejaRrhh = () => [
+  cfgRow("cfg_ebr_pend_rev", "PENDIENTE_REVISION", "Pendiente de revisión RRHH", 10),
+  cfgRow("cfg_ebr_visto", "VISTO", "Visto por RRHH", 20),
+  cfgRow("cfg_ebr_arch", "ARCHIVADO", "Archivado", 30),
+];
+
+const cfgEstadoDeclaracionDdjj = () => [
+  cfgRow("CFG_DDJJ_01_NO_INICIADA", "NO_INICIADA", "No iniciada", 10),
+  cfgRow("CFG_DDJJ_02_OMITIDA_ONBOARDING", "OMITIDA_ONBOARDING", "Omitida en onboarding", 20),
+  cfgRow("CFG_DDJJ_03_PRESENTADA", "PRESENTADA", "Presentada", 30),
 ];
 
 /** Una fila de catálogo cfg_* con nombre/código (demostración local). */
@@ -441,6 +558,8 @@ async function main() {
   await applyBatch(cfgEstadoCuentaAcceso(), "cfg_estado_cuenta_acceso");
   await applyBatch(cfgEstadoPerfilDatos(), "cfg_estado_perfil_datos");
   await applyBatch(cfgTipoEvento(), "cfg_tipo_evento");
+  await applyBatch(cfgEstadoBandejaRrhh(), "cfg_estado_bandeja_rrhh");
+  await applyBatch(cfgEstadoDeclaracionDdjj(), "cfg_estado_declaracion_ddjj");
   await applyBatch(cfgRol(), "cfg_rol");
   await applyBatch(cfgEstadoCivil(), "cfg_estado_civil");
 
@@ -474,6 +593,8 @@ async function main() {
     cfg_estado_cuenta_acceso: cfgEstadoCuentaAcceso().map((x) => x.id),
     cfg_estado_perfil_datos: cfgEstadoPerfilDatos().map((x) => x.id),
     cfg_tipo_evento: cfgTipoEvento().map((x) => x.id),
+    cfg_estado_bandeja_rrhh: cfgEstadoBandejaRrhh().map((x) => x.id),
+    cfg_estado_declaracion_ddjj: cfgEstadoDeclaracionDdjj().map((x) => x.id),
     cfg_rol: cfgRol().map((x) => x.id),
     cfg_estado_civil: cfgEstadoCivil().map((x) => x.id),
   };

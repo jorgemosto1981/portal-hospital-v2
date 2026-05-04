@@ -1,5 +1,7 @@
 export default function DdjjFields({
   ESTADO_DDJJ_DEFAULT_PERSONALES,
+  estadoDeclaracionIdActual,
+  estadoDeclaracionUiLabel,
   HELP,
   modoEdicion,
   form,
@@ -10,15 +12,24 @@ export default function DdjjFields({
   optsParentesco,
   disabled = false,
 }) {
+  const PARENTESCO_OTROS_ID = "CFG_PAR_OTROS";
+
+  function updateFam(idx, key, value) {
+    setFamiliares((prev) => prev.map((x, i) => (i === idx ? { ...x, [key]: value } : x)));
+  }
+
   return (
     <>
       <div>
-        <label className="block text-sm font-medium text-slate-700">estado_declaracion_id (fijo)</label>
+        <label className="block text-sm font-medium text-slate-700">estado_declaracion_id (vista simplificada)</label>
         <input
-          value={ESTADO_DDJJ_DEFAULT_PERSONALES}
+          value={estadoDeclaracionUiLabel || "Pendiente de presentación"}
           disabled
           className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none"
         />
+        <p className="mt-1 text-[11px] italic text-slate-500">
+          ({String(estadoDeclaracionIdActual || ESTADO_DDJJ_DEFAULT_PERSONALES || "—")})
+        </p>
         <p className="mt-1 text-xs text-slate-500">{HELP.estado_declaracion_id}</p>
       </div>
       <div>
@@ -33,6 +44,9 @@ export default function DdjjFields({
       <p className="md:col-span-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
         `declaracion_jurada_aceptada` y `aceptada_en` no se cargan manualmente en esta pantalla.
         Se resuelven por el flujo de validación/aceptación posterior según el estado DDJJ.
+      </p>
+      <p className="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+        Realizá tu DDJJ de familiares completando todos los datos requeridos del grupo familiar.
       </p>
 
       <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -72,13 +86,7 @@ export default function DdjjFields({
                   <label className="block text-sm font-medium text-slate-700">parentesco_id</label>
                   <select
                     value={f.parentesco_id}
-                    onChange={(e) =>
-                      setFamiliares((prev) =>
-                        prev.map((x, i) =>
-                          i === idx ? { ...x, parentesco_id: e.target.value } : x,
-                        ),
-                      )
-                    }
+                    onChange={(e) => updateFam(idx, "parentesco_id", e.target.value)}
                     disabled={disabled}
                     className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
                   >
@@ -90,15 +98,24 @@ export default function DdjjFields({
                     ))}
                   </select>
                 </div>
+                {String(f.parentesco_id || "").toUpperCase() === PARENTESCO_OTROS_ID ? (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">parentesco_otro_detalle</label>
+                    <input
+                      value={f.parentesco_otro_detalle || ""}
+                      onChange={(e) => updateFam(idx, "parentesco_otro_detalle", e.target.value)}
+                      disabled={disabled}
+                      className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
+                        placeholder="Detalle del parentesco (Otros)"
+                    />
+                      <p className="mt-1 text-[11px] text-slate-500">Obligatorio cuando seleccionás “Otros”.</p>
+                  </div>
+                ) : null}
                 <div>
                   <label className="block text-sm font-medium text-slate-700">dni</label>
                   <input
                     value={f.dni}
-                    onChange={(e) =>
-                      setFamiliares((prev) =>
-                        prev.map((x, i) => (i === idx ? { ...x, dni: e.target.value } : x)),
-                      )
-                    }
+                    onChange={(e) => updateFam(idx, "dni", e.target.value.replace(/\D/g, ""))}
                     disabled={disabled}
                     className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
                   />
@@ -108,9 +125,7 @@ export default function DdjjFields({
                   <input
                     value={f.nombre}
                     onChange={(e) =>
-                      setFamiliares((prev) =>
-                        prev.map((x, i) => (i === idx ? { ...x, nombre: e.target.value } : x)),
-                      )
+                      updateFam(idx, "nombre", e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÜü' ]/g, ""))
                     }
                     disabled={disabled}
                     className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
@@ -121,9 +136,7 @@ export default function DdjjFields({
                   <input
                     value={f.apellido}
                     onChange={(e) =>
-                      setFamiliares((prev) =>
-                        prev.map((x, i) => (i === idx ? { ...x, apellido: e.target.value } : x)),
-                      )
+                      updateFam(idx, "apellido", e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÜü' ]/g, ""))
                     }
                     disabled={disabled}
                     className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
@@ -134,13 +147,7 @@ export default function DdjjFields({
                   <input
                     type="date"
                     value={f.fecha_nacimiento}
-                    onChange={(e) =>
-                      setFamiliares((prev) =>
-                        prev.map((x, i) =>
-                          i === idx ? { ...x, fecha_nacimiento: e.target.value } : x,
-                        ),
-                      )
-                    }
+                    onChange={(e) => updateFam(idx, "fecha_nacimiento", e.target.value)}
                     disabled={disabled}
                     className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
                   />
@@ -149,62 +156,126 @@ export default function DdjjFields({
                   <label className="block text-sm font-medium text-slate-700">notas_titular</label>
                   <input
                     value={f.notas_titular}
-                    onChange={(e) =>
-                      setFamiliares((prev) =>
-                        prev.map((x, i) =>
-                          i === idx ? { ...x, notas_titular: e.target.value } : x,
-                        ),
-                      )
-                    }
+                    onChange={(e) => updateFam(idx, "notas_titular", e.target.value)}
                     disabled={disabled}
                     className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
-                <label className="flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={f.convive}
-                    disabled={disabled}
-                    onChange={(e) =>
-                      setFamiliares((prev) =>
-                        prev.map((x, i) => (i === idx ? { ...x, convive: e.target.checked } : x)),
-                      )
-                    }
-                  />
-                  Convive
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={f.dependiente}
-                    disabled={disabled}
-                    onChange={(e) =>
-                      setFamiliares((prev) =>
-                        prev.map((x, i) =>
-                          i === idx ? { ...x, dependiente: e.target.checked } : x,
-                        ),
-                      )
-                    }
-                  />
-                  Dependiente
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={f.discapacidad_declarada}
-                    disabled={disabled}
-                    onChange={(e) =>
-                      setFamiliares((prev) =>
-                        prev.map((x, i) =>
-                          i === idx
-                            ? { ...x, discapacidad_declarada: e.target.checked }
-                            : x,
-                        ),
-                      )
-                    }
-                  />
-                  Discapacidad declarada
-                </label>
+                <div className="md:col-span-2 space-y-3 pt-1 text-xs text-slate-700">
+                  <div className="space-y-1">
+                    <p className="font-medium">Conviven en el mismo domicilio</p>
+                    <div className="flex gap-4">
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`convive-${idx}`}
+                          checked={f.convive === true}
+                          disabled={disabled}
+                          onChange={() => updateFam(idx, "convive", true)}
+                        />
+                        Si
+                      </label>
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`convive-${idx}`}
+                          checked={f.convive === false}
+                          disabled={disabled}
+                          onChange={() => updateFam(idx, "convive", false)}
+                        />
+                        No
+                      </label>
+                    </div>
+                  </div>
+                  {f.convive === false ? (
+                    <div>
+                      <label className="block text-xs">Domicilio del familiar</label>
+                      <input
+                        className="w-full rounded-lg border border-slate-200 px-2 py-2 text-sm"
+                        value={f.domicilio_familiar || ""}
+                        onChange={(e) => updateFam(idx, "domicilio_familiar", e.target.value)}
+                        disabled={disabled}
+                        placeholder="Calle, número, localidad"
+                      />
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Obligatorio cuando no conviven en el mismo domicilio.
+                      </p>
+                    </div>
+                  ) : null}
+                  <div className="space-y-1">
+                    <p className="font-medium">Dependiente</p>
+                    <p className="text-[11px] text-slate-500">
+                      Indica si el familiar depende económicamente del titular.
+                    </p>
+                    <div className="flex gap-4">
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`dependiente-${idx}`}
+                          checked={f.dependiente === true}
+                          disabled={disabled}
+                          onChange={() => updateFam(idx, "dependiente", true)}
+                        />
+                        Si
+                      </label>
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`dependiente-${idx}`}
+                          checked={f.dependiente === false}
+                          disabled={disabled}
+                          onChange={() => updateFam(idx, "dependiente", false)}
+                        />
+                        No
+                      </label>
+                    </div>
+                  </div>
+                  {f.dependiente === true ? (
+                    <div>
+                      <label className="block text-xs">Detalle de dependencia</label>
+                      <input
+                        className="w-full rounded-lg border border-slate-200 px-2 py-2 text-sm"
+                        value={f.detalle_dependencia || ""}
+                        onChange={(e) => updateFam(idx, "detalle_dependencia", e.target.value)}
+                        disabled={disabled}
+                        placeholder="Ej: sin ingresos propios"
+                      />
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Obligatorio cuando indicás dependencia.
+                      </p>
+                    </div>
+                  ) : null}
+                  <div className="space-y-1">
+                    <p className="font-medium">Discapacidad declarada</p>
+                    <div className="flex gap-4">
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`discapacidad-${idx}`}
+                          checked={f.discapacidad_declarada === true}
+                          disabled={disabled}
+                          onChange={() => updateFam(idx, "discapacidad_declarada", true)}
+                        />
+                        Si
+                      </label>
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`discapacidad-${idx}`}
+                          checked={f.discapacidad_declarada === false}
+                          disabled={disabled}
+                          onChange={() => updateFam(idx, "discapacidad_declarada", false)}
+                        />
+                        No
+                      </label>
+                    </div>
+                    {f.discapacidad_declarada === true ? (
+                      <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-800">
+                        Para validación final debés presentar CUD en la oficina correspondiente.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             </div>
           ))}

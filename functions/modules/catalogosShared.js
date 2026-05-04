@@ -41,6 +41,8 @@ const COLECCIONES_PUBLICAS_TEMPORALES = new Set([
   "cfg_jurisdiccion_matricula",
   "cfg_rol",
   "cfg_estado_declaracion_ddjj",
+  "cfg_tipo_evento",
+  "cfg_estado_bandeja_rrhh",
   "cfg_tipo_consentimiento",
   "cfg_textos_legales",
   "cfg_idioma",
@@ -59,7 +61,7 @@ const COLECCIONES_ESCRITURA_PERSONAL_TEMPORAL = new Set([
   "consentimientos",
 ]);
 
-const ESTADO_DDJJ_DEFAULT_PERSONALES = "CFG_DDJJ_03_PRESENTADA";
+const ESTADO_DDJJ_DEFAULT_PERSONALES = "CFG_DDJJ_01_NO_INICIADA";
 const ESTADO_PERFIL_DEFAULT_PERSONAS = "cfg_epd_inc";
 const ESTADO_PERFIL_FALLBACK_PERSONAS = "cfg_epd_borr";
 const ESTADO_PERFIL_COMPLETO = "cfg_epd_comp";

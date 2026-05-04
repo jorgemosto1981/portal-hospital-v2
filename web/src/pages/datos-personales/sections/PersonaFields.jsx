@@ -2,6 +2,7 @@ export default function PersonaFields({
   form,
   setField,
   lockSensitiveFields = false,
+  readOnly = false,
   canEditField = () => true,
   HELP,
   optsLoc,
@@ -14,6 +15,10 @@ export default function PersonaFields({
 }) {
   const baseCls =
     "mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500";
+  const isDisabled = (field, allowInReadOnly = false) => {
+    if (!allowInReadOnly && readOnly) return true;
+    return !canEditField(field);
+  };
 
   return (
     <>
@@ -22,7 +27,7 @@ export default function PersonaFields({
         <input
           value={form.dni}
           onChange={(e) => setField("dni", e.target.value)}
-          disabled={lockSensitiveFields}
+          disabled={readOnly || lockSensitiveFields}
           className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
         />
         <p className="mt-1 text-xs text-slate-500">{HELP.dni}</p>
@@ -32,7 +37,7 @@ export default function PersonaFields({
         <input
           value={form.nombre}
           onChange={(e) => setField("nombre", e.target.value)}
-          disabled={lockSensitiveFields}
+          disabled={readOnly || lockSensitiveFields}
           className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
         />
         <p className="mt-1 text-xs text-slate-500">{HELP.nombre}</p>
@@ -42,7 +47,7 @@ export default function PersonaFields({
         <input
           value={form.apellido}
           onChange={(e) => setField("apellido", e.target.value)}
-          disabled={lockSensitiveFields}
+          disabled={readOnly || lockSensitiveFields}
           className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
         />
         <p className="mt-1 text-xs text-slate-500">{HELP.apellido}</p>
@@ -54,17 +59,17 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">cuil</label>
-        <input value={form.cuil} onChange={(e) => setField("cuil", e.target.value)} disabled={!canEditField("cuil")} className={baseCls} />
+        <input value={form.cuil} onChange={(e) => setField("cuil", e.target.value)} disabled={isDisabled("cuil")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.cuil}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">fecha_nacimiento</label>
-        <input type="date" value={form.fecha_nacimiento} onChange={(e) => setField("fecha_nacimiento", e.target.value)} disabled={!canEditField("fecha_nacimiento")} className={baseCls} />
+        <input type="date" value={form.fecha_nacimiento} onChange={(e) => setField("fecha_nacimiento", e.target.value)} disabled={isDisabled("fecha_nacimiento")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.fecha_nacimiento}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">lugar_nacimiento_id</label>
-        <select value={form.lugar_nacimiento_id} onChange={(e) => setField("lugar_nacimiento_id", e.target.value)} disabled={!canEditField("lugar_nacimiento_id")} className={baseCls}>
+        <select value={form.lugar_nacimiento_id} onChange={(e) => setField("lugar_nacimiento_id", e.target.value)} disabled={isDisabled("lugar_nacimiento_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsLoc.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -72,7 +77,7 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">lugar_nacimiento_texto</label>
-        <input value={form.lugar_nacimiento_texto} onChange={(e) => setField("lugar_nacimiento_texto", e.target.value)} disabled={!canEditField("lugar_nacimiento_texto")} className={baseCls} />
+        <input value={form.lugar_nacimiento_texto} onChange={(e) => setField("lugar_nacimiento_texto", e.target.value)} disabled={isDisabled("lugar_nacimiento_texto")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.lugar_nacimiento_texto}</p>
       </div>
       <div>
@@ -80,7 +85,7 @@ export default function PersonaFields({
         <select
           value={form.activo ? "true" : "false"}
           onChange={(e) => setField("activo", e.target.value === "true")}
-          disabled={lockSensitiveFields}
+          disabled={readOnly || lockSensitiveFields}
           className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
         >
           <option value="true">Sí</option>
@@ -94,7 +99,7 @@ export default function PersonaFields({
           <select
             value={form.motivo_baja_id}
             onChange={(e) => setField("motivo_baja_id", e.target.value)}
-            disabled={lockSensitiveFields}
+            disabled={readOnly || lockSensitiveFields}
             className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500"
           >
             <option value="">Seleccionar...</option>
@@ -105,7 +110,7 @@ export default function PersonaFields({
       )}
       <div>
         <label className="block text-sm font-medium text-slate-700">sexo_genero_id</label>
-        <select value={form.sexo_genero_id} onChange={(e) => setField("sexo_genero_id", e.target.value)} disabled={!canEditField("sexo_genero_id")} className={baseCls}>
+        <select value={form.sexo_genero_id} onChange={(e) => setField("sexo_genero_id", e.target.value)} disabled={isDisabled("sexo_genero_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsSexo.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -113,7 +118,7 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">estado_civil_id</label>
-        <select value={form.estado_civil_id} onChange={(e) => setField("estado_civil_id", e.target.value)} disabled={!canEditField("estado_civil_id")} className={baseCls}>
+        <select value={form.estado_civil_id} onChange={(e) => setField("estado_civil_id", e.target.value)} disabled={isDisabled("estado_civil_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsCivil.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -121,7 +126,7 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">nacionalidad_id</label>
-        <select value={form.nacionalidad_id} onChange={(e) => setField("nacionalidad_id", e.target.value)} disabled={!canEditField("nacionalidad_id")} className={baseCls}>
+        <select value={form.nacionalidad_id} onChange={(e) => setField("nacionalidad_id", e.target.value)} disabled={isDisabled("nacionalidad_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsNac.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -129,12 +134,12 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">telefono_celular</label>
-        <input value={form.telefono_celular} onChange={(e) => setField("telefono_celular", e.target.value)} disabled={!canEditField("telefono_celular")} className={baseCls} />
+        <input value={form.telefono_celular} onChange={(e) => setField("telefono_celular", e.target.value)} disabled={isDisabled("telefono_celular")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.telefono_celular}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">telefono_fijo</label>
-        <input value={form.telefono_fijo} onChange={(e) => setField("telefono_fijo", e.target.value)} disabled={!canEditField("telefono_fijo")} className={baseCls} />
+        <input value={form.telefono_fijo} onChange={(e) => setField("telefono_fijo", e.target.value)} disabled={isDisabled("telefono_fijo")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.telefono_fijo}</p>
       </div>
       <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -142,38 +147,38 @@ export default function PersonaFields({
           type="checkbox"
           checked={form.recibe_notificaciones_sms}
           onChange={(e) => setField("recibe_notificaciones_sms", e.target.checked)}
-          disabled={!canEditField("recibe_notificaciones_sms")}
+          disabled={isDisabled("recibe_notificaciones_sms")}
         />
         Recibe notificaciones por WhatsApp
       </label>
       <div>
         <label className="block text-sm font-medium text-slate-700">email_personal</label>
-        <input value={form.email_personal} onChange={(e) => setField("email_personal", e.target.value)} disabled={!canEditField("email_personal")} className={baseCls} />
+        <input value={form.email_personal} onChange={(e) => setField("email_personal", e.target.value)} disabled={isDisabled("email_personal")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.email_personal}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">calle</label>
-        <input value={form.calle} onChange={(e) => setField("calle", e.target.value)} disabled={!canEditField("calle")} className={baseCls} />
+        <input value={form.calle} onChange={(e) => setField("calle", e.target.value)} disabled={isDisabled("calle")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.calle}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">numero</label>
-        <input value={form.numero} onChange={(e) => setField("numero", e.target.value)} disabled={!canEditField("numero")} className={baseCls} />
+        <input value={form.numero} onChange={(e) => setField("numero", e.target.value)} disabled={isDisabled("numero")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.numero}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">piso</label>
-        <input value={form.piso} onChange={(e) => setField("piso", e.target.value)} disabled={!canEditField("piso")} className={baseCls} />
+        <input value={form.piso} onChange={(e) => setField("piso", e.target.value)} disabled={isDisabled("piso")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.piso}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">departamento</label>
-        <input value={form.departamento} onChange={(e) => setField("departamento", e.target.value)} disabled={!canEditField("departamento")} className={baseCls} />
+        <input value={form.departamento} onChange={(e) => setField("departamento", e.target.value)} disabled={isDisabled("departamento")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.departamento}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">provincia_id</label>
-        <select value={form.provincia_id} onChange={(e) => setField("provincia_id", e.target.value)} disabled={!canEditField("provincia_id")} className={baseCls}>
+        <select value={form.provincia_id} onChange={(e) => setField("provincia_id", e.target.value)} disabled={isDisabled("provincia_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsProv.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -181,7 +186,7 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">pais_id</label>
-        <select value={form.pais_id} onChange={(e) => setField("pais_id", e.target.value)} disabled={!canEditField("pais_id")} className={baseCls}>
+        <select value={form.pais_id} onChange={(e) => setField("pais_id", e.target.value)} disabled={isDisabled("pais_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsPais.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -189,7 +194,7 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">localidad_id</label>
-        <select value={form.localidad_id} onChange={(e) => setField("localidad_id", e.target.value)} disabled={!canEditField("localidad_id")} className={baseCls}>
+        <select value={form.localidad_id} onChange={(e) => setField("localidad_id", e.target.value)} disabled={isDisabled("localidad_id")} className={baseCls}>
           <option value="">Seleccionar...</option>
           {optsLoc.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -197,12 +202,12 @@ export default function PersonaFields({
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">codigo_postal</label>
-        <input value={form.codigo_postal} onChange={(e) => setField("codigo_postal", e.target.value)} disabled={!canEditField("codigo_postal")} className={baseCls} />
+        <input value={form.codigo_postal} onChange={(e) => setField("codigo_postal", e.target.value)} disabled={isDisabled("codigo_postal")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.codigo_postal}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">referencia</label>
-        <input value={form.referencia} onChange={(e) => setField("referencia", e.target.value)} disabled={!canEditField("referencia")} className={baseCls} />
+        <input value={form.referencia} onChange={(e) => setField("referencia", e.target.value)} disabled={isDisabled("referencia")} className={baseCls} />
         <p className="mt-1 text-xs text-slate-500">{HELP.referencia}</p>
       </div>
       <div className="md:col-span-2">
@@ -216,7 +221,7 @@ export default function PersonaFields({
             setField("foto_file", file);
             setField("foto_file_name", file ? file.name : "");
           }}
-          disabled={!canEditField("foto_archivo")}
+          disabled={isDisabled("foto_archivo")}
           className="mt-1 block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border file:border-slate-300 file:bg-white file:px-3 file:py-2 file:text-sm file:font-semibold"
         />
         <p className="mt-1 text-xs text-slate-500">{HELP.foto_archivo}</p>

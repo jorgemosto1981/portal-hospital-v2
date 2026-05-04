@@ -39,5 +39,6 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`PROPUESTA_ESTADOS_USUARIO_V2.md`](./PROPUESTA_ESTADOS_USUARIO_V2.md) | Estados de usuario (propuesta) |
 | [`HANDOFF_SESION_2026-04-30.md`](./HANDOFF_SESION_2026-04-30.md) | Continuidad de sesión: DDJJ onboarding, `CFG_PAR_OTROS`, evento a bandeja RRHH, limpieza usuarios test y próximos pasos |
 | [`HANDOFF_SESION_2026-05-02.md`](./HANDOFF_SESION_2026-05-02.md) | **Última sesión:** Datos personales (`desde`/`hasta`, eventos auditoría), RRHH + flujo usuario/notificación, scroll anchoring / HMR, deploy hosting, próximos pasos |
+| [`HANDOFF_SESION_2026-05-04.md`](./HANDOFF_SESION_2026-05-04.md) | **Sesión actual:** limpieza Fase 1+2 en Perfil RRHH, retiro callable legacy, deploy Hosting/Functions, continuidad hacia pantalla espejo rol Usuario y auditoría de estados duplicados |
 
 **Lecciones desde código V1 (en referencia V1):** [`../referencia_v1/PROBLEMA_LOGIN_PERMISOS.md`](../referencia_v1/PROBLEMA_LOGIN_PERMISOS.md) y el resto de `docs/referencia_v1/` según necesidad.

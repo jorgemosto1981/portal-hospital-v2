@@ -8,7 +8,6 @@ const {
   CFG_EPD_COMP,
   CFG_ONB,
   CFG_PEND_REG,
-  CFG_TEV_LOGIN,
   COL_EVENTOS,
   COL_PERSONAS,
   COL_USUARIOS_CUENTA,
@@ -24,6 +23,41 @@ const {
 const { applyLaborAwareSessionClaims } = require("./shared/authClaims");
 
 const PARENTESCO_OTROS_ID = "CFG_PAR_OTROS";
+const DDJJ_ESTADO_OMITIDA_ONBOARDING_ID = "CFG_DDJJ_02_OMITIDA_ONBOARDING";
+const DDJJ_ESTADO_PRESENTADA_ID = "CFG_DDJJ_03_PRESENTADA";
+
+function toMillisSafe(value) {
+  if (!value) return 0;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (value && typeof value.toMillis === "function") {
+    try {
+      return value.toMillis();
+    } catch (_) {
+      return 0;
+    }
+  }
+  if (value && typeof value.seconds === "number") {
+    const nanos = typeof value.nanoseconds === "number" ? value.nanoseconds : 0;
+    return Math.floor(value.seconds * 1000 + nanos / 1e6);
+  }
+  const parsed = new Date(String(value)).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function pickDdjjVigenteFromDocs(docs) {
+  if (!Array.isArray(docs) || docs.length === 0) return null;
+  return docs
+    .slice()
+    .sort((a, b) => {
+      const va = Number(a.get("declaracion_version")) || 0;
+      const vb = Number(b.get("declaracion_version")) || 0;
+      if (vb !== va) return vb - va;
+      const ta = toMillisSafe(a.get("actualizado_en")) || toMillisSafe(a.get("creado_en"));
+      const tb = toMillisSafe(b.get("actualizado_en")) || toMillisSafe(b.get("creado_en"));
+      if (tb !== ta) return tb - ta;
+      return String(b.id || "").localeCompare(String(a.id || ""));
+    })[0];
+}
 
 const vincularCuentaConDni = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Debes iniciar sesión para vincularte.");
@@ -110,7 +144,8 @@ const vincularCuentaConDni = onCall(async (request) => {
       actualizado_en: FieldValue.serverTimestamp(),
     });
     tx.set(db.collection(COL_EVENTOS).doc(evtId), {
-      tipo_evento_id: CFG_TEV_LOGIN,
+      tipo_evento_id: "EVT_LOGIN",
+      tipo_evento_cfg_id: "cfg_tev_login",
       persona_id: personaId,
       cuenta_id: cuentaId,
       ocurrido_en: FieldValue.serverTimestamp(),
@@ -272,9 +307,17 @@ const onboardingMvpDdjjFamiliar = onCall(async (request) => {
   if (out.length < 1) throw new HttpsError("invalid-argument", "Declará al menos un integrante de grupo familiar.");
   const evtId = `evt_${ulid()}`;
   await db.runTransaction(async (tx) => {
+    const ddjjSnap = await tx.get(
+      db.collection("declaraciones_grupo_familiar").where("titular_persona_id", "==", pid),
+    );
+    const ddjjVigente = pickDdjjVigenteFromDocs(ddjjSnap.docs || []);
+    const ddjjId = ddjjVigente ? ddjjVigente.id : `gf_${ulid()}`;
+    const ddjjRef = db.collection("declaraciones_grupo_familiar").doc(ddjjId);
+    const ddjjVersion = ddjjVigente ? Number(ddjjVigente.get("declaracion_version")) || 1 : 1;
     tx.update(ref, {
       "onboarding_mvp.paso_b": true,
       "onboarding_mvp.paso_b_omitido": false,
+      "onboarding_mvp.estado_declaracion_ddjj_id": DDJJ_ESTADO_PRESENTADA_ID,
       "onboarding_mvp.estado_declaracion_ddjj": "presentada",
       "onboarding_mvp.declaracion_jurada_aceptada": true,
       "onboarding_mvp.aceptada_paso_b_en": FieldValue.serverTimestamp(),
@@ -283,13 +326,30 @@ const onboardingMvpDdjjFamiliar = onCall(async (request) => {
       actualizado_en: FieldValue.serverTimestamp(),
     });
     tx.set(
+      ddjjRef,
+      {
+        id: ddjjId,
+        titular_persona_id: pid,
+        declaracion_version: ddjjVersion,
+        estado_declaracion_id: DDJJ_ESTADO_PRESENTADA_ID,
+        declaracion_jurada_aceptada: true,
+        aceptada_en: FieldValue.serverTimestamp(),
+        familiares: out,
+        actualizado_en: FieldValue.serverTimestamp(),
+        schema_version: 1,
+        ...(ddjjVigente ? {} : { creado_en: FieldValue.serverTimestamp() }),
+      },
+      { merge: true },
+    );
+    tx.set(
       db.collection(COL_EVENTOS).doc(evtId),
       {
         id: evtId,
         tipo_evento_id: "EVT_DATOS_NOTIF_CAMBIO_DDJJ",
+        tipo_evento_cfg_id: "cfg_tev_datos_notif_cambio_ddjj",
         persona_id: pid,
         actor_persona_id: pid,
-        estado_bandeja_rrhh: "pendiente_revision",
+        estado_bandeja_rrhh_id: "cfg_ebr_pend_rev",
         ocurrido_en: FieldValue.serverTimestamp(),
         payload: {
           accion: "presentar_ddjj_grupo_familiar",
@@ -317,19 +377,48 @@ const onboardingMvpOmitirDdjjFamiliar = onCall(async (request) => {
   }
   const evtId = `evt_${ulid()}`;
   await db.runTransaction(async (tx) => {
+    const ddjjSnap = await tx.get(
+      db.collection("declaraciones_grupo_familiar").where("titular_persona_id", "==", pid),
+    );
+    const ddjjVigente = pickDdjjVigenteFromDocs(ddjjSnap.docs || []);
+    const ddjjId = ddjjVigente ? ddjjVigente.id : `gf_${ulid()}`;
+    const ddjjRef = db.collection("declaraciones_grupo_familiar").doc(ddjjId);
+    const ddjjVersion = ddjjVigente ? Number(ddjjVigente.get("declaracion_version")) || 1 : 1;
     tx.update(ref, {
       "onboarding_mvp.paso_b": false,
       "onboarding_mvp.paso_b_omitido": true,
+      "onboarding_mvp.estado_declaracion_ddjj_id": DDJJ_ESTADO_OMITIDA_ONBOARDING_ID,
       "onboarding_mvp.estado_declaracion_ddjj": "omitida_onboarding",
       "onboarding_mvp.ddjj_familiares": FieldValue.delete(),
       "onboarding_mvp.omitido_paso_b_en": FieldValue.serverTimestamp(),
       actualizado_en: FieldValue.serverTimestamp(),
     });
+    tx.set(
+      ddjjRef,
+      {
+        id: ddjjId,
+        titular_persona_id: pid,
+        declaracion_version: ddjjVersion,
+        estado_declaracion_id: DDJJ_ESTADO_OMITIDA_ONBOARDING_ID,
+        declaracion_jurada_aceptada: false,
+        aceptada_en: null,
+        familiares: [],
+        actualizado_en: FieldValue.serverTimestamp(),
+        schema_version: 1,
+        ...(ddjjVigente ? {} : { creado_en: FieldValue.serverTimestamp() }),
+      },
+      { merge: true },
+    );
     tx.set(db.collection(COL_EVENTOS).doc(evtId), {
-      tipo_evento_id: "cfg_tev_ddjj_omitida",
+      tipo_evento_id: "EVT_DATOS_NOTIF_CAMBIO_DDJJ",
+      tipo_evento_cfg_id: "cfg_tev_datos_notif_cambio_ddjj",
+      id: evtId,
+      actor_persona_id: pid,
+      estado_bandeja_rrhh_id: "cfg_ebr_pend_rev",
       persona_id: pid,
       ocurrido_en: FieldValue.serverTimestamp(),
-      payload: { fase: "D", accion: "omitir_ddjj_onboarding" },
+      payload: { fase: "D", accion: "omitir_ddjj_onboarding", estado_declaracion_id: DDJJ_ESTADO_OMITIDA_ONBOARDING_ID },
+      schema_version: 1,
     });
   });
   return { ok: true, ddjj_estado: "omitida_onboarding" };

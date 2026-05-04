@@ -1,20 +1,4 @@
-export const ESTADO_DDJJ_DEFAULT_PERSONALES = "CFG_DDJJ_03_PRESENTADA";
-export const MSG_CAMPO_NO_EDITABLE_ROL =
-  "Campo no editable por rol: solo RRHH puede modificar dni, nombre, apellido, activo y motivo_baja_id.";
-export const ACCION_CAMBIO_DOMICILIO = "informar_cambio_domicilio";
-export const ACCION_CAMBIO_TELEFONOS = "informar_cambio_telefonos";
-export const ACCIONES_PERMITIDAS_USUARIO = [
-  {
-    id: ACCION_CAMBIO_DOMICILIO,
-    titulo: "Informar cambio de domicilio",
-    descripcion: "Habilita edición de calle, número, localidad, provincia, país y referencia.",
-  },
-  {
-    id: ACCION_CAMBIO_TELEFONOS,
-    titulo: "Informar cambio de teléfonos de contacto",
-    descripcion: "Habilita edición de teléfono celular, fijo y preferencia de notificaciones.",
-  },
-];
+export const ESTADO_DDJJ_DEFAULT_PERSONALES = "CFG_DDJJ_01_NO_INICIADA";
 
 export const COLECCIONES_BASE = [
   "personas",
@@ -49,6 +33,8 @@ export const COLECCIONES_CFG = [
   "cfg_especialidad",
   "cfg_colegio",
   "cfg_jurisdiccion_matricula",
+  "cfg_tipo_evento",
+  "cfg_estado_bandeja_rrhh",
 ];
 
 export const HELP = {
@@ -88,7 +74,7 @@ export const HELP = {
   matricula_jurisdiccion_id: "Jurisdicción de matrícula desde catálogo.",
   matricula_numero: "Número de matrícula profesional (texto o número según emisor).",
   estado_declaracion_id:
-    "Estado DDJJ fijado en este módulo para alta operativa (presentada).",
+    "Estado DDJJ por catálogo (por defecto: no iniciada hasta presentación/omisión).",
   tipo_consentimiento_id: "Tipo de consentimiento desde catálogo.",
   version_id: "Versión de texto legal (catálogo de textos legales).",
   idioma_id: "Idioma del consentimiento (catálogo).",

@@ -33,7 +33,6 @@ const CALLABLE_EXPORT_IDS = [
   "guardarRegistroLaboralTemporal",
   "listarReadModelLaboralOperativoTemporal",
   "guardarRegistroPersonalTemporal",
-  "registrarNotificacionCambioDatosPersonales",
   "rrhhMarcarEventoDatosPersonalesVisto",
   "vincularCuentaConDni",
   "onboardingMvpPasoA",

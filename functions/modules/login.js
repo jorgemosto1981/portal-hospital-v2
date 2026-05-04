@@ -6,7 +6,6 @@ const { auth, db, FieldValue } = require("./shared/context");
 const {
   CFG_ONB,
   CFG_PEND_REG,
-  CFG_TEV_LOGIN,
   COL_EVENTOS,
   COL_PERSONAS,
   COL_USUARIOS_CUENTA,
@@ -155,7 +154,8 @@ const registrarPrimerAcceso = onCall(async (request) => {
         actualizado_en: FieldValue.serverTimestamp(),
       });
       tx.set(db.collection(COL_EVENTOS).doc(evtId), {
-        tipo_evento_id: CFG_TEV_LOGIN,
+        tipo_evento_id: "EVT_LOGIN",
+        tipo_evento_cfg_id: "cfg_tev_login",
         persona_id: personaId,
         cuenta_id: cuentaId,
         ocurrido_en: FieldValue.serverTimestamp(),

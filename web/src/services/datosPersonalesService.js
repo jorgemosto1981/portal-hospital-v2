@@ -1,7 +1,6 @@
 import {
   callGuardarRegistroPersonalTemporal,
   callListarColeccionPublicaTemporal,
-  callRegistrarNotificacionCambioDatosPersonales,
 } from "./callables.js";
 
 export async function listarColeccionPersonal(collectionName, maxRows = null, onProgress) {
@@ -45,8 +44,3 @@ export async function guardarRegistroPersonal(collectionName, datos) {
   return data;
 }
 
-export async function registrarNotificacionCambioDatosPersonales(data) {
-  const r = await callRegistrarNotificacionCambioDatosPersonales(data);
-  const out = r && r.data && typeof r.data === "object" ? r.data : {};
-  return out;
-}

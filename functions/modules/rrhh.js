@@ -16,6 +16,8 @@ const {
 } = require("./shared/constants");
 const { assertRrhh, normalizeDni } = require("./shared/helpers");
 
+const DDJJ_ESTADO_NO_INICIADA_ID = "CFG_DDJJ_01_NO_INICIADA";
+
 const rrhhAltaAgente = onCall(async (request) => {
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
   const d = request.data && typeof request.data === "object" ? request.data : {};
@@ -42,6 +44,7 @@ const rrhhAltaAgente = onCall(async (request) => {
 
   const perId = `per_${ulid()}`;
   const usrId = `usr_${ulid()}`;
+  const ddjjId = `gf_${ulid()}`;
   const ts = FieldValue.serverTimestamp();
   const batch = db.batch();
   batch.set(db.collection(COL_PERSONAS).doc(perId), {
@@ -70,6 +73,18 @@ const rrhhAltaAgente = onCall(async (request) => {
     estado_acceso: CFG_PEND_REG,
     creado_en: ts,
     actualizado_en: ts,
+  });
+  batch.set(db.collection("declaraciones_grupo_familiar").doc(ddjjId), {
+    id: ddjjId,
+    titular_persona_id: perId,
+    declaracion_version: 1,
+    estado_declaracion_id: DDJJ_ESTADO_NO_INICIADA_ID,
+    declaracion_jurada_aceptada: false,
+    aceptada_en: null,
+    familiares: [],
+    creado_en: ts,
+    actualizado_en: ts,
+    schema_version: 1,
   });
   await batch.commit();
   return { ok: true, persona_id: perId, cuenta_id: usrId };

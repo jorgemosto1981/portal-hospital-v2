@@ -1,3 +1,5 @@
+const PARENTESCO_OTROS_ID = "CFG_PAR_OTROS";
+
 export function updateDatosPersonalesField({ prevForm, key, value, tipo, modoEdicion }) {
   const next = { ...prevForm, [key]: value };
   if (key === "nombre" || key === "apellido") {
@@ -69,12 +71,15 @@ export function hydrateDatosPersonales({ record, prevForm, emptyFamiliar }) {
     Array.isArray(record.familiares) && record.familiares.length > 0
       ? record.familiares.map((f) => ({
           parentesco_id: String(f.parentesco_id || ""),
+          parentesco_otro_detalle: String(f.parentesco_otro_detalle || ""),
           nombre: String(f.nombre || ""),
           apellido: String(f.apellido || ""),
           dni: String(f.dni || ""),
           fecha_nacimiento: String(f.fecha_nacimiento || ""),
-          convive: f.convive === true,
+          convive: f.convive !== false,
+          domicilio_familiar: String(f.domicilio_familiar || ""),
           dependiente: f.dependiente === true,
+          detalle_dependencia: String(f.detalle_dependencia || ""),
           discapacidad_declarada: f.discapacidad_declarada === true,
           notas_titular: String(f.notas_titular || ""),
         }))
@@ -133,6 +138,26 @@ export function validateDatosPersonales({ tipo, form, familiares }) {
     if (invalida) return "Cada familiar requiere: parentesco_id, dni, nombre, apellido y fecha_nacimiento.";
     const dniInvalido = filasConDatos.some((f) => !/^\d{6,12}$/.test(f.dni.trim()));
     if (dniInvalido) return "Cada familiar debe tener DNI válido (6 a 12 dígitos).";
+    const parentescoOtrosInvalido = filasConDatos.some(
+      (f) =>
+        String(f.parentesco_id || "").toUpperCase() === PARENTESCO_OTROS_ID &&
+        !String(f.parentesco_otro_detalle || "").trim(),
+    );
+    if (parentescoOtrosInvalido) {
+      return "Si parentesco_id es CFG_PAR_OTROS, debés completar detalle de parentesco.";
+    }
+    const conviveInvalido = filasConDatos.some(
+      (f) => f.convive === false && !String(f.domicilio_familiar || "").trim(),
+    );
+    if (conviveInvalido) {
+      return "Si no convive, debés informar domicilio_familiar del integrante.";
+    }
+    const dependienteInvalido = filasConDatos.some(
+      (f) => f.dependiente === true && !String(f.detalle_dependencia || "").trim(),
+    );
+    if (dependienteInvalido) {
+      return "Si es dependiente, debés informar detalle_dependencia.";
+    }
   }
   if (tipo === "consentimientos" && !form.persona_id.trim()) return "Completá persona_id para consentimiento.";
   if (tipo === "consentimientos" && !form.tipo_consentimiento_id.trim()) {
@@ -152,7 +177,6 @@ export function buildDatosPayload({
   editId,
   estadoDdjjDefault,
   fotoRostro,
-  accionHabilitada,
 }) {
   let datos;
   if (tipo === "personas") {
@@ -188,7 +212,6 @@ export function buildDatosPayload({
         referencia: form.referencia || null,
       },
       foto_rostro: fotoRostro,
-      accion_habilitada: accionHabilitada || null,
     };
   } else if (tipo === "formacion_agente") {
     datos = {
@@ -209,12 +232,18 @@ export function buildDatosPayload({
       )
       .map((f) => ({
         parentesco_id: f.parentesco_id || null,
+        parentesco_otro_detalle:
+          String(f.parentesco_id || "").toUpperCase() === PARENTESCO_OTROS_ID
+            ? f.parentesco_otro_detalle || null
+            : null,
         nombre: f.nombre || null,
         apellido: f.apellido || null,
         dni: f.dni || null,
         fecha_nacimiento: f.fecha_nacimiento || null,
         convive: f.convive === true,
+        domicilio_familiar: f.convive === false ? f.domicilio_familiar || null : null,
         dependiente: f.dependiente === true,
+        detalle_dependencia: f.dependiente === true ? f.detalle_dependencia || null : null,
         discapacidad_declarada: f.discapacidad_declarada === true,
         notas_titular: f.notas_titular || null,
       }));

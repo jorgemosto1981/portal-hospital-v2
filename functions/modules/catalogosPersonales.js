@@ -5,7 +5,7 @@ const { ulid } = require("ulid");
 const { createHash } = require("node:crypto");
 const { db, FieldValue } = require("./shared/context");
 const runtimeFlags = require("./shared/runtimeFlags.json");
-const { assertRrhh, assertAgenteConPersonaId, tokenHasRrhhAccess } = require("./shared/helpers");
+const { assertRrhh, tokenHasRrhhAccess } = require("./shared/helpers");
 const {
   COLECCIONES_ESCRITURA_PERSONAL_TEMPORAL,
   ESTADO_DDJJ_DEFAULT_PERSONALES,
@@ -19,31 +19,20 @@ const {
 
 const MSG_PERSONAS_SENSIBLE_ROL =
   "[AUTH-PER-001] Campo no editable por rol: solo RRHH puede modificar dni, nombre, apellido, activo y motivo_baja_id.";
-const MSG_ACCION_REQUERIDA_ROL =
-  "[AUTH-PER-004] Para actualizar datos personales debés habilitar una acción permitida (domicilio o teléfonos).";
-const MSG_ACCION_CAMPO_NO_PERMITIDO =
-  "[AUTH-PER-005] La acción habilitada no permite modificar uno o más campos enviados.";
-
-const ACCION_CAMBIO_DOMICILIO = "informar_cambio_domicilio";
-const ACCION_CAMBIO_TELEFONOS = "informar_cambio_telefonos";
-const ACCIONES_PERSONA_HABILITABLES = new Set([ACCION_CAMBIO_DOMICILIO, ACCION_CAMBIO_TELEFONOS]);
-const CAMPOS_POR_ACCION = {
-  [ACCION_CAMBIO_DOMICILIO]: new Set([
-    "domicilio.calle",
-    "domicilio.numero",
-    "domicilio.piso",
-    "domicilio.departamento",
-    "domicilio.provincia_id",
-    "domicilio.pais_id",
-    "domicilio.localidad_id",
-    "domicilio.codigo_postal",
-    "domicilio.referencia",
-  ]),
-  [ACCION_CAMBIO_TELEFONOS]: new Set([
-    "contacto.telefono_celular",
-    "contacto.telefono_fijo",
-    "contacto.recibe_notificaciones_sms",
-  ]),
+const ESTADO_BANDEJA_RRHH_PENDIENTE_ID = "cfg_ebr_pend_rev";
+const ESTADO_BANDEJA_RRHH_VISTO_ID = "cfg_ebr_visto";
+const EVENTO_CFG_ID_POR_EVENTO_ID = {
+  EVT_LOGIN: "cfg_tev_login",
+  EVT_DATOS_NOTIF_CAMBIO_DDJJ: "cfg_tev_datos_notif_cambio_ddjj",
+  EVT_DATOS_ACTUALIZA_PERSONAS: "cfg_tev_datos_actualiza_personas",
+  EVT_DATOS_ALTA_PERSONAS: "cfg_tev_datos_alta_personas",
+  EVT_DATOS_ACTUALIZA_FORMACION: "cfg_tev_datos_actualiza_formacion",
+  EVT_DATOS_ALTA_FORMACION: "cfg_tev_datos_alta_formacion",
+  EVT_DATOS_ACTUALIZA_DDJJ: "cfg_tev_datos_actualiza_ddjj",
+  EVT_DATOS_ALTA_DDJJ: "cfg_tev_datos_alta_ddjj",
+  EVT_DATOS_ACTUALIZA_CONSENTIMIENTO: "cfg_tev_datos_actualiza_consentimiento",
+  EVT_DATOS_ALTA_CONSENTIMIENTO: "cfg_tev_datos_alta_consentimiento",
+  EVT_CONSENTIMIENTO_ACEPTADO: "cfg_tev_consent",
 };
 
 function isRrhhActor(request) {
@@ -54,6 +43,11 @@ function isRrhhActor(request) {
 function getActorPersonaId(request) {
   const pid = request && request.auth && request.auth.token && request.auth.token.persona_id;
   return typeof pid === "string" && pid.trim() ? pid.trim() : null;
+}
+
+function resolveTipoEventoCfgId(tipoEventoId) {
+  const key = typeof tipoEventoId === "string" ? tipoEventoId.trim().toUpperCase() : "";
+  return EVENTO_CFG_ID_POR_EVENTO_ID[key] || "cfg_tev_datos_notif_cambio_generico";
 }
 
 function hasSensitivePersonaMutation({ existing, incoming }) {
@@ -103,6 +97,48 @@ function diffPersonaFields(prevData, nextData) {
     .map((key) => ({ campo: key, anterior: prev[key] ?? null, nuevo: next[key] ?? null }));
 }
 
+function buildTopLevelChanges(prevData, nextData, keys) {
+  const prev = prevData && typeof prevData === "object" ? prevData : {};
+  const next = nextData && typeof nextData === "object" ? nextData : {};
+  return keys
+    .filter((key) => JSON.stringify(prev[key] ?? null) !== JSON.stringify(next[key] ?? null))
+    .map((key) => ({
+      campo: key,
+      anterior: prev[key] ?? null,
+      nuevo: next[key] ?? null,
+    }));
+}
+
+async function crearEventoDatosPersonales({
+  tipo_evento_id,
+  persona_id,
+  actor_persona_id,
+  coleccion,
+  accion,
+  cambios,
+}) {
+  const eventoId = `evt_${ulid()}`;
+  await db.collection("eventos_ticket").doc(eventoId).set(
+    {
+      id: eventoId,
+      tipo_evento_id,
+      tipo_evento_cfg_id: resolveTipoEventoCfgId(tipo_evento_id),
+      persona_id: persona_id || null,
+      actor_persona_id: actor_persona_id || null,
+      ocurrido_en: FieldValue.serverTimestamp(),
+      estado_bandeja_rrhh_id: ESTADO_BANDEJA_RRHH_PENDIENTE_ID,
+      payload: {
+        coleccion,
+        accion,
+        cambios: Array.isArray(cambios) ? cambios : [],
+      },
+      schema_version: 1,
+    },
+    { merge: true },
+  );
+  return eventoId;
+}
+
 function buildTextoLegalCanonicalString(versionId, docData) {
   const raw = docData && typeof docData === "object" ? docData : {};
   const candidates = [
@@ -126,48 +162,6 @@ function sha256Hex(value) {
   return createHash("sha256").update(String(value || ""), "utf8").digest("hex");
 }
 
-const registrarNotificacionCambioDatosPersonales = onCall(async (request) => {
-  if (!request.auth) throw new HttpsError("unauthenticated", "Se requiere sesión.");
-  const actorPersonaId = assertAgenteConPersonaId(request);
-  const data = request.data && typeof request.data === "object" ? request.data : {};
-  const personaId = toNullableTrimmedString(data.persona_id) || actorPersonaId;
-  if (personaId !== actorPersonaId) {
-    throw new HttpsError("permission-denied", "[AUTH-PER-006] Solo podés notificar cambios sobre tu propia persona.");
-  }
-  const coleccion = toNullableTrimmedString(data.coleccion_objetivo);
-  const accion = toNullableTrimmedString(data.accion) || "notificar_cambio";
-  const allowed = new Set(["personas", "formacion_agente", "declaraciones_grupo_familiar"]);
-  if (!coleccion || !allowed.has(coleccion)) {
-    throw new HttpsError(
-      "invalid-argument",
-      "[VAL-PER-007] coleccion_objetivo inválida. Permitidas: personas, formacion_agente, declaraciones_grupo_familiar.",
-    );
-  }
-  const now = FieldValue.serverTimestamp();
-  const eventoId = `evt_${ulid()}`;
-  const typeMap = {
-    personas: "EVT_DATOS_NOTIF_CAMBIO_FOTO",
-    formacion_agente: "EVT_DATOS_NOTIF_CAMBIO_FORMACION",
-    declaraciones_grupo_familiar: "EVT_DATOS_NOTIF_CAMBIO_DDJJ",
-  };
-  const payload = {
-    id: eventoId,
-    tipo_evento_id: typeMap[coleccion] || "EVT_DATOS_NOTIF_CAMBIO",
-    persona_id: personaId,
-    actor_persona_id: actorPersonaId,
-    ocurrido_en: now,
-    estado_bandeja_rrhh: "pendiente_revision",
-    payload: {
-      accion,
-      coleccion_objetivo: coleccion,
-      motivo: toNullableTrimmedString(data.motivo),
-    },
-    schema_version: 1,
-  };
-  await db.collection("eventos_ticket").doc(eventoId).set(payload, { merge: true });
-  return { ok: true, id: eventoId };
-});
-
 const rrhhMarcarEventoDatosPersonalesVisto = onCall(async (request) => {
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
   const data = request.data && typeof request.data === "object" ? request.data : {};
@@ -182,7 +176,7 @@ const rrhhMarcarEventoDatosPersonalesVisto = onCall(async (request) => {
   }
   await ref.set(
     {
-      estado_bandeja_rrhh: "visto",
+      estado_bandeja_rrhh_id: ESTADO_BANDEJA_RRHH_VISTO_ID,
       tomado_conocimiento_en: FieldValue.serverTimestamp(),
       tomado_conocimiento_por_persona_id: getActorPersonaId(request),
       actualizado_en: FieldValue.serverTimestamp(),
@@ -347,26 +341,6 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
     if (!actorIsRrhh && request.auth && hasSensitivePersonaMutation({ existing: existingData, incoming: payload })) {
       throw new HttpsError("permission-denied", MSG_PERSONAS_SENSIBLE_ROL);
     }
-    const accionHabilitada = toNullableTrimmedString(datos.accion_habilitada);
-    let cambiosAuditados = null;
-    if (!actorIsRrhh && request.auth) {
-      if (!accionHabilitada || !ACCIONES_PERSONA_HABILITABLES.has(accionHabilitada)) {
-        throw new HttpsError("permission-denied", MSG_ACCION_REQUERIDA_ROL);
-      }
-      const cambios = diffPersonaFields(existingData || {}, payload);
-      if (cambios.length === 0) {
-        throw new HttpsError(
-          "failed-precondition",
-          "[VAL-PER-006] No se detectaron cambios para aplicar en la acción habilitada.",
-        );
-      }
-      const camposPermitidos = CAMPOS_POR_ACCION[accionHabilitada] || new Set();
-      const hayCampoNoPermitido = cambios.some((c) => !camposPermitidos.has(c.campo));
-      if (hayCampoNoPermitido) {
-        throw new HttpsError("permission-denied", MSG_ACCION_CAMPO_NO_PERMITIDO);
-      }
-      cambiosAuditados = cambios;
-    }
     if (!activo && !motivoBajaId) {
       throw new HttpsError(
         "invalid-argument",
@@ -393,26 +367,16 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
     const exists = existingSnap.exists;
     if (!exists) payload.creado_en = now;
     await ref.set(payload, { merge: true });
-    if (!actorIsRrhh && request.auth && cambiosAuditados && cambiosAuditados.length > 0) {
-      const eventoId = `evt_${ulid()}`;
-      const eventoPayload = {
-        id: eventoId,
-        tipo_evento_id:
-          accionHabilitada === ACCION_CAMBIO_DOMICILIO
-            ? "EVT_DATOS_CAMBIO_DOMICILIO"
-            : "EVT_DATOS_CAMBIO_TELEFONOS",
-        persona_id: id,
-        actor_persona_id: actorPersonaId,
-        ocurrido_en: now,
-        estado_bandeja_rrhh: "pendiente_revision",
-        payload: {
-          accion: accionHabilitada,
-          cambios: cambiosAuditados,
-        },
-        schema_version: 1,
-      };
-      await db.collection("eventos_ticket").doc(eventoId).set(eventoPayload, { merge: true });
-    }
+    const cambiosEvento = diffPersonaFields(existingData || {}, payload);
+    const tipoEvento = existingSnap.exists ? "EVT_DATOS_ACTUALIZA_PERSONAS" : "EVT_DATOS_ALTA_PERSONAS";
+    await crearEventoDatosPersonales({
+      tipo_evento_id: tipoEvento,
+      persona_id: id,
+      actor_persona_id: actorPersonaId,
+      coleccion: "personas",
+      accion: existingSnap.exists ? "guardar_actualizacion" : "guardar_alta",
+      cambios: cambiosEvento,
+    });
     return { ok: true, id, warnings };
   }
 
@@ -448,9 +412,31 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
       "matricula_jurisdiccion_id",
     );
     const ref = db.collection(colRaw).doc(id);
-    const exists = (await ref.get()).exists;
+    const existing = await ref.get();
+    const exists = existing.exists;
     if (!exists) payload.creado_en = now;
     await ref.set(payload, { merge: true });
+    const actorPersonaId = getActorPersonaId(request);
+    const cambios = buildTopLevelChanges(existing.data() || {}, payload, [
+      "persona_id",
+      "nivel_estudios_id",
+      "titulo_completo",
+      "duracion_anios",
+      "institucion",
+      "matricula_numero",
+      "especialidad_id",
+      "colegio_id",
+      "matricula_jurisdiccion_id",
+      "activo",
+    ]);
+    await crearEventoDatosPersonales({
+      tipo_evento_id: exists ? "EVT_DATOS_ACTUALIZA_FORMACION" : "EVT_DATOS_ALTA_FORMACION",
+      persona_id: personaId,
+      actor_persona_id: actorPersonaId,
+      coleccion: "formacion_agente",
+      accion: exists ? "guardar_actualizacion" : "guardar_alta",
+      cambios,
+    });
     return { ok: true, id, warnings };
   }
 
@@ -516,6 +502,23 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
     }
     if (!existing.exists) payload.creado_en = now;
     await ref.set(payload, { merge: true });
+    const actorPersonaId = getActorPersonaId(request);
+    const cambios = buildTopLevelChanges(existing.data() || {}, payload, [
+      "titular_persona_id",
+      "declaracion_version",
+      "estado_declaracion_id",
+      "declaracion_jurada_aceptada",
+      "aceptada_en",
+      "familiares",
+    ]);
+    await crearEventoDatosPersonales({
+      tipo_evento_id: existing.exists ? "EVT_DATOS_ACTUALIZA_DDJJ" : "EVT_DATOS_ALTA_DDJJ",
+      persona_id: titularPersonaId,
+      actor_persona_id: actorPersonaId,
+      coleccion: "declaraciones_grupo_familiar",
+      accion: existing.exists ? "guardar_actualizacion" : "guardar_alta",
+      cambios,
+    });
     return { ok: true, id, warnings };
   }
 
@@ -573,11 +576,28 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
   };
   if (!existing.exists) payload.creado_en = now;
   await ref.set(payload, { merge: true });
+  const actorPersonaId = getActorPersonaId(request);
+  const cambios = buildTopLevelChanges(existing.data() || {}, payload, [
+    "persona_id",
+    "tipo_consentimiento_id",
+    "version_id",
+    "idioma_id",
+    "texto_hash",
+    "aceptado",
+    "aceptado_en",
+  ]);
+  await crearEventoDatosPersonales({
+    tipo_evento_id: existing.exists ? "EVT_DATOS_ACTUALIZA_CONSENTIMIENTO" : "EVT_DATOS_ALTA_CONSENTIMIENTO",
+    persona_id: personaId,
+    actor_persona_id: actorPersonaId,
+    coleccion: "consentimientos",
+    accion: existing.exists ? "guardar_actualizacion" : "guardar_alta",
+    cambios,
+  });
   return { ok: true, id, warnings };
 });
 
 module.exports = {
   guardarRegistroPersonalTemporal,
-  registrarNotificacionCambioDatosPersonales,
   rrhhMarcarEventoDatosPersonalesVisto,
 };

@@ -8,6 +8,12 @@ import {
 import { useConfiguracionCatalogos } from "../features/configuracion/hooks/useConfiguracionCatalogos.js";
 import { sugerirIdCatalogo } from "../utils/catalogoId.js";
 
+function mapEstadoDdjjToUiLabel(idRaw) {
+  const id = String(idRaw || "").trim().toUpperCase();
+  if (id === "CFG_DDJJ_03_PRESENTADA") return "Presentada";
+  return "Pendiente de presentación";
+}
+
 export default function Configuracion() {
   const {
     user,
@@ -213,7 +219,18 @@ export default function Configuracion() {
                       <td className="max-w-[140px] truncate px-4 py-3 font-mono text-xs text-slate-700 md:max-w-xs md:px-5">
                         {row.id}
                       </td>
-                      <td className="px-4 py-3 text-slate-800 md:px-5">{row.nombre ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-800 md:px-5">
+                        {itemActual.collectionName === "cfg_estado_declaracion_ddjj" ? (
+                          <div>
+                            <p>{mapEstadoDdjjToUiLabel(row.id)}</p>
+                            <p className="text-[11px] text-slate-500">
+                              Catálogo: {row.nombre ?? row.id}
+                            </p>
+                          </div>
+                        ) : (
+                          row.nombre ?? "—"
+                        )}
+                      </td>
                       {isLocalidad && (
                         <td className="max-w-[160px] px-4 py-3 text-sm text-slate-700 md:px-5">
                           {labelProvinciaEnTabla(provincias, row.provincia_id)}

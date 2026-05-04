@@ -13,3 +13,13 @@
     @apply m-0 min-h-dvh bg-slate-50 font-sans text-slate-900 antialiased;
   }
 }
+
+@layer components {
+  .perfil-screen label {
+    @apply uppercase tracking-wide;
+  }
+
+  .perfil-screen .field-id {
+    @apply lowercase italic;
+  }
+}

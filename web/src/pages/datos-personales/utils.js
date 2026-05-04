@@ -1,12 +1,15 @@
 export function emptyFamiliar() {
   return {
     parentesco_id: "",
+    parentesco_otro_detalle: "",
     nombre: "",
     apellido: "",
     dni: "",
     fecha_nacimiento: "",
-    convive: false,
+    convive: true,
+    domicilio_familiar: "",
     dependiente: false,
+    detalle_dependencia: "",
     discapacidad_declarada: false,
     notas_titular: "",
   };

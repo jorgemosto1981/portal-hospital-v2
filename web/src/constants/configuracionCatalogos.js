@@ -86,6 +86,12 @@ export const SECCIONES_CATALOGO_RRHH = [
         idPrefix: "CFG_PAR_",
       },
       {
+        key: "estado_declaracion_ddjj",
+        etiqueta: "Estado de declaración DDJJ",
+        collectionName: "cfg_estado_declaracion_ddjj",
+        idPrefix: "CFG_DDJJ_",
+      },
+      {
         key: "estado_perfil_datos",
         etiqueta: "Estado de perfil de datos",
         collectionName: "cfg_estado_perfil_datos",
@@ -204,6 +210,18 @@ export const SECCIONES_CATALOGO_RRHH = [
         etiqueta: "Estado de cuenta de acceso",
         collectionName: "cfg_estado_cuenta_acceso",
         idPrefix: "CFG_ECA_",
+      },
+      {
+        key: "tipo_evento",
+        etiqueta: "Tipos de evento",
+        collectionName: "cfg_tipo_evento",
+        idPrefix: "CFG_TEV_",
+      },
+      {
+        key: "estado_bandeja_rrhh",
+        etiqueta: "Estado de bandeja RRHH",
+        collectionName: "cfg_estado_bandeja_rrhh",
+        idPrefix: "CFG_EBR_",
       },
     ],
   },

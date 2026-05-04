@@ -78,7 +78,7 @@ export const MODULOS_PORTAL = [
     label: "Perfil",
     path: "/portal/perfil",
     estado: ESTADOS_MODULO.MVP,
-    grupo: "usuario",
+    grupo: "rrhh",
   },
   {
     id: "pantallas",

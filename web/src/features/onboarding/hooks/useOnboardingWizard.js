@@ -22,6 +22,8 @@ function str(row, key) {
 
 const RX_NOMBRE = /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü' ]+$/;
 const PARENTESCO_OTROS_ID = "CFG_PAR_OTROS";
+const DDJJ_ESTADO_OMITIDA_ONBOARDING_ID = "CFG_DDJJ_02_OMITIDA_ONBOARDING";
+const DDJJ_ESTADO_PRESENTADA_ID = "CFG_DDJJ_03_PRESENTADA";
 
 function isParentescoOtros(parCatalog, parentescoId) {
   const id = (parentescoId || "").trim();
@@ -124,6 +126,38 @@ export function useOnboardingWizard() {
   const doneA = Boolean(pOnb && pOnb.paso_a);
   const doneB = Boolean(pOnb && (pOnb.paso_b || pOnb.paso_b_omitido));
   const step = !doneA ? 1 : !doneB ? 2 : 3;
+
+  useEffect(() => {
+    if (!pOnb) return;
+    const estadoDdjjId = str(pOnb, "estado_declaracion_ddjj_id").toUpperCase();
+    if (estadoDdjjId === DDJJ_ESTADO_PRESENTADA_ID) {
+      const familiares = Array.isArray(pOnb.ddjj_familiares) ? pOnb.ddjj_familiares : [];
+      if (familiares.length > 0) {
+        setFamRows(
+          familiares.map((r) => ({
+            nombre: str(r, "nombre"),
+            apellido: str(r, "apellido"),
+            dni: str(r, "dni"),
+            fecha_nacimiento: str(r, "fecha_nacimiento"),
+            parentesco_id: str(r, "parentesco_id"),
+            parentesco_otro_detalle: str(r, "parentesco_otro_detalle"),
+            convive: r?.convive !== false,
+            domicilio_familiar: str(r, "domicilio_familiar"),
+            dependiente: r?.dependiente === true,
+            detalle_dependencia: str(r, "dependiente_detalle"),
+            discapacidad_declarada: r?.discapacidad_declarada === true,
+          })),
+        );
+      }
+      setDdjjAceptada(pOnb.declaracion_jurada_aceptada === true);
+      setDdjjStage("review");
+      return;
+    }
+    if (estadoDdjjId === DDJJ_ESTADO_OMITIDA_ONBOARDING_ID) {
+      setDdjjAceptada(false);
+      setDdjjStage("choice");
+    }
+  }, [pOnb]);
 
   useEffect(() => {
     if (effectivePersona && str(effectivePersona, "estado") === ESTADO_ACTIVO_MVP) {
