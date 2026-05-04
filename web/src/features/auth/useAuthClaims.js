@@ -125,7 +125,7 @@ export function useAuthClaims(user) {
       return { claims: snap.claims, claimsLoading: true };
     }
     return { claims: snap.claims, claimsLoading: false };
-  }, [user, snap.v, snap.uid, snap.claims, snap.hydrated, snap.loading]);
+  }, [user, snap.uid, snap.claims, snap.hydrated, snap.loading]);
 
   const portalRole = useMemo(() => normalizePortalRole(claims), [claims]);
   const hasPortalRoles = useCallback(

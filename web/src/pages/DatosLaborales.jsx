@@ -1,7 +1,7 @@
 import Card from "../components/ui/Card.jsx";
 import { guardarRegistroLaboral } from "../services/datosLaboralesService.js";
 import { useEffect, useMemo, useState } from "react";
-import { AYUDA_CAMPOS, COLECCIONES_FORM, INITIAL_FORM_DATA_LABORAL } from "./datos-laborales/constants.js";
+import { AYUDA_CAMPOS, INITIAL_FORM_DATA_LABORAL } from "./datos-laborales/constants.js";
 import ColeccionesLaboralesCards from "./datos-laborales/sections/ColeccionesLaboralesCards.jsx";
 import FasesLaboralesTables from "./datos-laborales/sections/FasesLaboralesTables.jsx";
 import IntegridadReferencialCard from "./datos-laborales/sections/IntegridadReferencialCard.jsx";
@@ -27,6 +27,8 @@ import {
   buildTimelineResumen,
   buildIntegridadLaboral,
 } from "./datos-laborales/utils.js";
+
+const EMPTY_ROWS = [];
 
 export default function DatosLaborales() {
   const {
@@ -58,9 +60,9 @@ export default function DatosLaborales() {
   const [grupoVistaFecha, setGrupoVistaFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [formData, setFormData] = useState(() => ({ ...INITIAL_FORM_DATA_LABORAL }));
 
-  const hlcRows = rowsByCollection.historial_laboral_cargos || [];
-  const hldRows = rowsByCollection.historial_laboral_datos || [];
-  const hlgRows = rowsByCollection.historial_laboral_grupos || [];
+  const hlcRows = rowsByCollection.historial_laboral_cargos ?? EMPTY_ROWS;
+  const hldRows = rowsByCollection.historial_laboral_datos ?? EMPTY_ROWS;
+  const hlgRows = rowsByCollection.historial_laboral_grupos ?? EMPTY_ROWS;
   const idxEfectores = crearIndicePorId(rowsByCollection.cfg_efectores || []);
   const idxGrupos = crearIndicePorId(rowsByCollection.grupos_de_trabajo || []);
   const idxPersonas = crearIndicePorId(rowsByCollection.personas || []);
@@ -68,8 +70,8 @@ export default function DatosLaborales() {
   const idxFunciones = crearIndicePorId(rowsByCollection.cfg_cargo_funcional || []);
   const idxHlc = crearIndicePorId(hlcRows);
   const idxHld = crearIndicePorId(hldRows);
-  const opcionesGrupos = rowsByCollection.grupos_de_trabajo || [];
-  const opcionesPersonas = rowsByCollection.personas || [];
+  const opcionesGrupos = rowsByCollection.grupos_de_trabajo ?? EMPTY_ROWS;
+  const opcionesPersonas = rowsByCollection.personas ?? EMPTY_ROWS;
   const opcionesEfectores = rowsByCollection.cfg_efectores || [];
   const opcionesEstadoAsignacion = rowsByCollection.cfg_estado_asignacion_laboral || [];
   const opcionesEscalafon = rowsByCollection.cfg_escalafon || [];
@@ -84,7 +86,7 @@ export default function DatosLaborales() {
   const opcionesRegimenHorario = rowsByCollection.cfg_regimen_horario || [];
   const opcionesCentroCosto = rowsByCollection.cfg_centro_costo || [];
   const opcionesDiaSemana = rowsByCollection.cfg_dia_semana || [];
-  const registrosPorTipo = rowsByCollection[tipoAlta] || [];
+  const registrosPorTipo = rowsByCollection[tipoAlta] ?? EMPTY_ROWS;
   const registrosPorTipoFiltrados = useMemo(() => {
     const pid = String(formData.persona_id || "").trim();
     if (!pid) return [];

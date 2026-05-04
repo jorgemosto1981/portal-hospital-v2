@@ -43,6 +43,7 @@ import {
 } from "./datos-personales/fechaFiltroUtils.js";
 
 const TIPOS_URL_SET = new Set(TIPOS_DATOS_PERSONALES_URL);
+const EMPTY_ROWS = [];
 
 function readTipoFromSearchOnce() {
   if (typeof window === "undefined") return "personas";
@@ -198,7 +199,7 @@ export default function DatosPersonales() {
     setForm((prev) => (String(prev.persona_id || "").trim() ? prev : { ...prev, persona_id: personaIdClaim }));
   }, [isRrhh, personaIdClaim]);
 
-  const registros = rowsByCol[tipo] || [];
+  const registros = useMemo(() => rowsByCol[tipo] ?? EMPTY_ROWS, [rowsByCol, tipo]);
   const optsSexo = useMemo(() => toOpts(rowsByCol.cfg_sexo_genero), [rowsByCol.cfg_sexo_genero]);
   const optsCivil = useMemo(() => toOpts(rowsByCol.cfg_estado_civil), [rowsByCol.cfg_estado_civil]);
   const optsNac = useMemo(() => toOpts(rowsByCol.cfg_nacionalidad), [rowsByCol.cfg_nacionalidad]);
@@ -358,7 +359,7 @@ export default function DatosPersonales() {
 
   async function subirFotoRostro(file, dni) {
     const safeDni = String(dni || "sin-dni").replace(/[^\dA-Za-z_-]/g, "") || "sin-dni";
-    const safeName = String(file.name || "foto").replace(/[^\w.\-]/g, "_");
+    const safeName = String(file.name || "foto").replace(/[^\w.-]/g, "_");
     const path = `personas/foto_rostro/${safeDni}/${Date.now()}_${safeName}`;
     const storageRef = ref(storageV2, path);
     const snap = await uploadBytes(storageRef, file, {
@@ -393,7 +394,7 @@ export default function DatosPersonales() {
     }
     setSaving(true);
     try {
-      let datos = {};
+      let datos;
       let warnings = [];
       let fotoRostro = null;
       if (tipo === "personas") {

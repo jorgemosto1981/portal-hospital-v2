@@ -154,7 +154,7 @@ export function buildDatosPayload({
   fotoRostro,
   accionHabilitada,
 }) {
-  let datos = {};
+  let datos;
   if (tipo === "personas") {
     datos = {
       dni: form.dni.trim(),

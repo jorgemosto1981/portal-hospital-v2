@@ -11,7 +11,6 @@ import { sugerirIdCatalogo } from "../utils/catalogoId.js";
 export default function Configuracion() {
   const {
     user,
-    isRrhh,
     openAccessTemp,
     canReadCatalogos,
     canWriteCatalogos,
