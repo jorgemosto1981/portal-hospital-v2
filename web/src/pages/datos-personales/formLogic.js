@@ -9,6 +9,9 @@ export function updateDatosPersonalesField({ prevForm, key, value, tipo, modoEdi
   }
   if (key === "persona_id" && tipo === "declaraciones_grupo_familiar" && !modoEdicion) {
     next.declaracion_version = "1";
+    next.declaracion_jurada_aceptada = false;
+    next.consentimiento_evaluacion_rrhh = false;
+    next.ddjj_en_revision = false;
   }
   return next;
 }
@@ -66,6 +69,9 @@ export function hydrateDatosPersonales({ record, prevForm, emptyFamiliar }) {
     version_id: String(record.version_id || ""),
     idioma_id: String(record.idioma_id || record.idioma || ""),
     declaracion_version: record.declaracion_version == null ? "1" : String(record.declaracion_version),
+    declaracion_jurada_aceptada: record.declaracion_jurada_aceptada === true,
+    consentimiento_evaluacion_rrhh: record.consentimiento_evaluacion_rrhh === true,
+    ddjj_en_revision: false,
   };
   const nextFamiliares =
     Array.isArray(record.familiares) && record.familiares.length > 0
@@ -158,6 +164,14 @@ export function validateDatosPersonales({ tipo, form, familiares }) {
     if (dependienteInvalido) {
       return "Si es dependiente, debés informar detalle_dependencia.";
     }
+    if (form.ddjj_en_revision === true) {
+      if (form.declaracion_jurada_aceptada !== true) {
+        return "Debés aceptar la declaración jurada para presentar la DDJJ.";
+      }
+      if (form.consentimiento_evaluacion_rrhh !== true) {
+        return "Debés aceptar que tu DDJJ será evaluada por el área correspondiente.";
+      }
+    }
   }
   if (tipo === "consentimientos" && !form.persona_id.trim()) return "Completá persona_id para consentimiento.";
   if (tipo === "consentimientos" && !form.tipo_consentimiento_id.trim()) {
@@ -249,8 +263,14 @@ export function buildDatosPayload({
       }));
     datos = {
       titular_persona_id: form.persona_id.trim(),
-      estado_declaracion_id: estadoDdjjDefault,
-      declaracion_version: modoEdicion ? Number(form.declaracion_version || 1) : null,
+      estado_declaracion_id:
+        form.declaracion_jurada_aceptada === true && form.consentimiento_evaluacion_rrhh === true
+          ? "CFG_DDJJ_03_PRESENTADA"
+          : estadoDdjjDefault,
+      declaracion_version: Number(form.declaracion_version || 1),
+      declaracion_jurada_aceptada:
+        form.declaracion_jurada_aceptada === true && form.consentimiento_evaluacion_rrhh === true,
+      consentimiento_evaluacion_rrhh: form.consentimiento_evaluacion_rrhh === true,
       familiares: familiaresPayload,
     };
   } else {

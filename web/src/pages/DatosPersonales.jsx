@@ -54,6 +54,36 @@ function formatFechaEventoDdMmAaaa(value) {
   return `${dd}-${mm}-${yyyy}`;
 }
 
+function formatCambioValor(value) {
+  if (value == null) return "null";
+  if (value === "__server_timestamp__") return "timestamp_servidor";
+  if (value && typeof value === "object" && typeof value.toDate === "function") {
+    try {
+      return formatFechaEventoDdMmAaaa(value.toDate().toISOString());
+    } catch {
+      return "timestamp";
+    }
+  }
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return JSON.stringify(value);
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+function mapAccionDdjjToUiLabel(accionRaw) {
+  const accion = String(accionRaw || "").trim().toLowerCase();
+  if (accion === "presentar_ddjj_grupo_familiar_actualizacion") return "Presentación por actualización";
+  if (accion === "presentar_ddjj_grupo_familiar_inicial") return "Presentación inicial";
+  if (accion === "presentar_ddjj_grupo_familiar") return "Presentación DDJJ";
+  return accion || "—";
+}
+
 function toEpochMs(value) {
   if (value == null || value === "") return 0;
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -76,6 +106,7 @@ function sortRegistrosVigentes(a, b, tipo) {
 function mapEstadoDdjjToUiLabel(estadoIdRaw) {
   const estadoId = String(estadoIdRaw || "").trim().toUpperCase();
   if (estadoId === "CFG_DDJJ_03_PRESENTADA") return "Presentada";
+  if (estadoId === "CFG_DDJJ_04_SUPERADA_POR_ACTUALIZACION") return "Superada por actualización";
   return "Pendiente de presentación";
 }
 
@@ -108,6 +139,7 @@ export default function DatosPersonales() {
   const [durationByCol, setDurationByCol] = useState({});
   const [form, setForm] = useState(() => ({ ...INITIAL_FORM_DATA_PERSONALES }));
   const [familiares, setFamiliares] = useState([emptyFamiliar()]);
+  const [ddjjFlowMode, setDdjjFlowMode] = useState("idle");
   const autoHydratedPersonaIdRef = useRef("");
 
   const cargar = useCallback(async () => {
@@ -221,10 +253,12 @@ export default function DatosPersonales() {
     setModoEdicion(false);
     setEditId("");
     setSaveMsg("");
+    setDdjjFlowMode("idle");
   }, [tipo]);
 
   useEffect(() => {
     setEditId("");
+    setDdjjFlowMode("idle");
   }, [form.persona_id, tipo]);
 
   useEffect(() => {
@@ -361,6 +395,71 @@ export default function DatosPersonales() {
         : registros.filter((r) => String(r.persona_id || "") === pid);
     return [...filtrados].sort((a, b) => sortRegistrosVigentes(a, b, tipo));
   }, [registros, tipo, form.persona_id]);
+  const ddjjRegistrosPersona = useMemo(
+    () =>
+      tipo === "declaraciones_grupo_familiar"
+        ? registrosFiltradosPorPersona
+        : [],
+    [tipo, registrosFiltradosPorPersona],
+  );
+  const ddjjPresentadaActual = useMemo(
+    () =>
+      ddjjRegistrosPersona.find(
+        (r) => String(r.estado_declaracion_id || "").trim().toUpperCase() === "CFG_DDJJ_03_PRESENTADA",
+      ) || null,
+    [ddjjRegistrosPersona],
+  );
+  const updateButtonEnabled = useMemo(() => {
+    if (!form.persona_id) return false;
+    if (tipo === "personas") return true;
+    if (tipo === "declaraciones_grupo_familiar") return false;
+    return registrosFiltradosPorPersona.length > 0;
+  }, [form.persona_id, tipo, registrosFiltradosPorPersona.length]);
+
+  useEffect(() => {
+    if (tipo !== "declaraciones_grupo_familiar") return;
+    if (!form.persona_id) return;
+    if (ddjjFlowMode === "edit" || ddjjFlowMode === "review") return;
+    if (ddjjPresentadaActual) {
+      const next = hydrateDatosPersonales({
+        record: ddjjPresentadaActual,
+        prevForm: { ...form, persona_id: form.persona_id },
+        emptyFamiliar,
+      });
+      if (next) {
+        setForm((prev) => ({
+          ...next.form,
+          persona_id: String(form.persona_id || prev.persona_id || ""),
+          declaracion_jurada_aceptada: false,
+          consentimiento_evaluacion_rrhh: false,
+          ddjj_en_revision: false,
+        }));
+        setFamiliares(next.familiares);
+      }
+      setDdjjFlowMode("view");
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        declaracion_version: nextDeclaracionVersion,
+        declaracion_jurada_aceptada: false,
+        consentimiento_evaluacion_rrhh: false,
+        ddjj_en_revision: false,
+      }));
+      setFamiliares([emptyFamiliar()]);
+      setDdjjFlowMode("idle");
+    }
+  }, [tipo, form.persona_id, ddjjPresentadaActual, ddjjFlowMode, nextDeclaracionVersion]);
+
+  useEffect(() => {
+    if (!form.persona_id) return;
+    if (modoEdicion) return;
+    if (tipo === "declaraciones_grupo_familiar") return;
+    if (tipo === "personas") return;
+    const first = registrosFiltradosPorPersona[0];
+    if (!first) return;
+    hydrateFrom(first);
+    setEditId(String(first.id || ""));
+  }, [tipo, form.persona_id, modoEdicion, registrosFiltradosPorPersona]);
 
   const eventosPersona = useMemo(() => {
     if (!form.persona_id) return [];
@@ -383,6 +482,45 @@ export default function DatosPersonales() {
     if (!next) return;
     setForm(next.form);
     setFamiliares(next.familiares);
+  }
+
+  function iniciarCargaDdjj() {
+    setModoEdicion(true);
+    setEditId("");
+    setSaveMsg("");
+    setForm((prev) => ({
+      ...prev,
+      declaracion_version: nextDeclaracionVersion,
+      declaracion_jurada_aceptada: false,
+      consentimiento_evaluacion_rrhh: false,
+      ddjj_en_revision: false,
+    }));
+    setFamiliares([emptyFamiliar()]);
+    setDdjjFlowMode("edit");
+  }
+
+  function iniciarActualizacionDdjj() {
+    if (!ddjjPresentadaActual) return;
+    const next = hydrateDatosPersonales({
+      record: ddjjPresentadaActual,
+      prevForm: { ...form, persona_id: form.persona_id },
+      emptyFamiliar,
+    });
+    if (next) {
+      setForm((prev) => ({
+        ...next.form,
+        persona_id: String(form.persona_id || prev.persona_id || ""),
+        declaracion_version: nextDeclaracionVersion,
+        declaracion_jurada_aceptada: false,
+        consentimiento_evaluacion_rrhh: false,
+        ddjj_en_revision: false,
+      }));
+      setFamiliares(next.familiares);
+    }
+    setModoEdicion(true);
+    setEditId("");
+    setSaveMsg("");
+    setDdjjFlowMode("edit");
   }
 
   function validar() {
@@ -454,6 +592,10 @@ export default function DatosPersonales() {
         setSaveMsg(`${baseOk} | Advertencias: ${detalleWarnings}`);
       }
       await cargar();
+      if (tipo === "declaraciones_grupo_familiar") {
+        setDdjjFlowMode("view");
+        setModoEdicion(false);
+      }
     } catch (ex) {
       const msg = ex instanceof Error ? ex.message : "No se pudo guardar.";
       setSaveMsg(msg);
@@ -496,6 +638,15 @@ export default function DatosPersonales() {
               setEditId={setEditId}
               registros={registrosFiltradosPorPersona}
               hydrateFrom={hydrateFrom}
+              showUpdateButton={tipo !== "declaraciones_grupo_familiar"}
+              canUpdate={updateButtonEnabled}
+              updateDisabledReason={
+                !form.persona_id
+                  ? "Seleccioná una persona para habilitar edición."
+                  : tipo !== "personas" && registrosFiltradosPorPersona.length === 0
+                    ? "No hay registros guardados para esta colección."
+                    : ""
+              }
             />
 
             {(tipo === "personas" || tipo === "formacion_agente" || tipo === "declaraciones_grupo_familiar" || tipo === "consentimientos") && (
@@ -543,6 +694,11 @@ export default function DatosPersonales() {
                     emptyFamiliar={emptyFamiliar}
                     familiares={familiares}
                     optsParentesco={optsParentesco}
+                    setField={setField}
+                    flowMode={ddjjFlowMode}
+                    onStartDdjj={iniciarCargaDdjj}
+                    onActualizarDdjj={iniciarActualizacionDdjj}
+                    onBackToEdit={() => setDdjjFlowMode("edit")}
                     disabled={readOnlyByDefault}
                   />
                 )}
@@ -576,9 +732,58 @@ export default function DatosPersonales() {
             )}
 
             <div className="flex justify-end">
-              <button type="submit" disabled={saving || !modoEdicion} className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
-                {saving ? "Guardando..." : "Guardar datos en Base de Datos"}
-              </button>
+              {tipo === "declaraciones_grupo_familiar" && form.ddjj_en_revision !== true ? (
+                ddjjFlowMode === "edit" ? (
+                <button
+                  type="button"
+                  disabled={saving || !modoEdicion}
+                  onClick={() => {
+                    const familiaresLimpios = familiares.filter((f) =>
+                      [f.parentesco_id, f.dni, f.nombre, f.apellido, f.fecha_nacimiento].some((v) =>
+                        String(v || "").trim(),
+                      ),
+                    );
+                    if (familiaresLimpios.length === 0) {
+                      setSaveMsg("Debés cargar al menos un familiar en DDJJ.");
+                      return;
+                    }
+                    setFamiliares(familiaresLimpios);
+                    const err = validateDatosPersonales({
+                      tipo,
+                      form,
+                      familiares: familiaresLimpios,
+                    });
+                    if (err) {
+                      setSaveMsg(err);
+                      return;
+                    }
+                    setSaveMsg("");
+                    setDdjjFlowMode("review");
+                    setField("ddjj_en_revision", true);
+                  }}
+                  className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                >
+                  Revisar y presentar su DDJJ
+                </button>
+                ) : null
+              ) : (
+                <button
+                  type="submit"
+                  disabled={
+                    saving ||
+                    !modoEdicion ||
+                    (tipo === "declaraciones_grupo_familiar" &&
+                      form.ddjj_en_revision === true &&
+                      !(
+                        form.declaracion_jurada_aceptada === true &&
+                        form.consentimiento_evaluacion_rrhh === true
+                      ))
+                  }
+                  className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {saving ? "Guardando..." : tipo === "declaraciones_grupo_familiar" ? "Presentar DDJJ" : "Guardar datos en Base de Datos"}
+                </button>
+              )}
             </div>
           </form>
         </Card>
@@ -734,16 +939,34 @@ export default function DatosPersonales() {
                     <p className="text-slate-700">
                       Por el USUARIO: {actorPersona.nombreCompleto} · DNI: {actorPersona.dni}
                     </p>
+                    {String(evt.payload?.coleccion || "").trim() === "declaraciones_grupo_familiar" ? (
+                      <p className="text-slate-600">
+                        Acción DDJJ: {mapAccionDdjjToUiLabel(evt.payload?.accion)}
+                      </p>
+                    ) : null}
                     {Array.isArray(evt.payload?.cambios) &&
                       evt.payload.cambios.length > 0 &&
                       evt.payload.cambios.map((c, i) => (
                         <p key={`${evt.id}-${i}`} className="text-slate-600">
-                          {String(c.campo || "campo")}: {String(c.anterior ?? "null")} {"->"}{" "}
-                          {String(c.nuevo ?? "null")}
+                          {String(c.campo || "campo")}: {formatCambioValor(c.anterior)} {"->"}{" "}
+                          {formatCambioValor(c.nuevo)}
                         </p>
                       ))}
                     {(!Array.isArray(evt.payload?.cambios) || evt.payload.cambios.length === 0) && (
-                      <p className="text-slate-500">Sin campos actualizados informados en este evento.</p>
+                      <>
+                        {Number.isFinite(Number(evt.payload?.declaracion_version)) ? (
+                          <p className="text-slate-600">Versión DDJJ: {String(evt.payload.declaracion_version)}</p>
+                        ) : null}
+                        {Number.isFinite(Number(evt.payload?.familiares_count)) ? (
+                          <p className="text-slate-600">
+                            Familiares declarados: {String(evt.payload.familiares_count)}
+                          </p>
+                        ) : null}
+                        {!Number.isFinite(Number(evt.payload?.declaracion_version)) &&
+                        !Number.isFinite(Number(evt.payload?.familiares_count)) ? (
+                          <p className="text-slate-500">Sin campos actualizados informados en este evento.</p>
+                        ) : null}
+                      </>
                     )}
                         </>
                       );

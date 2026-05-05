@@ -23,6 +23,9 @@ export default function FormHeaderControls({
   setEditId,
   registros,
   hydrateFrom,
+  showUpdateButton = true,
+  canUpdate = true,
+  updateDisabledReason = "",
 }) {
   const [personaQuery, setPersonaQuery] = useState("");
   const [personaOpen, setPersonaOpen] = useState(false);
@@ -134,9 +137,12 @@ export default function FormHeaderControls({
       <div className="grid gap-3 md:grid-cols-2">
         <div className="flex items-end">
           <div>
+            {showUpdateButton ? (
             <button
               type="button"
+              disabled={!canUpdate}
               onClick={() => {
+                if (!canUpdate) return;
                 const next = !modoEdicion;
                 setModoEdicion(next);
                 setEditId("");
@@ -150,13 +156,17 @@ export default function FormHeaderControls({
               className={`h-11 rounded-xl border px-4 text-sm font-semibold transition-colors ${
                 modoEdicion
                   ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50"
               }`}
             >
               Actualizar información
             </button>
+            ) : null}
             {modoEdicion && tipo !== "personas" && personaId ? (
               <p className="mt-1 text-xs text-slate-500">Se editará automáticamente el registro vigente (última carga).</p>
+            ) : null}
+            {!canUpdate && showUpdateButton && updateDisabledReason ? (
+              <p className="mt-1 text-xs text-slate-500">{updateDisabledReason}</p>
             ) : null}
           </div>
         </div>

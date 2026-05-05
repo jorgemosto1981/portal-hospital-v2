@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 export default function DdjjFields({
   ESTADO_DDJJ_DEFAULT_PERSONALES,
   estadoDeclaracionIdActual,
@@ -10,59 +12,187 @@ export default function DdjjFields({
   emptyFamiliar,
   familiares,
   optsParentesco,
+  setField,
+  flowMode = "edit",
+  onStartDdjj = () => {},
+  onActualizarDdjj = () => {},
+  onBackToEdit = () => {},
   disabled = false,
 }) {
   const PARENTESCO_OTROS_ID = "CFG_PAR_OTROS";
+  const [activeIndex, setActiveIndex] = useState(0);
 
   function updateFam(idx, key, value) {
     setFamiliares((prev) => prev.map((x, i) => (i === idx ? { ...x, [key]: value } : x)));
   }
 
+  useEffect(() => {
+    if (!Array.isArray(familiares) || familiares.length === 0) return;
+    if (activeIndex < familiares.length) return;
+    setActiveIndex(Math.max(0, familiares.length - 1));
+  }, [familiares, activeIndex]);
+
+  function addOtroFamiliar() {
+    setFamiliares((prev) => {
+      const next = [...prev, emptyFamiliar()];
+      setActiveIndex(next.length - 1);
+      return next;
+    });
+  }
+
+  const parentescoLabelById = new Map(
+    (optsParentesco || []).map((o) => [String(o.value || "").trim(), String(o.label || o.value || "").trim()]),
+  );
+
+  function familiarTieneDatos(familiar) {
+    if (!familiar || typeof familiar !== "object") return false;
+    return [familiar.parentesco_id, familiar.dni, familiar.nombre, familiar.apellido, familiar.fecha_nacimiento]
+      .some((v) => String(v || "").trim());
+  }
+
+  function familiarCompleto(familiar) {
+    if (!familiarTieneDatos(familiar)) return false;
+    return [familiar.parentesco_id, familiar.dni, familiar.nombre, familiar.apellido, familiar.fecha_nacimiento]
+      .every((v) => String(v || "").trim());
+  }
+
+  function formatFechaDdMmAaaa(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "—";
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return raw;
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = String(d.getFullYear());
+    return `${dd}-${mm}-${yyyy}`;
+  }
+
   return (
     <>
       <div>
-        <label className="block text-sm font-medium text-slate-700">estado_declaracion_id (vista simplificada)</label>
+        <label className="block text-sm font-medium text-slate-700">Estado de declaración</label>
         <input
           value={estadoDeclaracionUiLabel || "Pendiente de presentación"}
           disabled
-          className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none"
+          className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 outline-none"
         />
         <p className="mt-1 text-[11px] italic text-slate-500">
           ({String(estadoDeclaracionIdActual || ESTADO_DDJJ_DEFAULT_PERSONALES || "—")})
         </p>
-        <p className="mt-1 text-xs text-slate-500">{HELP.estado_declaracion_id}</p>
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700">declaracion_version (automática)</label>
+        <label className="block text-sm font-medium text-slate-700">Versión DDJJ</label>
         <input
           value={modoEdicion ? form.declaracion_version : nextDeclaracionVersion}
           disabled
-          className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+          className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 outline-none"
         />
-        <p className="mt-1 text-xs text-slate-500">{HELP.declaracion_version}</p>
+        <p className="mt-1 text-xs text-slate-500">
+          Se genera automáticamente al presentar una nueva actualización.
+        </p>
       </div>
       <p className="md:col-span-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
-        `declaracion_jurada_aceptada` y `aceptada_en` no se cargan manualmente en esta pantalla.
-        Se resuelven por el flujo de validación/aceptación posterior según el estado DDJJ.
+        Cargá o actualizá familiares, revisá el resumen y presentá la DDJJ.
       </p>
       <p className="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-        Realizá tu DDJJ de familiares completando todos los datos requeridos del grupo familiar.
+        Solo se notificará a RRHH cuando completes la presentación final.
       </p>
 
+      {flowMode === "idle" ? (
+        <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-sm text-slate-700">Todavía no hay una DDJJ presentada para esta persona.</p>
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={onStartDdjj}
+              className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              Iniciar carga de DDJJ
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {flowMode === "view" ? (
+        <div className="md:col-span-2 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+            DDJJ presentada previamente. Podés actualizar los datos cuando lo necesites.
+          </div>
+          {familiares
+            .filter((f) =>
+              [f.parentesco_id, f.dni, f.nombre, f.apellido, f.fecha_nacimiento].some((v) =>
+                String(v || "").trim(),
+              ),
+            )
+            .map((f, idx) => (
+              <div key={`view-${idx}`} className="rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-700">
+                <p className="font-semibold text-slate-800">Familiar {idx + 1}</p>
+                <p>Nombre: {f.nombre || "—"} {f.apellido || ""}</p>
+                <p>DNI: {f.dni || "—"}</p>
+                <p>Fecha nacimiento: {formatFechaDdMmAaaa(f.fecha_nacimiento)}</p>
+                <p>Parentesco: {parentescoLabelById.get(String(f.parentesco_id || "").trim()) || "—"}</p>
+              </div>
+            ))}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={onActualizarDdjj}
+              className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              Actualizar datos
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {(flowMode === "edit" || flowMode === "review") && form.ddjj_en_revision !== true ? (
       <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-sm font-semibold text-slate-900">Familiares declarados</p>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => setFamiliares((prev) => [...prev, emptyFamiliar()])}
-            className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 disabled:opacity-50"
-          >
-            Agregar familiar
-          </button>
+          <p className="text-xs text-slate-500">Cargá un familiar por solapa.</p>
+        </div>
+        <div className="mb-3 flex flex-wrap gap-2">
+          {familiares.map((_, idx) => (
+            (() => {
+              const fam = familiares[idx];
+              const isComplete = familiarCompleto(fam);
+              const hasData = familiarTieneDatos(fam);
+              const marker = isComplete ? "Completo" : hasData ? "Falta completar" : "Sin datos";
+              const statusBgClass = isComplete
+                ? "bg-emerald-50 border-emerald-300"
+                : hasData
+                  ? "bg-amber-50 border-amber-300"
+                  : "bg-slate-100 border-slate-300";
+              const baseInactiveClass = `${statusBgClass} text-slate-700`;
+              return (
+                <button
+                  key={`tab-${idx}`}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => setActiveIndex(idx)}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+                    idx === activeIndex
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : baseInactiveClass
+                  } disabled:opacity-60`}
+                >
+                  <span>{`Familiar ${idx + 1} · `}</span>
+                  <span>{marker}</span>
+                </button>
+              );
+            })()
+          ))}
         </div>
         <div className="space-y-3">
-          {familiares.map((f, idx) => (
+          {familiares
+            .filter((_, idx) => idx === activeIndex)
+            .map((f, idxLocal) => {
+              const idx = activeIndex + idxLocal;
+              return (
             <div key={`fam-${idx}`} className="rounded-lg border border-slate-200 bg-white p-3">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -278,9 +408,71 @@ export default function DdjjFields({
                 </div>
               </div>
             </div>
-          ))}
+          );
+            })}
+        </div>
+        <div className="mt-3 flex justify-end">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={addOtroFamiliar}
+            className="h-11 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            Agregar otro familiar
+          </button>
         </div>
       </div>
+      ) : flowMode === "review" || form.ddjj_en_revision === true ? (
+      <div className="md:col-span-2 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+          Revisá los familiares cargados. Si detectás algo, podés volver a edición antes de presentar.
+        </div>
+        {familiares
+          .filter((f) =>
+            [f.parentesco_id, f.dni, f.nombre, f.apellido, f.fecha_nacimiento].some((v) => String(v || "").trim()),
+          )
+          .map((f, idx) => (
+            <div key={`res-${idx}`} className="rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-700">
+              <p className="font-semibold text-slate-800">Familiar {idx + 1}</p>
+              <p>Nombre: {f.nombre || "—"} {f.apellido || ""}</p>
+              <p>DNI: {f.dni || "—"}</p>
+              <p>Fecha nacimiento: {formatFechaDdMmAaaa(f.fecha_nacimiento)}</p>
+              <p>Parentesco: {parentescoLabelById.get(String(f.parentesco_id || "").trim()) || "—"}</p>
+            </div>
+          ))}
+        <label className="inline-flex items-start gap-2 text-xs text-slate-700">
+          <input
+            type="checkbox"
+            checked={
+              form.declaracion_jurada_aceptada === true &&
+              form.consentimiento_evaluacion_rrhh === true
+            }
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setField("declaracion_jurada_aceptada", checked);
+              setField("consentimiento_evaluacion_rrhh", checked);
+            }}
+            disabled={disabled}
+            className="mt-0.5"
+          />
+          Declaro bajo juramento que la información del grupo familiar es veraz y acepto
+          que mi DDJJ será evaluada por el área correspondiente.
+        </label>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => {
+              setField("ddjj_en_revision", false);
+              onBackToEdit();
+            }}
+            className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 disabled:opacity-60"
+          >
+            Volver a edición
+          </button>
+        </div>
+      </div>
+      ) : null}
     </>
   );
 }

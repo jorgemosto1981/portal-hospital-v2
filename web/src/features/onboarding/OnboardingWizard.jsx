@@ -20,12 +20,14 @@ export default function OnboardingWizard() {
     dom,
     famRows,
     ddjjAceptada,
+    ddjjEvaluacionAceptada,
     ddjjStage,
     localidadesFiltradas,
     setContacto,
     setDom,
     setFamRows,
     setDdjjAceptada,
+    setDdjjEvaluacionAceptada,
     updateFam,
     iniciarDdjjAhora,
     cerrarDdjjParaRevision,
@@ -552,6 +554,16 @@ export default function OnboardingWizard() {
                       required
                     />
                     Declaro bajo juramento que la información del grupo familiar es veraz.
+                  </label>
+                  <label className="inline-flex items-start gap-2 text-xs text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={ddjjEvaluacionAceptada === true}
+                      onChange={(e) => setDdjjEvaluacionAceptada(e.target.checked)}
+                      className="mt-0.5"
+                      required
+                    />
+                    Acepto que mi DDJJ será evaluada por el área correspondiente.
                   </label>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <button

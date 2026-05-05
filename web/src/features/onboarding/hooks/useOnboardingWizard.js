@@ -75,6 +75,7 @@ export function useOnboardingWizard() {
     },
   ]);
   const [ddjjAceptada, setDdjjAceptada] = useState(false);
+  const [ddjjEvaluacionAceptada, setDdjjEvaluacionAceptada] = useState(false);
   const [ddjjStage, setDdjjStage] = useState("choice");
 
   useEffect(() => {
@@ -190,6 +191,7 @@ export function useOnboardingWizard() {
 
   function iniciarDdjjAhora() {
     setDdjjAceptada(false);
+    setDdjjEvaluacionAceptada(false);
     setDdjjStage("edit");
   }
 
@@ -271,6 +273,10 @@ export function useOnboardingWizard() {
 
   async function guardarDdjj(e) {
     e.preventDefault();
+    if (ddjjEvaluacionAceptada !== true) {
+      toast.error("Debés aceptar que tu DDJJ será evaluada por el área correspondiente.");
+      return;
+    }
     setSaving(true);
     const t = toast.loading("Guardando declaración…");
     const familiares = famRows
@@ -302,6 +308,7 @@ export function useOnboardingWizard() {
       const { data } = await callOnboardingMvpDdjjFamiliar({
         familiares,
         declaracion_jurada_aceptada: ddjjAceptada === true,
+        consentimiento_evaluacion_rrhh: ddjjEvaluacionAceptada === true,
       });
       if (data?.ok) toast.success("Grupo familiar registrado", { id: t });
       else throw new Error();
@@ -357,12 +364,14 @@ export function useOnboardingWizard() {
     dom,
     famRows,
     ddjjAceptada,
+    ddjjEvaluacionAceptada,
     ddjjStage,
     localidadesFiltradas,
     setContacto,
     setDom,
     setFamRows,
     setDdjjAceptada,
+    setDdjjEvaluacionAceptada,
     updateFam,
     iniciarDdjjAhora,
     cerrarDdjjParaRevision,
