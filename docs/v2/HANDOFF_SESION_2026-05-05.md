@@ -11,6 +11,15 @@
 
 - Borrar eventos históricos es **irreversible**; usar solo cuando el evento es ruido administrativo o datos ya corregidos en la fuente (DDJJ / catálogo).
 
+## Refactor web — pantalla Datos laborales (misma línea de tiempo)
+
+- **Objetivo:** menos JSX duplicado en `DatosLaborales.jsx`, componentes reutilizables y coherencia del modo edición con `persona_id`.
+- **Componentes nuevos:** `web/src/pages/datos-laborales/components/LabeledSelect.jsx`, `LabeledTextField.jsx` (modo **`bare`** para filas de carga por día).
+- **Corrección:** al elegir «Registro a editar», la fila se resuelve con **`registrosPorTipoFiltrados`**, no con todos los registros del tipo.
+- **Documentación detallada:** [`REFACTOR_WEB_DATOS_LABORALES_FORMULARIO_V2.md`](./REFACTOR_WEB_DATOS_LABORALES_FORMULARIO_V2.md).
+- **Build:** `npm run build:web` OK.
+
 ## Próxima sesión (opcional)
 
 - Re-ejecutar **`npm run db:audit-refs-catalogos-eliminados`** tras cambios de catálogo o datos.
+- Continuar refactor (extracción de subformularios HLc/HLg y/o partición de `utils.js`) según [`REFACTOR_WEB_DATOS_LABORALES_FORMULARIO_V2.md`](./REFACTOR_WEB_DATOS_LABORALES_FORMULARIO_V2.md) §6.

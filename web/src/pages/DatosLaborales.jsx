@@ -10,6 +10,8 @@ import VistaOperativaGrupoCard from "./datos-laborales/sections/VistaOperativaGr
 import { useDatosLaboralesCollections } from "./datos-laborales/useDatosLaboralesCollections.js";
 import { buildFormDataFromRecord, validateLaboralForm } from "./datos-laborales/formLogic.js";
 import { buildHlcPayload, buildHldPayload, buildHlgPayload } from "./datos-laborales/payloadBuilders.js";
+import LabeledSelect from "./datos-laborales/components/LabeledSelect.jsx";
+import LabeledTextField from "./datos-laborales/components/LabeledTextField.jsx";
 import {
   buildVistaGrupoItems,
   buildTimelineItemsByPersona,
@@ -29,6 +31,22 @@ import {
 } from "./datos-laborales/utils.js";
 
 const EMPTY_ROWS = [];
+
+const OPCIONES_TIPO_ALTA = [
+  { id: "historial_laboral_cargos", nombre: "HLc · historial_laboral_cargos" },
+  {
+    id: "historial_laboral_grupos",
+    nombre: "HLg · historial_laboral_grupos (con vínculo a cargo)",
+  },
+];
+
+function labelPersonaOpcion(p) {
+  if (!p || !p.id) return "";
+  if (p.nombre || p.apellido) {
+    return `${String(p.apellido || "").trim()} ${String(p.nombre || "").trim()} (${p.id})`.trim();
+  }
+  return String(p.id);
+}
 
 export default function DatosLaborales() {
   const {
@@ -433,19 +451,17 @@ export default function DatosLaborales() {
               ejercida. Pueden diferir temporalmente sin que eso implique error.
             </p>
           <form className="mt-4 space-y-4" onSubmit={onGuardarRegistro}>
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Nivel de registro
-              </label>
-              <select
-                value={tipoAlta}
-                onChange={(e) => setTipoAlta(e.target.value)}
-                className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-              >
-                <option value="historial_laboral_cargos">HLc · historial_laboral_cargos</option>
-                <option value="historial_laboral_grupos">HLg · historial_laboral_grupos (con vínculo a cargo)</option>
-              </select>
-            </div>
+            <LabeledSelect
+              label={
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Nivel de registro
+                </span>
+              }
+              value={tipoAlta}
+              onValueChange={(v) => setTipoAlta(v)}
+              options={OPCIONES_TIPO_ALTA}
+              placeholder="Elegir nivel..."
+            />
 
             <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
               <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -472,374 +488,209 @@ export default function DatosLaborales() {
                 </p>
               )}
               {modoEdicion && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Registro a editar</label>
-                  <select
-                    value={registroEditId}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      setRegistroEditId(id);
-                      const target = registrosPorTipo.find((x) => String(x.id) === String(id));
-                      if (target) cargarRegistroEnFormulario(target);
-                    }}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar registro...</option>
-                    {registrosEdicionDetallados.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <LabeledSelect
+                  label="Registro a editar"
+                  value={registroEditId}
+                  onValueChange={(id) => {
+                    setRegistroEditId(id);
+                    const target = registrosPorTipoFiltrados.find((x) => String(x.id) === String(id));
+                    if (target) cargarRegistroEnFormulario(target);
+                  }}
+                  options={registrosEdicionDetallados}
+                  placeholder="Seleccionar registro..."
+                />
               )}
             </div>
 
             <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">persona_id *</label>
-                <select
-                  value={formData.persona_id}
-                  onChange={(e) => onChangeField("persona_id", e.target.value)}
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                >
-                  <option value="">Seleccionar persona...</option>
-                  {opcionesPersonas.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre || p.apellido ? `${p.apellido || ""} ${p.nombre || ""} (${p.id})` : p.id}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.persona_id}</p>
-              </div>
+              <LabeledSelect
+                label="persona_id *"
+                value={formData.persona_id}
+                onValueChange={(v) => onChangeField("persona_id", v)}
+                options={opcionesPersonas}
+                placeholder="Seleccionar persona..."
+                helpText={AYUDA_CAMPOS.persona_id}
+                optionLabel={labelPersonaOpcion}
+              />
 
               {tipoAlta === "historial_laboral_grupos" && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">grupo_de_trabajo_id *</label>
-                  <select
-                    value={formData.grupo_de_trabajo_id}
-                    onChange={(e) => onChangeField("grupo_de_trabajo_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar grupo...</option>
-                    {opcionesGrupos.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.nombre || g.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.grupo_de_trabajo_id}</p>
-                </div>
+                <LabeledSelect
+                  label="grupo_de_trabajo_id *"
+                  value={formData.grupo_de_trabajo_id}
+                  onValueChange={(v) => onChangeField("grupo_de_trabajo_id", v)}
+                  options={opcionesGrupos}
+                  placeholder="Seleccionar grupo..."
+                  helpText={AYUDA_CAMPOS.grupo_de_trabajo_id}
+                />
               )}
             </div>
 
             {tipoAlta === "historial_laboral_cargos" && (
               <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">efector_designacion_id *</label>
-                  <select
-                    value={formData.efector_designacion_id}
-                    onChange={(e) => onChangeField("efector_designacion_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar efector...</option>
-                    {opcionesEfectores.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.efector_designacion_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">efector_cumplimiento_id *</label>
-                  <select
-                    value={formData.efector_cumplimiento_id}
-                    onChange={(e) => onChangeField("efector_cumplimiento_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar efector...</option>
-                    {opcionesEfectores.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.efector_cumplimiento_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">rol_id</label>
-                  <select
-                    value={formData.rol_id}
-                    onChange={(e) => onChangeField("rol_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar rol...</option>
-                    {opcionesRol.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.rol_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">estado_asignacion_id</label>
-                  <select
-                    value={formData.estado_asignacion_id}
-                    onChange={(e) => onChangeField("estado_asignacion_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar estado...</option>
-                    {opcionesEstadoAsignacion.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.estado_asignacion_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">escalafon_id</label>
-                  <select
-                    value={formData.escalafon_id}
-                    onChange={(e) => onChangeField("escalafon_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar escalafón...</option>
-                    {opcionesEscalafon.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.escalafon_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">agrupamiento_id</label>
-                  <select
-                    value={formData.agrupamiento_id}
-                    onChange={(e) => onChangeField("agrupamiento_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar agrupamiento...</option>
-                    {opcionesAgrupamiento.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.agrupamiento_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">tipo_vinculo_id</label>
-                  <select
-                    value={formData.tipo_vinculo_id}
-                    onChange={(e) => onChangeField("tipo_vinculo_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar tipo de vínculo...</option>
-                    {opcionesTipoVinculo.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.tipo_vinculo_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">categoria_id</label>
-                  <select
-                    value={formData.categoria_id}
-                    onChange={(e) => onChangeField("categoria_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar categoría...</option>
-                    {opcionesCategorias.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.categoria_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">cargo_funcional_id</label>
-                  <select
-                    value={formData.cargo_funcional_id}
-                    onChange={(e) => onChangeField("cargo_funcional_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar cargo funcional...</option>
-                    {opcionesFuncion.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.cargo_funcional_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">modalidad_jornada_id</label>
-                  <select
-                    value={formData.modalidad_jornada_id}
-                    onChange={(e) => onChangeField("modalidad_jornada_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar modalidad...</option>
-                    {opcionesModalidadJornada.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.modalidad_jornada_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    referencia normativa · tipo_acto_id *
-                  </label>
-                  <select
-                    value={formData.referencia_tipo_acto_id}
-                    onChange={(e) => onChangeField("referencia_tipo_acto_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar tipo de acto...</option>
-                    {opcionesTipoActo.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.referencias_normativa_designacion}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    referencia normativa · número *
-                  </label>
-                  <input
-                    value={formData.referencia_numero}
-                    onChange={(e) => onChangeField("referencia_numero", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    referencia normativa · fecha *
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.referencia_fecha}
-                    onChange={(e) => onChangeField("referencia_fecha", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    referencia normativa · detalle
-                  </label>
-                  <input
-                    value={formData.referencia_detalle}
-                    onChange={(e) => onChangeField("referencia_detalle", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">carga_horaria_total</label>
-                  <input
-                    value={formData.carga_horaria_total}
-                    onChange={(e) => onChangeField("carga_horaria_total", e.target.value)}
-                    placeholder="36"
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  />
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.carga_horaria_total}</p>
-                </div>
+                <LabeledSelect
+                  label="efector_designacion_id *"
+                  value={formData.efector_designacion_id}
+                  onValueChange={(v) => onChangeField("efector_designacion_id", v)}
+                  options={opcionesEfectores}
+                  placeholder="Seleccionar efector..."
+                  helpText={AYUDA_CAMPOS.efector_designacion_id}
+                />
+                <LabeledSelect
+                  label="efector_cumplimiento_id *"
+                  value={formData.efector_cumplimiento_id}
+                  onValueChange={(v) => onChangeField("efector_cumplimiento_id", v)}
+                  options={opcionesEfectores}
+                  placeholder="Seleccionar efector..."
+                  helpText={AYUDA_CAMPOS.efector_cumplimiento_id}
+                />
+                <LabeledSelect
+                  label="rol_id"
+                  value={formData.rol_id}
+                  onValueChange={(v) => onChangeField("rol_id", v)}
+                  options={opcionesRol}
+                  placeholder="Seleccionar rol..."
+                  helpText={AYUDA_CAMPOS.rol_id}
+                />
+                <LabeledSelect
+                  label="estado_asignacion_id"
+                  value={formData.estado_asignacion_id}
+                  onValueChange={(v) => onChangeField("estado_asignacion_id", v)}
+                  options={opcionesEstadoAsignacion}
+                  placeholder="Seleccionar estado..."
+                  helpText={AYUDA_CAMPOS.estado_asignacion_id}
+                />
+                <LabeledSelect
+                  label="escalafon_id"
+                  value={formData.escalafon_id}
+                  onValueChange={(v) => onChangeField("escalafon_id", v)}
+                  options={opcionesEscalafon}
+                  placeholder="Seleccionar escalafón..."
+                  helpText={AYUDA_CAMPOS.escalafon_id}
+                />
+                <LabeledSelect
+                  label="agrupamiento_id"
+                  value={formData.agrupamiento_id}
+                  onValueChange={(v) => onChangeField("agrupamiento_id", v)}
+                  options={opcionesAgrupamiento}
+                  placeholder="Seleccionar agrupamiento..."
+                  helpText={AYUDA_CAMPOS.agrupamiento_id}
+                />
+                <LabeledSelect
+                  label="tipo_vinculo_id"
+                  value={formData.tipo_vinculo_id}
+                  onValueChange={(v) => onChangeField("tipo_vinculo_id", v)}
+                  options={opcionesTipoVinculo}
+                  placeholder="Seleccionar tipo de vínculo..."
+                  helpText={AYUDA_CAMPOS.tipo_vinculo_id}
+                />
+                <LabeledSelect
+                  label="categoria_id"
+                  value={formData.categoria_id}
+                  onValueChange={(v) => onChangeField("categoria_id", v)}
+                  options={opcionesCategorias}
+                  placeholder="Seleccionar categoría..."
+                  helpText={AYUDA_CAMPOS.categoria_id}
+                />
+                <LabeledSelect
+                  label="cargo_funcional_id"
+                  value={formData.cargo_funcional_id}
+                  onValueChange={(v) => onChangeField("cargo_funcional_id", v)}
+                  options={opcionesFuncion}
+                  placeholder="Seleccionar cargo funcional..."
+                  helpText={AYUDA_CAMPOS.cargo_funcional_id}
+                />
+                <LabeledSelect
+                  label="modalidad_jornada_id"
+                  value={formData.modalidad_jornada_id}
+                  onValueChange={(v) => onChangeField("modalidad_jornada_id", v)}
+                  options={opcionesModalidadJornada}
+                  placeholder="Seleccionar modalidad..."
+                  helpText={AYUDA_CAMPOS.modalidad_jornada_id}
+                />
+                <LabeledSelect
+                  label="referencia normativa · tipo_acto_id *"
+                  value={formData.referencia_tipo_acto_id}
+                  onValueChange={(v) => onChangeField("referencia_tipo_acto_id", v)}
+                  options={opcionesTipoActo}
+                  placeholder="Seleccionar tipo de acto..."
+                  helpText={AYUDA_CAMPOS.referencias_normativa_designacion}
+                />
+                <LabeledTextField
+                  label="referencia normativa · número *"
+                  value={formData.referencia_numero}
+                  onValueChange={(v) => onChangeField("referencia_numero", v)}
+                />
+                <LabeledTextField
+                  label="referencia normativa · fecha *"
+                  type="date"
+                  value={formData.referencia_fecha}
+                  onValueChange={(v) => onChangeField("referencia_fecha", v)}
+                />
+                <LabeledTextField
+                  label="referencia normativa · detalle"
+                  value={formData.referencia_detalle}
+                  onValueChange={(v) => onChangeField("referencia_detalle", v)}
+                />
+                <LabeledTextField
+                  label="carga_horaria_total"
+                  value={formData.carga_horaria_total}
+                  onValueChange={(v) => onChangeField("carga_horaria_total", v)}
+                  placeholder="36"
+                  inputMode="decimal"
+                  helpText={AYUDA_CAMPOS.carga_horaria_total}
+                />
               </div>
             )}
 
             {tipoAlta === "historial_laboral_grupos" && (
               <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">cargo_id *</label>
-                  <select
-                    value={formData.cargo_id}
-                    onChange={(e) => onChangeField("cargo_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar cargo HLc...</option>
-                    {opcionesCargoHlcDetalladas.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.cargo_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">regimen_horario_id</label>
-                  <select
-                    value={formData.regimen_horario_id}
-                    onChange={(e) => onChangeField("regimen_horario_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar régimen...</option>
-                    {opcionesRegimenHorario.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.regimen_horario_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">centro_costo_id</label>
-                  <select
-                    value={formData.centro_costo_id}
-                    onChange={(e) => onChangeField("centro_costo_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar centro de costo...</option>
-                    {opcionesCentroCosto.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.centro_costo_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">funcion_real_id</label>
-                  <select
-                    value={formData.funcion_real_id}
-                    onChange={(e) => onChangeField("funcion_real_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar función...</option>
-                    {opcionesFuncion.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.funcion_real_id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">nivel_jerarquico</label>
-                  <input
-                    value={formData.nivel_jerarquico}
-                    onChange={(e) => onChangeField("nivel_jerarquico", e.target.value)}
-                    placeholder="1..99"
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  />
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.nivel_jerarquico}</p>
-                </div>
+                <LabeledSelect
+                  label="cargo_id *"
+                  value={formData.cargo_id}
+                  onValueChange={(v) => onChangeField("cargo_id", v)}
+                  options={opcionesCargoHlcDetalladas}
+                  placeholder="Seleccionar cargo HLc..."
+                  helpText={AYUDA_CAMPOS.cargo_id}
+                />
+                <LabeledSelect
+                  label="regimen_horario_id"
+                  value={formData.regimen_horario_id}
+                  onValueChange={(v) => onChangeField("regimen_horario_id", v)}
+                  options={opcionesRegimenHorario}
+                  placeholder="Seleccionar régimen..."
+                  helpText={AYUDA_CAMPOS.regimen_horario_id}
+                />
+                <LabeledSelect
+                  label="centro_costo_id"
+                  value={formData.centro_costo_id}
+                  onValueChange={(v) => onChangeField("centro_costo_id", v)}
+                  options={opcionesCentroCosto}
+                  placeholder="Seleccionar centro de costo..."
+                  helpText={AYUDA_CAMPOS.centro_costo_id}
+                />
+                <LabeledSelect
+                  label="funcion_real_id"
+                  value={formData.funcion_real_id}
+                  onValueChange={(v) => onChangeField("funcion_real_id", v)}
+                  options={opcionesFuncion}
+                  placeholder="Seleccionar función..."
+                  helpText={AYUDA_CAMPOS.funcion_real_id}
+                />
+                <LabeledTextField
+                  label="nivel_jerarquico"
+                  value={formData.nivel_jerarquico}
+                  onValueChange={(v) => onChangeField("nivel_jerarquico", v)}
+                  placeholder="1..99"
+                  inputMode="numeric"
+                  helpText={AYUDA_CAMPOS.nivel_jerarquico}
+                />
                 <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
                   <div className="mb-2 flex items-center justify-between">
                     <label className="block text-sm font-medium text-slate-700">carga_por_dia_semana</label>
                     <button
                       type="button"
                       onClick={onAddCargaRow}
-                      className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700"
+                      className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 active:bg-slate-50"
                     >
                       Agregar día
                     </button>
@@ -848,28 +699,24 @@ export default function DatosLaborales() {
                   <div className="space-y-2">
                     {cargaPorDiaRows.map((row, idx) => (
                       <div key={`carga-dia-${idx}`} className="grid gap-2 md:grid-cols-[1fr_140px_auto]">
-                        <select
+                        <LabeledSelect
+                          bare
                           value={row.dia_semana_id}
-                          onChange={(e) => onChangeCargaRow(idx, "dia_semana_id", e.target.value)}
-                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                        >
-                          <option value="">Seleccionar día...</option>
-                          {opcionesDiaSemana.map((x) => (
-                            <option key={x.id} value={x.id}>
-                              {x.nombre || x.id}
-                            </option>
-                          ))}
-                        </select>
-                        <input
+                          onValueChange={(v) => onChangeCargaRow(idx, "dia_semana_id", v)}
+                          options={opcionesDiaSemana}
+                          placeholder="Seleccionar día..."
+                        />
+                        <LabeledTextField
+                          bare
                           value={row.horas}
-                          onChange={(e) => onChangeCargaRow(idx, "horas", e.target.value)}
+                          onValueChange={(v) => onChangeCargaRow(idx, "horas", v)}
                           placeholder="Horas (0..24)"
-                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
+                          inputMode="decimal"
                         />
                         <button
                           type="button"
                           onClick={() => onRemoveCargaRow(idx)}
-                          className="h-11 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-700"
+                          className="h-11 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-700 touch-manipulation active:bg-rose-100"
                         >
                           Quitar
                         </button>
@@ -881,52 +728,38 @@ export default function DatosLaborales() {
             )}
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">
-                  {tipoAlta === "historial_laboral_cargos"
+              <LabeledTextField
+                label={
+                  tipoAlta === "historial_laboral_cargos"
                     ? "fecha_desde (cargo)"
-                    : "fecha_desde (asignación en grupo)"}
-                </label>
-                <input
-                  type="date"
-                  value={formData.fecha_desde}
-                  onChange={(e) => onChangeField("fecha_desde", e.target.value)}
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                />
-                <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.fecha_desde}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">
-                  {tipoAlta === "historial_laboral_cargos"
+                    : "fecha_desde (asignación en grupo)"
+                }
+                type="date"
+                value={formData.fecha_desde}
+                onValueChange={(v) => onChangeField("fecha_desde", v)}
+                helpText={AYUDA_CAMPOS.fecha_desde}
+              />
+              <LabeledTextField
+                label={
+                  tipoAlta === "historial_laboral_cargos"
                     ? "fecha_hasta (cargo)"
-                    : "fecha_hasta (asignación en grupo)"}
-                </label>
-                <input
-                  type="date"
-                  value={formData.fecha_hasta}
-                  onChange={(e) => onChangeField("fecha_hasta", e.target.value)}
-                  min={formData.fecha_desde || undefined}
-                  className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                />
-                <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.fecha_hasta}</p>
-              </div>
+                    : "fecha_hasta (asignación en grupo)"
+                }
+                type="date"
+                value={formData.fecha_hasta}
+                onValueChange={(v) => onChangeField("fecha_hasta", v)}
+                min={formData.fecha_desde || undefined}
+                helpText={AYUDA_CAMPOS.fecha_hasta}
+              />
               {tipoAlta === "historial_laboral_cargos" && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">causal_fin_asignacion_id</label>
-                  <select
-                    value={formData.causal_fin_asignacion_id}
-                    onChange={(e) => onChangeField("causal_fin_asignacion_id", e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
-                  >
-                    <option value="">Seleccionar causal...</option>
-                    {opcionesCausalFinAsignacion.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.nombre || x.id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">{AYUDA_CAMPOS.causal_fin_asignacion_id}</p>
-                </div>
+                <LabeledSelect
+                  label="causal_fin_asignacion_id"
+                  value={formData.causal_fin_asignacion_id}
+                  onValueChange={(v) => onChangeField("causal_fin_asignacion_id", v)}
+                  options={opcionesCausalFinAsignacion}
+                  placeholder="Seleccionar causal..."
+                  helpText={AYUDA_CAMPOS.causal_fin_asignacion_id}
+                />
               )}
             </div>
 
