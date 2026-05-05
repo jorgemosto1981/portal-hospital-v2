@@ -15,6 +15,13 @@ const {
 } = require("./shared/constants");
 const { checkRateLoginDni, checkRatePrimerDni, normalizeDni, validEmail } = require("./shared/helpers");
 const { applyLaborAwareSessionClaims } = require("./shared/authClaims");
+const ESTADO_BANDEJA_RRHH_PENDIENTE_ID = "cfg_ebr_pend_rev";
+const TIPO_EVENTO_EMAIL_SOL = "EVT_AUTH_EMAIL_CAMBIO_SOLICITADO";
+const TIPO_EVENTO_EMAIL_CONF = "EVT_AUTH_EMAIL_CAMBIO_CONFIRMADO";
+const TIPO_EVENTO_PASS = "EVT_AUTH_PASSWORD_CAMBIO";
+const TIPO_EVENTO_CFG_EMAIL_SOL = "cfg_tev_auth_email_cambio_solicitado";
+const TIPO_EVENTO_CFG_EMAIL_CONF = "cfg_tev_auth_email_cambio_confirmado";
+const TIPO_EVENTO_CFG_PASS = "cfg_tev_auth_password_cambio";
 
 const resolverEmailLoginDni = onCall(async (request) => {
   const d = request.data && typeof request.data === "object" ? request.data : {};
@@ -204,10 +211,129 @@ const registrarPrimerAcceso = onCall(async (request) => {
   return { ok: true, persona_id: personaId, cuenta_id: cuentaId };
 });
 
+function maskEmail(email) {
+  const raw = String(email || "").trim().toLowerCase();
+  const [u, d] = raw.split("@");
+  if (!u || !d) return "—";
+  const safeUser = u.length <= 2 ? `${u[0] || "*"}*` : `${u[0]}***${u[u.length - 1]}`;
+  return `${safeUser}@${d}`;
+}
+
+async function resolveCuentaByAuthUid(uid) {
+  const snap = await db.collection(COL_USUARIOS_CUENTA).where("auth_uid", "==", uid).limit(2).get();
+  if (snap.empty) throw new HttpsError("failed-precondition", "No existe cuenta vinculada para esta sesión.");
+  if (snap.size > 1) throw new HttpsError("internal", "Inconsistencia: múltiples cuentas para la misma sesión.");
+  return snap.docs[0];
+}
+
+async function registrarEventoAuthCambio({
+  personaId,
+  actorPersonaId,
+  tipoEventoId,
+  tipoEventoCfgId,
+  accion,
+  payloadExtra = {},
+}) {
+  const eventoId = `evt_${ulid()}`;
+  await db.collection(COL_EVENTOS).doc(eventoId).set(
+    {
+      id: eventoId,
+      tipo_evento_id: tipoEventoId,
+      tipo_evento_cfg_id: tipoEventoCfgId,
+      persona_id: personaId,
+      actor_persona_id: actorPersonaId || personaId || null,
+      ocurrido_en: FieldValue.serverTimestamp(),
+      estado_bandeja_rrhh_id: ESTADO_BANDEJA_RRHH_PENDIENTE_ID,
+      payload: {
+        accion,
+        ...payloadExtra,
+      },
+      schema_version: 1,
+    },
+    { merge: true },
+  );
+  return eventoId;
+}
+
+const notificarCambioEmailAuth = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Se requiere sesión.");
+  const uid = request.auth.uid;
+  const d = request.data && typeof request.data === "object" ? request.data : {};
+  const etapa = String(d.etapa || "solicitado").trim().toLowerCase();
+  const nuevoEmail = String(d.nuevo_email || "").trim().toLowerCase();
+  if (!validEmail(nuevoEmail)) throw new HttpsError("invalid-argument", "nuevo_email inválido.");
+  if (!["solicitado", "confirmado"].includes(etapa)) {
+    throw new HttpsError("invalid-argument", "etapa inválida.");
+  }
+
+  const cuentaDoc = await resolveCuentaByAuthUid(uid);
+  const cuenta = cuentaDoc.data() || {};
+  const personaId = String(cuenta.persona_id || "").trim();
+  if (!personaId) throw new HttpsError("failed-precondition", "Cuenta sin persona_id.");
+
+  const userAuth = await auth.getUser(uid);
+  const emailActualAuth = String(userAuth.email || "").trim().toLowerCase();
+  if (emailActualAuth !== nuevoEmail) {
+    throw new HttpsError("failed-precondition", "El email autenticado no coincide con nuevo_email.");
+  }
+
+  await cuentaDoc.ref.set(
+    {
+      username: nuevoEmail,
+      actualizado_en: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  const tipoEventoId = etapa === "confirmado" ? TIPO_EVENTO_EMAIL_CONF : TIPO_EVENTO_EMAIL_SOL;
+  const tipoEventoCfgId = etapa === "confirmado" ? TIPO_EVENTO_CFG_EMAIL_CONF : TIPO_EVENTO_CFG_EMAIL_SOL;
+  const accion =
+    etapa === "confirmado" ? "notificar_cambio_email_confirmado" : "notificar_cambio_email_solicitado";
+  const eventoId = await registrarEventoAuthCambio({
+    personaId,
+    actorPersonaId: personaId,
+    tipoEventoId,
+    tipoEventoCfgId,
+    accion,
+    payloadExtra: {
+      email_anterior_mask: maskEmail(cuenta.username || null),
+      email_nuevo_mask: maskEmail(nuevoEmail),
+      verificado: userAuth.emailVerified === true,
+      coleccion: "usuarios_cuenta",
+    },
+  });
+
+  return { ok: true, persona_id: personaId, evento_id: eventoId };
+});
+
+const notificarCambioPasswordAuth = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Se requiere sesión.");
+  const uid = request.auth.uid;
+  const cuentaDoc = await resolveCuentaByAuthUid(uid);
+  const cuenta = cuentaDoc.data() || {};
+  const personaId = String(cuenta.persona_id || "").trim();
+  if (!personaId) throw new HttpsError("failed-precondition", "Cuenta sin persona_id.");
+
+  const eventoId = await registrarEventoAuthCambio({
+    personaId,
+    actorPersonaId: personaId,
+    tipoEventoId: TIPO_EVENTO_PASS,
+    tipoEventoCfgId: TIPO_EVENTO_CFG_PASS,
+    accion: "notificar_cambio_password",
+    payloadExtra: {
+      metodo: "password",
+      coleccion: "usuarios_cuenta",
+    },
+  });
+  return { ok: true, persona_id: personaId, evento_id: eventoId };
+});
+
 module.exports = {
   resolverEmailLoginDni,
   healthV2,
   syncSessionClaims,
   registrarPrimerAcceso,
+  notificarCambioEmailAuth,
+  notificarCambioPasswordAuth,
 };
 

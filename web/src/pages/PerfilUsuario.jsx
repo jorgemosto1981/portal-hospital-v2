@@ -1,9 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  sendEmailVerification,
+  updateEmail,
+  updatePassword,
+} from "firebase/auth";
 
 import Card from "../components/ui/Card.jsx";
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
 import { guardarRegistroPersonal, listarColeccionPersonal } from "../services/datosPersonalesService.js";
+import { callNotificarCambioEmailAuth, callNotificarCambioPasswordAuth } from "../services/callables.js";
+import { authV2 } from "../services/firebase.js";
 import { buildDatosPayload, hydrateDatosPersonales, validateDatosPersonales } from "./datos-personales/formLogic.js";
 import { ESTADO_DDJJ_DEFAULT_PERSONALES, INITIAL_FORM_DATA_PERSONALES } from "./datos-personales/constants.js";
 import { emptyFamiliar, toOpts } from "./datos-personales/utils.js";
@@ -40,6 +49,14 @@ export default function PerfilUsuario() {
   const [cfgEstadoCivil, setCfgEstadoCivil] = useState([]);
   const [cfgLocalidad, setCfgLocalidad] = useState([]);
   const [cfgProvincia, setCfgProvincia] = useState([]);
+  const [seguridadMsg, setSeguridadMsg] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [passBusy, setPassBusy] = useState(false);
+  const [nuevoEmail, setNuevoEmail] = useState("");
+  const [claveActualEmail, setClaveActualEmail] = useState("");
+  const [claveActualPass, setClaveActualPass] = useState("");
+  const [claveNueva, setClaveNueva] = useState("");
+  const [claveNueva2, setClaveNueva2] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -204,6 +221,85 @@ export default function PerfilUsuario() {
     }
   }
 
+  async function reauthWithPassword(password) {
+    const user = authV2.currentUser;
+    const email = String(user?.email || "").trim().toLowerCase();
+    if (!user || !email) throw new Error("No hay sesión activa con email para reautenticación.");
+    const cred = EmailAuthProvider.credential(email, password);
+    await reauthenticateWithCredential(user, cred);
+    return user;
+  }
+
+  async function onCambiarEmail(e) {
+    e.preventDefault();
+    setSeguridadMsg("");
+    const emailTarget = String(nuevoEmail || "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTarget)) {
+      setSeguridadMsg("Ingresá un correo electrónico válido.");
+      return;
+    }
+    if (!claveActualEmail.trim()) {
+      setSeguridadMsg("Ingresá tu contraseña actual para confirmar el cambio de email.");
+      return;
+    }
+    setEmailBusy(true);
+    try {
+      const user = await reauthWithPassword(claveActualEmail);
+      const emailPrev = String(user.email || "").trim().toLowerCase();
+      if (emailPrev === emailTarget) {
+        throw new Error("El nuevo correo debe ser distinto al actual.");
+      }
+      await updateEmail(user, emailTarget);
+      await sendEmailVerification(user);
+      const resp = await callNotificarCambioEmailAuth({
+        etapa: "solicitado",
+        nuevo_email: emailTarget,
+      });
+      setSeguridadMsg(
+        `Cambio de email solicitado. Verificá tu nuevo correo. Evento RRHH: ${String(resp?.data?.evento_id || "—")}.`,
+      );
+      setNuevoEmail("");
+      setClaveActualEmail("");
+    } catch (err) {
+      setSeguridadMsg(err instanceof Error ? err.message : "No se pudo cambiar el correo.");
+    } finally {
+      setEmailBusy(false);
+    }
+  }
+
+  async function onCambiarPassword(e) {
+    e.preventDefault();
+    setSeguridadMsg("");
+    if (!claveActualPass.trim()) {
+      setSeguridadMsg("Ingresá tu contraseña actual.");
+      return;
+    }
+    if (String(claveNueva).length < 8) {
+      setSeguridadMsg("La nueva contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+    if (claveNueva !== claveNueva2) {
+      setSeguridadMsg("La confirmación de contraseña no coincide.");
+      return;
+    }
+    setPassBusy(true);
+    try {
+      const user = await reauthWithPassword(claveActualPass);
+      await updatePassword(user, claveNueva);
+      const resp = await callNotificarCambioPasswordAuth({});
+      setSeguridadMsg(
+        `Contraseña actualizada correctamente. Evento RRHH: ${String(resp?.data?.evento_id || "—")}.`,
+      );
+      setClaveActualPass("");
+      setClaveNueva("");
+      setClaveNueva2("");
+    } catch (err) {
+      setSeguridadMsg(err instanceof Error ? err.message : "No se pudo cambiar la contraseña.");
+    } finally {
+      setPassBusy(false);
+    }
+  }
+
   if (loading) {
     return <Card className="px-4 py-5">Cargando perfil...</Card>;
   }
@@ -321,6 +417,78 @@ export default function PerfilUsuario() {
             </button>
           </div>
         </form>
+      </Card>
+
+      <Card className="px-4 py-4 md:px-5">
+        <p className="text-base font-semibold text-slate-900">Seguridad de la cuenta</p>
+        <p className="mt-1 text-sm text-slate-600">
+          Cambios de autenticación con revalidación de contraseña y notificación automática a bandeja RRHH.
+        </p>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <form className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3" onSubmit={onCambiarEmail}>
+            <p className="text-sm font-semibold text-slate-800">Cambiar correo electrónico</p>
+            <input
+              type="email"
+              value={nuevoEmail}
+              onChange={(e) => setNuevoEmail(e.target.value)}
+              placeholder="Nuevo correo"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+            />
+            <input
+              type="password"
+              value={claveActualEmail}
+              onChange={(e) => setClaveActualEmail(e.target.value)}
+              placeholder="Contraseña actual"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+            />
+            <button
+              type="submit"
+              disabled={emailBusy}
+              className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {emailBusy ? "Procesando..." : "Cambiar correo"}
+            </button>
+          </form>
+
+          <form className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3" onSubmit={onCambiarPassword}>
+            <p className="text-sm font-semibold text-slate-800">Cambiar contraseña</p>
+            <input
+              type="password"
+              value={claveActualPass}
+              onChange={(e) => setClaveActualPass(e.target.value)}
+              placeholder="Contraseña actual"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+            />
+            <input
+              type="password"
+              value={claveNueva}
+              onChange={(e) => setClaveNueva(e.target.value)}
+              placeholder="Nueva contraseña (mín. 8)"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+            />
+            <input
+              type="password"
+              value={claveNueva2}
+              onChange={(e) => setClaveNueva2(e.target.value)}
+              placeholder="Confirmar nueva contraseña"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+            />
+            <button
+              type="submit"
+              disabled={passBusy}
+              className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {passBusy ? "Procesando..." : "Cambiar contraseña"}
+            </button>
+          </form>
+        </div>
+
+        {seguridadMsg ? (
+          <p className={`mt-3 rounded-lg px-3 py-2 text-sm ${seguridadMsg.toLowerCase().includes("evento rrhh") ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+            {seguridadMsg}
+          </p>
+        ) : null}
       </Card>
     </div>
   );

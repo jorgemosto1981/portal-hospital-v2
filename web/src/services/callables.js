@@ -102,3 +102,11 @@ export function callOnboardingMvpOmitirDdjjFamiliar() {
 export function callOnboardingMvpCompletar() {
   return httpsCallable(getFunctionsV2(), "onboardingMvpCompletar")();
 }
+
+export function callNotificarCambioEmailAuth(data) {
+  return httpsCallable(getFunctionsV2(), "notificarCambioEmailAuth")(data);
+}
+
+export function callNotificarCambioPasswordAuth(data = {}) {
+  return httpsCallable(getFunctionsV2(), "notificarCambioPasswordAuth")(data);
+}

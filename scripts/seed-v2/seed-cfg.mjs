@@ -403,6 +403,39 @@ const cfgTipoEvento = () => [
       evento_id: "EVT_CONSENTIMIENTO_ACEPTADO",
     },
   },
+  {
+    id: "cfg_tev_auth_email_cambio_solicitado",
+    data: {
+      ...base(),
+      codigo_interno: "AUTH_EMAIL_CAMBIO_SOLICITADO",
+      titulo_ui: "Cambio de correo solicitado",
+      nombre: "Cambio correo solicitado",
+      orden: 170,
+      evento_id: "EVT_AUTH_EMAIL_CAMBIO_SOLICITADO",
+    },
+  },
+  {
+    id: "cfg_tev_auth_email_cambio_confirmado",
+    data: {
+      ...base(),
+      codigo_interno: "AUTH_EMAIL_CAMBIO_CONFIRMADO",
+      titulo_ui: "Cambio de correo confirmado",
+      nombre: "Cambio correo confirmado",
+      orden: 180,
+      evento_id: "EVT_AUTH_EMAIL_CAMBIO_CONFIRMADO",
+    },
+  },
+  {
+    id: "cfg_tev_auth_password_cambio",
+    data: {
+      ...base(),
+      codigo_interno: "AUTH_PASSWORD_CAMBIO",
+      titulo_ui: "Cambio de contraseña",
+      nombre: "Cambio contraseña",
+      orden: 190,
+      evento_id: "EVT_AUTH_PASSWORD_CAMBIO",
+    },
+  },
 ];
 
 const cfgEstadoBandejaRrhh = () => [

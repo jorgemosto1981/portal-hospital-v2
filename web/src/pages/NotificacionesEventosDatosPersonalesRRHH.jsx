@@ -45,6 +45,9 @@ function normalizeEstadoBandeja(evento) {
 function mapAccionToUiLabel(accionRaw) {
   const accion = String(accionRaw || "").trim().toLowerCase();
   if (accion === "notificar_actualizacion_perfil_usuario") return "Actualización perfil usuario";
+  if (accion === "notificar_cambio_email_solicitado") return "Cambio correo solicitado";
+  if (accion === "notificar_cambio_email_confirmado") return "Cambio correo confirmado";
+  if (accion === "notificar_cambio_password") return "Cambio contraseña";
   if (accion === "guardar_actualizacion") return "Actualización de datos";
   if (accion === "guardar_alta") return "Alta de datos";
   return accion || "—";
