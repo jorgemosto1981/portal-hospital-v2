@@ -28,6 +28,8 @@
     "db:migrate-eventos-bandeja-rrhh-id": "node scripts/migrate-eventos-bandeja-rrhh-id.mjs",
     "db:migrate-eventos-tipo-evento-cfg-id": "node scripts/migrate-eventos-tipo-evento-cfg-id.mjs",
     "db:normalize-eventos-tipo-evento-id-v2": "node scripts/normalize-eventos-tipo-evento-id-v2.mjs",
+    "db:normalizar-ddjj-duplicados-v2:dry-run": "node scripts/normalizar-ddjj-duplicados-v2.mjs --dry-run",
+    "db:normalizar-ddjj-duplicados-v2": "node scripts/normalizar-ddjj-duplicados-v2.mjs --apply",
     "db:delete-eventos-sin-ids-v2": "node scripts/delete-eventos-sin-ids-v2.mjs",
     "db:remove-eventos-legacy-fields-v2": "node scripts/remove-eventos-legacy-fields-v2.mjs",
     "db:audit-eventos-ids-v2": "node scripts/audit-eventos-ids-v2.mjs",

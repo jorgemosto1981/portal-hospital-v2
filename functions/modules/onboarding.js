@@ -21,10 +21,44 @@ const {
   validEmail,
 } = require("./shared/helpers");
 const { applyLaborAwareSessionClaims } = require("./shared/authClaims");
+const { processDdjjGrupoFamiliar } = require("./shared/ddjjGrupoFamiliarService");
 
 const PARENTESCO_OTROS_ID = "CFG_PAR_OTROS";
 const DDJJ_ESTADO_OMITIDA_ONBOARDING_ID = "CFG_DDJJ_02_OMITIDA_ONBOARDING";
 const DDJJ_ESTADO_PRESENTADA_ID = "CFG_DDJJ_03_PRESENTADA";
+const DDJJ_ESTADO_SUPERADA_ID = "CFG_DDJJ_04_SUPERADA_POR_ACTUALIZACION";
+const ESTADO_DDJJ_DEFAULT_PERSONALES = "CFG_DDJJ_01_NO_INICIADA";
+const ESTADO_BANDEJA_RRHH_PENDIENTE_ID = "cfg_ebr_pend_rev";
+
+function toNullableTrimmedString(value) {
+  if (value == null) return null;
+  const out = String(value).trim();
+  return out || null;
+}
+
+function toNumberOrNull(value) {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+async function assertDocExistsOrNull(collectionName, idValue, fieldName) {
+  const id = toNullableTrimmedString(idValue);
+  if (!id) return;
+  const snap = await db.collection(collectionName).doc(id).get();
+  if (!snap.exists) {
+    throw new HttpsError(
+      "invalid-argument",
+      `[VAL-DDJJ-ONB-REF] ${fieldName || "referencia"} no existe en ${collectionName}: ${id}.`,
+    );
+  }
+}
+
+function resolveTipoEventoCfgId(tipoEventoIdRaw) {
+  const key = String(tipoEventoIdRaw || "").trim().toUpperCase();
+  if (key === "EVT_DATOS_NOTIF_CAMBIO_DDJJ") return "cfg_tev_datos_notif_cambio_ddjj";
+  return "cfg_tev_datos_notif_cambio_generico";
+}
 
 function toMillisSafe(value) {
   if (!value) return 0;
@@ -221,8 +255,15 @@ const onboardingMvpDdjjFamiliar = onCall(async (request) => {
   const pid = assertAgenteConPersonaId(request);
   const d = request.data && typeof request.data === "object" ? request.data : {};
   const declaracionAceptada = d.declaracion_jurada_aceptada === true;
+  const consentimientoEvaluacion = d.consentimiento_evaluacion_rrhh === true;
   if (!declaracionAceptada) {
     throw new HttpsError("invalid-argument", "Debés aceptar la declaración jurada para continuar.");
+  }
+  if (!consentimientoEvaluacion) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Debés aceptar que tu DDJJ será evaluada por el área correspondiente.",
+    );
   }
   const familiares = Array.isArray(d.familiares) ? d.familiares : [];
   const out = [];
@@ -305,60 +346,44 @@ const onboardingMvpDdjjFamiliar = onCall(async (request) => {
     throw new HttpsError("failed-precondition", "Completá el paso de contacto y domicilio primero.");
   }
   if (out.length < 1) throw new HttpsError("invalid-argument", "Declará al menos un integrante de grupo familiar.");
-  const evtId = `evt_${ulid()}`;
   await db.runTransaction(async (tx) => {
-    const ddjjSnap = await tx.get(
-      db.collection("declaraciones_grupo_familiar").where("titular_persona_id", "==", pid),
-    );
-    const ddjjVigente = pickDdjjVigenteFromDocs(ddjjSnap.docs || []);
-    const ddjjId = ddjjVigente ? ddjjVigente.id : `gf_${ulid()}`;
-    const ddjjRef = db.collection("declaraciones_grupo_familiar").doc(ddjjId);
-    const ddjjVersion = ddjjVigente ? Number(ddjjVigente.get("declaracion_version")) || 1 : 1;
+    const now = FieldValue.serverTimestamp();
+    const ddjjResult = await processDdjjGrupoFamiliar({
+      tx,
+      db,
+      colRaw: "declaraciones_grupo_familiar",
+      titularPersonaId: pid,
+      datos: {
+        titular_persona_id: pid,
+        declaracion_jurada_aceptada: true,
+        consentimiento_evaluacion_rrhh: true,
+        familiares: out,
+      },
+      now,
+      toNullableTrimmedString,
+      toNumberOrNull,
+      assertDocExistsOrNull,
+      resolveTipoEventoCfgId,
+      actorPersonaId: pid,
+      ESTADO_DDJJ_DEFAULT_PERSONALES,
+      DDJJ_ESTADO_PRESENTADA_ID,
+      DDJJ_ESTADO_SUPERADA_ID,
+      ESTADO_BANDEJA_RRHH_PENDIENTE_ID,
+    });
+
     tx.update(ref, {
       "onboarding_mvp.paso_b": true,
       "onboarding_mvp.paso_b_omitido": false,
       "onboarding_mvp.estado_declaracion_ddjj_id": DDJJ_ESTADO_PRESENTADA_ID,
       "onboarding_mvp.estado_declaracion_ddjj": "presentada",
       "onboarding_mvp.declaracion_jurada_aceptada": true,
-      "onboarding_mvp.aceptada_paso_b_en": FieldValue.serverTimestamp(),
+      "onboarding_mvp.consentimiento_evaluacion_rrhh": true,
+      "onboarding_mvp.aceptada_paso_b_en": now,
       "onboarding_mvp.ddjj_familiares": out,
-      "onboarding_mvp.completado_paso_b_en": FieldValue.serverTimestamp(),
-      actualizado_en: FieldValue.serverTimestamp(),
+      "onboarding_mvp.completado_paso_b_en": now,
+      "onboarding_mvp.ddjj_id": ddjjResult.id,
+      actualizado_en: now,
     });
-    tx.set(
-      ddjjRef,
-      {
-        id: ddjjId,
-        titular_persona_id: pid,
-        declaracion_version: ddjjVersion,
-        estado_declaracion_id: DDJJ_ESTADO_PRESENTADA_ID,
-        declaracion_jurada_aceptada: true,
-        aceptada_en: FieldValue.serverTimestamp(),
-        familiares: out,
-        actualizado_en: FieldValue.serverTimestamp(),
-        schema_version: 1,
-        ...(ddjjVigente ? {} : { creado_en: FieldValue.serverTimestamp() }),
-      },
-      { merge: true },
-    );
-    tx.set(
-      db.collection(COL_EVENTOS).doc(evtId),
-      {
-        id: evtId,
-        tipo_evento_id: "EVT_DATOS_NOTIF_CAMBIO_DDJJ",
-        tipo_evento_cfg_id: "cfg_tev_datos_notif_cambio_ddjj",
-        persona_id: pid,
-        actor_persona_id: pid,
-        estado_bandeja_rrhh_id: "cfg_ebr_pend_rev",
-        ocurrido_en: FieldValue.serverTimestamp(),
-        payload: {
-          accion: "presentar_ddjj_grupo_familiar",
-          familiares_count: out.length,
-        },
-        schema_version: 1,
-      },
-      { merge: true },
-    );
   });
   return { ok: true, familiares_count: out.length };
 });
