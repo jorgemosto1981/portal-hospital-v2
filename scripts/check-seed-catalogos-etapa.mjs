@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import admin from "firebase-admin";
 import { getApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { assertFirestoreSeedAllowed } from "./seed-v2/guard-no-seed.mjs";
 
 function loadLocalEnvIfPresent() {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -40,6 +41,9 @@ function resolveProjectId(credPath) {
 }
 
 loadLocalEnvIfPresent();
+
+assertFirestoreSeedAllowed("check-seed-catalogos-etapa");
+
 const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 if (!credPath) {
   console.error("Falta GOOGLE_APPLICATION_CREDENTIALS.");

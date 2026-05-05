@@ -3,9 +3,11 @@
  * @see docs/v2/MODULO_CONFIGURACION_V2.md §6
  * @see docs/v2/DESARROLLO_ORDEN_LOGIN_DATOS_V2.md Fase 1
  *
+ * Política del repo: **no se ejecuta salvo** `ALLOW_FIRESTORE_SEED_V2=true` en el entorno (bloqueo por defecto).
+ *
  * Uso (desde la raíz `portal-hospital-v2/`):
  *   Colocá `GOOGLE_APPLICATION_CREDENTIALS` en `.env.v2.local` (carga automática vía `../load-env-v2.mjs`) o en el shell.
- *   npm run seed:cfg
+ *   ALLOW_FIRESTORE_SEED_V2=true npm run seed:cfg
  *
  * Opcionales: FIREBASE_V2_PROJECT_ID, FIREBASE_V2_FIRESTORE_DATABASE_ID (solo base con nombre propio, no "default")
  *
@@ -16,6 +18,7 @@
  */
 
 import "../load-env-v2.mjs";
+import { assertFirestoreSeedAllowed } from "./guard-no-seed.mjs";
 import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -24,6 +27,8 @@ import { fileURLToPath } from "node:url";
 import { getApp } from "firebase-admin/app";
 import admin from "firebase-admin";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
+
+assertFirestoreSeedAllowed("seed-cfg");
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

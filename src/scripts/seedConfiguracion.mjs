@@ -5,17 +5,20 @@
  *
  * Uso (raíz `portal-hospital-v2/`):
  *   Asegurate de tener en `.env.v2.local` la ruta al JSON (ver comentario en .env.v2.example).
- *   npm run seed:configuracion
+ *   ALLOW_FIRESTORE_SEED_V2=true npm run seed:configuracion
  *
  *   Opcional: $env:FIREBASE_V2_PROJECT_ID en .env o en shell si el JSON no trae project_id.
  */
 
 import "../../scripts/load-env-v2.mjs";
+import { assertFirestoreSeedAllowed } from "../../scripts/seed-v2/guard-no-seed.mjs";
 import { readFileSync } from "node:fs";
 
 import { getApp } from "firebase-admin/app";
 import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
+
+assertFirestoreSeedAllowed("seed:configuracion");
 
 const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 if (!credPath) {

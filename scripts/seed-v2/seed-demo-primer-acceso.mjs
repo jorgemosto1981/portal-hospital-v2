@@ -10,10 +10,11 @@
  * - `DEMO_PRIMER_DNI` (solo dígitos, 6–12) — por defecto `30123456`
  *
  * Uso (raíz del repo):
- *   npm run seed:demo-primer-acceso
+ *   ALLOW_FIRESTORE_SEED_V2=true npm run seed:demo-primer-acceso
  */
 
 import "../load-env-v2.mjs";
+import { assertFirestoreSeedAllowed } from "./guard-no-seed.mjs";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,6 +22,8 @@ import { fileURLToPath } from "node:url";
 import { getApp } from "firebase-admin/app";
 import admin from "firebase-admin";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+
+assertFirestoreSeedAllowed("seed-demo-primer-acceso");
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

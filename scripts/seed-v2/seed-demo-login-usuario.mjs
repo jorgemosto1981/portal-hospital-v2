@@ -6,7 +6,7 @@
  * `signInWithEmailAndPassword` falla.
  *
  * Uso (raíz del repo):
- *   npm run seed:demo-login-usuario
+ *   ALLOW_FIRESTORE_SEED_V2=true npm run seed:demo-login-usuario
  *
  * Variables opcionales (.env.v2.local o entorno):
  *   DEMO_LOGIN_DNI          por defecto 1234567
@@ -17,6 +17,7 @@
  */
 
 import "../load-env-v2.mjs";
+import { assertFirestoreSeedAllowed } from "./guard-no-seed.mjs";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,6 +26,8 @@ import { getApp } from "firebase-admin/app";
 import admin from "firebase-admin";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+
+assertFirestoreSeedAllowed("seed-demo-login-usuario");
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

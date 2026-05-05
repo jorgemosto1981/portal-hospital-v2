@@ -26,7 +26,7 @@ Tras `npm install` en la raíz y **`cd web && npm install`** la primera vez (o s
 | `npm run firebase:deploy:functions` | Despliega Cloud Functions (plan Blaze; script con `FUNCTIONS_DISCOVERY_TIMEOUT=60`) |
 
 Si Cloud Build falla con **missing permission on the build service account**, seguí [Solución de problemas de Cloud Functions — cuenta de servicio de compilación](https://cloud.google.com/functions/docs/troubleshooting#build-service-account) en la consola GCP (propietario del proyecto o administrador IAM).
-| `npm run seed:cfg` | Volcado de catálogos `cfg_*` (ver `docs/v2/MODULO_CONFIGURACION_V2.md`) — requiere `GOOGLE_APPLICATION_CREDENTIALS` |
+| `npm run seed:cfg` | **Bloqueado por defecto.** Solo con `ALLOW_FIRESTORE_SEED_V2=true` + `GOOGLE_APPLICATION_CREDENTIALS`. Política: no semillar BD salvo excepción operativa. Ver `scripts/seed-v2/guard-no-seed.mjs`. |
 | `npm run firestore:create` | Windows: script gcloud para crear instancia Firestore (una vez) |
 
 - Variables web: [`.env.v2.example`](./.env.v2.example) → **`.env.v2.local`** (no comitear).
