@@ -53,6 +53,7 @@ export function hydrateDatosPersonales({ record, prevForm, emptyFamiliar }) {
       (record.foto_rostro && (record.foto_rostro.storage_path || record.foto_rostro.content_type)) || "",
     ),
     foto_storage_path: String((record.foto_rostro && record.foto_rostro.storage_path) || ""),
+    foto_storage_path_thumb: String((record.foto_rostro && record.foto_rostro.storage_path_thumb) || ""),
     foto_content_type: String((record.foto_rostro && record.foto_rostro.content_type) || ""),
     foto_download_url: String((record.foto_rostro && record.foto_rostro.download_url) || ""),
     persona_id: String(record.persona_id || record.titular_persona_id || ""),

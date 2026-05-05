@@ -120,6 +120,7 @@ export const INITIAL_FORM_DATA_PERSONALES = {
   foto_file: null,
   foto_file_name: "",
   foto_storage_path: "",
+  foto_storage_path_thumb: "",
   foto_content_type: "",
   foto_download_url: "",
   persona_id: "",

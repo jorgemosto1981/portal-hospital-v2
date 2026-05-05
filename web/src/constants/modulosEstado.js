@@ -46,6 +46,13 @@ export const MODULOS_PORTAL = [
     grupo: "usuario",
   },
   {
+    id: "perfil",
+    label: "Perfil",
+    path: "/portal/mi-perfil",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "usuario",
+  },
+  {
     id: "laboral",
     label: "Laboral",
     path: "/portal/laboral",
@@ -74,8 +81,8 @@ export const MODULOS_PORTAL = [
     grupo: "rrhh",
   },
   {
-    id: "perfil",
-    label: "Perfil",
+    id: "perfil-rrhh",
+    label: "Datos personales",
     path: "/portal/perfil",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
@@ -91,6 +98,13 @@ export const MODULOS_PORTAL = [
     id: "modulos",
     label: "Módulos",
     path: "/portal/modulos",
+    estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "rrhh",
+  },
+  {
+    id: "sistemas-web",
+    label: "Sistemas web",
+    path: "/portal/sistemas-web",
     estado: ESTADOS_MODULO.ACTIVO,
     grupo: "rrhh",
   },
@@ -113,9 +127,11 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla";
   if (pathname.startsWith("/portal/laboral") || pathname.startsWith("/laboral")) return "laboral";
-  if (pathname.startsWith("/portal/perfil") || pathname.startsWith("/perfil")) return "perfil";
+  if (pathname.startsWith("/portal/mi-perfil")) return "perfil";
+  if (pathname.startsWith("/portal/perfil") || pathname.startsWith("/perfil")) return "perfil-rrhh";
   if (pathname.startsWith("/portal/pantallas") || pathname.startsWith("/pantallas")) return "pantallas";
   if (pathname.startsWith("/portal/modulos") || pathname.startsWith("/modulos")) return "modulos";
+  if (pathname.startsWith("/portal/sistemas-web")) return "sistemas-web";
   if (
     pathname.startsWith("/portal/home") ||
     pathname === "/portal" ||

@@ -6,6 +6,7 @@ import { callListarColeccion, callRrhhMarcarEventoDatosPersonalesVisto } from ".
 
 const ESTADO_BANDEJA_ARCHIVADO_ID = "cfg_ebr_arch";
 const ESTADO_BANDEJA_PENDIENTE_ID = "cfg_ebr_pend_rev";
+const ESTADO_BANDEJA_VISTO_ID = "cfg_ebr_visto";
 
 function isEventoDatosPersonales(evento) {
   const tipoCfgId = String(evento?.tipo_evento_cfg_id || "").trim().toLowerCase();
@@ -18,7 +19,22 @@ function formatFechaEventoDdMmAaaa(value) {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = String(d.getFullYear());
-  return `${dd}-${mm}-${yyyy}`;
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
+}
+
+function toDateSafe(value) {
+  const raw = value && typeof value.toDate === "function" ? value.toDate() : new Date(String(value || ""));
+  return Number.isNaN(raw.getTime()) ? null : raw;
+}
+
+function toYmd(dateObj) {
+  if (!(dateObj instanceof Date)) return "";
+  const yyyy = String(dateObj.getFullYear());
+  const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const dd = String(dateObj.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function normalizeEstadoBandeja(evento) {
@@ -26,10 +42,23 @@ function normalizeEstadoBandeja(evento) {
   return estadoId || ESTADO_BANDEJA_PENDIENTE_ID;
 }
 
+function mapAccionToUiLabel(accionRaw) {
+  const accion = String(accionRaw || "").trim().toLowerCase();
+  if (accion === "notificar_actualizacion_perfil_usuario") return "Actualización perfil usuario";
+  if (accion === "guardar_actualizacion") return "Actualización de datos";
+  if (accion === "guardar_alta") return "Alta de datos";
+  return accion || "—";
+}
+
 export default function NotificacionesEventosDatosPersonalesRRHH() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("pendientes");
+  const [filtroAccion, setFiltroAccion] = useState("todas");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
 
   async function cargar() {
     setLoading(true);
@@ -65,6 +94,7 @@ export default function NotificacionesEventosDatosPersonalesRRHH() {
           const personaDni = p ? String(p.dni || "—") : "—";
           const tipoEventoId = String(e.tipo_evento_cfg_id || "").trim().toLowerCase();
           const estadoId = normalizeEstadoBandeja(e);
+          const fecha = toDateSafe(e.ocurrido_en);
           return {
             ...e,
             persona_nombre_completo: personaNombreCompleto,
@@ -72,6 +102,9 @@ export default function NotificacionesEventosDatosPersonalesRRHH() {
             tipo_evento_label: idxTipoEvento.get(tipoEventoId) || tipoEventoId || "—",
             estado_bandeja_label: idxEstadoBandeja.get(estadoId) || estadoId || "—",
             estado_bandeja_id_normalizado: estadoId || "—",
+            accion_ui: mapAccionToUiLabel(e.payload?.accion),
+            occurred_date: fecha,
+            occurred_ymd: toYmd(fecha),
           };
         })
         .sort((a, b) => String(b.ocurrido_en || "").localeCompare(String(a.ocurrido_en || "")));
@@ -89,6 +122,52 @@ export default function NotificacionesEventosDatosPersonalesRRHH() {
   }, []);
 
   const pendientes = useMemo(() => rows.filter((x) => normalizeEstadoBandeja(x) === ESTADO_BANDEJA_PENDIENTE_ID), [rows]);
+  const vistos = useMemo(() => rows.filter((x) => normalizeEstadoBandeja(x) === ESTADO_BANDEJA_VISTO_ID), [rows]);
+
+  const rowsFiltradas = useMemo(() => {
+    const q = String(busqueda || "").trim().toLowerCase();
+    return rows
+      .filter((r) => {
+        const estado = normalizeEstadoBandeja(r);
+        if (filtroEstado === "pendientes") return estado === ESTADO_BANDEJA_PENDIENTE_ID;
+        if (filtroEstado === "vistos") return estado === ESTADO_BANDEJA_VISTO_ID;
+        return true;
+      })
+      .filter((r) => {
+        if (filtroAccion === "todas") return true;
+        return String(r.payload?.accion || "").trim().toLowerCase() === filtroAccion;
+      })
+      .filter((r) => {
+        const ymd = String(r.occurred_ymd || "");
+        if (desde && ymd && ymd < desde) return false;
+        if (hasta && ymd && ymd > hasta) return false;
+        return true;
+      })
+      .filter((r) => {
+        if (!q) return true;
+        const target = [
+          r.persona_nombre_completo,
+          r.persona_dni,
+          r.persona_id,
+          r.id,
+          r.accion_ui,
+          r.tipo_evento_label,
+          r.estado_bandeja_label,
+        ]
+          .join(" ")
+          .toLowerCase();
+        return target.includes(q);
+      });
+  }, [rows, busqueda, filtroEstado, filtroAccion, desde, hasta]);
+
+  const accionesDisponibles = useMemo(() => {
+    const set = new Set();
+    rows.forEach((r) => {
+      const accion = String(r.payload?.accion || "").trim().toLowerCase();
+      if (accion) set.add(accion);
+    });
+    return [...set].sort();
+  }, [rows]);
 
   async function marcarVisto(id) {
     setBusyId(id);
@@ -120,13 +199,72 @@ export default function NotificacionesEventosDatosPersonalesRRHH() {
         </Card>
 
         <Card className="px-4 py-4 md:px-5">
+          <div className="mb-3 grid gap-2 md:grid-cols-2">
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por nombre, apellido, DNI, persona_id, evento_id…"
+              className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={filtroEstado}
+                onChange={(e) => setFiltroEstado(e.target.value)}
+                className="h-10 rounded-lg border border-slate-300 bg-white px-2 text-sm"
+              >
+                <option value="pendientes">Pendientes</option>
+                <option value="vistos">Vistos</option>
+                <option value="todos">Todos</option>
+              </select>
+              <select
+                value={filtroAccion}
+                onChange={(e) => setFiltroAccion(e.target.value)}
+                className="h-10 rounded-lg border border-slate-300 bg-white px-2 text-sm"
+              >
+                <option value="todas">Todas las acciones</option>
+                {accionesDisponibles.map((acc) => (
+                  <option key={acc} value={acc}>
+                    {mapAccionToUiLabel(acc)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="mb-3 grid gap-2 md:grid-cols-4">
+            <label className="text-xs text-slate-600">
+              Desde
+              <input
+                type="date"
+                value={desde}
+                onChange={(e) => setDesde(e.target.value)}
+                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm"
+              />
+            </label>
+            <label className="text-xs text-slate-600">
+              Hasta
+              <input
+                type="date"
+                value={hasta}
+                onChange={(e) => setHasta(e.target.value)}
+                className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm"
+              />
+            </label>
+            <div className="text-xs text-slate-600 md:col-span-2">
+              Resumen filtro
+              <div className="mt-1 h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                Pendientes: <strong>{pendientes.length}</strong> · Vistos: <strong>{vistos.length}</strong> · Mostrando:{" "}
+                <strong>{rowsFiltradas.length}</strong>
+              </div>
+            </div>
+          </div>
           {loading ? (
             <p className="text-sm text-slate-500">Cargando notificaciones...</p>
-          ) : rows.length === 0 ? (
+          ) : rowsFiltradas.length === 0 ? (
             <p className="text-sm text-slate-500">Sin notificaciones para mostrar.</p>
           ) : (
             <div className="space-y-3">
-              {rows.map((r) => {
+              {rowsFiltradas.map((r) => {
                 const estadoBandeja = normalizeEstadoBandeja(r);
                 return (
                   <div key={r.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-xs">
@@ -138,6 +276,9 @@ export default function NotificacionesEventosDatosPersonalesRRHH() {
                       {String(r.tipo_evento_label || "—")} · Estado: {String(r.estado_bandeja_label || "—")} (
                       {String(r.estado_bandeja_id_normalizado || estadoBandeja || "—")})
                     </p>
+                    {String(r.payload?.accion || "").trim() ? (
+                      <p className="text-slate-600">Acción: {mapAccionToUiLabel(r.payload?.accion)}</p>
+                    ) : null}
                     <p className="mt-0.5 text-[11px] italic text-slate-500">({String(r.id || "—")})</p>
                     {Array.isArray(r.payload?.cambios) && r.payload.cambios.length > 0 && (
                       <div className="mt-2 rounded border border-slate-200 bg-white px-2 py-2">

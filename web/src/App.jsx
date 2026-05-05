@@ -18,7 +18,9 @@ import PantallasCatalogo from "./pages/PantallasCatalogo.jsx";
 import Perfil from "./pages/Perfil.jsx";
 import Configuracion from "./pages/Configuracion.jsx";
 import SeguimientoEnrolamientoUsuariosRRHH from "./pages/SeguimientoEnrolamientoUsuariosRRHH.jsx";
-import PortalHome from "./features/home/PortalHome.jsx";
+import Inicio from "./pages/Inicio.jsx";
+import SistemasWeb from "./pages/SistemasWeb.jsx";
+import PerfilUsuario from "./pages/PerfilUsuario.jsx";
 import runtimeFlags from "../../shared/runtimeFlags.json";
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
@@ -76,7 +78,8 @@ export default function App() {
           <Route path="/onboarding" element={<OnboardingWizard />} />
           <Route path="/portal" element={<PortalLayout />}>
             <Route index element={<Navigate to="home" replace />} />
-            <Route path="home" element={<PortalHome />} />
+            <Route path="home" element={<Inicio />} />
+            <Route path="mi-perfil" element={<PerfilUsuario />} />
             <Route path="laboral" element={<DatosLaborales />} />
             <Route path="perfil" element={<DatosPersonales />} />
             <Route path="perfil/:personaId" element={<Perfil />} />
@@ -85,6 +88,7 @@ export default function App() {
             <Route path="pantallas" element={<PantallasCatalogo />} />
             <Route path="configuracion" element={<Configuracion />} />
             <Route element={<RoleGuard />}>
+              <Route path="sistemas-web" element={<SistemasWeb />} />
               <Route path="rrhh/alta" element={<AltaAgenteRRHH />} />
               <Route path="rrhh/notificaciones-datos-personales" element={<NotificacionesEventosDatosPersonalesRRHH />} />
               <Route path="rrhh/seguimiento-enrolamiento" element={<SeguimientoEnrolamientoUsuariosRRHH />} />

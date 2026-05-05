@@ -86,6 +86,7 @@ function buildPersonaComparable(data) {
     dni: toNullableTrimmedString(src.dni),
     nombre: toNullableTrimmedString(src.nombre),
     apellido: toNullableTrimmedString(src.apellido),
+    estado_civil_id: toNullableTrimmedString(src.estado_civil_id),
     activo: src.activo !== false,
     motivo_baja_id: toNullableTrimmedString(src.motivo_baja_id),
   };
@@ -183,6 +184,13 @@ function buildNombreCompletoLegal(nombre, apellido) {
   const a = toNullableTrimmedString(apellido);
   const full = [n, a].filter(Boolean).join(" ").trim();
   return full || null;
+}
+
+function resolveAccionPersonasUpdate(datos, exists) {
+  if (!exists) return "guardar_alta";
+  const origen = toNullableTrimmedString(datos && datos.origen_flujo);
+  if (origen === "perfil_usuario") return "notificar_actualizacion_perfil_usuario";
+  return "guardar_actualizacion";
 }
 
 const guardarRegistroPersonalTemporal = onCall(async (request) => {
@@ -296,6 +304,7 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
         datos.foto_rostro && typeof datos.foto_rostro === "object"
           ? {
               storage_path: toNullableTrimmedString(datos.foto_rostro.storage_path),
+              storage_path_thumb: toNullableTrimmedString(datos.foto_rostro.storage_path_thumb),
               subido_en: toNullableTrimmedString(datos.foto_rostro.subido_en),
               content_type: toNullableTrimmedString(datos.foto_rostro.content_type),
               origen_captura: toNullableTrimmedString(datos.foto_rostro.origen_captura),
@@ -361,15 +370,15 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
     await ref.set(payload, { merge: true });
     const cambiosEvento = diffPersonaFields(existingData || {}, payload);
     const tipoEvento = existingSnap.exists ? "EVT_DATOS_ACTUALIZA_PERSONAS" : "EVT_DATOS_ALTA_PERSONAS";
-    await crearEventoDatosPersonales({
+    const eventoId = await crearEventoDatosPersonales({
       tipo_evento_id: tipoEvento,
       persona_id: id,
       actor_persona_id: actorPersonaId,
       coleccion: "personas",
-      accion: existingSnap.exists ? "guardar_actualizacion" : "guardar_alta",
+      accion: resolveAccionPersonasUpdate(datos, existingSnap.exists),
       cambios: cambiosEvento,
     });
-    return { ok: true, id, warnings };
+    return { ok: true, id, warnings, evento_id: eventoId };
   }
 
   if (colRaw === "formacion_agente") {

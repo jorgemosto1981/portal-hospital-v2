@@ -51,7 +51,9 @@ function formatFechaEventoDdMmAaaa(value) {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = String(d.getFullYear());
-  return `${dd}-${mm}-${yyyy}`;
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
 }
 
 function formatCambioValor(value) {
@@ -346,7 +348,9 @@ export default function DatosPersonales() {
     () =>
       (rowsByCol.personas || []).map((p) => ({
         value: String(p.id),
-        label: p.nombre || p.apellido ? `${p.apellido || ""} ${p.nombre || ""} (${p.id})` : String(p.id),
+        label: p.nombre || p.apellido ? `${p.nombre || ""} ${p.apellido || ""} · DNI: ${p.dni || "—"}` : String(p.id),
+        selectedLabel: p.nombre || p.apellido ? `${p.nombre || ""} ${p.apellido || ""} · DNI: ${p.dni || "—"}` : String(p.id),
+        secondary: String(p.id || ""),
       })),
     [rowsByCol.personas],
   );
@@ -412,7 +416,7 @@ export default function DatosPersonales() {
   const updateButtonEnabled = useMemo(() => {
     if (!form.persona_id) return false;
     if (tipo === "personas") return true;
-    if (tipo === "declaraciones_grupo_familiar") return false;
+    if (tipo === "declaraciones_grupo_familiar") return true;
     return registrosFiltradosPorPersona.length > 0;
   }, [form.persona_id, tipo, registrosFiltradosPorPersona.length]);
 
@@ -510,7 +514,7 @@ export default function DatosPersonales() {
       setForm((prev) => ({
         ...next.form,
         persona_id: String(form.persona_id || prev.persona_id || ""),
-        declaracion_version: nextDeclaracionVersion,
+        declaracion_version: String(ddjjPresentadaActual.declaracion_version || next.form.declaracion_version || "1"),
         declaracion_jurada_aceptada: false,
         consentimiento_evaluacion_rrhh: false,
         ddjj_en_revision: false,
@@ -527,18 +531,44 @@ export default function DatosPersonales() {
     return validateDatosPersonales({ tipo, form, familiares });
   }
 
+  async function buildThumbBlob(file) {
+    const bitmap = await createImageBitmap(file);
+    const maxSide = 160;
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const w = Math.max(1, Math.round(bitmap.width * scale));
+    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("No se pudo generar miniatura de foto.");
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    const blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.72));
+    if (!blob) throw new Error("No se pudo exportar miniatura de foto.");
+    return blob;
+  }
+
   async function subirFotoRostro(file, dni) {
     const safeDni = String(dni || "sin-dni").replace(/[^\dA-Za-z_-]/g, "") || "sin-dni";
     const safeName = String(file.name || "foto").replace(/[^\w.-]/g, "_");
-    const path = `personas/foto_rostro/${safeDni}/${Date.now()}_${safeName}`;
+    const nowKey = Date.now();
+    const path = `personas/foto_rostro/${safeDni}/${nowKey}_${safeName}`;
+    const thumbPath = `personas/foto_rostro/${safeDni}/thumb_${nowKey}_${safeName}.jpg`;
     const storageRef = ref(storageV2, path);
+    const thumbRef = ref(storageV2, thumbPath);
+    const thumbBlob = await buildThumbBlob(file);
     const snap = await uploadBytes(storageRef, file, {
       contentType: file.type || "application/octet-stream",
+      cacheControl: "public,max-age=3600",
+    });
+    await uploadBytes(thumbRef, thumbBlob, {
+      contentType: "image/jpeg",
       cacheControl: "public,max-age=3600",
     });
     const downloadUrl = await getDownloadURL(snap.ref);
     return {
       storage_path: snap.metadata.fullPath || path,
+      storage_path_thumb: thumbPath,
       content_type: snap.metadata.contentType || file.type || null,
       download_url: downloadUrl,
       origen_captura: "adjunto_o_camara",
@@ -562,9 +592,10 @@ export default function DatosPersonales() {
       if (tipo === "personas") {
         if (form.foto_file) {
           fotoRostro = await subirFotoRostro(form.foto_file, form.dni);
-        } else if (form.foto_storage_path || form.foto_content_type || form.foto_download_url) {
+        } else if (form.foto_storage_path || form.foto_storage_path_thumb || form.foto_content_type || form.foto_download_url) {
           fotoRostro = {
             storage_path: form.foto_storage_path || null,
+            storage_path_thumb: form.foto_storage_path_thumb || null,
             content_type: form.foto_content_type || null,
             download_url: form.foto_download_url || null,
             origen_captura: "adjunto_o_camara",
@@ -638,7 +669,7 @@ export default function DatosPersonales() {
               setEditId={setEditId}
               registros={registrosFiltradosPorPersona}
               hydrateFrom={hydrateFrom}
-              showUpdateButton={tipo !== "declaraciones_grupo_familiar"}
+              showUpdateButton={true}
               canUpdate={updateButtonEnabled}
               updateDisabledReason={
                 !form.persona_id

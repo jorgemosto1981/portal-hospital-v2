@@ -33,11 +33,13 @@ export default function FormHeaderControls({
   const personaOptionsFiltradas = useMemo(() => {
     const q = String(personaQuery || "").trim().toLowerCase();
     if (!q) return personaOptions || [];
-    return (personaOptions || []).filter((o) => String(o.label || "").toLowerCase().includes(q));
+    return (personaOptions || []).filter((o) =>
+      [o.label, o.secondary, o.selectedLabel].some((v) => String(v || "").toLowerCase().includes(q)),
+    );
   }, [personaOptions, personaQuery]);
   const personaSeleccionadaLabel = useMemo(() => {
     const o = (personaOptions || []).find((x) => String(x.value) === String(personaId || ""));
-    return o ? o.label : "";
+    return o ? (o.selectedLabel || o.label) : "";
   }, [personaOptions, personaId]);
 
   useEffect(() => {
@@ -99,7 +101,10 @@ export default function FormHeaderControls({
                       }}
                       className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-blue-50"
                     >
-                      {o.label}
+                      <span className="block">{o.label}</span>
+                      {o.secondary ? (
+                        <span className="block text-xs italic text-slate-500">({o.secondary})</span>
+                      ) : null}
                     </button>
                   ))
                 )}

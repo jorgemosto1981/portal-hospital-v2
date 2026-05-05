@@ -10,7 +10,7 @@ export default function PantallasCatalogo() {
           <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Menú de pantallas</h1>
           <p className="mt-2 text-sm text-slate-600">
             Mapa de rutas del código web. Los enlaces llevan a la <strong>rama inicial</strong> por rol RRHH (entrada de
-            sección), no a subpantallas; la ruta canónica queda como referencia debajo.
+            sección), excepto pantallas RRHH operativas habilitadas para acceso directo.
           </p>
           <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
             Referencia de estado: <strong>activo</strong> = ruta principal; <strong>activo-soporte</strong> =

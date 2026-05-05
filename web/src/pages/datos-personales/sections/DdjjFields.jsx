@@ -19,6 +19,14 @@ export default function DdjjFields({
   onBackToEdit = () => {},
   disabled = false,
 }) {
+  function labelWithId(label, id) {
+    return (
+      <span>
+        {label} <span className="text-xs italic text-slate-500">({id})</span>
+      </span>
+    );
+  }
+
   const PARENTESCO_OTROS_ID = "CFG_PAR_OTROS";
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -85,7 +93,7 @@ export default function DdjjFields({
       <div>
         <label className="block text-sm font-medium text-slate-700">Versión DDJJ</label>
         <input
-          value={modoEdicion ? form.declaracion_version : nextDeclaracionVersion}
+          value={String(form.declaracion_version || nextDeclaracionVersion || "1")}
           disabled
           className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 outline-none"
         />
@@ -213,7 +221,7 @@ export default function DdjjFields({
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">parentesco_id</label>
+                  <label className="block text-sm font-medium text-slate-700">{labelWithId("Parentesco", "parentesco_id")}</label>
                   <select
                     value={f.parentesco_id}
                     onChange={(e) => updateFam(idx, "parentesco_id", e.target.value)}
@@ -230,7 +238,7 @@ export default function DdjjFields({
                 </div>
                 {String(f.parentesco_id || "").toUpperCase() === PARENTESCO_OTROS_ID ? (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">parentesco_otro_detalle</label>
+                    <label className="block text-sm font-medium text-slate-700">{labelWithId("Detalle parentesco", "parentesco_otro_detalle")}</label>
                     <input
                       value={f.parentesco_otro_detalle || ""}
                       onChange={(e) => updateFam(idx, "parentesco_otro_detalle", e.target.value)}
@@ -242,7 +250,7 @@ export default function DdjjFields({
                   </div>
                 ) : null}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">dni</label>
+                  <label className="block text-sm font-medium text-slate-700">{labelWithId("DNI", "dni")}</label>
                   <input
                     value={f.dni}
                     onChange={(e) => updateFam(idx, "dni", e.target.value.replace(/\D/g, ""))}
@@ -251,7 +259,7 @@ export default function DdjjFields({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">nombre</label>
+                  <label className="block text-sm font-medium text-slate-700">{labelWithId("Nombre", "nombre")}</label>
                   <input
                     value={f.nombre}
                     onChange={(e) =>
@@ -262,7 +270,7 @@ export default function DdjjFields({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">apellido</label>
+                  <label className="block text-sm font-medium text-slate-700">{labelWithId("Apellido", "apellido")}</label>
                   <input
                     value={f.apellido}
                     onChange={(e) =>
@@ -273,7 +281,7 @@ export default function DdjjFields({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">fecha_nacimiento</label>
+                  <label className="block text-sm font-medium text-slate-700">{labelWithId("Fecha de nacimiento", "fecha_nacimiento")}</label>
                   <input
                     type="date"
                     value={f.fecha_nacimiento}
@@ -283,7 +291,7 @@ export default function DdjjFields({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">notas_titular</label>
+                  <label className="block text-sm font-medium text-slate-700">{labelWithId("Notas del titular", "notas_titular")}</label>
                   <input
                     value={f.notas_titular}
                     onChange={(e) => updateFam(idx, "notas_titular", e.target.value)}

@@ -65,6 +65,16 @@ const ICONS_BY_ID = {
       strokeWidth={1.5}
     />
   ),
+  "perfil-rrhh": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
   modulos: () => (
     <path
       strokeLinecap="round"
@@ -80,6 +90,16 @@ const ICONS_BY_ID = {
       strokeLinecap="round"
       strokeLinejoin="round"
       d="M4.5 5.25h15a1.5 1.5 0 0 1 1.5 1.5v10.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.25V6.75a1.5 1.5 0 0 1 1.5-1.5ZM7.5 21h9"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
+  "sistemas-web": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.75 5.25h16.5A1.5 1.5 0 0 1 21.75 6.75v10.5a1.5 1.5 0 0 1-1.5 1.5H3.75a1.5 1.5 0 0 1-1.5-1.5V6.75a1.5 1.5 0 0 1 1.5-1.5Zm0 10.5h18"
       fill="none"
       stroke="currentColor"
       strokeWidth={1.5}

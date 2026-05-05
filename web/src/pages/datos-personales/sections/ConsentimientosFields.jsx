@@ -7,6 +7,14 @@ export default function ConsentimientosFields({
   optsTextosLegales,
   optsIdioma,
 }) {
+  function labelWithId(label, id) {
+    return (
+      <span>
+        {label} <span className="text-xs italic text-slate-500">({id})</span>
+      </span>
+    );
+  }
+
   return (
     <>
       <p className="md:col-span-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
@@ -15,7 +23,7 @@ export default function ConsentimientosFields({
         cambios de campos legales en consentimientos ya aceptados.
       </p>
       <div>
-        <label className="block text-sm font-medium text-slate-700">tipo_consentimiento_id *</label>
+        <label className="block text-sm font-medium text-slate-700">{labelWithId("Tipo de consentimiento *", "tipo_consentimiento_id")}</label>
         <select
           value={form.tipo_consentimiento_id}
           onChange={(e) => setField("tipo_consentimiento_id", e.target.value)}
@@ -32,7 +40,7 @@ export default function ConsentimientosFields({
         <p className="mt-1 text-xs text-slate-500">{HELP.tipo_consentimiento_id}</p>
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700">version_id *</label>
+        <label className="block text-sm font-medium text-slate-700">{labelWithId("Versión legal *", "version_id")}</label>
         <select
           value={form.version_id}
           onChange={(e) => setField("version_id", e.target.value)}
@@ -49,7 +57,7 @@ export default function ConsentimientosFields({
         <p className="mt-1 text-xs text-slate-500">{HELP.version_id}</p>
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700">idioma_id</label>
+        <label className="block text-sm font-medium text-slate-700">{labelWithId("Idioma", "idioma_id")}</label>
         <select
           value={form.idioma_id}
           onChange={(e) => setField("idioma_id", e.target.value)}
