@@ -1,6 +1,6 @@
 {
   "projectId": "portal-hospital-v2",
-  "generado": "2026-05-04T14:19:43.852Z",
+  "generado": "2026-05-05T10:59:40.219Z",
   "cfg_estado_cuenta_acceso": [
     "cfg_eca_pend_reg",
     "cfg_eca_onb",
@@ -36,7 +36,8 @@
   "cfg_estado_declaracion_ddjj": [
     "CFG_DDJJ_01_NO_INICIADA",
     "CFG_DDJJ_02_OMITIDA_ONBOARDING",
-    "CFG_DDJJ_03_PRESENTADA"
+    "CFG_DDJJ_03_PRESENTADA",
+    "CFG_DDJJ_04_SUPERADA_POR_ACTUALIZACION"
   ],
   "cfg_rol": [
     "CFG_RRHH",

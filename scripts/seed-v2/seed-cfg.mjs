@@ -415,6 +415,12 @@ const cfgEstadoDeclaracionDdjj = () => [
   cfgRow("CFG_DDJJ_01_NO_INICIADA", "NO_INICIADA", "No iniciada", 10),
   cfgRow("CFG_DDJJ_02_OMITIDA_ONBOARDING", "OMITIDA_ONBOARDING", "Omitida en onboarding", 20),
   cfgRow("CFG_DDJJ_03_PRESENTADA", "PRESENTADA", "Presentada", 30),
+  cfgRow(
+    "CFG_DDJJ_04_SUPERADA_POR_ACTUALIZACION",
+    "SUPERADA_POR_ACTUALIZACION",
+    "Superada por actualización",
+    40,
+  ),
 ];
 
 /** Una fila de catálogo cfg_* con nombre/código (demostración local). */

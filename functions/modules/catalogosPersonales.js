@@ -6,6 +6,7 @@ const { createHash } = require("node:crypto");
 const { db, FieldValue } = require("./shared/context");
 const runtimeFlags = require("./shared/runtimeFlags.json");
 const { assertRrhh, tokenHasRrhhAccess } = require("./shared/helpers");
+const { processDdjjGrupoFamiliar } = require("./shared/ddjjGrupoFamiliarService");
 const {
   COLECCIONES_ESCRITURA_PERSONAL_TEMPORAL,
   ESTADO_DDJJ_DEFAULT_PERSONALES,
@@ -21,6 +22,8 @@ const MSG_PERSONAS_SENSIBLE_ROL =
   "[AUTH-PER-001] Campo no editable por rol: solo RRHH puede modificar dni, nombre, apellido, activo y motivo_baja_id.";
 const ESTADO_BANDEJA_RRHH_PENDIENTE_ID = "cfg_ebr_pend_rev";
 const ESTADO_BANDEJA_RRHH_VISTO_ID = "cfg_ebr_visto";
+const DDJJ_ESTADO_PRESENTADA_ID = "CFG_DDJJ_03_PRESENTADA";
+const DDJJ_ESTADO_SUPERADA_ID = "CFG_DDJJ_04_SUPERADA_POR_ACTUALIZACION";
 const EVENTO_CFG_ID_POR_EVENTO_ID = {
   EVT_LOGIN: "cfg_tev_login",
   EVT_DATOS_NOTIF_CAMBIO_DDJJ: "cfg_tev_datos_notif_cambio_ddjj",
@@ -97,17 +100,6 @@ function diffPersonaFields(prevData, nextData) {
     .map((key) => ({ campo: key, anterior: prev[key] ?? null, nuevo: next[key] ?? null }));
 }
 
-function buildTopLevelChanges(prevData, nextData, keys) {
-  const prev = prevData && typeof prevData === "object" ? prevData : {};
-  const next = nextData && typeof nextData === "object" ? nextData : {};
-  return keys
-    .filter((key) => JSON.stringify(prev[key] ?? null) !== JSON.stringify(next[key] ?? null))
-    .map((key) => ({
-      campo: key,
-      anterior: prev[key] ?? null,
-      nuevo: next[key] ?? null,
-    }));
-}
 
 async function crearEventoDatosPersonales({
   tipo_evento_id,
@@ -441,85 +433,31 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
   }
 
   if (colRaw === "declaraciones_grupo_familiar") {
-    const id = toNullableTrimmedString(datos.id) || `gf_${ulid()}`;
     const titularPersonaId = toNullableTrimmedString(datos.titular_persona_id);
     if (!titularPersonaId) {
       throw new HttpsError("invalid-argument", "[VAL-DDJJ-001] En declaraciones_grupo_familiar es obligatorio: titular_persona_id.");
     }
-    await assertDocExistsOrNull("personas", titularPersonaId, "titular_persona_id");
-    const ref = db.collection(colRaw).doc(id);
-    const existing = await ref.get();
-    const isNew = !existing.exists;
-    let declaracionVersion = toNumberOrNull(datos.declaracion_version);
-    if (declaracionVersion == null) {
-      if (isNew) {
-        const prevSnap = await db.collection(colRaw).where("titular_persona_id", "==", titularPersonaId).get();
-        const prev = prevSnap.empty
-          ? null
-          : prevSnap.docs.reduce((maxV, doc) => {
-              const n = toNumberOrNull(doc.get("declaracion_version"));
-              return n != null && n > maxV ? n : maxV;
-            }, 0);
-        declaracionVersion = (prev || 0) + 1;
-      } else {
-        declaracionVersion = toNumberOrNull(existing.get("declaracion_version")) || 1;
-      }
-    }
-    const estadoDeclaracionId = existing.exists
-      ? toNullableTrimmedString(existing.get("estado_declaracion_id")) || ESTADO_DDJJ_DEFAULT_PERSONALES
-      : ESTADO_DDJJ_DEFAULT_PERSONALES;
-    await assertDocExistsOrNull("cfg_estado_declaracion_ddjj", estadoDeclaracionId, "estado_declaracion_id");
-    const payload = {
-      id,
-      titular_persona_id: titularPersonaId,
-      declaracion_version: declaracionVersion,
-      estado_declaracion_id: estadoDeclaracionId,
-      declaracion_jurada_aceptada: existing.exists ? existing.get("declaracion_jurada_aceptada") === true : false,
-      aceptada_en: existing.exists ? existing.get("aceptada_en") || null : null,
-      familiares: Array.isArray(datos.familiares) ? datos.familiares : [],
-      actualizado_en: now,
-      schema_version: 1,
-    };
-    if (!Array.isArray(payload.familiares) || payload.familiares.length === 0) {
-      throw new HttpsError(
-        "invalid-argument",
-        "[VAL-DDJJ-002] Debe informarse al menos un familiar en declaraciones_grupo_familiar.",
-      );
-    }
-    const familiaresIncompletos = payload.familiares.some((f) => {
-      const parentesco = toNullableTrimmedString(f && f.parentesco_id);
-      const dni = toNullableTrimmedString(f && f.dni);
-      const nombreF = toNullableTrimmedString(f && f.nombre);
-      const apellidoF = toNullableTrimmedString(f && f.apellido);
-      const fechaNac = toNullableTrimmedString(f && f.fecha_nacimiento);
-      return !parentesco || !dni || !nombreF || !apellidoF || !fechaNac;
-    });
-    if (familiaresIncompletos) {
-      throw new HttpsError(
-        "invalid-argument",
-        "[VAL-DDJJ-003] Cada familiar requiere: parentesco_id, dni, nombre, apellido y fecha_nacimiento.",
-      );
-    }
-    if (!existing.exists) payload.creado_en = now;
-    await ref.set(payload, { merge: true });
     const actorPersonaId = getActorPersonaId(request);
-    const cambios = buildTopLevelChanges(existing.data() || {}, payload, [
-      "titular_persona_id",
-      "declaracion_version",
-      "estado_declaracion_id",
-      "declaracion_jurada_aceptada",
-      "aceptada_en",
-      "familiares",
-    ]);
-    await crearEventoDatosPersonales({
-      tipo_evento_id: existing.exists ? "EVT_DATOS_ACTUALIZA_DDJJ" : "EVT_DATOS_ALTA_DDJJ",
-      persona_id: titularPersonaId,
-      actor_persona_id: actorPersonaId,
-      coleccion: "declaraciones_grupo_familiar",
-      accion: existing.exists ? "guardar_actualizacion" : "guardar_alta",
-      cambios,
-    });
-    return { ok: true, id, warnings };
+    const result = await db.runTransaction((tx) =>
+      processDdjjGrupoFamiliar({
+        tx,
+        db,
+        colRaw,
+        titularPersonaId,
+        datos,
+        now,
+        toNullableTrimmedString,
+        toNumberOrNull,
+        assertDocExistsOrNull,
+        resolveTipoEventoCfgId,
+        actorPersonaId,
+        ESTADO_DDJJ_DEFAULT_PERSONALES,
+        DDJJ_ESTADO_PRESENTADA_ID,
+        DDJJ_ESTADO_SUPERADA_ID,
+        ESTADO_BANDEJA_RRHH_PENDIENTE_ID,
+      }),
+    );
+    return { ok: true, id: result.id, warnings };
   }
 
   const id = toNullableTrimmedString(datos.id) || `doc_${ulid()}`;
