@@ -18,6 +18,7 @@
     "seed:demo-primer-acceso": "node scripts/seed-v2/seed-demo-primer-acceso.mjs",
     "seed:demo-login-usuario": "node scripts/seed-v2/seed-demo-login-usuario.mjs",
     "seed:configuracion": "node src/scripts/seedConfiguracion.mjs",
+    "db:delete-catalog-demo-docs": "node scripts/seed-v2/delete-catalog-demo-docs.mjs",
     "db:purge-efectores-legacy": "node scripts/purge-efectores-legacy.mjs",
     "db:migrate-grupos-trabajo-ids-v2:dry-run": "node scripts/migrate-grupos-trabajo-ids-v2.mjs --dry-run",
     "db:migrate-grupos-trabajo-ids-v2": "node scripts/migrate-grupos-trabajo-ids-v2.mjs --apply",

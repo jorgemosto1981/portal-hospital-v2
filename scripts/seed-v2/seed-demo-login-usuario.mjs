@@ -39,8 +39,8 @@ const CFG_ECA_ACTIVO = "cfg_eca_activo";
 const CFG_EPD_BORR = "cfg_epd_borr";
 const ESTADO_ACTIVO_MVP = "ACTIVO";
 
-/** Debe existir en Firestore (véase `npm run seed:cfg` → `grupos_de_trabajo`). */
-const GRUPO_ID = "gdt_seed_demo_cfg";
+/** Grupo laboral existente en `grupos_de_trabajo` (ej. ULID real). Si quitaste el demo, definí DEMO_GRUPO_ID en .env. */
+const GRUPO_ID = String(process.env.DEMO_GRUPO_ID || "").trim() || "gdt_seed_demo_cfg";
 
 const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 if (!credPath) {

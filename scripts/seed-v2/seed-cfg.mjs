@@ -165,29 +165,8 @@ const cfgEstadoCuentaAcceso = () => [
  * @see MODULO_CONFIGURACION_V2.md §5 (cfg_rol), MODULO_DATOS_PERSONALES_V2.md §3.7 (role_ids)
  * @see docs/v2/CUESTIONES_ROLES_MENUS_ARQUITECTURA_V2.md
  */
-/** Mínimos para que Configuración (pestaña por defecto: estado civil) no arranque vacía. */
-const cfgEstadoCivil = () => [
-  {
-    id: "CFG_EST_CIVIL_SOLTERO",
-    data: {
-      ...base(),
-      codigo_interno: "SOLTERO",
-      nombre: "Soltero/a",
-      titulo_ui: "Soltero/a",
-      orden: 10,
-    },
-  },
-  {
-    id: "CFG_EST_CIVIL_CASADO",
-    data: {
-      ...base(),
-      codigo_interno: "CASADO",
-      nombre: "Casado/a",
-      titulo_ui: "Casado/a",
-      orden: 20,
-    },
-  },
-];
+/** Catálogo operativo: cargar desde proceso de negocio / consola (sin filas demo en repo). */
+const cfgEstadoCivil = () => [];
 
 const cfgRol = () => [
   {
@@ -476,27 +455,18 @@ function cfgRow(id, codigo_interno, nombre, orden = 10, extra = {}) {
   };
 }
 
-/** Catálogos adicionales de `configuracionCatalogos.js` — mínimos para listas no vacías en Configuración. */
-const cfgSexoGenero = () => [
-  cfgRow("CFG_GEN_M", "M", "Masculino", 10),
-  cfgRow("CFG_GEN_F", "F", "Femenino", 20),
-];
+/** Catálogos operativos (sin demos en repo). */
+const cfgSexoGenero = () => [];
 
-const cfgNacionalidad = () => [cfgRow("CFG_NAC_ARG", "ARG", "Argentina", 10)];
+const cfgNacionalidad = () => [];
 
 const cfgPais = () => [cfgRow("CFG_PAIS_ARG", "ARG", "Argentina", 10)];
 
-const cfgProvincia = () => [
-  cfgRow("CFG_PROV_BA", "BA", "Buenos Aires", 10),
-  cfgRow("CFG_PROV_CABA", "CABA", "Ciudad Autónoma de Buenos Aires", 20),
-];
+const cfgProvincia = () => [];
 
-const cfgLocalidad = () => [
-  cfgRow("CFG_LOC_LA_PLATA", "LA_PLATA", "La Plata", 10, { provincia_id: "CFG_PROV_BA" }),
-];
+const cfgLocalidad = () => [];
 
 const cfgNivelEstudios = () => [
-  cfgRow("CFG_EST_SEC", "SECUNDARIO", "Secundario completo", 10),
   cfgRow("CFG_EST_UNI", "UNIVERSITARIO", "Universitario", 20),
 ];
 
@@ -508,65 +478,38 @@ const cfgJurisdiccionMatricula = () => [
   cfgRow("CFG_JUR_PBA", "PBA", "Provincia de Buenos Aires", 10),
 ];
 
-const cfgParentesco = () => [
-  cfgRow("CFG_PAR_HIJO", "HIJO", "Hijo/a", 10),
-  cfgRow("CFG_PAR_CONY", "CONYUGE", "Cónyuge", 20),
-];
+const cfgParentesco = () => [];
 
 const cfgMotivoBajaPersona = () => [
   cfgRow("CFG_MOT_BAJA_FIN", "FIN_CONTRATO", "Fin de contrato", 10),
 ];
 
-const cfgEscalafon = () => [cfgRow("CFG_ESC_X", "GENERAL", "Escalafón general", 10)];
+const cfgEscalafon = () => [];
 
-const cfgAgrupamiento = () => [cfgRow("CFG_AGR_PROF", "PROF", "Profesional", 10)];
+const cfgAgrupamiento = () => [];
 
-const cfgTipoVinculoLaboral = () => [
-  cfgRow("CFG_VIN_PERM", "PERMANENTE", "Permanente", 10),
-];
+const cfgTipoVinculoLaboral = () => [];
 
-const cfgCargoFuncional = () => [cfgRow("CFG_CF_MED", "MEDICO", "Médico", 10)];
+const cfgCargoFuncional = () => [];
 
-const cfgModalidadJornada = () => [
-  cfgRow("CFG_MOD_FULL", "COMPLETA", "Jornada completa", 10),
-];
+const cfgModalidadJornada = () => [];
 
-const cfgEstadoAsignacionLaboral = () => [
-  cfgRow("CFG_EST_LAB_VIG", "VIGENTE", "Vigente", 10),
-];
+const cfgEstadoAsignacionLaboral = () => [];
 
-const cfgCausalFinAsignacionLaboral = () => [
-  cfgRow("CFG_CAU_FIN_FIN", "FIN_VIGENCIA", "Fin de vigencia", 10),
-];
+const cfgCausalFinAsignacionLaboral = () => [];
 
-const cfgTipoActoDesignacion = () => [
-  cfgRow("CFG_ACT_DEC", "DECRETO", "Decreto", 10),
-];
+const cfgTipoActoDesignacion = () => [];
 
-const cfgRegimenHorario = () => [
-  cfgRow("CFG_REG_HOR_48", "48_HS", "48 horas semanales", 10),
-];
+const cfgRegimenHorario = () => [];
 
-const cfgCentroCosto = () => [
-  cfgRow("CFG_CEN_COST_CTE", "CTE001", "Centro de costo demo", 10),
-];
+const cfgCentroCosto = () => [];
 
-const cfgEfectores = () => [
-  cfgRow("CFG_EFE_HOSP", "HOSP_DEMO", "Hospital demo", 10),
-];
+const cfgEfectores = () => [];
 
-const gruposDeTrabajoSeed = () => [
-  {
-    id: "gdt_seed_demo_cfg",
-    data: {
-      ...base(),
-      id: "gdt_seed_demo_cfg",
-      nombre: "Grupo demo (seed cfg)",
-    },
-  },
-];
+const gruposDeTrabajoSeed = () => [];
 
 function applyBatch(items, col) {
+  if (!items || items.length === 0) return Promise.resolve();
   const b = db.batch();
   for (const { id, data } of items) {
     b.set(db.collection(col).doc(id), data, { merge: true });

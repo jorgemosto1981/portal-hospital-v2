@@ -48,8 +48,5 @@
     "CFG_MEDICO",
     "CFG_VISUALIZADOR"
   ],
-  "cfg_estado_civil": [
-    "CFG_EST_CIVIL_SOLTERO",
-    "CFG_EST_CIVIL_CASADO"
-  ]
+  "cfg_estado_civil": []
 }
