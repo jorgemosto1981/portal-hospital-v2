@@ -10,7 +10,7 @@ const ESTADO_BANDEJA_VISTO_ID = "cfg_ebr_visto";
 
 function isEventoDatosPersonales(evento) {
   const tipoCfgId = String(evento?.tipo_evento_cfg_id || "").trim().toLowerCase();
-  return tipoCfgId.startsWith("cfg_tev_datos_");
+  return tipoCfgId.startsWith("cfg_tev_datos_") || tipoCfgId.startsWith("cfg_tev_auth_");
 }
 
 function formatFechaEventoDdMmAaaa(value) {

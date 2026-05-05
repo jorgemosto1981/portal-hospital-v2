@@ -219,6 +219,24 @@ function maskEmail(email) {
   return `${safeUser}@${d}`;
 }
 
+/**
+ * Tras confirmar correo en Auth, alinea la ficha `personas.contacto.email_personal` con el correo de cuenta
+ * (normativa V2: correo de acceso en `usuarios_cuenta.username`; la ficha suele mostrar `email_personal`).
+ */
+async function alinearEmailPersonalPersona(personaId, emailLower) {
+  const pid = String(personaId || "").trim();
+  const em = String(emailLower || "").trim().toLowerCase();
+  if (!pid || !em || !validEmail(em)) return;
+  try {
+    await db.collection(COL_PERSONAS).doc(pid).update({
+      "contacto.email_personal": em,
+      actualizado_en: FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    console.warn("[notificarCambioEmailAuth] alinearEmailPersonalPersona:", e && e.message);
+  }
+}
+
 async function resolveCuentaByAuthUid(uid) {
   const snap = await db.collection(COL_USUARIOS_CUENTA).where("auth_uid", "==", uid).limit(2).get();
   if (snap.empty) throw new HttpsError("failed-precondition", "No existe cuenta vinculada para esta sesión.");
@@ -273,17 +291,24 @@ const notificarCambioEmailAuth = onCall(async (request) => {
 
   const userAuth = await auth.getUser(uid);
   const emailActualAuth = String(userAuth.email || "").trim().toLowerCase();
-  if (emailActualAuth !== nuevoEmail) {
-    throw new HttpsError("failed-precondition", "El email autenticado no coincide con nuevo_email.");
-  }
+  if (etapa === "confirmado") {
+    if (emailActualAuth !== nuevoEmail) {
+      throw new HttpsError("failed-precondition", "El email autenticado no coincide con nuevo_email.");
+    }
+    await alinearEmailPersonalPersona(personaId, nuevoEmail);
 
-  await cuentaDoc.ref.set(
-    {
-      username: nuevoEmail,
-      actualizado_en: FieldValue.serverTimestamp(),
-    },
-    { merge: true },
-  );
+    const usernameActual = String(cuenta.username || "").trim().toLowerCase();
+    if (usernameActual === nuevoEmail) {
+      return { ok: true, persona_id: personaId, evento_id: null, skipped: true };
+    }
+    await cuentaDoc.ref.set(
+      {
+        username: nuevoEmail,
+        actualizado_en: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  }
 
   const tipoEventoId = etapa === "confirmado" ? TIPO_EVENTO_EMAIL_CONF : TIPO_EVENTO_EMAIL_SOL;
   const tipoEventoCfgId = etapa === "confirmado" ? TIPO_EVENTO_CFG_EMAIL_CONF : TIPO_EVENTO_CFG_EMAIL_SOL;

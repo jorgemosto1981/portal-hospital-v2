@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 import { APP_TITLE, INSTITUTION_NAME, LOGO_SRC } from "../../constants/appBrand.js";
 import { safeRedirectPath } from "../routing/redirectPaths.js";
@@ -24,6 +24,33 @@ const INPUT =
 
 const MSG_CUENTA_YA_CREADA =
   "Tu cuenta ya fue creada. Por favor, ve a la pantalla de Iniciar Sesión.";
+
+/** @param {unknown} err */
+function mapFirebaseLoginError(err) {
+  const code = err && typeof err === "object" && /** @type {{ code?: string }} */ (err).code;
+  const c = typeof code === "string" ? code : "";
+  if (c === "auth/invalid-credential" || c === "auth/wrong-password" || c === "auth/user-not-found") {
+    return "Credenciales incorrectas o cuenta no habilitada.";
+  }
+  if (c === "auth/too-many-requests") {
+    return "Demasiados intentos. Esperá unos minutos y volvé a intentar.";
+  }
+  if (c === "auth/user-disabled") {
+    return "Esta cuenta está deshabilitada.";
+  }
+  const msg = err && typeof err === "object" && /** @type {{ message?: string }} */ (err).message;
+  return (typeof msg === "string" && msg.trim()) || "No se pudo iniciar sesión.";
+}
+
+/** @param {unknown} err */
+function mapFirebaseResetPinError(err) {
+  const code = err && typeof err === "object" && /** @type {{ code?: string }} */ (err).code;
+  const c = typeof code === "string" ? code : "";
+  if (c === "auth/invalid-email") return "El correo ingresado no es válido.";
+  if (c === "auth/too-many-requests") return "Demasiados intentos. Esperá unos minutos y volvé a intentar.";
+  const msg = err && typeof err === "object" && /** @type {{ message?: string }} */ (err).message;
+  return (typeof msg === "string" && msg.trim()) || "No se pudo enviar el enlace. Intentá más tarde.";
+}
 
 /** @param {unknown} err */
 function callablePideIrALogin(err) {
@@ -83,6 +110,10 @@ export default function AccesoPortal() {
   const [pinLogin, setPinLogin] = useState("");
   const [busyLogin, setBusyLogin] = useState(false);
   const [feedbackLogin, setFeedbackLogin] = useState(/** @type {null | { status: string, message: string }} */ (null));
+  const [olvidoPinAbierto, setOlvidoPinAbierto] = useState(false);
+  const [olvidoEmail, setOlvidoEmail] = useState("");
+  const [busyOlvidoPin, setBusyOlvidoPin] = useState(false);
+  const [feedbackOlvido, setFeedbackOlvido] = useState(/** @type {null | { status: string, message: string }} */ (null));
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -130,9 +161,7 @@ export default function AccesoPortal() {
     } catch (err) {
       const code = err?.code;
       const isAuth = code && String(code).startsWith("auth/");
-      const msg = isAuth
-        ? "DNI o PIN incorrectos, o la cuenta no está habilitada."
-        : (err?.message && String(err.message)) || "No se pudo iniciar sesión. Intentá de nuevo.";
+      const msg = isAuth ? mapFirebaseLoginError(err) : (err?.message && String(err.message)) || "No se pudo iniciar sesión.";
       setFeedbackLogin({ status: "error", message: msg });
       toast.error("No se pudo iniciar sesión", { id: t });
       try {
@@ -144,6 +173,43 @@ export default function AccesoPortal() {
       }
     } finally {
       setBusyLogin(false);
+    }
+  }
+
+  async function handleOlvidePin(e) {
+    e.preventDefault();
+    setFeedbackOlvido(null);
+    const emailNorm = String(olvidoEmail || "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+      setFeedbackOlvido({ status: "error", message: "Ingresá el correo con el que te registraste (formato válido)." });
+      return;
+    }
+    setBusyOlvidoPin(true);
+    setFeedbackOlvido({ status: "loading", message: "Enviando enlace…" });
+    const t = toast.loading("Enviando enlace…");
+    try {
+      const continueUrl =
+        typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname || "/login"}` : undefined;
+      await sendPasswordResetEmail(authV2, emailNorm, continueUrl ? { url: continueUrl, handleCodeInApp: false } : undefined);
+      const okMsg =
+        "Revisá tu bandeja de entrada (y spam). Abrí el enlace y elegí un nuevo PIN de exactamente 6 dígitos para volver a entrar con DNI + PIN.";
+      setFeedbackOlvido({ status: "success", message: okMsg });
+      toast.success("Si el correo está registrado, recibís el enlace en unos minutos.", { id: t });
+      setOlvidoEmail("");
+    } catch (err) {
+      const code = err && typeof err === "object" && /** @type {{ code?: string }} */ (err).code;
+      if (code === "auth/user-not-found") {
+        const neutral =
+          "Si el correo está registrado en el portal, recibirás un enlace. Si no llega, verificá el correo o consultá a RRHH.";
+        setFeedbackOlvido({ status: "success", message: neutral });
+        toast.success("Si el correo está registrado, recibís el enlace en unos minutos.", { id: t });
+      } else {
+        const msg = mapFirebaseResetPinError(err);
+        setFeedbackOlvido({ status: "error", message: msg });
+        toast.error(msg, { id: t });
+      }
+    } finally {
+      setBusyOlvidoPin(false);
     }
   }
 
@@ -269,51 +335,94 @@ export default function AccesoPortal() {
 
           <div className="p-5 sm:p-6">
             {tab === "login" && !user ? (
-              <form onSubmit={handleLogin} className="flex flex-col gap-4">
-                <p className="text-sm text-slate-600">
-                  Ingresá con el <strong className="text-slate-800">DNI</strong> y el <strong className="text-slate-800">PIN de 6 dígitos</strong> asignados a tu cuenta.
-                </p>
-                <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
-                  DNI
-                  <input
-                    name="dni"
-                    className={INPUT}
-                    inputMode="numeric"
-                    autoComplete="username"
-                    value={dniLogin}
-                    onChange={(e) => setDniLogin(e.target.value.replace(/\D/g, ""))}
-                    maxLength={12}
-                    disabled={busyLogin}
-                  />
-                </label>
-                <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
-                  PIN
-                  <input
-                    name="pin"
-                    type="password"
-                    className={INPUT}
-                    inputMode="numeric"
-                    autoComplete="current-password"
-                    value={pinLogin}
-                    onChange={(e) => setPinLogin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    maxLength={6}
-                    disabled={busyLogin}
-                  />
-                </label>
-                {feedbackLogin && feedbackLogin.status !== "idle" ? (
-                  <DataOperationFeedback status={feedbackLogin.status} message={feedbackLogin.message} />
-                ) : null}
-                <PrimaryButton type="submit" disabled={busyLogin} className="!mt-1 w-full">
-                  {busyLogin ? "Ingresando…" : "Ingresar al portal"}
-                </PrimaryButton>
-                <p className="text-center text-xs text-slate-500">
-                  ¿Sos agente nuevo? Tocá la pestaña{" "}
-                  <button type="button" onClick={setTabRegistro} className="font-semibold text-blue-600 hover:underline">
-                    Primer acceso
+              <div className="flex flex-col gap-4">
+                <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                  <p className="text-sm text-slate-600">
+                    Ingresá con el <strong className="text-slate-800">DNI</strong> y el{" "}
+                    <strong className="text-slate-800">PIN de 6 dígitos</strong> asignados a tu cuenta.
+                  </p>
+                  <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
+                    DNI
+                    <input
+                      name="dni"
+                      className={INPUT}
+                      inputMode="numeric"
+                      autoComplete="username"
+                      value={dniLogin}
+                      onChange={(e) => setDniLogin(e.target.value.replace(/\D/g, ""))}
+                      maxLength={12}
+                      disabled={busyLogin}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
+                    PIN
+                    <input
+                      name="pin"
+                      type="password"
+                      className={INPUT}
+                      inputMode="numeric"
+                      autoComplete="current-password"
+                      value={pinLogin}
+                      onChange={(e) => setPinLogin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      maxLength={6}
+                      disabled={busyLogin}
+                    />
+                  </label>
+                  {feedbackLogin && feedbackLogin.status !== "idle" ? (
+                    <DataOperationFeedback status={feedbackLogin.status} message={feedbackLogin.message} />
+                  ) : null}
+                  <PrimaryButton type="submit" disabled={busyLogin} className="!mt-1 w-full">
+                    {busyLogin ? "Ingresando…" : "Ingresar al portal"}
+                  </PrimaryButton>
+                </form>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOlvidoPinAbierto((v) => !v);
+                      setFeedbackOlvido(null);
+                    }}
+                    className="flex min-h-11 w-full items-center justify-between rounded-lg px-1 text-left text-sm font-semibold text-blue-700 hover:text-blue-800"
+                  >
+                    <span>Olvidé mi PIN</span>
+                    <span className="text-slate-400" aria-hidden>
+                      {olvidoPinAbierto ? "▲" : "▼"}
+                    </span>
                   </button>
-                  .
-                </p>
-              </form>
+                  {olvidoPinAbierto ? (
+                    <form className="mt-3 space-y-3 border-t border-slate-200 pt-3" onSubmit={handleOlvidePin}>
+                      <p className="text-xs leading-relaxed text-slate-600">
+                        Ingresá el mismo correo que usaste en &quot;Primer acceso&quot; (es el usuario de la cuenta). Te
+                        enviamos un enlace desde el Portal Digital: al abrirlo, definí una contraseña nueva con solo 6
+                        dígitos (tu nuevo PIN) para seguir entrando con DNI + PIN.
+                      </p>
+                      <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
+                        Correo de la cuenta
+                        <input
+                          type="email"
+                          autoComplete="email"
+                          className={INPUT}
+                          value={olvidoEmail}
+                          onChange={(e) => setOlvidoEmail(e.target.value.trim().toLowerCase())}
+                          disabled={busyOlvidoPin}
+                          placeholder="correo@ejemplo.com"
+                        />
+                      </label>
+                      {feedbackOlvido && feedbackOlvido.status !== "idle" ? (
+                        <DataOperationFeedback status={feedbackOlvido.status} message={feedbackOlvido.message} />
+                      ) : null}
+                      <button
+                        type="submit"
+                        disabled={busyOlvidoPin}
+                        className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60"
+                      >
+                        {busyOlvidoPin ? "Enviando…" : "Enviar enlace de recuperación"}
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
+              </div>
             ) : null}
 
             {tab === "registro" && !user ? (
@@ -379,17 +488,6 @@ export default function AccesoPortal() {
           </>
         ) : null}
 
-        <p className="mt-6 text-center text-sm text-slate-600">
-          <Link to="/vinculacion" className="font-medium text-blue-600 hover:underline">
-            Vinculación por DNI (soporte)
-          </Link>
-          <span className="mx-2 text-slate-300" aria-hidden>
-            ·
-          </span>
-          <Link to="/portal/home" className="font-medium text-slate-700 hover:underline">
-            Ir al inicio del portal
-          </Link>
-        </p>
       </div>
     </div>
   );

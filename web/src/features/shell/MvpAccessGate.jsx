@@ -5,6 +5,7 @@ import PublicAuthMenu from "../../components/layout/PublicAuthMenu.jsx";
 import { ESTADO_PEND_ONBOARDING, subscribePersonaById } from "../../services/personaService.js";
 import { useAuthSession } from "../auth/useAuthSession.js";
 import { useAuthClaims } from "../auth/useAuthClaims.js";
+import { useSyncAuthEmailConfirmado } from "../auth/useSyncAuthEmailConfirmado.js";
 import { hasAnyPortalRole, MANAGEMENT_PORTAL_ROLES } from "../routing/portalRole.js";
 import runtimeFlags from "../../../../shared/runtimeFlags.json";
 
@@ -40,6 +41,12 @@ export default function MvpAccessGate({ children }) {
   const [persona, setPersona] = useState(/** @type {Record<string, unknown> | null} */ (null));
   const pid = typeof claims?.persona_id === "string" ? /** @type {string} */ (claims.persona_id) : null;
   const effectivePersona = pid ? persona : null;
+
+  useSyncAuthEmailConfirmado({
+    user,
+    personaId: pid,
+    disabled: OPEN_ACCESS_TEMP || BYPASS_AUTH,
+  });
 
   useEffect(() => {
     if (!pid) {

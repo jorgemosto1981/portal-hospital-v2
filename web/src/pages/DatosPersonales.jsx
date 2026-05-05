@@ -42,7 +42,7 @@ const EMPTY_ROWS = [];
 
 function isEventoAuditoriaDatosPersonales(evento) {
   const tipoCfgId = String(evento?.tipo_evento_cfg_id || "").trim().toLowerCase();
-  return tipoCfgId.startsWith("cfg_tev_datos_");
+  return tipoCfgId.startsWith("cfg_tev_datos_") || tipoCfgId.startsWith("cfg_tev_auth_");
 }
 
 function formatFechaEventoDdMmAaaa(value) {
@@ -83,6 +83,15 @@ function mapAccionDdjjToUiLabel(accionRaw) {
   if (accion === "presentar_ddjj_grupo_familiar_actualizacion") return "Presentación por actualización";
   if (accion === "presentar_ddjj_grupo_familiar_inicial") return "Presentación inicial";
   if (accion === "presentar_ddjj_grupo_familiar") return "Presentación DDJJ";
+  return accion || "—";
+}
+
+function mapAccionAuthCuentaToUiLabel(accionRaw) {
+  const accion = String(accionRaw || "").trim().toLowerCase();
+  if (accion === "notificar_cambio_email_solicitado") return "Cambio correo solicitado";
+  if (accion === "notificar_cambio_email_confirmado") return "Cambio correo confirmado";
+  if (accion === "notificar_cambio_password") return "Cambio contraseña";
+  if (accion === "notificar_actualizacion_perfil_usuario") return "Actualización perfil usuario";
   return accion || "—";
 }
 
@@ -974,6 +983,10 @@ export default function DatosPersonales() {
                       <p className="text-slate-600">
                         Acción DDJJ: {mapAccionDdjjToUiLabel(evt.payload?.accion)}
                       </p>
+                    ) : null}
+                    {String(evt.payload?.coleccion || "").trim() === "usuarios_cuenta" &&
+                    String(evt.payload?.accion || "").trim() ? (
+                      <p className="text-slate-600">Acción cuenta: {mapAccionAuthCuentaToUiLabel(evt.payload?.accion)}</p>
                     ) : null}
                     {Array.isArray(evt.payload?.cambios) &&
                       evt.payload.cambios.length > 0 &&

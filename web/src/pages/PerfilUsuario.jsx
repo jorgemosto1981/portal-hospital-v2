@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
-  sendEmailVerification,
-  updateEmail,
+  verifyBeforeUpdateEmail,
   updatePassword,
 } from "firebase/auth";
 
@@ -249,8 +248,7 @@ export default function PerfilUsuario() {
       if (emailPrev === emailTarget) {
         throw new Error("El nuevo correo debe ser distinto al actual.");
       }
-      await updateEmail(user, emailTarget);
-      await sendEmailVerification(user);
+      await verifyBeforeUpdateEmail(user, emailTarget);
       const resp = await callNotificarCambioEmailAuth({
         etapa: "solicitado",
         nuevo_email: emailTarget,
@@ -274,18 +272,22 @@ export default function PerfilUsuario() {
       setSeguridadMsg("Ingresá tu contraseña actual.");
       return;
     }
-    if (String(claveNueva).length < 8) {
-      setSeguridadMsg("La nueva contraseña debe tener al menos 8 caracteres.");
+    const pinNuevo = String(claveNueva || "").replace(/\D/g, "").slice(0, 6);
+    if (!/^\d{6}$/.test(pinNuevo)) {
+      setSeguridadMsg(
+        "El acceso con DNI en el portal usa un PIN de exactamente 6 dígitos como contraseña. Ingresá un nuevo PIN solo numérico (6 dígitos).",
+      );
       return;
     }
-    if (claveNueva !== claveNueva2) {
-      setSeguridadMsg("La confirmación de contraseña no coincide.");
+    const pinConfirma = String(claveNueva2 || "").replace(/\D/g, "").slice(0, 6);
+    if (pinNuevo !== pinConfirma) {
+      setSeguridadMsg("La confirmación del PIN no coincide.");
       return;
     }
     setPassBusy(true);
     try {
       const user = await reauthWithPassword(claveActualPass);
-      await updatePassword(user, claveNueva);
+      await updatePassword(user, pinNuevo);
       const resp = await callNotificarCambioPasswordAuth({});
       setSeguridadMsg(
         `Contraseña actualizada correctamente. Evento RRHH: ${String(resp?.data?.evento_id || "—")}.`,
@@ -422,7 +424,8 @@ export default function PerfilUsuario() {
       <Card className="px-4 py-4 md:px-5">
         <p className="text-base font-semibold text-slate-900">Seguridad de la cuenta</p>
         <p className="mt-1 text-sm text-slate-600">
-          Cambios de autenticación con revalidación de contraseña y notificación automática a bandeja RRHH.
+          Cambios de autenticación con revalidación y notificación a bandeja RRHH. La clave del portal es el mismo PIN de
+          6 dígitos que usás al iniciar sesión con DNI; solo podés reemplazarlo por otro PIN de 6 dígitos.
         </p>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -452,26 +455,30 @@ export default function PerfilUsuario() {
           </form>
 
           <form className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3" onSubmit={onCambiarPassword}>
-            <p className="text-sm font-semibold text-slate-800">Cambiar contraseña</p>
+            <p className="text-sm font-semibold text-slate-800">Cambiar PIN (6 dígitos)</p>
             <input
               type="password"
               value={claveActualPass}
               onChange={(e) => setClaveActualPass(e.target.value)}
-              placeholder="Contraseña actual"
+              placeholder="PIN o contraseña actual"
               className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
             />
             <input
               type="password"
               value={claveNueva}
-              onChange={(e) => setClaveNueva(e.target.value)}
-              placeholder="Nueva contraseña (mín. 8)"
+              onChange={(e) => setClaveNueva(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="Nuevo PIN (6 dígitos)"
+              inputMode="numeric"
+              maxLength={6}
               className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
             />
             <input
               type="password"
               value={claveNueva2}
-              onChange={(e) => setClaveNueva2(e.target.value)}
-              placeholder="Confirmar nueva contraseña"
+              onChange={(e) => setClaveNueva2(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="Confirmar nuevo PIN"
+              inputMode="numeric"
+              maxLength={6}
               className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
             />
             <button
@@ -479,7 +486,7 @@ export default function PerfilUsuario() {
               disabled={passBusy}
               className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {passBusy ? "Procesando..." : "Cambiar contraseña"}
+              {passBusy ? "Procesando..." : "Cambiar PIN"}
             </button>
           </form>
         </div>
