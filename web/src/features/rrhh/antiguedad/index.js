@@ -13,3 +13,6 @@ export { MarcadorInline } from "./MarcadorInline.jsx";
 export { TarjetaAmdPaso } from "./TarjetaAmdPaso.jsx";
 export { TimelineHlcFusionados } from "./TimelineHlcFusionados.jsx";
 export { AntiguedadResultadoCard } from "./AntiguedadResultadoCard.jsx";
+export { AntiguedadIntroCard } from "./AntiguedadIntroCard.jsx";
+export { AntiguedadCalculoFormCard } from "./AntiguedadCalculoFormCard.jsx";
+export { AntiguedadExternaCard } from "./AntiguedadExternaCard.jsx";
