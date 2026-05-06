@@ -41,6 +41,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`HANDOFF_SESION_2026-05-02.md`](./HANDOFF_SESION_2026-05-02.md) | Datos personales (`desde`/`hasta`, eventos auditoría), RRHH + flujo usuario/notificación, scroll anchoring / HMR, deploy hosting, próximos pasos |
 | [`HANDOFF_SESION_2026-05-04.md`](./HANDOFF_SESION_2026-05-04.md) | Limpieza Fase 1+2 en Perfil RRHH, retiro callable legacy, deploy Hosting/Functions, continuidad hacia pantalla espejo rol Usuario y auditoría de estados duplicados |
 | [`HANDOFF_SESION_2026-05-05.md`](./HANDOFF_SESION_2026-05-05.md) | **Última sesión:** auditoría FK catálogo + borrado `evt_*`; refactor formulario **Datos laborales** en `web/` (detalle abajo) |
+| [`HANDOFF_SESION_2026-05-06.md`](./HANDOFF_SESION_2026-05-06.md) | **Última sesión:** auditoría end-to-end Datos Laborales, unificación visual actual/histórico, limpieza de flujo contextual, validaciones `VAL-HLD-003/004`, mensajes claros y continuidad en pulido de Datos Laborales, Datos Personales y Login |
 | [`REFACTOR_WEB_DATOS_LABORALES_FORMULARIO_V2.md`](./REFACTOR_WEB_DATOS_LABORALES_FORMULARIO_V2.md) | Refactor UI del formulario datos laborales: `LabeledSelect` / `LabeledTextField`, modo `bare`, fix edición por persona; lista de archivos y pendientes |
 
 **Lecciones desde código V1 (en referencia V1):** [`../referencia_v1/PROBLEMA_LOGIN_PERMISOS.md`](../referencia_v1/PROBLEMA_LOGIN_PERMISOS.md) y el resto de `docs/referencia_v1/` según necesidad.
