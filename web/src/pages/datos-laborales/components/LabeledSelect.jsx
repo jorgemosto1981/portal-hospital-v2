@@ -17,6 +17,8 @@ export default function LabeledSelect({
   placeholder,
   helpText,
   optionLabel,
+  technicalName,
+  showTechnicalName = false,
   bare = false,
 }) {
   const formatLabel =
@@ -48,6 +50,9 @@ export default function LabeledSelect({
   return (
     <div>
       <label className="block text-sm font-medium text-slate-700">{label}</label>
+      {showTechnicalName && technicalName ? (
+        <p className="mt-0.5 text-xs text-slate-500">Campo técnico: {technicalName}</p>
+      ) : null}
       {selectEl}
       {helpText ? <p className="mt-1 text-xs text-slate-500">{helpText}</p> : null}
     </div>

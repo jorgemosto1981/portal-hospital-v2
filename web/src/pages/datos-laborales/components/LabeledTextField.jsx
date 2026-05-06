@@ -12,6 +12,8 @@ export default function LabeledTextField({
   value,
   onValueChange,
   helpText,
+  technicalName,
+  showTechnicalName = false,
   type = "text",
   placeholder,
   inputMode,
@@ -35,6 +37,9 @@ export default function LabeledTextField({
   return (
     <div>
       <label className="block text-sm font-medium text-slate-700">{label}</label>
+      {showTechnicalName && technicalName ? (
+        <p className="mt-0.5 text-xs text-slate-500">Campo técnico: {technicalName}</p>
+      ) : null}
       {inputEl}
       {helpText ? <p className="mt-1 text-xs text-slate-500">{helpText}</p> : null}
     </div>

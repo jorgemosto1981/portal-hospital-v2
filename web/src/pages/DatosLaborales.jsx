@@ -5,6 +5,12 @@ import { AYUDA_CAMPOS, INITIAL_FORM_DATA_LABORAL } from "./datos-laborales/const
 import ColeccionesLaboralesCards from "./datos-laborales/sections/ColeccionesLaboralesCards.jsx";
 import FasesLaboralesTables from "./datos-laborales/sections/FasesLaboralesTables.jsx";
 import IntegridadReferencialCard from "./datos-laborales/sections/IntegridadReferencialCard.jsx";
+import LaboralFormCabeceraFields from "./datos-laborales/sections/LaboralFormCabeceraFields.jsx";
+import PersonaSearchSelect from "./datos-laborales/components/PersonaSearchSelect.jsx";
+import LaboralFormHlcFields from "./datos-laborales/sections/LaboralFormHlcFields.jsx";
+import LaboralFormHlgFields from "./datos-laborales/sections/LaboralFormHlgFields.jsx";
+import LaboralFormModoEdicionFields from "./datos-laborales/sections/LaboralFormModoEdicionFields.jsx";
+import LaboralFormVigenciaFields from "./datos-laborales/sections/LaboralFormVigenciaFields.jsx";
 import TimelineLaboralPersonaCard from "./datos-laborales/sections/TimelineLaboralPersonaCard.jsx";
 import VistaOperativaGrupoCard from "./datos-laborales/sections/VistaOperativaGrupoCard.jsx";
 import { useDatosLaboralesCollections } from "./datos-laborales/useDatosLaboralesCollections.js";
@@ -39,6 +45,28 @@ const OPCIONES_TIPO_ALTA = [
     nombre: "HLg · historial_laboral_grupos (con vínculo a cargo)",
   },
 ];
+const STORAGE_KEY_MODO_AVANZADO = "rrhh_datos_laborales_modo_avanzado_v1";
+
+function toDateSafe(value) {
+  const d = new Date(String(value || ""));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatDateTime(value) {
+  const d = toDateSafe(value);
+  if (!d) return "—";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = String(d.getFullYear());
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
+}
+
+function isVigenteByFecha(row) {
+  const hasta = String(row?.fecha_hasta || row?.fecha_fin || "").trim();
+  return !hasta;
+}
 
 function labelPersonaOpcion(p) {
   if (!p || !p.id) return "";
@@ -46,6 +74,30 @@ function labelPersonaOpcion(p) {
     return `${String(p.apellido || "").trim()} ${String(p.nombre || "").trim()} (${p.id})`.trim();
   }
   return String(p.id);
+}
+
+function labelPersonaOpcionAvanzada(p) {
+  if (!p || !p.id) return "";
+  const apellido = String(p.apellido || "").trim();
+  const nombre = String(p.nombre || "").trim();
+  const base = [apellido, nombre].filter(Boolean).join(" ").trim();
+  return base ? `${base} | ${p.id}` : String(p.id);
+}
+
+function buildPersonaSearchOption(p) {
+  const id = String(p?.id || "").trim();
+  if (!id) return null;
+  const nombre = String(p?.nombre || "").trim();
+  const apellido = String(p?.apellido || "").trim();
+  const dni = String(p?.dni || "").trim();
+  const nombreCompleto = [nombre, apellido].filter(Boolean).join(" ").trim();
+  const label = nombreCompleto ? `${nombreCompleto} · DNI: ${dni || "—"}` : id;
+  return {
+    value: id,
+    label,
+    selectedLabel: label,
+    secondary: id,
+  };
 }
 
 export default function DatosLaborales() {
@@ -77,6 +129,11 @@ export default function DatosLaborales() {
   const [grupoVistaId, setGrupoVistaId] = useState("");
   const [grupoVistaFecha, setGrupoVistaFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [formData, setFormData] = useState(() => ({ ...INITIAL_FORM_DATA_LABORAL }));
+  const [vistaTab, setVistaTab] = useState("actual");
+  const [modoAvanzado, setModoAvanzado] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(STORAGE_KEY_MODO_AVANZADO) === "1";
+  });
 
   const hlcRows = rowsByCollection.historial_laboral_cargos ?? EMPTY_ROWS;
   const hldRows = rowsByCollection.historial_laboral_datos ?? EMPTY_ROWS;
@@ -104,6 +161,10 @@ export default function DatosLaborales() {
   const opcionesRegimenHorario = rowsByCollection.cfg_regimen_horario || [];
   const opcionesCentroCosto = rowsByCollection.cfg_centro_costo || [];
   const opcionesDiaSemana = rowsByCollection.cfg_dia_semana || [];
+  const opcionesPersonasSearch = useMemo(
+    () => (opcionesPersonas || []).map(buildPersonaSearchOption).filter(Boolean),
+    [opcionesPersonas],
+  );
   const registrosPorTipo = rowsByCollection[tipoAlta] ?? EMPTY_ROWS;
   const registrosPorTipoFiltrados = useMemo(() => {
     const pid = String(formData.persona_id || "").trim();
@@ -145,6 +206,56 @@ export default function DatosLaborales() {
       idxHlc,
     });
   }, [registrosPorTipoFiltrados, tipoAlta, idxPersonas, idxFunciones, idxGrupos, idxHld, idxHlc]);
+  const snapshotActual = useMemo(() => {
+    const personaId = String(formData.persona_id || "").trim();
+    if (!personaId) {
+      return {
+        hlcVigente: null,
+        hlgVigentes: [],
+        hldVigente: null,
+        lastUpdate: null,
+        alertas: [],
+      };
+    }
+    const hlcPersona = hlcRows.filter((r) => String(r.persona_id || "") === personaId);
+    const hlgPersona = hlgRows.filter((r) => String(r.persona_id || "") === personaId);
+    const hldPersona = hldRows.filter((r) => String(r.persona_id || "") === personaId);
+    const hlcVigentes = hlcPersona.filter(isVigenteByFecha);
+    const hlgVigentes = hlgPersona.filter(isVigenteByFecha);
+    const hldVigentes = hldPersona.filter(isVigenteByFecha);
+    const hlcVigente = hlcVigentes[0] || null;
+    const hldVigente = hldVigentes[0] || null;
+    const merged = [...hlcPersona, ...hlgPersona, ...hldPersona];
+    const lastUpdate = merged
+      .map((r) => r.actualizado_en || r.creado_en || null)
+      .filter(Boolean)
+      .sort((a, b) => String(b).localeCompare(String(a)))[0] || null;
+    const alertas = [];
+    if (hlcVigentes.length > 1) alertas.push("Más de un HLC vigente");
+    if (!hlcVigente && hlgVigentes.length > 0) alertas.push("HLG vigente sin HLC vigente");
+    if (!hldVigente && hlgVigentes.length > 0) alertas.push("HLG vigente sin HLD vigente");
+    const hlcLabel = hlcVigente
+      ? `${labelDesdeIndice(idxFunciones, hlcVigente.cargo_funcional_id)} · ${labelDesdeIndice(
+          idxEfectores,
+          hlcVigente.efector_cumplimiento_id,
+        )}`
+      : "Sin vigencia";
+    const hlgLabel =
+      hlgVigentes.length === 0
+        ? "Sin vigencia"
+        : hlgVigentes
+            .slice(0, 2)
+            .map((r) => {
+              const grupo = labelDesdeIndice(idxGrupos, r.grupo_de_trabajo_id);
+              const funcion = labelDesdeIndice(idxFunciones, r.funcion_real_id);
+              return `${grupo} · ${funcion}`;
+            })
+            .join(" | ");
+    const hldLabel = hldVigente
+      ? `Vigente desde ${String(hldVigente.fecha_desde || hldVigente.fecha_inicio || "—")}`
+      : "Sin vigencia";
+    return { hlcVigente, hlgVigentes, hldVigente, lastUpdate, alertas, hlcLabel, hlgLabel, hldLabel };
+  }, [formData.persona_id, hlcRows, hlgRows, hldRows, idxFunciones, idxEfectores, idxGrupos]);
   const timelineItemsBase = useMemo(
     () =>
       buildTimelineItemsByPersona({
@@ -250,6 +361,11 @@ export default function DatosLaborales() {
     const first = opcionesGrupos[0];
     if (first && first.id) setGrupoVistaId(String(first.id));
   }, [grupoVistaId, opcionesGrupos]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(STORAGE_KEY_MODO_AVANZADO, modoAvanzado ? "1" : "0");
+  }, [modoAvanzado]);
 
   function onChangeField(key, value) {
     setFormData((prev) => updateFormDataField(prev, key, value));
@@ -381,18 +497,19 @@ export default function DatosLaborales() {
         r = await guardarRegistroLaboral("historial_laboral_grupos", payloadHlg);
         warnings = warnings.concat(normalizarWarnings(r && r.warnings));
       }
-      const baseOk = `Registro guardado correctamente: ${r.id || "(sin id)"}`;
+      const baseOk = `Guardado correctamente: ${r.id || "(sin id)"}`;
       if (warnings.length === 0) {
         setSaveMsg(baseOk);
       } else {
         const detalleWarnings = warnings
           .map((w) => (w.code ? `${w.code}: ${w.message}` : w.message))
           .join(" | ");
-        setSaveMsg(`${baseOk} | Advertencias: ${detalleWarnings}`);
+        setSaveMsg(`Guardado con advertencias: ${detalleWarnings}`);
       }
       await cargarTodo();
     } catch (err) {
-      setSaveMsg(err instanceof Error ? err.message : "No se pudo guardar el registro.");
+      const msg = err instanceof Error ? err.message : "Error desconocido.";
+      setSaveMsg(`No se pudo guardar: ${msg}`);
     } finally {
       setSaving(false);
     }
@@ -404,372 +521,234 @@ export default function DatosLaborales() {
         <Card className="px-4 py-5 md:px-6">
           <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Datos laborales</h1>
           <p className="mt-2 text-sm text-slate-600">
-            Vista de referencia del contrato vigente en V2 para las colecciones y campos del modulo
-            laboral. Esta pantalla consulta Firestore en vivo.
+            Pantalla operativa RRHH para gestionar vigencias laborales por persona con datos en vivo.
           </p>
           <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3 text-xs text-slate-600">
-            <p><strong>Objetivo:</strong> registrar y auditar historial laboral por persona_id.</p>
-            <p><strong>Resultado:</strong> HLc/HLd/HLg consistentes para operación y trazabilidad.</p>
-            <p><strong>Cuándo usar:</strong> gestión RRHH de altas, cambios, cierres y controles laborales.</p>
+            <p><strong>Objetivo:</strong> registrar y revisar historial laboral por persona.</p>
+            <p><strong>Resultado:</strong> cargos y asignaciones vigentes e históricos con trazabilidad.</p>
+            <p><strong>Cuándo usar:</strong> altas, cambios, cierres y control de consistencia laboral.</p>
           </div>
         </Card>
 
         <Card className="px-4 py-4 md:px-5">
-          <p className="text-base font-semibold text-slate-900">Guía rápida de niveles (uso recomendado)</p>
-          <div className="mt-2 space-y-2 text-sm text-slate-700">
-            <p>
-              <span className="font-semibold">Nivel 1 · Cargo (HLc):</span> define el cargo principal del usuario
-              (efectores, estado, escalafón, agrupamiento, cargo funcional y carga total).
-            </p>
-            <p>
-              <span className="font-semibold">Nivel 2 · Grupo de trabajo (HLg):</span> define la asignación
-              operativa por grupo/burbuja (cargo base, rol, función real, nivel jerárquico y vigencia).
-            </p>
-            <p>
-              <span className="font-semibold">Detalle técnico (HLd):</span> se gestiona en segundo plano para
-              sostener trazabilidad técnica entre cargo y asignaciones por grupo.
-            </p>
-            <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
-              Orden sugerido de carga: HLc {"->"} HLg. La app crea/actualiza HLd cuando corresponde, sin
-              perder trazabilidad.
-            </p>
+          <PersonaSearchSelect
+            personaId={formData.persona_id}
+            setPersonaId={(value) => onChangeField("persona_id", value)}
+            personaOptions={opcionesPersonasSearch}
+            modoAvanzado={modoAvanzado}
+          />
+        </Card>
+
+        <Card className="px-4 py-4 md:px-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-base font-semibold text-slate-900">Resumen actual</p>
+            <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1">
+              {[
+                ["actual", "Actual"],
+                ["historico", "Histórico"],
+                ["auditoria", "Auditoría"],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setVistaTab(id)}
+                  className={`rounded-md px-3 py-1.5 text-sm font-semibold ${
+                    vistaTab === id
+                      ? "bg-blue-600 text-white focus-visible:ring-2 focus-visible:ring-blue-300"
+                      : "text-slate-700 hover:bg-slate-100 active:bg-slate-200 focus-visible:ring-2 focus-visible:ring-blue-300"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cargo vigente</p>
+              <p className="mt-1 text-base font-semibold text-slate-900">
+                {snapshotActual.hlcLabel}
+              </p>
+            </div>
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Asignaciones vigentes
+              </p>
+              <p className="mt-1 text-base font-semibold text-slate-900">{snapshotActual.hlgLabel}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Vínculo técnico</p>
+              <p className="mt-1 text-sm font-medium text-slate-700">
+                {snapshotActual.hldLabel}
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Última actualización</p>
+              <p className="mt-1 text-sm font-medium text-slate-700">
+                {formatDateTime(snapshotActual.lastUpdate)}
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+            <p className="text-sm font-semibold text-slate-900">Consistencia</p>
+            {snapshotActual.alertas.length === 0 ? (
+              <div className="mt-2">
+                <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                  OK · Sin alertas críticas
+                </span>
+              </div>
+            ) : (
+              <ul className="mt-2 flex flex-wrap gap-2 text-sm text-amber-800">
+                {snapshotActual.alertas.map((a) => (
+                  <li
+                    key={a}
+                    className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800"
+                  >
+                    Advertencia · {a}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setTipoAlta("historial_laboral_cargos");
+                setVistaTab("actual");
+              }}
+              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 active:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-300"
+            >
+              Nuevo ciclo HLC
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTipoAlta("historial_laboral_grupos");
+                setVistaTab("actual");
+              }}
+              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 active:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-300"
+            >
+              Nuevo ciclo HLG
+            </button>
+            <button
+              type="button"
+              onClick={() => setVistaTab("historico")}
+              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 active:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-300"
+            >
+              Ver histórico completo
+            </button>
           </div>
         </Card>
 
+        {vistaTab === "actual" && (
+        <>
         <Card className="px-4 py-4 md:px-5">
           <p className="text-base font-semibold text-slate-900">
-            Alta de Datos Laborales (BD real, sin datos ficticios)
+            Carga y edición laboral
           </p>
           <p className="mt-1 text-sm text-slate-600">
-            Completá la información por nivel (`HLc` o `HLg`). Los campos seleccionables se cargan
-            desde colecciones reales de Firestore.
+            Completá la información por nivel de registro. Los campos seleccionables se cargan desde
+            catálogos y colecciones operativas.
           </p>
-            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Criterio operativo: <span className="font-semibold">cargo_funcional_id</span> representa la
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Criterio operativo: <span className="font-semibold">Cargo funcional</span> representa la
               función por normativa/designación formal, mientras que{" "}
-              <span className="font-semibold">funcion_real_id</span> representa la función efectivamente
-              ejercida. Pueden diferir temporalmente sin que eso implique error.
-            </p>
-          <form className="mt-4 space-y-4" onSubmit={onGuardarRegistro}>
-            <LabeledSelect
-              label={
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Nivel de registro
+              <span className="font-semibold">Función real</span> representa la función efectivamente
+              ejercida.
+              {modoAvanzado ? (
+                <span>
+                  {" "}Campos técnicos: <span className="font-semibold">cargo_funcional_id</span> y{" "}
+                  <span className="font-semibold">funcion_real_id</span>.
                 </span>
-              }
-              value={tipoAlta}
-              onValueChange={(v) => setTipoAlta(v)}
-              options={OPCIONES_TIPO_ALTA}
-              placeholder="Elegir nivel..."
+              ) : null}
+            </p>
+            <button
+              type="button"
+              onClick={() => setModoAvanzado((prev) => !prev)}
+              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 touch-manipulation active:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-300"
+            >
+              Modo: {modoAvanzado ? "Avanzado" : "Estándar"}
+            </button>
+          </div>
+          <form className="mt-4 space-y-4" onSubmit={onGuardarRegistro}>
+            <LaboralFormCabeceraFields
+              tipoAlta={tipoAlta}
+              setTipoAlta={setTipoAlta}
+              opcionesTipoAlta={OPCIONES_TIPO_ALTA}
+              modoAvanzado={modoAvanzado}
+              formData={formData}
+              onChangeField={onChangeField}
+              opcionesGrupos={opcionesGrupos}
+              ayudaCampos={AYUDA_CAMPOS}
             />
 
-            <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={modoEdicion}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setModoEdicion(checked);
-                    setRegistroEditId("");
-                    if (!checked) return;
-                    const first = registrosPorTipoFiltrados[0];
-                    if (first && first.id) {
-                      setRegistroEditId(String(first.id));
-                      cargarRegistroEnFormulario(first);
-                    }
-                  }}
-                />
-                Editar registro existente
-              </label>
-              {modoEdicion && !formData.persona_id && (
-                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  Seleccioná primero un <span className="font-semibold">persona_id</span> para listar registros.
-                </p>
-              )}
-              {modoEdicion && (
-                <LabeledSelect
-                  label="Registro a editar"
-                  value={registroEditId}
-                  onValueChange={(id) => {
-                    setRegistroEditId(id);
-                    const target = registrosPorTipoFiltrados.find((x) => String(x.id) === String(id));
-                    if (target) cargarRegistroEnFormulario(target);
-                  }}
-                  options={registrosEdicionDetallados}
-                  placeholder="Seleccionar registro..."
-                />
-              )}
-            </div>
-
-            <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-2">
-              <LabeledSelect
-                label="persona_id *"
-                value={formData.persona_id}
-                onValueChange={(v) => onChangeField("persona_id", v)}
-                options={opcionesPersonas}
-                placeholder="Seleccionar persona..."
-                helpText={AYUDA_CAMPOS.persona_id}
-                optionLabel={labelPersonaOpcion}
-              />
-
-              {tipoAlta === "historial_laboral_grupos" && (
-                <LabeledSelect
-                  label="grupo_de_trabajo_id *"
-                  value={formData.grupo_de_trabajo_id}
-                  onValueChange={(v) => onChangeField("grupo_de_trabajo_id", v)}
-                  options={opcionesGrupos}
-                  placeholder="Seleccionar grupo..."
-                  helpText={AYUDA_CAMPOS.grupo_de_trabajo_id}
-                />
-              )}
-            </div>
+            <LaboralFormModoEdicionFields
+              modoEdicion={modoEdicion}
+              modoAvanzado={modoAvanzado}
+              formData={formData}
+              registroEditId={registroEditId}
+              setModoEdicion={setModoEdicion}
+              setRegistroEditId={setRegistroEditId}
+              registrosPorTipoFiltrados={registrosPorTipoFiltrados}
+              registrosEdicionDetallados={registrosEdicionDetallados}
+              cargarRegistroEnFormulario={cargarRegistroEnFormulario}
+            />
 
             {tipoAlta === "historial_laboral_cargos" && (
-              <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
-                <LabeledSelect
-                  label="efector_designacion_id *"
-                  value={formData.efector_designacion_id}
-                  onValueChange={(v) => onChangeField("efector_designacion_id", v)}
-                  options={opcionesEfectores}
-                  placeholder="Seleccionar efector..."
-                  helpText={AYUDA_CAMPOS.efector_designacion_id}
-                />
-                <LabeledSelect
-                  label="efector_cumplimiento_id *"
-                  value={formData.efector_cumplimiento_id}
-                  onValueChange={(v) => onChangeField("efector_cumplimiento_id", v)}
-                  options={opcionesEfectores}
-                  placeholder="Seleccionar efector..."
-                  helpText={AYUDA_CAMPOS.efector_cumplimiento_id}
-                />
-                <LabeledSelect
-                  label="rol_id"
-                  value={formData.rol_id}
-                  onValueChange={(v) => onChangeField("rol_id", v)}
-                  options={opcionesRol}
-                  placeholder="Seleccionar rol..."
-                  helpText={AYUDA_CAMPOS.rol_id}
-                />
-                <LabeledSelect
-                  label="estado_asignacion_id"
-                  value={formData.estado_asignacion_id}
-                  onValueChange={(v) => onChangeField("estado_asignacion_id", v)}
-                  options={opcionesEstadoAsignacion}
-                  placeholder="Seleccionar estado..."
-                  helpText={AYUDA_CAMPOS.estado_asignacion_id}
-                />
-                <LabeledSelect
-                  label="escalafon_id"
-                  value={formData.escalafon_id}
-                  onValueChange={(v) => onChangeField("escalafon_id", v)}
-                  options={opcionesEscalafon}
-                  placeholder="Seleccionar escalafón..."
-                  helpText={AYUDA_CAMPOS.escalafon_id}
-                />
-                <LabeledSelect
-                  label="agrupamiento_id"
-                  value={formData.agrupamiento_id}
-                  onValueChange={(v) => onChangeField("agrupamiento_id", v)}
-                  options={opcionesAgrupamiento}
-                  placeholder="Seleccionar agrupamiento..."
-                  helpText={AYUDA_CAMPOS.agrupamiento_id}
-                />
-                <LabeledSelect
-                  label="tipo_vinculo_id"
-                  value={formData.tipo_vinculo_id}
-                  onValueChange={(v) => onChangeField("tipo_vinculo_id", v)}
-                  options={opcionesTipoVinculo}
-                  placeholder="Seleccionar tipo de vínculo..."
-                  helpText={AYUDA_CAMPOS.tipo_vinculo_id}
-                />
-                <LabeledSelect
-                  label="categoria_id"
-                  value={formData.categoria_id}
-                  onValueChange={(v) => onChangeField("categoria_id", v)}
-                  options={opcionesCategorias}
-                  placeholder="Seleccionar categoría..."
-                  helpText={AYUDA_CAMPOS.categoria_id}
-                />
-                <LabeledSelect
-                  label="cargo_funcional_id"
-                  value={formData.cargo_funcional_id}
-                  onValueChange={(v) => onChangeField("cargo_funcional_id", v)}
-                  options={opcionesFuncion}
-                  placeholder="Seleccionar cargo funcional..."
-                  helpText={AYUDA_CAMPOS.cargo_funcional_id}
-                />
-                <LabeledSelect
-                  label="modalidad_jornada_id"
-                  value={formData.modalidad_jornada_id}
-                  onValueChange={(v) => onChangeField("modalidad_jornada_id", v)}
-                  options={opcionesModalidadJornada}
-                  placeholder="Seleccionar modalidad..."
-                  helpText={AYUDA_CAMPOS.modalidad_jornada_id}
-                />
-                <LabeledSelect
-                  label="referencia normativa · tipo_acto_id *"
-                  value={formData.referencia_tipo_acto_id}
-                  onValueChange={(v) => onChangeField("referencia_tipo_acto_id", v)}
-                  options={opcionesTipoActo}
-                  placeholder="Seleccionar tipo de acto..."
-                  helpText={AYUDA_CAMPOS.referencias_normativa_designacion}
-                />
-                <LabeledTextField
-                  label="referencia normativa · número *"
-                  value={formData.referencia_numero}
-                  onValueChange={(v) => onChangeField("referencia_numero", v)}
-                />
-                <LabeledTextField
-                  label="referencia normativa · fecha *"
-                  type="date"
-                  value={formData.referencia_fecha}
-                  onValueChange={(v) => onChangeField("referencia_fecha", v)}
-                />
-                <LabeledTextField
-                  label="referencia normativa · detalle"
-                  value={formData.referencia_detalle}
-                  onValueChange={(v) => onChangeField("referencia_detalle", v)}
-                />
-                <LabeledTextField
-                  label="carga_horaria_total"
-                  value={formData.carga_horaria_total}
-                  onValueChange={(v) => onChangeField("carga_horaria_total", v)}
-                  placeholder="36"
-                  inputMode="decimal"
-                  helpText={AYUDA_CAMPOS.carga_horaria_total}
-                />
-              </div>
+              <LaboralFormHlcFields
+                modoAvanzado={modoAvanzado}
+                formData={formData}
+                onChangeField={onChangeField}
+                opcionesEfectores={opcionesEfectores}
+                opcionesRol={opcionesRol}
+                opcionesEstadoAsignacion={opcionesEstadoAsignacion}
+                opcionesEscalafon={opcionesEscalafon}
+                opcionesAgrupamiento={opcionesAgrupamiento}
+                opcionesTipoVinculo={opcionesTipoVinculo}
+                opcionesCategorias={opcionesCategorias}
+                opcionesFuncion={opcionesFuncion}
+                opcionesModalidadJornada={opcionesModalidadJornada}
+                opcionesTipoActo={opcionesTipoActo}
+                ayudaCampos={AYUDA_CAMPOS}
+              />
             )}
 
             {tipoAlta === "historial_laboral_grupos" && (
-              <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
-                <LabeledSelect
-                  label="cargo_id *"
-                  value={formData.cargo_id}
-                  onValueChange={(v) => onChangeField("cargo_id", v)}
-                  options={opcionesCargoHlcDetalladas}
-                  placeholder="Seleccionar cargo HLc..."
-                  helpText={AYUDA_CAMPOS.cargo_id}
-                />
-                <LabeledSelect
-                  label="regimen_horario_id"
-                  value={formData.regimen_horario_id}
-                  onValueChange={(v) => onChangeField("regimen_horario_id", v)}
-                  options={opcionesRegimenHorario}
-                  placeholder="Seleccionar régimen..."
-                  helpText={AYUDA_CAMPOS.regimen_horario_id}
-                />
-                <LabeledSelect
-                  label="centro_costo_id"
-                  value={formData.centro_costo_id}
-                  onValueChange={(v) => onChangeField("centro_costo_id", v)}
-                  options={opcionesCentroCosto}
-                  placeholder="Seleccionar centro de costo..."
-                  helpText={AYUDA_CAMPOS.centro_costo_id}
-                />
-                <LabeledSelect
-                  label="funcion_real_id"
-                  value={formData.funcion_real_id}
-                  onValueChange={(v) => onChangeField("funcion_real_id", v)}
-                  options={opcionesFuncion}
-                  placeholder="Seleccionar función..."
-                  helpText={AYUDA_CAMPOS.funcion_real_id}
-                />
-                <LabeledTextField
-                  label="nivel_jerarquico"
-                  value={formData.nivel_jerarquico}
-                  onValueChange={(v) => onChangeField("nivel_jerarquico", v)}
-                  placeholder="1..99"
-                  inputMode="numeric"
-                  helpText={AYUDA_CAMPOS.nivel_jerarquico}
-                />
-                <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <label className="block text-sm font-medium text-slate-700">carga_por_dia_semana</label>
-                    <button
-                      type="button"
-                      onClick={onAddCargaRow}
-                      className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 active:bg-slate-50"
-                    >
-                      Agregar día
-                    </button>
-                  </div>
-                  <p className="mb-2 text-xs text-slate-500">{AYUDA_CAMPOS.carga_por_dia_semana}</p>
-                  <div className="space-y-2">
-                    {cargaPorDiaRows.map((row, idx) => (
-                      <div key={`carga-dia-${idx}`} className="grid gap-2 md:grid-cols-[1fr_140px_auto]">
-                        <LabeledSelect
-                          bare
-                          value={row.dia_semana_id}
-                          onValueChange={(v) => onChangeCargaRow(idx, "dia_semana_id", v)}
-                          options={opcionesDiaSemana}
-                          placeholder="Seleccionar día..."
-                        />
-                        <LabeledTextField
-                          bare
-                          value={row.horas}
-                          onValueChange={(v) => onChangeCargaRow(idx, "horas", v)}
-                          placeholder="Horas (0..24)"
-                          inputMode="decimal"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => onRemoveCargaRow(idx)}
-                          className="h-11 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-700 touch-manipulation active:bg-rose-100"
-                        >
-                          Quitar
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <LaboralFormHlgFields
+                modoAvanzado={modoAvanzado}
+                formData={formData}
+                onChangeField={onChangeField}
+                opcionesCargoHlcDetalladas={opcionesCargoHlcDetalladas}
+                opcionesRegimenHorario={opcionesRegimenHorario}
+                opcionesCentroCosto={opcionesCentroCosto}
+                opcionesFuncion={opcionesFuncion}
+                cargaPorDiaRows={cargaPorDiaRows}
+                onAddCargaRow={onAddCargaRow}
+                onChangeCargaRow={onChangeCargaRow}
+                onRemoveCargaRow={onRemoveCargaRow}
+                opcionesDiaSemana={opcionesDiaSemana}
+                ayudaCampos={AYUDA_CAMPOS}
+              />
             )}
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <LabeledTextField
-                label={
-                  tipoAlta === "historial_laboral_cargos"
-                    ? "fecha_desde (cargo)"
-                    : "fecha_desde (asignación en grupo)"
-                }
-                type="date"
-                value={formData.fecha_desde}
-                onValueChange={(v) => onChangeField("fecha_desde", v)}
-                helpText={AYUDA_CAMPOS.fecha_desde}
-              />
-              <LabeledTextField
-                label={
-                  tipoAlta === "historial_laboral_cargos"
-                    ? "fecha_hasta (cargo)"
-                    : "fecha_hasta (asignación en grupo)"
-                }
-                type="date"
-                value={formData.fecha_hasta}
-                onValueChange={(v) => onChangeField("fecha_hasta", v)}
-                min={formData.fecha_desde || undefined}
-                helpText={AYUDA_CAMPOS.fecha_hasta}
-              />
-              {tipoAlta === "historial_laboral_cargos" && (
-                <LabeledSelect
-                  label="causal_fin_asignacion_id"
-                  value={formData.causal_fin_asignacion_id}
-                  onValueChange={(v) => onChangeField("causal_fin_asignacion_id", v)}
-                  options={opcionesCausalFinAsignacion}
-                  placeholder="Seleccionar causal..."
-                  helpText={AYUDA_CAMPOS.causal_fin_asignacion_id}
-                />
-              )}
-            </div>
+            <LaboralFormVigenciaFields
+              tipoAlta={tipoAlta}
+              modoAvanzado={modoAvanzado}
+              formData={formData}
+              onChangeField={onChangeField}
+              opcionesCausalFinAsignacion={opcionesCausalFinAsignacion}
+              ayudaCampos={AYUDA_CAMPOS}
+            />
 
             {saveMsg && (
               <p
                 className={`rounded-lg px-3 py-2 text-sm ${
-                  saveMsg.startsWith("Registro guardado")
-                    ? saveMsg.includes("Advertencias:")
+                  saveMsg.startsWith("Guardado correctamente")
+                    ? "bg-emerald-50 text-emerald-700"
+                    : saveMsg.startsWith("Guardado con advertencias:")
                       ? "bg-amber-50 text-amber-800"
-                      : "bg-emerald-50 text-emerald-700"
                     : "bg-rose-50 text-rose-700"
                 }`}
               >
@@ -783,12 +762,15 @@ export default function DatosLaborales() {
                 disabled={saving}
                 className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60"
               >
-                {saving ? "Guardando..." : modoEdicion ? "Guardar cambios en BD" : "Guardar en BD"}
+                {saving ? "Guardando..." : modoEdicion ? "Guardar cambios" : "Guardar registro"}
               </button>
             </div>
           </form>
         </Card>
+        </>
+        )}
 
+        {(vistaTab === "actual" || vistaTab === "historico") && (
         <IntegridadReferencialCard
           totalAlertasIntegridad={totalAlertasIntegridad}
           hldSinCargo={hldSinCargo}
@@ -798,7 +780,9 @@ export default function DatosLaborales() {
           hlcConEfectorDesignacionInvalido={hlcConEfectorDesignacionInvalido}
           hlcConEfectorCumplimientoInvalido={hlcConEfectorCumplimientoInvalido}
         />
+        )}
 
+        {vistaTab === "historico" && (
         <TimelineLaboralPersonaCard
           opcionesPersonas={opcionesPersonas}
           personaId={timelinePersonaId}
@@ -831,7 +815,9 @@ export default function DatosLaborales() {
           totalBase={timelineItemsBase.length}
           onLimpiarFiltros={limpiarFiltrosTimeline}
         />
+        )}
 
+        {vistaTab === "historico" && (
         <VistaOperativaGrupoCard
           grupos={opcionesGrupos}
           grupoId={grupoVistaId}
@@ -840,7 +826,9 @@ export default function DatosLaborales() {
           onFechaCorteChange={setGrupoVistaFecha}
           items={vistaGrupoItems}
         />
+        )}
 
+        {vistaTab === "auditoria" && (
         <ColeccionesLaboralesCards
           loadingByCollection={loadingByCollection}
           progressByCollection={progressByCollection}
@@ -848,7 +836,9 @@ export default function DatosLaborales() {
           errorByCollection={errorByCollection}
           rowsByCollection={rowsByCollection}
         />
+        )}
 
+        {vistaTab === "auditoria" && (
         <FasesLaboralesTables
           loadingByCollection={loadingByCollection}
           errorByCollection={errorByCollection}
@@ -861,6 +851,7 @@ export default function DatosLaborales() {
           idxHld={idxHld}
           labelDesdeIndice={labelDesdeIndice}
         />
+        )}
       </div>
     </div>
   );
