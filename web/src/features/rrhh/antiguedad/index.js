@@ -12,3 +12,4 @@ export { construirTextoResumen } from "./resumenTexto.js";
 export { MarcadorInline } from "./MarcadorInline.jsx";
 export { TarjetaAmdPaso } from "./TarjetaAmdPaso.jsx";
 export { TimelineHlcFusionados } from "./TimelineHlcFusionados.jsx";
+export { AntiguedadResultadoCard } from "./AntiguedadResultadoCard.jsx";
