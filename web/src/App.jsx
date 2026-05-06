@@ -10,6 +10,7 @@ import { GateSpinner, ProtectedRoute, PublicRoute, RoleGuard } from "./features/
 import MvpAccessGate from "./features/shell/MvpAccessGate.jsx";
 import AltaAgenteRRHH from "./features/rrhh/AltaAgenteRRHH.jsx";
 import DatosLaborales from "./pages/DatosLaborales.jsx";
+import Antiguedad from "./pages/Antiguedad.jsx";
 import DatosPersonales from "./pages/DatosPersonales.jsx";
 import EstadoModulos from "./pages/EstadoModulos.jsx";
 import GrillaOperativa from "./pages/GrillaOperativa.jsx";
@@ -90,6 +91,7 @@ export default function App() {
             <Route element={<RoleGuard />}>
               <Route path="sistemas-web" element={<SistemasWeb />} />
               <Route path="rrhh/alta" element={<AltaAgenteRRHH />} />
+              <Route path="rrhh/antiguedad" element={<Antiguedad />} />
               <Route path="rrhh/notificaciones-datos-personales" element={<NotificacionesEventosDatosPersonalesRRHH />} />
               <Route path="rrhh/seguimiento-enrolamiento" element={<SeguimientoEnrolamientoUsuariosRRHH />} />
             </Route>
@@ -105,6 +107,7 @@ export default function App() {
         <Route path="/pantallas" element={<LegacyNavigate to="/portal/pantallas" />} />
         <Route path="/configuracion" element={<LegacyNavigate to="/portal/configuracion" />} />
         <Route path="/rrhh/alta" element={<LegacyNavigate to="/portal/rrhh/alta" />} />
+        <Route path="/rrhh/antiguedad" element={<LegacyNavigate to="/portal/rrhh/antiguedad" />} />
         <Route
           path="/rrhh/notificaciones-datos-personales"
           element={<LegacyNavigate to="/portal/rrhh/notificaciones-datos-personales" />}

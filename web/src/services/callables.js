@@ -32,6 +32,16 @@ export function callRrhhReiniciarVinculacionCuenta(data) {
   return httpsCallable(getFunctionsV2(), "rrhhReiniciarVinculacionCuenta")(data);
 }
 
+/** RRHH: calcula antigüedad por persona y fecha de corte (default hoy). */
+export function callRrhhCalcularAntiguedadPersona(data) {
+  return httpsCallable(getFunctionsV2(), "rrhhCalcularAntiguedadPersona")(data);
+}
+
+/** RRHH: registra antigüedad externa reconocida (licencias) con fecha de impacto. */
+export function callRrhhGuardarAntiguedadExternaPersona(data) {
+  return httpsCallable(getFunctionsV2(), "rrhhGuardarAntiguedadExternaPersona")(data);
+}
+
 /** Primer acceso: DNI + email + PIN 6 (no requiere sesión previa del agente en Auth). */
 export function callRegistroPrimerAcceso(data) {
   return httpsCallable(getFunctionsV2(), "registrarPrimerAcceso")(data);

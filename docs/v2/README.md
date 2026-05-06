@@ -19,6 +19,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`UNIFICACION_OTRA_PC_Y_TICKET.md`](./UNIFICACION_OTRA_PC_Y_TICKET.md) | Fusión otra PC + Ticket — pasos git, pautas, compatibilidad, checklist |
 | [`CUESTIONES_ROLES_MENUS_ARQUITECTURA_V2.md`](./CUESTIONES_ROLES_MENUS_ARQUITECTURA_V2.md) | Roles (`cfg_rol`), menús, módulo “Jefe”, master, UX/mobile — orientación y pendientes |
 | [`CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md`](./CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md) | Ticket: solicitud iniciada por **jefe** para **subordinado** (configurable por artículo, auditoría) |
+| [`DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md`](./DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md) | Criterios V2 de antigüedad + LAO (Art. 40 y Art. 46), no retroactividad, proporcional y base para Ticket/Solicitudes |
 | [`CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md`](./CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md) | Estados agente: **activo laboral**, **inactivo laboral (baja)**, **deshabilitado**; RRHH; reactivación + login |
 | [`CURSOR_RULES_BORRADOR_V2.md`](./CURSOR_RULES_BORRADOR_V2.md) | **Borrador** reglas Cursor/convenciones de código V2 (referencia; basado en buenas prácticas de la V1 + `docs/v2`) |
 | [`RULEBOOK_V2.md`](./RULEBOOK_V2.md) | Convenciones transversales (IDs, estados, seguridad) — v0 |

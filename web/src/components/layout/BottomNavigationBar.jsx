@@ -34,6 +34,16 @@ const ICONS_BY_ID = {
       strokeWidth={1.5}
     />
   ),
+  antiguedad: () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.75 12h16.5M12 3.75v16.5m7.5-12-3 3m3-3-3-3m-9 15 3-3m-3 3 3 3"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
   /** Vista tabular / read-model (distinta de carga en Laboral). */
   grilla: () => (
     <path

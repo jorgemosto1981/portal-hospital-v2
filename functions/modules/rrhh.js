@@ -9,14 +9,56 @@ const {
   CFG_ONB,
   CFG_EPD_BORR,
   CFG_PEND_REG,
-  COL_GRUPOS_TRABAJO,
   COL_PERSONAS,
   COL_USUARIOS_CUENTA,
   ESTADO_PENDIENTE_ONBOARDING,
 } = require("./shared/constants");
 const { assertRrhh, normalizeDni } = require("./shared/helpers");
+const { calcularAntiguedad } = require("./shared/antiguedadCalculator");
 
 const DDJJ_ESTADO_NO_INICIADA_ID = "CFG_DDJJ_01_NO_INICIADA";
+
+function parseFechaCorteOrToday(rawFechaCorte) {
+  if (typeof rawFechaCorte === "string" && rawFechaCorte.trim()) {
+    return rawFechaCorte.trim();
+  }
+  const now = new Date();
+  const yyyy = now.getUTCFullYear();
+  const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(now.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function resolveExternosDesdePersona(persona) {
+  if (!persona || typeof persona !== "object") return 0;
+  const recArrayCandidates = [
+    persona.antiguedad_reconocimientos,
+    persona.antiguedad_externa_reconocimientos,
+    persona.reconocimientos_antiguedad,
+  ];
+  for (const candidate of recArrayCandidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  const daysCandidates = [
+    persona.antiguedad_reconocida_dias,
+    persona.antiguedad_externa_dias,
+    persona.dias_antiguedad_reconocida,
+  ];
+  for (const candidate of daysCandidates) {
+    const n = Number(candidate);
+    if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+  }
+  return 0;
+}
+
+function toNonNegativeInt(value, fieldName) {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n) || n < 0) {
+    throw new HttpsError("invalid-argument", `${fieldName} debe ser numérico y mayor o igual a 0.`);
+  }
+  return Math.floor(n);
+}
 
 const rrhhAltaAgente = onCall(async (request) => {
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
@@ -24,21 +66,9 @@ const rrhhAltaAgente = onCall(async (request) => {
   const dni = normalizeDni(d.dni);
   const nombre = typeof d.nombre === "string" ? d.nombre.trim() : "";
   const apellido = typeof d.apellido === "string" ? d.apellido.trim() : "";
-  const grupoId = typeof d.grupo_de_trabajo_id === "string" ? d.grupo_de_trabajo_id.trim() : "";
-  const njRaw = d.nivel_jerarquico;
-  const nivelJerarquico = typeof njRaw === "number" ? njRaw : parseInt(String(njRaw), 10);
 
   if (!/^\d{6,12}$/.test(dni)) throw new HttpsError("invalid-argument", "DNI inválido (usá solo dígitos, 6–12).");
   if (!nombre || !apellido) throw new HttpsError("invalid-argument", "Nombre y apellido son obligatorios.");
-  if (!grupoId) throw new HttpsError("invalid-argument", "Seleccioná un grupo de trabajo.");
-  if (!Number.isInteger(nivelJerarquico) || nivelJerarquico < 1 || nivelJerarquico > 99) {
-    throw new HttpsError("invalid-argument", "El nivel jerárquico debe ser un entero entre 1 y 99.");
-  }
-
-  const gref = db.collection(COL_GRUPOS_TRABAJO).doc(grupoId);
-  if (!(await gref.get()).exists) {
-    throw new HttpsError("not-found", "El grupo de trabajo no existe o fue dado de baja.");
-  }
   const q = await db.collection(COL_PERSONAS).where("dni", "==", dni).limit(3).get();
   if (!q.empty) throw new HttpsError("already-exists", "Ya existe una persona con ese DNI.");
 
@@ -53,8 +83,6 @@ const rrhhAltaAgente = onCall(async (request) => {
     nombre,
     apellido,
     estado: ESTADO_PENDIENTE_ONBOARDING,
-    grupo_de_trabajo_id: grupoId,
-    nivel_jerarquico: nivelJerarquico,
     activo: true,
     schema_version: 1,
     estado_perfil_datos_id: CFG_EPD_BORR,
@@ -393,10 +421,138 @@ const rrhhReiniciarVinculacionCuenta = onCall(async (request) => {
   };
 });
 
+const rrhhCalcularAntiguedadPersona = onCall(async (request) => {
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
+  const d = request.data && typeof request.data === "object" ? request.data : {};
+  const personaId = typeof d.persona_id === "string" ? d.persona_id.trim() : "";
+  const fechaCorte = parseFechaCorteOrToday(d.fecha_corte);
+
+  if (!personaId || !/^per_/i.test(personaId)) {
+    throw new HttpsError("invalid-argument", "persona_id inválido.");
+  }
+
+  const personaRef = db.collection(COL_PERSONAS).doc(personaId);
+  const [personaSnap, hlcSnap] = await Promise.all([
+    personaRef.get(),
+    db.collection("historial_laboral_cargos").where("persona_id", "==", personaId).get(),
+  ]);
+  if (!personaSnap.exists) {
+    throw new HttpsError("not-found", "La persona no existe.");
+  }
+
+  const persona = personaSnap.data() || {};
+  const hlcArray = hlcSnap.docs.map((doc) => {
+    const row = doc.data() || {};
+    return {
+      ...row,
+      id: doc.id,
+      fecha_inicio: row.fecha_inicio || row.fecha_desde || null,
+      fecha_fin: row.fecha_fin || row.fecha_hasta || null,
+    };
+  });
+
+  const diasExternos = resolveExternosDesdePersona(persona);
+  try {
+    const resultado = calcularAntiguedad(hlcArray, fechaCorte, diasExternos);
+    return {
+      ok: true,
+      persona_id: personaId,
+      fecha_corte: fechaCorte,
+      cantidad_hlc_origen: hlcArray.length,
+      fuente_antiguedad_externa: Array.isArray(diasExternos) ? "reconocimientos" : "dias",
+      resultado,
+    };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Error desconocido";
+    throw new HttpsError("failed-precondition", `No se pudo calcular antigüedad: ${detail}`);
+  }
+});
+
+const rrhhGuardarAntiguedadExternaPersona = onCall(async (request) => {
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
+  const d = request.data && typeof request.data === "object" ? request.data : {};
+  const personaId = typeof d.persona_id === "string" ? d.persona_id.trim() : "";
+  const normativa = typeof d.normativa === "string" ? d.normativa.trim() : "";
+  const fechaImpacto = typeof d.desde === "string" ? d.desde.trim() : "";
+  const observacion = typeof d.observacion === "string" ? d.observacion.trim() : "";
+
+  if (!personaId || !/^per_/i.test(personaId)) {
+    throw new HttpsError("invalid-argument", "persona_id inválido.");
+  }
+  if (!normativa) {
+    throw new HttpsError("invalid-argument", "normativa es obligatoria.");
+  }
+  if (!fechaImpacto) {
+    throw new HttpsError("invalid-argument", "desde (fecha de impacto) es obligatoria.");
+  }
+  const years = toNonNegativeInt(d.anios, "años");
+  const months = toNonNegativeInt(d.meses, "meses");
+  const days = toNonNegativeInt(d.dias, "días");
+  if (months > 11) {
+    throw new HttpsError("invalid-argument", "meses debe ser menor o igual a 11.");
+  }
+  if (days > 31) {
+    throw new HttpsError("invalid-argument", "días debe ser menor o igual a 31.");
+  }
+  const diasReconocidos = years * 365 + months * 30 + days;
+  if (diasReconocidos <= 0) {
+    throw new HttpsError("invalid-argument", "Ingresá al menos un valor mayor a 0 en años, meses o días.");
+  }
+
+  const personaRef = db.collection(COL_PERSONAS).doc(personaId);
+  const now = FieldValue.serverTimestamp();
+  const reconocimientoId = `rec_ant_${ulid()}`;
+  const actorUid = (request.auth && request.auth.uid) || null;
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(personaRef);
+    if (!snap.exists) {
+      throw new HttpsError("not-found", "La persona no existe.");
+    }
+    const persona = snap.data() || {};
+    const prev = Array.isArray(persona.antiguedad_reconocimientos)
+      ? persona.antiguedad_reconocimientos
+      : [];
+    const next = [
+      ...prev,
+      {
+        reconocimiento_id: reconocimientoId,
+        dias_reconocidos: diasReconocidos,
+        anios: years,
+        meses: months,
+        dias: days,
+        normativa,
+        fecha_impacto: fechaImpacto,
+        estado: "vigente",
+        observacion: observacion || null,
+        creado_por_uid: actorUid,
+        creado_en: new Date().toISOString(),
+      },
+    ];
+    tx.set(
+      personaRef,
+      {
+        antiguedad_reconocimientos: next,
+        actualizado_en: now,
+      },
+      { merge: true },
+    );
+  });
+
+  return {
+    ok: true,
+    persona_id: personaId,
+    reconocimiento_id: reconocimientoId,
+    dias_reconocidos: diasReconocidos,
+  };
+});
+
 module.exports = {
   rrhhAltaAgente,
   rrhhActualizarEstadoCuentaAcceso,
   rrhhAplicarBajaLaboral,
   rrhhReiniciarVinculacionCuenta,
+  rrhhCalcularAntiguedadPersona,
+  rrhhGuardarAntiguedadExternaPersona,
 };
 

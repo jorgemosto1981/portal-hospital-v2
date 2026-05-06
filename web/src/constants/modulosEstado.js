@@ -60,6 +60,13 @@ export const MODULOS_PORTAL = [
     grupo: "rrhh",
   },
   {
+    id: "antiguedad",
+    label: "Antigüedad",
+    path: "/portal/rrhh/antiguedad",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
     id: "grilla",
     label: "Grilla",
     path: "/portal/grilla",

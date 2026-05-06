@@ -85,3 +85,77 @@ Continuar con **pulido fino de interfaz y UX** en:
 ## Nota operativa
 
 - Mantener enfoque “capa visual primero” para los próximos ajustes, evitando cambios de lógica de negocio salvo corrección explícitamente acordada.
+
+---
+
+## Actualización complementaria de sesión — Antigüedad (RRHH)
+
+### 7) Nuevo módulo base de Antigüedad (backend + frontend)
+
+- Se creó el motor utilitario de antigüedad en:
+  - `shared/utils/antiguedadCalculator.js` (uso transversal)
+  - `functions/modules/shared/antiguedadCalculator.js` (uso deployable en Functions)
+- Se implementó callable de cálculo:
+  - `rrhhCalcularAntiguedadPersona`
+- Se implementó callable de carga de reconocimiento externo:
+  - `rrhhGuardarAntiguedadExternaPersona`
+- Se incorporaron wrappers en frontend:
+  - `callRrhhCalcularAntiguedadPersona`
+  - `callRrhhGuardarAntiguedadExternaPersona`
+
+### 8) Pantalla exclusiva RRHH: Antigüedad
+
+- Nueva página `web/src/pages/Antiguedad.jsx`.
+- Ruta: `/portal/rrhh/antiguedad` + legado `/rrhh/antiguedad`.
+- Menú RRHH actualizado para incluir entrada “Antigüedad”.
+- Selector de persona con patrón de búsqueda igual a Datos Personales.
+- Fecha de cálculo:
+  - default hoy
+  - opción “cambiar fecha”
+  - visualización en `DD-MM-AAAA`.
+- Bloque de carga de antigüedad externa:
+  - campos años, meses, días, normativa, desde
+  - validaciones: meses `0..11`, días `0..31`.
+
+### 9) Regla funcional aplicada (Opción B anti-solape)
+
+- Se abandonó suma “ciega” de externos.
+- Reconocimientos externos ahora:
+  - se transforman a intervalos por `fecha_impacto + dias_reconocidos`
+  - se deduplican por solape contra HLC y entre sí
+  - solo aportan días netos no solapados
+- El resultado expone:
+  - días externos reconocidos
+  - días externos netos aplicados
+  - días externos descartados por solape
+  - intervalos externos fusionados.
+
+### 10) Mejoras de trazabilidad y UX de resultado
+
+- Resultado con tarjeta destacada para total calculado.
+- Secciones visuales separadas por tipo:
+  - HLC consideradas
+  - Intervalos HLC fusionados
+  - Externos aplicados
+  - Intervalos externos fusionados
+  - Externos no aplicados por corte
+- HLC consideradas en dos renglones:
+  - línea 1: Escalafón · Agrupamiento · Tipo de vínculo (resuelto por catálogo)
+  - línea 2: período + días + años/meses/días.
+
+### 11) Incidencias corregidas durante implementación
+
+- 404/CORS aparente por callable no desplegada: resuelto con deploy.
+- 500 en cálculo por import fuera de `functions/`: resuelto moviendo motor al árbol deployable.
+- 500 en guardado externo por variable no definida (`anios`): resuelto (`years/months/days`).
+
+### 12) Documentación normativa/funcional agregada
+
+- Se creó:
+  - `docs/v2/DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md`
+- Contenido principal:
+  - base de Decreto 1919/89 para Art. 40 y Art. 46
+  - criterio operativo LAO en año en curso
+  - regla de fracción de mes > 15 días para proporcional
+  - lineamientos para integración posterior con Ticket/Solicitudes.
+- Se registró en índice `docs/v2/README.md`.
