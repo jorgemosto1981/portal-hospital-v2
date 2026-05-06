@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   calcularAntiguedad,
+  normalizarAcarreoAmd,
   obtenerFechaCorteLao,
 } from "../shared/utils/antiguedadCalculator.js";
 
@@ -48,7 +49,29 @@ test("externos con fecha_impacto futura no aplican", () => {
   assert.equal(result.detalleCalculo.externosExcluidosPorCorte.length, 1);
 });
 
-test("externos solapados con HLC no duplican días", () => {
+test("externo sin dias_reconocidos usa desglose anios/meses/dias (365/30)", () => {
+  const hlc = [{ fecha_inicio: "2024-01-01", fecha_fin: "2024-12-31" }];
+  const externos = [
+    {
+      anios: 1,
+      meses: 0,
+      dias: 0,
+      normativa: "RES-SIN-DR",
+      fecha_impacto: "2024-06-01",
+      estado: "vigente",
+    },
+  ];
+  const result = calcularAntiguedad(hlc, "2024-12-31", externos);
+  assert.deepEqual(result.detalleCalculo.externosConsiderados[0].amd_aportado, { años: 1, meses: 0, dias: 0 });
+  assert.equal(result.detalleCalculo.diasExternosAplicados, 365);
+  assert.equal(result.detalleCalculo.externosConsiderados[0].dias_reconocidos, 365);
+  assert.equal(result.detalleCalculo.externosConsiderados[0].dias_desglose_normativo, 0);
+  assert.deepEqual(result.detalleCalculo.amdHlc, { años: 1, meses: 0, dias: 1 });
+  assert.deepEqual(result.detalleCalculo.amdFinal, { años: 2, meses: 0, dias: 1 });
+  assert.equal(result.totalDiasCalculados, 731);
+});
+
+test("externos se suman como crédito adicional por fecha", () => {
   const hlc = [{ fecha_inicio: "2020-01-01", fecha_fin: "2020-12-31" }];
   const externos = [
     {
@@ -62,8 +85,23 @@ test("externos solapados con HLC no duplican días", () => {
   const result = calcularAntiguedad(hlc, "2020-12-31", externos);
   assert.equal(result.detalleCalculo.resumen.diasHlcFusionados, 366);
   assert.equal(result.detalleCalculo.resumen.diasExternosReconocidos, 60);
-  assert.equal(result.detalleCalculo.resumen.diasExternosNetosAplicados, 0);
-  assert.equal(result.totalDiasCalculados, 366);
+  assert.equal(result.detalleCalculo.resumen.diasExternosNetosAplicados, 60);
+  assert.deepEqual(result.detalleCalculo.amdFinal, { años: 1, meses: 2, dias: 1 });
+  assert.equal(result.totalDiasCalculados, 426);
+});
+
+test("acarreo: dias > 29 suma un mes; meses > 11 suma un año", () => {
+  assert.deepEqual(normalizarAcarreoAmd(0, 0, 30), { años: 0, meses: 1, dias: 0 });
+  assert.deepEqual(normalizarAcarreoAmd(0, 12, 0), { años: 1, meses: 0, dias: 0 });
+  const hlc = [{ fecha_inicio: "2024-01-01", fecha_fin: "2024-02-28" }];
+  const result = calcularAntiguedad(hlc, "2024-12-31", [
+    { anios: 0, meses: 0, dias: 2, normativa: "X", fecha_impacto: "2024-06-01", estado: "vigente" },
+  ]);
+  assert.equal(result.detalleCalculo.resumen.diasHlcFusionados, 59);
+  assert.deepEqual(result.detalleCalculo.amdHlc, { años: 0, meses: 1, dias: 29 });
+  assert.deepEqual(result.detalleCalculo.amdExternoSumadoRaw, { años: 0, meses: 0, dias: 2 });
+  assert.deepEqual(result.detalleCalculo.amdFinal, { años: 0, meses: 2, dias: 1 });
+  assert.equal(result.totalDiasCalculados, 61);
 });
 
 test("fecha corte LAO devuelve 31/12 del año anterior", () => {

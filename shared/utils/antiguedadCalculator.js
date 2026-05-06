@@ -142,8 +142,62 @@ function mergeIntervals(intervals) {
   }));
 }
 
+function splitDias(totalDias) {
+  const years = Math.floor(totalDias / 365);
+  const remAfterYears = totalDias % 365;
+  const months = Math.floor(remAfterYears / 30);
+  const days = remAfterYears % 30;
+  return { años: years, meses: months, dias: days };
+}
+
+/** Equivalente en días (365/30) solo para auditoría / totales reportados. */
+function equivDiasDesdeAmd(amd) {
+  const a = Math.max(0, Math.floor(Number(amd?.años ?? 0)));
+  const m = Math.max(0, Math.floor(Number(amd?.meses ?? 0)));
+  const d = Math.max(0, Math.floor(Number(amd?.dias ?? 0)));
+  return a * 365 + m * 30 + d;
+}
+
+/**
+ * Desglose A/M/D del reconocimiento: prioriza anios/meses/dias informados;
+ * si todos son 0, convierte `dias_reconocidos` con la misma base 365/30 que HLC.
+ */
+function amdFromExternoRecord(rec) {
+  const a = Math.max(0, Math.floor(Number(rec?.anios ?? 0)));
+  const m = Math.max(0, Math.floor(Number(rec?.meses ?? 0)));
+  const d = Math.max(0, Math.floor(Number(rec?.dias ?? 0)));
+  if (a > 0 || m > 0 || d > 0) {
+    return { años: a, meses: m, dias: d };
+  }
+  const explicitRaw = rec?.dias_reconocidos ?? rec?.diasReconocidos;
+  const explicit = Number(explicitRaw);
+  if (Number.isFinite(explicit) && explicit > 0) {
+    return splitDias(Math.floor(explicit));
+  }
+  return { años: 0, meses: 0, dias: 0 };
+}
+
+/**
+ * Tras sumar años/meses/días (HLC + externo): días > 29 → +1 mes (−30 días);
+ * meses > 11 → +1 año (−12 meses).
+ */
+export function normalizarAcarreoAmd(anios, meses, dias) {
+  let a = Math.max(0, Math.floor(Number(anios)));
+  let m = Math.max(0, Math.floor(Number(meses)));
+  let d = Math.max(0, Math.floor(Number(dias)));
+  while (d > 29) {
+    m += 1;
+    d -= 30;
+  }
+  while (m > 11) {
+    a += 1;
+    m -= 12;
+  }
+  return { años: a, meses: m, dias: d };
+}
+
 function normalizeReconocimiento(rec, idx, corteUtc) {
-  const dias = safeNonNegativeInt(rec?.dias_reconocidos, `externos[${idx}].dias_reconocidos`);
+  const amd = amdFromExternoRecord(rec);
   const estado = String(rec?.estado || "vigente").trim().toLowerCase();
   if (estado === "anulado" || estado === "inactivo") {
     return {
@@ -177,31 +231,13 @@ function normalizeReconocimiento(rec, idx, corteUtc) {
 
   return {
     aplica: true,
-    dias,
+    amd,
     impactoUtc,
     detalle: {
       ...rec,
       fecha_impacto: impactoUtc == null ? null : formatUtcDay(impactoUtc),
     },
   };
-}
-
-function overlapDays(interval, mergedIntervals) {
-  let overlap = 0;
-  for (const base of mergedIntervals) {
-    const start = Math.max(interval.inicioUtc, base.inicioUtc);
-    const end = Math.min(interval.finUtc, base.finUtc);
-    if (start <= end) overlap += diffDaysInclusive(start, end);
-  }
-  return overlap;
-}
-
-function splitDias(totalDias) {
-  const years = Math.floor(totalDias / 365);
-  const remAfterYears = totalDias % 365;
-  const months = Math.floor(remAfterYears / 30);
-  const days = remAfterYears % 30;
-  return { años: years, meses: months, dias: days };
 }
 
 export function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasExternos = 0) {
@@ -234,45 +270,36 @@ export function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasE
   const diasHlcFusionados = intervalosFusionados.reduce((acc, item) => acc + item.dias, 0);
   const diasSuperpuestosDescartados = Math.max(0, diasHlcSinFusion - diasHlcFusionados);
 
+  const amdHlc = splitDias(diasHlcFusionados);
+  let sumExtA = 0;
+  let sumExtM = 0;
+  let sumExtD = 0;
   let diasExternosReconocidos = 0;
   let diasExternosAplicados = 0;
-  let diasExternosSolapadosDescartados = 0;
   let externosConsiderados = [];
   let externosExcluidosPorCorte = [];
-  let intervalosExternosFusionados = [];
 
   if (Array.isArray(diasExternos)) {
-    const externosIntervalos = [];
     for (let i = 0; i < diasExternos.length; i += 1) {
       const normalized = normalizeReconocimiento(diasExternos[i], i, corteUtc);
       if (normalized.aplica) {
-        if (normalized.impactoUtc == null) {
-          externosExcluidosPorCorte.push({
-            indice: i,
-            motivo: "Reconocimiento sin fecha_impacto. No se puede deduplicar por solape.",
-            detalle: normalized.detalle,
-          });
-          continue;
-        }
-        diasExternosReconocidos += normalized.dias;
-        const finUtc = Math.min(
-          normalized.impactoUtc + (normalized.dias - 1) * MS_PER_DAY,
-          corteUtc,
-        );
-        if (finUtc < normalized.impactoUtc) {
-          externosExcluidosPorCorte.push({
-            indice: i,
-            motivo: "Intervalo externo fuera de corte.",
-            detalle: normalized.detalle,
-          });
-          continue;
-        }
-        externosIntervalos.push({
-          indice: i,
-          inicioUtc: normalized.impactoUtc,
-          finUtc,
-          dias: diffDaysInclusive(normalized.impactoUtc, finUtc),
-          detalle: normalized.detalle,
+        const { años: ea, meses: em, dias: ed } = normalized.amd;
+        sumExtA += ea;
+        sumExtM += em;
+        sumExtD += ed;
+        const equiv = equivDiasDesdeAmd(normalized.amd);
+        diasExternosReconocidos += equiv;
+        diasExternosAplicados += equiv;
+        const raw = diasExternos[i] || {};
+        const diasDesgloseNormativo = Math.max(0, Math.floor(Number(raw.dias ?? 0)));
+        const { dias: _diasComponenteNormativo, ...restSinColisionDias } = raw;
+        externosConsiderados.push({
+          ...restSinColisionDias,
+          dias_desglose_normativo: diasDesgloseNormativo,
+          fecha_impacto: normalized.detalle.fecha_impacto,
+          amd_aportado: { ...normalized.amd },
+          dias_reconocidos: equiv,
+          dias_netos_aplicados: equiv,
         });
       } else {
         externosExcluidosPorCorte.push({
@@ -282,59 +309,34 @@ export function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasE
         });
       }
     }
-
-    let baseMerged = [...intervalosFusionados];
-    const externosSorted = externosIntervalos.sort((a, b) => a.inicioUtc - b.inicioUtc);
-    for (const ext of externosSorted) {
-      const diasSolapados = overlapDays(ext, baseMerged);
-      const diasNetos = Math.max(0, ext.dias - diasSolapados);
-      diasExternosSolapadosDescartados += diasSolapados;
-      diasExternosAplicados += diasNetos;
-      externosConsiderados.push({
-        ...ext.detalle,
-        fecha_inicio_intervalo: formatUtcDay(ext.inicioUtc),
-        fecha_fin_intervalo: formatUtcDay(ext.finUtc),
-        dias_reconocidos: ext.dias,
-        dias_solapados_descartados: diasSolapados,
-        dias_netos_aplicados: diasNetos,
-      });
-      baseMerged = mergeIntervals([
-        ...baseMerged,
-        {
-          inicioUtc: ext.inicioUtc,
-          finUtc: ext.finUtc,
-          inicio: formatUtcDay(ext.inicioUtc),
-          fin: formatUtcDay(ext.finUtc),
-        },
-      ]);
-    }
-    intervalosExternosFusionados = mergeIntervals(
-      externosSorted.map((ext) => ({
-        inicioUtc: ext.inicioUtc,
-        finUtc: ext.finUtc,
-        inicio: formatUtcDay(ext.inicioUtc),
-        fin: formatUtcDay(ext.finUtc),
-      })),
-    ).map((item) => ({
-      fecha_inicio: item.inicio,
-      fecha_fin: item.fin,
-      dias: item.dias,
-    }));
   } else {
-    diasExternosReconocidos = safeNonNegativeInt(diasExternos, "diasExternos");
-    diasExternosAplicados = diasExternosReconocidos;
+    const soloDias = safeNonNegativeInt(diasExternos, "diasExternos");
+    const amdScalar = splitDias(soloDias);
+    sumExtA = amdScalar.años;
+    sumExtM = amdScalar.meses;
+    sumExtD = amdScalar.dias;
+    diasExternosReconocidos = soloDias;
+    diasExternosAplicados = soloDias;
   }
 
-  const totalDiasCalculados = diasHlcFusionados + diasExternosAplicados;
-  const desglose = splitDias(totalDiasCalculados);
+  const amdExternoSumadoRaw = { años: sumExtA, meses: sumExtM, dias: sumExtD };
+  const desglose = normalizarAcarreoAmd(
+    amdHlc.años + sumExtA,
+    amdHlc.meses + sumExtM,
+    amdHlc.dias + sumExtD,
+  );
+  const totalDiasCalculados = equivDiasDesdeAmd(desglose);
 
   return {
     ...desglose,
     totalDiasCalculados,
     detalleCalculo: {
-      versionAlgoritmo: "antiguedad-hlc-v1",
+      versionAlgoritmo: "antiguedad-hlc-v2-amd-suma",
       fechaCorteAplicada: formatUtcDay(corteUtc),
       diasExternosAplicados,
+      amdHlc,
+      amdExternoSumadoRaw,
+      amdFinal: desglose,
       resumen: {
         cantidadHlcOriginales: hlcArray.length,
         cantidadHlcValidas: hlcValidas.length,
@@ -345,7 +347,6 @@ export function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasE
         diasSuperpuestosDescartados,
         diasExternosReconocidos,
         diasExternosNetosAplicados: diasExternosAplicados,
-        diasExternosSolapadosDescartados,
       },
       hlcConsideradas: hlcValidas.map((item) => ({
         fecha_inicio: item.inicio,
@@ -362,13 +363,14 @@ export function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasE
         dias: item.dias,
       })),
       externosConsiderados,
-      intervalosExternosFusionados,
       externosExcluidosPorCorte,
       reglasAplicadas: [
         "Se topa fecha fin por fecha de corte.",
-        "Los tramos HLC superpuestos o continuos se fusionan.",
+        "Los tramos HLC superpuestos o continuos se fusionan (solo entre cargos HLC; no involucra al crédito externo).",
+        "No se analiza solapamiento ni intersección temporal entre crédito externo y períodos HLC.",
         "Los reconocimientos externos con fecha_impacto posterior a fecha de corte no se aplican.",
-        "Los reconocimientos externos se deduplican por solape contra HLC y entre sí.",
+        "Tras validar fechas, el crédito externo (años/meses/días informados) se suma al desglose HLC (365/30).",
+        "Acarreo: si días > 29 → +1 mes y −30 días; si meses > 11 → +1 año y −12 meses.",
       ],
     },
   };

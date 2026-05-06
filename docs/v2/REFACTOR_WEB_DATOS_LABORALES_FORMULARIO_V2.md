@@ -81,6 +81,18 @@ Campos de texto / fecha / número:
 - **`fecha_desde`** / **`fecha_hasta`:** **`LabeledTextField`** `type="date"`; en **hasta**, **`min={formData.fecha_desde}`** para coherencia de rango.
 - **`causal_fin_asignacion_id`:** solo en HLc → **`LabeledSelect`**.
 
+### 3.8 Extracción por secciones (avance posterior)
+
+Para reducir aún más el tamaño de `DatosLaborales.jsx`, se extrajeron bloques completos del formulario a secciones dedicadas:
+
+- **`LaboralFormCabeceraFields.jsx`**: nivel de registro + `persona_id` + `grupo_de_trabajo_id` (condicional HLg).
+- **`LaboralFormModoEdicionFields.jsx`**: checkbox de edición + selector de registro + carga inicial del primer registro filtrado.
+- **`LaboralFormHlcFields.jsx`**: bloque completo HLc.
+- **`LaboralFormHlgFields.jsx`**: bloque completo HLg + grilla `carga_por_dia_semana`.
+- **`LaboralFormVigenciaFields.jsx`**: `fecha_desde`, `fecha_hasta` y causal de fin para HLc.
+
+La página principal queda como **orquestador** (estado, hooks y callbacks), sin cambios de contrato funcional.
+
 ---
 
 ## 4. Archivos tocados
@@ -90,6 +102,11 @@ Campos de texto / fecha / número:
 | `web/src/pages/DatosLaborales.jsx` | Refactor masivo del formulario; constantes `OPCIONES_TIPO_ALTA`, `labelPersonaOpcion`; fix `registrosPorTipoFiltrados` en edición. |
 | `web/src/pages/datos-laborales/components/LabeledSelect.jsx` | Nuevo; soporte `bare`, `optionLabel`. |
 | `web/src/pages/datos-laborales/components/LabeledTextField.jsx` | Nuevo; soporte `bare`, `min`. |
+| `web/src/pages/datos-laborales/sections/LaboralFormCabeceraFields.jsx` | Nuevo; cabecera del formulario (nivel + persona/grupo). |
+| `web/src/pages/datos-laborales/sections/LaboralFormModoEdicionFields.jsx` | Nuevo; bloque de modo edición y selección de registro. |
+| `web/src/pages/datos-laborales/sections/LaboralFormHlcFields.jsx` | Nuevo; campos específicos HLc. |
+| `web/src/pages/datos-laborales/sections/LaboralFormHlgFields.jsx` | Nuevo; campos específicos HLg y carga por día. |
+| `web/src/pages/datos-laborales/sections/LaboralFormVigenciaFields.jsx` | Nuevo; vigencias y causal de fin. |
 
 ---
 
@@ -101,7 +118,6 @@ Campos de texto / fecha / número:
 
 ## 6. Pendientes sugeridos (no realizados en esta sesión)
 
-- Extraer subcomponentes **`LaboralFormHlcFields`** / **`LaboralFormHlgFields`** / shell del formulario para acercar `DatosLaborales.jsx` a la guía de tamaño de archivo del proyecto (~100 líneas por módulo orientativo).
 - Partir `web/src/pages/datos-laborales/utils.js` por dominio (timeline / integridad / helpers de formulario).
 - Alinear **`web/src/constants/datosLaboralesSchema.js`** (lista de campos documentales) con los nombres reales en Firestore y payloads (`fecha_desde` vs `fecha_inicio`, etc.).
 - Opcional: prop **`labelClassName`** en `LabeledSelect` si se quiere separar por completo el estilo del título «Nivel de registro» sin anidar spans.

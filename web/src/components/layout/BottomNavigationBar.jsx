@@ -137,6 +137,7 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
   return (
     <nav
       className={[
+        "print:hidden",
         "shrink-0 border-slate-100 bg-white shadow-sm",
         "w-full border-t",
         "max-h-[min(52vh,28rem)] overflow-y-auto md:max-h-none md:overflow-visible",

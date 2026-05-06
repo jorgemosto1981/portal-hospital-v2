@@ -12,6 +12,12 @@
   body {
     @apply m-0 min-h-dvh bg-slate-50 font-sans text-slate-900 antialiased;
   }
+
+  @media print {
+    body {
+      background: #fff;
+    }
+  }
 }
 
 @layer components {

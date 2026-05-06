@@ -9,11 +9,6 @@ export function AltaAgenteForm({
   setNombre,
   apellido,
   setApellido,
-  grupoId,
-  setGrupoId,
-  grupos,
-  nivel,
-  setNivel,
   busy,
 }) {
   return (
@@ -45,32 +40,6 @@ export function AltaAgenteForm({
             value={apellido}
             onChange={(e) => setApellido(e.target.value)}
             required
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Grupo de trabajo</label>
-          <select
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-            value={grupoId}
-            onChange={(e) => setGrupoId(e.target.value)}
-          >
-            <option value="">{grupos.length ? "Elegir…" : "Sin nodos (seed primero)"}</option>
-            {grupos.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.nombre || g.id}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-sm font-medium">Nivel jerárquico (1–99 en la burbuja)</label>
-          <input
-            type="number"
-            min={1}
-            max={99}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-            value={nivel}
-            onChange={(e) => setNivel(parseInt(e.target.value, 10) || 1)}
           />
         </div>
         <PrimaryButton type="submit" disabled={busy} className="!mt-4 w-full">

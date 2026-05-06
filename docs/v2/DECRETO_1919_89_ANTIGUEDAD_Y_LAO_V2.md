@@ -20,6 +20,7 @@ Documento de referencia funcional para futuras implementaciones de Ticket/Solici
   - Se guarda por persona como reconocimiento con normativa y `fecha_impacto`.
   - Solo aplica si `fecha_impacto <= fecha_corte`.
   - No hay retroactividad si la fecha de impacto es posterior al corte.
+  - No se analiza solapamiento ni intersección con los períodos HLC: es crédito administrativo que se suma al desglose (A/M/D) según reglas del motor V2.
 
 ## 3) LAO Art. 40 (criterio de aplicación acordado)
 

@@ -117,18 +117,12 @@ Continuar con **pulido fino de interfaz y UX** en:
   - campos años, meses, días, normativa, desde
   - validaciones: meses `0..11`, días `0..31`.
 
-### 9) Regla funcional aplicada (Opción B anti-solape)
+### 9) Regla funcional: crédito externo (sin solape con HLC)
 
-- Se abandonó suma “ciega” de externos.
-- Reconocimientos externos ahora:
-  - se transforman a intervalos por `fecha_impacto + dias_reconocidos`
-  - se deduplican por solape contra HLC y entre sí
-  - solo aportan días netos no solapados
-- El resultado expone:
-  - días externos reconocidos
-  - días externos netos aplicados
-  - días externos descartados por solape
-  - intervalos externos fusionados.
+- **No** se analiza solapamiento ni intersección temporal entre antigüedad externa y períodos HLC (interpretación previa por intervalos fue descartada).
+- Tras validar **fecha de cálculo ≥ fecha de implementación**, el crédito externo informado en **años/meses/días** se **suma** al desglose HLC (base 365/30), con **acarreo**: días &gt; 29 → +1 mes (−30 días); meses &gt; 11 → +1 año (−12 meses).
+- Si solo existe `dias_reconocidos` (legado), se descompone con la misma base antes de sumar.
+- El resultado expone desglose HLC, suma externa, desglose final y equivalencia en días (referencial).
 
 ### 10) Mejoras de trazabilidad y UX de resultado
 
@@ -136,8 +130,7 @@ Continuar con **pulido fino de interfaz y UX** en:
 - Secciones visuales separadas por tipo:
   - HLC consideradas
   - Intervalos HLC fusionados
-  - Externos aplicados
-  - Intervalos externos fusionados
+  - Crédito externo (A/M/D y decisión por fecha)
   - Externos no aplicados por corte
 - HLC consideradas en dos renglones:
   - línea 1: Escalafón · Agrupamiento · Tipo de vínculo (resuelto por catálogo)
@@ -159,3 +152,78 @@ Continuar con **pulido fino de interfaz y UX** en:
   - regla de fracción de mes > 15 días para proporcional
   - lineamientos para integración posterior con Ticket/Solicitudes.
 - Se registró en índice `docs/v2/README.md`.
+
+---
+
+## Cierre de sesión (continuación) — Refactor Antigüedad, deploy y sincronización Git
+
+**Fecha de registro:** 2026-05-06 (cierre para continuar en otra PC).
+
+### 13) Jerarquía visual “Total calculado”
+
+- El desglose **años / meses / días** quedó como cifra **principal** (tipografía mayor).
+- Los **días totales** (equivalente 365/30) pasaron a texto **secundario**, como dato referencial complementario.
+- Texto aclaratorio: la cifra oficial del cómputo es el desglose A/M/D; los días sirven para cruzar con otros módulos.
+
+### 14) Iconografía
+
+- Se **retiraron SVG de Heroicons** que en algunos usos perdían clases de tamaño (`className` solo de color) y se veían enormes.
+- Reemplazo por **marcadores tipográficos** pequeños (`MarcadorInline`) y botones **Copiar / Imprimir** solo texto.
+- Corrección de imports: `callables` al inicio del archivo (no a mitad del módulo).
+
+### 15) Refactor modular `features/rrhh/antiguedad/` (sin cambiar contrato de negocio)
+
+Estructura principal:
+
+| Archivo / carpeta | Rol |
+|-------------------|-----|
+| `constants.js` | `MS_DIA` |
+| `dateIso.js` | Fechas ISO ↔ UTC ms, `todayIso`, `formatDdMmAaaa` |
+| `acarreo.js` | `detectarAcarreo` |
+| `amdFormat.js` | Textos A/M/D, `catalogLabel`, etc. |
+| `resumenTexto.js` | `construirTextoResumen` (portapapeles) |
+| `MarcadorInline.jsx`, `TarjetaAmdPaso.jsx`, `TimelineHlcFusionados.jsx` | UI reutilizable |
+| `AntiguedadResultadoCard.jsx` + subcomponentes `Antiguedad*.jsx` | Tarjeta de resultado (total, ecuación, síntesis, listas HLC/externos) |
+| `AntiguedadIntroCard.jsx`, `AntiguedadCalculoFormCard.jsx`, `AntiguedadExternaCard.jsx` | Tres cards superiores (intro, persona/fecha/calcular, externa) |
+| `useAntiguedadPage.js` | Estado, efectos, callables y **props agrupadas** (`calculoCardProps`, `externaCardProps`, `resultadoCardProps`) |
+| `index.js` | Barrel export (el hook **no** importa desde el barrel para evitar ciclo con `resumenTexto` / `dateIso`) |
+
+**Página:** `web/src/pages/Antiguedad.jsx` queda como **layout fino** (~26 líneas): solo `useAntiguedadPage()` y composición de cards.
+
+**Commits en cadena (orden cronológico reciente):**
+
+1. `d9c2d13` — fix(web): Antigüedad — imports al inicio y UI sin SVG voluminosos  
+2. `c1192d1` — refactor(web): extraer módulos de Antigüedad a `features/rrhh/antiguedad`  
+3. `9e63a2a` — refactor(web): componentizar tarjeta Resultado en Antigüedad  
+4. `86d8ba8` — refactor(web): extraer cards intro, cálculo y externa de Antigüedad  
+5. `9c47ba3` — refactor(web): hook `useAntiguedadPage` para estado y acciones de la página Antigüedad  
+
+*(Los hashes exactos pueden verse con `git log --oneline -10` en la rama `mvp-fase1-onboarding`.)*
+
+### 16) Deploy Hosting (Firebase)
+
+- Proyecto: **portal-hospital-v2**
+- Comando habitual: `npm run build:web` y `npx firebase deploy --only hosting --project portal-hospital-v2`
+- URL pública: **https://portal-hospital-v2.web.app**
+- **Nota:** este deploy publica el **frontend** (`web/dist` según `firebase.json`). Las **Cloud Functions** no se despliegan salvo `firebase deploy --only functions` (no ejecutado en este cierre salvo que se indique en el historial de la máquina).
+
+### 17) Continuidad mañana (otra PC)
+
+1. `git fetch origin && git checkout mvp-fase1-onboarding && git pull origin mvp-fase1-onboarding`
+2. Copiar/ajustar `.env` local según `.env.v2.example` si hace falta para `web/` / Firebase.
+3. `npm install` en raíz si hay cambios de dependencias; `npm run dev:web` para probar.
+4. Ruta a validar: **`/portal/rrhh/antiguedad`** (menú RRHH → Antigüedad).
+
+### 18) Pendientes sugeridos (no bloqueantes)
+
+- Opcional: **code-split** de la ruta Antigüedad (`React.lazy`) para reducir chunk único >500 KB (aviso de Vite).
+- Opcional: alinear **duplicación** `parseIsoYmdToUtcMs` (web) vs motor en `shared/utils/antiguedadCalculator.js` con un helper único en `shared/` si se prioriza DRY.
+- Resto de archivos modificados en el árbol de trabajo (Datos personales, login, seeds, etc.) pueden seguir líneas de producto ya abiertas en otros handoffs; revisar diff antes de mezclar a `main` si aplica.
+
+---
+
+### Checklist rápido post-pull
+
+- [ ] `npm run build:web` sin errores  
+- [ ] Probar Antigüedad: persona + fecha + calcular + copiar resumen + imprimir  
+- [ ] Confirmar que callables RRHH responden (entorno Firebase correcto)

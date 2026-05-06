@@ -33,14 +33,11 @@ const OPEN_ACCESS_TEMP = runtimeFlags.OPEN_ACCESS_TEMP === true;
 
 export default function AltaAgenteRRHH() {
   const { user } = useAuthSession();
-  const [grupos, setGrupos] = useState(/** @type {{ id: string, nombre?: string }[]} */ ([]));
   const [personas, setPersonas] = useState(/** @type {{ id: string, nombre?: string, apellido?: string, dni?: string }[]} */ ([]));
   const [personasConCuentaIds, setPersonasConCuentaIds] = useState(/** @type {Set<string>} */ (new Set()));
   const [dni, setDni] = useState("");
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
-  const [grupoId, setGrupoId] = useState("");
-  const [nivel, setNivel] = useState(10);
   const [estadosCuentaAcceso, setEstadosCuentaAcceso] = useState(
     /** @type {{ id: string, nombre?: string, titulo_ui?: string }[]} */ ([]),
   );
@@ -76,19 +73,14 @@ export default function AltaAgenteRRHH() {
     let a = true;
     setLoad(true);
     Promise.all([
-      callListarColeccion({ collectionName: "grupos_de_trabajo" }),
       callListarColeccion({ collectionName: "cfg_estado_cuenta_acceso" }),
       callListarColeccion({ collectionName: "cfg_causal_fin_asignacion_laboral" }),
       callListarColeccion({ collectionName: "cfg_motivo_baja_persona" }),
       callListarColeccion({ collectionName: "usuarios_cuenta" }),
       callListarColeccionPublicaTemporal({ collectionName: "personas", pageSize: 200 }),
     ])
-      .then(([rG, rEca, rCausal, rMotivosBaja, rUsuariosCuenta, rPersonas]) => {
+      .then(([rEca, rCausal, rMotivosBaja, rUsuariosCuenta, rPersonas]) => {
         if (!a) return;
-        const itemsG = (rG && rG.data && rG.data.items) || [];
-        setGrupos(itemsG.filter((it) => it.activo !== false));
-        setGrupoId((prev) => (prev && prev.length ? prev : (itemsG[0] && itemsG[0].id) || ""));
-
         const itemsEca = (rEca && rEca.data && rEca.data.items) || [];
         const ecaOk = itemsEca.filter((it) => it.activo !== false);
         setEstadosCuentaAcceso(ecaOk);
@@ -142,7 +134,7 @@ export default function AltaAgenteRRHH() {
             { duration: 8_000 },
           );
         } else {
-          toast.error("No se pudo cargar el formulario (grupos / roles).");
+          toast.error("No se pudo cargar el formulario (catálogos RRHH).");
         }
       })
       .finally(() => {
@@ -161,15 +153,11 @@ export default function AltaAgenteRRHH() {
       toast.error("DNI: 6 a 12 dígitos.");
       return;
     }
-    if (!grupoId) {
-      toast.error("Seleccioná un grupo de trabajo.");
-      return;
-    }
     setBusy(true);
     const t = toast.loading("Dando de alta cáscara de agente…");
     try {
       const { data } = await callRrhhAltaAgente(
-        buildAltaAgentePayload({ dni, nombre, apellido, grupoId, nivel }),
+        buildAltaAgentePayload({ dni, nombre, apellido }),
       );
       if (data?.ok) {
         toast.success(`Creado ${data.persona_id} — ` + `Cuenta ${data.cuenta_id}`, { id: t, duration: 5_000 });
@@ -310,7 +298,9 @@ export default function AltaAgenteRRHH() {
         <p className="mt-1 text-sm text-slate-500">
           Cáscara en PENDIENTE_ONBOARDING. El <strong>rol operativo</strong> proviene del{" "}
           <code className="text-xs">rol_id</code> en <strong>HLc</strong> (cadena HLc → HLd → HLg); completá el legajo
-          en <strong>Datos laborales</strong> para que el agente reciba claims coherentes.
+          en <strong>Datos laborales</strong> para que el agente reciba claims coherentes.{" "}
+          <strong>Grupo de trabajo</strong> y <strong>nivel jerárquico</strong> se asignan únicamente en el paso
+          laboral (HLg).
         </p>
         <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3 text-xs text-slate-600">
           <p><strong>Objetivo:</strong> administrar altas, acceso, bajas y re-vinculación de cuentas.</p>
@@ -343,7 +333,7 @@ export default function AltaAgenteRRHH() {
         </div>
 
         {load ? (
-          <p className="text-sm text-slate-500">Cargando catálogos (grupos)…</p>
+          <p className="text-sm text-slate-500">Cargando catálogos RRHH…</p>
         ) : (
           <>
             <AltaAgenteForm
@@ -354,11 +344,6 @@ export default function AltaAgenteRRHH() {
               setNombre={setNombre}
               apellido={apellido}
               setApellido={setApellido}
-              grupoId={grupoId}
-              setGrupoId={setGrupoId}
-              grupos={grupos}
-              nivel={nivel}
-              setNivel={setNivel}
               busy={busy}
             />
 
