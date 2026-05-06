@@ -5,7 +5,6 @@ export default function LaboralFormHlgFields({
   modoAvanzado,
   formData,
   onChangeField,
-  opcionesCargoHlcDetalladas,
   opcionesRegimenHorario,
   opcionesCentroCosto,
   opcionesFuncion,
@@ -18,16 +17,6 @@ export default function LaboralFormHlgFields({
 }) {
   return (
     <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
-      <LabeledSelect
-        label="Cargo base asociado *"
-        value={formData.cargo_id}
-        onValueChange={(v) => onChangeField("cargo_id", v)}
-        options={opcionesCargoHlcDetalladas}
-        placeholder="Seleccionar cargo HLc..."
-        helpText={ayudaCampos.cargo_id}
-        technicalName="cargo_id"
-        showTechnicalName={modoAvanzado}
-      />
       <LabeledSelect
         label="Régimen horario"
         value={formData.regimen_horario_id}

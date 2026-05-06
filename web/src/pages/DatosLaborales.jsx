@@ -9,7 +9,6 @@ import LaboralFormCabeceraFields from "./datos-laborales/sections/LaboralFormCab
 import PersonaSearchSelect from "./datos-laborales/components/PersonaSearchSelect.jsx";
 import LaboralFormHlcFields from "./datos-laborales/sections/LaboralFormHlcFields.jsx";
 import LaboralFormHlgFields from "./datos-laborales/sections/LaboralFormHlgFields.jsx";
-import LaboralFormModoEdicionFields from "./datos-laborales/sections/LaboralFormModoEdicionFields.jsx";
 import LaboralFormVigenciaFields from "./datos-laborales/sections/LaboralFormVigenciaFields.jsx";
 import TimelineLaboralPersonaCard from "./datos-laborales/sections/TimelineLaboralPersonaCard.jsx";
 import VistaOperativaGrupoCard from "./datos-laborales/sections/VistaOperativaGrupoCard.jsx";
@@ -68,6 +67,29 @@ function isVigenteByFecha(row) {
   return !hasta;
 }
 
+function sumarHorasSemana(cargaPorDiaSemana) {
+  if (!Array.isArray(cargaPorDiaSemana)) return 0;
+  return cargaPorDiaSemana.reduce((acc, row) => {
+    const horas = Number(row && typeof row === "object" ? row.horas : row);
+    return Number.isFinite(horas) ? acc + horas : acc;
+  }, 0);
+}
+
+function scrollToForm() {
+  if (typeof document === "undefined") return;
+  const tryScroll = (retries = 6) => {
+    const el = document.getElementById("form-laboral");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (retries <= 0) return;
+    window.setTimeout(() => tryScroll(retries - 1), 80);
+  };
+  // Espera a que React pinte el formulario visible antes de desplazar.
+  window.requestAnimationFrame(() => tryScroll());
+}
+
 function labelPersonaOpcion(p) {
   if (!p || !p.id) return "";
   if (p.nombre || p.apellido) {
@@ -114,6 +136,8 @@ export default function DatosLaborales() {
   const [registroEditId, setRegistroEditId] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+  const [resultadoModalAbierto, setResultadoModalAbierto] = useState(false);
+  const [resultadoModalMsg, setResultadoModalMsg] = useState("");
   const [cargaPorDiaRows, setCargaPorDiaRows] = useState([emptyCargaDia()]);
   const [timelinePersonaId, setTimelinePersonaId] = useState("");
   const [timelineFiltro, setTimelineFiltro] = useState("todos");
@@ -130,6 +154,7 @@ export default function DatosLaborales() {
   const [grupoVistaFecha, setGrupoVistaFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [formData, setFormData] = useState(() => ({ ...INITIAL_FORM_DATA_LABORAL }));
   const [vistaTab, setVistaTab] = useState("actual");
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [modoAvanzado, setModoAvanzado] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(STORAGE_KEY_MODO_AVANZADO) === "1";
@@ -143,6 +168,9 @@ export default function DatosLaborales() {
   const idxPersonas = crearIndicePorId(rowsByCollection.personas || []);
   const idxRoles = crearIndicePorId(rowsByCollection.cfg_rol || []);
   const idxFunciones = crearIndicePorId(rowsByCollection.cfg_cargo_funcional || []);
+  const idxEscalafon = crearIndicePorId(rowsByCollection.cfg_escalafon || []);
+  const idxAgrupamiento = crearIndicePorId(rowsByCollection.cfg_agrupamiento || []);
+  const idxCategorias = crearIndicePorId(rowsByCollection.cfg_categorias || []);
   const idxHlc = crearIndicePorId(hlcRows);
   const idxHld = crearIndicePorId(hldRows);
   const opcionesGrupos = rowsByCollection.grupos_de_trabajo ?? EMPTY_ROWS;
@@ -165,6 +193,60 @@ export default function DatosLaborales() {
     () => (opcionesPersonas || []).map(buildPersonaSearchOption).filter(Boolean),
     [opcionesPersonas],
   );
+  const personaSeleccionada = String(formData.persona_id || "").trim().length > 0;
+  const personaActiva = useMemo(() => {
+    const personaId = String(formData.persona_id || "").trim();
+    if (!personaId) return null;
+    return idxPersonas.get(personaId) || null;
+  }, [formData.persona_id, idxPersonas]);
+  const personaActivaLabel = useMemo(() => {
+    if (!personaActiva) return String(formData.persona_id || "").trim();
+    const nombre = `${String(personaActiva.apellido || "").trim()} ${String(personaActiva.nombre || "").trim()}`.trim();
+    const dni = String(personaActiva.dni || "").trim() || "—";
+    return `${nombre || "Persona"} · DNI ${dni} · ${String(personaActiva.id || formData.persona_id || "")}`;
+  }, [personaActiva, formData.persona_id]);
+  const cargoContexto = useMemo(() => {
+    let cargoId = "";
+    if (tipoAlta === "historial_laboral_grupos") {
+      cargoId = String(formData.cargo_id || "").trim();
+    } else if (tipoAlta === "historial_laboral_cargos" && modoEdicion) {
+      cargoId = String(registroEditId || "").trim();
+    }
+    if (!cargoId) return null;
+    const cargo = idxHlc.get(cargoId);
+    if (!cargo) return null;
+    return {
+      titulo: `${labelDesdeIndice(idxFunciones, cargo.cargo_funcional_id)} · ${labelDesdeIndice(
+        idxEfectores,
+        cargo.efector_cumplimiento_id,
+      )}`,
+      rol: labelDesdeIndice(idxRoles, cargo.rol_id),
+      escalafon: labelDesdeIndice(idxEscalafon, cargo.escalafon_id),
+      agrupamiento: labelDesdeIndice(idxAgrupamiento, cargo.agrupamiento_id),
+      categoria: labelDesdeIndice(idxCategorias, cargo.categoria_id),
+      funcion: labelDesdeIndice(idxFunciones, cargo.cargo_funcional_id),
+      cargaHoraria: String(cargo.carga_horaria_total || "—"),
+      vigencia: `Desde ${String(cargo.fecha_desde || "—")} · ${String(cargo.fecha_hasta || "Vigente")}`,
+    };
+  }, [
+    tipoAlta,
+    modoEdicion,
+    registroEditId,
+    formData.cargo_id,
+    idxHlc,
+    idxFunciones,
+    idxEfectores,
+    idxRoles,
+    idxEscalafon,
+    idxAgrupamiento,
+    idxCategorias,
+  ]);
+  const accionFormularioLabel = useMemo(() => {
+    if (tipoAlta === "historial_laboral_cargos") {
+      return modoEdicion ? "Editar período de cargo" : "Nuevo período de cargo";
+    }
+    return modoEdicion ? "Editar este grupo" : "Crear nuevo grupo";
+  }, [tipoAlta, modoEdicion]);
   const registrosPorTipo = rowsByCollection[tipoAlta] ?? EMPTY_ROWS;
   const registrosPorTipoFiltrados = useMemo(() => {
     const pid = String(formData.persona_id || "").trim();
@@ -176,25 +258,6 @@ export default function DatosLaborales() {
     const personaId = String(formData.persona_id);
     return hlcRows.filter((row) => String(row.persona_id || "") === personaId);
   }, [hlcRows, formData.persona_id]);
-  const opcionesCargoHlcDetalladas = useMemo(
-    () =>
-      opcionesCargoHlcFiltradas.map((cargo) => {
-        const cargoFuncional = labelDesdeIndice(idxFunciones, cargo.cargo_funcional_id);
-        const grupo = labelDesdeIndice(idxGrupos, cargo.grupo_de_trabajo_id);
-        const efectorDes = labelDesdeIndice(idxEfectores, cargo.efector_designacion_id);
-        const efectorCum = labelDesdeIndice(idxEfectores, cargo.efector_cumplimiento_id);
-        const desde = cargo.fecha_desde || "—";
-        const hasta = cargo.fecha_hasta || "abierto";
-        const estado = cargo.estado_asignacion_id || "—";
-        return {
-          id: cargo.id,
-          label:
-            `${cargo.id} | ${cargoFuncional} | ${grupo} | ` +
-            `ED:${efectorDes} EC:${efectorCum} | ${desde} -> ${hasta} | estado:${estado}`,
-        };
-      }),
-    [opcionesCargoHlcFiltradas, idxFunciones, idxGrupos, idxEfectores],
-  );
   const registrosEdicionDetallados = useMemo(() => {
     return buildRegistrosEdicionDetallados({
       registrosPorTipo: registrosPorTipoFiltrados,
@@ -210,9 +273,9 @@ export default function DatosLaborales() {
     const personaId = String(formData.persona_id || "").trim();
     if (!personaId) {
       return {
-        hlcVigente: null,
-        hlgVigentes: [],
-        hldVigente: null,
+        bloquesVigentes: [],
+        totalHlcPersona: 0,
+        tieneHistorico: false,
         lastUpdate: null,
         alertas: [],
       };
@@ -223,8 +286,7 @@ export default function DatosLaborales() {
     const hlcVigentes = hlcPersona.filter(isVigenteByFecha);
     const hlgVigentes = hlgPersona.filter(isVigenteByFecha);
     const hldVigentes = hldPersona.filter(isVigenteByFecha);
-    const hlcVigente = hlcVigentes[0] || null;
-    const hldVigente = hldVigentes[0] || null;
+    const hlcCerrados = hlcPersona.filter((r) => !isVigenteByFecha(r));
     const merged = [...hlcPersona, ...hlgPersona, ...hldPersona];
     const lastUpdate = merged
       .map((r) => r.actualizado_en || r.creado_en || null)
@@ -232,30 +294,149 @@ export default function DatosLaborales() {
       .sort((a, b) => String(b).localeCompare(String(a)))[0] || null;
     const alertas = [];
     if (hlcVigentes.length > 1) alertas.push("Más de un HLC vigente");
-    if (!hlcVigente && hlgVigentes.length > 0) alertas.push("HLG vigente sin HLC vigente");
-    if (!hldVigente && hlgVigentes.length > 0) alertas.push("HLG vigente sin HLD vigente");
-    const hlcLabel = hlcVigente
-      ? `${labelDesdeIndice(idxFunciones, hlcVigente.cargo_funcional_id)} · ${labelDesdeIndice(
+    if (hlcVigentes.length === 0 && hlgVigentes.length > 0) alertas.push("HLG vigente sin HLC vigente");
+    if (hldVigentes.length === 0 && hlgVigentes.length > 0) alertas.push("HLG vigente sin HLD vigente");
+
+    const hldByCargo = hldPersona.reduce((acc, hld) => {
+      const cargoId = String(hld.cargo_id || "").trim();
+      if (!cargoId) return acc;
+      if (!acc.has(cargoId)) acc.set(cargoId, []);
+      acc.get(cargoId).push(hld);
+      return acc;
+    }, new Map());
+
+    const bloquesVigentes = hlcVigentes
+      .slice()
+      .sort((a, b) => String(b.fecha_desde || "").localeCompare(String(a.fecha_desde || "")))
+      .map((hlc) => {
+        const hldAsociados = hldByCargo.get(String(hlc.id || "")) || [];
+        const hldAsociadosIds = new Set(hldAsociados.map((row) => String(row.id || "")));
+        const hlgAsociados = hlgPersona.filter((r) => hldAsociadosIds.has(String(r.dato_laboral_id || "")));
+        const hlgVigDelHlc = hlgAsociados.filter(isVigenteByFecha);
+        const hlgHistDelHlc = hlgAsociados.filter((r) => !isVigenteByFecha(r));
+        const hldRelacionado =
+          hlgVigDelHlc
+            .map((r) => idxHld.get(String(r.dato_laboral_id || "")))
+            .find(Boolean) || null;
+        const tituloHlc = `${labelDesdeIndice(idxFunciones, hlc.cargo_funcional_id)} · ${labelDesdeIndice(
           idxEfectores,
-          hlcVigente.efector_cumplimiento_id,
-        )}`
-      : "Sin vigencia";
-    const hlgLabel =
-      hlgVigentes.length === 0
-        ? "Sin vigencia"
-        : hlgVigentes
-            .slice(0, 2)
-            .map((r) => {
-              const grupo = labelDesdeIndice(idxGrupos, r.grupo_de_trabajo_id);
-              const funcion = labelDesdeIndice(idxFunciones, r.funcion_real_id);
-              return `${grupo} · ${funcion}`;
-            })
-            .join(" | ");
-    const hldLabel = hldVigente
-      ? `Vigente desde ${String(hldVigente.fecha_desde || hldVigente.fecha_inicio || "—")}`
-      : "Sin vigencia";
-    return { hlcVigente, hlgVigentes, hldVigente, lastUpdate, alertas, hlcLabel, hlgLabel, hldLabel };
-  }, [formData.persona_id, hlcRows, hlgRows, hldRows, idxFunciones, idxEfectores, idxGrupos]);
+          hlc.efector_cumplimiento_id,
+        )}`;
+        const mapHlg = (r) => {
+          const hldRef = idxHld.get(String(r.dato_laboral_id || "")) || null;
+          const cargaHorariaGrupo = sumarHorasSemana(r.carga_por_dia_semana);
+          const warningHlg = [];
+          if (cargaHorariaGrupo <= 0) warningHlg.push("Sin carga horaria asignada al grupo.");
+          if (!hldRef || !hldRef.funcion_real_id) warningHlg.push("Sin función real asociada.");
+          return {
+            id: String(r.id || ""),
+            grupo: labelDesdeIndice(idxGrupos, r.grupo_de_trabajo_id),
+            funcion: labelDesdeIndice(idxFunciones, hldRef && hldRef.funcion_real_id),
+            periodo: `Desde ${String(r.fecha_inicio || "—")} · ${String(r.fecha_fin || "Vigente")}`,
+            cargaHorariaGrupo: cargaHorariaGrupo > 0 ? cargaHorariaGrupo : 0,
+            warningHlg,
+          };
+        };
+        const vigenciaHlc = `Desde ${String(hlc.fecha_desde || "—")} · ${String(hlc.fecha_hasta || "Vigente")}`;
+        const hldLabel = hldRelacionado
+          ? `Vigente desde ${String(hldRelacionado.fecha_desde || hldRelacionado.fecha_inicio || "—")}`
+          : "Sin vínculo HLD vigente";
+        const totalCargaHlg = hlgVigDelHlc.reduce((acc, row) => acc + sumarHorasSemana(row.carga_por_dia_semana), 0);
+        const warningsHlc = [];
+        const cargaHlcNum = Number(hlc.carga_horaria_total);
+        if (hlgVigDelHlc.length === 0) warningsHlc.push("Cargo vigente sin asignación vigente a grupo de trabajo.");
+        if (Number.isFinite(cargaHlcNum) && hlgVigDelHlc.length > 0 && Math.abs(totalCargaHlg - cargaHlcNum) > 0.01) {
+          warningsHlc.push(`Carga horaria inconsistente: HLC ${cargaHlcNum} hs vs HLG ${totalCargaHlg} hs.`);
+        }
+        return {
+          id: String(hlc.id || ""),
+          hlcId: String(hlc.id || ""),
+          rolHlc: labelDesdeIndice(idxRoles, hlc.rol_id),
+          escalafon: labelDesdeIndice(idxEscalafon, hlc.escalafon_id),
+          agrupamiento: labelDesdeIndice(idxAgrupamiento, hlc.agrupamiento_id),
+          categoria: labelDesdeIndice(idxCategorias, hlc.categoria_id),
+          funcion: labelDesdeIndice(idxFunciones, hlc.cargo_funcional_id),
+          cargaHoraria: String(hlc.carga_horaria_total || "—"),
+          tituloHlc,
+          vigenciaHlc,
+          hlgVigentes: hlgVigDelHlc.map(mapHlg),
+          hlgHistoricos: hlgHistDelHlc.map(mapHlg),
+          hldLabel,
+          warningsHlc,
+        };
+      });
+
+    return {
+      bloquesVigentes,
+      totalHlcPersona: hlcPersona.length,
+      tieneHistorico: hlcCerrados.length > 0,
+      lastUpdate,
+      alertas,
+    };
+  }, [
+    formData.persona_id,
+    hlcRows,
+    hlgRows,
+    hldRows,
+    idxHld,
+    idxFunciones,
+    idxEfectores,
+    idxGrupos,
+    idxRoles,
+    idxEscalafon,
+    idxAgrupamiento,
+    idxCategorias,
+  ]);
+  const snapshotHistorico = useMemo(() => {
+    const personaId = String(formData.persona_id || "").trim();
+    if (!personaId) return [];
+    const hlcCerrados = hlcRows
+      .filter((r) => String(r.persona_id || "") === personaId)
+      .filter((r) => !isVigenteByFecha(r))
+      .slice()
+      .sort((a, b) => String(b.fecha_hasta || "").localeCompare(String(a.fecha_hasta || "")));
+    return hlcCerrados.map((hlc, idx) => {
+      const hldDelPeriodo = hldRows.filter(
+        (r) =>
+          String(r.persona_id || "") === personaId && String(r.cargo_id || "") === String(hlc.id || ""),
+      );
+      const hldDelPeriodoIds = new Set(hldDelPeriodo.map((row) => String(row.id || "")));
+      const hlgDelPeriodo = hlgRows.filter(
+        (r) =>
+          String(r.persona_id || "") === personaId &&
+          hldDelPeriodoIds.has(String(r.dato_laboral_id || "")),
+      );
+      const hlgVigDelHlc = hlgDelPeriodo.filter(isVigenteByFecha);
+      const hlgHistDelHlc = hlgDelPeriodo.filter((r) => !isVigenteByFecha(r));
+      const mapHlg = (r) => {
+        const hldRef = idxHld.get(String(r.dato_laboral_id || "")) || null;
+        const cargaHorariaGrupo = sumarHorasSemana(r.carga_por_dia_semana);
+        return {
+          id: String(r.id || ""),
+          grupo: labelDesdeIndice(idxGrupos, r.grupo_de_trabajo_id),
+          funcion: labelDesdeIndice(idxFunciones, hldRef && hldRef.funcion_real_id),
+          periodo: `Desde ${String(r.fecha_inicio || "—")} · ${String(r.fecha_fin || "Vigente")}`,
+          cargaHorariaGrupo: cargaHorariaGrupo > 0 ? cargaHorariaGrupo : 0,
+        };
+      };
+      const titulo = `${labelDesdeIndice(idxFunciones, hlc.cargo_funcional_id)} · ${labelDesdeIndice(
+        idxEfectores,
+        hlc.efector_cumplimiento_id,
+      )}`;
+      const periodo = `Desde ${String(hlc.fecha_desde || "—")} · Hasta ${String(hlc.fecha_hasta || "—")}`;
+      return {
+        id: String(hlc.id || `hlc-cerrado-${idx}`),
+        hlcId: String(hlc.id || ""),
+        rolHlc: labelDesdeIndice(idxRoles, hlc.rol_id),
+        orden: idx + 1,
+        titulo,
+        periodo,
+        asignaciones: hlgDelPeriodo.length,
+        hlgVigentes: hlgVigDelHlc.map(mapHlg),
+        hlgHistoricos: hlgHistDelHlc.map(mapHlg),
+      };
+    });
+  }, [formData.persona_id, hlcRows, hldRows, hlgRows, idxHld, idxFunciones, idxEfectores, idxGrupos, idxRoles]);
   const timelineItemsBase = useMemo(
     () =>
       buildTimelineItemsByPersona({
@@ -383,6 +564,71 @@ export default function DatosLaborales() {
     setCargaPorDiaRows((prev) => removeCargaPorDiaRow(prev, idx));
   }
 
+  function cerrarFlujoFormularioManteniendoPersona() {
+    const personaId = String(formData.persona_id || "").trim();
+    setModoEdicion(false);
+    setRegistroEditId("");
+    setTipoAlta("historial_laboral_cargos");
+    setCargaPorDiaRows([emptyCargaDia()]);
+    setFormData({
+      ...INITIAL_FORM_DATA_LABORAL,
+      persona_id: personaId,
+    });
+    setMostrarFormulario(false);
+    setVistaTab("actual");
+    setSaveMsg("");
+  }
+
+  function abrirFormularioEdicionHlc(hlcId) {
+    const target = hlcRows.find((r) => String(r.id || "") === String(hlcId || ""));
+    if (!target) return;
+    setTipoAlta("historial_laboral_cargos");
+    setModoEdicion(true);
+    setModoAvanzado(false);
+    setRegistroEditId(String(target.id));
+    cargarRegistroEnFormulario(target);
+    setVistaTab("actual");
+    setMostrarFormulario(true);
+    scrollToForm();
+  }
+
+  function abrirFormularioEdicionHlg(hlgId) {
+    const target = hlgRows.find((r) => String(r.id || "") === String(hlgId || ""));
+    if (!target) return;
+    setTipoAlta("historial_laboral_grupos");
+    setModoEdicion(true);
+    setModoAvanzado(false);
+    setRegistroEditId(String(target.id));
+    cargarRegistroEnFormulario(target);
+    setVistaTab("actual");
+    setMostrarFormulario(true);
+    scrollToForm();
+  }
+
+  function abrirFormularioNuevoHlgEnHlc(hlcId) {
+    const targetHlc = hlcRows.find((r) => String(r.id || "") === String(hlcId || ""));
+    if (!targetHlc) return;
+    setTipoAlta("historial_laboral_grupos");
+    setModoEdicion(false);
+    setModoAvanzado(false);
+    setRegistroEditId("");
+    setSaveMsg("");
+    setFormData((prev) => ({
+      ...prev,
+      persona_id: String(targetHlc.persona_id || prev.persona_id || ""),
+      cargo_id: String(targetHlc.id || ""),
+      grupo_de_trabajo_id: "",
+      regimen_horario_id: "",
+      centro_costo_id: "",
+      funcion_real_id: "",
+      nivel_jerarquico: "",
+    }));
+    setCargaPorDiaRows([emptyCargaDia()]);
+    setVistaTab("actual");
+    setMostrarFormulario(true);
+    scrollToForm();
+  }
+
   function abrirEdicionDesdeTimeline(item) {
     if (!item || !item.id) return;
     if (item.tipo === "HLc") {
@@ -390,6 +636,7 @@ export default function DatosLaborales() {
       if (!target) return;
       setTipoAlta("historial_laboral_cargos");
       setModoEdicion(true);
+      setModoAvanzado(false);
       setRegistroEditId(String(target.id));
       cargarRegistroEnFormulario(target);
       return;
@@ -399,6 +646,7 @@ export default function DatosLaborales() {
       if (!target) return;
       setTipoAlta("historial_laboral_grupos");
       setModoEdicion(true);
+      setModoAvanzado(false);
       setRegistroEditId(String(target.id));
       cargarRegistroEnFormulario(target);
       return;
@@ -407,6 +655,7 @@ export default function DatosLaborales() {
     if (!hlgVinculado) return;
     setTipoAlta("historial_laboral_grupos");
     setModoEdicion(true);
+    setModoAvanzado(false);
     setRegistroEditId(String(hlgVinculado.id));
     cargarRegistroEnFormulario(hlgVinculado);
   }
@@ -464,6 +713,7 @@ export default function DatosLaborales() {
       tipoAlta,
       formData,
       cargaPorDiaRows,
+      idxHlc,
     });
   }
 
@@ -500,16 +750,23 @@ export default function DatosLaborales() {
       const baseOk = `Guardado correctamente: ${r.id || "(sin id)"}`;
       if (warnings.length === 0) {
         setSaveMsg(baseOk);
+        setResultadoModalMsg(baseOk);
       } else {
         const detalleWarnings = warnings
           .map((w) => (w.code ? `${w.code}: ${w.message}` : w.message))
           .join(" | ");
-        setSaveMsg(`Guardado con advertencias: ${detalleWarnings}`);
+        const advertenciaMsg = `Guardado con advertencias: ${detalleWarnings}`;
+        setSaveMsg(advertenciaMsg);
+        setResultadoModalMsg(advertenciaMsg);
       }
       await cargarTodo();
+      setResultadoModalAbierto(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error desconocido.";
-      setSaveMsg(`No se pudo guardar: ${msg}`);
+      const errorMsg = `No se pudo guardar: ${msg}`;
+      setSaveMsg(errorMsg);
+      setResultadoModalMsg(errorMsg);
+      setResultadoModalAbierto(true);
     } finally {
       setSaving(false);
     }
@@ -530,13 +787,39 @@ export default function DatosLaborales() {
           </div>
         </Card>
 
-        <Card className="px-4 py-4 md:px-5">
+        <Card className="px-4 py-4 md:px-5" id="form-laboral">
           <PersonaSearchSelect
             personaId={formData.persona_id}
             setPersonaId={(value) => onChangeField("persona_id", value)}
             personaOptions={opcionesPersonasSearch}
             modoAvanzado={modoAvanzado}
           />
+        </Card>
+
+        {personaSeleccionada ? (
+        <>
+        <Card className="px-4 py-4 md:px-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Persona activa</p>
+              <p className="text-sm font-semibold text-slate-900">{personaActivaLabel}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setTipoAlta("historial_laboral_cargos");
+                setModoEdicion(false);
+                setModoAvanzado(false);
+                setRegistroEditId("");
+                setMostrarFormulario(true);
+                setVistaTab("actual");
+                scrollToForm();
+              }}
+              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 active:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-300"
+            >
+              Nuevo ciclo HLC
+            </button>
+          </div>
         </Card>
 
         <Card className="px-4 py-4 md:px-5">
@@ -546,7 +829,6 @@ export default function DatosLaborales() {
               {[
                 ["actual", "Actual"],
                 ["historico", "Histórico"],
-                ["auditoria", "Auditoría"],
               ].map(([id, label]) => (
                 <button
                   key={id}
@@ -563,33 +845,147 @@ export default function DatosLaborales() {
               ))}
             </div>
           </div>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cargo vigente</p>
-              <p className="mt-1 text-base font-semibold text-slate-900">
-                {snapshotActual.hlcLabel}
-              </p>
-            </div>
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Asignaciones vigentes
-              </p>
-              <p className="mt-1 text-base font-semibold text-slate-900">{snapshotActual.hlgLabel}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Vínculo técnico</p>
-              <p className="mt-1 text-sm font-medium text-slate-700">
-                {snapshotActual.hldLabel}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Última actualización</p>
-              <p className="mt-1 text-sm font-medium text-slate-700">
-                {formatDateTime(snapshotActual.lastUpdate)}
-              </p>
-            </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {snapshotActual.bloquesVigentes.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                {snapshotActual.totalHlcPersona === 0 ? (
+                  <>
+                    <p className="text-sm font-semibold text-slate-900">Esta persona no tiene cargos registrados</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      No existen períodos de cargo vigentes ni históricos para la persona seleccionada.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-semibold text-slate-900">No hay período de cargo vigente</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      La persona tiene cargos registrados, pero ninguno vigente en este momento.
+                    </p>
+                  </>
+                )}
+              </div>
+            ) : (
+              snapshotActual.bloquesVigentes.map((bloque, idx) => (
+                <div key={bloque.id} className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                  <div className="mb-2 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+                    Ciclo {idx + 1}
+                  </div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Período de cargo vigente
+                  </p>
+                  <p className="mt-1 text-base font-semibold text-slate-900">{bloque.tituloHlc}</p>
+                  <ul className="mt-1 space-y-1 text-xs text-slate-700">
+                    <li>- Rol asignado: {bloque.rolHlc || "—"}</li>
+                    <li>- Escalafón: {bloque.escalafon || "—"}</li>
+                    <li>- Agrupamiento: {bloque.agrupamiento || "—"}</li>
+                    <li>- Categoría: {bloque.categoria || "—"}</li>
+                    <li>- Función: {bloque.funcion || "—"}</li>
+                    <li>- Carga horaria: {bloque.cargaHoraria || "—"}</li>
+                    <li>- {bloque.vigenciaHlc}</li>
+                  </ul>
+                  {bloque.warningsHlc.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {bloque.warningsHlc.map((warning) => (
+                        <span
+                          key={`${bloque.id}-${warning}`}
+                          className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800"
+                        >
+                          Advertencia · {warning}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Períodos de asignación a grupos de trabajo vigentes ({bloque.hlgVigentes.length})
+                    </p>
+                    {bloque.hlgVigentes.length === 0 ? (
+                      <span className="mt-2 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                        Inconsistencia: cargo sin asignación a grupo de trabajo
+                      </span>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {bloque.hlgVigentes.map((hlg) => (
+                          <div key={hlg.id} className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2">
+                            <p className="text-sm font-semibold text-slate-900">{hlg.grupo} · {hlg.funcion}</p>
+                            <ul className="mt-0.5 space-y-1 text-xs text-slate-600">
+                              <li>- {hlg.periodo}</li>
+                              <li>- Carga horaria: {hlg.cargaHorariaGrupo} hs/semana</li>
+                            </ul>
+                            {hlg.warningHlg.length > 0 ? (
+                              <div className="mt-1 flex flex-wrap gap-2">
+                                {hlg.warningHlg.map((warning) => (
+                                  <span
+                                    key={`${hlg.id}-${warning}`}
+                                    className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+                                  >
+                                    {warning}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => abrirFormularioEdicionHlg(hlg.id)}
+                              className="mt-2 h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 active:bg-slate-50"
+                            >
+                              Editar este grupo
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() => abrirFormularioNuevoHlgEnHlc(bloque.hlcId)}
+                        className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 active:bg-slate-50"
+                      >
+                        Crear nuevo grupo
+                      </button>
+                    </div>
+                  </div>
+                  {bloque.hlgHistoricos.length > 0 ? (
+                    <div className="mt-2 rounded-lg border border-slate-300 bg-slate-100 px-2.5 py-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Períodos de asignación a grupos de trabajo históricos ({bloque.hlgHistoricos.length})
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {bloque.hlgHistoricos.map((hlg) => (
+                          <div key={hlg.id} className="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-2">
+                            <p className="text-sm font-semibold text-slate-900">{hlg.grupo} · {hlg.funcion}</p>
+                            <ul className="mt-0.5 space-y-1 text-xs text-slate-600">
+                              <li>- {hlg.periodo}</li>
+                              <li>- Carga horaria: {hlg.cargaHorariaGrupo} hs/semana</li>
+                            </ul>
+                            <button
+                              type="button"
+                              onClick={() => abrirFormularioEdicionHlg(hlg.id)}
+                              className="mt-2 h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 active:bg-slate-50"
+                            >
+                              Editar este grupo
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  <p className="mt-2 text-xs text-slate-600">{bloque.hldLabel}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => abrirFormularioEdicionHlc(bloque.hlcId)}
+                      className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 active:bg-slate-50"
+                    >
+                      Editar período de cargo
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
           <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+            <p className="mb-1 text-xs text-slate-500">Última actualización: {formatDateTime(snapshotActual.lastUpdate)}</p>
             <p className="text-sm font-semibold text-slate-900">Consistencia</p>
             {snapshotActual.alertas.length === 0 ? (
               <div className="mt-2">
@@ -610,38 +1006,94 @@ export default function DatosLaborales() {
               </ul>
             )}
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setTipoAlta("historial_laboral_cargos");
-                setVistaTab("actual");
-              }}
-              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 active:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-300"
-            >
-              Nuevo ciclo HLC
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setTipoAlta("historial_laboral_grupos");
-                setVistaTab("actual");
-              }}
-              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 active:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-300"
-            >
-              Nuevo ciclo HLG
-            </button>
-            <button
-              type="button"
-              onClick={() => setVistaTab("historico")}
-              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 active:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-300"
-            >
-              Ver histórico completo
-            </button>
-          </div>
         </Card>
 
-        {vistaTab === "actual" && (
+        {vistaTab === "historico" && (
+        <Card className="px-4 py-4 md:px-5">
+          <p className="text-base font-semibold text-slate-900">Períodos de cargo cerrados</p>
+          {snapshotHistorico.length === 0 ? (
+            <p className="mt-2 text-sm text-slate-600">Sin períodos cerrados para la persona seleccionada.</p>
+          ) : (
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              {snapshotHistorico.map((item) => (
+                <div key={item.id} className="rounded-xl border border-slate-300 bg-slate-50 p-3">
+                  <div className="mb-2 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+                    Ciclo {item.orden}
+                  </div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Período de cargo cerrado</p>
+                  <p className="mt-1 text-base font-semibold text-slate-900">{item.titulo}</p>
+                  <ul className="mt-1 space-y-1 text-xs text-slate-700">
+                    <li>- Rol asignado: {item.rolHlc || "—"}</li>
+                    <li>- {item.periodo}</li>
+                    <li>- Períodos de asignación a grupos de trabajo: {item.asignaciones}</li>
+                  </ul>
+                  {item.hlgVigentes.length > 0 ? (
+                    <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Períodos de asignación a grupos de trabajo vigentes ({item.hlgVigentes.length})
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {item.hlgVigentes.map((hlg) => (
+                          <div key={hlg.id} className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2">
+                            <p className="text-sm font-semibold text-slate-900">{hlg.grupo} · {hlg.funcion}</p>
+                            <ul className="mt-0.5 space-y-1 text-xs text-slate-600">
+                              <li>- {hlg.periodo}</li>
+                              <li>- Carga horaria: {hlg.cargaHorariaGrupo} hs/semana</li>
+                            </ul>
+                            <button
+                              type="button"
+                              onClick={() => abrirFormularioEdicionHlg(hlg.id)}
+                              className="mt-2 h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 active:bg-slate-50"
+                            >
+                              Editar este grupo
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {item.hlgHistoricos.length > 0 ? (
+                    <div className="mt-2 rounded-lg border border-slate-300 bg-slate-100 px-2.5 py-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Períodos de asignación a grupos de trabajo históricos ({item.hlgHistoricos.length})
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {item.hlgHistoricos.map((hlg) => (
+                          <div key={hlg.id} className="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-2">
+                            <p className="text-sm font-semibold text-slate-900">{hlg.grupo} · {hlg.funcion}</p>
+                            <ul className="mt-0.5 space-y-1 text-xs text-slate-600">
+                              <li>- {hlg.periodo}</li>
+                              <li>- Carga horaria: {hlg.cargaHorariaGrupo} hs/semana</li>
+                            </ul>
+                            <button
+                              type="button"
+                              onClick={() => abrirFormularioEdicionHlg(hlg.id)}
+                              className="mt-2 h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 active:bg-slate-50"
+                            >
+                              Editar este grupo
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => abrirFormularioEdicionHlc(item.hlcId)}
+                      className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 active:bg-slate-50"
+                    >
+                      Editar período de cargo
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+        )}
+
+        {vistaTab === "actual" && mostrarFormulario && (
         <>
         <Card className="px-4 py-4 md:px-5">
           <p className="text-base font-semibold text-slate-900">
@@ -672,28 +1124,35 @@ export default function DatosLaborales() {
               Modo: {modoAvanzado ? "Avanzado" : "Estándar"}
             </button>
           </div>
+          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contexto de la acción</p>
+            <p className="mt-1 text-sm font-semibold text-blue-700">{accionFormularioLabel}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{personaActivaLabel}</p>
+            {cargoContexto ? (
+              <div className="mt-1 text-xs text-slate-700">
+                <p className="font-semibold">Período de cargo seleccionado</p>
+                <p>{cargoContexto.titulo}</p>
+                <p>Rol asignado: {cargoContexto.rol || "—"}</p>
+                <p>Escalafón: {cargoContexto.escalafon || "—"} · Agrupamiento: {cargoContexto.agrupamiento || "—"}</p>
+                <p>
+                  Categoría: {cargoContexto.categoria || "—"} · Función: {cargoContexto.funcion || "—"} · Carga horaria:{" "}
+                  {cargoContexto.cargaHoraria}
+                </p>
+                <p>{cargoContexto.vigencia}</p>
+              </div>
+            ) : null}
+          </div>
           <form className="mt-4 space-y-4" onSubmit={onGuardarRegistro}>
             <LaboralFormCabeceraFields
               tipoAlta={tipoAlta}
               setTipoAlta={setTipoAlta}
               opcionesTipoAlta={OPCIONES_TIPO_ALTA}
+              showNivelRegistro={false}
               modoAvanzado={modoAvanzado}
               formData={formData}
               onChangeField={onChangeField}
               opcionesGrupos={opcionesGrupos}
               ayudaCampos={AYUDA_CAMPOS}
-            />
-
-            <LaboralFormModoEdicionFields
-              modoEdicion={modoEdicion}
-              modoAvanzado={modoAvanzado}
-              formData={formData}
-              registroEditId={registroEditId}
-              setModoEdicion={setModoEdicion}
-              setRegistroEditId={setRegistroEditId}
-              registrosPorTipoFiltrados={registrosPorTipoFiltrados}
-              registrosEdicionDetallados={registrosEdicionDetallados}
-              cargarRegistroEnFormulario={cargarRegistroEnFormulario}
             />
 
             {tipoAlta === "historial_laboral_cargos" && (
@@ -720,7 +1179,6 @@ export default function DatosLaborales() {
                 modoAvanzado={modoAvanzado}
                 formData={formData}
                 onChangeField={onChangeField}
-                opcionesCargoHlcDetalladas={opcionesCargoHlcDetalladas}
                 opcionesRegimenHorario={opcionesRegimenHorario}
                 opcionesCentroCosto={opcionesCentroCosto}
                 opcionesFuncion={opcionesFuncion}
@@ -742,20 +1200,6 @@ export default function DatosLaborales() {
               ayudaCampos={AYUDA_CAMPOS}
             />
 
-            {saveMsg && (
-              <p
-                className={`rounded-lg px-3 py-2 text-sm ${
-                  saveMsg.startsWith("Guardado correctamente")
-                    ? "bg-emerald-50 text-emerald-700"
-                    : saveMsg.startsWith("Guardado con advertencias:")
-                      ? "bg-amber-50 text-amber-800"
-                    : "bg-rose-50 text-rose-700"
-                }`}
-              >
-                {saveMsg}
-              </p>
-            )}
-
             <div className="flex justify-end">
               <button
                 type="submit"
@@ -768,6 +1212,15 @@ export default function DatosLaborales() {
           </form>
         </Card>
         </>
+        )}
+
+        {vistaTab === "actual" && !mostrarFormulario && (
+        <Card className="px-4 py-4 md:px-5" id="form-laboral">
+          <p className="text-base font-semibold text-slate-900">Acción laboral</p>
+          <p className="mt-1 text-sm text-slate-600">
+            Seleccioná una acción desde las tarjetas: crear período de cargo, crear nuevo grupo o editar el grupo/cargo seleccionado.
+          </p>
+        </Card>
         )}
 
         {(vistaTab === "actual" || vistaTab === "historico") && (
@@ -828,30 +1281,42 @@ export default function DatosLaborales() {
         />
         )}
 
-        {vistaTab === "auditoria" && (
-        <ColeccionesLaboralesCards
-          loadingByCollection={loadingByCollection}
-          progressByCollection={progressByCollection}
-          durationByCollection={durationByCollection}
-          errorByCollection={errorByCollection}
-          rowsByCollection={rowsByCollection}
-        />
-        )}
 
-        {vistaTab === "auditoria" && (
-        <FasesLaboralesTables
-          loadingByCollection={loadingByCollection}
-          errorByCollection={errorByCollection}
-          hlcRows={hlcRows}
-          hldRows={hldRows}
-          hlgRows={hlgRows}
-          idxGrupos={idxGrupos}
-          idxEfectores={idxEfectores}
-          idxHlc={idxHlc}
-          idxHld={idxHld}
-          labelDesdeIndice={labelDesdeIndice}
-        />
-        )}
+        {resultadoModalAbierto ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 px-4">
+            <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:p-5">
+              <p className="text-base font-semibold text-slate-900">Resultado de la operación</p>
+              <p
+                className={`mt-3 max-h-[40vh] overflow-y-auto rounded-lg px-3 py-2 text-sm ${
+                  resultadoModalMsg.startsWith("Guardado correctamente")
+                    ? "bg-emerald-50 text-emerald-700"
+                    : resultadoModalMsg.startsWith("Guardado con advertencias:")
+                      ? "bg-amber-50 text-amber-800"
+                      : "bg-rose-50 text-rose-700"
+                }`}
+              >
+                {resultadoModalMsg}
+              </p>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fueGuardado =
+                      resultadoModalMsg.startsWith("Guardado correctamente") ||
+                      resultadoModalMsg.startsWith("Guardado con advertencias:");
+                    setResultadoModalAbierto(false);
+                    if (fueGuardado) cerrarFlujoFormularioManteniendoPersona();
+                  }}
+                  className="h-10 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  Aceptar
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+        </>
+        ) : null}
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ const {
   findSolapeHlc,
   findSolapeHlgMismoCargo,
   assertHlgDentroDeHlc,
+  assertHldDentroDeHlc,
   buildWarningReconciliacionCarga,
   pushWarning,
   validarCargaPorDiaSemana,
@@ -79,7 +80,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   const d = request.data && typeof request.data === "object" ? request.data : {};
   const colRaw = typeof d.collectionName === "string" ? d.collectionName.trim() : "";
   if (!COLECCIONES_ESCRITURA_LABORAL_TEMPORAL.has(colRaw)) {
-    throw new HttpsError("invalid-argument", "[VAL-HLB-001] Colección laboral no permitida para escritura temporal.");
+    throw new HttpsError("invalid-argument", "[VAL-HLB-001] La coleccion indicada no esta habilitada para guardado laboral temporal.");
   }
   const datos = d.datos && typeof d.datos === "object" ? d.datos : {};
   const now = FieldValue.serverTimestamp();
@@ -94,7 +95,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     if (!personaId || !efDesignacionId || !efCumplimientoId) {
       throw new HttpsError(
         "invalid-argument",
-        "[VAL-HLC-002] En HLc son obligatorios: persona_id, efector_designacion_id y efector_cumplimiento_id.",
+        "[VAL-HLC-002] Faltan datos obligatorios del cargo: persona, efector de designacion y efector de cumplimiento.",
       );
     }
     await assertDocExistsOrNull("grupos_de_trabajo", grupoTrabajoId, "grupo_de_trabajo_id");
@@ -122,7 +123,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     ) {
       throw new HttpsError(
         "invalid-argument",
-        "[VAL-HLC-007] En HLc son obligatorios: tipo_vinculo_id, modalidad_jornada_id, estado_asignacion_id, escalafon_id, agrupamiento_id, categoria_id, rol_id, cargo_funcional_id y carga_horaria_total.",
+        "[VAL-HLC-007] Faltan datos obligatorios del cargo: tipo de vinculo, modalidad de jornada, estado de asignacion, escalafon, agrupamiento, categoria, rol, cargo funcional y carga horaria total.",
       );
     }
     await assertDocExistsOrNull("cfg_tipo_vinculo_laboral", tipoVinculoId, "tipo_vinculo_id");
@@ -143,7 +144,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     if (referenciasNormativa.length === 0) {
       throw new HttpsError(
         "invalid-argument",
-        "[VAL-HLC-005] referencias_normativa_designacion requiere al menos una referencia legal.",
+        "[VAL-HLC-005] Debes informar al menos una referencia normativa de designacion.",
       );
     }
     const referenciasNormalizadas = [];
@@ -154,7 +155,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       if (!tipoActoId || !numero || !fecha) {
         throw new HttpsError(
           "invalid-argument",
-          "[VAL-HLC-006] Cada referencia normativa requiere tipo_acto_id, numero y fecha.",
+          "[VAL-HLC-006] Cada referencia normativa debe incluir tipo de acto, numero y fecha.",
         );
       }
       await assertDocExistsOrNull("cfg_tipo_acto_designacion", tipoActoId, "referencias_normativa_designacion.tipo_acto_id");
@@ -189,18 +190,18 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     };
     const warnings = [];
     if (!payload.fecha_desde) {
-      throw new HttpsError("invalid-argument", "[VAL-HLC-001] fecha_desde es obligatoria en HLc.");
+      throw new HttpsError("invalid-argument", "[VAL-HLC-001] Debes informar la fecha de inicio del cargo.");
     }
     if (isRangoInvalido(payload.fecha_desde, payload.fecha_hasta)) {
       throw new HttpsError(
         "invalid-argument",
-        "[VAL-HLC-003] Rango inválido en HLc: fecha_desde no puede ser mayor que fecha_hasta.",
+        "[VAL-HLC-003] El periodo del cargo es invalido: la fecha de inicio no puede ser mayor que la fecha de fin.",
       );
     }
     if (payload.fecha_hasta && !payload.causal_fin_asignacion_id) {
       throw new HttpsError(
         "invalid-argument",
-        "[VAL-HLC-004] causal_fin_asignacion_id es obligatorio cuando fecha_hasta está informada.",
+        "[VAL-HLC-004] Si cierras el cargo con fecha de fin, debes informar la causal de fin de asignacion.",
       );
     }
     const solapeHlc = await findSolapeHlc({
@@ -213,7 +214,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       pushWarning(
         warnings,
         "VAL-HLC-W001",
-        `Solape de vigencia HLc detectado para persona_id ${personaId} (conflicto con ${solapeHlc.id}).`,
+        `Advertencia: este período de cargo se superpone con otro período de la misma persona (registro relacionado: ${solapeHlc.id}).`,
         { persona_id: personaId, id, conflictivo_id: solapeHlc.id, collection: colRaw },
       );
     }
@@ -241,7 +242,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       pushWarning(
         warnings,
         "VAL-HLC-W005",
-        "Cargo activo sin grupo de trabajo asignado aún. Recomendado: completar HLg para evitar errores operativos.",
+        "Advertencia: el cargo quedó activo, pero todavía no tiene una asignación a grupo de trabajo. Recomendación: cargar una asignación (HLg).",
         { persona_id: personaId, hlc_id: id, collection: colRaw },
       );
     }
@@ -259,7 +260,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     if (cargoPersonaId && cargoPersonaId !== personaId) {
       throw new HttpsError(
         "invalid-argument",
-        `[VAL-HLD-001] persona_id inconsistente: HLd (${personaId}) no coincide con HLc (${cargoPersonaId}).`,
+        `[VAL-HLD-001] La persona del detalle laboral no coincide con la persona del cargo (${cargoPersonaId}).`,
       );
     }
     const funcionRealId = toNullableTrimmedString(datos.funcion_real_id);
@@ -268,7 +269,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     if (!funcionRealId || nivelJerarquico == null || !fechaInicio) {
       throw new HttpsError(
         "invalid-argument",
-        "[VAL-HLD-002] En HLd son obligatorios: funcion_real_id, nivel_jerarquico y fecha_inicio.",
+        "[VAL-HLD-002] Faltan datos obligatorios en el detalle laboral: funcion real, nivel jerarquico y fecha de inicio.",
       );
     }
     const payload = {
@@ -286,6 +287,18 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       activo: datos.activo !== false,
       actualizado_en: now,
     };
+    if (isRangoInvalido(payload.fecha_inicio, payload.fecha_fin)) {
+      throw new HttpsError(
+        "invalid-argument",
+        "[VAL-HLD-003] El periodo del detalle laboral es invalido: la fecha de inicio no puede ser mayor que la fecha de fin.",
+      );
+    }
+    await assertHldDentroDeHlc({
+      fechaInicioHld: payload.fecha_inicio,
+      fechaFinHld: payload.fecha_fin,
+      fechaDesdeHlc: toNullableTrimmedString(cargoSnap.get("fecha_desde")),
+      fechaHastaHlc: toNullableTrimmedString(cargoSnap.get("fecha_hasta")),
+    });
     await assertDocExistsOrNull("cfg_regimen_horario", payload.regimen_horario_id, "regimen_horario_id");
     await assertDocExistsOrNull("cfg_centro_costo", payload.centro_costo_id, "centro_costo_id");
     const ref = db.collection(colRaw).doc(id);
@@ -302,7 +315,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   if (!personaId || !datoLaboralId || !grupoId) {
     throw new HttpsError(
       "invalid-argument",
-      "[VAL-HLG-007] En HLg son obligatorios: persona_id, dato_laboral_id y grupo_de_trabajo_id.",
+      "[VAL-HLG-007] Faltan datos obligatorios en la asignacion a grupo: persona, detalle laboral y grupo de trabajo.",
     );
   }
   await assertDocExistsOrNull("historial_laboral_datos", datoLaboralId, "dato_laboral_id");
@@ -311,7 +324,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   if (datoPersonaId && datoPersonaId !== personaId) {
     throw new HttpsError(
       "invalid-argument",
-      `[VAL-HLG-001] persona_id inconsistente: HLg (${personaId}) no coincide con HLd (${datoPersonaId}).`,
+      `[VAL-HLG-001] La persona de la asignacion a grupo no coincide con la persona del detalle laboral (${datoPersonaId}).`,
     );
   }
   await assertDocExistsOrNull("grupos_de_trabajo", grupoId, "grupo_de_trabajo_id");
@@ -345,21 +358,27 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   if (!Array.isArray(payload.carga_por_dia_semana) || payload.carga_por_dia_semana.length === 0) {
     throw new HttpsError(
       "invalid-argument",
-      "[VAL-HLG-013] carga_por_dia_semana es obligatoria y debe contener al menos un día.",
+      "[VAL-HLG-013] Debes informar la carga horaria por dia con al menos un dia cargado.",
     );
   }
   if (!payload.fecha_inicio) {
-    throw new HttpsError("invalid-argument", "[VAL-HLG-010] fecha_inicio es obligatoria en HLg.");
+    throw new HttpsError(
+      "invalid-argument",
+      "[VAL-HLG-010] Debes informar la fecha de inicio de la asignacion a grupo.",
+    );
   }
   if (isRangoInvalido(payload.fecha_inicio, payload.fecha_fin)) {
-    throw new HttpsError("invalid-argument", "[VAL-HLG-005] Rango inválido en HLg: fecha_inicio no puede ser mayor que fecha_fin.");
+    throw new HttpsError(
+      "invalid-argument",
+      "[VAL-HLG-005] El periodo de la asignacion a grupo es invalido: la fecha de inicio no puede ser mayor que la fecha de fin.",
+    );
   }
   validarCargaPorDiaSemana(payload.carga_por_dia_semana);
   const cargoId = toNullableTrimmedString(datoSnap.get("cargo_id"));
   if (!cargoId) {
     throw new HttpsError(
       "failed-precondition",
-      "[VAL-HLG-006] HLd referenciado no contiene cargo_id para validar cadena HLg->HLd->HLc.",
+      "[VAL-HLG-006] El detalle laboral referenciado no tiene cargo asociado. No se puede validar la relacion grupo -> detalle -> cargo.",
     );
   }
   await assertDocExistsOrNull("historial_laboral_cargos", cargoId, "cargo_id");
@@ -381,7 +400,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     pushWarning(
       warnings,
       "VAL-HLG-W002",
-      `Solape de vigencia HLg detectado dentro del mismo cargo (${cargoId}) para grupo_de_trabajo_id ${grupoId} (conflicto con ${solapeHlg.id}).`,
+      `Advertencia: esta asignación a grupo se superpone con otra asignación del mismo cargo y mismo grupo (registro relacionado: ${solapeHlg.id}).`,
       { persona_id: personaId, cargo_id: cargoId, id, grupo_de_trabajo_id: grupoId, conflictivo_id: solapeHlg.id, collection: colRaw },
     );
   }
@@ -389,7 +408,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   if (!hasDiaSemanaObjects) {
     throw new HttpsError(
       "invalid-argument",
-      "[VAL-HLG-015] carga_por_dia_semana debe informar dia_semana_id por item (modo objeto).",
+      "[VAL-HLG-015] Cada fila de carga horaria debe incluir el dia de semana (dia_semana_id).",
     );
   }
   const warningCarga = await buildWarningReconciliacionCarga({

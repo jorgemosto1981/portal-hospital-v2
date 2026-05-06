@@ -4,6 +4,7 @@ export default function LaboralFormCabeceraFields({
   tipoAlta,
   setTipoAlta,
   opcionesTipoAlta,
+  showNivelRegistro = true,
   modoAvanzado,
   onChangeField,
   opcionesGrupos,
@@ -12,19 +13,21 @@ export default function LaboralFormCabeceraFields({
 }) {
   return (
     <>
-      <LabeledSelect
-        label={
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Nivel de registro
-          </span>
-        }
-        value={tipoAlta}
-        onValueChange={(v) => setTipoAlta(v)}
-        options={opcionesTipoAlta}
-        placeholder="Elegir nivel..."
-        technicalName="tipoAlta"
-        showTechnicalName={modoAvanzado}
-      />
+      {showNivelRegistro ? (
+        <LabeledSelect
+          label={
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Nivel de registro
+            </span>
+          }
+          value={tipoAlta}
+          onValueChange={(v) => setTipoAlta(v)}
+          options={opcionesTipoAlta}
+          placeholder="Elegir nivel..."
+          technicalName="tipoAlta"
+          showTechnicalName={modoAvanzado}
+        />
+      ) : null}
 
       {tipoAlta === "historial_laboral_grupos" ? (
         <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-2">

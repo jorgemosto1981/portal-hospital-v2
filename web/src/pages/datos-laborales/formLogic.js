@@ -95,7 +95,7 @@ export function requiredFieldsByTipo(tipoAlta) {
   ];
 }
 
-export function validateLaboralForm({ tipoAlta, formData, cargaPorDiaRows }) {
+export function validateLaboralForm({ tipoAlta, formData, cargaPorDiaRows, idxHlc }) {
   const faltantes = requiredFieldsByTipo(tipoAlta).filter((k) => !String(formData[k] || "").trim());
   if (faltantes.length > 0) return `Completá los campos obligatorios: ${faltantes.join(", ")}`;
   if (formData.persona_id && !/^per_/i.test(formData.persona_id.trim())) {
@@ -135,6 +135,22 @@ export function validateLaboralForm({ tipoAlta, formData, cargaPorDiaRows }) {
     }
   }
   if (tipoAlta === "historial_laboral_grupos") {
+    const cargoRef = idxHlc && formData.cargo_id ? idxHlc.get(String(formData.cargo_id || "")) : null;
+    if (cargoRef) {
+      const cargoDesde = String(cargoRef.fecha_desde || "").trim();
+      const cargoHasta = String(cargoRef.fecha_hasta || "").trim();
+      const fechaDesde = String(formData.fecha_desde || "").trim();
+      const fechaHasta = String(formData.fecha_hasta || "").trim();
+      if (cargoDesde && fechaDesde && fechaDesde < cargoDesde) {
+        return "La fecha de inicio del detalle/asignacion no puede ser anterior al inicio del cargo.";
+      }
+      if (cargoHasta && !fechaHasta) {
+        return "El cargo seleccionado esta cerrado; debés informar fecha de fin en el detalle/asignación.";
+      }
+      if (cargoHasta && fechaHasta && fechaHasta > cargoHasta) {
+        return "La fecha de fin del detalle/asignación no puede superar la fecha de fin del cargo.";
+      }
+    }
     const rowsValidas = (cargaPorDiaRows || [])
       .map((row) => ({
         dia_semana_id: String(row.dia_semana_id || "").trim(),

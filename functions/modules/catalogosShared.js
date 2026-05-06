@@ -128,7 +128,7 @@ function pushWarning(warnings, code, message, details) {
 
 function validarCargaPorDiaSemana(cargaPorDiaSemana) {
   if (!Array.isArray(cargaPorDiaSemana)) {
-    throw new HttpsError("invalid-argument", "[VAL-HLG-011] carga_por_dia_semana debe ser un arreglo.");
+    throw new HttpsError("invalid-argument", "[VAL-HLG-011] La carga horaria por dia debe enviarse como una lista.");
   }
   const seenDias = new Set();
   for (const item of cargaPorDiaSemana) {
@@ -136,19 +136,19 @@ function validarCargaPorDiaSemana(cargaPorDiaSemana) {
       const dia = toNullableTrimmedString(item.dia_semana_id);
       const horas = toNumberOrNull(item.horas);
       if (!dia) {
-        throw new HttpsError("invalid-argument", "[VAL-HLG-011] Cada item de carga_por_dia_semana requiere dia_semana_id.");
+        throw new HttpsError("invalid-argument", "[VAL-HLG-011] Cada fila de carga horaria debe incluir el dia de semana.");
       }
       if (seenDias.has(dia)) {
         throw new HttpsError(
           "invalid-argument",
-          `[VAL-HLG-012] dia_semana_id duplicado en carga_por_dia_semana: ${dia}.`,
+          `[VAL-HLG-012] El dia ${dia} esta repetido en la carga horaria semanal.`,
         );
       }
       seenDias.add(dia);
       if (horas == null || horas < 0 || horas > 24) {
         throw new HttpsError(
           "invalid-argument",
-          `[VAL-HLG-011] Horas inválidas para dia_semana_id ${dia}. Debe estar entre 0 y 24.`,
+          `[VAL-HLG-011] Las horas del dia ${dia} son invalidas. Deben estar entre 0 y 24.`,
         );
       }
       continue;
@@ -157,7 +157,7 @@ function validarCargaPorDiaSemana(cargaPorDiaSemana) {
     if (horas == null || horas < 0 || horas > 24) {
       throw new HttpsError(
         "invalid-argument",
-        "[VAL-HLG-011] Cada valor numérico de carga_por_dia_semana debe estar entre 0 y 24.",
+        "[VAL-HLG-011] Cada valor de horas debe estar entre 0 y 24.",
       );
     }
   }
@@ -244,17 +244,47 @@ async function assertHlgDentroDeHlc({ fechaInicioHlg, fechaFinHlg, fechaDesdeHlc
   if (inicioHlg < inicioHlc) {
     throw new HttpsError(
       "failed-precondition",
-      "[VAL-HLG-003] fecha_inicio de HLg queda fuera de la vigencia de HLc (anterior al inicio del cargo).",
+      "[VAL-HLG-003] La asignacion a grupo comienza antes que el periodo del cargo. Ajusta la fecha de inicio del grupo o la del cargo.",
     );
   }
   if (!finHlc) return;
   if (!finHlg) {
-    throw new HttpsError("failed-precondition", "[VAL-HLG-004] HLg abierto no permitido cuando HLc ya tiene fecha_hasta.");
+    throw new HttpsError(
+      "failed-precondition",
+      "[VAL-HLG-004] El cargo esta cerrado y la asignacion a grupo quedo abierta. Debes informar fecha de fin en la asignacion.",
+    );
   }
   if (finHlg > finHlc) {
     throw new HttpsError(
       "failed-precondition",
-      "[VAL-HLG-004] fecha_fin de HLg supera la fecha_hasta del HLc referenciado.",
+      "[VAL-HLG-004] La fecha de fin de la asignacion a grupo supera la fecha de fin del cargo. Ajusta el periodo para que quede dentro del cargo.",
+    );
+  }
+}
+
+async function assertHldDentroDeHlc({ fechaInicioHld, fechaFinHld, fechaDesdeHlc, fechaHastaHlc }) {
+  const inicioHld = parseIsoDateOrNull(fechaInicioHld);
+  const finHld = parseIsoDateOrNull(fechaFinHld);
+  const inicioHlc = parseIsoDateOrNull(fechaDesdeHlc);
+  const finHlc = parseIsoDateOrNull(fechaHastaHlc);
+  if (!inicioHld || !inicioHlc) return;
+  if (inicioHld < inicioHlc) {
+    throw new HttpsError(
+      "failed-precondition",
+      "[VAL-HLD-004] El detalle laboral comienza antes que el periodo del cargo. Ajusta la fecha de inicio del detalle o la del cargo.",
+    );
+  }
+  if (!finHlc) return;
+  if (!finHld) {
+    throw new HttpsError(
+      "failed-precondition",
+      "[VAL-HLD-004] El cargo esta cerrado y el detalle laboral quedo abierto. Debes informar fecha de fin en el detalle.",
+    );
+  }
+  if (finHld > finHlc) {
+    throw new HttpsError(
+      "failed-precondition",
+      "[VAL-HLD-004] La fecha de fin del detalle laboral supera la fecha de fin del cargo. Ajusta el periodo para que quede dentro del cargo.",
     );
   }
 }
@@ -284,7 +314,7 @@ async function buildWarningReconciliacionCarga({
   return {
     code: "VAL-HLG-W003",
     severity: "warning",
-    message: `Reconciliación de carga horaria: total HLg (${total}) difiere de carga_horaria_total HLc (${objetivo}).`,
+    message: `Advertencia: la suma semanal de horas en asignaciones a grupo (${total}) no coincide con la carga horaria total del cargo (${objetivo}).`,
     details: { total_hlg: total, carga_horaria_total_hlc: objetivo, epsilon },
   };
 }
@@ -333,6 +363,7 @@ module.exports = {
   findSolapeHlc,
   findSolapeHlgMismoCargo,
   assertHlgDentroDeHlc,
+  assertHldDentroDeHlc,
   buildWarningReconciliacionCarga,
   assertConsistenciaEstadoPerfilCuenta,
   pushWarning,
