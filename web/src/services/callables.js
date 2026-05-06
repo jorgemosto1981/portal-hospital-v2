@@ -42,6 +42,11 @@ export function callRrhhGuardarAntiguedadExternaPersona(data) {
   return httpsCallable(getFunctionsV2(), "rrhhGuardarAntiguedadExternaPersona")(data);
 }
 
+/** RRHH: elimina la antigüedad externa guardada para permitir nueva carga. */
+export function callRrhhEliminarAntiguedadExternaPersona(data) {
+  return httpsCallable(getFunctionsV2(), "rrhhEliminarAntiguedadExternaPersona")(data);
+}
+
 /** Primer acceso: DNI + email + PIN 6 (no requiere sesión previa del agente en Auth). */
 export function callRegistroPrimerAcceso(data) {
   return httpsCallable(getFunctionsV2(), "registrarPrimerAcceso")(data);

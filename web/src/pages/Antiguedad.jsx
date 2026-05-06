@@ -6,6 +6,7 @@ import {
   callListarColeccionPublicaTemporal,
   callListarColeccion,
   callRrhhCalcularAntiguedadPersona,
+  callRrhhEliminarAntiguedadExternaPersona,
   callRrhhGuardarAntiguedadExternaPersona,
 } from "../services/callables.js";
 
@@ -50,6 +51,7 @@ export default function Antiguedad() {
   const [normativa, setNormativa] = useState("");
   const [desde, setDesde] = useState(() => todayIso());
   const [busyGuardarExterna, setBusyGuardarExterna] = useState(false);
+  const [busyEliminarExterna, setBusyEliminarExterna] = useState(false);
   const [personaQuery, setPersonaQuery] = useState("");
   const [personaOpen, setPersonaOpen] = useState(false);
   const personaWrapRef = useRef(null);
@@ -192,6 +194,10 @@ export default function Antiguedad() {
       toast.error("Completá normativa.");
       return;
     }
+    if (reconocimientosGuardados.length > 0) {
+      toast.error("Ya existe antigüedad externa cargada. Eliminá la existente para cargar una nueva.");
+      return;
+    }
     if (!desde) {
       toast.error("Completá fecha 'desde'.");
       return;
@@ -230,6 +236,30 @@ export default function Antiguedad() {
       toast.error(error?.message || "No se pudo guardar antigüedad externa.", { id: t });
     } finally {
       setBusyGuardarExterna(false);
+    }
+  }
+
+  async function eliminarAntiguedadExterna() {
+    if (!personaId) {
+      toast.error("Seleccioná un persona_id.");
+      return;
+    }
+    if (reconocimientosGuardados.length === 0) {
+      toast.error("No hay antigüedad externa para eliminar.");
+      return;
+    }
+    setBusyEliminarExterna(true);
+    const t = toast.loading("Eliminando antigüedad externa...");
+    try {
+      await callRrhhEliminarAntiguedadExternaPersona({ persona_id: personaId });
+      const refreshed = await callListarColeccionPublicaTemporal({ collectionName: "personas", pageSize: 400 });
+      setPersonas(refreshed?.data?.items || []);
+      await calcular();
+      toast.success("Antigüedad externa eliminada.", { id: t });
+    } catch (error) {
+      toast.error(error?.message || "No se pudo eliminar antigüedad externa.", { id: t });
+    } finally {
+      setBusyEliminarExterna(false);
     }
   }
 
@@ -396,14 +426,29 @@ export default function Antiguedad() {
               />
             </label>
             <div className="md:col-span-3">
-              <button
-                type="button"
-                onClick={guardarAntiguedadExterna}
-                disabled={busyGuardarExterna || !personaId}
-                className="min-h-11 rounded-xl bg-slate-800 px-4 text-sm font-semibold text-white disabled:opacity-60"
-              >
-                {busyGuardarExterna ? "Guardando..." : "Guardar antigüedad externa"}
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={guardarAntiguedadExterna}
+                  disabled={busyGuardarExterna || !personaId || reconocimientosGuardados.length > 0}
+                  className="min-h-11 rounded-xl bg-slate-800 px-4 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  {busyGuardarExterna ? "Guardando..." : "Guardar antigüedad externa"}
+                </button>
+                <button
+                  type="button"
+                  onClick={eliminarAntiguedadExterna}
+                  disabled={busyEliminarExterna || !personaId || reconocimientosGuardados.length === 0}
+                  className="min-h-11 rounded-xl border border-red-300 bg-red-50 px-4 text-sm font-semibold text-red-700 disabled:opacity-60"
+                >
+                  {busyEliminarExterna ? "Eliminando..." : "Eliminar antigüedad externa"}
+                </button>
+              </div>
+              {reconocimientosGuardados.length > 0 ? (
+                <p className="mt-1 text-xs text-amber-700">
+                  Solo se permite una antigüedad externa por persona. Eliminá la actual para cargar otra.
+                </p>
+              ) : null}
             </div>
           </div>
           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">

@@ -513,6 +513,12 @@ const rrhhGuardarAntiguedadExternaPersona = onCall(async (request) => {
     const prev = Array.isArray(persona.antiguedad_reconocimientos)
       ? persona.antiguedad_reconocimientos
       : [];
+    if (prev.length > 0) {
+      throw new HttpsError(
+        "failed-precondition",
+        "La persona ya tiene antigüedad externa cargada. Eliminá la existente antes de crear una nueva.",
+      );
+    }
     const next = [
       ...prev,
       {
@@ -547,6 +553,38 @@ const rrhhGuardarAntiguedadExternaPersona = onCall(async (request) => {
   };
 });
 
+const rrhhEliminarAntiguedadExternaPersona = onCall(async (request) => {
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
+  const d = request.data && typeof request.data === "object" ? request.data : {};
+  const personaId = typeof d.persona_id === "string" ? d.persona_id.trim() : "";
+  if (!personaId || !/^per_/i.test(personaId)) {
+    throw new HttpsError("invalid-argument", "persona_id inválido.");
+  }
+
+  const personaRef = db.collection(COL_PERSONAS).doc(personaId);
+  const now = FieldValue.serverTimestamp();
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(personaRef);
+    if (!snap.exists) {
+      throw new HttpsError("not-found", "La persona no existe.");
+    }
+    tx.set(
+      personaRef,
+      {
+        antiguedad_reconocimientos: [],
+        actualizado_en: now,
+      },
+      { merge: true },
+    );
+  });
+
+  return {
+    ok: true,
+    persona_id: personaId,
+    eliminada: true,
+  };
+});
+
 module.exports = {
   rrhhAltaAgente,
   rrhhActualizarEstadoCuentaAcceso,
@@ -554,5 +592,6 @@ module.exports = {
   rrhhReiniciarVinculacionCuenta,
   rrhhCalcularAntiguedadPersona,
   rrhhGuardarAntiguedadExternaPersona,
+  rrhhEliminarAntiguedadExternaPersona,
 };
 
