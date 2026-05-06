@@ -16,3 +16,4 @@ export { AntiguedadResultadoCard } from "./AntiguedadResultadoCard.jsx";
 export { AntiguedadIntroCard } from "./AntiguedadIntroCard.jsx";
 export { AntiguedadCalculoFormCard } from "./AntiguedadCalculoFormCard.jsx";
 export { AntiguedadExternaCard } from "./AntiguedadExternaCard.jsx";
+export { useAntiguedadPage } from "./useAntiguedadPage.js";
