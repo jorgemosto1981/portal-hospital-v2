@@ -84,6 +84,7 @@ export default function PerfilUsuario() {
   const personaId = String((claims && claims.persona_id) || "").trim();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [datosModalAbierto, setDatosModalAbierto] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [acepta, setAcepta] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -312,6 +313,19 @@ export default function PerfilUsuario() {
     return String(v || "").replace(/[^\d]/g, "");
   }
 
+  function abrirModalDatosPersonales() {
+    setModoEdicion(true);
+    setAcepta(false);
+    setSaveMsg("");
+    setDatosModalAbierto(true);
+  }
+
+  function cerrarModalDatosPersonales() {
+    setDatosModalAbierto(false);
+    setModoEdicion(false);
+    setAcepta(false);
+  }
+
   async function onSave(e) {
     e.preventDefault();
     setSaveMsg("");
@@ -372,6 +386,7 @@ export default function PerfilUsuario() {
       setModoEdicion(false);
       setAcepta(false);
       setBaseForm(form);
+      setDatosModalAbierto(false);
     } catch (ex) {
       setSaveMsg(ex instanceof Error ? ex.message : "No se pudo guardar.");
     } finally {
@@ -475,21 +490,52 @@ export default function PerfilUsuario() {
       </Card>
 
       <Card className="px-4 py-4 md:px-5">
-        <div className="mb-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-base font-semibold text-slate-900">Datos Personales</p>
           <button
             type="button"
-            onClick={() => setModoEdicion((v) => !v)}
-            className={`h-11 rounded-xl border px-4 text-sm font-semibold ${
-              modoEdicion
-                ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                : "border-slate-300 bg-white text-slate-700"
-            }`}
+            onClick={abrirModalDatosPersonales}
+            className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
           >
             Actualizar información
           </button>
         </div>
+        <p className="text-sm text-slate-600">Se visualizan tus datos personales actuales.</p>
 
-        <form className="space-y-4" onSubmit={onSave}>
+        <div className="mt-3 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
+          <div><label className="block text-sm font-medium text-slate-700">Nombre completo legal</label><input disabled value={form.nombre_completo_legal || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700">DNI</label><input disabled value={form.dni || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700">CUIL</label><input disabled value={form.cuil || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700">Fecha de nacimiento</label><input disabled value={formatDdMmAaaa(form.fecha_nacimiento)} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div className="md:col-span-2"><label className="block text-sm font-medium text-slate-700">Email personal</label><input disabled value={form.email_personal || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700">Estado civil</label><input disabled value={estadoCivilLabel} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700">Teléfono celular</label><input disabled value={form.telefono_celular || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700">Teléfono fijo</label><input disabled value={form.telefono_fijo || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700">Calle</label><input disabled value={form.calle || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700">Número</label><input disabled value={form.numero || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700">Piso</label><input disabled value={form.piso || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700">Departamento</label><input disabled value={form.departamento || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700">Localidad</label><input disabled value={localidadLabel} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700">Código postal</label><input disabled value={form.codigo_postal || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700">Provincia</label><input disabled value={provinciaLabel} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+          <div className="md:col-span-2"><label className="block text-sm font-medium text-slate-700">Referencia</label><input disabled value={form.referencia || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
+        </div>
+
+        {saveMsg ? (
+          <p className={`mt-3 rounded-lg px-3 py-2 text-sm ${saveMsg.startsWith("Notificación enviada") ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+            {saveMsg}
+          </p>
+        ) : null}
+      </Card>
+
+      {datosModalAbierto ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/45 px-4 py-4 md:py-8">
+          <div className="w-full max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:max-h-[90vh] md:p-5">
+            <p className="text-base font-semibold text-slate-900">Actualizar Datos Personales</p>
+            <p className="mt-1 text-sm text-slate-600">
+              Completá los cambios y notificá formalmente la actualización de datos.
+            </p>
+            <form className="mt-4 space-y-4" onSubmit={onSave}>
           <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
             <div><label className="block text-sm font-medium text-slate-700">Nombre completo legal</label><input disabled value={form.nombre_completo_legal || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
             <div><label className="block text-sm font-medium text-slate-700">DNI</label><input disabled value={form.dni || "—"} className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm" /></div>
@@ -568,7 +614,14 @@ export default function PerfilUsuario() {
             </p>
           ) : null}
 
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={cerrarModalDatosPersonales}
+              className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
+            >
+              Cancelar
+            </button>
             <button
               type="submit"
               disabled={!modoEdicion || !acepta || saving}
@@ -577,15 +630,17 @@ export default function PerfilUsuario() {
               {saving ? "Notificando..." : "Notificar actualización de datos"}
             </button>
           </div>
-        </form>
-      </Card>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       <Card className="px-4 py-4 md:px-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-base font-semibold text-slate-900">Declaración de Grupo Familiar</p>
             <p className="mt-1 text-sm text-slate-600">
-              Se visualiza la última DDJJ presentada del titular autenticado.
+              Se visualiza su última DDJJ presentada.
             </p>
           </div>
           <button
@@ -653,10 +708,6 @@ export default function PerfilUsuario() {
 
       <Card className="px-4 py-4 md:px-5">
         <p className="text-base font-semibold text-slate-900">Seguridad de la cuenta</p>
-        <p className="mt-1 text-sm text-slate-600">
-          Cambios de autenticación con revalidación y notificación a bandeja RRHH. La clave del portal es el mismo PIN de
-          6 dígitos que usás al iniciar sesión con DNI; solo podés reemplazarlo por otro PIN de 6 dígitos.
-        </p>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <form className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3" onSubmit={onCambiarEmail}>
