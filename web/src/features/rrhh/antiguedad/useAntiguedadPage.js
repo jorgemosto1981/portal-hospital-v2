@@ -47,7 +47,12 @@ export function useAntiguedadPage() {
         if (!mounted) return;
         const items = respPersonas?.data?.items || [];
         setPersonas(items);
-        setPersonaId((prev) => prev || (items[0]?.id || ""));
+        setPersonaId((prev) => {
+          const current = String(prev || "").trim();
+          if (!current) return "";
+          const exists = items.some((p) => String(p?.id || "").trim() === current);
+          return exists ? current : "";
+        });
         setCfgEscalafon(respEsc?.data?.items || []);
         setCfgAgrupamiento(respAgr?.data?.items || []);
         setCfgTipoVinculo(respVin?.data?.items || []);

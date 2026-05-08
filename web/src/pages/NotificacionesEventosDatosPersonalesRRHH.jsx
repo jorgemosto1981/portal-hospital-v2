@@ -90,7 +90,54 @@ function mapAccionToUiLabel(accionRaw) {
   if (accion === "notificar_cambio_password") return "Cambio contraseña";
   if (accion === "guardar_actualizacion") return "Actualización de datos";
   if (accion === "guardar_alta") return "Alta de datos";
+  if (accion === "presentar_ddjj_grupo_familiar_actualizacion") return "Presentar DDJJ grupo familiar (actualización)";
+  if (accion === "presentar_ddjj_grupo_familiar_inicial") return "Presentar DDJJ grupo familiar (inicial)";
+  if (accion === "omitir_ddjj_onboarding") return "Omitir DDJJ en onboarding";
+  if (accion === "actualizar_hlc") return "Actualizar historial laboral";
   return accion || "—";
+}
+
+function mapEstadoBandejaToUiLabel(estadoIdRaw) {
+  const estado = String(estadoIdRaw || "").trim().toLowerCase();
+  if (estado === ESTADO_BANDEJA_PENDIENTE_ID) return "Pendiente de revisión RRHH";
+  if (estado === ESTADO_BANDEJA_VISTO_ID) return "Visto";
+  if (estado === ESTADO_BANDEJA_ARCHIVADO_ID) return "Archivado";
+  return "Estado no categorizado";
+}
+
+function mapCampoToUiLabel(campoRaw) {
+  const campo = String(campoRaw || "").trim().toLowerCase();
+  const dictionary = {
+    titular_persona_id: "Titular persona",
+    declaracion_version: "Versión DDJJ",
+    estado_declaracion_id: "Estado DDJJ",
+    declaracion_jurada_aceptada: "DDJJ aceptada",
+    consentimiento_evaluacion_rrhh: "Consentimiento evaluación RRHH",
+    aceptada_en: "Fecha aceptación",
+    estado_bandeja_rrhh_id: "Estado bandeja RRHH",
+    estado_acceso: "Estado acceso",
+    estado_perfil_datos_id: "Estado perfil de datos",
+  };
+  return dictionary[campo] || String(campoRaw || "Campo");
+}
+
+function formatValueForUi(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return "Sin valor";
+  if (value === "__server_timestamp__") return "Marca de tiempo del servidor";
+  const maybeBool = String(value).trim().toLowerCase();
+  if (maybeBool === "true") return "Sí";
+  if (maybeBool === "false") return "No";
+  const mapCfg = {
+    cfg_ebr_pend_rev: "Pendiente de revisión RRHH",
+    cfg_ebr_visto: "Visto",
+    cfg_ebr_arch: "Archivado",
+    cfg_ddjj_03_presentada: "DDJJ presentada",
+    cfg_eca_activo: "Acceso activo al portal",
+    cfg_eca_onb: "Onboarding de datos en curso",
+    cfg_epd_comp: "Perfil completo",
+    cfg_epd_inc: "Perfil incompleto",
+  };
+  return mapCfg[maybeBool] || String(value);
 }
 
 function formatUiError(err, fallbackMsg) {
@@ -159,6 +206,7 @@ export default function NotificacionesEventosDatosPersonalesRRHH() {
   const [desde, setDesde] = useState(() => mesEnCursoRangoLocal().desde);
   const [hasta, setHasta] = useState(() => mesEnCursoRangoLocal().hasta);
   const [periodoYyyymm] = useState(() => mesEnCursoRangoLocal().periodo_yyyymm);
+  const [glosarioAbierto, setGlosarioAbierto] = useState(false);
 
   async function cargar() {
     setLoading(true);
@@ -284,7 +332,8 @@ export default function NotificacionesEventosDatosPersonalesRRHH() {
           occurred_date: toDateSafe(e.ocurrido_en),
           occurred_ymd: toYmd(toDateSafe(e.ocurrido_en)),
         };
-      });
+      })
+        .filter((e) => isEventoDatosPersonales(e) && normalizeEstadoBandeja(e) !== ESTADO_BANDEJA_ARCHIVADO_ID);
       setRows((prev) => [...prev, ...nuevos]);
       setNextCursorId(ev?.data?.page_info?.next_cursor_id || null);
       setHasMore(ev?.data?.page_info?.has_more === true);
@@ -424,6 +473,15 @@ export default function NotificacionesEventosDatosPersonalesRRHH() {
               </button>
             </div>
           </div>
+          <div className="mb-3 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setGlosarioAbierto(true)}
+              className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700"
+            >
+              Ver glosario
+            </button>
+          </div>
           <div className="mb-3 grid gap-2 md:grid-cols-4">
             <label className="text-xs text-slate-600">
               Desde
@@ -465,39 +523,47 @@ export default function NotificacionesEventosDatosPersonalesRRHH() {
                     key={r.id}
                     className={`rounded-lg border px-3 py-3 text-xs ${estadoStyles.card}`}
                   >
-                    <p className="text-slate-700">
+                    <p className="font-semibold text-slate-800">
                       {formatFechaEventoDdMmAaaa(r.ocurrido_en)} · {String(r.persona_nombre_completo || "—")} · DNI:{" "}
                       {String(r.persona_dni || "—")}
                     </p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <p className="text-slate-600">{String(r.tipo_evento_label || "—")}</p>
+                      <p className="text-slate-700">{String(r.tipo_evento_label || "—")}</p>
                       <span
                         className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${estadoStyles.badge}`}
                       >
-                        Estado: {String(r.estado_bandeja_label || "—")} (
-                        {String(r.estado_bandeja_id_normalizado || estadoBandeja || "—")})
+                        Estado: {mapEstadoBandejaToUiLabel(estadoBandeja)}
                       </span>
                     </div>
                     {String(r.accion || "").trim() ? (
-                      <p className="text-slate-600">Acción: {mapAccionToUiLabel(r.accion)}</p>
-                    ) : null}
-                    <p className="mt-0.5 text-[11px] italic text-slate-500">({String(r.id || "—")})</p>
-                    {String(r.evento_id || "").trim() ? (
-                      <p className="text-[11px] text-slate-500">Evento canónico: {String(r.evento_id)}</p>
+                      <p className="text-slate-700">
+                        <span className="font-semibold">Acción:</span> {mapAccionToUiLabel(r.accion)}
+                      </p>
                     ) : null}
                     <p className="text-slate-700">
-                      Por el USUARIO: {String(r.actor_nombre_completo || "—")} · DNI: {String(r.actor_dni || "—")}
+                      <span className="font-semibold">Actor del evento:</span> {String(r.actor_nombre_completo || "—")} · DNI:{" "}
+                      {String(r.actor_dni || "—")}
                     </p>
                     {Array.isArray(r.payload?.cambios) && r.payload.cambios.length > 0 && (
                       <div className="mt-2 rounded border border-slate-200 bg-white px-2 py-2">
                         {r.payload.cambios.map((c, i) => (
                           <p key={`${r.id}-chg-${i}`} className="text-slate-600">
-                            {String(c.campo || "campo")}: {String(c.antes ?? c.anterior ?? "null")} {"->"}{" "}
-                            {String(c.despues ?? c.nuevo ?? "null")}
+                            {mapCampoToUiLabel(c.campo)}: {formatValueForUi(c.antes ?? c.anterior)} {"->"}{" "}
+                            {formatValueForUi(c.despues ?? c.nuevo)}
                           </p>
                         ))}
                       </div>
                     )}
+                    <details className="mt-2 rounded border border-slate-200 bg-white px-2 py-2 text-slate-600">
+                      <summary className="cursor-pointer font-semibold text-slate-700">
+                        Ver detalle técnico (solo referencia)
+                      </summary>
+                      <p className="mt-1 text-[11px]">ID bandeja: {String(r.id || "—")}</p>
+                      {String(r.evento_id || "").trim() ? (
+                        <p className="text-[11px]">Evento canónico: {String(r.evento_id)}</p>
+                      ) : null}
+                      <p className="text-[11px]">Estado bandeja: {mapEstadoBandejaToUiLabel(estadoBandeja)}</p>
+                    </details>
                     {estadoBandeja === ESTADO_BANDEJA_PENDIENTE_ID && (
                       <button
                         type="button"
@@ -527,6 +593,53 @@ export default function NotificacionesEventosDatosPersonalesRRHH() {
           )}
         </Card>
       </div>
+      {glosarioAbierto ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/45 px-4 py-4 md:py-8">
+          <div className="w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:max-h-[90vh] md:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-base font-semibold text-slate-900">Glosario de eventos (solo lectura)</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Referencia para interpretar estados, acciones y cambios de la bandeja RRHH.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGlosarioAbierto(false)}
+                className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
+              >
+                Cerrar
+              </button>
+            </div>
+            <div className="mt-4 space-y-3 text-sm text-slate-700">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="font-semibold text-slate-900">Estados de bandeja RRHH</p>
+                <p>`cfg_ebr_pend_rev`: Pendiente de revisión RRHH.</p>
+                <p>`cfg_ebr_visto`: Visto (ya tomado conocimiento).</p>
+                <p>`cfg_ebr_arch`: Archivado (fuera de la bandeja activa).</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="font-semibold text-slate-900">Acciones frecuentes</p>
+                <p>Actualización perfil usuario: cambios de datos personales desde Mi Perfil.</p>
+                <p>Cambio correo solicitado/confirmado: flujo de actualización de email de acceso.</p>
+                <p>Cambio contraseña: actualización de PIN/contraseña de acceso.</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="font-semibold text-slate-900">Campos en bloque de cambios</p>
+                <p>Estado DDJJ: transición del estado de declaración jurada.</p>
+                <p>Estado acceso: estado de la cuenta de acceso del usuario.</p>
+                <p>Estado perfil de datos: completitud del perfil personal.</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="font-semibold text-slate-900">Interpretación de valores</p>
+                <p>Sin valor: dato no informado en el evento.</p>
+                <p>Marca de tiempo del servidor: valor automático aplicado por backend.</p>
+                <p>Detalle técnico: IDs internos para auditoría y soporte.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -40,10 +40,13 @@ export function AntiguedadCalculoFormCard({
               setPersonaOpen(true);
               setPersonaQuery(e.target.value);
             }}
-            placeholder="Buscar por nombre, apellido, DNI o ID..."
+            placeholder={personaId ? "Buscar por nombre, apellido, DNI o ID..." : "Seleccionar persona..."}
             className="mt-1 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
             disabled={load}
           />
+          {!personaId && !personaOpen ? (
+            <p className="mt-1 text-xs text-slate-500">Seleccioná una persona para habilitar el cálculo.</p>
+          ) : null}
           {personaOpen && (
             <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
               <button
