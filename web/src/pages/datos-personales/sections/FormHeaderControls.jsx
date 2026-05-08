@@ -41,6 +41,20 @@ export default function FormHeaderControls({
     const o = (personaOptions || []).find((x) => String(x.value) === String(personaId || ""));
     return o ? (o.selectedLabel || o.label) : "";
   }, [personaOptions, personaId]);
+  const isPersonasSection = String(tipo || "").trim() === "personas";
+
+  function onClickActualizarInformacion() {
+    if (!canUpdate) return;
+    const next = !modoEdicion;
+    setModoEdicion(next);
+    setEditId("");
+    if (!next) return;
+    const first = (registros || [])[0];
+    if (first && first.id) {
+      setEditId(String(first.id));
+      hydrateFrom(first);
+    }
+  }
 
   useEffect(() => {
     if (!personaOpen) return;
@@ -54,6 +68,33 @@ export default function FormHeaderControls({
 
   return (
     <>
+      {isPersonasSection ? (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-base font-semibold text-slate-900">Datos Personales</p>
+              <p className="mt-1 text-sm text-slate-600">Se visualizan tus datos personales actuales.</p>
+            </div>
+            {showUpdateButton ? (
+              <button
+                type="button"
+                disabled={!canUpdate}
+                onClick={onClickActualizarInformacion}
+                className={`h-11 rounded-xl border px-4 text-sm font-semibold transition-colors ${
+                  modoEdicion
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                }`}
+              >
+                Actualizar información
+              </button>
+            ) : null}
+          </div>
+          {!canUpdate && showUpdateButton && updateDisabledReason ? (
+            <p className="mt-2 text-xs text-slate-500">{updateDisabledReason}</p>
+          ) : null}
+        </div>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-2">
         {showPersonaSelector ? (
           <div ref={personaWrapRef} className="relative">
@@ -142,22 +183,11 @@ export default function FormHeaderControls({
       <div className="grid gap-3 md:grid-cols-2">
         <div className="flex items-end">
           <div>
-            {showUpdateButton ? (
+            {showUpdateButton && !isPersonasSection ? (
             <button
               type="button"
               disabled={!canUpdate}
-              onClick={() => {
-                if (!canUpdate) return;
-                const next = !modoEdicion;
-                setModoEdicion(next);
-                setEditId("");
-                if (!next) return;
-                const first = (registros || [])[0];
-                if (first && first.id) {
-                  setEditId(String(first.id));
-                  hydrateFrom(first);
-                }
-              }}
+              onClick={onClickActualizarInformacion}
               className={`h-11 rounded-xl border px-4 text-sm font-semibold transition-colors ${
                 modoEdicion
                   ? "border-emerald-300 bg-emerald-50 text-emerald-700"

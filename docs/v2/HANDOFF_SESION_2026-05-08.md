@@ -84,3 +84,28 @@
 - Catálogo de motivos desacoplado del catálogo de causal fin general.
 - Fechas visibles normalizadas en módulo laboral.
 - Read models de eventos extendidos y desplegados.
+
+## 9) Continuación sesión (perfil usuario + menú datos personales)
+
+- Se completó ajuste de `Perfil` (rol usuario) en `web/src/pages/PerfilUsuario.jsx`:
+  - bloque con título `Datos Personales`.
+  - botón `Actualizar información` dentro del bloque y alineado a la derecha.
+  - edición en modal flotante con botón `Cancelar` y acción de notificación.
+  - texto de DDJJ actualizado a: `Se visualiza su última DDJJ presentada.`
+  - texto explicativo removido de `Seguridad de la cuenta` según pedido funcional.
+- Se reforzó el mismo criterio visual en pantalla de `DatosPersonales` mediante `web/src/pages/datos-personales/sections/FormHeaderControls.jsx`:
+  - para colección `personas`, encabezado explícito:
+    - `Datos Personales`
+    - `Se visualizan tus datos personales actuales.`
+  - botón `Actualizar información` dentro del bloque, a la derecha.
+  - se evitó botón duplicado en el bloque inferior para `personas`.
+
+## 10) Git, deploy y sincronización multi-PC
+
+- Commits realizados y enviados a remoto en rama `mvp-fase1-onboarding`:
+  - `f456cbd` — `feat(web): ajustar perfil usuario con modal de datos personales`
+  - pendiente de esta continuidad: retoque de encabezado/botón en `FormHeaderControls`.
+- Deploy web ejecutado exitosamente en hosting:
+  - URL: `https://portal-hospital-v2.web.app`
+- Objetivo operativo cumplido:
+  - dejar remoto actualizado para continuar desde otra PC con el mismo estado funcional.
