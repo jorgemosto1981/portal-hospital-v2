@@ -33,6 +33,7 @@ const COLECCIONES_PUBLICAS_TEMPORALES = new Set([
   "cfg_regimen_horario",
   "cfg_centro_costo",
   "cfg_causal_fin_asignacion_laboral",
+  "cfg_motivo_deshabilitacion_hlc",
   "cfg_dia_semana",
   "cfg_tipo_acto_designacion",
   "cfg_motivo_baja_persona",

@@ -3,6 +3,9 @@
 const COL_PERSONAS = "personas";
 const COL_USUARIOS_CUENTA = "usuarios_cuenta";
 const COL_EVENTOS = "eventos_ticket";
+const COL_EVENTOS_BANDEJA_RRHH = "eventos_bandeja_rrhh";
+const COL_EVENTOS_POR_PERSONA = "eventos_por_persona";
+const COL_EVENTOS_POR_MODULO = "eventos_por_modulo";
 const COL_RATE_PRIMER_DNI = "_system_reg_primer_dni";
 const COL_RATE_LOGIN_DNI = "_system_rate_login_dni";
 const COL_GRUPOS_TRABAJO = "grupos_de_trabajo";
@@ -61,6 +64,7 @@ const CFG_COLECCIONES_RRHH = new Set([
   "cfg_centro_costo",
   "cfg_estado_asignacion_laboral",
   "cfg_causal_fin_asignacion_laboral",
+  "cfg_motivo_deshabilitacion_hlc",
   "cfg_tipo_acto_designacion",
   "usuarios_cuenta",
   /** Lecturas RRHH · seguimiento enrolamiento y perfil laboral (HLc). */
@@ -73,6 +77,9 @@ module.exports = {
   COL_PERSONAS,
   COL_USUARIOS_CUENTA,
   COL_EVENTOS,
+  COL_EVENTOS_BANDEJA_RRHH,
+  COL_EVENTOS_POR_PERSONA,
+  COL_EVENTOS_POR_MODULO,
   COL_RATE_PRIMER_DNI,
   COL_RATE_LOGIN_DNI,
   COL_GRUPOS_TRABAJO,

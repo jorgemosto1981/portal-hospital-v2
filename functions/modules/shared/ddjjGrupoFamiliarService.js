@@ -2,6 +2,7 @@
 
 const { ulid } = require("ulid");
 const { HttpsError } = require("firebase-functions/v2/https");
+const { buildEventoV21, persistEventoV21 } = require("./eventosV2");
 
 function normalizeEventValue(value) {
   if (value == null) return null;
@@ -47,7 +48,6 @@ async function processDdjjGrupoFamiliar({
   toNullableTrimmedString,
   toNumberOrNull,
   assertDocExistsOrNull,
-  resolveTipoEventoCfgId,
   actorPersonaId,
   ESTADO_DDJJ_DEFAULT_PERSONALES,
   DDJJ_ESTADO_PRESENTADA_ID,
@@ -195,32 +195,45 @@ async function processDdjjGrupoFamiliar({
       );
     }
     const eventoId = `evt_${ulid()}`;
-    tx.set(
-      db.collection("eventos_ticket").doc(eventoId),
-      {
+    persistEventoV21({
+      db,
+      writer: tx,
+      evento: buildEventoV21({
         id: eventoId,
-        tipo_evento_id: "EVT_DATOS_NOTIF_CAMBIO_DDJJ",
-        tipo_evento_cfg_id: resolveTipoEventoCfgId("EVT_DATOS_NOTIF_CAMBIO_DDJJ"),
+        tipo_evento_id: "cfg_tev_ddjj",
+        modulo_origen: "datos_personales",
+        accion: isActualizacion
+          ? "presentar_ddjj_grupo_familiar_actualizacion"
+          : "presentar_ddjj_grupo_familiar_inicial",
         persona_id: titularPersonaId,
         actor_persona_id: actorPersonaId || null,
-        ocurrido_en: now,
-        estado_bandeja_rrhh_id: ESTADO_BANDEJA_RRHH_PENDIENTE_ID,
-        payload: {
-          coleccion: "declaraciones_grupo_familiar",
-          accion: isActualizacion
-            ? "presentar_ddjj_grupo_familiar_actualizacion"
-            : "presentar_ddjj_grupo_familiar_inicial",
+        payload_ui: {
+          titulo: isActualizacion ? "DDJJ actualizada y presentada" : "DDJJ presentada",
+          resumen: "Se registro una presentacion de DDJJ de grupo familiar para revision RRHH.",
+          entidad: "declaraciones_grupo_familiar",
+          persona_afectada_label: titularPersonaId,
+          actor_label: actorPersonaId || "Sistema",
+        },
+        payload_contexto: {
+          estado_bandeja_rrhh_id: ESTADO_BANDEJA_RRHH_PENDIENTE_ID,
           declaracion_presentada: true,
           declaracion_version: currentVersion || null,
           familiares_count: Array.isArray(payload.familiares) ? payload.familiares.length : 0,
           familiares_count_anterior: Array.isArray(existing.get("familiares")) ? existing.get("familiares").length : 0,
           version_anterior_superada: isActualizacion ? prevVersion : null,
-          cambios: cambiosResumen,
+          ddjj_id: targetDoc.id,
         },
-        schema_version: 1,
-      },
-      { merge: true },
-    );
+        payload_cambios: cambiosResumen.map((c) => ({
+          campo: c.campo,
+          label: c.campo,
+          antes: c.anterior ?? null,
+          despues: c.nuevo ?? null,
+          antes_label: c.anterior ?? null,
+          despues_label: c.nuevo ?? null,
+          tipo: "string",
+        })),
+      }),
+    });
   }
 
   return { id: targetDoc.id };

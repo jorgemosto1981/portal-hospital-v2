@@ -15,6 +15,74 @@
         { "fieldPath": "persona_id", "order": "ASCENDING" },
         { "fieldPath": "ocurrido_en", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "eventos_bandeja_rrhh",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado_bandeja_rrhh_id", "order": "ASCENDING" },
+        { "fieldPath": "ocurrido_en", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventos_bandeja_rrhh",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "periodo_yyyymm", "order": "ASCENDING" },
+        { "fieldPath": "ocurrido_en", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventos_bandeja_rrhh",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "periodo_yyyymm", "order": "ASCENDING" },
+        { "fieldPath": "estado_bandeja_rrhh_id", "order": "ASCENDING" },
+        { "fieldPath": "ocurrido_en", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventos_bandeja_rrhh",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "periodo_yyyymm", "order": "ASCENDING" },
+        { "fieldPath": "modulo_origen", "order": "ASCENDING" },
+        { "fieldPath": "ocurrido_en", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventos_por_persona",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "persona_id", "order": "ASCENDING" },
+        { "fieldPath": "ocurrido_en", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventos_por_persona",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "persona_id", "order": "ASCENDING" },
+        { "fieldPath": "periodo_yyyymm", "order": "ASCENDING" },
+        { "fieldPath": "ocurrido_en", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventos_por_modulo",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "modulo_origen", "order": "ASCENDING" },
+        { "fieldPath": "ocurrido_en", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventos_por_modulo",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "modulo_origen", "order": "ASCENDING" },
+        { "fieldPath": "tipo_evento_id", "order": "ASCENDING" },
+        { "fieldPath": "ocurrido_en", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

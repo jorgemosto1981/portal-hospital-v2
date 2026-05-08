@@ -1,7 +1,11 @@
 import { collection, getDocs, limit, query } from "firebase/firestore";
 
 import { dbV2 } from "./firebase.js";
-import { callGuardarRegistroLaboralTemporal, callListarColeccionPublicaTemporal } from "./callables.js";
+import {
+  callGuardarRegistroLaboralTemporal,
+  callListarColeccionPublicaTemporal,
+  callRrhhDeshabilitarHlc,
+} from "./callables.js";
 
 /**
  * Lee una colección laboral de Firestore V2.
@@ -62,4 +66,9 @@ export async function guardarRegistroLaboral(collectionName, datos) {
   const r = await callGuardarRegistroLaboralTemporal({ collectionName, datos });
   const data = r && r.data && typeof r.data === "object" ? r.data : {};
   return data;
+}
+
+export async function deshabilitarCicloHlc(data) {
+  const r = await callRrhhDeshabilitarHlc(data);
+  return r && r.data && typeof r.data === "object" ? r.data : {};
 }

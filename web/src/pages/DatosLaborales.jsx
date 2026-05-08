@@ -1,5 +1,5 @@
 import Card from "../components/ui/Card.jsx";
-import { guardarRegistroLaboral } from "../services/datosLaboralesService.js";
+import { deshabilitarCicloHlc, guardarRegistroLaboral } from "../services/datosLaboralesService.js";
 import { useEffect, useMemo, useState } from "react";
 import { AYUDA_CAMPOS, INITIAL_FORM_DATA_LABORAL } from "./datos-laborales/constants.js";
 import ColeccionesLaboralesCards from "./datos-laborales/sections/ColeccionesLaboralesCards.jsx";
@@ -33,6 +33,7 @@ import {
   buildRegistrosEdicionDetallados,
   buildTimelineResumen,
   buildIntegridadLaboral,
+  formatDateDdMmAaaa,
 } from "./datos-laborales/utils.js";
 
 const EMPTY_ROWS = [];
@@ -59,12 +60,30 @@ function formatDateTime(value) {
   const yyyy = String(d.getFullYear());
   const hh = String(d.getHours()).padStart(2, "0");
   const min = String(d.getMinutes()).padStart(2, "0");
-  return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
+  return `${dd} ${mm} ${yyyy} ${hh}:${min}`;
+}
+
+function formatFechaVisible(value, fallback = "—") {
+  return formatDateDdMmAaaa(value, fallback);
 }
 
 function isVigenteByFecha(row) {
   const hasta = String(row?.fecha_hasta || row?.fecha_fin || "").trim();
   return !hasta;
+}
+
+function isHlcOperativo(row) {
+  if (!row || typeof row !== "object") return false;
+  if (row.activo === false) return false;
+  if (String(row.motivo_deshabilitacion_id || "").trim()) return false;
+  return isVigenteByFecha(row);
+}
+
+function isHlcHistoricoVisible(row) {
+  if (!row || typeof row !== "object") return false;
+  if (row.activo === false) return false;
+  if (String(row.motivo_deshabilitacion_id || "").trim()) return false;
+  return !isVigenteByFecha(row);
 }
 
 function sumarHorasSemana(cargaPorDiaSemana) {
@@ -138,6 +157,16 @@ export default function DatosLaborales() {
   const [saveMsg, setSaveMsg] = useState("");
   const [resultadoModalAbierto, setResultadoModalAbierto] = useState(false);
   const [resultadoModalMsg, setResultadoModalMsg] = useState("");
+  const [deshabilitarModalAbierto, setDeshabilitarModalAbierto] = useState(false);
+  const [deshabilitando, setDeshabilitando] = useState(false);
+  const [hlcDeshabilitarId, setHlcDeshabilitarId] = useState("");
+  const [deshabilitarError, setDeshabilitarError] = useState("");
+  const [deshabilitarForm, setDeshabilitarForm] = useState({
+    motivo_id: "",
+    fecha_corte: "",
+    comentario: "",
+    confirmar_impacto: false,
+  });
   const [cargaPorDiaRows, setCargaPorDiaRows] = useState([emptyCargaDia()]);
   const [timelinePersonaId, setTimelinePersonaId] = useState("");
   const [timelineFiltro, setTimelineFiltro] = useState("todos");
@@ -184,7 +213,7 @@ export default function DatosLaborales() {
   const opcionesFuncion = rowsByCollection.cfg_cargo_funcional || [];
   const opcionesTipoVinculo = rowsByCollection.cfg_tipo_vinculo_laboral || [];
   const opcionesModalidadJornada = rowsByCollection.cfg_modalidad_jornada || [];
-  const opcionesCausalFinAsignacion = rowsByCollection.cfg_causal_fin_asignacion_laboral || [];
+  const opcionesMotivoDeshabilitacionHlc = rowsByCollection.cfg_motivo_deshabilitacion_hlc || [];
   const opcionesTipoActo = rowsByCollection.cfg_tipo_acto_designacion || [];
   const opcionesRegimenHorario = rowsByCollection.cfg_regimen_horario || [];
   const opcionesCentroCosto = rowsByCollection.cfg_centro_costo || [];
@@ -226,7 +255,9 @@ export default function DatosLaborales() {
       categoria: labelDesdeIndice(idxCategorias, cargo.categoria_id),
       funcion: labelDesdeIndice(idxFunciones, cargo.cargo_funcional_id),
       cargaHoraria: String(cargo.carga_horaria_total || "—"),
-      vigencia: `Desde ${String(cargo.fecha_desde || "—")} · ${String(cargo.fecha_hasta || "Vigente")}`,
+      vigencia: `Desde ${formatFechaVisible(cargo.fecha_desde)} · ${
+        String(cargo.fecha_hasta || "").trim() ? formatFechaVisible(cargo.fecha_hasta) : "Vigente"
+      }`,
     };
   }, [
     tipoAlta,
@@ -283,7 +314,7 @@ export default function DatosLaborales() {
     const hlcPersona = hlcRows.filter((r) => String(r.persona_id || "") === personaId);
     const hlgPersona = hlgRows.filter((r) => String(r.persona_id || "") === personaId);
     const hldPersona = hldRows.filter((r) => String(r.persona_id || "") === personaId);
-    const hlcVigentes = hlcPersona.filter(isVigenteByFecha);
+    const hlcVigentes = hlcPersona.filter(isHlcOperativo);
     const hlgVigentes = hlgPersona.filter(isVigenteByFecha);
     const hldVigentes = hldPersona.filter(isVigenteByFecha);
     const hlcCerrados = hlcPersona.filter((r) => !isVigenteByFecha(r));
@@ -332,14 +363,18 @@ export default function DatosLaborales() {
             id: String(r.id || ""),
             grupo: labelDesdeIndice(idxGrupos, r.grupo_de_trabajo_id),
             funcion: labelDesdeIndice(idxFunciones, hldRef && hldRef.funcion_real_id),
-            periodo: `Desde ${String(r.fecha_inicio || "—")} · ${String(r.fecha_fin || "Vigente")}`,
+            periodo: `Desde ${formatFechaVisible(r.fecha_inicio)} · ${
+              String(r.fecha_fin || "").trim() ? formatFechaVisible(r.fecha_fin) : "Vigente"
+            }`,
             cargaHorariaGrupo: cargaHorariaGrupo > 0 ? cargaHorariaGrupo : 0,
             warningHlg,
           };
         };
-        const vigenciaHlc = `Desde ${String(hlc.fecha_desde || "—")} · ${String(hlc.fecha_hasta || "Vigente")}`;
+        const vigenciaHlc = `Desde ${formatFechaVisible(hlc.fecha_desde)} · ${
+          String(hlc.fecha_hasta || "").trim() ? formatFechaVisible(hlc.fecha_hasta) : "Vigente"
+        }`;
         const hldLabel = hldRelacionado
-          ? `Vigente desde ${String(hldRelacionado.fecha_desde || hldRelacionado.fecha_inicio || "—")}`
+          ? `Vigente desde ${formatFechaVisible(hldRelacionado.fecha_desde || hldRelacionado.fecha_inicio)}`
           : "Sin vínculo HLD vigente";
         const totalCargaHlg = hlgVigDelHlc.reduce((acc, row) => acc + sumarHorasSemana(row.carga_por_dia_semana), 0);
         const warningsHlc = [];
@@ -392,7 +427,7 @@ export default function DatosLaborales() {
     if (!personaId) return [];
     const hlcCerrados = hlcRows
       .filter((r) => String(r.persona_id || "") === personaId)
-      .filter((r) => !isVigenteByFecha(r))
+      .filter(isHlcHistoricoVisible)
       .slice()
       .sort((a, b) => String(b.fecha_hasta || "").localeCompare(String(a.fecha_hasta || "")));
     return hlcCerrados.map((hlc, idx) => {
@@ -415,7 +450,9 @@ export default function DatosLaborales() {
           id: String(r.id || ""),
           grupo: labelDesdeIndice(idxGrupos, r.grupo_de_trabajo_id),
           funcion: labelDesdeIndice(idxFunciones, hldRef && hldRef.funcion_real_id),
-          periodo: `Desde ${String(r.fecha_inicio || "—")} · ${String(r.fecha_fin || "Vigente")}`,
+          periodo: `Desde ${formatFechaVisible(r.fecha_inicio)} · ${
+            String(r.fecha_fin || "").trim() ? formatFechaVisible(r.fecha_fin) : "Vigente"
+          }`,
           cargaHorariaGrupo: cargaHorariaGrupo > 0 ? cargaHorariaGrupo : 0,
         };
       };
@@ -423,7 +460,7 @@ export default function DatosLaborales() {
         idxEfectores,
         hlc.efector_cumplimiento_id,
       )}`;
-      const periodo = `Desde ${String(hlc.fecha_desde || "—")} · Hasta ${String(hlc.fecha_hasta || "—")}`;
+      const periodo = `Desde ${formatFechaVisible(hlc.fecha_desde)} · Hasta ${formatFechaVisible(hlc.fecha_hasta)}`;
       return {
         id: String(hlc.id || `hlc-cerrado-${idx}`),
         hlcId: String(hlc.id || ""),
@@ -562,6 +599,86 @@ export default function DatosLaborales() {
 
   function onRemoveCargaRow(idx) {
     setCargaPorDiaRows((prev) => removeCargaPorDiaRow(prev, idx));
+  }
+
+  function abrirModalDeshabilitarHlc(hlcId) {
+    const target = hlcRows.find((r) => String(r.id || "") === String(hlcId || ""));
+    if (!target) return;
+    setHlcDeshabilitarId(String(target.id));
+    setDeshabilitarError("");
+    setDeshabilitarForm({
+      motivo_id: "",
+      fecha_corte: "",
+      comentario: "",
+      confirmar_impacto: false,
+    });
+    setDeshabilitarModalAbierto(true);
+  }
+
+  function cerrarModalDeshabilitarHlc() {
+    if (deshabilitando) return;
+    setDeshabilitarModalAbierto(false);
+    setHlcDeshabilitarId("");
+    setDeshabilitarError("");
+  }
+
+  async function confirmarDeshabilitacionHlc() {
+    const motivoId = String(deshabilitarForm.motivo_id || "").trim();
+    const fechaCorte = String(deshabilitarForm.fecha_corte || "").trim();
+    const comentario = String(deshabilitarForm.comentario || "").trim();
+    if (!hlcDeshabilitarId) {
+      setDeshabilitarError("No se encontró el ciclo HLC a deshabilitar.");
+      return;
+    }
+    if (!motivoId) {
+      setDeshabilitarError("Debés seleccionar un motivo de deshabilitación.");
+      return;
+    }
+    if (!deshabilitarForm.confirmar_impacto) {
+      setDeshabilitarError("Debés confirmar el impacto para continuar.");
+      return;
+    }
+    if (fechaCorte && !/^\d{4}-\d{2}-\d{2}$/.test(fechaCorte)) {
+      setDeshabilitarError("La fecha de corte es inválida. Usá el formato AAAA-MM-DD.");
+      return;
+    }
+    setDeshabilitarError("");
+    setDeshabilitando(true);
+    try {
+      const payload = {
+        hlc_id: hlcDeshabilitarId,
+        motivo_deshabilitacion_id: motivoId,
+      };
+      if (fechaCorte) payload.fecha_corte = fechaCorte;
+      if (comentario) payload.comentario = comentario;
+      const r = await deshabilitarCicloHlc(payload);
+      const warnings = normalizarWarnings(r && r.warnings);
+      const resumen = r && r.resumen && typeof r.resumen === "object" ? r.resumen : {};
+      const hldAfectados = Number.isFinite(Number(resumen.hld_afectados)) ? Number(resumen.hld_afectados) : 0;
+      const hlgAfectados = Number.isFinite(Number(resumen.hlg_afectados)) ? Number(resumen.hlg_afectados) : 0;
+      const fechaAplicadaRaw = String((r && r.fecha_corte_aplicada) || fechaCorte || "hoy");
+      const fechaAplicada =
+        fechaAplicadaRaw === "hoy" ? "hoy" : formatFechaVisible(fechaAplicadaRaw, fechaAplicadaRaw);
+      const baseMsg =
+        `Ciclo deshabilitado correctamente. HLd afectados: ${hldAfectados}. ` +
+        `HLg afectados: ${hlgAfectados}. Fecha de corte: ${fechaAplicada}.`;
+      const finalMsg =
+        warnings.length === 0
+          ? baseMsg
+          : `${baseMsg} Observaciones: ${warnings
+              .map((w) => (w.code ? `${w.code}: ${w.message}` : w.message))
+              .join(" | ")}`;
+      await cargarTodo();
+      setDeshabilitarModalAbierto(false);
+      setHlcDeshabilitarId("");
+      setResultadoModalMsg(finalMsg);
+      setResultadoModalAbierto(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "No se pudo deshabilitar el ciclo.";
+      setDeshabilitarError(msg);
+    } finally {
+      setDeshabilitando(false);
+    }
   }
 
   function cerrarFlujoFormularioManteniendoPersona() {
@@ -979,6 +1096,13 @@ export default function DatosLaborales() {
                     >
                       Editar período de cargo
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => abrirModalDeshabilitarHlc(bloque.hlcId)}
+                      className="h-9 rounded-lg border border-rose-300 bg-rose-50 px-3 text-xs font-semibold text-rose-700 active:bg-rose-100"
+                    >
+                      Deshabilitar ciclo HLC
+                    </button>
                   </div>
                 </div>
               ))
@@ -1084,6 +1208,13 @@ export default function DatosLaborales() {
                       className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 active:bg-slate-50"
                     >
                       Editar período de cargo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => abrirModalDeshabilitarHlc(item.hlcId)}
+                      className="h-9 rounded-lg border border-rose-300 bg-rose-50 px-3 text-xs font-semibold text-rose-700 active:bg-rose-100"
+                    >
+                      Deshabilitar ciclo HLC
                     </button>
                   </div>
                 </div>
@@ -1281,6 +1412,90 @@ export default function DatosLaborales() {
         />
         )}
 
+        {deshabilitarModalAbierto ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 px-4">
+            <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:p-5">
+              <p className="text-base font-semibold text-slate-900">Deshabilitar ciclo HLC</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Esta acción retira el ciclo de los flujos operativos, cierra y deshabilita la cadena asociada (HLd/HLg) sin borrar historial.
+              </p>
+              <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+                No se podrá rehabilitar este ciclo. Si se requiere continuidad, deberás crear un nuevo ciclo HLC.
+              </div>
+              <div className="mt-4 grid gap-3">
+                <label className="grid gap-1 text-sm">
+                  <span className="font-semibold text-slate-800">Motivo de deshabilitación</span>
+                  <select
+                    value={deshabilitarForm.motivo_id}
+                    onChange={(e) => setDeshabilitarForm((prev) => ({ ...prev, motivo_id: e.target.value }))}
+                    className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 focus-visible:ring-2 focus-visible:ring-blue-300"
+                  >
+                    <option value="">Seleccioná un motivo</option>
+                    {opcionesMotivoDeshabilitacionHlc.map((opt) => (
+                      <option key={String(opt.id)} value={String(opt.id)}>
+                        {String(opt.nombre || opt.label || opt.descripcion || "Sin nombre")}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1 text-sm">
+                  <span className="font-semibold text-slate-800">Fecha de corte (opcional)</span>
+                  <input
+                    type="date"
+                    value={deshabilitarForm.fecha_corte}
+                    onChange={(e) => setDeshabilitarForm((prev) => ({ ...prev, fecha_corte: e.target.value }))}
+                    className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 focus-visible:ring-2 focus-visible:ring-blue-300"
+                  />
+                  <span className="text-xs text-slate-500">Si no la informás, se usa la fecha de hoy.</span>
+                </label>
+                <label className="grid gap-1 text-sm">
+                  <span className="font-semibold text-slate-800">Comentario (opcional)</span>
+                  <textarea
+                    value={deshabilitarForm.comentario}
+                    onChange={(e) => setDeshabilitarForm((prev) => ({ ...prev, comentario: e.target.value.slice(0, 500) }))}
+                    rows={3}
+                    className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus-visible:ring-2 focus-visible:ring-blue-300"
+                    placeholder="Observación interna"
+                  />
+                </label>
+                <label className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={deshabilitarForm.confirmar_impacto}
+                    onChange={(e) =>
+                      setDeshabilitarForm((prev) => ({ ...prev, confirmar_impacto: e.target.checked }))
+                    }
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                  />
+                  <span>
+                    Confirmo que se deshabilitará el HLC y se cerrarán/deshabilitarán sus HLd/HLg asociados.
+                  </span>
+                </label>
+              </div>
+              {deshabilitarError ? (
+                <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{deshabilitarError}</p>
+              ) : null}
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={cerrarModalDeshabilitarHlc}
+                  disabled={deshabilitando}
+                  className="h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 disabled:opacity-60"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmarDeshabilitacionHlc}
+                  disabled={deshabilitando}
+                  className="h-10 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  {deshabilitando ? "Deshabilitando..." : "Deshabilitar ciclo"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {resultadoModalAbierto ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 px-4">

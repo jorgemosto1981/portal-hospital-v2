@@ -72,6 +72,11 @@ export function callGuardarRegistroLaboralTemporal(data) {
   return httpsCallable(getFunctionsV2(), "guardarRegistroLaboralTemporal")(data);
 }
 
+/** RRHH: deshabilita un ciclo HLc y cierra cadena HLd/HLg asociada. */
+export function callRrhhDeshabilitarHlc(data) {
+  return httpsCallable(getFunctionsV2(), "rrhhDeshabilitarHlc")(data);
+}
+
 /** Read-model laboral operativo (C1) para Ticket/RDA/Grilla, con filtros por fecha/persona/grupo. */
 export function callListarReadModelLaboralOperativoTemporal(data) {
   return httpsCallable(getFunctionsV2(), "listarReadModelLaboralOperativoTemporal")(data);
@@ -85,6 +90,11 @@ export function callGuardarRegistroPersonalTemporal(data) {
 /** RRHH: marca una notificación de datos personales como vista. */
 export function callRrhhMarcarEventoDatosPersonalesVisto(data) {
   return httpsCallable(getFunctionsV2(), "rrhhMarcarEventoDatosPersonalesVisto")(data);
+}
+
+/** RRHH: lista paginada de eventos operativos desde read model `eventos_bandeja_rrhh`. */
+export function callRrhhListarBandejaEventos(data) {
+  return httpsCallable(getFunctionsV2(), "rrhhListarBandejaEventos")(data);
 }
 
 /** RRHH: guardar opción de catálogo (`set` + merge, id en mayúsculas). */

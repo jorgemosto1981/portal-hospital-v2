@@ -2,6 +2,10 @@ export function formatValue(v) {
   if (v == null) return "—";
   if (Array.isArray(v)) return `[${v.length}]`;
   if (typeof v === "object") return "{...}";
+  if (typeof v === "string") {
+    const formattedDate = formatDateDdMmAaaa(v, null);
+    if (formattedDate) return formattedDate;
+  }
   return String(v);
 }
 
@@ -18,6 +22,14 @@ export function isoToDateInput(iso) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+export function formatDateDdMmAaaa(value, fallback = "—") {
+  const iso = toDateKey(value);
+  if (!iso) return fallback;
+  const [yyyy, mm, dd] = iso.split("-");
+  if (!yyyy || !mm || !dd) return fallback;
+  return `${dd} ${mm} ${yyyy}`;
 }
 
 export function takeFirst(items, max = 5) {
@@ -501,8 +513,8 @@ export function buildVistaGrupoItems({
         persona_id: personaId,
         persona_label: nombrePersona ? `${personaId} (${nombrePersona})` : personaId || "—",
         nivel_jerarquico: row.nivel_jerarquico == null ? null : Number(row.nivel_jerarquico),
-        fecha_inicio: desde || "—",
-        fecha_fin: hasta || "—",
+        fecha_inicio: formatDateDdMmAaaa(desde, "—"),
+        fecha_fin: formatDateDdMmAaaa(hasta, "—"),
         activo_en_fecha: activoEnFecha,
         dato_laboral_id: String(row.dato_laboral_id || ""),
         cargo_id: cargoId,
@@ -546,9 +558,11 @@ export function buildRegistrosEdicionDetallados({
       const grupo = labelDesdeIndice(idxGrupos, x.grupo_de_trabajo_id);
       const desde = x.fecha_desde || "—";
       const hasta = x.fecha_hasta || "abierto";
+      const desdeLabel = formatDateDdMmAaaa(desde, "—");
+      const hastaLabel = hasta === "abierto" ? "abierto" : formatDateDdMmAaaa(hasta, "—");
       return {
         id: x.id,
-        label: `${x.id} | persona:${persona} | cargo:${cargoFuncional} | grupo:${grupo} | ${desde} -> ${hasta}`,
+        label: `${x.id} | persona:${persona} | cargo:${cargoFuncional} | grupo:${grupo} | ${desdeLabel} -> ${hastaLabel}`,
       };
     }
     const persona = personaLabelFromIndex(idxPersonas, x.persona_id);
@@ -556,6 +570,8 @@ export function buildRegistrosEdicionDetallados({
     const nivel = x.nivel_jerarquico == null ? "—" : String(x.nivel_jerarquico);
     const desde = x.fecha_inicio || "—";
     const hasta = x.fecha_fin || "abierto";
+    const desdeLabel = formatDateDdMmAaaa(desde, "—");
+    const hastaLabel = hasta === "abierto" ? "abierto" : formatDateDdMmAaaa(hasta, "—");
     const dato = x.dato_laboral_id || "—";
     const datoLaboral = idxHld.get(String(x.dato_laboral_id || ""));
     const cargo = datoLaboral ? idxHlc.get(String(datoLaboral.cargo_id || "")) : null;
@@ -564,7 +580,7 @@ export function buildRegistrosEdicionDetallados({
       id: x.id,
       label:
         `${x.id} | persona:${persona} | grupo:${grupo} | cargo:${cargoFuncional} | ` +
-        `nivel:${nivel} | hld:${dato} | ${desde} -> ${hasta}`,
+        `nivel:${nivel} | hld:${dato} | ${desdeLabel} -> ${hastaLabel}`,
     };
   });
 }

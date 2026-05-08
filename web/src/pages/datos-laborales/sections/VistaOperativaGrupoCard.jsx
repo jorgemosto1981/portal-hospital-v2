@@ -1,5 +1,6 @@
 import Card from "../../../components/ui/Card.jsx";
 import { useMemo, useState } from "react";
+import { formatDateDdMmAaaa } from "../utils.js";
 
 export default function VistaOperativaGrupoCard({
   grupos,
@@ -58,7 +59,7 @@ export default function VistaOperativaGrupoCard({
   const noVigentes = itemsFiltrados.length - activos;
   const chipsActivos = [];
   if (grupoId) chipsActivos.push(`Grupo: ${grupoLabel}`);
-  if (fechaCorte) chipsActivos.push(`Fecha corte: ${fechaCorte}`);
+  if (fechaCorte) chipsActivos.push(`Fecha corte: ${formatDateDdMmAaaa(fechaCorte, fechaCorte)}`);
   if (filtroEstado !== "todos") chipsActivos.push(`Estado HLg: ${filtroEstado}`);
   if (personaQuery) chipsActivos.push(`Persona: ${personaQuery}`);
   if (nivelMin) chipsActivos.push(`Nivel min: ${nivelMin}`);

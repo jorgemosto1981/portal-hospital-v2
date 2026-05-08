@@ -5,6 +5,7 @@ const { ulid } = require("ulid");
 const { db, FieldValue } = require("./shared/context");
 const runtimeFlags = require("./shared/runtimeFlags.json");
 const { assertRrhh } = require("./shared/helpers");
+const { buildEventoV21, persistEventoV21 } = require("./shared/eventosV2");
 const {
   COLECCIONES_ESCRITURA_LABORAL_TEMPORAL,
   toNullableTrimmedString,
@@ -66,6 +67,105 @@ function haySolapeInclusivo(aDesde, aHasta, bDesde, bHasta) {
   return aDesde <= bFin && bDesde <= aFin;
 }
 
+function fechaHoyIsoUtc() {
+  const now = new Date();
+  const yyyy = now.getUTCFullYear();
+  const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(now.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function parseFechaCorteOrThrow(rawFechaCorte) {
+  const raw = toNullableTrimmedString(rawFechaCorte) || fechaHoyIsoUtc();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    throw new HttpsError("invalid-argument", "[VAL-HLC-DES-007] La fecha de corte es invalida. Usa el formato AAAA-MM-DD.");
+  }
+  const d = new Date(`${raw}T00:00:00.000Z`);
+  if (Number.isNaN(d.getTime())) {
+    throw new HttpsError("invalid-argument", "[VAL-HLC-DES-007] La fecha de corte es invalida. Usa el formato AAAA-MM-DD.");
+  }
+  const normalized = d.toISOString().slice(0, 10);
+  if (normalized !== raw) {
+    throw new HttpsError("invalid-argument", "[VAL-HLC-DES-007] La fecha de corte es invalida. Usa el formato AAAA-MM-DD.");
+  }
+  return raw;
+}
+
+function resolveFechaCierre(fechaExistente, fechaCorte) {
+  const existente = toNullableTrimmedString(fechaExistente);
+  if (!existente) return fechaCorte;
+  return existente <= fechaCorte ? existente : fechaCorte;
+}
+
+function normalizeEventValue(value) {
+  if (value == null) return null;
+  if (value && typeof value.toDate === "function") {
+    try {
+      return value.toDate().toISOString();
+    } catch {
+      return "__timestamp__";
+    }
+  }
+  if (Array.isArray(value)) return value.map((item) => normalizeEventValue(item));
+  if (typeof value === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[k] = normalizeEventValue(v);
+    return out;
+  }
+  return value;
+}
+
+function buildTopLevelChanges(prevData, nextData, keys) {
+  const prev = prevData && typeof prevData === "object" ? prevData : {};
+  const next = nextData && typeof nextData === "object" ? nextData : {};
+  return keys
+    .filter((key) => JSON.stringify(prev[key] ?? null) !== JSON.stringify(next[key] ?? null))
+    .map((key) => ({
+      campo: key,
+      label: key,
+      antes: normalizeEventValue(prev[key] ?? null),
+      despues: normalizeEventValue(next[key] ?? null),
+      antes_label: normalizeEventValue(prev[key] ?? null),
+      despues_label: normalizeEventValue(next[key] ?? null),
+      tipo: "string",
+    }));
+}
+
+async function crearEventoDatosLaborales({
+  tipoEventoId,
+  accion,
+  personaId,
+  actorUid,
+  actorPersonaId,
+  entidad,
+  contexto,
+  cambios,
+}) {
+  const eventoId = `evt_${ulid()}`;
+  await persistEventoV21({
+    db,
+    evento: buildEventoV21({
+      id: eventoId,
+      tipo_evento_id: tipoEventoId,
+      modulo_origen: "datos_laborales",
+      accion,
+      persona_id: personaId || null,
+      actor_uid: actorUid || null,
+      actor_persona_id: actorPersonaId || null,
+      payload_ui: {
+        titulo: "Actualizacion de datos laborales",
+        resumen: `Se registro una operacion sobre ${entidad}.`,
+        entidad,
+        persona_afectada_label: personaId || "N/A",
+        actor_label: actorPersonaId || actorUid || "Sistema",
+      },
+      payload_contexto: contexto || {},
+      payload_cambios: Array.isArray(cambios) ? cambios : [],
+    }),
+  });
+  return eventoId;
+}
+
 /** Solo desarrollo / carga puntual: permite HL sin claim RRHH (véase runtimeFlags y LABORAL_ESCRITURA_SIN_RRHH en .env). */
 function laboralEscrituraSinAssertRrhh() {
   if (runtimeFlags.OPEN_ACCESS_TEMP === true) return true;
@@ -84,6 +184,11 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   }
   const datos = d.datos && typeof d.datos === "object" ? d.datos : {};
   const now = FieldValue.serverTimestamp();
+  const actorUid = request && request.auth ? request.auth.uid || null : null;
+  const actorPersonaId =
+    request && request.auth && request.auth.token && typeof request.auth.token.persona_id === "string"
+      ? request.auth.token.persona_id
+      : null;
 
   if (colRaw === "historial_laboral_cargos") {
     const id = toNullableTrimmedString(datos.id) || `hlc_${ulid()}`;
@@ -219,7 +324,8 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       );
     }
     const ref = db.collection(colRaw).doc(id);
-    const exists = (await ref.get()).exists;
+    const existing = await ref.get();
+    const exists = existing.exists;
     if (!exists) payload.creado_en = now;
     await ref.set(payload, { merge: true });
     const hldSnap = await db.collection("historial_laboral_datos").where("cargo_id", "==", id).get();
@@ -246,7 +352,30 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
         { persona_id: personaId, hlc_id: id, collection: colRaw },
       );
     }
-    return { ok: true, id, warnings };
+    const cambios = buildTopLevelChanges(existing.data() || {}, payload, [
+      "persona_id",
+      "grupo_de_trabajo_id",
+      "efector_designacion_id",
+      "efector_cumplimiento_id",
+      "tipo_vinculo_id",
+      "modalidad_jornada_id",
+      "estado_asignacion_id",
+      "carga_horaria_total",
+      "fecha_desde",
+      "fecha_hasta",
+      "activo",
+    ]);
+    const eventoId = await crearEventoDatosLaborales({
+      tipoEventoId: "cfg_tev_datos_laborales",
+      accion: exists ? "actualizar_hlc" : "alta_hlc",
+      personaId,
+      actorUid,
+      actorPersonaId,
+      entidad: "historial_laboral_cargos",
+      contexto: { hlc_id: id },
+      cambios,
+    });
+    return { ok: true, id, warnings, evento_id: eventoId };
   }
 
   if (colRaw === "historial_laboral_datos") {
@@ -302,10 +431,30 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     await assertDocExistsOrNull("cfg_regimen_horario", payload.regimen_horario_id, "regimen_horario_id");
     await assertDocExistsOrNull("cfg_centro_costo", payload.centro_costo_id, "centro_costo_id");
     const ref = db.collection(colRaw).doc(id);
-    const exists = (await ref.get()).exists;
+    const existing = await ref.get();
+    const exists = existing.exists;
     if (!exists) payload.creado_en = now;
     await ref.set(payload, { merge: true });
-    return { ok: true, id };
+    const cambios = buildTopLevelChanges(existing.data() || {}, payload, [
+      "persona_id",
+      "cargo_id",
+      "funcion_real_id",
+      "nivel_jerarquico",
+      "fecha_inicio",
+      "fecha_fin",
+      "activo",
+    ]);
+    const eventoId = await crearEventoDatosLaborales({
+      tipoEventoId: "cfg_tev_datos_laborales",
+      accion: exists ? "actualizar_hld" : "alta_hld",
+      personaId,
+      actorUid,
+      actorPersonaId,
+      entidad: "historial_laboral_datos",
+      contexto: { hld_id: id, hlc_id: cargoId },
+      cambios,
+    });
+    return { ok: true, id, evento_id: eventoId };
   }
 
   const id = toNullableTrimmedString(datos.id) || `hlg_${ulid()}`;
@@ -419,10 +568,221 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   });
   if (warningCarga) warnings.push(warningCarga);
   const ref = db.collection(colRaw).doc(id);
-  const exists = (await ref.get()).exists;
+  const existing = await ref.get();
+  const exists = existing.exists;
   if (!exists) payload.creado_en = now;
   await ref.set(payload, { merge: true });
-  return { ok: true, id, warnings };
+  const cambios = buildTopLevelChanges(existing.data() || {}, payload, [
+    "persona_id",
+    "dato_laboral_id",
+    "grupo_de_trabajo_id",
+    "nivel_jerarquico",
+    "carga_por_dia_semana",
+    "fecha_inicio",
+    "fecha_fin",
+    "activo",
+  ]);
+  const eventoId = await crearEventoDatosLaborales({
+    tipoEventoId: "cfg_tev_datos_laborales",
+    accion: exists ? "actualizar_hlg" : "alta_hlg",
+    personaId,
+    actorUid,
+    actorPersonaId,
+    entidad: "historial_laboral_grupos",
+    contexto: { hlg_id: id, hld_id: datoLaboralId, hlc_id: cargoId },
+    cambios,
+  });
+  return { ok: true, id, warnings, evento_id: eventoId };
+});
+
+const rrhhDeshabilitarHlc = onCall(async (request) => {
+  if (!laboralEscrituraSinAssertRrhh()) assertRrhh(request);
+  const d = request.data && typeof request.data === "object" ? request.data : {};
+  const hlcId = toNullableTrimmedString(d.hlc_id);
+  const motivoDeshabilitacionId = toNullableTrimmedString(d.motivo_deshabilitacion_id);
+  const comentario = toNullableTrimmedString(d.comentario);
+  const fechaCorte = parseFechaCorteOrThrow(d.fecha_corte);
+  const forzar = d.forzar === true;
+
+  if (!hlcId) {
+    throw new HttpsError("invalid-argument", "[VAL-HLC-DES-001] No se encontro el ciclo HLC indicado. Verifica el registro e intenta nuevamente.");
+  }
+  if (!motivoDeshabilitacionId) {
+    throw new HttpsError(
+      "invalid-argument",
+      "[VAL-HLC-DES-002] El motivo de deshabilitacion no es valido o no esta vigente. Selecciona un motivo habilitado.",
+    );
+  }
+  await assertDocExistsOrNull(
+    "cfg_motivo_deshabilitacion_hlc",
+    motivoDeshabilitacionId,
+    "motivo_deshabilitacion_id",
+  );
+
+  const warnings = [];
+  const hlcRef = db.collection("historial_laboral_cargos").doc(hlcId);
+  const hlcSnap = await hlcRef.get();
+  if (!hlcSnap.exists) {
+    throw new HttpsError("not-found", "[VAL-HLC-DES-001] No se encontro el ciclo HLC indicado. Verifica el registro e intenta nuevamente.");
+  }
+  const hlc = hlcSnap.data() || {};
+  if (hlc.activo === false && !forzar) {
+    throw new HttpsError("failed-precondition", "[VAL-HLC-DES-003] El ciclo HLC ya esta deshabilitado. No se aplicaron cambios.");
+  }
+  const fechaDesdeHlc = toNullableTrimmedString(hlc.fecha_desde);
+  if (fechaDesdeHlc && fechaCorte < fechaDesdeHlc) {
+    throw new HttpsError("invalid-argument", "[VAL-HLC-DES-004] La fecha de corte no puede ser anterior al inicio del ciclo HLC.");
+  }
+
+  const hldSnap = await db.collection("historial_laboral_datos").where("cargo_id", "==", hlcId).get();
+  const hldDocs = hldSnap.docs;
+  const hldIds = hldDocs.map((doc) => doc.id);
+  const hlgDocs = [];
+  for (const hldId of hldIds) {
+    const hlgSnap = await db.collection("historial_laboral_grupos").where("dato_laboral_id", "==", hldId).get();
+    hlgSnap.docs.forEach((doc) => hlgDocs.push(doc));
+  }
+
+  if (toNullableTrimmedString(hlc.fecha_hasta)) {
+    pushWarning(
+      warnings,
+      "VAL-HLC-DES-W001",
+      "El ciclo HLC ya estaba cerrado por fecha. Se aplico la deshabilitacion administrativa.",
+      { hlc_id: hlcId, fecha_corte: fechaCorte, collection: "historial_laboral_cargos" },
+    );
+  }
+  if (hldDocs.length === 0) {
+    pushWarning(
+      warnings,
+      "VAL-HLC-DES-W004",
+      "El ciclo HLC no tenia detalles HLd asociados. Se deshabilito unicamente el HLC.",
+      { hlc_id: hlcId, fecha_corte: fechaCorte, collection: "historial_laboral_datos" },
+    );
+  }
+  if (hldDocs.length > 0 && hlgDocs.length === 0) {
+    pushWarning(
+      warnings,
+      "VAL-HLC-DES-W005",
+      "Se deshabilitaron HLd asociados al ciclo, pero no se encontraron HLG vinculados.",
+      { hlc_id: hlcId, fecha_corte: fechaCorte, collection: "historial_laboral_grupos" },
+    );
+  }
+  const hldCerradosPrevios = hldDocs.filter((doc) => !!toNullableTrimmedString(doc.get("fecha_fin"))).length;
+  const hlgCerradosPrevios = hlgDocs.filter((doc) => !!toNullableTrimmedString(doc.get("fecha_fin"))).length;
+  if (hldCerradosPrevios > 0 || hlgCerradosPrevios > 0) {
+    pushWarning(
+      warnings,
+      "VAL-HLC-DES-W002",
+      "Parte de la cadena HLd/HLg ya estaba cerrada antes de la fecha de corte. Se conservaron esos cierres.",
+      {
+        hlc_id: hlcId,
+        fecha_corte: fechaCorte,
+        hld_cerrados_previos: hldCerradosPrevios,
+        hlg_cerrados_previos: hlgCerradosPrevios,
+      },
+    );
+  }
+
+  const now = FieldValue.serverTimestamp();
+  const estadoFinalizadaSnap = await db.collection("cfg_estado_asignacion_laboral").doc("CFG_EST_LAB_03_FINALIZADA").get();
+  const estadoFinalizadaId = estadoFinalizadaSnap.exists ? "CFG_EST_LAB_03_FINALIZADA" : null;
+  const actorUid = (request.auth && request.auth.uid) || null;
+  const actorPersonaId = toNullableTrimmedString(request.auth && request.auth.token && request.auth.token.persona_id);
+
+  await db.runTransaction(async (tx) => {
+    const fresh = await tx.get(hlcRef);
+    if (!fresh.exists) {
+      throw new HttpsError("not-found", "[VAL-HLC-DES-001] No se encontro el ciclo HLC indicado. Verifica el registro e intenta nuevamente.");
+    }
+    const freshData = fresh.data() || {};
+    if (freshData.activo === false && !forzar) {
+      throw new HttpsError("failed-precondition", "[VAL-HLC-DES-003] El ciclo HLC ya esta deshabilitado. No se aplicaron cambios.");
+    }
+    const fechaInicioFresh = toNullableTrimmedString(freshData.fecha_desde);
+    if (fechaInicioFresh && fechaCorte < fechaInicioFresh) {
+      throw new HttpsError("invalid-argument", "[VAL-HLC-DES-004] La fecha de corte no puede ser anterior al inicio del ciclo HLC.");
+    }
+    const fechaHastaHlc = resolveFechaCierre(freshData.fecha_hasta, fechaCorte);
+    const payloadHlc = {
+      activo: false,
+      fecha_hasta: fechaHastaHlc,
+      causal_fin_asignacion_id: motivoDeshabilitacionId,
+      actualizado_en: now,
+      deshabilitado_en: now,
+      deshabilitado_por_persona_id: actorPersonaId,
+      motivo_deshabilitacion_id: motivoDeshabilitacionId,
+      comentario_deshabilitacion: comentario || null,
+    };
+    if (estadoFinalizadaId) payloadHlc.estado_asignacion_id = estadoFinalizadaId;
+    tx.set(hlcRef, payloadHlc, { merge: true });
+
+    for (const hldDoc of hldDocs) {
+      const fechaFin = resolveFechaCierre(hldDoc.get("fecha_fin"), fechaCorte);
+      tx.set(
+        hldDoc.ref,
+        {
+          activo: false,
+          fecha_fin: fechaFin,
+          actualizado_en: now,
+        },
+        { merge: true },
+      );
+    }
+    for (const hlgDoc of hlgDocs) {
+      const fechaFin = resolveFechaCierre(hlgDoc.get("fecha_fin"), fechaCorte);
+      tx.set(
+        hlgDoc.ref,
+        {
+          activo: false,
+          fecha_fin: fechaFin,
+          actualizado_en: now,
+        },
+        { merge: true },
+      );
+    }
+  });
+
+  const cambios = [
+    {
+      campo: "activo",
+      label: "Estado de ciclo",
+      antes: true,
+      despues: false,
+      antes_label: "Operativo",
+      despues_label: "Deshabilitado",
+      tipo: "boolean",
+    },
+  ];
+  const eventoId = await crearEventoDatosLaborales({
+    tipoEventoId: "cfg_tev_datos_laborales",
+    accion: "deshabilitar_hlc",
+    personaId: toNullableTrimmedString(hlc.persona_id),
+    actorUid,
+    actorPersonaId,
+    entidad: "historial_laboral_cargos",
+    contexto: {
+      hlc_id: hlcId,
+      fecha_corte: fechaCorte,
+      motivo_deshabilitacion_id: motivoDeshabilitacionId,
+      comentario: comentario || null,
+      hld_afectados: hldDocs.length,
+      hlg_afectados: hlgDocs.length,
+    },
+    cambios,
+  });
+
+  return {
+    ok: true,
+    hlc_id: hlcId,
+    fecha_corte_aplicada: fechaCorte,
+    resumen: {
+      hld_afectados: hldDocs.length,
+      hlg_afectados: hlgDocs.length,
+      hlc_ya_cerrado: !!toNullableTrimmedString(hlc.fecha_hasta),
+    },
+    warnings,
+    evento_id: eventoId,
+  };
 });
 
 const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
@@ -576,4 +936,8 @@ const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
   };
 });
 
-module.exports = { guardarRegistroLaboralTemporal, listarReadModelLaboralOperativoTemporal };
+module.exports = {
+  guardarRegistroLaboralTemporal,
+  rrhhDeshabilitarHlc,
+  listarReadModelLaboralOperativoTemporal,
+};

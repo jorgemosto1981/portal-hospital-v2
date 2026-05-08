@@ -22,6 +22,7 @@ const {
 } = require("./shared/helpers");
 const { applyLaborAwareSessionClaims } = require("./shared/authClaims");
 const { processDdjjGrupoFamiliar } = require("./shared/ddjjGrupoFamiliarService");
+const { buildEventoV21, buildPersonaLabel, persistEventoV21 } = require("./shared/eventosV2");
 
 const PARENTESCO_OTROS_ID = "CFG_PAR_OTROS";
 const DDJJ_ESTADO_OMITIDA_ONBOARDING_ID = "CFG_DDJJ_02_OMITIDA_ONBOARDING";
@@ -52,12 +53,6 @@ async function assertDocExistsOrNull(collectionName, idValue, fieldName) {
       `[VAL-DDJJ-ONB-REF] ${fieldName || "referencia"} no existe en ${collectionName}: ${id}.`,
     );
   }
-}
-
-function resolveTipoEventoCfgId(tipoEventoIdRaw) {
-  const key = String(tipoEventoIdRaw || "").trim().toUpperCase();
-  if (key === "EVT_DATOS_NOTIF_CAMBIO_DDJJ") return "cfg_tev_datos_notif_cambio_ddjj";
-  return "cfg_tev_datos_notif_cambio_generico";
 }
 
 function toMillisSafe(value) {
@@ -177,13 +172,42 @@ const vincularCuentaConDni = onCall(async (request) => {
       "metadata.vinculado_en": FieldValue.serverTimestamp(),
       actualizado_en: FieldValue.serverTimestamp(),
     });
-    tx.set(db.collection(COL_EVENTOS).doc(evtId), {
-      tipo_evento_id: "EVT_LOGIN",
-      tipo_evento_cfg_id: "cfg_tev_login",
-      persona_id: personaId,
-      cuenta_id: cuentaId,
-      ocurrido_en: FieldValue.serverTimestamp(),
-      payload: { fase: "B", motivo: "vincularCuentaConDni" },
+    persistEventoV21({
+      db,
+      writer: tx,
+      evento: buildEventoV21({
+        id: evtId,
+        tipo_evento_id: "cfg_tev_login",
+        modulo_origen: "onboarding",
+        accion: "vincular_cuenta_con_dni",
+        persona_id: personaId,
+        actor_uid: uid,
+        actor_persona_id: personaId,
+        payload_ui: {
+          titulo: "Cuenta vinculada por DNI",
+          resumen: "Se vinculo la sesion autenticada con el legajo en onboarding.",
+          entidad: "usuarios_cuenta",
+          persona_afectada_label: buildPersonaLabel(pData),
+          actor_label: uid,
+        },
+        payload_contexto: {
+          fase: "B",
+          motivo: "vincularCuentaConDni",
+          cuenta_id: cuentaId,
+          estado_acceso_nuevo_id: CFG_ONB,
+        },
+        payload_cambios: [
+          {
+            campo: "estado_acceso_id",
+            label: "Estado de acceso",
+            antes: CFG_PEND_REG,
+            despues: CFG_ONB,
+            antes_label: CFG_PEND_REG,
+            despues_label: CFG_ONB,
+            tipo: "catalog_id",
+          },
+        ],
+      }),
     });
   });
 
@@ -363,7 +387,6 @@ const onboardingMvpDdjjFamiliar = onCall(async (request) => {
       toNullableTrimmedString,
       toNumberOrNull,
       assertDocExistsOrNull,
-      resolveTipoEventoCfgId,
       actorPersonaId: pid,
       ESTADO_DDJJ_DEFAULT_PERSONALES,
       DDJJ_ESTADO_PRESENTADA_ID,
@@ -434,16 +457,42 @@ const onboardingMvpOmitirDdjjFamiliar = onCall(async (request) => {
       },
       { merge: true },
     );
-    tx.set(db.collection(COL_EVENTOS).doc(evtId), {
-      tipo_evento_id: "EVT_DATOS_NOTIF_CAMBIO_DDJJ",
-      tipo_evento_cfg_id: "cfg_tev_datos_notif_cambio_ddjj",
-      id: evtId,
-      actor_persona_id: pid,
-      estado_bandeja_rrhh_id: "cfg_ebr_pend_rev",
-      persona_id: pid,
-      ocurrido_en: FieldValue.serverTimestamp(),
-      payload: { fase: "D", accion: "omitir_ddjj_onboarding", estado_declaracion_id: DDJJ_ESTADO_OMITIDA_ONBOARDING_ID },
-      schema_version: 1,
+    persistEventoV21({
+      db,
+      writer: tx,
+      evento: buildEventoV21({
+        id: evtId,
+        tipo_evento_id: "cfg_tev_ddjj",
+        modulo_origen: "onboarding",
+        accion: "omitir_ddjj_onboarding",
+        persona_id: pid,
+        actor_uid: request.auth && request.auth.uid ? request.auth.uid : null,
+        actor_persona_id: pid,
+        payload_ui: {
+          titulo: "DDJJ omitida en onboarding",
+          resumen: "La persona indico que completara DDJJ de grupo familiar mas adelante.",
+          entidad: "declaraciones_grupo_familiar",
+          persona_afectada_label: buildPersonaLabel(ps.data() || {}),
+          actor_label: pid,
+        },
+        payload_contexto: {
+          fase: "D",
+          estado_bandeja_rrhh_id: ESTADO_BANDEJA_RRHH_PENDIENTE_ID,
+          estado_declaracion_id: DDJJ_ESTADO_OMITIDA_ONBOARDING_ID,
+          ddjj_id: ddjjId,
+        },
+        payload_cambios: [
+          {
+            campo: "estado_declaracion_id",
+            label: "Estado DDJJ",
+            antes: ddjjVigente ? ddjjVigente.get("estado_declaracion_id") || null : null,
+            despues: DDJJ_ESTADO_OMITIDA_ONBOARDING_ID,
+            antes_label: ddjjVigente ? ddjjVigente.get("estado_declaracion_id") || null : null,
+            despues_label: DDJJ_ESTADO_OMITIDA_ONBOARDING_ID,
+            tipo: "catalog_id",
+          },
+        ],
+      }),
     });
   });
   return { ok: true, ddjj_estado: "omitida_onboarding" };

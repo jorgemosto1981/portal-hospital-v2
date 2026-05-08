@@ -33,12 +33,21 @@ Estado: **actualizada** según acuerdos funcionales 2026-04-28.
   - `VAL-HLG-012`: día de semana repetido en `carga_por_dia_semana`.
   - `VAL-HLG-013`: `carga_por_dia_semana` vacía o ausente.
   - `VAL-HLG-015`: `carga_por_dia_semana` sin `dia_semana_id` por item (modo numérico no permitido).
+  - `VAL-HLC-DES-001`: no existe `hlc_id` al intentar deshabilitar ciclo.
+  - `VAL-HLC-DES-002`: `motivo_deshabilitacion_id` faltante o inválido (catálogo no vigente/inexistente).
+  - `VAL-HLC-DES-003`: ciclo HLC ya deshabilitado (sin `forzar=true`).
+  - `VAL-HLC-DES-004`: `fecha_corte` anterior a `fecha_desde` del HLC.
+  - `VAL-HLC-DES-007`: `fecha_corte` con formato inválido (debe ser `AAAA-MM-DD`).
 
 - **Warning (no bloquea guardado)**
   - `VAL-HLC-W001`: solape de vigencia HLc para misma persona (paralelo permitido, revisar operativamente).
   - `VAL-HLG-W002`: solape de vigencia HLg para mismo `cargo_id` + mismo `grupo_de_trabajo_id` (warning informativo; permitido entre cargos distintos de la misma persona).
   - `VAL-HLC-W005`: cargo activo sin grupo de trabajo asignado aún.
   - `VAL-HLG-W003` (reconciliación de carga): diferencia entre suma semanal operativa (`HLg`) y carga normativa del cargo (`HLc`), sin bloqueo.
+  - `VAL-HLC-DES-W001`: el HLC ya estaba cerrado por fecha; se aplica deshabilitación administrativa.
+  - `VAL-HLC-DES-W002`: parte de la cadena `HLd/HLg` ya estaba cerrada antes de la fecha de corte; se conservan esos cierres.
+  - `VAL-HLC-DES-W004`: el HLC no tenía `HLd` asociados; se deshabilita únicamente HLC.
+  - `VAL-HLC-DES-W005`: había `HLd` asociados pero no `HLg`; se deshabilita la porción existente.
 
 ## Alineación UI (B1/B2)
 
@@ -52,6 +61,17 @@ Estado: **actualizada** según acuerdos funcionales 2026-04-28.
 
 Esta matriz quedó implementada en `functions/modules/catalogosLaborales.js`.
 Reglas auxiliares compartidas de validación (`HLG`) viven en `functions/modules/catalogosShared.js`.
+
+### Convención de redacción de warnings (RRHH)
+
+- Cada warning debe explicar en lenguaje claro: **qué pasó**, **impacto**, y **si requiere acción**.
+- Formato de payload:
+  - `code`
+  - `severity` (`warning`)
+  - `message` (texto humano)
+  - `details` (ids/conteos/fechas para soporte técnico)
+- Ejemplo de estilo correcto:
+  - "Parte de la cadena HLd/HLg ya estaba cerrada antes de la fecha de corte. Se conservaron esos cierres."
 
 ## Priorizar próximo ajuste en HLd (estado)
 

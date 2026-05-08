@@ -41,12 +41,26 @@ const TIPOS_URL_SET = new Set(TIPOS_DATOS_PERSONALES_URL);
 const EMPTY_ROWS = [];
 
 function isEventoAuditoriaDatosPersonales(evento) {
-  const tipoCfgId = String(evento?.tipo_evento_cfg_id || "").trim().toLowerCase();
-  return tipoCfgId.startsWith("cfg_tev_datos_") || tipoCfgId.startsWith("cfg_tev_auth_");
+  const tipoId = String(evento?.tipo_evento_id || evento?.tipo_evento_cfg_id || "").trim().toLowerCase();
+  return tipoId.startsWith("cfg_tev_datos_") || tipoId.startsWith("cfg_tev_auth_") || tipoId === "cfg_tev_ddjj";
 }
 
 function formatFechaEventoDdMmAaaa(value) {
-  const d = new Date(String(value || ""));
+  let d = null;
+  if (value && typeof value.toDate === "function") {
+    try {
+      d = value.toDate();
+    } catch {
+      d = null;
+    }
+  } else if (value && typeof value === "object" && typeof value.seconds === "number") {
+    d = new Date(value.seconds * 1000);
+  } else if (value && typeof value === "object" && typeof value._seconds === "number") {
+    d = new Date(value._seconds * 1000);
+  } else {
+    d = new Date(String(value || ""));
+  }
+  if (!(d instanceof Date)) return "—";
   if (Number.isNaN(d.getTime())) return "—";
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -482,7 +496,7 @@ export default function DatosPersonales() {
       .filter((e) => String(e.persona_id || "") === String(form.persona_id || ""))
       .filter((e) => isEventoAuditoriaDatosPersonales(e))
       .filter((e) => eventoEnRangoAuditoria(e, desde, hasta))
-      .sort((a, b) => String(b.ocurrido_en || "").localeCompare(String(a.ocurrido_en || "")))
+      .sort((a, b) => toEpochMs(b.ocurrido_en) - toEpochMs(a.ocurrido_en))
       .slice(0, 80);
   }, [rowsByCol.eventos_ticket, form.persona_id, rangoEventos]);
 
@@ -963,9 +977,13 @@ export default function DatosPersonales() {
                         nombreCompleto: actorPersonaId || "—",
                         dni: "—",
                       };
-                      const tipoEventoId = String(evt.tipo_evento_cfg_id || "").trim().toLowerCase();
+                      const tipoEventoId = String(evt.tipo_evento_id || evt.tipo_evento_cfg_id || "").trim().toLowerCase();
                       const tipoEventoLabel = tipoEventoLabelById.get(tipoEventoId) || tipoEventoId || "—";
-                      const estadoId = String(evt.estado_bandeja_rrhh_id || "").trim().toLowerCase();
+                      const estadoId = String(
+                        evt.estado_bandeja_rrhh_id || evt.payload?.contexto?.estado_bandeja_rrhh_id || "",
+                      )
+                        .trim()
+                        .toLowerCase();
                       const estadoLabel = estadoBandejaLabelById.get(estadoId) || estadoId || "—";
                       return (
                         <>
@@ -979,21 +997,21 @@ export default function DatosPersonales() {
                     <p className="text-slate-700">
                       Por el USUARIO: {actorPersona.nombreCompleto} · DNI: {actorPersona.dni}
                     </p>
-                    {String(evt.payload?.coleccion || "").trim() === "declaraciones_grupo_familiar" ? (
+                    {String(evt.payload?.contexto?.coleccion || evt.payload?.coleccion || "").trim() === "declaraciones_grupo_familiar" ? (
                       <p className="text-slate-600">
-                        Acción DDJJ: {mapAccionDdjjToUiLabel(evt.payload?.accion)}
+                        Acción DDJJ: {mapAccionDdjjToUiLabel(evt.accion || evt.payload?.accion)}
                       </p>
                     ) : null}
-                    {String(evt.payload?.coleccion || "").trim() === "usuarios_cuenta" &&
-                    String(evt.payload?.accion || "").trim() ? (
-                      <p className="text-slate-600">Acción cuenta: {mapAccionAuthCuentaToUiLabel(evt.payload?.accion)}</p>
+                    {String(evt.payload?.contexto?.coleccion || evt.payload?.coleccion || "").trim() === "usuarios_cuenta" &&
+                    String(evt.accion || evt.payload?.accion || "").trim() ? (
+                      <p className="text-slate-600">Acción cuenta: {mapAccionAuthCuentaToUiLabel(evt.accion || evt.payload?.accion)}</p>
                     ) : null}
                     {Array.isArray(evt.payload?.cambios) &&
                       evt.payload.cambios.length > 0 &&
                       evt.payload.cambios.map((c, i) => (
                         <p key={`${evt.id}-${i}`} className="text-slate-600">
-                          {String(c.campo || "campo")}: {formatCambioValor(c.anterior)} {"->"}{" "}
-                          {formatCambioValor(c.nuevo)}
+                          {String(c.campo || "campo")}: {formatCambioValor(c.antes ?? c.anterior)} {"->"}{" "}
+                          {formatCambioValor(c.despues ?? c.nuevo)}
                         </p>
                       ))}
                     {(!Array.isArray(evt.payload?.cambios) || evt.payload.cambios.length === 0) && (

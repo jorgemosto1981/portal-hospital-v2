@@ -15,10 +15,8 @@ const {
 } = require("./shared/constants");
 const { checkRateLoginDni, checkRatePrimerDni, normalizeDni, validEmail } = require("./shared/helpers");
 const { applyLaborAwareSessionClaims } = require("./shared/authClaims");
+const { buildEventoV21, buildPersonaLabel, persistEventoV21 } = require("./shared/eventosV2");
 const ESTADO_BANDEJA_RRHH_PENDIENTE_ID = "cfg_ebr_pend_rev";
-const TIPO_EVENTO_EMAIL_SOL = "EVT_AUTH_EMAIL_CAMBIO_SOLICITADO";
-const TIPO_EVENTO_EMAIL_CONF = "EVT_AUTH_EMAIL_CAMBIO_CONFIRMADO";
-const TIPO_EVENTO_PASS = "EVT_AUTH_PASSWORD_CAMBIO";
 const TIPO_EVENTO_CFG_EMAIL_SOL = "cfg_tev_auth_email_cambio_solicitado";
 const TIPO_EVENTO_CFG_EMAIL_CONF = "cfg_tev_auth_email_cambio_confirmado";
 const TIPO_EVENTO_CFG_PASS = "cfg_tev_auth_password_cambio";
@@ -160,13 +158,42 @@ const registrarPrimerAcceso = onCall(async (request) => {
         "metadata.vinculado_en": FieldValue.serverTimestamp(),
         actualizado_en: FieldValue.serverTimestamp(),
       });
-      tx.set(db.collection(COL_EVENTOS).doc(evtId), {
-        tipo_evento_id: "EVT_LOGIN",
-        tipo_evento_cfg_id: "cfg_tev_login",
-        persona_id: personaId,
-        cuenta_id: cuentaId,
-        ocurrido_en: FieldValue.serverTimestamp(),
-        payload: { fase: "B", motivo: "registro_primer_acceso" },
+      persistEventoV21({
+        db,
+        writer: tx,
+        evento: buildEventoV21({
+          id: evtId,
+          tipo_evento_id: "cfg_tev_login",
+          modulo_origen: "login",
+          accion: "registrar_primer_acceso",
+          persona_id: personaId,
+          actor_uid: null,
+          actor_persona_id: personaId,
+          payload_ui: {
+            titulo: "Primer acceso registrado",
+            resumen: "Se vinculo la cuenta digital inicial para onboarding.",
+            entidad: "usuarios_cuenta",
+            persona_afectada_label: buildPersonaLabel(personaPData),
+            actor_label: "Sistema",
+          },
+          payload_contexto: {
+            fase: "B",
+            motivo: "registro_primer_acceso",
+            cuenta_id: cuentaId,
+            estado_acceso_nuevo_id: CFG_ONB,
+          },
+          payload_cambios: [
+            {
+              campo: "estado_acceso_id",
+              label: "Estado de acceso",
+              antes: CFG_PEND_REG,
+              despues: CFG_ONB,
+              antes_label: CFG_PEND_REG,
+              despues_label: CFG_ONB,
+              tipo: "catalog_id",
+            },
+          ],
+        }),
       });
     });
   } catch (e) {
@@ -246,30 +273,41 @@ async function resolveCuentaByAuthUid(uid) {
 
 async function registrarEventoAuthCambio({
   personaId,
+  actorUid,
   actorPersonaId,
-  tipoEventoId,
   tipoEventoCfgId,
   accion,
+  titulo,
+  resumen,
   payloadExtra = {},
 }) {
   const eventoId = `evt_${ulid()}`;
-  await db.collection(COL_EVENTOS).doc(eventoId).set(
-    {
+  const personaSnap = personaId ? await db.collection(COL_PERSONAS).doc(personaId).get() : null;
+  const personaData = personaSnap && personaSnap.exists ? personaSnap.data() || {} : {};
+  await persistEventoV21({
+    db,
+    evento: buildEventoV21({
       id: eventoId,
-      tipo_evento_id: tipoEventoId,
-      tipo_evento_cfg_id: tipoEventoCfgId,
-      persona_id: personaId,
+      tipo_evento_id: tipoEventoCfgId,
+      modulo_origen: "login",
+      accion,
+      persona_id: personaId || null,
+      actor_uid: actorUid || null,
       actor_persona_id: actorPersonaId || personaId || null,
-      ocurrido_en: FieldValue.serverTimestamp(),
-      estado_bandeja_rrhh_id: ESTADO_BANDEJA_RRHH_PENDIENTE_ID,
-      payload: {
-        accion,
+      payload_ui: {
+        titulo,
+        resumen,
+        entidad: "usuarios_cuenta",
+        persona_afectada_label: buildPersonaLabel(personaData),
+        actor_label: actorUid || actorPersonaId || "Usuario",
+      },
+      payload_contexto: {
+        estado_bandeja_rrhh_id: ESTADO_BANDEJA_RRHH_PENDIENTE_ID,
         ...payloadExtra,
       },
-      schema_version: 1,
-    },
-    { merge: true },
-  );
+      payload_cambios: [],
+    }),
+  });
   return eventoId;
 }
 
@@ -310,16 +348,20 @@ const notificarCambioEmailAuth = onCall(async (request) => {
     );
   }
 
-  const tipoEventoId = etapa === "confirmado" ? TIPO_EVENTO_EMAIL_CONF : TIPO_EVENTO_EMAIL_SOL;
   const tipoEventoCfgId = etapa === "confirmado" ? TIPO_EVENTO_CFG_EMAIL_CONF : TIPO_EVENTO_CFG_EMAIL_SOL;
   const accion =
     etapa === "confirmado" ? "notificar_cambio_email_confirmado" : "notificar_cambio_email_solicitado";
   const eventoId = await registrarEventoAuthCambio({
     personaId,
+    actorUid: uid,
     actorPersonaId: personaId,
-    tipoEventoId,
     tipoEventoCfgId,
     accion,
+    titulo: etapa === "confirmado" ? "Cambio de email confirmado" : "Cambio de email solicitado",
+    resumen:
+      etapa === "confirmado"
+        ? "Se confirmo el nuevo email de acceso."
+        : "El usuario solicito cambio de email de acceso.",
     payloadExtra: {
       email_anterior_mask: maskEmail(cuenta.username || null),
       email_nuevo_mask: maskEmail(nuevoEmail),
@@ -341,10 +383,12 @@ const notificarCambioPasswordAuth = onCall(async (request) => {
 
   const eventoId = await registrarEventoAuthCambio({
     personaId,
+    actorUid: uid,
     actorPersonaId: personaId,
-    tipoEventoId: TIPO_EVENTO_PASS,
     tipoEventoCfgId: TIPO_EVENTO_CFG_PASS,
     accion: "notificar_cambio_password",
+    titulo: "Cambio de password",
+    resumen: "El usuario informo cambio de contraseña de acceso.",
     payloadExtra: {
       metodo: "password",
       coleccion: "usuarios_cuenta",

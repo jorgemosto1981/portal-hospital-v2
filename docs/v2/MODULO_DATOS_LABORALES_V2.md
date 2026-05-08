@@ -296,6 +296,22 @@ Igual que antes: tras Login/datos personales puede no existir `hlc_*` aún.
 4. **Varios cargos paralelos:** nuevas filas **sin** cerrar las anteriores salvo que el acto administrativo sea reemplazo explícito (regla de negocio en Callable).
 5. **Cierre** de un cargo: `fecha_hasta`, `causal_fin_asignacion_id`, `estado_asignacion_id` finalizada + cierre o baja lógica de `hlg_*` asociados + `evt_*`.
 
+### 7.2.1 Deshabilitación de ciclo HLC (sin borrado físico)
+
+Operación administrativa para retirar un ciclo de todos los flujos operativos, manteniendo trazabilidad histórica.
+
+1. Acción RRHH: **Deshabilitar ciclo HLC** sobre `hlc_id`.
+2. Input obligatorio:
+   - `motivo_deshabilitacion_id` (catálogo `cfg_*`; en implementación actual se valida contra `cfg_causal_fin_asignacion_laboral`).
+   - `fecha_corte` opcional (default = hoy, formato `AAAA-MM-DD`).
+3. Efecto obligatorio en cascada (misma operación):
+   - `hlc_*`: `activo=false`, cierre por fecha (`fecha_hasta`), motivo/causal y estado final cuando aplique.
+   - `hld_*` vinculados por `cargo_id`: `activo=false`, `fecha_fin`.
+   - `hlg_*` vinculados por `dato_laboral_id`: `activo=false`, `fecha_fin`.
+4. **No se rehabilita** el ciclo deshabilitado.
+   - Si se requiere continuidad operativa, se crea un **nuevo** `hlc_*` (nuevo ciclo).
+5. Debe generar evento de auditoría `evt_*` con actor, fecha, motivo y resumen de impacto (`HLd`/`HLg` afectados).
+
 ### 7.3 Flujo de interfaz recomendado (pantalla Datos Laborales)
 
 1. RRHH selecciona “Nivel 1 (Cargo)” y completa `HLc`.
@@ -334,6 +350,7 @@ Agente lee lo propio; RRHH escribe **`hlc_*`**, `hld_*`/`hlg_*` y participa en c
 | Efectores | Dos FK por cargo a **`cfg_efectores`**: designación y cumplimiento. Marca **efector institucional** = **`es_efector_institucional`** en el documento de catálogo. |
 | Activo laboralmente | Al menos un `hlc_*` activo y vigente. |
 | Fechas y causal | `fecha_desde` / `fecha_hasta`; si hay fin, **causal** seleccionable desde **configuración** (`cfg_*`). |
+| Deshabilitar ciclo HLC | Sí, sin borrado físico. Cierre y deshabilitación en cascada `HLc -> HLd -> HLg`; motivo por `id` de catálogo; sin rehabilitación (crear nuevo ciclo). |
 | Carga horaria | **`carga_horaria_total`**: **horas** a nivel `hlc_*`. **Reparto** y desglose **día a día** por **burbuja** en `hlg_*` (**`carga_por_dia_semana`**, §4.5; **C10**). Suma semanal reconciliable con el total. |
 | Nivel en organigrama | **Por `grupo_de_trabajo` en `hlg_*`:** `nivel_jerarquico` entero **1–99** (C10). **No** es catálogo. **No** sustituye a la lógica de burbujeo de Ticket, pero alimenta comparaciones y visibilidad. |
 | Jefe inmediato | **No** en `hlc_*` ni `hlg_*` como FK a persona; resolución en **Ticket** / burbujeo. |
@@ -354,6 +371,7 @@ Agente lee lo propio; RRHH escribe **`hlc_*`**, `hld_*`/`hlg_*` y participa en c
 - [ ] Índices Firestore desplegados y validados en el proyecto (consola / `firebase-v2/firestore.indexes.json`).
 - [x] **§4.4–4.5** y **C10:** `hlg_*` con `nivel_jerarquico` (1–99) y `carga_por_dia_semana` + catálogo `cfg_dia_semana` (seed); **sin** `cfg_nivel_jerarquia` (nivel = número en documento).
 - [ ] Validación Callable: suma semanal `hlg_*` vs `carga_horaria_total` y solapes de fechas.
+- [x] Deshabilitación administrativa de ciclo HLC (sin delete) con cascada `HLc -> HLd -> HLg`, motivo por catálogo y warnings claros.
 
 ---
 
@@ -374,3 +392,4 @@ Agente lee lo propio; RRHH escribe **`hlc_*`**, `hld_*`/`hlg_*` y participa en c
 | 2026-04-23 | **C10:** `hlg_*` con `nivel_jerarquico` / jerarquía **por** grupo de trabajo (antes redactado con catálogo; hoy entero 1–99) y `carga_por_dia_semana` (horas **por** día, `cfg_dia_semana`); tablas **§4.4.0–4.4.1** y **§4.5**; `cfg` §6; §1, §2, §3, §7.2, §9–10; `hld_*` ajuste `nivel_jerarquico` vs `hlg`. |
 | 2026-04-23 | **§4.5.1–4.5.2:** reconciliación `S_hlg` / `carga_horaria_total` (ε, uno o N `hlg_*`); ejemplo JSON; unidad = horas por semana en el cargo (salvo RFC). |
 | 2026-04-28 | **Clarificación UX/BD:** se documentan **2 niveles operativos de pantalla** (Nivel 1 `HLc`, Nivel 2 `HLg`) y se mantiene `HLd` como capa técnica opcional, sin alterar el contrato de persistencia de 3 colecciones. |
+| 2026-05-07 | Se agrega contrato operativo de **deshabilitación de ciclo HLC**: sin borrado físico, cascada obligatoria a `HLd/HLg`, motivo por catálogo y regla de **no rehabilitación** (nuevo ciclo para continuidad). |

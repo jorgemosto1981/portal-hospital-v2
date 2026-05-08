@@ -15,6 +15,7 @@ const {
 } = require("./shared/constants");
 const { assertRrhh, normalizeDni } = require("./shared/helpers");
 const { calcularAntiguedad } = require("./shared/antiguedadCalculator");
+const { buildEventoV21, buildPersonaLabel, persistEventoV21 } = require("./shared/eventosV2");
 
 const DDJJ_ESTADO_NO_INICIADA_ID = "CFG_DDJJ_01_NO_INICIADA";
 
@@ -152,6 +153,13 @@ const rrhhActualizarEstadoCuentaAcceso = onCall(async (request) => {
   const now = FieldValue.serverTimestamp();
   const eventoId = `evt_${ulid()}`;
   const actorUid = (request.auth && request.auth.uid) || null;
+  const actorPersonaId = (request.auth && request.auth.token && request.auth.token.persona_id) || null;
+  const personaLabel = buildPersonaLabel(personaSnap.data() || {});
+  const estadoNuevoData = estadoSnap.data() || {};
+  const estadoNuevoLabel =
+    (typeof estadoNuevoData.titulo_ui === "string" && estadoNuevoData.titulo_ui.trim()) ||
+    (typeof estadoNuevoData.nombre === "string" && estadoNuevoData.nombre.trim()) ||
+    estadoAccesoId;
   await Promise.all([
     db.collection(COL_USUARIOS_CUENTA).doc(cuentaId).set(
       {
@@ -161,18 +169,41 @@ const rrhhActualizarEstadoCuentaAcceso = onCall(async (request) => {
       },
       { merge: true },
     ),
-    db.collection(COL_EVENTOS).doc(eventoId).set({
-      tipo_evento_id: "cfg_tev_login",
-      actor_uid: actorUid,
-      persona_id: personaId,
-      cuenta_id: cuentaId,
-      modulo_origen: "rrhh",
-      accion: "actualizar_estado_cuenta_acceso",
-      estado_acceso_anterior_id: estadoPrevio || null,
-      estado_acceso_nuevo_id: estadoAccesoId,
-      motivo: motivo || null,
-      creado_en: now,
-      actualizado_en: now,
+    persistEventoV21({
+      db,
+      evento: buildEventoV21({
+        id: eventoId,
+        tipo_evento_id: "cfg_tev_rrhh",
+        modulo_origen: "rrhh",
+        accion: "actualizar_estado_cuenta_acceso",
+        persona_id: personaId,
+        actor_uid: actorUid,
+        actor_persona_id: actorPersonaId,
+        payload_ui: {
+          titulo: "Estado de acceso actualizado",
+          resumen: "RRHH actualizo el estado de acceso de la cuenta.",
+          entidad: "usuarios_cuenta",
+          persona_afectada_label: personaLabel,
+          actor_label: actorUid || "RRHH",
+        },
+        payload_contexto: {
+          cuenta_id: cuentaId,
+          estado_anterior_id: estadoPrevio || null,
+          estado_nuevo_id: estadoAccesoId,
+          motivo: motivo || null,
+        },
+        payload_cambios: [
+          {
+            campo: "estado_acceso_id",
+            label: "Estado de acceso",
+            antes: estadoPrevio || null,
+            despues: estadoAccesoId,
+            antes_label: estadoPrevio || null,
+            despues_label: estadoNuevoLabel,
+            tipo: "catalog_id",
+          },
+        ],
+      }),
     }),
   ]);
 
@@ -294,23 +325,50 @@ const rrhhAplicarBajaLaboral = onCall(async (request) => {
   }
 
   const eventoId = `evt_${ulid()}`;
-  batch.set(db.collection(COL_EVENTOS).doc(eventoId), {
-    tipo_evento_id: "cfg_tev_login",
-    actor_uid: (request.auth && request.auth.uid) || null,
-    persona_id: personaId,
-    cuenta_id: cuentaDoc ? cuentaDoc.id : null,
-    modulo_origen: "rrhh",
-    accion: "aplicar_baja_laboral",
-    fecha_baja_laboral: fechaBaja,
-    causal_fin_asignacion_id: causalFinAsignacionId,
-    motivo_baja_id: motivoBajaPersonaId || null,
-    bloquear_acceso: bloquearAcceso,
-    estado_acceso_anterior_id: estadoAccesoPrevio,
-    estado_acceso_nuevo_id: bloquearAcceso && cuentaDoc ? estadoAccesoId : null,
-    motivo: motivo || null,
-    cantidad_hlc_cerrados: hlcAbiertosSnap.size,
-    creado_en: now,
-    actualizado_en: now,
+  const actorUid = (request.auth && request.auth.uid) || null;
+  const actorPersonaId = (request.auth && request.auth.token && request.auth.token.persona_id) || null;
+  const personaLabel = buildPersonaLabel(personaSnap.data() || {});
+  persistEventoV21({
+    db,
+    writer: batch,
+    evento: buildEventoV21({
+      id: eventoId,
+      tipo_evento_id: "cfg_tev_rrhh",
+      modulo_origen: "rrhh",
+      accion: "aplicar_baja_laboral",
+      persona_id: personaId,
+      actor_uid: actorUid,
+      actor_persona_id: actorPersonaId,
+      payload_ui: {
+        titulo: "Baja laboral aplicada",
+        resumen: `Se cerraron ${hlcAbiertosSnap.size} registros HLc vigentes para la persona.`,
+        entidad: "historial_laboral_cargos",
+        persona_afectada_label: personaLabel,
+        actor_label: actorUid || "RRHH",
+      },
+      payload_contexto: {
+        cuenta_id: cuentaDoc ? cuentaDoc.id : null,
+        fecha_baja_laboral: fechaBaja,
+        causal_fin_asignacion_id: causalFinAsignacionId,
+        motivo_baja_id: motivoBajaPersonaId || null,
+        bloquear_acceso: bloquearAcceso,
+        estado_acceso_anterior_id: estadoAccesoPrevio,
+        estado_acceso_nuevo_id: bloquearAcceso && cuentaDoc ? estadoAccesoId : null,
+        motivo: motivo || null,
+        cantidad_hlc_cerrados: hlcAbiertosSnap.size,
+      },
+      payload_cambios: [
+        {
+          campo: "activo",
+          label: "Estado de persona",
+          antes: true,
+          despues: false,
+          antes_label: "Activo",
+          despues_label: "Inactivo por baja laboral",
+          tipo: "boolean",
+        },
+      ],
+    }),
   });
 
   await batch.commit();
@@ -365,6 +423,9 @@ const rrhhReiniciarVinculacionCuenta = onCall(async (request) => {
 
   const now = FieldValue.serverTimestamp();
   const eventoId = `evt_${ulid()}`;
+  const actorUid = (request.auth && request.auth.uid) || null;
+  const actorPersonaId = (request.auth && request.auth.token && request.auth.token.persona_id) || null;
+  const personaLabel = buildPersonaLabel(personaSnap.data() || {});
   const batch = db.batch();
   batch.set(
     cuentaDoc.ref,
@@ -392,22 +453,55 @@ const rrhhReiniciarVinculacionCuenta = onCall(async (request) => {
       { merge: true },
     );
   }
-  batch.set(db.collection(COL_EVENTOS).doc(eventoId), {
-    tipo_evento_id: "cfg_tev_login",
-    actor_uid: (request.auth && request.auth.uid) || null,
-    persona_id: personaId,
-    cuenta_id: cuentaDoc.id,
-    modulo_origen: "rrhh",
-    accion: "reiniciar_vinculacion_cuenta",
-    auth_uid_anterior: authUidPrevio || null,
-    username_anterior: usernamePrevio || null,
-    estado_acceso_anterior_id: estadoAccesoPrevio || null,
-    estado_acceso_nuevo_id: estadoAccesoId,
-    reset_estado_onboarding: resetEstadoOnboarding,
-    estado_sugerido_post_reset: resetEstadoOnboarding ? CFG_ONB : null,
-    motivo: motivo || null,
-    creado_en: now,
-    actualizado_en: now,
+  persistEventoV21({
+    db,
+    writer: batch,
+    evento: buildEventoV21({
+      id: eventoId,
+      tipo_evento_id: "cfg_tev_rrhh",
+      modulo_origen: "rrhh",
+      accion: "reiniciar_vinculacion_cuenta",
+      persona_id: personaId,
+      actor_uid: actorUid,
+      actor_persona_id: actorPersonaId,
+      payload_ui: {
+        titulo: "Cuenta desvinculada para nueva vinculacion",
+        resumen: "RRHH reinicio la vinculacion de cuenta y revoco la sesion previa.",
+        entidad: "usuarios_cuenta",
+        persona_afectada_label: personaLabel,
+        actor_label: actorUid || "RRHH",
+      },
+      payload_contexto: {
+        cuenta_id: cuentaDoc.id,
+        auth_uid_anterior: authUidPrevio || null,
+        username_anterior: usernamePrevio || null,
+        estado_acceso_anterior_id: estadoAccesoPrevio || null,
+        estado_acceso_nuevo_id: estadoAccesoId,
+        reset_estado_onboarding: resetEstadoOnboarding,
+        estado_sugerido_post_reset: resetEstadoOnboarding ? CFG_ONB : null,
+        motivo: motivo || null,
+      },
+      payload_cambios: [
+        {
+          campo: "auth_uid",
+          label: "Vinculacion Auth",
+          antes: authUidPrevio || null,
+          despues: null,
+          antes_label: authUidPrevio || "Sin vinculacion",
+          despues_label: "Sin vinculacion",
+          tipo: "string",
+        },
+        {
+          campo: "estado_acceso_id",
+          label: "Estado de acceso",
+          antes: estadoAccesoPrevio || null,
+          despues: estadoAccesoId,
+          antes_label: estadoAccesoPrevio || null,
+          despues_label: estadoAccesoId,
+          tipo: "catalog_id",
+        },
+      ],
+    }),
   });
   await batch.commit();
 

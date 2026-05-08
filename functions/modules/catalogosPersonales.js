@@ -7,6 +7,8 @@ const { db, FieldValue } = require("./shared/context");
 const runtimeFlags = require("./shared/runtimeFlags.json");
 const { assertRrhh, tokenHasRrhhAccess } = require("./shared/helpers");
 const { processDdjjGrupoFamiliar } = require("./shared/ddjjGrupoFamiliarService");
+const { buildEventoV21, persistEventoV21 } = require("./shared/eventosV2");
+const { COL_EVENTOS, COL_EVENTOS_BANDEJA_RRHH } = require("./shared/constants");
 const {
   COLECCIONES_ESCRITURA_PERSONAL_TEMPORAL,
   ESTADO_DDJJ_DEFAULT_PERSONALES,
@@ -24,20 +26,6 @@ const ESTADO_BANDEJA_RRHH_PENDIENTE_ID = "cfg_ebr_pend_rev";
 const ESTADO_BANDEJA_RRHH_VISTO_ID = "cfg_ebr_visto";
 const DDJJ_ESTADO_PRESENTADA_ID = "CFG_DDJJ_03_PRESENTADA";
 const DDJJ_ESTADO_SUPERADA_ID = "CFG_DDJJ_04_SUPERADA_POR_ACTUALIZACION";
-const EVENTO_CFG_ID_POR_EVENTO_ID = {
-  EVT_LOGIN: "cfg_tev_login",
-  EVT_DATOS_NOTIF_CAMBIO_DDJJ: "cfg_tev_datos_notif_cambio_ddjj",
-  EVT_DATOS_ACTUALIZA_PERSONAS: "cfg_tev_datos_actualiza_personas",
-  EVT_DATOS_ALTA_PERSONAS: "cfg_tev_datos_alta_personas",
-  EVT_DATOS_ACTUALIZA_FORMACION: "cfg_tev_datos_actualiza_formacion",
-  EVT_DATOS_ALTA_FORMACION: "cfg_tev_datos_alta_formacion",
-  EVT_DATOS_ACTUALIZA_DDJJ: "cfg_tev_datos_actualiza_ddjj",
-  EVT_DATOS_ALTA_DDJJ: "cfg_tev_datos_alta_ddjj",
-  EVT_DATOS_ACTUALIZA_CONSENTIMIENTO: "cfg_tev_datos_actualiza_consentimiento",
-  EVT_DATOS_ALTA_CONSENTIMIENTO: "cfg_tev_datos_alta_consentimiento",
-  EVT_CONSENTIMIENTO_ACEPTADO: "cfg_tev_consent",
-};
-
 function isRrhhActor(request) {
   const token = request && request.auth && request.auth.token;
   return tokenHasRrhhAccess(token);
@@ -46,11 +34,6 @@ function isRrhhActor(request) {
 function getActorPersonaId(request) {
   const pid = request && request.auth && request.auth.token && request.auth.token.persona_id;
   return typeof pid === "string" && pid.trim() ? pid.trim() : null;
-}
-
-function resolveTipoEventoCfgId(tipoEventoId) {
-  const key = typeof tipoEventoId === "string" ? tipoEventoId.trim().toUpperCase() : "";
-  return EVENTO_CFG_ID_POR_EVENTO_ID[key] || "cfg_tev_datos_notif_cambio_generico";
 }
 
 function hasSensitivePersonaMutation({ existing, incoming }) {
@@ -105,30 +88,45 @@ function diffPersonaFields(prevData, nextData) {
 async function crearEventoDatosPersonales({
   tipo_evento_id,
   persona_id,
+  actor_uid,
   actor_persona_id,
   coleccion,
   accion,
   cambios,
 }) {
   const eventoId = `evt_${ulid()}`;
-  await db.collection("eventos_ticket").doc(eventoId).set(
-    {
+  await persistEventoV21({
+    db,
+    evento: buildEventoV21({
       id: eventoId,
       tipo_evento_id,
-      tipo_evento_cfg_id: resolveTipoEventoCfgId(tipo_evento_id),
+      modulo_origen: "datos_personales",
+      accion,
       persona_id: persona_id || null,
+      actor_uid: actor_uid || null,
       actor_persona_id: actor_persona_id || null,
-      ocurrido_en: FieldValue.serverTimestamp(),
-      estado_bandeja_rrhh_id: ESTADO_BANDEJA_RRHH_PENDIENTE_ID,
-      payload: {
-        coleccion,
-        accion,
-        cambios: Array.isArray(cambios) ? cambios : [],
+      payload_ui: {
+        titulo: "Actualizacion de datos personales",
+        resumen: `Se registro una operacion sobre ${coleccion}.`,
+        entidad: coleccion,
+        persona_afectada_label: persona_id || "N/A",
+        actor_label: actor_persona_id || actor_uid || "Sistema",
       },
-      schema_version: 1,
-    },
-    { merge: true },
-  );
+      payload_contexto: {
+        estado_bandeja_rrhh_id: ESTADO_BANDEJA_RRHH_PENDIENTE_ID,
+        coleccion,
+      },
+      payload_cambios: (Array.isArray(cambios) ? cambios : []).map((c) => ({
+        campo: c.campo,
+        label: c.campo,
+        antes: c.anterior ?? null,
+        despues: c.nuevo ?? null,
+        antes_label: c.anterior ?? null,
+        despues_label: c.nuevo ?? null,
+        tipo: "string",
+      })),
+    }),
+  });
   return eventoId;
 }
 
@@ -162,12 +160,28 @@ const rrhhMarcarEventoDatosPersonalesVisto = onCall(async (request) => {
   if (!eventoId) {
     throw new HttpsError("invalid-argument", "[VAL-PER-008] evento_id es obligatorio.");
   }
-  const ref = db.collection("eventos_ticket").doc(eventoId);
-  const snap = await ref.get();
-  if (!snap.exists) {
-    throw new HttpsError("not-found", `[VAL-PER-009] Evento inexistente: ${eventoId}.`);
+  const refEvento = db.collection(COL_EVENTOS).doc(eventoId);
+  const snapEvento = await refEvento.get();
+  let canonicalEventoId = eventoId;
+  const legacyMatch = eventoId.match(/^(?:\d{4}-\d{2})_(evt_[A-Za-z0-9]+)$/);
+  if (legacyMatch && legacyMatch[1]) {
+    canonicalEventoId = legacyMatch[1];
   }
-  await ref.set(
+  if (!snapEvento.exists) {
+    const proySnap = await db.collection(COL_EVENTOS_BANDEJA_RRHH).doc(eventoId).get();
+    if (!proySnap.exists) {
+      const legacyProySnap = canonicalEventoId !== eventoId
+        ? await db.collection(COL_EVENTOS_BANDEJA_RRHH).doc(canonicalEventoId).get()
+        : null;
+      if (!legacyProySnap || !legacyProySnap.exists) {
+        throw new HttpsError("not-found", `[VAL-PER-009] Evento inexistente: ${eventoId}.`);
+      }
+      canonicalEventoId = toNullableTrimmedString(legacyProySnap.get("evento_id")) || canonicalEventoId;
+    } else {
+      canonicalEventoId = toNullableTrimmedString(proySnap.get("evento_id")) || canonicalEventoId;
+    }
+  }
+  await db.collection(COL_EVENTOS).doc(canonicalEventoId).set(
     {
       estado_bandeja_rrhh_id: ESTADO_BANDEJA_RRHH_VISTO_ID,
       tomado_conocimiento_en: FieldValue.serverTimestamp(),
@@ -176,7 +190,86 @@ const rrhhMarcarEventoDatosPersonalesVisto = onCall(async (request) => {
     },
     { merge: true },
   );
-  return { ok: true, id: eventoId };
+  const projectionPayload = {
+    estado_bandeja_rrhh_id: ESTADO_BANDEJA_RRHH_VISTO_ID,
+  };
+  await db.collection(COL_EVENTOS_BANDEJA_RRHH).doc(canonicalEventoId).set(projectionPayload, { merge: true });
+  if (canonicalEventoId !== eventoId) {
+    await db.collection(COL_EVENTOS_BANDEJA_RRHH).doc(eventoId).set(projectionPayload, { merge: true });
+  }
+  return { ok: true, id: canonicalEventoId };
+});
+
+const rrhhListarBandejaEventos = onCall(async (request) => {
+  try {
+    if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
+    const data = request.data && typeof request.data === "object" ? request.data : {};
+    const periodoYyyymm = toNullableTrimmedString(data.periodo_yyyymm);
+    const estadoBandeja = toNullableTrimmedString(data.estado_bandeja_rrhh_id);
+    const moduloOrigen = toNullableTrimmedString(data.modulo_origen);
+    const personaId = toNullableTrimmedString(data.persona_id);
+    const cursorId = toNullableTrimmedString(data.cursor_id);
+    const requestedLimit = Number(data.limit);
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.max(1, Math.min(100, Math.floor(requestedLimit)))
+      : 30;
+
+    let query = db.collection(COL_EVENTOS_BANDEJA_RRHH);
+    if (periodoYyyymm) query = query.where("periodo_yyyymm", "==", periodoYyyymm);
+    if (estadoBandeja) query = query.where("estado_bandeja_rrhh_id", "==", estadoBandeja);
+    if (moduloOrigen) query = query.where("modulo_origen", "==", moduloOrigen);
+    if (personaId) query = query.where("persona_id", "==", personaId);
+    query = query.orderBy("ocurrido_en", "desc").limit(limit + 1);
+
+    if (cursorId) {
+      const cursorSnap = await db.collection(COL_EVENTOS_BANDEJA_RRHH).doc(cursorId).get();
+      if (cursorSnap.exists) {
+        query = query.startAfter(cursorSnap);
+      }
+    }
+
+    const snap = await query.get();
+    const docs = snap.docs || [];
+    const hasMore = docs.length > limit;
+    const page = hasMore ? docs.slice(0, limit) : docs;
+    const items = page.map((doc) => ({ id: doc.id, ...(doc.data() || {}) }));
+    const nextCursorId = hasMore && page.length > 0 ? page[page.length - 1].id : null;
+
+    return {
+      ok: true,
+      items,
+      page_info: {
+        limit,
+        has_more: hasMore,
+        next_cursor_id: nextCursorId,
+      },
+      filtros: {
+        periodo_yyyymm: periodoYyyymm || null,
+        estado_bandeja_rrhh_id: estadoBandeja || null,
+        modulo_origen: moduloOrigen || null,
+        persona_id: personaId || null,
+      },
+    };
+  } catch (error) {
+    const raw = error && error.message ? String(error.message) : "";
+    const msgLow = raw.toLowerCase();
+    if (msgLow.includes("index") || msgLow.includes("failed-precondition")) {
+      throw new HttpsError(
+        "failed-precondition",
+        "[EVT-BANDEJA-001] Falta índice para la consulta de bandeja RRHH. Verificar firestore.indexes desplegados.",
+      );
+    }
+    if (msgLow.includes("permission") || msgLow.includes("insufficient")) {
+      throw new HttpsError(
+        "permission-denied",
+        "[EVT-BANDEJA-002] Sin permisos para leer la bandeja RRHH.",
+      );
+    }
+    throw new HttpsError(
+      "internal",
+      "[EVT-BANDEJA-003] No se pudo listar la bandeja RRHH. Reintentar o revisar logs de Functions.",
+    );
+  }
 });
 
 function buildNombreCompletoLegal(nombre, apellido) {
@@ -254,6 +347,7 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
     const existingData = existingSnap.exists ? existingSnap.data() || {} : null;
     const actorIsRrhh = isRrhhActor(request);
     const actorPersonaId = getActorPersonaId(request);
+    const actorUid = request && request.auth ? request.auth.uid || null : null;
     if (!actorIsRrhh && request.auth) {
       if (!existingSnap.exists) {
         throw new HttpsError("permission-denied", "[AUTH-PER-002] Solo RRHH puede dar de alta registros en personas.");
@@ -369,10 +463,10 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
     if (!exists) payload.creado_en = now;
     await ref.set(payload, { merge: true });
     const cambiosEvento = diffPersonaFields(existingData || {}, payload);
-    const tipoEvento = existingSnap.exists ? "EVT_DATOS_ACTUALIZA_PERSONAS" : "EVT_DATOS_ALTA_PERSONAS";
     const eventoId = await crearEventoDatosPersonales({
-      tipo_evento_id: tipoEvento,
+      tipo_evento_id: "cfg_tev_datos_personales",
       persona_id: id,
+      actor_uid: actorUid,
       actor_persona_id: actorPersonaId,
       coleccion: "personas",
       accion: resolveAccionPersonasUpdate(datos, existingSnap.exists),
@@ -418,6 +512,7 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
     if (!exists) payload.creado_en = now;
     await ref.set(payload, { merge: true });
     const actorPersonaId = getActorPersonaId(request);
+    const actorUid = request && request.auth ? request.auth.uid || null : null;
     const cambios = buildTopLevelChanges(existing.data() || {}, payload, [
       "persona_id",
       "nivel_estudios_id",
@@ -431,8 +526,9 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
       "activo",
     ]);
     await crearEventoDatosPersonales({
-      tipo_evento_id: exists ? "EVT_DATOS_ACTUALIZA_FORMACION" : "EVT_DATOS_ALTA_FORMACION",
+      tipo_evento_id: "cfg_tev_datos_personales",
       persona_id: personaId,
+      actor_uid: actorUid,
       actor_persona_id: actorPersonaId,
       coleccion: "formacion_agente",
       accion: exists ? "guardar_actualizacion" : "guardar_alta",
@@ -458,7 +554,6 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
         toNullableTrimmedString,
         toNumberOrNull,
         assertDocExistsOrNull,
-        resolveTipoEventoCfgId,
         actorPersonaId,
         ESTADO_DDJJ_DEFAULT_PERSONALES,
         DDJJ_ESTADO_PRESENTADA_ID,
@@ -524,6 +619,7 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
   if (!existing.exists) payload.creado_en = now;
   await ref.set(payload, { merge: true });
   const actorPersonaId = getActorPersonaId(request);
+  const actorUid = request && request.auth ? request.auth.uid || null : null;
   const cambios = buildTopLevelChanges(existing.data() || {}, payload, [
     "persona_id",
     "tipo_consentimiento_id",
@@ -534,8 +630,9 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
     "aceptado_en",
   ]);
   await crearEventoDatosPersonales({
-    tipo_evento_id: existing.exists ? "EVT_DATOS_ACTUALIZA_CONSENTIMIENTO" : "EVT_DATOS_ALTA_CONSENTIMIENTO",
+    tipo_evento_id: "cfg_tev_datos_personales",
     persona_id: personaId,
+    actor_uid: actorUid,
     actor_persona_id: actorPersonaId,
     coleccion: "consentimientos",
     accion: existing.exists ? "guardar_actualizacion" : "guardar_alta",
@@ -547,4 +644,5 @@ const guardarRegistroPersonalTemporal = onCall(async (request) => {
 module.exports = {
   guardarRegistroPersonalTemporal,
   rrhhMarcarEventoDatosPersonalesVisto,
+  rrhhListarBandejaEventos,
 };

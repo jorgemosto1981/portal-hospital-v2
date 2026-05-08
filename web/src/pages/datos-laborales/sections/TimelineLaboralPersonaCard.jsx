@@ -1,4 +1,5 @@
 import Card from "../../../components/ui/Card.jsx";
+import { formatDateDdMmAaaa } from "../utils.js";
 
 export default function TimelineLaboralPersonaCard({
   opcionesPersonas,
@@ -47,7 +48,7 @@ export default function TimelineLaboralPersonaCard({
   if (personaId) chipsActivos.push(`Persona: ${personaLabel}`);
   if (filtro && filtro !== "todos") chipsActivos.push(`Filtro: ${filtro}`);
   if ((filtro === "vigentes" || filtro === "no_vigentes") && fechaCorte) {
-    chipsActivos.push(`Fecha X: ${fechaCorte}`);
+    chipsActivos.push(`Fecha X: ${formatDateDdMmAaaa(fechaCorte, fechaCorte)}`);
   }
   if (tipoTramo && tipoTramo !== "todos") chipsActivos.push(`Tipo: ${tipoTramo}`);
   if (grupoId) chipsActivos.push(`Grupo: ${grupoLabel}`);
@@ -328,8 +329,8 @@ export default function TimelineLaboralPersonaCard({
                       {item.hasta ? "cerrado" : "abierto"}
                     </span>
                   </td>
-                  <td className="px-3 py-2">{item.desde || "—"}</td>
-                  <td className="px-3 py-2">{item.hasta || "—"}</td>
+                  <td className="px-3 py-2">{formatDateDdMmAaaa(item.desde, "—")}</td>
+                  <td className="px-3 py-2">{item.hasta ? formatDateDdMmAaaa(item.hasta, "—") : "—"}</td>
                   <td className="px-3 py-2">{item.secundario || "—"}</td>
                   <td className="px-3 py-2">
                     {(item.conflictos || []).length > 0 ? (

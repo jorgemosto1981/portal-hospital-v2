@@ -6,10 +6,15 @@ const {
   listarCatalogoOnboarding,
   listarColeccionPublicaTemporal,
 } = require("./catalogosCore");
-const { guardarRegistroLaboralTemporal, listarReadModelLaboralOperativoTemporal } = require("./catalogosLaborales");
+const {
+  guardarRegistroLaboralTemporal,
+  rrhhDeshabilitarHlc,
+  listarReadModelLaboralOperativoTemporal,
+} = require("./catalogosLaborales");
 const {
   guardarRegistroPersonalTemporal,
   rrhhMarcarEventoDatosPersonalesVisto,
+  rrhhListarBandejaEventos,
 } = require("./catalogosPersonales");
 
 module.exports = {
@@ -18,8 +23,10 @@ module.exports = {
   listarCatalogoOnboarding,
   listarColeccionPublicaTemporal,
   guardarRegistroLaboralTemporal,
+  rrhhDeshabilitarHlc,
   listarReadModelLaboralOperativoTemporal,
   guardarRegistroPersonalTemporal,
   rrhhMarcarEventoDatosPersonalesVisto,
+  rrhhListarBandejaEventos,
 };
 
