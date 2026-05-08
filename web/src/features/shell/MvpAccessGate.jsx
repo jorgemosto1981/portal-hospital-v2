@@ -7,6 +7,7 @@ import { useAuthSession } from "../auth/useAuthSession.js";
 import { useAuthClaims } from "../auth/useAuthClaims.js";
 import { useSyncAuthEmailConfirmado } from "../auth/useSyncAuthEmailConfirmado.js";
 import { hasAnyPortalRole, MANAGEMENT_PORTAL_ROLES } from "../routing/portalRole.js";
+import { GateSpinner } from "../routing/RouteGuards.jsx";
 import runtimeFlags from "../../../../shared/runtimeFlags.json";
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
@@ -62,13 +63,7 @@ export default function MvpAccessGate({ children }) {
     return (
       <div className="flex min-h-dvh w-full flex-col bg-slate-100">
         <PublicAuthMenu active="none" />
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-slate-600">
-          <span
-            className="inline-block size-8 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600"
-            aria-hidden
-          />
-          <p className="text-sm">Cargando…</p>
-        </div>
+        <GateSpinner label="Estamos preparando tu espacio de trabajo" />
       </div>
     );
   }
@@ -77,8 +72,9 @@ export default function MvpAccessGate({ children }) {
   }
   if (claimsLoading) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-slate-100 text-sm text-slate-500">
-        Sincronizando permisos…
+      <div className="flex min-h-dvh w-full flex-col bg-slate-100">
+        <PublicAuthMenu active="none" />
+        <GateSpinner label="Sincronizando permisos del portal" />
       </div>
     );
   }

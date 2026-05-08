@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useAuthSession } from "../auth/useAuthSession.js";
@@ -10,13 +11,36 @@ const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
 const OPEN_ACCESS_TEMP = runtimeFlags.OPEN_ACCESS_TEMP === true;
 
 export function GateSpinner({ label = "Cargando…" }) {
+  const loadingSteps = [
+    "Validando sesión",
+    "Cargando permisos",
+    "Sincronizando datos iniciales",
+  ];
+  const [stepIndex, setStepIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setStepIndex((prev) => (prev + 1) % loadingSteps.length);
+    }, 1200);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
-    <div className="flex min-h-dvh w-full flex-col items-center justify-center gap-3 bg-slate-100 px-4 text-slate-600">
-      <span
-        className="inline-block size-8 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600"
-        aria-hidden
-      />
-      <p className="text-sm">{label}</p>
+    <div className="flex min-h-dvh w-full items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 px-4">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white/90 px-6 py-7 text-center shadow-sm">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+          <span className="h-6 w-6 animate-pulse rounded-full bg-blue-600/80" aria-hidden />
+        </div>
+        <p className="text-base font-semibold text-slate-900">Cargando Portal Digital...</p>
+        <p className="mt-1 text-sm text-slate-600">{label}</p>
+        <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-500">
+          <span
+            className="inline-block size-4 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600"
+            aria-hidden
+          />
+          <span>{loadingSteps[stepIndex]}...</span>
+        </div>
+      </div>
     </div>
   );
 }
