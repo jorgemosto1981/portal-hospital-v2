@@ -94,21 +94,6 @@ function sumarHorasSemana(cargaPorDiaSemana) {
   }, 0);
 }
 
-function scrollToForm() {
-  if (typeof document === "undefined") return;
-  const tryScroll = (retries = 6) => {
-    const el = document.getElementById("form-laboral");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    }
-    if (retries <= 0) return;
-    window.setTimeout(() => tryScroll(retries - 1), 80);
-  };
-  // Espera a que React pinte el formulario visible antes de desplazar.
-  window.requestAnimationFrame(() => tryScroll());
-}
-
 function labelPersonaOpcion(p) {
   if (!p || !p.id) return "";
   if (p.nombre || p.apellido) {
@@ -197,6 +182,7 @@ export default function DatosLaborales() {
   const idxPersonas = crearIndicePorId(rowsByCollection.personas || []);
   const idxRoles = crearIndicePorId(rowsByCollection.cfg_rol || []);
   const idxFunciones = crearIndicePorId(rowsByCollection.cfg_cargo_funcional || []);
+  const idxTipoVinculo = crearIndicePorId(rowsByCollection.cfg_tipo_vinculo_laboral || []);
   const idxEscalafon = crearIndicePorId(rowsByCollection.cfg_escalafon || []);
   const idxAgrupamiento = crearIndicePorId(rowsByCollection.cfg_agrupamiento || []);
   const idxCategorias = crearIndicePorId(rowsByCollection.cfg_categorias || []);
@@ -387,6 +373,7 @@ export default function DatosLaborales() {
         return {
           id: String(hlc.id || ""),
           hlcId: String(hlc.id || ""),
+          tipoVinculo: labelDesdeIndice(idxTipoVinculo, hlc.tipo_vinculo_id),
           rolHlc: labelDesdeIndice(idxRoles, hlc.rol_id),
           escalafon: labelDesdeIndice(idxEscalafon, hlc.escalafon_id),
           agrupamiento: labelDesdeIndice(idxAgrupamiento, hlc.agrupamiento_id),
@@ -419,6 +406,7 @@ export default function DatosLaborales() {
     idxEfectores,
     idxGrupos,
     idxRoles,
+    idxTipoVinculo,
     idxEscalafon,
     idxAgrupamiento,
     idxCategorias,
@@ -465,7 +453,13 @@ export default function DatosLaborales() {
       return {
         id: String(hlc.id || `hlc-cerrado-${idx}`),
         hlcId: String(hlc.id || ""),
+        tipoVinculo: labelDesdeIndice(idxTipoVinculo, hlc.tipo_vinculo_id),
         rolHlc: labelDesdeIndice(idxRoles, hlc.rol_id),
+        escalafon: labelDesdeIndice(idxEscalafon, hlc.escalafon_id),
+        agrupamiento: labelDesdeIndice(idxAgrupamiento, hlc.agrupamiento_id),
+        categoria: labelDesdeIndice(idxCategorias, hlc.categoria_id),
+        funcion: labelDesdeIndice(idxFunciones, hlc.cargo_funcional_id),
+        cargaHoraria: String(hlc.carga_horaria_total || "—"),
         orden: idx + 1,
         titulo,
         periodo,
@@ -474,7 +468,21 @@ export default function DatosLaborales() {
         hlgHistoricos: hlgHistDelHlc.map(mapHlg),
       };
     });
-  }, [formData.persona_id, hlcRows, hldRows, hlgRows, idxHld, idxFunciones, idxEfectores, idxGrupos, idxRoles]);
+  }, [
+    formData.persona_id,
+    hlcRows,
+    hldRows,
+    hlgRows,
+    idxHld,
+    idxFunciones,
+    idxEfectores,
+    idxGrupos,
+    idxRoles,
+    idxTipoVinculo,
+    idxEscalafon,
+    idxAgrupamiento,
+    idxCategorias,
+  ]);
   const timelineItemsBase = useMemo(
     () =>
       buildTimelineItemsByPersona({
@@ -707,7 +715,6 @@ export default function DatosLaborales() {
     cargarRegistroEnFormulario(target);
     setVistaTab("actual");
     setMostrarFormulario(true);
-    scrollToForm();
   }
 
   function abrirFormularioEdicionHlg(hlgId) {
@@ -720,7 +727,6 @@ export default function DatosLaborales() {
     cargarRegistroEnFormulario(target);
     setVistaTab("actual");
     setMostrarFormulario(true);
-    scrollToForm();
   }
 
   function abrirFormularioNuevoHlgEnHlc(hlcId) {
@@ -744,7 +750,6 @@ export default function DatosLaborales() {
     setCargaPorDiaRows([emptyCargaDia()]);
     setVistaTab("actual");
     setMostrarFormulario(true);
-    scrollToForm();
   }
 
   function abrirEdicionDesdeTimeline(item) {
@@ -931,7 +936,6 @@ export default function DatosLaborales() {
                 setRegistroEditId("");
                 setMostrarFormulario(true);
                 setVistaTab("actual");
-                scrollToForm();
               }}
               className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 active:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-300"
             >
@@ -993,6 +997,7 @@ export default function DatosLaborales() {
                   </p>
                   <p className="mt-1 text-base font-semibold text-slate-900">{bloque.tituloHlc}</p>
                   <ul className="mt-1 space-y-1 text-xs text-slate-700">
+                    <li>- Tipo de vínculo: {bloque.tipoVinculo || "—"}</li>
                     <li>- Rol asignado: {bloque.rolHlc || "—"}</li>
                     <li>- Escalafón: {bloque.escalafon || "—"}</li>
                     <li>- Agrupamiento: {bloque.agrupamiento || "—"}</li>
@@ -1148,7 +1153,13 @@ export default function DatosLaborales() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Período de cargo cerrado</p>
                   <p className="mt-1 text-base font-semibold text-slate-900">{item.titulo}</p>
                   <ul className="mt-1 space-y-1 text-xs text-slate-700">
+                    <li>- Tipo de vínculo: {item.tipoVinculo || "—"}</li>
                     <li>- Rol asignado: {item.rolHlc || "—"}</li>
+                    <li>- Escalafón: {item.escalafon || "—"}</li>
+                    <li>- Agrupamiento: {item.agrupamiento || "—"}</li>
+                    <li>- Categoría: {item.categoria || "—"}</li>
+                    <li>- Función: {item.funcion || "—"}</li>
+                    <li>- Carga horaria: {item.cargaHoraria || "—"}</li>
                     <li>- {item.periodo}</li>
                     <li>- Períodos de asignación a grupos de trabajo: {item.asignaciones}</li>
                   </ul>
@@ -1226,8 +1237,8 @@ export default function DatosLaborales() {
         )}
 
         {vistaTab === "actual" && mostrarFormulario && (
-        <>
-        <Card className="px-4 py-4 md:px-5">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/45 px-4 py-4 md:py-8">
+          <div className="w-full max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:max-h-[90vh] md:p-5">
           <p className="text-base font-semibold text-slate-900">
             Carga y edición laboral
           </p>
@@ -1333,21 +1344,31 @@ export default function DatosLaborales() {
             />
 
             <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={saving}
-                className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60"
-              >
-                {saving ? "Guardando..." : modoEdicion ? "Guardar cambios" : "Guardar registro"}
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={cerrarFlujoFormularioManteniendoPersona}
+                  disabled={saving}
+                  className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {saving ? "Guardando..." : modoEdicion ? "Guardar cambios" : "Guardar registro"}
+                </button>
+              </div>
             </div>
           </form>
-        </Card>
-        </>
+          </div>
+        </div>
         )}
 
         {vistaTab === "actual" && !mostrarFormulario && (
-        <Card className="px-4 py-4 md:px-5" id="form-laboral">
+        <Card className="px-4 py-4 md:px-5">
           <p className="text-base font-semibold text-slate-900">Acción laboral</p>
           <p className="mt-1 text-sm text-slate-600">
             Seleccioná una acción desde las tarjetas: crear período de cargo, crear nuevo grupo o editar el grupo/cargo seleccionado.

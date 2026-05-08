@@ -420,7 +420,7 @@ export default function NotificacionesEventosDatosPersonalesRRHH() {
                 disabled={loading}
                 className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 disabled:opacity-50"
               >
-                {loading ? "Refrescando..." : "Refrescar"}
+                {loading ? "Actualizando..." : "Actualizar información"}
               </button>
             </div>
           </div>
