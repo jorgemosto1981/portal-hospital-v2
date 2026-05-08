@@ -29,6 +29,8 @@ export const AYUDA_CAMPOS = {
   referencias_normativa_designacion: "Referencia legal del acto de designación del cargo.",
   categoria_id: "Categoría laboral del cargo (desde catálogo).",
   carga_horaria_total: "Carga horaria total del cargo (en horas).",
+  computa_antiguedad_licencias:
+    "Define si este ciclo HLC se incluye en el cálculo de antigüedad para licencias.",
   fecha_desde: "Fecha de inicio de vigencia del registro.",
   fecha_hasta: "Fecha de fin de vigencia (vacío = abierto).",
   cargo_id: "Referencia al registro HLc base del puesto.",
@@ -50,6 +52,7 @@ export const INITIAL_FORM_DATA_LABORAL = {
   efector_cumplimiento_id: "",
   estado_asignacion_id: "",
   carga_horaria_total: "",
+  computa_antiguedad_licencias: "si",
   fecha_desde: "",
   fecha_hasta: "",
   cargo_id: "",

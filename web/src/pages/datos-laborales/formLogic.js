@@ -22,6 +22,8 @@ export function buildFormDataFromRecord({ record, idxHld, prevFormData }) {
     tipo_vinculo_id: String(record.tipo_vinculo_id || ""),
     modalidad_jornada_id: String(record.modalidad_jornada_id || ""),
     causal_fin_asignacion_id: String(record.causal_fin_asignacion_id || ""),
+    computa_antiguedad_licencias:
+      record.computa_antiguedad_licencias === false ? "no" : "si",
     referencia_tipo_acto_id: String(
       (Array.isArray(record.referencias_normativa_designacion) &&
         record.referencias_normativa_designacion[0] &&

@@ -5,6 +5,7 @@ import { AntiguedadEcuacionAmd } from "./AntiguedadEcuacionAmd.jsx";
 import { AntiguedadExternosConsideradosSection } from "./AntiguedadExternosConsideradosSection.jsx";
 import { AntiguedadExternosExcluidosSection } from "./AntiguedadExternosExcluidosSection.jsx";
 import { AntiguedadHlcConsideradasSection } from "./AntiguedadHlcConsideradasSection.jsx";
+import { AntiguedadHlcExcluidasNoComputaSection } from "./AntiguedadHlcExcluidasNoComputaSection.jsx";
 import { AntiguedadIntervalosFusionadosSection } from "./AntiguedadIntervalosFusionadosSection.jsx";
 import { AntiguedadReglasMotor } from "./AntiguedadReglasMotor.jsx";
 import { AntiguedadSintesisComputo } from "./AntiguedadSintesisComputo.jsx";
@@ -77,6 +78,7 @@ export function AntiguedadResultadoCard({
         idxAgrupamiento={idxAgrupamiento}
         idxTipoVinculo={idxTipoVinculo}
       />
+      <AntiguedadHlcExcluidasNoComputaSection items={det?.hlcExcluidasNoComputaAntiguedad} />
       <AntiguedadIntervalosFusionadosSection
         intervalos={det?.intervalosFusionados}
         fechaCorteIso={det?.fechaCorteAplicada || ""}

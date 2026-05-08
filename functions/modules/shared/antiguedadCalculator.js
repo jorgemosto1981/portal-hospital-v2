@@ -46,6 +46,14 @@ function safeNonNegativeInt(value, fieldName) {
 }
 
 function normalizeHlcInterval(row, index, corteUtc) {
+  if (row && row.computa_antiguedad_licencias === false) {
+    return {
+      ok: false,
+      motivo: "HLC excluida: no computa antigüedad para licencias.",
+      origen: row,
+      tipo: "NO_COMPUTA_ANTIGUEDAD_LICENCIAS",
+    };
+  }
   const inicioRaw = row && (row.fecha_inicio ?? row.fecha_desde ?? null);
   const finRaw = row && (row.fecha_fin ?? row.fecha_hasta ?? null);
   let inicioUtc;
@@ -183,10 +191,18 @@ function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasExternos
 
   const hlcValidas = [];
   const hlcDescartadas = [];
+  const hlcExcluidasNoComputaAntiguedad = [];
   for (let i = 0; i < hlcArray.length; i += 1) {
     const normalized = normalizeHlcInterval(hlcArray[i], i, corteUtc);
-    if (normalized.ok) hlcValidas.push(normalized.intervalo);
-    else hlcDescartadas.push({ indice: i, motivo: normalized.motivo, origen: normalized.origen });
+    if (normalized.ok) {
+      hlcValidas.push(normalized.intervalo);
+      continue;
+    }
+    const itemDescartado = { indice: i, motivo: normalized.motivo, origen: normalized.origen };
+    hlcDescartadas.push(itemDescartado);
+    if (normalized.tipo === "NO_COMPUTA_ANTIGUEDAD_LICENCIAS") {
+      hlcExcluidasNoComputaAntiguedad.push(itemDescartado);
+    }
   }
 
   const diasHlcSinFusion = hlcValidas.reduce((acc, item) => acc + item.dias, 0);
@@ -261,6 +277,7 @@ function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasExternos
         cantidadHlcOriginales: hlcArray.length,
         cantidadHlcValidas: hlcValidas.length,
         cantidadHlcDescartadas: hlcDescartadas.length,
+        cantidadHlcExcluidasNoComputaAntiguedad: hlcExcluidasNoComputaAntiguedad.length,
         cantidadIntervalosFusionados: intervalosFusionados.length,
         diasHlcSinFusion,
         diasHlcFusionados,
@@ -277,6 +294,18 @@ function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasExternos
         tipo_vinculo_id: item.origen && (item.origen.tipo_vinculo_id || item.origen.tipo_vinculo || null),
       })),
       hlcDescartadas,
+      hlcExcluidasNoComputaAntiguedad: hlcExcluidasNoComputaAntiguedad.map((item) => {
+        const row = item && item.origen && typeof item.origen === "object" ? item.origen : {};
+        return {
+          indice: item.indice,
+          motivo: item.motivo,
+          hlc_id: row.id || null,
+          fecha_inicio: row.fecha_inicio || row.fecha_desde || null,
+          fecha_fin: row.fecha_fin || row.fecha_hasta || null,
+          cargo_funcional_id: row.cargo_funcional_id || null,
+          efector_cumplimiento_id: row.efector_cumplimiento_id || null,
+        };
+      }),
       intervalosFusionados: intervalosFusionados.map((item) => ({
         fecha_inicio: item.inicio,
         fecha_fin: item.fin,
@@ -286,6 +315,7 @@ function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasExternos
       externosExcluidosPorCorte,
       reglasAplicadas: [
         "Se topa fecha fin por fecha de corte.",
+        "Solo se incluyen HLC con computa_antiguedad_licencias=true (o campo ausente).",
         "Los tramos HLC superpuestos o continuos se fusionan (solo entre cargos HLC; no involucra al crédito externo).",
         "No se analiza solapamiento ni intersección temporal entre crédito externo y períodos HLC.",
         "Los reconocimientos externos con fecha_impacto posterior a fecha de corte no se aplican.",

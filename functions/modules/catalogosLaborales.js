@@ -97,6 +97,15 @@ function resolveFechaCierre(fechaExistente, fechaCorte) {
   return existente <= fechaCorte ? existente : fechaCorte;
 }
 
+function parseComputaAntiguedadLicencias(rawValue) {
+  if (typeof rawValue === "boolean") return rawValue;
+  const normalized = toNullableTrimmedString(rawValue);
+  if (!normalized) return true;
+  const lower = normalized.toLowerCase();
+  if (lower === "no" || lower === "false" || lower === "0") return false;
+  return true;
+}
+
 function normalizeEventValue(value) {
   if (value == null) return null;
   if (value && typeof value.toDate === "function") {
@@ -284,6 +293,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       cargo_funcional_id: cargoFuncionalId,
       tipo_vinculo_id: tipoVinculoId,
       modalidad_jornada_id: modalidadJornadaId,
+      computa_antiguedad_licencias: parseComputaAntiguedadLicencias(datos.computa_antiguedad_licencias),
       causal_fin_asignacion_id: causalFinAsignacionId,
       referencias_normativa_designacion: referenciasNormalizadas,
       estado_asignacion_id: estadoAsignacionId,
@@ -361,6 +371,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       "modalidad_jornada_id",
       "estado_asignacion_id",
       "carga_horaria_total",
+      "computa_antiguedad_licencias",
       "fecha_desde",
       "fecha_hasta",
       "activo",

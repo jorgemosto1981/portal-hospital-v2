@@ -16,6 +16,8 @@ export function buildHlcPayload({ formData, modoEdicion, registroEditId }) {
     tipo_vinculo_id: toNull(formData.tipo_vinculo_id),
     modalidad_jornada_id: toNull(formData.modalidad_jornada_id),
     causal_fin_asignacion_id: toNull(formData.causal_fin_asignacion_id),
+    computa_antiguedad_licencias:
+      String(formData.computa_antiguedad_licencias || "").trim().toLowerCase() !== "no",
     referencias_normativa_designacion: [
       {
         tipo_acto_id: toNull(formData.referencia_tipo_acto_id),

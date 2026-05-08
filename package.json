@@ -37,6 +37,8 @@
     "db:remove-eventos-legacy-fields-v2": "node scripts/remove-eventos-legacy-fields-v2.mjs",
     "db:audit-eventos-ids-v2": "node scripts/audit-eventos-ids-v2.mjs",
     "db:cleanup-usuarios-test": "node scripts/cleanup-usuarios-test.mjs",
+    "db:backfill-hlc-computa-antiguedad-licencias:dry-run": "node scripts/backfill-hlc-computa-antiguedad-licencias.mjs",
+    "db:backfill-hlc-computa-antiguedad-licencias": "node scripts/backfill-hlc-computa-antiguedad-licencias.mjs --apply",
     "firestore:create": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/seed-v2/crear-base-firestore.ps1",
     "backup": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/crear-copia-seguridad.ps1"
   },

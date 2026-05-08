@@ -11,6 +11,21 @@ export default function LaboralFormVigenciaFields({
 }) {
   return (
     <div className="grid gap-3 md:grid-cols-2">
+      {tipoAlta === "historial_laboral_cargos" && (
+        <LabeledSelect
+          label="Computa antigüedad para licencias"
+          value={formData.computa_antiguedad_licencias}
+          onValueChange={(v) => onChangeField("computa_antiguedad_licencias", v)}
+          options={[
+            { id: "si", nombre: "Sí" },
+            { id: "no", nombre: "No" },
+          ]}
+          placeholder="Seleccionar opción..."
+          helpText={ayudaCampos.computa_antiguedad_licencias}
+          technicalName="computa_antiguedad_licencias"
+          showTechnicalName={modoAvanzado}
+        />
+      )}
       <LabeledTextField
         label={
           tipoAlta === "historial_laboral_cargos"

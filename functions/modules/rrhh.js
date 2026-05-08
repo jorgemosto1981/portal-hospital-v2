@@ -542,6 +542,8 @@ const rrhhCalcularAntiguedadPersona = onCall(async (request) => {
       id: doc.id,
       fecha_inicio: row.fecha_inicio || row.fecha_desde || null,
       fecha_fin: row.fecha_fin || row.fecha_hasta || null,
+      computa_antiguedad_licencias:
+        row.computa_antiguedad_licencias === false ? false : true,
     };
   });
 
