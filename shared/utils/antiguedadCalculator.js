@@ -379,6 +379,9 @@ export function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasE
           hlc_id: row.id || null,
           fecha_inicio: row.fecha_inicio || row.fecha_desde || null,
           fecha_fin: row.fecha_fin || row.fecha_hasta || null,
+          escalafon_id: row.escalafon_id || row.escalafon || null,
+          agrupamiento_id: row.agrupamiento_id || row.agrupamiento || null,
+          tipo_vinculo_id: row.tipo_vinculo_id || row.tipo_vinculo || null,
           cargo_funcional_id: row.cargo_funcional_id || null,
           efector_cumplimiento_id: row.efector_cumplimiento_id || null,
         };

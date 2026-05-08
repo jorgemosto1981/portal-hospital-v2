@@ -33,6 +33,8 @@ export function useAntiguedadPage() {
   const [cfgEscalafon, setCfgEscalafon] = useState([]);
   const [cfgAgrupamiento, setCfgAgrupamiento] = useState([]);
   const [cfgTipoVinculo, setCfgTipoVinculo] = useState([]);
+  const [cfgFunciones, setCfgFunciones] = useState([]);
+  const [cfgEfectores, setCfgEfectores] = useState([]);
 
   useEffect(() => {
     let mounted = true;
@@ -42,8 +44,10 @@ export function useAntiguedadPage() {
       callListarColeccion({ collectionName: "cfg_escalafon" }),
       callListarColeccion({ collectionName: "cfg_agrupamiento" }),
       callListarColeccion({ collectionName: "cfg_tipo_vinculo_laboral" }),
+      callListarColeccion({ collectionName: "cfg_cargo_funcional" }),
+      callListarColeccion({ collectionName: "cfg_efectores" }),
     ])
-      .then(([respPersonas, respEsc, respAgr, respVin]) => {
+      .then(([respPersonas, respEsc, respAgr, respVin, respFun, respEfe]) => {
         if (!mounted) return;
         const items = respPersonas?.data?.items || [];
         setPersonas(items);
@@ -56,6 +60,8 @@ export function useAntiguedadPage() {
         setCfgEscalafon(respEsc?.data?.items || []);
         setCfgAgrupamiento(respAgr?.data?.items || []);
         setCfgTipoVinculo(respVin?.data?.items || []);
+        setCfgFunciones(respFun?.data?.items || []);
+        setCfgEfectores(respEfe?.data?.items || []);
       })
       .catch((error) => {
         toast.error(error?.message || "No se pudo cargar personas.");
@@ -142,6 +148,14 @@ export function useAntiguedadPage() {
   const idxTipoVinculo = useMemo(
     () => new Map((cfgTipoVinculo || []).map((x) => [String(x.id || ""), x])),
     [cfgTipoVinculo],
+  );
+  const idxFunciones = useMemo(
+    () => new Map((cfgFunciones || []).map((x) => [String(x.id || ""), x])),
+    [cfgFunciones],
+  );
+  const idxEfectores = useMemo(
+    () => new Map((cfgEfectores || []).map((x) => [String(x.id || ""), x])),
+    [cfgEfectores],
   );
 
   async function calcular() {
@@ -330,6 +344,8 @@ export function useAntiguedadPage() {
         idxEscalafon,
         idxAgrupamiento,
         idxTipoVinculo,
+        idxFunciones,
+        idxEfectores,
       }
     : null;
 

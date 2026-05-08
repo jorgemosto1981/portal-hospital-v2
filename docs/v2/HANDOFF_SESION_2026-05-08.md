@@ -109,3 +109,66 @@
   - URL: `https://portal-hospital-v2.web.app`
 - Objetivo operativo cumplido:
   - dejar remoto actualizado para continuar desde otra PC con el mismo estado funcional.
+
+## 11) Continuación sesión (RRHH + Antigüedad + seguridad de sesión hospitalaria)
+
+- Se rediseñaron vistas RRHH para legibilidad operativa y se redujo exposición de IDs técnicos:
+  - `web/src/pages/SeguimientoEnrolamientoUsuariosRRHH.jsx`
+    - estados y etiquetas de negocio en lenguaje humano.
+    - pendientes explícitos para estado `PARCIAL`.
+    - paginación de 10 registros.
+    - check `Visto` por registro con persistencia local.
+    - filtro `Solo no vistos` activo por defecto + contador `No vistos (N)`.
+    - bloque técnico colapsable y glosario de solo lectura en modal.
+  - `web/src/pages/NotificacionesEventosDatosPersonalesRRHH.jsx`
+    - acciones legibles (sin mostrar IDs crudos en filtro y línea principal).
+    - estado de bandeja con etiqueta humana.
+    - bloque de cambios con etiquetas de campo traducidas.
+    - detalle técnico colapsable (solo referencia).
+    - glosario de solo lectura en modal.
+    - fix funcional: en `cargarMas` se aplican los mismos filtros de dominio para evitar items no esperados.
+
+- Se ajustó pantalla `Antigüedad`:
+  - no precarga `persona_id` al abrir.
+  - placeholder explícito cuando no hay persona seleccionada.
+  - intro simplificada: se removió texto redundante.
+  - se agregó botón `Ver guía de cálculo` con modal flotante de solo lectura.
+  - en `HLC excluidas`:
+    - se dejaron solo campos legibles (sin IDs visibles en la línea principal).
+    - misma estructura conceptual que `HLC incluidas`.
+    - backend actualizado para devolver `escalafon_id`, `agrupamiento_id`, `tipo_vinculo_id` también en excluidas.
+
+## 12) Seguridad de sesión estricta (entorno hospitalario)
+
+- Backend (`functions/modules/login.js`):
+  - Callable nuevo `registrarSesionActiva`:
+    - persiste `sesiones_usuario/{auth_uid}` con `current_session_id`, `last_seen_at`, `last_login_at`, `device_hint`.
+    - detecta concurrencia reciente (ventana activa de 15 min).
+  - Callable nuevo `verificarSesionConcurrente`:
+    - valida sesión concurrente con costo bajo.
+    - touch opcional con throttle para evitar escrituras frecuentes.
+
+- Frontend:
+  - `web/src/features/auth/secureSignOut.js` (nuevo):
+    - flujo de cierre seguro unificado: `localStorage.clear()`, `sessionStorage.clear()`, `signOut`, redirección.
+  - `web/src/features/auth/useConcurrentSessionWarning.js` (nuevo):
+    - registra sesión al autenticar.
+    - verifica concurrencia al volver foco (`visibilitychange`) con throttling.
+    - expone warning + `Último acceso` formateado.
+  - `web/src/components/layout/AppBrandHeader.jsx`:
+    - muestra `Último acceso: dd/mm/aaaa hh:mm` cuando está disponible.
+    - warning de sesión concurrente en modo advertencia (no bloqueante).
+    - botón `Cerrar sesión` usa cierre seguro unificado.
+  - `web/src/features/auth/IdleSessionGuard.jsx`:
+    - timeout 15 min mantiene comportamiento, ahora usando `secureSignOut`.
+  - `web/src/services/callables.js`:
+    - wrappers `callRegistrarSesionActiva` y `callVerificarSesionConcurrente`.
+
+## 13) Validaciones y deploys de esta continuidad
+
+- Build frontend:
+  - `npm run build:web`: OK.
+- Deploy completos ejecutados:
+  - `firebase deploy --project portal-hospital-v2`: OK (storage + firestore + functions + hosting).
+  - funciones nuevas desplegadas correctamente en `southamerica-east1`.
+  - hosting actualizado en `https://portal-hospital-v2.web.app`.

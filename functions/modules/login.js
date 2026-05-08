@@ -20,6 +20,9 @@ const ESTADO_BANDEJA_RRHH_PENDIENTE_ID = "cfg_ebr_pend_rev";
 const TIPO_EVENTO_CFG_EMAIL_SOL = "cfg_tev_auth_email_cambio_solicitado";
 const TIPO_EVENTO_CFG_EMAIL_CONF = "cfg_tev_auth_email_cambio_confirmado";
 const TIPO_EVENTO_CFG_PASS = "cfg_tev_auth_password_cambio";
+const COL_SESIONES_USUARIO = "sesiones_usuario";
+const SESSION_ACTIVE_WINDOW_MS = 15 * 60 * 1000;
+const SESSION_TOUCH_THROTTLE_MS_DEFAULT = 10 * 60 * 1000;
 
 const resolverEmailLoginDni = onCall(async (request) => {
   const d = request.data && typeof request.data === "object" ? request.data : {};
@@ -246,6 +249,130 @@ function maskEmail(email) {
   return `${safeUser}@${d}`;
 }
 
+function toEpochMs(value) {
+  if (!value) return 0;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? 0 : value.getTime();
+  if (typeof value.toDate === "function") {
+    try {
+      const d = value.toDate();
+      return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+    } catch {
+      return 0;
+    }
+  }
+  if (typeof value === "object" && typeof value._seconds === "number") {
+    return Number(value._seconds) * 1000;
+  }
+  if (typeof value === "object" && typeof value.seconds === "number") {
+    return Number(value.seconds) * 1000;
+  }
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+}
+
+function sanitizeSessionId(raw) {
+  const id = String(raw || "").trim();
+  return id.slice(0, 120);
+}
+
+function sanitizeDeviceHint(raw) {
+  const hint = String(raw || "").trim();
+  return hint ? hint.slice(0, 120) : null;
+}
+
+const registrarSesionActiva = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Se requiere sesión.");
+  const uid = request.auth.uid;
+  const d = request.data && typeof request.data === "object" ? request.data : {};
+  const sessionId = sanitizeSessionId(d.session_id);
+  if (!sessionId) {
+    throw new HttpsError("invalid-argument", "session_id es obligatorio.");
+  }
+  const deviceHint = sanitizeDeviceHint(d.device_hint);
+  const personaId = String(d.persona_id || "").trim() || null;
+
+  const ref = db.collection(COL_SESIONES_USUARIO).doc(uid);
+  const snap = await ref.get();
+  const prev = snap.exists ? snap.data() || {} : {};
+  const prevSessionId = sanitizeSessionId(prev.current_session_id);
+  const prevLastSeenMs = toEpochMs(prev.last_seen_at);
+  const prevLastLoginMs = toEpochMs(prev.last_login_at);
+  const nowMs = Date.now();
+  const warningConcurrente =
+    !!prevSessionId &&
+    prevSessionId !== sessionId &&
+    prevLastSeenMs > 0 &&
+    nowMs - prevLastSeenMs <= SESSION_ACTIVE_WINDOW_MS;
+
+  await ref.set(
+    {
+      current_session_id: sessionId,
+      last_seen_at: FieldValue.serverTimestamp(),
+      last_login_at: FieldValue.serverTimestamp(),
+      updated_at: FieldValue.serverTimestamp(),
+      updated_by_persona_id: personaId,
+      device_hint: deviceHint,
+    },
+    { merge: true },
+  );
+
+  return {
+    ok: true,
+    warning_concurrente: warningConcurrente,
+    last_login_at_previo_ms: prevLastLoginMs || null,
+    active_window_ms: SESSION_ACTIVE_WINDOW_MS,
+  };
+});
+
+const verificarSesionConcurrente = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Se requiere sesión.");
+  const uid = request.auth.uid;
+  const d = request.data && typeof request.data === "object" ? request.data : {};
+  const sessionId = sanitizeSessionId(d.session_id);
+  if (!sessionId) {
+    throw new HttpsError("invalid-argument", "session_id es obligatorio.");
+  }
+  const touch = d.touch === true;
+  const throttleRaw = Number(d.touch_throttle_ms);
+  const touchThrottleMs =
+    Number.isFinite(throttleRaw) && throttleRaw >= 60 * 1000 && throttleRaw <= 24 * 60 * 60 * 1000
+      ? Math.floor(throttleRaw)
+      : SESSION_TOUCH_THROTTLE_MS_DEFAULT;
+
+  const ref = db.collection(COL_SESIONES_USUARIO).doc(uid);
+  const snap = await ref.get();
+  const data = snap.exists ? snap.data() || {} : {};
+  const currentSessionId = sanitizeSessionId(data.current_session_id);
+  const lastSeenMs = toEpochMs(data.last_seen_at);
+  const lastLoginMs = toEpochMs(data.last_login_at);
+  const nowMs = Date.now();
+  const warningConcurrente =
+    !!currentSessionId &&
+    currentSessionId !== sessionId &&
+    lastSeenMs > 0 &&
+    nowMs - lastSeenMs <= SESSION_ACTIVE_WINDOW_MS;
+
+  if (touch && currentSessionId === sessionId) {
+    const shouldTouch = !lastSeenMs || nowMs - lastSeenMs >= touchThrottleMs;
+    if (shouldTouch) {
+      await ref.set(
+        {
+          last_seen_at: FieldValue.serverTimestamp(),
+          updated_at: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    }
+  }
+
+  return {
+    ok: true,
+    warning_concurrente: warningConcurrente,
+    last_login_at_ms: lastLoginMs || null,
+    active_window_ms: SESSION_ACTIVE_WINDOW_MS,
+  };
+});
+
 /**
  * Tras confirmar correo en Auth, alinea la ficha `personas.contacto.email_personal` con el correo de cuenta
  * (normativa V2: correo de acceso en `usuarios_cuenta.username`; la ficha suele mostrar `email_personal`).
@@ -402,6 +529,8 @@ module.exports = {
   healthV2,
   syncSessionClaims,
   registrarPrimerAcceso,
+  registrarSesionActiva,
+  verificarSesionConcurrente,
   notificarCambioEmailAuth,
   notificarCambioPasswordAuth,
 };

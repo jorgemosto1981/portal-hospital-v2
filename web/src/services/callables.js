@@ -135,3 +135,13 @@ export function callNotificarCambioEmailAuth(data) {
 export function callNotificarCambioPasswordAuth(data = {}) {
   return httpsCallable(getFunctionsV2(), "notificarCambioPasswordAuth")(data);
 }
+
+/** Seguridad sesión: registra login/sesión activa y detecta concurrencia reciente. */
+export function callRegistrarSesionActiva(data) {
+  return httpsCallable(getFunctionsV2(), "registrarSesionActiva")(data);
+}
+
+/** Seguridad sesión: verifica concurrencia y opcionalmente actualiza latido con throttle. */
+export function callVerificarSesionConcurrente(data) {
+  return httpsCallable(getFunctionsV2(), "verificarSesionConcurrente")(data);
+}

@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signOut } from "firebase/auth";
 import toast from "react-hot-toast";
 
 import { APP_TITLE, INSTITUTION_NAME, LOGO_SRC } from "../../constants/appBrand.js";
+import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
+import { useConcurrentSessionWarning } from "../../features/auth/useConcurrentSessionWarning.js";
+import { secureSignOut } from "../../features/auth/secureSignOut.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
-import { authV2 } from "../../services/firebase.js";
 
 /**
  * Cabecera de marca: logo institucional + título del sistema (móvil y escritorio).
@@ -13,6 +14,9 @@ import { authV2 } from "../../services/firebase.js";
  */
 export default function AppBrandHeader() {
   const { user } = useAuthSession();
+  const { claims } = useAuthClaims(user);
+  const personaId = typeof claims?.persona_id === "string" ? claims.persona_id.trim() : "";
+  const { showWarning, dismissWarning, lastLoginLabel } = useConcurrentSessionWarning({ user, personaId });
   const nav = useNavigate();
   const [signOutBusy, setSignOutBusy] = useState(false);
 
@@ -20,8 +24,7 @@ export default function AppBrandHeader() {
     if (!user) return;
     setSignOutBusy(true);
     try {
-      await signOut(authV2);
-      nav("/login", { replace: true });
+      await secureSignOut({ navigate: nav, reason: "logout" });
     } catch (e) {
       const m = e instanceof Error ? e.message : "No se pudo cerrar sesión.";
       toast.error(m);
@@ -46,6 +49,9 @@ export default function AppBrandHeader() {
               {APP_TITLE}
             </p>
             <p className="mt-0.5 text-xs font-medium text-slate-500">{INSTITUTION_NAME}</p>
+            {user && lastLoginLabel ? (
+              <p className="mt-0.5 text-[11px] text-slate-500">Ultimo acceso: {lastLoginLabel}</p>
+            ) : null}
           </div>
         </div>
         {user ? (
@@ -59,6 +65,22 @@ export default function AppBrandHeader() {
           </button>
         ) : null}
       </div>
+      {user && showWarning ? (
+        <div className="mx-auto mt-2 w-full max-w-5xl rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 lg:max-w-6xl">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p>
+              Advertencia de seguridad: detectamos otra sesion activa recientemente para esta cuenta. Si no reconoces la actividad, cambia tu contrasena/PIN.
+            </p>
+            <button
+              type="button"
+              onClick={dismissWarning}
+              className="rounded-lg border border-amber-300 bg-white px-2 py-1 font-semibold text-amber-900"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      ) : null}
     </header>
   );
 }

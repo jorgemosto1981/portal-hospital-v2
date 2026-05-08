@@ -1,8 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { signOut } from "firebase/auth";
 
-import { authV2 } from "../../services/firebase.js";
+import { secureSignOut } from "./secureSignOut.js";
 import { useAuthSession } from "./useAuthSession.js";
 
 /** Tiempo máximo sin actividad antes de cerrar sesión (toda la app V2). */
@@ -26,12 +25,7 @@ export default function IdleSessionGuard() {
     let timeoutId = /** @type {ReturnType<typeof setTimeout> | null} */ (null);
 
     const logout = async () => {
-      try {
-        await signOut(authV2);
-      } catch {
-        /* ignorar errores de red / estado ya cerrado */
-      }
-      navigate("/login?motivo=inactividad", { replace: true });
+      await secureSignOut({ navigate, reason: "inactividad" });
     };
 
     const resetTimer = () => {

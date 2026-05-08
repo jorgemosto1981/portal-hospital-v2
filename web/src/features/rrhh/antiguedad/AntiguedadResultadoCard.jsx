@@ -22,6 +22,8 @@ export function AntiguedadResultadoCard({
   idxEscalafon,
   idxAgrupamiento,
   idxTipoVinculo,
+  idxFunciones,
+  idxEfectores,
 }) {
   const det = resultado?.detalleCalculo;
   const hlcConsideradasCount = det?.hlcConsideradas?.length ?? 0;
@@ -78,7 +80,12 @@ export function AntiguedadResultadoCard({
         idxAgrupamiento={idxAgrupamiento}
         idxTipoVinculo={idxTipoVinculo}
       />
-      <AntiguedadHlcExcluidasNoComputaSection items={det?.hlcExcluidasNoComputaAntiguedad} />
+      <AntiguedadHlcExcluidasNoComputaSection
+        items={det?.hlcExcluidasNoComputaAntiguedad}
+        idxEscalafon={idxEscalafon}
+        idxAgrupamiento={idxAgrupamiento}
+        idxTipoVinculo={idxTipoVinculo}
+      />
       <AntiguedadIntervalosFusionadosSection
         intervalos={det?.intervalosFusionados}
         fechaCorteIso={det?.fechaCorteAplicada || ""}

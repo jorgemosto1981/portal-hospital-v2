@@ -1,7 +1,13 @@
+import { catalogLabel } from "./amdFormat.js";
 import { formatDdMmAaaa } from "./dateIso.js";
 import { MarcadorInline } from "./MarcadorInline.jsx";
 
-export function AntiguedadHlcExcluidasNoComputaSection({ items }) {
+export function AntiguedadHlcExcluidasNoComputaSection({
+  items,
+  idxEscalafon,
+  idxAgrupamiento,
+  idxTipoVinculo,
+}) {
   if (!items?.length) return null;
 
   return (
@@ -14,7 +20,9 @@ export function AntiguedadHlcExcluidasNoComputaSection({ items }) {
         {items.map((item, idx) => (
           <li key={`hlc-excl-${idx}`} className="rounded-lg border border-amber-200 bg-white px-2 py-2">
             <p className="font-medium text-slate-800">
-              {item.hlc_id || "HLC sin ID"} · {item.cargo_funcional_id || "cargo —"} · {item.efector_cumplimiento_id || "efector —"}
+              {`${catalogLabel(idxEscalafon?.get(String(item.escalafon_id || ""))) || item.escalafon_id || "Escalafón —"} · ${
+                catalogLabel(idxAgrupamiento?.get(String(item.agrupamiento_id || ""))) || item.agrupamiento_id || "Agrupamiento —"
+              } · ${catalogLabel(idxTipoVinculo?.get(String(item.tipo_vinculo_id || ""))) || item.tipo_vinculo_id || "Tipo de vínculo —"}`}
             </p>
             <p className="mt-1">
               {`${formatDdMmAaaa(item.fecha_inicio)} a ${formatDdMmAaaa(item.fecha_fin)} · No incluida por estar configurada en "No computa antigüedad para licencias".`}
