@@ -213,6 +213,7 @@ export default function DatosLaborales() {
   const opcionesFuncion = rowsByCollection.cfg_cargo_funcional || [];
   const opcionesTipoVinculo = rowsByCollection.cfg_tipo_vinculo_laboral || [];
   const opcionesModalidadJornada = rowsByCollection.cfg_modalidad_jornada || [];
+  const opcionesCausalFinAsignacion = rowsByCollection.cfg_causal_fin_asignacion_laboral || [];
   const opcionesMotivoDeshabilitacionHlc = rowsByCollection.cfg_motivo_deshabilitacion_hlc || [];
   const opcionesTipoActo = rowsByCollection.cfg_tipo_acto_designacion || [];
   const opcionesRegimenHorario = rowsByCollection.cfg_regimen_horario || [];
