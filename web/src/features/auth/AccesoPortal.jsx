@@ -24,6 +24,19 @@ const INPUT =
 
 const MSG_CUENTA_YA_CREADA =
   "Tu cuenta ya fue creada. Por favor, ve a la pantalla de Iniciar Sesión.";
+const POST_LOGIN_LOADER_FLAG = "portal_post_login_loading_v1";
+
+function markPostLoginLoaderStart() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(
+      POST_LOGIN_LOADER_FLAG,
+      JSON.stringify({ enabled: true, startedAt: Date.now() }),
+    );
+  } catch {
+    // El loader post-login es opcional; nunca debe bloquear el acceso.
+  }
+}
 
 /** @param {unknown} err */
 function mapFirebaseLoginError(err) {
@@ -157,6 +170,7 @@ export default function AccesoPortal() {
       }
       setFeedbackLogin({ status: "success", message: "Sesión iniciada correctamente" });
       toast.success("Bienvenido", { id: t });
+      markPostLoginLoaderStart();
       nav(safeRedirectPath(searchParams.get("redirect")), { replace: true });
     } catch (err) {
       const code = err?.code;

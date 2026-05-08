@@ -7,17 +7,83 @@ import { useAuthSession } from "../auth/useAuthSession.js";
 import { useAuthClaims } from "../auth/useAuthClaims.js";
 import { useSyncAuthEmailConfirmado } from "../auth/useSyncAuthEmailConfirmado.js";
 import { hasAnyPortalRole, MANAGEMENT_PORTAL_ROLES } from "../routing/portalRole.js";
-import { GateSpinner } from "../routing/RouteGuards.jsx";
 import runtimeFlags from "../../../../shared/runtimeFlags.json";
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
 const OPEN_ACCESS_TEMP = runtimeFlags.OPEN_ACCESS_TEMP === true;
+const POST_LOGIN_LOADER_FLAG = "portal_post_login_loading_v1";
+const POST_LOGIN_LOADER_MIN_MS = 1000;
+
+function readPostLoginLoaderStartedAt() {
+  if (typeof window === "undefined") return 0;
+  let raw = "";
+  try {
+    raw = window.sessionStorage.getItem(POST_LOGIN_LOADER_FLAG) || "";
+  } catch {
+    return 0;
+  }
+  if (!raw) return 0;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.enabled === true && Number.isFinite(Number(parsed.startedAt))) {
+      return Number(parsed.startedAt);
+    }
+  } catch {
+    // Compatibilidad con versión previa del flag.
+    if (raw === "1") return Date.now();
+  }
+  return 0;
+}
+
+function clearPostLoginLoaderFlag() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(POST_LOGIN_LOADER_FLAG);
+  } catch {
+    // No-op: el flag es opcional.
+  }
+}
 
 const PUBLIC_NO_PERSONA = new Set(["/vinculacion", "/registro", "/login"]);
 
 const MSG_SIN_CADENA_LABORAL =
   "No tenés un legajo laboral activo completo (asignación HLc → puesto HLd → grupo HLg) con vigencia a hoy. " +
   "Solicitá a Recursos Humanos la carga o la corrección, o abrí Datos laborales si tu rol lo permite.";
+
+function PostLoginPortalLoader({ label }) {
+  const loadingSteps = [
+    "Validando sesión",
+    "Cargando permisos",
+    "Sincronizando datos iniciales",
+  ];
+  const [stepIndex, setStepIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setStepIndex((prev) => (prev + 1) % loadingSteps.length);
+    }, 1200);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="flex min-h-dvh w-full items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 px-4">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white/90 px-6 py-7 text-center shadow-sm">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+          <span className="h-6 w-6 animate-pulse rounded-full bg-blue-600/80" aria-hidden />
+        </div>
+        <p className="text-base font-semibold text-slate-900">Cargando Portal Digital...</p>
+        <p className="mt-1 text-sm text-slate-600">{label}</p>
+        <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-500">
+          <span
+            className="inline-block size-4 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600"
+            aria-hidden
+          />
+          <span>{loadingSteps[stepIndex]}...</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Bloquea solo si el token ya trae `cargo_activo: false` (p. ej. tras syncSessionClaims).
@@ -40,6 +106,8 @@ export default function MvpAccessGate({ children }) {
   const { claims, claimsLoading } = useAuthClaims(user);
   const location = useLocation();
   const [persona, setPersona] = useState(/** @type {Record<string, unknown> | null} */ (null));
+  const [postLoginLoaderStartedAt] = useState(readPostLoginLoaderStartedAt);
+  const [showPostLoginLoader, setShowPostLoginLoader] = useState(postLoginLoaderStartedAt > 0);
   const pid = typeof claims?.persona_id === "string" ? /** @type {string} */ (claims.persona_id) : null;
   const effectivePersona = pid ? persona : null;
 
@@ -56,14 +124,40 @@ export default function MvpAccessGate({ children }) {
     return subscribePersonaById(pid, setPersona);
   }, [pid]);
 
+  useEffect(() => {
+    if (!showPostLoginLoader) return;
+    if (authPending || claimsLoading) return;
+    const elapsed = Math.max(0, Date.now() - Number(postLoginLoaderStartedAt || 0));
+    const waitMs = Math.max(0, POST_LOGIN_LOADER_MIN_MS - elapsed);
+    const timer = window.setTimeout(() => {
+      clearPostLoginLoaderFlag();
+      setShowPostLoginLoader(false);
+    }, waitMs);
+    return () => window.clearTimeout(timer);
+  }, [showPostLoginLoader, authPending, claimsLoading, postLoginLoaderStartedAt]);
+
   if (OPEN_ACCESS_TEMP || BYPASS_AUTH) {
     return children;
   }
   if (authPending) {
+    if (showPostLoginLoader) {
+      return (
+        <div className="flex min-h-dvh w-full flex-col bg-slate-100">
+          <PublicAuthMenu active="none" />
+          <PostLoginPortalLoader label="Estamos preparando tu espacio de trabajo" />
+        </div>
+      );
+    }
     return (
       <div className="flex min-h-dvh w-full flex-col bg-slate-100">
         <PublicAuthMenu active="none" />
-        <GateSpinner label="Estamos preparando tu espacio de trabajo" />
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-slate-600">
+          <span
+            className="inline-block size-8 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600"
+            aria-hidden
+          />
+          <p className="text-sm">Cargando…</p>
+        </div>
       </div>
     );
   }
@@ -71,10 +165,17 @@ export default function MvpAccessGate({ children }) {
     return children;
   }
   if (claimsLoading) {
+    if (showPostLoginLoader) {
+      return (
+        <div className="flex min-h-dvh w-full flex-col bg-slate-100">
+          <PublicAuthMenu active="none" />
+          <PostLoginPortalLoader label="Sincronizando permisos del portal" />
+        </div>
+      );
+    }
     return (
-      <div className="flex min-h-dvh w-full flex-col bg-slate-100">
-        <PublicAuthMenu active="none" />
-        <GateSpinner label="Sincronizando permisos del portal" />
+      <div className="flex min-h-dvh items-center justify-center bg-slate-100 text-sm text-slate-500">
+        Sincronizando permisos…
       </div>
     );
   }
