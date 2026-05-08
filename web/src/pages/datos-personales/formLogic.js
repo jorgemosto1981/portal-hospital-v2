@@ -77,6 +77,7 @@ export function hydrateDatosPersonales({ record, prevForm, emptyFamiliar }) {
   const nextFamiliares =
     Array.isArray(record.familiares) && record.familiares.length > 0
       ? record.familiares.map((f) => ({
+          familiar_id: String(f.familiar_id || ""),
           parentesco_id: String(f.parentesco_id || ""),
           parentesco_otro_detalle: String(f.parentesco_otro_detalle || ""),
           nombre: String(f.nombre || ""),
@@ -89,6 +90,12 @@ export function hydrateDatosPersonales({ record, prevForm, emptyFamiliar }) {
           detalle_dependencia: String(f.detalle_dependencia || ""),
           discapacidad_declarada: f.discapacidad_declarada === true,
           notas_titular: String(f.notas_titular || ""),
+          estado_auditoria_familiar_id: String(f.estado_auditoria_familiar_id || "CFG_EAF_01_PENDIENTE"),
+          motivo_rechazo_id: String(f.motivo_rechazo_id || ""),
+          motivo_rechazo_detalle: String(f.motivo_rechazo_detalle || ""),
+          observacion_auditoria: String(f.observacion_auditoria || ""),
+          auditado_en: String(f.auditado_en || ""),
+          auditado_por_persona_id: String(f.auditado_por_persona_id || ""),
         }))
       : [emptyFamiliar()];
   return { form: nextForm, familiares: nextFamiliares };
@@ -246,6 +253,7 @@ export function buildDatosPayload({
         [f.parentesco_id, f.dni, f.nombre, f.apellido, f.fecha_nacimiento].some((v) => String(v || "").trim()),
       )
       .map((f) => ({
+        familiar_id: f.familiar_id || null,
         parentesco_id: f.parentesco_id || null,
         parentesco_otro_detalle:
           String(f.parentesco_id || "").toUpperCase() === PARENTESCO_OTROS_ID
@@ -261,6 +269,12 @@ export function buildDatosPayload({
         detalle_dependencia: f.dependiente === true ? f.detalle_dependencia || null : null,
         discapacidad_declarada: f.discapacidad_declarada === true,
         notas_titular: f.notas_titular || null,
+        estado_auditoria_familiar_id: "CFG_EAF_01_PENDIENTE",
+        motivo_rechazo_id: null,
+        motivo_rechazo_detalle: null,
+        observacion_auditoria: null,
+        auditado_en: null,
+        auditado_por_persona_id: null,
       }));
     datos = {
       titular_persona_id: form.persona_id.trim(),

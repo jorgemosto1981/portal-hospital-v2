@@ -22,6 +22,8 @@ const COLECCIONES_PUBLICAS_TEMPORALES = new Set([
   "cfg_pais",
   "cfg_nivel_estudios",
   "cfg_parentesco",
+  "cfg_estado_auditoria_familiar",
+  "cfg_motivo_rechazo_familiar",
   "cfg_estado_perfil_datos",
   "cfg_estado_asignacion_laboral",
   "cfg_escalafon",

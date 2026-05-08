@@ -25,6 +25,8 @@ export const COLECCIONES_CFG = [
   "cfg_localidad",
   "cfg_nivel_estudios",
   "cfg_parentesco",
+  "cfg_estado_auditoria_familiar",
+  "cfg_motivo_rechazo_familiar",
   "cfg_motivo_baja_persona",
   "cfg_estado_declaracion_ddjj",
   "cfg_tipo_consentimiento",

@@ -55,14 +55,14 @@ async function processDdjjGrupoFamiliar({
   ESTADO_BANDEJA_RRHH_PENDIENTE_ID,
 }) {
   await assertDocExistsOrNull("personas", titularPersonaId, "titular_persona_id");
-  const familiaresPayload = Array.isArray(datos.familiares) ? datos.familiares : [];
-  if (!Array.isArray(familiaresPayload) || familiaresPayload.length === 0) {
+  const familiaresInput = Array.isArray(datos.familiares) ? datos.familiares : [];
+  if (!Array.isArray(familiaresInput) || familiaresInput.length === 0) {
     throw new HttpsError(
       "invalid-argument",
       "[VAL-DDJJ-002] Debe informarse al menos un familiar en declaraciones_grupo_familiar.",
     );
   }
-  const familiaresIncompletos = familiaresPayload.some((f) => {
+  const familiaresIncompletos = familiaresInput.some((f) => {
     const parentesco = toNullableTrimmedString(f && f.parentesco_id);
     const dni = toNullableTrimmedString(f && f.dni);
     const nombreF = toNullableTrimmedString(f && f.nombre);
@@ -76,6 +76,27 @@ async function processDdjjGrupoFamiliar({
       "[VAL-DDJJ-003] Cada familiar requiere: parentesco_id, dni, nombre, apellido y fecha_nacimiento.",
     );
   }
+  const familiaresPayload = familiaresInput.map((f) => {
+    const estadoAuditoriaId =
+      toNullableTrimmedString(f && f.estado_auditoria_familiar_id) || "CFG_EAF_01_PENDIENTE";
+    const motivoRechazoId = toNullableTrimmedString(f && f.motivo_rechazo_id);
+    if (estadoAuditoriaId === "CFG_EAF_04_RECHAZADO" && !motivoRechazoId) {
+      throw new HttpsError(
+        "invalid-argument",
+        "[VAL-DDJJ-004] Si el estado de auditoría del familiar es rechazado, motivo_rechazo_id es obligatorio.",
+      );
+    }
+    return {
+      ...f,
+      familiar_id: toNullableTrimmedString(f && f.familiar_id) || `fam_${ulid()}`,
+      estado_auditoria_familiar_id: "CFG_EAF_01_PENDIENTE",
+      motivo_rechazo_id: null,
+      motivo_rechazo_detalle: null,
+      observacion_auditoria: null,
+      auditado_en: null,
+      auditado_por_persona_id: null,
+    };
+  });
 
   const incomingId = toNullableTrimmedString(datos.id);
   const incomingVersion = toNumberOrNull(datos.declaracion_version);

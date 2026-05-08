@@ -47,6 +47,8 @@ const CFG_COLECCIONES_RRHH = new Set([
   "cfg_colegio",
   "cfg_jurisdiccion_matricula",
   "cfg_parentesco",
+  "cfg_estado_auditoria_familiar",
+  "cfg_motivo_rechazo_familiar",
   "cfg_estado_declaracion_ddjj",
   "cfg_estado_perfil_datos",
   "cfg_motivo_baja_persona",

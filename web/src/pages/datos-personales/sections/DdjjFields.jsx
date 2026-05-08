@@ -18,6 +18,8 @@ export default function DdjjFields({
   onActualizarDdjj = () => {},
   onBackToEdit = () => {},
   disabled = false,
+  hideTopSummary = false,
+  hideOperationalNotes = false,
 }) {
   function labelWithId(label, id) {
     return (
@@ -79,34 +81,42 @@ export default function DdjjFields({
 
   return (
     <>
-      <div>
-        <label className="block text-sm font-medium text-slate-700">Estado de declaración</label>
-        <input
-          value={estadoDeclaracionUiLabel || "Pendiente de presentación"}
-          disabled
-          className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 outline-none"
-        />
-        <p className="mt-1 text-[11px] italic text-slate-500">
-          ({String(estadoDeclaracionIdActual || ESTADO_DDJJ_DEFAULT_PERSONALES || "—")})
-        </p>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-slate-700">Versión DDJJ</label>
-        <input
-          value={String(form.declaracion_version || nextDeclaracionVersion || "1")}
-          disabled
-          className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 outline-none"
-        />
-        <p className="mt-1 text-xs text-slate-500">
-          Se genera automáticamente al presentar una nueva actualización.
-        </p>
-      </div>
-      <p className="md:col-span-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
-        Cargá o actualizá familiares, revisá el resumen y presentá la DDJJ.
-      </p>
-      <p className="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-        Solo se notificará a RRHH cuando completes la presentación final.
-      </p>
+      {!hideTopSummary ? (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Estado de declaración</label>
+            <input
+              value={estadoDeclaracionUiLabel || "Pendiente de presentación"}
+              disabled
+              className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 outline-none"
+            />
+            <p className="mt-1 text-[11px] italic text-slate-500">
+              ({String(estadoDeclaracionIdActual || ESTADO_DDJJ_DEFAULT_PERSONALES || "—")})
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Versión DDJJ</label>
+            <input
+              value={String(form.declaracion_version || nextDeclaracionVersion || "1")}
+              disabled
+              className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 outline-none"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Se genera automáticamente al presentar una nueva actualización.
+            </p>
+          </div>
+        </>
+      ) : null}
+      {!hideOperationalNotes ? (
+        <>
+          <p className="md:col-span-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
+            Cargá o actualizá familiares, revisá el resumen y presentá la DDJJ.
+          </p>
+          <p className="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+            Solo se notificará a RRHH cuando completes la presentación final.
+          </p>
+        </>
+      ) : null}
 
       {flowMode === "idle" ? (
         <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">

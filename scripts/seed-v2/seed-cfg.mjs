@@ -440,6 +440,21 @@ const cfgEstadoDeclaracionDdjj = () => [
   ),
 ];
 
+const cfgEstadoAuditoriaFamiliar = () => [
+  cfgRow("CFG_EAF_01_PENDIENTE", "PENDIENTE", "Pendiente", 10),
+  cfgRow("CFG_EAF_02_APROBADO", "APROBADO", "Aprobado", 20),
+  cfgRow("CFG_EAF_03_OBSERVADO", "OBSERVADO", "Observado", 30),
+  cfgRow("CFG_EAF_04_RECHAZADO", "RECHAZADO", "Rechazado", 40),
+];
+
+const cfgMotivoRechazoFamiliar = () => [
+  cfgRow("CFG_MRF_01_DOC_INVALIDA", "DOC_INVALIDA", "Documentación inválida", 10),
+  cfgRow("CFG_MRF_02_PARENTESCO_NO_ACREDITA", "PARENTESCO_NO_ACREDITA", "Parentesco no acredita", 20),
+  cfgRow("CFG_MRF_03_DATOS_INCONSISTENTES", "DATOS_INCONSISTENTES", "Datos inconsistentes", 30),
+  cfgRow("CFG_MRF_04_FUERA_NORMATIVA", "FUERA_NORMATIVA", "Fuera de normativa", 40),
+  cfgRow("CFG_MRF_99_OTROS", "OTROS", "Otros", 99),
+];
+
 /** Una fila de catálogo cfg_* con nombre/código (demostración local). */
 function cfgRow(id, codigo_interno, nombre, orden = 10, extra = {}) {
   return {
@@ -547,6 +562,8 @@ async function main() {
   await applyBatch(cfgTipoEvento(), "cfg_tipo_evento");
   await applyBatch(cfgEstadoBandejaRrhh(), "cfg_estado_bandeja_rrhh");
   await applyBatch(cfgEstadoDeclaracionDdjj(), "cfg_estado_declaracion_ddjj");
+  await applyBatch(cfgEstadoAuditoriaFamiliar(), "cfg_estado_auditoria_familiar");
+  await applyBatch(cfgMotivoRechazoFamiliar(), "cfg_motivo_rechazo_familiar");
   await applyBatch(cfgRol(), "cfg_rol");
   await applyBatch(cfgEstadoCivil(), "cfg_estado_civil");
 

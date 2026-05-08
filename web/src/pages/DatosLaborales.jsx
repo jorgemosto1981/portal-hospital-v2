@@ -167,7 +167,6 @@ export default function DatosLaborales() {
   const [grupoVistaId, setGrupoVistaId] = useState("");
   const [grupoVistaFecha, setGrupoVistaFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [formData, setFormData] = useState(() => ({ ...INITIAL_FORM_DATA_LABORAL }));
-  const [vistaTab, setVistaTab] = useState("actual");
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [modoAvanzado, setModoAvanzado] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -701,7 +700,6 @@ export default function DatosLaborales() {
       persona_id: personaId,
     });
     setMostrarFormulario(false);
-    setVistaTab("actual");
     setSaveMsg("");
   }
 
@@ -713,7 +711,6 @@ export default function DatosLaborales() {
     setModoAvanzado(false);
     setRegistroEditId(String(target.id));
     cargarRegistroEnFormulario(target);
-    setVistaTab("actual");
     setMostrarFormulario(true);
   }
 
@@ -725,7 +722,6 @@ export default function DatosLaborales() {
     setModoAvanzado(false);
     setRegistroEditId(String(target.id));
     cargarRegistroEnFormulario(target);
-    setVistaTab("actual");
     setMostrarFormulario(true);
   }
 
@@ -748,7 +744,6 @@ export default function DatosLaborales() {
       nivel_jerarquico: "",
     }));
     setCargaPorDiaRows([emptyCargaDia()]);
-    setVistaTab("actual");
     setMostrarFormulario(true);
   }
 
@@ -935,7 +930,6 @@ export default function DatosLaborales() {
                 setModoAvanzado(false);
                 setRegistroEditId("");
                 setMostrarFormulario(true);
-                setVistaTab("actual");
               }}
               className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 active:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-300"
             >
@@ -946,26 +940,7 @@ export default function DatosLaborales() {
 
         <Card className="px-4 py-4 md:px-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-base font-semibold text-slate-900">Resumen actual</p>
-            <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1">
-              {[
-                ["actual", "Actual"],
-                ["historico", "Histórico"],
-              ].map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setVistaTab(id)}
-                  className={`rounded-md px-3 py-1.5 text-sm font-semibold ${
-                    vistaTab === id
-                      ? "bg-blue-600 text-white focus-visible:ring-2 focus-visible:ring-blue-300"
-                      : "text-slate-700 hover:bg-slate-100 active:bg-slate-200 focus-visible:ring-2 focus-visible:ring-blue-300"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <p className="text-base font-semibold text-slate-900">CARGOS ACTIVOS</p>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             {snapshotActual.bloquesVigentes.length === 0 ? (
@@ -1138,9 +1113,8 @@ export default function DatosLaborales() {
           </div>
         </Card>
 
-        {vistaTab === "historico" && (
         <Card className="px-4 py-4 md:px-5">
-          <p className="text-base font-semibold text-slate-900">Períodos de cargo cerrados</p>
+          <p className="text-base font-semibold text-slate-900">CARGOS CERRADOS O HISTÓRICOS</p>
           {snapshotHistorico.length === 0 ? (
             <p className="mt-2 text-sm text-slate-600">Sin períodos cerrados para la persona seleccionada.</p>
           ) : (
@@ -1234,9 +1208,8 @@ export default function DatosLaborales() {
             </div>
           )}
         </Card>
-        )}
 
-        {vistaTab === "actual" && mostrarFormulario && (
+        {mostrarFormulario && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/45 px-4 py-4 md:py-8">
           <div className="w-full max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:max-h-[90vh] md:p-5">
           <p className="text-base font-semibold text-slate-900">
@@ -1367,7 +1340,7 @@ export default function DatosLaborales() {
         </div>
         )}
 
-        {vistaTab === "actual" && !mostrarFormulario && (
+        {!mostrarFormulario && (
         <Card className="px-4 py-4 md:px-5">
           <p className="text-base font-semibold text-slate-900">Acción laboral</p>
           <p className="mt-1 text-sm text-slate-600">
@@ -1376,7 +1349,6 @@ export default function DatosLaborales() {
         </Card>
         )}
 
-        {(vistaTab === "actual" || vistaTab === "historico") && (
         <IntegridadReferencialCard
           totalAlertasIntegridad={totalAlertasIntegridad}
           hldSinCargo={hldSinCargo}
@@ -1386,9 +1358,7 @@ export default function DatosLaborales() {
           hlcConEfectorDesignacionInvalido={hlcConEfectorDesignacionInvalido}
           hlcConEfectorCumplimientoInvalido={hlcConEfectorCumplimientoInvalido}
         />
-        )}
 
-        {vistaTab === "historico" && (
         <TimelineLaboralPersonaCard
           opcionesPersonas={opcionesPersonas}
           personaId={timelinePersonaId}
@@ -1421,9 +1391,7 @@ export default function DatosLaborales() {
           totalBase={timelineItemsBase.length}
           onLimpiarFiltros={limpiarFiltrosTimeline}
         />
-        )}
 
-        {vistaTab === "historico" && (
         <VistaOperativaGrupoCard
           grupos={opcionesGrupos}
           grupoId={grupoVistaId}
@@ -1432,7 +1400,6 @@ export default function DatosLaborales() {
           onFechaCorteChange={setGrupoVistaFecha}
           items={vistaGrupoItems}
         />
-        )}
 
         {deshabilitarModalAbierto ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 px-4">

@@ -13,7 +13,8 @@ import { guardarRegistroPersonal, listarColeccionPersonal } from "../services/da
 import { callNotificarCambioEmailAuth, callNotificarCambioPasswordAuth } from "../services/callables.js";
 import { authV2 } from "../services/firebase.js";
 import { buildDatosPayload, hydrateDatosPersonales, validateDatosPersonales } from "./datos-personales/formLogic.js";
-import { ESTADO_DDJJ_DEFAULT_PERSONALES, INITIAL_FORM_DATA_PERSONALES } from "./datos-personales/constants.js";
+import DdjjFields from "./datos-personales/sections/DdjjFields.jsx";
+import { ESTADO_DDJJ_DEFAULT_PERSONALES, HELP, INITIAL_FORM_DATA_PERSONALES } from "./datos-personales/constants.js";
 import { emptyFamiliar, toOpts } from "./datos-personales/utils.js";
 
 function sameValue(a, b) {
@@ -33,6 +34,50 @@ function formatDdMmAaaa(value) {
   return `${dd}-${mm}-${yyyy}`;
 }
 
+function mapEstadoDdjjToUiLabel(estadoIdRaw) {
+  const estadoId = String(estadoIdRaw || "").trim().toUpperCase();
+  if (estadoId === "CFG_DDJJ_03_PRESENTADA") return "Presentada";
+  if (estadoId === "CFG_DDJJ_04_SUPERADA_POR_ACTUALIZACION") return "Superada por actualización";
+  return "Pendiente de presentación";
+}
+
+function mapEstadoAuditoriaFamiliarToUi(estadoIdRaw) {
+  const id = String(estadoIdRaw || "").trim().toUpperCase();
+  if (id === "CFG_EAF_02_APROBADO") {
+    return {
+      label: "Aprobado",
+      message: "Validado por AUDITOR.",
+      badgeClass: "border-emerald-300 bg-emerald-100 text-emerald-800",
+    };
+  }
+  if (id === "CFG_EAF_03_OBSERVADO") {
+    return {
+      label: "Observado",
+      message: "Requiere revisión adicional por AUDITOR.",
+      badgeClass: "border-amber-300 bg-amber-100 text-amber-800",
+    };
+  }
+  if (id === "CFG_EAF_04_RECHAZADO") {
+    return {
+      label: "Rechazado",
+      message: "No cumple criterios. Revisá el motivo informado.",
+      badgeClass: "border-rose-300 bg-rose-100 text-rose-800",
+    };
+  }
+  return {
+    label: "Pendiente",
+    message: "En evaluación por AUDITOR.",
+    badgeClass: "border-slate-300 bg-slate-100 text-slate-700",
+  };
+}
+
+function toEpochMs(value) {
+  if (value == null || value === "") return 0;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+}
+
 export default function PerfilUsuario() {
   const { user } = useAuthSession();
   const { claims } = useAuthClaims(user);
@@ -48,6 +93,17 @@ export default function PerfilUsuario() {
   const [cfgEstadoCivil, setCfgEstadoCivil] = useState([]);
   const [cfgLocalidad, setCfgLocalidad] = useState([]);
   const [cfgProvincia, setCfgProvincia] = useState([]);
+  const [cfgParentesco, setCfgParentesco] = useState([]);
+  const [ddjjRows, setDdjjRows] = useState([]);
+  const [ddjjModalAbierto, setDdjjModalAbierto] = useState(false);
+  const [ddjjFlowMode, setDdjjFlowMode] = useState("idle");
+  const [ddjjSaving, setDdjjSaving] = useState(false);
+  const [ddjjMsg, setDdjjMsg] = useState("");
+  const [ddjjForm, setDdjjForm] = useState(() => ({
+    ...INITIAL_FORM_DATA_PERSONALES,
+    persona_id: personaId,
+  }));
+  const [ddjjFamiliares, setDdjjFamiliares] = useState([emptyFamiliar()]);
   const [seguridadMsg, setSeguridadMsg] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
   const [passBusy, setPassBusy] = useState(false);
@@ -66,16 +122,20 @@ export default function PerfilUsuario() {
       }
       setLoading(true);
       try {
-        const [rows, rowsEstadoCivil, rowsLocalidad, rowsProvincia] = await Promise.all([
+        const [rows, rowsEstadoCivil, rowsLocalidad, rowsProvincia, rowsParentesco, rowsDdjj] = await Promise.all([
           listarColeccionPersonal("personas"),
           listarColeccionPersonal("cfg_estado_civil"),
           listarColeccionPersonal("cfg_localidad"),
           listarColeccionPersonal("cfg_provincia"),
+          listarColeccionPersonal("cfg_parentesco"),
+          listarColeccionPersonal("declaraciones_grupo_familiar"),
         ]);
         if (cancelled) return;
         setCfgEstadoCivil(rowsEstadoCivil || []);
         setCfgLocalidad(rowsLocalidad || []);
         setCfgProvincia(rowsProvincia || []);
+        setCfgParentesco(rowsParentesco || []);
+        setDdjjRows(rowsDdjj || []);
         const row = (rows || []).find((r) => String(r.id || "") === personaId);
         if (!row) {
           setSaveMsg("No se encontró el perfil de la persona en base de datos.");
@@ -106,6 +166,105 @@ export default function PerfilUsuario() {
       cancelled = true;
     };
   }, [personaId]);
+
+  const ddjjRowsPersona = useMemo(() => {
+    const pid = String(personaId || "").trim();
+    if (!pid) return [];
+    return (ddjjRows || [])
+      .filter((r) => String(r.titular_persona_id || "") === pid)
+      .slice()
+      .sort((a, b) => {
+        const va = Number(a?.declaracion_version) || 0;
+        const vb = Number(b?.declaracion_version) || 0;
+        if (vb !== va) return vb - va;
+        const ta = toEpochMs(a?.actualizado_en) || toEpochMs(a?.creado_en);
+        const tb = toEpochMs(b?.actualizado_en) || toEpochMs(b?.creado_en);
+        return tb - ta;
+      });
+  }, [ddjjRows, personaId]);
+
+  const ultimaDdjj = useMemo(() => ddjjRowsPersona[0] || null, [ddjjRowsPersona]);
+  const ddjjEstadoLabel = useMemo(
+    () => mapEstadoDdjjToUiLabel(ultimaDdjj?.estado_declaracion_id),
+    [ultimaDdjj],
+  );
+  const ddjjVersionActual = useMemo(() => String(Number(ultimaDdjj?.declaracion_version || 0) || 0), [ultimaDdjj]);
+  const ddjjNextVersion = useMemo(() => String((Number(ultimaDdjj?.declaracion_version || 0) || 0) + 1), [ultimaDdjj]);
+  const optsParentesco = useMemo(() => toOpts(cfgParentesco), [cfgParentesco]);
+
+  function abrirModalDdjj() {
+    setDdjjMsg("");
+    if (ultimaDdjj) {
+      const hydrated = hydrateDatosPersonales({
+        record: ultimaDdjj,
+        prevForm: { ...INITIAL_FORM_DATA_PERSONALES, persona_id: personaId },
+        emptyFamiliar,
+      });
+      if (hydrated) {
+        setDdjjForm({
+          ...hydrated.form,
+          persona_id: personaId,
+          declaracion_version: ddjjNextVersion,
+          declaracion_jurada_aceptada: false,
+          consentimiento_evaluacion_rrhh: false,
+          ddjj_en_revision: false,
+        });
+        setDdjjFamiliares(hydrated.familiares);
+      }
+      setDdjjFlowMode("edit");
+    } else {
+      setDdjjForm({
+        ...INITIAL_FORM_DATA_PERSONALES,
+        persona_id: personaId,
+        declaracion_version: "1",
+        estado_declaracion_id: ESTADO_DDJJ_DEFAULT_PERSONALES,
+        declaracion_jurada_aceptada: false,
+        consentimiento_evaluacion_rrhh: false,
+        ddjj_en_revision: false,
+      });
+      setDdjjFamiliares([emptyFamiliar()]);
+      setDdjjFlowMode("edit");
+    }
+    setDdjjModalAbierto(true);
+  }
+
+  async function recargarDdjj() {
+    const rowsDdjj = await listarColeccionPersonal("declaraciones_grupo_familiar");
+    setDdjjRows(rowsDdjj || []);
+  }
+
+  async function presentarNuevaDdjj() {
+    setDdjjMsg("");
+    const err = validateDatosPersonales({
+      tipo: "declaraciones_grupo_familiar",
+      form: ddjjForm,
+      familiares: ddjjFamiliares,
+    });
+    if (err) {
+      setDdjjMsg(err);
+      return;
+    }
+    setDdjjSaving(true);
+    try {
+      const payload = buildDatosPayload({
+        tipo: "declaraciones_grupo_familiar",
+        form: { ...ddjjForm, persona_id: personaId },
+        familiares: ddjjFamiliares,
+        modoEdicion: false,
+        editId: "",
+        estadoDdjjDefault: ESTADO_DDJJ_DEFAULT_PERSONALES,
+        fotoRostro: null,
+      });
+      await guardarRegistroPersonal("declaraciones_grupo_familiar", payload);
+      await recargarDdjj();
+      setDdjjMsg("DDJJ presentada correctamente.");
+      setDdjjModalAbierto(false);
+    } catch (ex) {
+      setDdjjMsg(ex instanceof Error ? ex.message : "No se pudo presentar la DDJJ.");
+    } finally {
+      setDdjjSaving(false);
+    }
+  }
 
   const cambioEstadoCivil = useMemo(
     () => !sameValue(form.estado_civil_id, baseForm.estado_civil_id),
@@ -422,6 +581,77 @@ export default function PerfilUsuario() {
       </Card>
 
       <Card className="px-4 py-4 md:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-base font-semibold text-slate-900">Declaración de Grupo Familiar</p>
+            <p className="mt-1 text-sm text-slate-600">
+              Se visualiza la última DDJJ presentada del titular autenticado.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={abrirModalDdjj}
+            className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
+          >
+            Actualizar DDJJ
+          </button>
+        </div>
+        {ultimaDdjj ? (
+          <div className="mt-3 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="grid gap-2 text-xs text-slate-700 md:grid-cols-3">
+              <p>
+                <span className="font-semibold">Estado:</span> {ddjjEstadoLabel}
+              </p>
+              <p>
+                <span className="font-semibold">Versión:</span> {ddjjVersionActual}
+              </p>
+              <p>
+                <span className="font-semibold">Última presentación:</span> {formatDdMmAaaa(ultimaDdjj.actualizado_en || ultimaDdjj.creado_en)}
+              </p>
+            </div>
+            <div className="space-y-2">
+              {(Array.isArray(ultimaDdjj.familiares) ? ultimaDdjj.familiares : []).map((f, idx) => (
+                <div key={`perfil-ddjj-fam-${idx}`} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+                  {(() => {
+                    const estado = mapEstadoAuditoriaFamiliarToUi(f.estado_auditoria_familiar_id);
+                    return (
+                      <>
+                  <p className="font-semibold text-slate-800">
+                    {String(f.apellido || "").trim()} {String(f.nombre || "").trim() || "Familiar sin nombre"}
+                  </p>
+                  <p>DNI: {String(f.dni || "—")}</p>
+                  <p>Parentesco: {optsParentesco.find((o) => String(o.value) === String(f.parentesco_id || ""))?.label || "—"}</p>
+                  <p>Fecha nacimiento: {formatDdMmAaaa(f.fecha_nacimiento)}</p>
+                        <p className="mt-1">
+                          Estado auditoría:{" "}
+                          <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${estado.badgeClass}`}>
+                            {estado.label}
+                          </span>
+                        </p>
+                        <p className="text-[11px] text-slate-600">{estado.message}</p>
+                        {String(f.motivo_rechazo_id || "").trim() ? (
+                          <p className="text-[11px] text-slate-600">
+                            Motivo: {String(f.motivo_rechazo_id)}
+                            {String(f.motivo_rechazo_detalle || "").trim()
+                              ? ` · ${String(f.motivo_rechazo_detalle)}`
+                              : ""}
+                          </p>
+                        ) : null}
+                      </>
+                    );
+                  })()}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            No hay DDJJ presentada todavía para esta persona.
+          </p>
+        )}
+      </Card>
+
+      <Card className="px-4 py-4 md:px-5">
         <p className="text-base font-semibold text-slate-900">Seguridad de la cuenta</p>
         <p className="mt-1 text-sm text-slate-600">
           Cambios de autenticación con revalidación y notificación a bandeja RRHH. La clave del portal es el mismo PIN de
@@ -497,6 +727,103 @@ export default function PerfilUsuario() {
           </p>
         ) : null}
       </Card>
+
+      {ddjjModalAbierto ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/45 px-4 py-4 md:py-8">
+          <div className="w-full max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:max-h-[90vh] md:p-5">
+            <p className="text-base font-semibold text-slate-900">Actualizar Declaración de Grupo Familiar</p>
+            <p className="mt-1 text-sm text-slate-600">
+              Esta presentación generará una nueva versión de DDJJ para tu persona.
+            </p>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <DdjjFields
+                ESTADO_DDJJ_DEFAULT_PERSONALES={ESTADO_DDJJ_DEFAULT_PERSONALES}
+                estadoDeclaracionIdActual={String(ddjjForm.estado_declaracion_id || ESTADO_DDJJ_DEFAULT_PERSONALES)}
+                estadoDeclaracionUiLabel={mapEstadoDdjjToUiLabel(ddjjForm.estado_declaracion_id)}
+                HELP={HELP}
+                modoEdicion
+                form={ddjjForm}
+                nextDeclaracionVersion={ddjjNextVersion}
+                setFamiliares={setDdjjFamiliares}
+                emptyFamiliar={emptyFamiliar}
+                familiares={ddjjFamiliares}
+                optsParentesco={optsParentesco}
+                setField={(key, value) => setDdjjForm((prev) => ({ ...prev, [key]: value }))}
+                flowMode={ddjjFlowMode}
+                onStartDdjj={() => setDdjjFlowMode("edit")}
+                onActualizarDdjj={() => setDdjjFlowMode("edit")}
+                onBackToEdit={() => setDdjjFlowMode("edit")}
+                disabled={ddjjSaving}
+                hideTopSummary
+                hideOperationalNotes
+              />
+            </div>
+
+            {ddjjMsg ? (
+              <p className={`mt-3 rounded-lg px-3 py-2 text-sm ${ddjjMsg.toLowerCase().includes("correctamente") ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                {ddjjMsg}
+              </p>
+            ) : null}
+
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                disabled={ddjjSaving}
+                onClick={() => {
+                  setDdjjModalAbierto(false);
+                  setDdjjMsg("");
+                }}
+                className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
+              >
+                Cancelar
+              </button>
+              {ddjjFlowMode === "edit" ? (
+                <button
+                  type="button"
+                  disabled={ddjjSaving}
+                  onClick={() => {
+                    const familiaresLimpios = ddjjFamiliares.filter((f) =>
+                      [f.parentesco_id, f.dni, f.nombre, f.apellido, f.fecha_nacimiento].some((v) =>
+                        String(v || "").trim(),
+                      ),
+                    );
+                    if (familiaresLimpios.length === 0) {
+                      setDdjjMsg("Debés cargar al menos un familiar en DDJJ.");
+                      return;
+                    }
+                    setDdjjFamiliares(familiaresLimpios);
+                    const err = validateDatosPersonales({
+                      tipo: "declaraciones_grupo_familiar",
+                      form: { ...ddjjForm, ddjj_en_revision: false },
+                      familiares: familiaresLimpios,
+                    });
+                    if (err) {
+                      setDdjjMsg(err);
+                      return;
+                    }
+                    setDdjjMsg("");
+                    setDdjjForm((prev) => ({ ...prev, ddjj_en_revision: true }));
+                    setDdjjFlowMode("review");
+                  }}
+                  className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  Revisar y presentar DDJJ
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={ddjjSaving}
+                  onClick={presentarNuevaDdjj}
+                  className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  {ddjjSaving ? "Presentando..." : "Presentar nueva DDJJ"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
