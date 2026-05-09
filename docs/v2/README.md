@@ -30,6 +30,11 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`MODULO_DATOS_PERSONALES_V2.md`](./MODULO_DATOS_PERSONALES_V2.md) | Anexo: contrato `personas`, formación, DDJJ, campos (ítem a ítem) |
 | [`DECISIONES_REVISION_PERSONALES_LABORALES_V2.md`](./DECISIONES_REVISION_PERSONALES_LABORALES_V2.md) | **Decisiones de revisión** (A–D) entre módulos personales y laborales; precedencia y criterios sin código |
 | [`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md) | Colecciones `cfg_*`, semillas |
+| [`MODULO_CONFIGURACION_ARTICULOS_V2.md`](./MODULO_CONFIGURACION_ARTICULOS_V2.md) | **Artículos (licencias/franquicias):** contrato funcional ABM + solicitudes, norma/SARH, documentación diferida, eventos |
+| [`DICCIONARIO_CFG_ARTICULOS_V2.md`](./DICCIONARIO_CFG_ARTICULOS_V2.md) | Inventario `cfg_*` y prefijos del dominio artículos (`art_`, `sol_`, `cfg_tcp_*`, `cfg_cfi_*`, `cfg_tev_art_*`, …) |
+| [`ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md`](./ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md) | Jerarquía Decreto 1919 / SARH / Ley 8525 y trazabilidad |
+| [`MATRIZ_ESCENARIOS_ARTICULOS_V2.md`](./MATRIZ_ESCENARIOS_ARTICULOS_V2.md) | Ocho escenarios operativos → parámetros y catálogos |
+| [`BACKLOG_MODULOS_PARALELOS_ARTICULOS_V2.md`](./BACKLOG_MODULOS_PARALELOS_ARTICULOS_V2.md) | Interfaces con ticketera, asistencia/MDC, eventos, SLA, superposición |
 | [`FLUJO_V2_LOGIN_Y_DATOS_PERSONALES.md`](./FLUJO_V2_LOGIN_Y_DATOS_PERSONALES.md) | Flujo A–E, gating, checklist de implementación |
 | [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./ACCESO_Y_RULES_FIRESTORE_V2.md) | Matriz de acceso, Callables, orientación Rules |
 | [`DESARROLLO_ORDEN_LOGIN_DATOS_V2.md`](./DESARROLLO_ORDEN_LOGIN_DATOS_V2.md) | Orden de fases 0–6 para codificar |
@@ -44,6 +49,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`HANDOFF_SESION_2026-05-04.md`](./HANDOFF_SESION_2026-05-04.md) | Limpieza Fase 1+2 en Perfil RRHH, retiro callable legacy, deploy Hosting/Functions, continuidad hacia pantalla espejo rol Usuario y auditoría de estados duplicados |
 | [`HANDOFF_SESION_2026-05-05.md`](./HANDOFF_SESION_2026-05-05.md) | **Última sesión:** auditoría FK catálogo + borrado `evt_*`; refactor formulario **Datos laborales** en `web/` (detalle abajo) |
 | [`HANDOFF_SESION_2026-05-06.md`](./HANDOFF_SESION_2026-05-06.md) | **Última sesión:** auditoría end-to-end Datos Laborales, unificación visual actual/histórico, limpieza de flujo contextual, validaciones `VAL-HLD-003/004`, mensajes claros y continuidad en pulido de Datos Laborales, Datos Personales y Login |
+| [`HANDOFF_SESION_2026-05-09.md`](./HANDOFF_SESION_2026-05-09.md) | Documentación módulo **Artículos** (`cfg_articulos`, SARH 1:N, Gate RFC), docs nuevos en `docs/v2/`, tag Git `snapshot-2026-05-09-articulos-docs-backup` antes de más código |
 | [`REFACTOR_WEB_DATOS_LABORALES_FORMULARIO_V2.md`](./REFACTOR_WEB_DATOS_LABORALES_FORMULARIO_V2.md) | Refactor UI del formulario datos laborales: `LabeledSelect` / `LabeledTextField`, modo `bare`, fix edición por persona; lista de archivos y pendientes |
 
 **Lecciones desde código V1 (en referencia V1):** [`../referencia_v1/PROBLEMA_LOGIN_PERMISOS.md`](../referencia_v1/PROBLEMA_LOGIN_PERMISOS.md) y el resto de `docs/referencia_v1/` según necesidad.
