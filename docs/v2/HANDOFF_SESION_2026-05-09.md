@@ -116,4 +116,16 @@ Para backup adicional del disco completo (incl. `.cursor`, node_modules, etc.), 
 
 ---
 
+## 8) Copia física completa en disco (continuación 2026-05-09)
+
+- **Carpeta espejo del proyecto (árbol completo, incluye `.git` y dependencias):**  
+  `C:\Users\jorge\Desktop\BACKUP_COPIA_COMPLETA_portal-hospital-v2_2026-05-09\`  
+  Verificación: `robocopy` sincronizado (sin archivos pendientes; ~648 MB).
+- **Historial Git portable** dentro de esa carpeta: `git-historial-completo.bundle` (~1 MB). Restaurar con:  
+  `git clone git-historial-completo.bundle portal-hospital-v2-restaurado`
+- **Instrucciones en texto plano en el Escritorio:** `LEEME_BACKUP_portal-hospital-v2_2026-05-09.txt`
+- Un **.zip** monolítico de toda la carpeta puede generarse manualmente (clic derecho → Enviar a → Carpeta comprimida) si se desea una sola pieza para USB/nube; la carpeta ya es backup utilizable sin comprimir.
+
+---
+
 **Fin del handoff — 2026-05-09**
