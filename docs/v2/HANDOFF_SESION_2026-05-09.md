@@ -139,6 +139,15 @@ Para backup adicional del disco completo (incl. `.cursor`, node_modules, etc.), 
 
 Detalle en [`MODULO_CONFIGURACION_ARTICULOS_V2.md`](./MODULO_CONFIGURACION_ARTICULOS_V2.md) y [`DICCIONARIO_CFG_ARTICULOS_V2.md`](./DICCIONARIO_CFG_ARTICULOS_V2.md).
 
+### 9.1 Motor de plazos — definiciones adicionales
+
+- **`getDiasLaborablesAgente`:** solo plantilla/RDA; feriados `cfg_cfi_*` solo en capa Licencias/Artículos.
+- **Timezone:** `America/Argentina/Buenos_Aires`; fechas ISO `YYYY-MM-DD`.
+- **`variantes_sarh[]`:** al menos una `activo: true` para publicar; todas inactivas → error de datos (Zod).
+- **Multi-efector:** OR en no hábil institucional; criterio pro-agente.
+- **`cantidad_dias_buscados`:** N laborables efectivos devueltos.
+- **Firestore `in` (10):** plazos cortos OK; si no, chunking.
+
 ---
 
 **Fin del handoff — 2026-05-09**

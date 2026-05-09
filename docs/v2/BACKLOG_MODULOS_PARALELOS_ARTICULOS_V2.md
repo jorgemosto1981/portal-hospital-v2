@@ -30,7 +30,9 @@
 ## 2. Contrato crítico: laborables del agente
 
 - El módulo de artículos **no** calcula francos ni turnos.
-- Contrato cerrado (stub hasta código): Callable **`getDiasLaborablesAgente`** con entrada **`{ persona_id, fecha_inicio, cantidad_dias_buscados }`** y salida **array de strings** en formato **`YYYY-MM-DD`** (fechas laborables del agente según RDA/plantilla).
+- **`getDiasLaborablesAgente`:** entrada **`{ persona_id, fecha_inicio, cantidad_dias_buscados }`**; salida **`YYYY-MM-DD[]`**. El callable devuelve **solo RDA/plantilla pura** (días que el agente debe trabajar). **`cantidad_dias_buscados`** = **N laborables efectivos** a devolver (búsqueda hacia adelante). La **resta de feriados institucionales** (`cfg_cfi_*`) es responsabilidad de la **capa Licencias/Artículos**, no de Asistencia.
+- **Timezone:** **`America/Argentina/Buenos_Aires`** para fecha civil antes de cálculos.
+- **Varios efectores:** **OR**: si un día es no hábil institucional en **cualquier** efector con vínculo del agente, se resta para el plazo administrativo (criterio pro-agente).
 
 ---
 

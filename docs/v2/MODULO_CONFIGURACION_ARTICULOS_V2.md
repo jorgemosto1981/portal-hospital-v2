@@ -57,6 +57,8 @@ Inventario y prefijos: [DICCIONARIO_CFG_ARTICULOS_V2.md](./DICCIONARIO_CFG_ARTIC
 
   `{ codigo_sarh, etiqueta_ui, afecta_sueldo_porcentaje, activo }`
 
+- **Validación:** si **todas** las variantes tienen `activo: false`, el artículo es **error de datos** y **no seleccionable**. La validación (p. ej. Zod) debe exigir **al menos una variante activa** para permitir pasar el artículo a estado **publicado** (o equivalente operativo de “visible para uso”).
+
 - Si cambian **workflow**, **impacto** o reglas críticas no expresables en variantes: **nuevo** `art_<ULID>` y uso del flujo **Duplicar base** en configuración.
 
 En solicitudes, cuando aplica elección operativa: **`sarh_variante_codigo`** (opcional), elegido por RRHH al resolver remanente o destino final; debe coincidir con un `codigo_sarh` **activo** dentro de `variantes_sarh[]` del artículo aplicable.
@@ -79,12 +81,23 @@ En solicitudes, cuando aplica elección operativa: **`sarh_variante_codigo`** (o
 
 ### 6.1 Hábil compuesto (cerrado)
 
+**Contrato entre capas (sin doble resta de feriados):**
+
+- **`getDiasLaborablesAgente`** devuelve **solo plantilla/RDA pura**: días en que el agente **debe trabajar** según turno/asignación. **No** incluye feriados institucionales.
+- La **resta de `cfg_calendario_feriados_institucional`** ocurre **solo en la capa Licencias/Artículos**, para mantener control del plazo administrativo y poder extender excepciones en el futuro sin depender del módulo de Asistencia.
+
 **Filtro sustractivo:**
 
-1. **Base:** días laborables del agente según **Asistencia/MDC** (RDA/plantilla: días en que el agente “debería” trabajar), obtenidos por **contrato entre módulos**, no recalculados en ticketera ni en esta pantalla. **Stub de contrato (validación futura):** Callable **`getDiasLaborablesAgente`** con entrada `{ persona_id, fecha_inicio, cantidad_dias_buscados }` y salida **array de strings** fecha ISO `YYYY-MM-DD`.
-2. **Resta:** fechas presentes en **`cfg_calendario_feriados_institucional`** (`cfg_cfi_<ULID>`) aplicables por **`alcance_efector_id`**. Cada documento representa **una fecha exacta** (sin rangos; un fin de semana largo = N documentos, uno por día).
+1. **Base:** resultado de **`getDiasLaborablesAgente`** (entrada `{ persona_id, fecha_inicio, cantidad_dias_buscados }`). **`cantidad_dias_buscados`** significa **N días laborables efectivos a devolver**: el motor de MDC/Asistencia avanza hacia adelante hasta reunir **N** fechas en las que el agente trabaja (según contrato del callable).
+2. **Resta (capa artículos):** fechas presentes en **`cfg_calendario_feriados_institucional`** (`cfg_cfi_<ULID>`) según regla multi-efector (ver abajo). Cada documento es **una fecha exacta**.
 
-**Regla conceptual (MVP):** el feriado institucional **anula** ese día como hábil para **plazos administrativos**, **sin excepciones** (YAGNI). Un RFC futuro podría abrir matices si Operaciones lo exige.
+**Varios efectores (OR / unión):** si el agente tiene vínculo con más de un efector, un día se **resta** del cómputo de plazo administrativo si es **no hábil institucional en cualquiera** de los efectores aplicables (unión). **Criterio:** ante la duda, **beneficia al agente** (más conservador en plazo para la administración).
+
+**Zona horaria:** regla estricta — **fecha civil explícita**, strings ISO **`YYYY-MM-DD`**. Backend y frontend deben anclar zona **`America/Argentina/Buenos_Aires`** **antes** de cualquier cálculo para evitar desplazamiento por UTC.
+
+**Consultas Firestore (`in` máx. 10):** para plazos cortos habituales (p. ej. 2–10 días normativos) el límite es suficiente. Si el plazo excede lo cubrible en una query, el motor de licencias debe **trocear** consultas (chunking).
+
+**Regla conceptual (MVP):** el feriado institucional **anula** ese día como hábil para **plazos administrativos** en la capa artículos, **sin excepciones** adicionales (YAGNI).
 
 En **aprobación parcial/split**, el ancla documental usa el **último día del tramo efectivamente aprobado** del artículo que exige documentación.
 

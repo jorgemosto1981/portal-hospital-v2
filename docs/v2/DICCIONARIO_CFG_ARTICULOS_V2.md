@@ -60,7 +60,7 @@ Incluye (lista no exhaustiva para implementación; definitivos en schema y RFC):
 - Documentación: `documentacion_diferida_habilitada`, `momento_entrega_documentacion_id`, `plazo_documental_post_inicio_dias`, `plazo_documental_tipo_dias_id` → `cfg_tcp_*`, `accion_vencimiento_documental_id`
 - Impacto y conflictos: `admite_reemplazo`, `dispara_evento_contrataciones`, `prioridad_normativa_id`, `politica_superposicion_id`, `articulos_incompatibles_ids`, `filtros_elegibilidad`, `metadata`
 
-**`variantes_sarh[]`:** obligatorio; arreglo de uno o más objetos `{ codigo_sarh, etiqueta_ui, afecta_sueldo_porcentaje, activo }`. Un solo código SARH = array de longitud 1.
+**`variantes_sarh[]`:** obligatorio; arreglo de uno o más objetos `{ codigo_sarh, etiqueta_ui, afecta_sueldo_porcentaje, activo }`. Un solo código SARH = array de longitud 1. **Al menos una variante con `activo: true`** para publicar; si todas están inactivas → error de datos / artículo no seleccionable (validación Zod u equivalente).
 
 ---
 
@@ -101,14 +101,16 @@ Campos mínimos por fila sugeridos: `codigo_interno`, `titulo_ui`, `descripcion_
 
 ## 6. Catálogo institucional y cómputo
 
-- **`cfg_calendario_feriados_institucional` (`cfg_cfi_*`):** **un documento por fecha exacta** (sin rangos `fecha_inicio`/`fecha_fin`). Varias fechas consecutivas (puente) = varios documentos. Campos mínimos: `fecha`, `tipo`, `alcance_efector_id`, `activo` (más campos comunes de `cfg_*` según MODULO_CONFIGURACION). Consultas típicas: filtro por fecha(s) concretas (p. ej. `in` sobre lista de fechas).
+- **`cfg_calendario_feriados_institucional` (`cfg_cfi_*`):** **un documento por fecha exacta** (sin rangos `fecha_inicio`/`fecha_fin`). Varias fechas consecutivas (puente) = varios documentos. Campos mínimos: `fecha`, `tipo`, `alcance_efector_id`, `activo` (más campos comunes de `cfg_*` según MODULO_CONFIGURACION). Consultas: filtro por fecha(s) concretas; **`in` máx. 10 valores en Firestore** — para plazos largos, **trocear** queries (chunking). Plazos cortos normativos (p. ej. 2–10 días) suelen caber en un batch.
 - **`cfg_tipo_computo_plazo` (`cfg_tcp_*`):** define si el plazo documental usa días corridos, hábil compuesto u otras semánticas según filas del catálogo (sin hardcode en motor).
 
-## 6.1 Stub Asistencia/MDC (contrato acordado para validación futura)
+## 6.1 Contrato `getDiasLaborablesAgente` (Asistencia/MDC)
 
 - **Callable:** `getDiasLaborablesAgente`
 - **Entrada:** `{ persona_id, fecha_inicio, cantidad_dias_buscados }`
-- **Salida:** array de strings con fechas **ISO `YYYY-MM-DD`** (días laborables del agente según RDA/plantilla).
+- **`cantidad_dias_buscados`:** cantidad de **días laborables efectivos** a devolver; el motor avanza desde `fecha_inicio` hasta reunir esa cantidad de fechas en que el agente debe trabajar (RDA/plantilla **pura**).
+- **Salida:** array de strings **ISO `YYYY-MM-DD`** (solo plantilla/RDA; **sin** aplicar feriados institucionales — esos se restan en la capa Licencias/Artículos).
+- **Timezone:** todas las fechas como **fecha civil**; normalizar con **`America/Argentina/Buenos_Aires`** antes de aritmética para evitar saltos por UTC.
 
 ---
 
