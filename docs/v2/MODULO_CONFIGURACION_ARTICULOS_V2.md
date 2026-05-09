@@ -52,14 +52,14 @@ Inventario y prefijos: [DICCIONARIO_CFG_ARTICULOS_V2.md](./DICCIONARIO_CFG_ARTIC
 
 ## 4. Identidad normativa y SARH (1:N)
 
-- Campo **`codigo_sarh`:** compatible con artículo de **código único**; puede convivir con variantes o actuar como código “principal” según política de datos acordada en inventario.
-- **`variantes_sarh[]` (opcional):** cuando un mismo marco normativo/operativo mapea a **varias filas SARH** sin duplicar todo el artículo. Estructura obligatoria por elemento:
+- **Regla estricta (sin `codigo_sarh` en la raíz):** el documento `cfg_articulos` **no** incluye un campo suelto `codigo_sarh` en el nivel raíz. **Todo** artículo usa solo **`variantes_sarh[]`**. Incluso un único código SARH se modela como **arreglo de un elemento** — evita ramas en frontend/backend (siempre se itera un array).
+- **Estructura obligatoria por elemento de `variantes_sarh[]`:**
 
   `{ codigo_sarh, etiqueta_ui, afecta_sueldo_porcentaje, activo }`
 
 - Si cambian **workflow**, **impacto** o reglas críticas no expresables en variantes: **nuevo** `art_<ULID>` y uso del flujo **Duplicar base** en configuración.
 
-En solicitudes, cuando aplica elección operativa: **`sarh_variante_codigo`** (opcional), elegido por RRHH al resolver remanente o destino final; debe coincidir con un `codigo_sarh` **activo** entre las variantes del artículo aplicable.
+En solicitudes, cuando aplica elección operativa: **`sarh_variante_codigo`** (opcional), elegido por RRHH al resolver remanente o destino final; debe coincidir con un `codigo_sarh` **activo** dentro de `variantes_sarh[]` del artículo aplicable.
 
 ---
 
@@ -81,10 +81,10 @@ En solicitudes, cuando aplica elección operativa: **`sarh_variante_codigo`** (o
 
 **Filtro sustractivo:**
 
-1. **Base:** días laborables del agente según **Asistencia/MDC** (RDA/plantilla: días en que el agente “debería” trabajar), obtenidos por **contrato entre módulos**, no recalculados en ticketera ni en esta pantalla.
-2. **Resta:** fechas que coincidan con **`cfg_calendario_feriados_institucional`** (`cfg_cfi_<ULID>`) aplicables por **`alcance_efector_id`**.
+1. **Base:** días laborables del agente según **Asistencia/MDC** (RDA/plantilla: días en que el agente “debería” trabajar), obtenidos por **contrato entre módulos**, no recalculados en ticketera ni en esta pantalla. **Stub de contrato (validación futura):** Callable **`getDiasLaborablesAgente`** con entrada `{ persona_id, fecha_inicio, cantidad_dias_buscados }` y salida **array de strings** fecha ISO `YYYY-MM-DD`.
+2. **Resta:** fechas presentes en **`cfg_calendario_feriados_institucional`** (`cfg_cfi_<ULID>`) aplicables por **`alcance_efector_id`**. Cada documento representa **una fecha exacta** (sin rangos; un fin de semana largo = N documentos, uno por día).
 
-**Regla conceptual:** el feriado institucional **anula** ese día como hábil para **plazos administrativos**, salvo **excepciones explícitas** documentadas en RFC.
+**Regla conceptual (MVP):** el feriado institucional **anula** ese día como hábil para **plazos administrativos**, **sin excepciones** (YAGNI). Un RFC futuro podría abrir matices si Operaciones lo exige.
 
 En **aprobación parcial/split**, el ancla documental usa el **último día del tramo efectivamente aprobado** del artículo que exige documentación.
 
@@ -108,7 +108,7 @@ En **aprobación parcial/split**, el ancla documental usa el **último día del 
 
 ## 8. UX de pantalla (blueprint)
 
-Tabs mínimos: General (incluye variantes SARH si hay 1:N), Elegibilidad, Plazos, Workflow y SLA, Superposición, Documentación, Impacto, Auditoría/rechazos; FAB glosario dual (RRHH vs IT); acciones Guardar borrador, Publicar versión, Duplicar, Deshabilitar. Detalle no normativo puede ampliarse en una revisión UX sin cambiar contrato de datos.
+Tabs mínimos: General (tabla **`variantes_sarh[]`**, siempre al menos una fila), Elegibilidad, Plazos, Workflow y SLA, Superposición, Documentación, Impacto, Auditoría/rechazos; FAB glosario dual (RRHH vs IT); acciones Guardar borrador, Publicar versión, Duplicar, Deshabilitar. Detalle no normativo puede ampliarse en una revisión UX sin cambiar contrato de datos.
 
 ---
 
@@ -127,4 +127,4 @@ Tabs mínimos: General (incluye variantes SARH si hay 1:N), Elegibilidad, Plazos
 
 ## 10. No negociables (gate RFC)
 
-Antes de cerrar implementación o contradecir estos puntos en otros documentos, revisar el plan maestro y el gate acordado: catálogo **`cfg_tipo_computo_plazo`**, calendario **`cfg_calendario_feriados_institucional`**, delegación de **francos/laborables del agente** a Asistencia/MDC, modelo **1:N SARH** (`variantes_sarh[]` vs artículo duplicado), **sin recordatorios proactivos** en MVP.
+Antes de cerrar implementación o contradecir estos puntos en otros documentos, revisar el plan maestro y el gate acordado: catálogo **`cfg_tipo_computo_plazo`**, calendario **`cfg_calendario_feriados_institucional`** (un doc por fecha), delegación de **francos/laborables del agente** a Asistencia/MDC (**stub** `getDiasLaborablesAgente`), **`variantes_sarh[]` obligatorio** (sin `codigo_sarh` en raíz), **sin recordatorios proactivos** en MVP.

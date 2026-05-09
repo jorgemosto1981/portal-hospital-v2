@@ -52,7 +52,7 @@ Referencias en documentos de negocio usan sufijo **`*_id`** (singular) o **`*_id
 
 Incluye (lista no exhaustiva para implementación; definitivos en schema y RFC):
 
-- Identidad: `codigo_sarh`, `variantes_sarh[]`, `norma_principal_tipo_id`, `norma_principal_referencia`, `inciso_normativo`, `titulo`, `descripcion_operativa`
+- Identidad: **`variantes_sarh[]` (obligatorio, mínimo 1 elemento; no hay `codigo_sarh` en raíz)**, `norma_principal_tipo_id`, `norma_principal_referencia`, `inciso_normativo`, `titulo`, `descripcion_operativa`
 - Clasificación: `tipo_articulo_id`, `unidad_medida_id`
 - Vigencia: `activo`, `vigente_desde`, `vigente_hasta`
 - Alta y autorización: `permite_alta_iniciada_por_jefe_grupo`, `requiere_autorizacion_jefe`, `origen_alta_id_default`
@@ -60,7 +60,7 @@ Incluye (lista no exhaustiva para implementación; definitivos en schema y RFC):
 - Documentación: `documentacion_diferida_habilitada`, `momento_entrega_documentacion_id`, `plazo_documental_post_inicio_dias`, `plazo_documental_tipo_dias_id` → `cfg_tcp_*`, `accion_vencimiento_documental_id`
 - Impacto y conflictos: `admite_reemplazo`, `dispara_evento_contrataciones`, `prioridad_normativa_id`, `politica_superposicion_id`, `articulos_incompatibles_ids`, `filtros_elegibilidad`, `metadata`
 
-**`variantes_sarh[]`:** arreglo de objetos `{ codigo_sarh, etiqueta_ui, afecta_sueldo_porcentaje, activo }`.
+**`variantes_sarh[]`:** obligatorio; arreglo de uno o más objetos `{ codigo_sarh, etiqueta_ui, afecta_sueldo_porcentaje, activo }`. Un solo código SARH = array de longitud 1.
 
 ---
 
@@ -101,8 +101,14 @@ Campos mínimos por fila sugeridos: `codigo_interno`, `titulo_ui`, `descripcion_
 
 ## 6. Catálogo institucional y cómputo
 
-- **`cfg_calendario_feriados_institucional` (`cfg_cfi_*`):** campos mínimos acordados en plan: `fecha`, `tipo`, `alcance_efector_id`, `activo` (más campos comunes de `cfg_*` según MODULO_CONFIGURACION).
+- **`cfg_calendario_feriados_institucional` (`cfg_cfi_*`):** **un documento por fecha exacta** (sin rangos `fecha_inicio`/`fecha_fin`). Varias fechas consecutivas (puente) = varios documentos. Campos mínimos: `fecha`, `tipo`, `alcance_efector_id`, `activo` (más campos comunes de `cfg_*` según MODULO_CONFIGURACION). Consultas típicas: filtro por fecha(s) concretas (p. ej. `in` sobre lista de fechas).
 - **`cfg_tipo_computo_plazo` (`cfg_tcp_*`):** define si el plazo documental usa días corridos, hábil compuesto u otras semánticas según filas del catálogo (sin hardcode en motor).
+
+## 6.1 Stub Asistencia/MDC (contrato acordado para validación futura)
+
+- **Callable:** `getDiasLaborablesAgente`
+- **Entrada:** `{ persona_id, fecha_inicio, cantidad_dias_buscados }`
+- **Salida:** array de strings con fechas **ISO `YYYY-MM-DD`** (días laborables del agente según RDA/plantilla).
 
 ---
 

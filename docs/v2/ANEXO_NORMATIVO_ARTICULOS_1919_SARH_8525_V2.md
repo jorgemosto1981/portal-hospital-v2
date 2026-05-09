@@ -22,7 +22,7 @@ Si hay conflicto aparente entre normas del mismo nivel, se documenta **decisión
 
 - Un **mismo** artículo o inciso del decreto puede corresponder a **varias** variantes operativas SARH (relación **1:N**).
 - La configuración debe permitir:
-  - **`variantes_sarh[]`** embebidas en `cfg_articulos` cuando las reglas base son compartidas y solo cambian datos como **código** o **afectación de sueldo** (`afecta_sueldo_porcentaje`).
+  - **`variantes_sarh[]`** **obligatorio** en `cfg_articulos` (siempre al menos un elemento; no hay `codigo_sarh` en raíz). Variante única = array de un elemento.
   - **Varios documentos `art_<ULID>`** cuando cambian workflow, impacto sustantivo o reglas no representables como variante.
 
 ---

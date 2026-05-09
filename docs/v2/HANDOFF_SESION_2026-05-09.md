@@ -114,6 +114,8 @@ Para backup adicional del disco completo (incl. `.cursor`, node_modules, etc.), 
 - `docs/v2/BACKLOG_MODULOS_PARALELOS_ARTICULOS_V2.md` (nuevo)
 - `docs/v2/HANDOFF_SESION_2026-05-09.md` (este archivo)
 
+**Actualización (cierre arquitectónico el mismo día):** [`MODULO_CONFIGURACION_ARTICULOS_V2.md`](./MODULO_CONFIGURACION_ARTICULOS_V2.md), [`DICCIONARIO_CFG_ARTICULOS_V2.md`](./DICCIONARIO_CFG_ARTICULOS_V2.md), [`ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md`](./ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md), [`BACKLOG_MODULOS_PARALELOS_ARTICULOS_V2.md`](./BACKLOG_MODULOS_PARALELOS_ARTICULOS_V2.md), sección 9 de este handoff.
+
 ---
 
 ## 8) Copia física completa en disco (continuación 2026-05-09)
@@ -125,6 +127,17 @@ Para backup adicional del disco completo (incl. `.cursor`, node_modules, etc.), 
   `git clone git-historial-completo.bundle portal-hospital-v2-restaurado`
 - **Instrucciones en texto plano en el Escritorio:** `LEEME_BACKUP_portal-hospital-v2_2026-05-09.txt`
 - Un **.zip** monolítico de toda la carpeta puede generarse manualmente (clic derecho → Enviar a → Carpeta comprimida) si se desea una sola pieza para USB/nube; la carpeta ya es backup utilizable sin comprimir.
+
+---
+
+## 9) Cierre arquitectónico (post-revisión documentos — 2026-05-09)
+
+- **`variantes_sarh[]` único vector:** se elimina `codigo_sarh` en raíz de `cfg_articulos`; siempre array (mínimo 1 elemento).
+- **`cfg_calendario_feriados_institucional`:** un documento por **fecha exacta** (sin rangos en un solo doc).
+- **Excepciones al “feriado pisa hábil”:** fuera de MVP (YAGNI); regla rígida hasta RFC futuro.
+- **Stub callable Asistencia:** `getDiasLaborablesAgente({ persona_id, fecha_inicio, cantidad_dias_buscados })` → `string[]` `YYYY-MM-DD`.
+
+Detalle en [`MODULO_CONFIGURACION_ARTICULOS_V2.md`](./MODULO_CONFIGURACION_ARTICULOS_V2.md) y [`DICCIONARIO_CFG_ARTICULOS_V2.md`](./DICCIONARIO_CFG_ARTICULOS_V2.md).
 
 ---
 

@@ -15,8 +15,8 @@
 | Motor de validación (callable/backend) | Lee `cfg_articulos` + `cfg_*`; crea/actualiza `solicitudes_articulo` | Rechazo con `motivo_*` tipificado |
 | Ticketera / solicitud | CRUD solicitud; titular vs actor; `origen_alta_id`; delegación jefe | [`CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md`](./CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md) |
 | Máquina de estados | Transiciones según matriz; **callable** donde reglas V2 lo exijan | Estados en `cfg_estado_solicitud_articulo` |
-| Asistencia / MDC / RDA | **Próximos N días laborables del agente**; no recalcular francos en ticketera | [`ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md`](./ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md) |
-| Calendario institucional | `cfg_calendario_feriados_institucional` (`cfg_cfi_*`) resta días en hábil compuesto | Alcance por `alcance_efector_id` |
+| Asistencia / MDC / RDA | Callable **`getDiasLaborablesAgente`** `{ persona_id, fecha_inicio, cantidad_dias_buscados }` → `string[]` ISO `YYYY-MM-DD`; no recalcular francos en ticketera | Stub hasta implementación; [`ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md`](./ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md) |
+| Calendario institucional | `cfg_calendario_feriados_institucional` (`cfg_cfi_*`): **un doc por fecha exacta**; resta en hábil compuesto | Alcance por `alcance_efector_id`; sin rangos multi-día en un solo doc |
 | Motor de plazos documentales | Usa `cfg_tcp_*` + resultado Asistencia + `cfg_cfi_*` | Ver módulo artículos — documentación diferida |
 | Superposición / prioridad | Políticas e incompatibilidades; eventos de resolución | Integración con reglas de asistencia para consolidación |
 | SLA / burbujeo | Temporizadores por paso; escalamiento | Campos `vencimiento_en`, `sla_*`, `escalamientos_*` |
@@ -30,7 +30,7 @@
 ## 2. Contrato crítico: laborables del agente
 
 - El módulo de artículos **no** calcula francos ni turnos.
-- Debe consumir un contrato del área **Asistencia/MDC** del estilo: **lista de fechas laborables** del agente en un horizonte N, derivada de RDA/plantilla vigente.
+- Contrato cerrado (stub hasta código): Callable **`getDiasLaborablesAgente`** con entrada **`{ persona_id, fecha_inicio, cantidad_dias_buscados }`** y salida **array de strings** en formato **`YYYY-MM-DD`** (fechas laborables del agente según RDA/plantilla).
 
 ---
 
