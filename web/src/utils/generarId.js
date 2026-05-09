@@ -9,3 +9,8 @@ export function generarPersonaId() {
 export function generarCargoId() {
   return `hlc_${ulid()}`;
 }
+
+/** @returns {string} ID de documento en `cfg_articulos` (prefijo `art_`). */
+export function generarArticuloId() {
+  return `art_${ulid()}`;
+}

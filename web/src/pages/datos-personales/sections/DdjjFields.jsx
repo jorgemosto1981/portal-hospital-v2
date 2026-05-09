@@ -21,6 +21,9 @@ export default function DdjjFields({
   hideTopSummary = false,
   hideOperationalNotes = false,
 }) {
+  void HELP;
+  void modoEdicion;
+
   function labelWithId(label, id) {
     return (
       <span>

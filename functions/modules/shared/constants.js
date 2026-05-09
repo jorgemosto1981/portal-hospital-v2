@@ -68,6 +68,9 @@ const CFG_COLECCIONES_RRHH = new Set([
   "cfg_causal_fin_asignacion_laboral",
   "cfg_motivo_deshabilitacion_hlc",
   "cfg_tipo_acto_designacion",
+  /** Configuración de artículos (licencias) — listados en formulario RRHH. */
+  "cfg_tipo_articulo",
+  "cfg_unidad_medida_articulo",
   "usuarios_cuenta",
   /** Lecturas RRHH · seguimiento enrolamiento y perfil laboral (HLc). */
   COL_PERSONAS,

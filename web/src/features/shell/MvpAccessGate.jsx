@@ -16,7 +16,7 @@ const POST_LOGIN_LOADER_MIN_MS = 1000;
 
 function readPostLoginLoaderStartedAt() {
   if (typeof window === "undefined") return 0;
-  let raw = "";
+  let raw;
   try {
     raw = window.sessionStorage.getItem(POST_LOGIN_LOADER_FLAG) || "";
   } catch {
@@ -46,21 +46,23 @@ function clearPostLoginLoaderFlag() {
 
 const PUBLIC_NO_PERSONA = new Set(["/vinculacion", "/registro", "/login"]);
 
+const POST_LOGIN_LOADING_STEPS = [
+  "Validando sesión",
+  "Cargando permisos",
+  "Sincronizando datos iniciales",
+];
+
 const MSG_SIN_CADENA_LABORAL =
   "No tenés un legajo laboral activo completo (asignación HLc → puesto HLd → grupo HLg) con vigencia a hoy. " +
   "Solicitá a Recursos Humanos la carga o la corrección, o abrí Datos laborales si tu rol lo permite.";
 
 function PostLoginPortalLoader({ label }) {
-  const loadingSteps = [
-    "Validando sesión",
-    "Cargando permisos",
-    "Sincronizando datos iniciales",
-  ];
   const [stepIndex, setStepIndex] = useState(0);
 
   useEffect(() => {
+    const n = POST_LOGIN_LOADING_STEPS.length;
     const timer = window.setInterval(() => {
-      setStepIndex((prev) => (prev + 1) % loadingSteps.length);
+      setStepIndex((prev) => (prev + 1) % n);
     }, 1200);
     return () => window.clearInterval(timer);
   }, []);
@@ -78,7 +80,7 @@ function PostLoginPortalLoader({ label }) {
             className="inline-block size-4 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600"
             aria-hidden
           />
-          <span>{loadingSteps[stepIndex]}...</span>
+          <span>{POST_LOGIN_LOADING_STEPS[stepIndex]}...</span>
         </div>
       </div>
     </div>

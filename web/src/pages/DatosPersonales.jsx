@@ -46,12 +46,13 @@ function isEventoAuditoriaDatosPersonales(evento) {
 }
 
 function formatFechaEventoDdMmAaaa(value) {
-  let d = null;
+  /** @type {Date | undefined} */
+  let d;
   if (value && typeof value.toDate === "function") {
     try {
       d = value.toDate();
     } catch {
-      d = null;
+      /* sin fecha */
     }
   } else if (value && typeof value === "object" && typeof value.seconds === "number") {
     d = new Date(value.seconds * 1000);
@@ -475,6 +476,7 @@ export default function DatosPersonales() {
       setFamiliares([emptyFamiliar()]);
       setDdjjFlowMode("idle");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- incluir `form` completo re-dispararía en cada cambio de campo
   }, [tipo, form.persona_id, ddjjPresentadaActual, ddjjFlowMode, nextDeclaracionVersion]);
 
   useEffect(() => {
@@ -486,6 +488,7 @@ export default function DatosPersonales() {
     if (!first) return;
     hydrateFrom(first);
     setEditId(String(first.id || ""));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrateFrom cierra sobre form; deps explícitas evitan bucles
   }, [tipo, form.persona_id, modoEdicion, registrosFiltradosPorPersona]);
 
   const eventosPersona = useMemo(() => {

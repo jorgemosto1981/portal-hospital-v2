@@ -22,8 +22,6 @@ export function AntiguedadResultadoCard({
   idxEscalafon,
   idxAgrupamiento,
   idxTipoVinculo,
-  idxFunciones,
-  idxEfectores,
 }) {
   const det = resultado?.detalleCalculo;
   const hlcConsideradasCount = det?.hlcConsideradas?.length ?? 0;

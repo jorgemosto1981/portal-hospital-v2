@@ -10,17 +10,19 @@ import runtimeFlags from "../../../../shared/runtimeFlags.json";
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
 const OPEN_ACCESS_TEMP = runtimeFlags.OPEN_ACCESS_TEMP === true;
 
+const GATE_SPINNER_LOADING_STEPS = [
+  "Validando sesión",
+  "Cargando permisos",
+  "Sincronizando datos iniciales",
+];
+
 export function GateSpinner({ label = "Cargando…" }) {
-  const loadingSteps = [
-    "Validando sesión",
-    "Cargando permisos",
-    "Sincronizando datos iniciales",
-  ];
   const [stepIndex, setStepIndex] = useState(0);
 
   useEffect(() => {
+    const n = GATE_SPINNER_LOADING_STEPS.length;
     const timer = window.setInterval(() => {
-      setStepIndex((prev) => (prev + 1) % loadingSteps.length);
+      setStepIndex((prev) => (prev + 1) % n);
     }, 1200);
     return () => window.clearInterval(timer);
   }, []);
@@ -38,7 +40,7 @@ export function GateSpinner({ label = "Cargando…" }) {
             className="inline-block size-4 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600"
             aria-hidden
           />
-          <span>{loadingSteps[stepIndex]}...</span>
+          <span>{GATE_SPINNER_LOADING_STEPS[stepIndex]}...</span>
         </div>
       </div>
     </div>

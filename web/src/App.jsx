@@ -18,6 +18,7 @@ import NotificacionesEventosDatosPersonalesRRHH from "./pages/NotificacionesEven
 import PantallasCatalogo from "./pages/PantallasCatalogo.jsx";
 import Perfil from "./pages/Perfil.jsx";
 import Configuracion from "./pages/Configuracion.jsx";
+import ArticuloFormConfig from "./components/configuracion/ArticuloFormConfig.jsx";
 import SeguimientoEnrolamientoUsuariosRRHH from "./pages/SeguimientoEnrolamientoUsuariosRRHH.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import SistemasWeb from "./pages/SistemasWeb.jsx";
@@ -90,6 +91,10 @@ export default function App() {
             <Route path="configuracion" element={<Configuracion />} />
             <Route element={<RoleGuard />}>
               <Route path="sistemas-web" element={<SistemasWeb />} />
+              <Route
+                path="rrhh/configuracion-articulos/:articuloId?"
+                element={<ArticuloFormConfig />}
+              />
               <Route path="rrhh/alta" element={<AltaAgenteRRHH />} />
               <Route path="rrhh/antiguedad" element={<Antiguedad />} />
               <Route path="rrhh/notificaciones-datos-personales" element={<NotificacionesEventosDatosPersonalesRRHH />} />

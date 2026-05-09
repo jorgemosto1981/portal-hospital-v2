@@ -16,13 +16,14 @@
  */
 export function feriadoAplicaAlAgente(feriado, efectoresAgente) {
   if (!feriado?.fecha) return false;
+  const efectores = Array.isArray(efectoresAgente) ? efectoresAgente : [];
   const alcance = feriado.alcance_efector_id;
   const global =
     alcance === undefined ||
     alcance === null ||
     (typeof alcance === 'string' && alcance.trim() === '');
-  if (global) return efectoresAgente.length > 0;
-  return efectoresAgente.includes(alcance);
+  if (global) return efectores.length > 0;
+  return efectores.includes(alcance);
 }
 
 /**
@@ -39,6 +40,7 @@ export function getVencimientoDocumental(
   feriadosInstitucionales,
   efectoresAgente,
 ) {
+  const laborables = Array.isArray(fechasLaborables) ? fechasLaborables : [];
   const efectores = Array.isArray(efectoresAgente) ? efectoresAgente : [];
   const fechasQuitadas = new Set();
 
@@ -47,5 +49,5 @@ export function getVencimientoDocumental(
     fechasQuitadas.add(feriado.fecha);
   }
 
-  return fechasLaborables.filter((dia) => !fechasQuitadas.has(dia));
+  return laborables.filter((dia) => !fechasQuitadas.has(dia));
 }

@@ -2,8 +2,6 @@ import Card from "../components/ui/Card.jsx";
 import { deshabilitarCicloHlc, guardarRegistroLaboral } from "../services/datosLaboralesService.js";
 import { useEffect, useMemo, useState } from "react";
 import { AYUDA_CAMPOS, INITIAL_FORM_DATA_LABORAL } from "./datos-laborales/constants.js";
-import ColeccionesLaboralesCards from "./datos-laborales/sections/ColeccionesLaboralesCards.jsx";
-import FasesLaboralesTables from "./datos-laborales/sections/FasesLaboralesTables.jsx";
 import IntegridadReferencialCard from "./datos-laborales/sections/IntegridadReferencialCard.jsx";
 import LaboralFormCabeceraFields from "./datos-laborales/sections/LaboralFormCabeceraFields.jsx";
 import PersonaSearchSelect from "./datos-laborales/components/PersonaSearchSelect.jsx";
@@ -15,8 +13,6 @@ import VistaOperativaGrupoCard from "./datos-laborales/sections/VistaOperativaGr
 import { useDatosLaboralesCollections } from "./datos-laborales/useDatosLaboralesCollections.js";
 import { buildFormDataFromRecord, validateLaboralForm } from "./datos-laborales/formLogic.js";
 import { buildHlcPayload, buildHldPayload, buildHlgPayload } from "./datos-laborales/payloadBuilders.js";
-import LabeledSelect from "./datos-laborales/components/LabeledSelect.jsx";
-import LabeledTextField from "./datos-laborales/components/LabeledTextField.jsx";
 import {
   buildVistaGrupoItems,
   buildTimelineItemsByPersona,
@@ -30,7 +26,6 @@ import {
   updateCargaPorDiaRow,
   addCargaPorDiaRow,
   removeCargaPorDiaRow,
-  buildRegistrosEdicionDetallados,
   buildTimelineResumen,
   buildIntegridadLaboral,
   formatDateDdMmAaaa,
@@ -94,22 +89,6 @@ function sumarHorasSemana(cargaPorDiaSemana) {
   }, 0);
 }
 
-function labelPersonaOpcion(p) {
-  if (!p || !p.id) return "";
-  if (p.nombre || p.apellido) {
-    return `${String(p.apellido || "").trim()} ${String(p.nombre || "").trim()} (${p.id})`.trim();
-  }
-  return String(p.id);
-}
-
-function labelPersonaOpcionAvanzada(p) {
-  if (!p || !p.id) return "";
-  const apellido = String(p.apellido || "").trim();
-  const nombre = String(p.nombre || "").trim();
-  const base = [apellido, nombre].filter(Boolean).join(" ").trim();
-  return base ? `${base} | ${p.id}` : String(p.id);
-}
-
 function buildPersonaSearchOption(p) {
   const id = String(p?.id || "").trim();
   if (!id) return null;
@@ -127,19 +106,12 @@ function buildPersonaSearchOption(p) {
 }
 
 export default function DatosLaborales() {
-  const {
-    rowsByCollection,
-    loadingByCollection,
-    progressByCollection,
-    durationByCollection,
-    errorByCollection,
-    cargarTodo,
-  } = useDatosLaboralesCollections();
+  const { rowsByCollection, cargarTodo } = useDatosLaboralesCollections();
   const [tipoAlta, setTipoAlta] = useState("historial_laboral_cargos");
   const [modoEdicion, setModoEdicion] = useState(false);
   const [registroEditId, setRegistroEditId] = useState("");
   const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState("");
+  const [, setSaveMsg] = useState("");
   const [resultadoModalAbierto, setResultadoModalAbierto] = useState(false);
   const [resultadoModalMsg, setResultadoModalMsg] = useState("");
   const [deshabilitarModalAbierto, setDeshabilitarModalAbierto] = useState(false);
@@ -270,22 +242,6 @@ export default function DatosLaborales() {
     if (!pid) return [];
     return registrosPorTipo.filter((r) => String(r.persona_id || "") === pid);
   }, [registrosPorTipo, formData.persona_id]);
-  const opcionesCargoHlcFiltradas = useMemo(() => {
-    if (!formData.persona_id) return hlcRows;
-    const personaId = String(formData.persona_id);
-    return hlcRows.filter((row) => String(row.persona_id || "") === personaId);
-  }, [hlcRows, formData.persona_id]);
-  const registrosEdicionDetallados = useMemo(() => {
-    return buildRegistrosEdicionDetallados({
-      registrosPorTipo: registrosPorTipoFiltrados,
-      tipoAlta,
-      idxPersonas,
-      idxFunciones,
-      idxGrupos,
-      idxHld,
-      idxHlc,
-    });
-  }, [registrosPorTipoFiltrados, tipoAlta, idxPersonas, idxFunciones, idxGrupos, idxHld, idxHlc]);
   const snapshotActual = useMemo(() => {
     const personaId = String(formData.persona_id || "").trim();
     if (!personaId) {

@@ -16,6 +16,21 @@ service cloud.firestore {
       return signedIn() && request.auth.token.persona_id == personaId;
     }
 
+    /** RRHH o admin — alineado a claims `portal_role` (minúsculas). Ver portalRole.js (web). */
+    function isRrhhOrAdmin() {
+      return signedIn()
+        && request.auth.token.portal_role is string
+        && (request.auth.token.portal_role == 'rrhh' || request.auth.token.portal_role == 'admin');
+    }
+
+    // Definiciones operativas de artículos (MODULO_CONFIGURACION_ARTICULOS_V2). Baja lógica con `activo`; sin delete físico.
+    match /cfg_articulos/{articuloId} {
+      allow read: if isRrhhOrAdmin();
+      allow create: if isRrhhOrAdmin();
+      allow update: if isRrhhOrAdmin();
+      allow delete: if false;
+    }
+
     // Catálogos volcados por seed (MODULO_CONFIGURACION_V2) — escritura solo Admin/seed.
     match /cfg_estado_cuenta_acceso/{docId} {
       allow read: if signedIn();

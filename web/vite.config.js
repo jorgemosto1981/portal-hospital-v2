@@ -84,4 +84,9 @@ export default defineConfig(({ mode }) => ({
       allow: [repoRoot],
     },
   },
+  test: {
+    environment: "node",
+    globals: false,
+    include: ["src/**/*.test.js"],
+  },
 }));

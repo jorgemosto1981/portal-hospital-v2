@@ -29,12 +29,13 @@ function isEventoDatosPersonales(evento) {
 }
 
 function formatFechaEventoDdMmAaaa(value) {
-  let d = null;
+  /** @type {Date | undefined} */
+  let d;
   if (value && typeof value.toDate === "function") {
     try {
       d = value.toDate();
     } catch {
-      d = null;
+      /* sin fecha */
     }
   } else if (value && typeof value === "object" && typeof value.seconds === "number") {
     d = new Date(value.seconds * 1000);
@@ -276,6 +277,7 @@ export default function NotificacionesEventosDatosPersonalesRRHH() {
 
   useEffect(() => {
     void cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recarga solo al cambiar período
   }, [periodoYyyymm]);
 
   async function cargarMas() {
