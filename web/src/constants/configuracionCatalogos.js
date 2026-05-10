@@ -194,6 +194,12 @@ export const SECCIONES_CATALOGO_RRHH = [
         idPrefix: "CFG_UM_",
       },
       {
+        key: "tipo_norma_principal_articulo",
+        etiqueta: "Tipo de norma principal (referencia citada)",
+        collectionName: "cfg_tipo_norma_principal_articulo",
+        idPrefix: "CFG_TNPA_",
+      },
+      {
         key: "origen_alta_solicitud",
         etiqueta: "Origen de alta (solicitud)",
         collectionName: "cfg_origen_alta_solicitud",
@@ -234,6 +240,30 @@ export const SECCIONES_CATALOGO_RRHH = [
         etiqueta: "Acción ante vencimiento (SLA / documental)",
         collectionName: "cfg_accion_vencimiento",
         idPrefix: "CFG_AV_",
+      },
+      {
+        key: "calendario_feriados_institucional",
+        etiqueta: "Calendario de feriados institucional",
+        collectionName: "cfg_calendario_feriados_institucional",
+        idPrefix: "CFG_CFI_",
+      },
+      {
+        key: "situacion_revista",
+        etiqueta: "Situación de revista (artículos)",
+        collectionName: "cfg_situacion_revista",
+        idPrefix: "CFG_SREV_",
+      },
+      {
+        key: "unidad_intervalo_tiempo",
+        etiqueta: "Unidad de intervalo (cadencia / plazos)",
+        collectionName: "cfg_unidad_intervalo_tiempo",
+        idPrefix: "cfg_uit_",
+      },
+      {
+        key: "paso_workflow_articulo",
+        etiqueta: "Pasos de workflow (artículos)",
+        collectionName: "cfg_paso_workflow_articulo",
+        idPrefix: "cfg_pwa_",
       },
     ],
   },

@@ -57,5 +57,15 @@ export function cfgPoliticaSuperposicion() {
     cfgRow("CFG_PS_PRIORIDAD_NORMATIVA", "PRIORIDAD_NORMATIVA", "Resolver por prioridad normativa", 20),
     cfgRow("CFG_PS_DERIVAR_RRHH", "DERIVAR_RRHH", "Derivar a RRHH", 30),
     cfgRow("CFG_PS_PERMITIR_CONVIVENCIA", "PERMITIR_CONVIVENCIA", "Permitir convivencia con registro", 40),
+    cfgRow(
+      "CFG_PS_INTERRUPCION_LISTA_ARTICULO",
+      "INTERRUPCION_LISTA_ARTICULO",
+      "Interrupción / prioridad según lista en cfg_articulos",
+      45,
+      {
+        descripcion_ui:
+          "Usa articulos_interrupcion_permitida_ids del artículo para resolver frente a otro trámite activo.",
+      },
+    ),
   ];
 }

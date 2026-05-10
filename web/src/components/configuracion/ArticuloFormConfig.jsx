@@ -19,11 +19,13 @@ import {
   parseArticuloBorrador,
   parseArticuloPublicable,
 } from "../../utils/articulos/index.js";
+import { useArticuloCadenciaCatalogos } from "./hooks/useArticuloCadenciaCatalogos.js";
 import { useArticuloElegibilidadCatalogos } from "./hooks/useArticuloElegibilidadCatalogos.js";
 import { useArticuloGeneralCatalogos } from "./hooks/useArticuloGeneralCatalogos.js";
 import { useArticuloPlazosCatalogos } from "./hooks/useArticuloPlazosCatalogos.js";
 import { useArticuloWorkflowCatalogos } from "./hooks/useArticuloWorkflowCatalogos.js";
 import ArticuloFormReadinessBadge from "./ArticuloFormReadinessBadge.jsx";
+import CadenciaTab from "./tabs/CadenciaTab.jsx";
 import DocumentacionTab from "./tabs/DocumentacionTab.jsx";
 import ElegibilidadTab from "./tabs/ElegibilidadTab.jsx";
 import GeneralTab from "./tabs/GeneralTab.jsx";
@@ -33,6 +35,7 @@ import WorkflowTab from "./tabs/WorkflowTab.jsx";
 const TABS = [
   { id: "general", label: "General" },
   { id: "elegibilidad", label: "Elegibilidad" },
+  { id: "cadencia", label: "Cadencia" },
   { id: "plazos", label: "Plazos" },
   { id: "workflow", label: "Workflow" },
   { id: "documentacion", label: "Documentación" },
@@ -65,6 +68,7 @@ export default function ArticuloFormConfig() {
 
   const { catalogos, recargarCatalogos } = useArticuloGeneralCatalogos();
   const elegibilidadCatalogos = useArticuloElegibilidadCatalogos();
+  const cadenciaCatalogos = useArticuloCadenciaCatalogos();
   const plazosCatalogos = useArticuloPlazosCatalogos();
   const workflowCatalogos = useArticuloWorkflowCatalogos();
 
@@ -187,6 +191,14 @@ export default function ArticuloFormConfig() {
         catalogosElegibilidad={elegibilidadCatalogos.catalogos}
         onRecargarCatalogos={elegibilidadCatalogos.recargarCatalogos}
       />
+    ) : tabId === "cadencia" ? (
+      <CadenciaTab
+        data={data}
+        update={update}
+        errors={erroresBorrador}
+        catalogosCadencia={cadenciaCatalogos.catalogos}
+        onRecargarCatalogos={cadenciaCatalogos.recargarCatalogos}
+      />
     ) : tabId === "plazos" ? (
       <PlazosTab
         data={data}
@@ -204,7 +216,13 @@ export default function ArticuloFormConfig() {
         onRecargarCatalogos={workflowCatalogos.recargarCatalogos}
       />
     ) : (
-      <DocumentacionTab data={data} update={update} errors={erroresBorrador} />
+      <DocumentacionTab
+        data={data}
+        update={update}
+        errors={erroresBorrador}
+        catalogosPlazos={plazosCatalogos.catalogos}
+        catalogosElegibilidad={elegibilidadCatalogos.catalogos}
+      />
     );
 
   return (

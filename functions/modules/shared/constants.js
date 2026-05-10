@@ -71,6 +71,8 @@ const CFG_COLECCIONES_RRHH = new Set([
   /** Configuración de artículos (licencias) — listados en formulario RRHH. */
   "cfg_tipo_articulo",
   "cfg_unidad_medida_articulo",
+  /** Normativa principal citada en `cfg_articulos.norma_principal_tipo_id` (solo clasificación de fuente). */
+  "cfg_tipo_norma_principal_articulo",
   "cfg_origen_alta_solicitud",
   "cfg_regla_split_remanente",
   "cfg_prioridad_normativa",
@@ -78,6 +80,10 @@ const CFG_COLECCIONES_RRHH = new Set([
   "cfg_momento_entrega_documentacion",
   "cfg_tipo_computo_plazo",
   "cfg_accion_vencimiento",
+  "cfg_calendario_feriados_institucional",
+  "cfg_situacion_revista",
+  "cfg_unidad_intervalo_tiempo",
+  "cfg_paso_workflow_articulo",
   "usuarios_cuenta",
   /** Lecturas RRHH · seguimiento enrolamiento y perfil laboral (HLc). */
   COL_PERSONAS,

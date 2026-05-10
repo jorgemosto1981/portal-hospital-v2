@@ -1,3 +1,8 @@
+import ArticulosIncompatiblesSection from "./ArticulosIncompatiblesSection.jsx";
+import ArticulosInterrupcionSection from "./ArticulosInterrupcionSection.jsx";
+import OrderedPasosWorkflow from "./OrderedPasosWorkflow.jsx";
+import ContextNote from "../ContextNote.jsx";
+
 /**
  * Workflow y políticas de solicitud (`cfg_articulos`).
  */
@@ -78,14 +83,6 @@ function ToggleField({ checked, onChange, title, description }) {
   );
 }
 
-function ContextNote({ children }) {
-  return (
-    <p className="mt-1 rounded-lg border border-blue-100 bg-blue-50/70 px-2 py-1 text-xs text-blue-900">
-      <strong>Efecto:</strong> {children}
-    </p>
-  );
-}
-
 function ToggleFieldWithState({ checked, onChange, title, description, inactive = false }) {
   return (
     <div className={`${inactive ? "opacity-60" : ""}`}>
@@ -149,6 +146,8 @@ export default function WorkflowTab({
     CFG_PS_PRIORIDAD_NORMATIVA: "Resuelve conflictos por prioridad normativa configurada.",
     CFG_PS_DERIVAR_RRHH: "Escala el conflicto a resolución manual de RRHH.",
     CFG_PS_PERMITIR_CONVIVENCIA: "Permite convivir con trazabilidad y registro de excepción.",
+    CFG_PS_INTERRUPCION_LISTA_ARTICULO:
+      "Ante conflicto, usa la lista de artículos permitidos para interrumpir/prevalecer (campo dedicado).",
   }[politicaSuperposicion];
   const prioridadNormativaContext = {
     CFG_PN_DECRETO_PREVALECE: "Ante conflicto, prevalece el marco normativo principal.",
@@ -295,6 +294,37 @@ export default function WorkflowTab({
       </section>
 
       <section className="space-y-3">
+        <h3 className="text-base font-semibold text-slate-900">Pasos de workflow (orden)</h3>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
+          <OrderedPasosWorkflow
+            pasoIds={data.paso_workflow_articulo_ids}
+            catalogoPaso={catalogosWorkflow.pasoWorkflow}
+            onChange={(next) => update.field("paso_workflow_articulo_ids", next)}
+          />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <ToggleField
+              checked={data.requiere_dictamen_medicina_laboral}
+              onChange={(v) =>
+                update.field("requiere_dictamen_medicina_laboral", v ? true : undefined)
+              }
+              title="Requiere dictamen de medicina laboral"
+              description="Paso ML explícito (distinto de auditoría médica del bloque remanente)."
+            />
+            <ToggleField
+              checked={data.requiere_asesoria_letrada}
+              onChange={(v) => update.field("requiere_asesoria_letrada", v ? true : undefined)}
+              title="Requiere asesoría letrada"
+              description="Incluye revisión jurídica institucional cuando corresponda."
+            />
+          </div>
+          <ContextNote>
+            Los pasos catalogados complementan los toggles existentes; el ticket usará esta orden cuando el
+            módulo de solicitudes esté acoplado.
+          </ContextNote>
+        </div>
+      </section>
+
+      <section className="space-y-3">
         <h3 className="text-base font-semibold text-slate-900">Conflictos e impacto</h3>
         <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
           <p className="mb-3 text-xs text-slate-500">
@@ -348,6 +378,30 @@ export default function WorkflowTab({
         ) : null}
       </section>
 
+      <ArticulosInterrupcionSection
+        data={data}
+        update={update}
+        fieldError={
+          Array.isArray(fe.articulos_interrupcion_permitida_ids)
+            ? fe.articulos_interrupcion_permitida_ids.filter(Boolean).join(" · ")
+            : typeof fe.articulos_interrupcion_permitida_ids?.[0] === "string"
+              ? fe.articulos_interrupcion_permitida_ids[0]
+              : undefined
+        }
+      />
+
+      <ArticulosIncompatiblesSection
+        data={data}
+        update={update}
+        fieldError={
+          Array.isArray(fe.articulos_incompatibles_ids)
+            ? fe.articulos_incompatibles_ids.filter(Boolean).join(" · ")
+            : typeof fe.articulos_incompatibles_ids?.[0] === "string"
+              ? fe.articulos_incompatibles_ids[0]
+              : undefined
+        }
+      />
+
       <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
         <h3 className="text-sm font-semibold text-emerald-900">Resumen final de impacto (Workflow)</h3>
         <ul className="mt-2 space-y-1 text-sm text-emerald-900">
@@ -380,6 +434,34 @@ export default function WorkflowTab({
           <li>
             Impacto operativo: reemplazo <strong>{data.admite_reemplazo ? "sí" : "no"}</strong> · evento a
             contrataciones <strong>{data.dispara_evento_contrataciones ? "sí" : "no"}</strong>.
+          </li>
+          <li>
+            Pasos ordenados en configuración:{" "}
+            <strong>
+              {Array.isArray(data.paso_workflow_articulo_ids)
+                ? data.paso_workflow_articulo_ids.length
+                : 0}
+            </strong>
+            · ML laboral <strong>{data.requiere_dictamen_medicina_laboral ? "sí" : "no"}</strong> · asesoría
+            letrada <strong>{data.requiere_asesoria_letrada ? "sí" : "no"}</strong>.
+          </li>
+          <li>
+            Artículos para interrupción explícita:{" "}
+            <strong>
+              {Array.isArray(data.articulos_interrupcion_permitida_ids)
+                ? data.articulos_interrupcion_permitida_ids.length
+                : 0}
+            </strong>
+            .
+          </li>
+          <li>
+            Artículos incompatibles declarados:{" "}
+            <strong>
+              {Array.isArray(data.articulos_incompatibles_ids)
+                ? data.articulos_incompatibles_ids.length
+                : 0}
+            </strong>
+            .
           </li>
         </ul>
       </section>

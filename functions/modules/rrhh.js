@@ -13,7 +13,8 @@ const {
   COL_USUARIOS_CUENTA,
   ESTADO_PENDIENTE_ONBOARDING,
 } = require("./shared/constants");
-const { assertRrhh, normalizeDni } = require("./shared/helpers");
+const { assertRrhh, normalizeDni, tokenHasRrhhAccess } = require("./shared/helpers");
+const { validarReglasArticuloRuntime } = require("./shared/articuloRuntimeValidation");
 const { calcularAntiguedad } = require("./shared/antiguedadCalculator");
 const { buildEventoV21, buildPersonaLabel, persistEventoV21 } = require("./shared/eventosV2");
 
@@ -649,6 +650,75 @@ const rrhhGuardarAntiguedadExternaPersona = onCall(async (request) => {
   };
 });
 
+/**
+ * Valida reglas de cfg_articulos contra persona + HLC (+ solicitudes en contexto opcional).
+ * RRHH: cualquier persona_id. Agente: solo la propia (`persona_id` del token).
+ */
+const validarReglasArticuloV2 = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Se requiere sesión.");
+  }
+  const d = request.data && typeof request.data === "object" ? request.data : {};
+  const personaId = typeof d.persona_id === "string" ? d.persona_id.trim() : "";
+  const articuloId = typeof d.articulo_id === "string" ? d.articulo_id.trim() : "";
+
+  if (!personaId || !/^per_/i.test(personaId)) {
+    throw new HttpsError("invalid-argument", "persona_id inválido.");
+  }
+  if (!articuloId || !/^art_/i.test(articuloId)) {
+    throw new HttpsError("invalid-argument", "articulo_id inválido.");
+  }
+
+  const tokenPid =
+    request.auth.token && typeof request.auth.token.persona_id === "string"
+      ? request.auth.token.persona_id.trim()
+      : "";
+  if (!tokenHasRrhhAccess(request.auth.token)) {
+    if (!tokenPid || tokenPid !== personaId) {
+      throw new HttpsError(
+        "permission-denied",
+        "Solo podés ejecutar la validación para tu persona_id.",
+      );
+    }
+  }
+
+  const solicitudesContexto = Array.isArray(d.solicitudes_contexto) ? d.solicitudes_contexto : [];
+
+  const articuloRef = db.collection("cfg_articulos").doc(articuloId);
+  const personaRef = db.collection(COL_PERSONAS).doc(personaId);
+  const [artSnap, personaSnap, hlcSnap] = await Promise.all([
+    articuloRef.get(),
+    personaRef.get(),
+    db.collection("historial_laboral_cargos").where("persona_id", "==", personaId).get(),
+  ]);
+
+  if (!artSnap.exists) {
+    throw new HttpsError("not-found", "Artículo no encontrado.");
+  }
+  if (!personaSnap.exists) {
+    throw new HttpsError("not-found", "Persona no encontrada.");
+  }
+
+  const articulo = artSnap.data() || {};
+  const persona = personaSnap.data() || {};
+  const hlcRows = hlcSnap.docs.map((doc) => ({ id: doc.id, ...(doc.data() || {}) }));
+
+  const issues = validarReglasArticuloRuntime({
+    articulo,
+    persona,
+    hlcRows,
+    solicitudesContexto,
+  });
+
+  const bloqueos = issues.filter((i) => i.severidad !== "informacion");
+  return {
+    ok: bloqueos.length === 0,
+    articulo_id: articuloId,
+    persona_id: personaId,
+    issues,
+  };
+});
+
 const rrhhEliminarAntiguedadExternaPersona = onCall(async (request) => {
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
   const d = request.data && typeof request.data === "object" ? request.data : {};
@@ -689,5 +759,6 @@ module.exports = {
   rrhhCalcularAntiguedadPersona,
   rrhhGuardarAntiguedadExternaPersona,
   rrhhEliminarAntiguedadExternaPersona,
+  validarReglasArticuloV2,
 };
 

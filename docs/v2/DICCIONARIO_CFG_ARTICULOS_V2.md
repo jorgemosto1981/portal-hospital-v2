@@ -22,6 +22,9 @@
 | `cfg_tev_art_` | Filas nuevas de `cfg_tipo_evento` **exclusivas** del dominio artículos (misma colección global; ids reservados por prefijo) |
 | `cfg_cfi_` | `cfg_calendario_feriados_institucional` |
 | `cfg_tcp_` | `cfg_tipo_computo_plazo` |
+| `cfg_uit_` | `cfg_unidad_intervalo_tiempo` — horas/días/meses/años para cadencia y preaviso |
+| `CFG_SREV_` | `cfg_situacion_revista` — planta / temporal / suplencia (elegibilidad ampliada) |
+| `CFG_TNPA_` | `cfg_tipo_norma_principal_articulo` — tipo de fuente normativa citada en `norma_principal_tipo_id` |
 
 Referencias en documentos de negocio usan sufijo **`*_id`** (singular) o **`*_ids`** (listas).
 
@@ -33,6 +36,7 @@ Referencias en documentos de negocio usan sufijo **`*_id`** (singular) o **`*_id
 |-----------|-----|
 | `cfg_tipo_articulo` | Clase / naturaleza del artículo |
 | `cfg_unidad_medida_articulo` | Días, horas, jornadas, etc. |
+| `cfg_tipo_norma_principal_articulo` | Clasificación bibliográfica de la fuente normativa citada (`norma_principal_tipo_id`); **no** sustituye `cfg_tipo_acto_designacion` (laboral / designación) |
 | `cfg_estado_solicitud_articulo` | Estados del trámite |
 | `cfg_paso_workflow_articulo` | Pasos y responsabilidades |
 | `cfg_accion_vencimiento` | Qué hacer ante SLA vencido (también puede referenciarse en plazos documentales si política no default) |
@@ -45,6 +49,8 @@ Referencias en documentos de negocio usan sufijo **`*_id`** (singular) o **`*_id
 | `cfg_motivo_rechazo_solicitud` | Motivos tipificados |
 | `cfg_tipo_computo_plazo` | Cómputo de plazo documental (corrido, hábil compuesto, extensiones futuras por filas) |
 | `cfg_calendario_feriados_institucional` | Feriados y asuetos con alcance por efector |
+| `cfg_situacion_revista` | Situación de revista / vínculo para filtros ampliados (`reglas_elegibilidad_ampliada`) |
+| `cfg_unidad_intervalo_tiempo` | Unidad temporal para cadencia, preaviso y límites por periodo (`reglas_cadencia`) |
 
 ---
 
@@ -52,13 +58,17 @@ Referencias en documentos de negocio usan sufijo **`*_id`** (singular) o **`*_id
 
 Incluye (lista no exhaustiva para implementación; definitivos en schema y RFC):
 
-- Identidad: **`variantes_sarh[]` (obligatorio, mínimo 1 elemento; no hay `codigo_sarh` en raíz)**, `norma_principal_tipo_id`, `norma_principal_referencia`, `inciso_normativo`, `titulo`, `descripcion_operativa`
+- Identidad: **`variantes_sarh[]` (obligatorio, mínimo 1 elemento; no hay `codigo_sarh` en raíz)**, `norma_principal_tipo_id` → **`cfg_tipo_norma_principal_articulo`** (MVP: solo tipología de fuente; detalle en referencia/inciso), `norma_principal_referencia`, `inciso_normativo`, `titulo`, `descripcion_operativa`
 - Clasificación: `tipo_articulo_id`, `unidad_medida_id`
 - Vigencia: `activo`, `vigente_desde`, `vigente_hasta`
 - Alta y autorización: `permite_alta_iniciada_por_jefe_grupo`, `requiere_autorizacion_jefe`, `origen_alta_id_default`
 - Split: `permite_aprobacion_parcial`, `regla_split_remanente_id`, `permite_remanente_sin_articulo`, `permite_nueva_solicitud_remanente`, `requiere_decision_rrhh_para_remanente`, `requiere_auditoria_medica`, …
 - Documentación: `documentacion_diferida_habilitada`, `momento_entrega_documentacion_id`, `plazo_documental_post_inicio_dias`, `plazo_documental_tipo_dias_id` → `cfg_tcp_*`, `accion_vencimiento_documental_id`
-- Impacto y conflictos: `admite_reemplazo`, `dispara_evento_contrataciones`, `prioridad_normativa_id`, `politica_superposicion_id`, `articulos_incompatibles_ids`, `filtros_elegibilidad`, `metadata`
+- Impacto y conflictos: `admite_reemplazo`, `dispara_evento_contrataciones`, `prioridad_normativa_id`, `politica_superposicion_id`, `articulos_incompatibles_ids`, `articulos_interrupcion_permitida_ids`, `filtros_elegibilidad`, `metadata`
+- Elegibilidad ampliada (RFC 1919): objeto opcional `reglas_elegibilidad_ampliada` (`antiguedad_minima_meses`, `situacion_revista_ids`, `requiere_junta_medica_previa`)
+- Cadencia: objeto opcional `reglas_cadencia` (intervalos, preaviso, duración mínima, límites por periodo con referencias `cfg_unidad_intervalo_tiempo`)
+- Documentación explícita: `documentacion_certificado_obligatorio`, `plazo_documental_post_inicio_horas` (convive con plazo en días)
+- Workflow por pasos: `paso_workflow_articulo_ids` → `cfg_paso_workflow_articulo`; `requiere_asesoria_letrada`, `requiere_dictamen_medicina_laboral`
 
 **`variantes_sarh[]`:** obligatorio; arreglo de uno o más objetos `{ codigo_sarh, etiqueta_ui, afecta_sueldo_porcentaje, activo }`. Un solo código SARH = array de longitud 1. **Al menos una variante con `activo: true`** para publicar; si todas están inactivas → error de datos / artículo no seleccionable (validación Zod u equivalente).
 

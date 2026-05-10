@@ -6,8 +6,8 @@ import { mapCatalogoRowToOption } from "../../../utils/articulos/mapCatalogoRowT
 const SPECS = [
   { key: "tipoArticulo", collectionName: "cfg_tipo_articulo" },
   { key: "unidadMedida", collectionName: "cfg_unidad_medida_articulo" },
-  /** `norma_principal_tipo_id` en schema; catálogo operativo vía tipo de acto designación hasta colección dedicada. */
-  { key: "normaPrincipalTipo", collectionName: "cfg_tipo_acto_designacion" },
+  /** `norma_principal_tipo_id` — clasificación bibliográfica de la fuente normativa citada. */
+  { key: "normaPrincipalTipo", collectionName: "cfg_tipo_norma_principal_articulo" },
 ];
 
 function initialCatalogState() {

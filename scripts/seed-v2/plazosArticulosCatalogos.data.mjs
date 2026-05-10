@@ -131,5 +131,15 @@ export function cfgAccionVencimiento() {
           "Usar solo si el hospital define política explícita; no es default normativo del MVP.",
       },
     ),
+    cfgRow(
+      "CFG_AV_REGISTRO_FALTA_DOCUMENTACION",
+      "REGISTRO_FALTA_DOCUMENTACION",
+      "Registro como falta por documentación incumplida",
+      45,
+      {
+        descripcion_ui:
+          "Impacto disciplinario o registro según política HR; no sustituye revisión RRHH cuando aplique.",
+      },
+    ),
   ];
 }

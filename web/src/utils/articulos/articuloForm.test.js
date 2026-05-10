@@ -175,6 +175,21 @@ describe('createArticuloFormUpdate', () => {
     expect(state.variantes_sarh[0].codigo_sarh).toBe('Nuevo');
   });
 
+  it('varianteAgregar añade fila y varianteEliminar respeta mínimo 1', () => {
+    let state = createInitialArticuloFormState();
+    const setData = (fn) => {
+      state = fn(state);
+    };
+    const update = createArticuloFormUpdate(setData);
+    expect(state.variantes_sarh.length).toBe(1);
+    update.varianteAgregar();
+    expect(state.variantes_sarh.length).toBe(2);
+    update.varianteEliminar(0);
+    expect(state.variantes_sarh.length).toBe(1);
+    update.varianteEliminar(0);
+    expect(state.variantes_sarh.length).toBe(1);
+  });
+
   it('fusiona section filtros_elegibilidad', () => {
     let state = createInitialArticuloFormState();
     const setData = (fn) => {

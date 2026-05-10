@@ -1,3 +1,5 @@
+import ContextNote from "../ContextNote.jsx";
+
 /**
  * Plazos y documentación diferida: campos de `cfg_articulos` alineados al schema.
  */
@@ -46,14 +48,6 @@ function PlazoSelect({ id, label, hint, catalogo, value, onChange, emptyLabel, f
   );
 }
 
-function ContextNote({ children }) {
-  return (
-    <p className="mt-1 rounded-lg border border-blue-100 bg-blue-50/70 px-2 py-1 text-xs text-blue-900">
-      <strong>Efecto:</strong> {children}
-    </p>
-  );
-}
-
 export default function PlazosTab({ data, update, errors, catalogosPlazos, onRecargarCatalogos }) {
   const fe = errors?.fieldErrors || {};
 
@@ -75,6 +69,10 @@ export default function PlazosTab({ data, update, errors, catalogosPlazos, onRec
   const diasRaw = data.plazo_documental_post_inicio_dias;
   const diasStr =
     typeof diasRaw === "number" && Number.isFinite(diasRaw) ? String(diasRaw) : "";
+  const horasRaw = data.plazo_documental_post_inicio_horas;
+  const horasStr =
+    typeof horasRaw === "number" && Number.isFinite(horasRaw) ? String(horasRaw) : "";
+  const certOblig = data.documentacion_certificado_obligatorio === true;
 
   const setOptionalId = (key, raw) => {
     const v = String(raw || "").trim();
@@ -98,6 +96,23 @@ export default function PlazosTab({ data, update, errors, catalogosPlazos, onRec
       >
         Recargar catálogos
       </button>
+
+      <label className="flex min-h-11 cursor-pointer touch-manipulation items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm">
+        <input
+          type="checkbox"
+          className="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+          checked={certOblig}
+          onChange={(e) =>
+            update.field("documentacion_certificado_obligatorio", e.target.checked ? true : undefined)
+          }
+        />
+        <span>
+          <span className="font-medium">Certificado / documentación obligatoria</span>
+          <span className="mt-0.5 block text-xs font-normal text-slate-500">
+            Exige explícitamente adjunto o certificado según norma del artículo.
+          </span>
+        </span>
+      </label>
 
       <label className="flex min-h-11 cursor-pointer touch-manipulation items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm">
         <input
@@ -183,6 +198,43 @@ export default function PlazosTab({ data, update, errors, catalogosPlazos, onRec
           ) : null}
         </div>
 
+        <div className="space-y-1">
+          <label
+            htmlFor="plazo_documental_post_inicio_horas"
+            className="block text-sm font-medium text-slate-700"
+          >
+            Plazo documental (horas después del inicio)
+          </label>
+          <p className="text-xs text-slate-500">
+            Opcional. Si es mayor a 0, el motor puede priorizar horas frente al plazo en días (RFC 1919).
+          </p>
+          <input
+            id="plazo_documental_post_inicio_horas"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="off"
+            className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 shadow-sm outline-none ring-blue-500 focus-visible:ring-2 touch-manipulation"
+            placeholder="Ej. 48"
+            value={horasStr}
+            onChange={(e) => {
+              const t = e.target.value.trim();
+              if (t === "") {
+                update.field("plazo_documental_post_inicio_horas", undefined);
+                return;
+              }
+              const n = parseInt(t, 10);
+              if (!Number.isFinite(n) || n < 0) return;
+              update.field("plazo_documental_post_inicio_horas", n);
+            }}
+          />
+          {fe.plazo_documental_post_inicio_horas?.[0] ? (
+            <span className="block text-sm text-red-600" role="alert">
+              {fe.plazo_documental_post_inicio_horas[0]}
+            </span>
+          ) : null}
+        </div>
+
         <PlazoSelect
           id="accion_vencimiento_documental_id"
           label="Acción si vence el plazo documental"
@@ -204,6 +256,9 @@ export default function PlazosTab({ data, update, errors, catalogosPlazos, onRec
         <h3 className="text-sm font-semibold text-emerald-900">Resumen final de impacto (Plazos)</h3>
         <ul className="mt-2 space-y-1 text-sm text-emerald-900">
           <li>
+            Certificado obligatorio: <strong>{certOblig ? "sí" : "no"}</strong>.
+          </li>
+          <li>
             Documentación diferida: <strong>{docDiff ? "habilitada" : "deshabilitada"}</strong>.
           </li>
           <li>
@@ -211,7 +266,8 @@ export default function PlazosTab({ data, update, errors, catalogosPlazos, onRec
           </li>
           <li>
             Cómputo del plazo: <strong>{tcpLabel || "sin definir"}</strong> · Días post-inicio:{" "}
-            <strong>{diasStr || "sin definir"}</strong>.
+            <strong>{diasStr || "sin definir"}</strong> · Horas post-inicio:{" "}
+            <strong>{horasStr || "sin definir"}</strong>.
           </li>
           <li>
             Acción al vencer: <strong>{accionLabel || "sin definir"}</strong>.

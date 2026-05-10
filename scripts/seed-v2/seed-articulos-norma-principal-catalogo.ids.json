@@ -1,0 +1,16 @@
+{
+  "projectId": "portal-hospital-v2",
+  "generado": "2026-05-10T19:37:20.813Z",
+  "colecciones": [
+    "cfg_tipo_norma_principal_articulo"
+  ],
+  "cfg_tipo_norma_principal_articulo": [
+    "CFG_TNPA_LEY",
+    "CFG_TNPA_DECRETO",
+    "CFG_TNPA_RESOLUCION",
+    "CFG_TNPA_DISPOSICION",
+    "CFG_TNPA_CIRCULAR",
+    "CFG_TNPA_CONVENIO",
+    "CFG_TNPA_OTRO"
+  ]
+}

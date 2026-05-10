@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+import ContextNote from "../components/configuracion/ContextNote.jsx";
 import { listarArticulosCfgResumen } from "../services/articulosCfgService.js";
 
 function formatoFecha(v) {
@@ -21,6 +22,13 @@ export default function ArticulosCfgLista() {
   const [filas, setFilas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroActivo, setFiltroActivo] = useState(
+    /** @type {'todos' | 'activos' | 'inactivos'} */ ("todos"),
+  );
+  const [orden, setOrden] = useState(
+    /** @type {'actualizado_desc' | 'titulo_asc' | 'titulo_desc'} */ ("actualizado_desc"),
+  );
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -40,9 +48,48 @@ export default function ArticulosCfgLista() {
     void cargar();
   }, [cargar]);
 
+  const filasVisibles = useMemo(() => {
+    let x = filas;
+    if (filtroActivo === "activos") x = x.filter((r) => r.activo);
+    if (filtroActivo === "inactivos") x = x.filter((r) => !r.activo);
+    const q = busqueda.trim().toLowerCase();
+    if (q) {
+      x = x.filter(
+        (r) =>
+          r.titulo.toLowerCase().includes(q) || String(r.id).toLowerCase().includes(q),
+      );
+    }
+    const sorted = [...x];
+    if (orden === "titulo_asc") {
+      sorted.sort((a, b) =>
+        (a.titulo || "").localeCompare(b.titulo || "", "es", { sensitivity: "base" }),
+      );
+    } else if (orden === "titulo_desc") {
+      sorted.sort((a, b) =>
+        (b.titulo || "").localeCompare(a.titulo || "", "es", { sensitivity: "base" }),
+      );
+    } else {
+      sorted.sort((a, b) => {
+        const ma =
+          a.actualizado_en && typeof a.actualizado_en.toMillis === "function"
+            ? a.actualizado_en.toMillis()
+            : 0;
+        const mb =
+          b.actualizado_en && typeof b.actualizado_en.toMillis === "function"
+            ? b.actualizado_en.toMillis()
+            : 0;
+        return mb - ma;
+      });
+    }
+    return sorted;
+  }, [filas, filtroActivo, busqueda, orden]);
+
+  const hayDatos = filas.length > 0;
+  const listaVaciaPorFiltro = hayDatos && filasVisibles.length === 0;
+
   return (
     <div className="min-h-[calc(100dvh-6rem)] bg-slate-50 px-3 py-6 md:px-6">
-      <div className="mx-auto max-w-3xl rounded-3xl border border-slate-100 bg-white p-4 shadow-xl md:p-8">
+      <div className="mx-auto max-w-5xl rounded-3xl border border-slate-100 bg-white p-4 shadow-xl md:p-8">
         <header className="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-slate-900">Artículos</h1>
@@ -69,6 +116,56 @@ export default function ArticulosCfgLista() {
           </div>
         </header>
 
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="block sm:col-span-2 lg:col-span-2">
+            <span className="mb-1 block text-sm font-medium text-slate-700">Buscar</span>
+            <input
+              type="search"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Título o id del documento"
+              autoComplete="off"
+              className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 shadow-sm outline-none ring-blue-500 focus-visible:ring-2 touch-manipulation"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700">Estado</span>
+            <select
+              value={filtroActivo}
+              onChange={(e) =>
+                setFiltroActivo(/** @type {'todos' | 'activos' | 'inactivos'} */ (e.target.value))
+              }
+              className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 shadow-sm outline-none ring-blue-500 focus-visible:ring-2 touch-manipulation"
+            >
+              <option value="todos">Todos</option>
+              <option value="activos">Solo activos</option>
+              <option value="inactivos">Solo inactivos</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700">Orden</span>
+            <select
+              value={orden}
+              onChange={(e) =>
+                setOrden(
+                  /** @type {'actualizado_desc' | 'titulo_asc' | 'titulo_desc'} */ (e.target.value),
+                )
+              }
+              className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 shadow-sm outline-none ring-blue-500 focus-visible:ring-2 touch-manipulation"
+            >
+              <option value="actualizado_desc">Última actualización</option>
+              <option value="titulo_asc">Título A → Z</option>
+              <option value="titulo_desc">Título Z → A</option>
+            </select>
+          </label>
+        </div>
+
+        <ContextNote className="mt-4">
+          La búsqueda y el filtro por estado recortan solo esta vista en el navegador; no modifican
+          Firestore. El orden aplica a las filas ya cargadas (actualización según timestamp del documento
+          cuando elegís &quot;Última actualización&quot;).
+        </ContextNote>
+
         {error ? (
           <p className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
             {error}
@@ -92,14 +189,21 @@ export default function ArticulosCfgLista() {
                     Cargando…
                   </td>
                 </tr>
-              ) : filas.length === 0 ? (
+              ) : !hayDatos ? (
                 <tr>
                   <td colSpan={4} className="py-10 text-center text-slate-500">
                     No hay artículos. Creá uno con &quot;Nuevo artículo&quot;.
                   </td>
                 </tr>
+              ) : listaVaciaPorFiltro ? (
+                <tr>
+                  <td colSpan={4} className="py-10 text-center text-slate-600">
+                    Ningún artículo coincide con la búsqueda o el filtro. Probá otras palabras o cambiá el
+                    estado.
+                  </td>
+                </tr>
               ) : (
-                filas.map((r) => (
+                filasVisibles.map((r) => (
                   <tr key={r.id} className="bg-white">
                     <td className="max-w-[200px] py-3 pr-3 md:max-w-md">
                       <p className="font-medium text-slate-900">{r.titulo || "(sin título)"}</p>
@@ -120,7 +224,7 @@ export default function ArticulosCfgLista() {
                     <td className="py-3 text-right">
                       <Link
                         to={`/portal/rrhh/configuracion-articulos/${r.id}`}
-                        className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-medium text-blue-600 hover:bg-blue-50 active:bg-blue-100"
+                        className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-medium text-blue-600 outline-none ring-blue-500 focus-visible:ring-2 active:bg-blue-50"
                       >
                         Editar
                       </Link>
@@ -131,6 +235,12 @@ export default function ArticulosCfgLista() {
             </tbody>
           </table>
         </div>
+
+        {hayDatos && !cargando ? (
+          <p className="mt-4 text-center text-xs text-slate-500">
+            Mostrando <strong>{filasVisibles.length}</strong> de <strong>{filas.length}</strong> artículo(s).
+          </p>
+        ) : null}
       </div>
     </div>
   );

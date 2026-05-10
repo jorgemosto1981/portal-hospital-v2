@@ -22,3 +22,4 @@ export {
 } from './articuloFormValidation.js';
 export { articuloCfgDocToFormState } from './articuloCfgSnapshot.js';
 export { mapCatalogoRowToOption } from './mapCatalogoRowToOption.js';
+export { filtrarIssuesBloqueantes } from './runtimeArticuloChecks.js';

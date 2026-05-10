@@ -1,0 +1,12 @@
+{
+  "projectId": "portal-hospital-v2",
+  "generado": "2026-05-10T14:29:15.024Z",
+  "colecciones": [
+    "cfg_calendario_feriados_institucional"
+  ],
+  "cfg_calendario_feriados_institucional": [
+    "cfg_cfi_01ARZ3NDEKTSV4RRFFQ69G2F0",
+    "cfg_cfi_01BX5ZZKBKACTAV9WEVGEMMVRY",
+    "cfg_cfi_01CY6ZZKBKACTAV9WEVGEMMVRZ"
+  ]
+}

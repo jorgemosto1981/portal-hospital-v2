@@ -3,6 +3,7 @@ import {
   ARTICULO_FORM_FORBIDDEN_FIELD_KEYS,
   ARTICULO_FORM_SECTION_KEY_SET,
 } from './articuloFormKeys.js';
+import { VARIANTE_SARH_FILA_NUEVA } from './articuloFormInitialState.js';
 
 function assertFieldKey(key) {
   if (typeof key !== 'string') {
@@ -36,6 +37,8 @@ function assertSectionKey(key) {
  *   field: (key: string, value: unknown) => void,
  *   section: (key: string, patch: Record<string, unknown>) => void,
  *   variante: (index: number, patch: Record<string, unknown>) => void,
+ *   varianteAgregar: () => void,
+ *   varianteEliminar: (index: number) => void,
  * }}
  */
 export function createArticuloFormUpdate(setData) {
@@ -82,6 +85,30 @@ export function createArticuloFormUpdate(setData) {
             ? actual
             : {};
         variantes[index] = { ...base, ...patch };
+        return { ...prev, variantes_sarh: variantes };
+      });
+    },
+
+    varianteAgregar() {
+      setData((prev) => {
+        const variantes = Array.isArray(prev.variantes_sarh)
+          ? [...prev.variantes_sarh]
+          : [];
+        variantes.push({ ...VARIANTE_SARH_FILA_NUEVA });
+        return { ...prev, variantes_sarh: variantes };
+      });
+    },
+
+    varianteEliminar(index) {
+      if (!Number.isInteger(index) || index < 0) {
+        throw new RangeError('update.varianteEliminar: index inválido');
+      }
+      setData((prev) => {
+        const variantes = Array.isArray(prev.variantes_sarh)
+          ? [...prev.variantes_sarh]
+          : [];
+        if (variantes.length <= 1) return prev;
+        variantes.splice(index, 1);
         return { ...prev, variantes_sarh: variantes };
       });
     },

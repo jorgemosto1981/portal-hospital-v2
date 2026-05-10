@@ -24,6 +24,12 @@ import {
   cfgMomentoEntregaDocumentacion,
   cfgTipoComputoPlazo,
 } from "./plazosArticulosCatalogos.data.mjs";
+import {
+  cfgPasoWorkflowArticulo,
+  cfgSituacionRevista,
+  cfgUnidadIntervaloTiempo,
+} from "./articulos1919Catalogos.data.mjs";
+import { cfgTipoNormaPrincipalArticulo } from "./normaPrincipalArticuloCatalogos.data.mjs";
 import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -619,9 +625,13 @@ async function main() {
   await applyBatch(cfgEfectores(), "cfg_efectores");
   await applyBatch(cfgTipoArticulo(), "cfg_tipo_articulo");
   await applyBatch(cfgUnidadMedidaArticulo(), "cfg_unidad_medida_articulo");
+  await applyBatch(cfgTipoNormaPrincipalArticulo(), "cfg_tipo_norma_principal_articulo");
   await applyBatch(cfgMomentoEntregaDocumentacion(), "cfg_momento_entrega_documentacion");
   await applyBatch(cfgTipoComputoPlazo(), "cfg_tipo_computo_plazo");
   await applyBatch(cfgAccionVencimiento(), "cfg_accion_vencimiento");
+  await applyBatch(cfgSituacionRevista(), "cfg_situacion_revista");
+  await applyBatch(cfgUnidadIntervaloTiempo(), "cfg_unidad_intervalo_tiempo");
+  await applyBatch(cfgPasoWorkflowArticulo(), "cfg_paso_workflow_articulo");
   await applyBatch(gruposDeTrabajoSeed(), "grupos_de_trabajo");
 
   const out = {
@@ -636,9 +646,13 @@ async function main() {
     cfg_estado_civil: cfgEstadoCivil().map((x) => x.id),
     cfg_tipo_articulo: cfgTipoArticulo().map((x) => x.id),
     cfg_unidad_medida_articulo: cfgUnidadMedidaArticulo().map((x) => x.id),
+    cfg_tipo_norma_principal_articulo: cfgTipoNormaPrincipalArticulo().map((x) => x.id),
     cfg_momento_entrega_documentacion: cfgMomentoEntregaDocumentacion().map((x) => x.id),
     cfg_tipo_computo_plazo: cfgTipoComputoPlazo().map((x) => x.id),
     cfg_accion_vencimiento: cfgAccionVencimiento().map((x) => x.id),
+    cfg_situacion_revista: cfgSituacionRevista().map((x) => x.id),
+    cfg_unidad_intervalo_tiempo: cfgUnidadIntervaloTiempo().map((x) => x.id),
+    cfg_paso_workflow_articulo: cfgPasoWorkflowArticulo().map((x) => x.id),
   };
 
   const outPath = join(__dirname, "seed-ids.v2.json");

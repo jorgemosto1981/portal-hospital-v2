@@ -3,36 +3,26 @@ import { useCallback, useEffect, useState } from "react";
 import { listarColeccion } from "../../../services/configuracionCatalogosService.js";
 import { mapCatalogoRowToOption } from "../../../utils/articulos/mapCatalogoRowToOption.js";
 
-/** Orden y colección alineadas a `filtros_elegibilidad` en `articulo.schema.js`. */
-export const ELEGIBILIDAD_CATALOG_SPECS = /** @type {const} */ ([
-  { key: "escalafon", collectionName: "cfg_escalafon" },
-  { key: "agrupamiento", collectionName: "cfg_agrupamiento" },
-  { key: "cargoFuncional", collectionName: "cfg_cargo_funcional" },
-  { key: "tipoVinculo", collectionName: "cfg_tipo_vinculo_laboral" },
-  { key: "efector", collectionName: "cfg_efectores" },
-  { key: "grupoTrabajo", collectionName: "grupos_de_trabajo" },
-  { key: "genero", collectionName: "cfg_sexo_genero" },
-  { key: "situacionRevista", collectionName: "cfg_situacion_revista" },
+const CADENCIA_CATALOG_SPECS = /** @type {const} */ ([
+  { key: "unidadIntervalo", collectionName: "cfg_unidad_intervalo_tiempo" },
 ]);
 
 function initialAll() {
   return Object.fromEntries(
-    ELEGIBILIDAD_CATALOG_SPECS.map((s) => [s.key, { status: "loading", options: [], error: null }]),
+    CADENCIA_CATALOG_SPECS.map((s) => [s.key, { status: "loading", options: [], error: null }]),
   );
 }
 
 /**
- * Catálogos para filtros de elegibilidad (listados RRHH).
- * @returns {{ catalogos: Record<string, { status: string, options: { value: string, label: string }[], error: string | null }>, recargarCatalogos: () => Promise<void> }}
+ * Catálogos para `reglas_cadencia` (unidades de intervalo).
  */
-export function useArticuloElegibilidadCatalogos() {
+export function useArticuloCadenciaCatalogos() {
   const [catalogos, setCatalogos] = useState(initialAll);
 
   const recargar = useCallback(async () => {
     setCatalogos(initialAll());
-
     const settled = await Promise.allSettled(
-      ELEGIBILIDAD_CATALOG_SPECS.map(async (s) => {
+      CADENCIA_CATALOG_SPECS.map(async (s) => {
         const rows = await listarColeccion(s.collectionName);
         const options = (Array.isArray(rows) ? rows : [])
           .map((r) => mapCatalogoRowToOption(r))
@@ -44,7 +34,7 @@ export function useArticuloElegibilidadCatalogos() {
     setCatalogos((prev) => {
       const next = { ...prev };
       settled.forEach((result, i) => {
-        const key = ELEGIBILIDAD_CATALOG_SPECS[i].key;
+        const key = CADENCIA_CATALOG_SPECS[i].key;
         if (result.status === "fulfilled") {
           next[key] = { status: "ok", options: result.value.options, error: null };
         } else {

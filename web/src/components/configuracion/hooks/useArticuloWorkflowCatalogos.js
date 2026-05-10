@@ -9,6 +9,7 @@ export const WORKFLOW_CATALOG_SPECS = /** @type {const} */ ([
   { key: "reglaSplit", collectionName: "cfg_regla_split_remanente" },
   { key: "prioridadNormativa", collectionName: "cfg_prioridad_normativa" },
   { key: "politicaSuperposicion", collectionName: "cfg_politica_superposicion" },
+  { key: "pasoWorkflow", collectionName: "cfg_paso_workflow_articulo" },
 ]);
 
 function initialAll() {
