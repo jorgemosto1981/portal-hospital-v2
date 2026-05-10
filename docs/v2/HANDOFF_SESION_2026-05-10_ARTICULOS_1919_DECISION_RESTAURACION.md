@@ -38,7 +38,7 @@ Para poder comparar, revertir o continuar desde cualquier máquina:
 2. El **mensaje de commit** del checkpoint incluirá referencia a este archivo para ubicar el estado en el historial.
 3. Anotar aquí el **hash del commit** una vez hecho el push (completar manualmente si hace falta):
 
-   - **Commit checkpoint post-handoff:** _(completar tras `git log -1` en la rama)_.
+   - **Commit checkpoint post-handoff:** `a34f8db25ad6bfbc8d644c7d1b9732a9d2d5b806` (rama `feature/articulos-motor-plazos`, push realizado a `origin`).
 
 ---
 
