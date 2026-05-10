@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc, serverTimestamp } from "firebase/firestore";
 
 import { dbV2 } from "./firebase.js";
 import { generarArticuloId } from "../utils/generarId.js";
@@ -42,6 +42,37 @@ export async function obtenerArticuloCfgPorId(articuloId) {
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() };
+}
+
+/**
+ * Lista documentos de `cfg_articulos` (Firestore directo; rules RRHH).
+ * Orden: `actualizado_en` descendente cuando existe Timestamp.
+ * @returns {Promise<Array<{ id: string, titulo: string, activo: boolean, actualizado_en: unknown, creado_en: unknown }>>}
+ */
+export async function listarArticulosCfgResumen() {
+  const snap = await getDocs(collection(dbV2, CFG_ARTICULOS_COLLECTION));
+  const rows = snap.docs.map((d) => {
+    const x = d.data() || {};
+    return {
+      id: d.id,
+      titulo: typeof x.titulo === "string" ? x.titulo : "",
+      activo: x.activo !== false,
+      actualizado_en: x.actualizado_en ?? null,
+      creado_en: x.creado_en ?? null,
+    };
+  });
+  rows.sort((a, b) => {
+    const ma =
+      a.actualizado_en && typeof a.actualizado_en.toMillis === "function"
+        ? a.actualizado_en.toMillis()
+        : 0;
+    const mb =
+      b.actualizado_en && typeof b.actualizado_en.toMillis === "function"
+        ? b.actualizado_en.toMillis()
+        : 0;
+    return mb - ma;
+  });
+  return rows;
 }
 
 /**

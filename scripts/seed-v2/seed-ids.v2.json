@@ -1,6 +1,6 @@
 {
   "projectId": "portal-hospital-v2",
-  "generado": "2026-05-05T21:18:14.016Z",
+  "generado": "2026-05-10T11:33:56.249Z",
   "cfg_estado_cuenta_acceso": [
     "cfg_eca_pend_reg",
     "cfg_eca_onb",
@@ -48,5 +48,18 @@
     "CFG_MEDICO",
     "CFG_VISUALIZADOR"
   ],
-  "cfg_estado_civil": []
+  "cfg_estado_civil": [],
+  "cfg_tipo_articulo": [
+    "CFG_TA_LICENCIA",
+    "CFG_TA_FRANQUICIA",
+    "CFG_TA_PERMISO",
+    "CFG_TA_COMPENSATORIO"
+  ],
+  "cfg_unidad_medida_articulo": [
+    "CFG_UM_DIAS_CORRIDOS",
+    "CFG_UM_DIAS_HABILES",
+    "CFG_UM_HORAS",
+    "CFG_UM_JORNADAS",
+    "CFG_UM_MESES"
+  ]
 }

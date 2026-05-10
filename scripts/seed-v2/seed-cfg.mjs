@@ -19,6 +19,11 @@
 
 import "../load-env-v2.mjs";
 import { assertFirestoreSeedAllowed } from "./guard-no-seed.mjs";
+import {
+  cfgAccionVencimiento,
+  cfgMomentoEntregaDocumentacion,
+  cfgTipoComputoPlazo,
+} from "./plazosArticulosCatalogos.data.mjs";
 import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -521,6 +526,29 @@ const cfgCentroCosto = () => [];
 
 const cfgEfectores = () => [];
 
+/**
+ * Clasificación de artículo (licencias, franquicias, permisos).
+ * @see docs/v2/DICCIONARIO_CFG_ARTICULOS_V2.md (prefijos `cfg_ta_` en doc; ids en mayúsculas vía `normalizeCatalogDocId`)
+ */
+const cfgTipoArticulo = () => [
+  cfgRow("CFG_TA_LICENCIA", "LICENCIA", "Licencia", 10),
+  cfgRow("CFG_TA_FRANQUICIA", "FRANQUICIA", "Franquicia", 20),
+  cfgRow("CFG_TA_PERMISO", "PERMISO", "Permiso", 30),
+  cfgRow("CFG_TA_COMPENSATORIO", "COMPENSATORIO", "Días compensatorios / asueto", 40),
+];
+
+/**
+ * Unidad en que se mide el beneficio (días, horas, jornadas).
+ * @see docs/v2/MATRIZ_ESCENARIOS_ARTICULOS_V2.md
+ */
+const cfgUnidadMedidaArticulo = () => [
+  cfgRow("CFG_UM_DIAS_CORRIDOS", "DIAS_CORRIDOS", "Días corridos", 10),
+  cfgRow("CFG_UM_DIAS_HABILES", "DIAS_HABILES", "Días hábiles", 20),
+  cfgRow("CFG_UM_HORAS", "HORAS", "Horas", 30),
+  cfgRow("CFG_UM_JORNADAS", "JORNADAS", "Jornadas", 40),
+  cfgRow("CFG_UM_MESES", "MESES", "Meses (calendario)", 50),
+];
+
 const gruposDeTrabajoSeed = () => [];
 
 function applyBatch(items, col) {
@@ -589,6 +617,11 @@ async function main() {
   await applyBatch(cfgRegimenHorario(), "cfg_regimen_horario");
   await applyBatch(cfgCentroCosto(), "cfg_centro_costo");
   await applyBatch(cfgEfectores(), "cfg_efectores");
+  await applyBatch(cfgTipoArticulo(), "cfg_tipo_articulo");
+  await applyBatch(cfgUnidadMedidaArticulo(), "cfg_unidad_medida_articulo");
+  await applyBatch(cfgMomentoEntregaDocumentacion(), "cfg_momento_entrega_documentacion");
+  await applyBatch(cfgTipoComputoPlazo(), "cfg_tipo_computo_plazo");
+  await applyBatch(cfgAccionVencimiento(), "cfg_accion_vencimiento");
   await applyBatch(gruposDeTrabajoSeed(), "grupos_de_trabajo");
 
   const out = {
@@ -601,6 +634,11 @@ async function main() {
     cfg_estado_declaracion_ddjj: cfgEstadoDeclaracionDdjj().map((x) => x.id),
     cfg_rol: cfgRol().map((x) => x.id),
     cfg_estado_civil: cfgEstadoCivil().map((x) => x.id),
+    cfg_tipo_articulo: cfgTipoArticulo().map((x) => x.id),
+    cfg_unidad_medida_articulo: cfgUnidadMedidaArticulo().map((x) => x.id),
+    cfg_momento_entrega_documentacion: cfgMomentoEntregaDocumentacion().map((x) => x.id),
+    cfg_tipo_computo_plazo: cfgTipoComputoPlazo().map((x) => x.id),
+    cfg_accion_vencimiento: cfgAccionVencimiento().map((x) => x.id),
   };
 
   const outPath = join(__dirname, "seed-ids.v2.json");

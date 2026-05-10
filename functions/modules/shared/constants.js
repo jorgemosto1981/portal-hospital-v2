@@ -71,6 +71,13 @@ const CFG_COLECCIONES_RRHH = new Set([
   /** Configuración de artículos (licencias) — listados en formulario RRHH. */
   "cfg_tipo_articulo",
   "cfg_unidad_medida_articulo",
+  "cfg_origen_alta_solicitud",
+  "cfg_regla_split_remanente",
+  "cfg_prioridad_normativa",
+  "cfg_politica_superposicion",
+  "cfg_momento_entrega_documentacion",
+  "cfg_tipo_computo_plazo",
+  "cfg_accion_vencimiento",
   "usuarios_cuenta",
   /** Lecturas RRHH · seguimiento enrolamiento y perfil laboral (HLc). */
   COL_PERSONAS,

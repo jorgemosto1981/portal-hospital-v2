@@ -1,7 +1,7 @@
 /**
  * Catálogos editables desde Configuración maestra (RRHH).
  * Para añadir una colección: agregar el ítem aquí y duplicar el `collectionName` en
- * `CFG_COLECCIONES_RRHH` de `functions/index.js` (lista blanca servidor).
+ * `CFG_COLECCIONES_RRHH` en `functions/modules/shared/constants.js` (lista blanca servidor).
  */
 
 /** @typedef {{ key: string; etiqueta: string; collectionName: string; idPrefix: string }} ItemCatalogoCfg */
@@ -174,6 +174,66 @@ export const SECCIONES_CATALOGO_RRHH = [
         etiqueta: "Centro de costo",
         collectionName: "cfg_centro_costo",
         idPrefix: "CFG_CEN_COST_",
+      },
+    ],
+  },
+  {
+    id: "articulos",
+    titulo: "Artículos (licencias)",
+    items: [
+      {
+        key: "tipo_articulo",
+        etiqueta: "Tipo de artículo",
+        collectionName: "cfg_tipo_articulo",
+        idPrefix: "CFG_TA_",
+      },
+      {
+        key: "unidad_medida_articulo",
+        etiqueta: "Unidad de medida",
+        collectionName: "cfg_unidad_medida_articulo",
+        idPrefix: "CFG_UM_",
+      },
+      {
+        key: "origen_alta_solicitud",
+        etiqueta: "Origen de alta (solicitud)",
+        collectionName: "cfg_origen_alta_solicitud",
+        idPrefix: "CFG_OAS_",
+      },
+      {
+        key: "regla_split_remanente",
+        etiqueta: "Regla split remanente",
+        collectionName: "cfg_regla_split_remanente",
+        idPrefix: "CFG_RSR_",
+      },
+      {
+        key: "prioridad_normativa",
+        etiqueta: "Prioridad normativa",
+        collectionName: "cfg_prioridad_normativa",
+        idPrefix: "CFG_PN_",
+      },
+      {
+        key: "politica_superposicion",
+        etiqueta: "Política de superposición",
+        collectionName: "cfg_politica_superposicion",
+        idPrefix: "CFG_PS_",
+      },
+      {
+        key: "momento_entrega_documentacion",
+        etiqueta: "Momento de entrega de documentación",
+        collectionName: "cfg_momento_entrega_documentacion",
+        idPrefix: "CFG_MED_",
+      },
+      {
+        key: "tipo_computo_plazo",
+        etiqueta: "Tipo de cómputo de plazo (documental)",
+        collectionName: "cfg_tipo_computo_plazo",
+        idPrefix: "CFG_TCP_",
+      },
+      {
+        key: "accion_vencimiento",
+        etiqueta: "Acción ante vencimiento (SLA / documental)",
+        collectionName: "cfg_accion_vencimiento",
+        idPrefix: "CFG_AV_",
       },
     ],
   },

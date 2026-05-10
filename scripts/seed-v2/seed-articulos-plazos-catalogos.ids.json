@@ -1,0 +1,25 @@
+{
+  "projectId": "portal-hospital-v2",
+  "generado": "2026-05-10T12:06:57.714Z",
+  "colecciones": [
+    "cfg_momento_entrega_documentacion",
+    "cfg_tipo_computo_plazo",
+    "cfg_accion_vencimiento"
+  ],
+  "cfg_momento_entrega_documentacion": [
+    "CFG_MED_ANTES",
+    "CFG_MED_DESPUES_ULTIMO_DIA",
+    "CFG_MED_MIXTO"
+  ],
+  "cfg_tipo_computo_plazo": [
+    "cfg_tcp_01ARZ3NDEKTSV4RRFFQ69G2F0",
+    "cfg_tcp_01BX5ZZKBKACTAV9WEVGEMMVRY",
+    "cfg_tcp_01CY6ZZKBKACTAV9WEVGEMMVRZ"
+  ],
+  "cfg_accion_vencimiento": [
+    "CFG_AV_ALERTA_EVENTO_RRHH",
+    "CFG_AV_ESCALAMIENTO",
+    "CFG_AV_BLOQUEO_HASTA_REGULARIZAR",
+    "CFG_AV_RECHAZO_POLITICA_EXPLICITA"
+  ]
+}

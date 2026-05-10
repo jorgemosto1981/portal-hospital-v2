@@ -64,6 +64,14 @@ function CatalogSelect({
   );
 }
 
+function ContextNote({ children }) {
+  return (
+    <p className="mt-1 rounded-lg border border-blue-100 bg-blue-50/70 px-2 py-1 text-xs text-blue-900">
+      <strong>Efecto:</strong> {children}
+    </p>
+  );
+}
+
 export default function GeneralTab({
   data,
   update,
@@ -86,6 +94,10 @@ export default function GeneralTab({
   const umId = typeof data.unidad_medida_id === "string" ? data.unidad_medida_id : "";
   const normaTipoId =
     typeof data.norma_principal_tipo_id === "string" ? data.norma_principal_tipo_id : "";
+  const tipoLabel = catalogoTipoArticulo.options.find((o) => o.value === tipoId)?.label || null;
+  const umLabel = catalogoUnidadMedida.options.find((o) => o.value === umId)?.label || null;
+  const normaTipoLabel =
+    catalogoNormaPrincipalTipo.options.find((o) => o.value === normaTipoId)?.label || null;
 
   const vigDesde =
     data.vigente_desde == null ? "" : String(data.vigente_desde).slice(0, 10);
@@ -169,6 +181,11 @@ export default function GeneralTab({
               onChange={(v) => setOptionalId("norma_principal_tipo_id", v)}
               fieldError={fe.norma_principal_tipo_id?.[0]}
             />
+            {normaTipoLabel ? (
+              <ContextNote>
+                El artículo se interpreta bajo la tipología normativa <strong>{normaTipoLabel}</strong>.
+              </ContextNote>
+            ) : null}
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">Referencia normativa</span>
               <input
@@ -215,6 +232,11 @@ export default function GeneralTab({
               onChange={(v) => setOptionalId("tipo_articulo_id", v)}
               fieldError={fe.tipo_articulo_id?.[0]}
             />
+            {tipoLabel ? (
+              <ContextNote>
+                Se comporta como <strong>{tipoLabel}</strong> para reglas operativas y reportes.
+              </ContextNote>
+            ) : null}
             <CatalogSelect
               id="unidad_medida_id"
               label="Unidad de medida"
@@ -223,6 +245,11 @@ export default function GeneralTab({
               onChange={(v) => setOptionalId("unidad_medida_id", v)}
               fieldError={fe.unidad_medida_id?.[0]}
             />
+            {umLabel ? (
+              <ContextNote>
+                Las cantidades del artículo se expresan en <strong>{umLabel}</strong>.
+              </ContextNote>
+            ) : null}
           </div>
         </section>
 
@@ -266,6 +293,26 @@ export default function GeneralTab({
           </div>
         </section>
       </div>
+
+      <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
+        <h3 className="text-sm font-semibold text-emerald-900">Resumen final de impacto (General)</h3>
+        <ul className="mt-2 space-y-1 text-sm text-emerald-900">
+          <li>
+            Normativa:{" "}
+            <strong>{normaTipoLabel || "sin tipología seleccionada"}</strong>
+            {normaRef ? ` · Ref. ${normaRef}` : ""}
+            {inciso ? ` · Inciso ${inciso}` : ""}
+          </li>
+          <li>
+            Clasificación: <strong>{tipoLabel || "sin tipo"}</strong> · Unidad{" "}
+            <strong>{umLabel || "sin unidad"}</strong>.
+          </li>
+          <li>
+            Vigencia: desde <strong>{vigDesde || "abierta"}</strong> hasta{" "}
+            <strong>{vigHasta || "abierta"}</strong>.
+          </li>
+        </ul>
+      </section>
     </div>
   );
 }

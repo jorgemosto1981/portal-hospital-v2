@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
@@ -19,7 +19,10 @@ import {
   parseArticuloBorrador,
   parseArticuloPublicable,
 } from "../../utils/articulos/index.js";
+import { useArticuloElegibilidadCatalogos } from "./hooks/useArticuloElegibilidadCatalogos.js";
 import { useArticuloGeneralCatalogos } from "./hooks/useArticuloGeneralCatalogos.js";
+import { useArticuloPlazosCatalogos } from "./hooks/useArticuloPlazosCatalogos.js";
+import { useArticuloWorkflowCatalogos } from "./hooks/useArticuloWorkflowCatalogos.js";
 import ArticuloFormReadinessBadge from "./ArticuloFormReadinessBadge.jsx";
 import DocumentacionTab from "./tabs/DocumentacionTab.jsx";
 import ElegibilidadTab from "./tabs/ElegibilidadTab.jsx";
@@ -36,7 +39,9 @@ const TABS = [
 ];
 
 export default function ArticuloFormConfig() {
-  const { articuloId } = useParams();
+  const { articuloId: articuloIdRoute } = useParams();
+  /** Ruta dedicada `/nuevo` = alta sin id en Firestore todavía. */
+  const articuloId = articuloIdRoute === "nuevo" ? undefined : articuloIdRoute;
   const navigate = useNavigate();
   const { user } = useAuthSession();
   const { claims } = useAuthClaims(user);
@@ -45,7 +50,9 @@ export default function ArticuloFormConfig() {
 
   const [data, setData] = useState(() => createInitialArticuloFormState());
   const [tabId, setTabId] = useState("general");
-  const [cargandoDoc, setCargandoDoc] = useState(Boolean(articuloId));
+  const [cargandoDoc, setCargandoDoc] = useState(() =>
+    Boolean(articuloIdRoute && articuloIdRoute !== "nuevo"),
+  );
 
   const update = useMemo(() => createArticuloFormUpdate(setData), []);
 
@@ -57,6 +64,9 @@ export default function ArticuloFormConfig() {
   const puedePublicar = useMemo(() => canPublishArticulo(data), [data]);
 
   const { catalogos, recargarCatalogos } = useArticuloGeneralCatalogos();
+  const elegibilidadCatalogos = useArticuloElegibilidadCatalogos();
+  const plazosCatalogos = useArticuloPlazosCatalogos();
+  const workflowCatalogos = useArticuloWorkflowCatalogos();
 
   const cargar = useCallback(async () => {
     if (!articuloId) {
@@ -126,7 +136,8 @@ export default function ArticuloFormConfig() {
       toast.error("Publicación bloqueada: revisá borrador y requisitos normativos.");
       return;
     }
-    const payload = b.data;
+    /** Artículo publicado = disponible en catálogo; distinto de variantes_sarh[].activo. */
+    const payload = { ...b.data, activo: true };
     try {
       const idDoc = resolverIdDocumento();
       if (idDoc) {
@@ -136,6 +147,7 @@ export default function ArticuloFormConfig() {
         update.field("id", id);
         navigate(`/portal/rrhh/configuracion-articulos/${id}`, { replace: true });
       }
+      update.field("activo", true);
       toast.success("Publicación persistida.");
     } catch (e) {
       toast.error(e?.message || "No se pudo publicar (Firestore).");
@@ -147,7 +159,7 @@ export default function ArticuloFormConfig() {
       personaId: personaId || undefined,
     });
     setData(siguiente);
-    navigate("/portal/rrhh/configuracion-articulos", { replace: true });
+    navigate("/portal/rrhh/configuracion-articulos/nuevo", { replace: true });
     toast.success("Copia cargada en el formulario. Guardá como nuevo documento.");
   };
 
@@ -168,11 +180,29 @@ export default function ArticuloFormConfig() {
         onRecargarCatalogos={recargarCatalogos}
       />
     ) : tabId === "elegibilidad" ? (
-      <ElegibilidadTab data={data} update={update} errors={erroresBorrador} />
+      <ElegibilidadTab
+        data={data}
+        update={update}
+        errors={erroresBorrador}
+        catalogosElegibilidad={elegibilidadCatalogos.catalogos}
+        onRecargarCatalogos={elegibilidadCatalogos.recargarCatalogos}
+      />
     ) : tabId === "plazos" ? (
-      <PlazosTab data={data} update={update} errors={erroresBorrador} />
+      <PlazosTab
+        data={data}
+        update={update}
+        errors={erroresBorrador}
+        catalogosPlazos={plazosCatalogos.catalogos}
+        onRecargarCatalogos={plazosCatalogos.recargarCatalogos}
+      />
     ) : tabId === "workflow" ? (
-      <WorkflowTab data={data} update={update} errors={erroresBorrador} />
+      <WorkflowTab
+        data={data}
+        update={update}
+        errors={erroresBorrador}
+        catalogosWorkflow={workflowCatalogos.catalogos}
+        onRecargarCatalogos={workflowCatalogos.recargarCatalogos}
+      />
     ) : (
       <DocumentacionTab data={data} update={update} errors={erroresBorrador} />
     );
@@ -182,6 +212,12 @@ export default function ArticuloFormConfig() {
       <div className="mx-auto max-w-5xl rounded-3xl border border-slate-100 bg-white p-4 shadow-xl md:p-8">
         <header className="flex flex-col gap-4 border-b border-slate-100 pb-6 md:flex-row md:items-start md:justify-between">
           <div>
+            <Link
+              to="/portal/rrhh/configuracion-articulos"
+              className="mb-3 inline-flex min-h-11 touch-manipulation items-center gap-1 text-sm font-medium text-blue-600 outline-none ring-blue-500 focus-visible:ring-2 active:text-blue-800"
+            >
+              ← Lista de artículos
+            </Link>
             <h1 className="text-xl font-semibold tracking-tight text-slate-900">
               {typeof data.titulo === "string" ? data.titulo : "Artículo"}
             </h1>

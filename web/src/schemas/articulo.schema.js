@@ -6,7 +6,10 @@ export const fechaIsoCivilSchema = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Usar fecha ISO YYYY-MM-DD');
 
 export const idArticuloSchema = z.string().regex(/^art_[0-9A-Za-z]{26}$/);
-export const idCfgTcpSchema = z.string().regex(/^cfg_tcp_[0-9A-Za-z]{26}$/);
+/** Prefijo documental `cfg_tcp_` (mayúsculas/minúsculas; callable normaliza a mayúsculas). */
+export const idCfgTcpSchema = z
+  .string()
+  .regex(/^cfg_tcp_[0-9A-Za-z]{26}$/i, 'ID de tipo de cómputo plazo inválido (cfg_tcp_…)');
 export const idCfgSchema = z.string().min(1);
 
 export const varianteSarhSchema = z.object({

@@ -1,0 +1,31 @@
+{
+  "projectId": "portal-hospital-v2",
+  "generado": "2026-05-10T12:31:00.917Z",
+  "colecciones": [
+    "cfg_origen_alta_solicitud",
+    "cfg_regla_split_remanente",
+    "cfg_prioridad_normativa",
+    "cfg_politica_superposicion"
+  ],
+  "cfg_origen_alta_solicitud": [
+    "CFG_OAS_AGENTE",
+    "CFG_OAS_JEFE_GRUPO",
+    "CFG_OAS_RRHH"
+  ],
+  "cfg_regla_split_remanente": [
+    "CFG_RSR_RECHAZAR_REMANENTE",
+    "CFG_RSR_NUEVA_SOLICITUD",
+    "CFG_RSR_DERIVAR_RRHH"
+  ],
+  "cfg_prioridad_normativa": [
+    "CFG_PN_DECRETO_PREVALECE",
+    "CFG_PN_POLITICA_INSTITUCIONAL",
+    "CFG_PN_DECISION_RRHH"
+  ],
+  "cfg_politica_superposicion": [
+    "CFG_PS_BLOQUEO_TOTAL",
+    "CFG_PS_PRIORIDAD_NORMATIVA",
+    "CFG_PS_DERIVAR_RRHH",
+    "CFG_PS_PERMITIR_CONVIVENCIA"
+  ]
+}
