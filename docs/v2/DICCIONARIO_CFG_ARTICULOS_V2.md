@@ -8,6 +8,8 @@
 
 **Convenciones generales:** alineadas a [`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md) (`codigo_interno`, `titulo_ui`, `orden`, `vigente_desde` / `vigente_hasta`, `activo` donde corresponda).
 
+**Contrato canónico (product-first):** [`MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md`](./MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md) — **§1.6** semáforo de estados (`activo`, `estado_articulo_id`, `estado_version_id`), **§1.7** matriz lógica vs **subcolecciones** bajo `versiones` (tamaño de documento y costo de lectura), **§1.8** motor de saldos y despacho por `origen_saldo_id`, **§2.5–2.7** triple capa operativa / contable / vista y archivo frío, **§8** restricciones mandatorias de costo (grilla, saldos sin barrido histórico, RDA, inmutabilidad). La **§2** siguiente unifica catálogos del **schema §3** con los ya listados en planes modulares previos; ante divergencia de semántica, **prima el schema product-first**.
+
 ---
 
 ## 1. Prefijos de ids de documento
@@ -15,7 +17,11 @@
 | Prefijo | Colección / uso |
 |---------|------------------|
 | `art_` | `cfg_articulos` |
+| `ver_` | `cfg_articulos/{art_id}/versiones/{ver_id}` (subcolección de parámetros versionados) |
+| `car_` | `cfg_articulo_relaciones` |
 | `sol_` | `solicitudes_articulo` |
+| `sal_` | Documento agregado de saldos por persona y año (capa contable; colección a fijar en implementación, ver schema §2.5) |
+| `vis_` | Documento de vista mensual de grilla por persona (capa vista; schema §2.5) |
 | `cfg_ta_` | `cfg_tipo_articulo` |
 | `cfg_pwa_` | `cfg_paso_workflow_articulo` |
 | `cfg_rsr_` | `cfg_regla_split_remanente` |
@@ -27,24 +33,53 @@ Referencias en documentos de negocio usan sufijo **`*_id`** (singular) o **`*_id
 
 ---
 
-## 2. Colecciones `cfg_*` del dominio (lista cerrada del plan)
+## 2. Colecciones `cfg_*` del dominio (unificado: modular + product-first §3)
 
-| Colección | Rol |
-|-----------|-----|
-| `cfg_tipo_articulo` | Clase / naturaleza del artículo |
-| `cfg_unidad_medida_articulo` | Días, horas, jornadas, etc. |
-| `cfg_estado_solicitud_articulo` | Estados del trámite |
-| `cfg_paso_workflow_articulo` | Pasos y responsabilidades |
-| `cfg_accion_vencimiento` | Qué hacer ante SLA vencido (también puede referenciarse en plazos documentales si política no default) |
-| `cfg_origen_alta_solicitud` | Origen del alta (coherente con delegación jefe) |
-| `cfg_prioridad_normativa` | Peso frente a otros aportes / MDC |
-| `cfg_politica_superposicion` | Convivencia, rechazo, derivación RRHH, etc. |
-| `cfg_regla_split_remanente` | Destino del remanente tras aprobación parcial |
-| `cfg_momento_entrega_documentacion` | Antes / después / mixto |
-| `cfg_fuente_decision_solicitud` | Quién decide en conflicto |
-| `cfg_motivo_rechazo_solicitud` | Motivos tipificados |
-| `cfg_tipo_computo_plazo` | Cómputo de plazo documental (corrido, hábil compuesto, extensiones futuras por filas) |
-| `cfg_calendario_feriados_institucional` | Feriados y asuetos con alcance por efector |
+Orden alfabético. **PF** = enumerado explícito en [`MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md`](./MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md) §3. **Leg.** = ya previsto en [`MODULO_CONFIGURACION_ARTICULOS_V2.md`](./MODULO_CONFIGURACION_ARTICULOS_V2.md) / flujos de solicitud. Una fila puede cubrir ambos usos.
+
+| Colección | Rol | Origen |
+|-----------|-----|--------|
+| `cfg_accion_incumplimiento_documental` | Acción ante incumplimiento documental configurado | PF |
+| `cfg_accion_saldo` | Semántica de movimiento de saldo (p. ej. descuenta disponible vs acumula uso) | PF |
+| `cfg_accion_vencimiento` | Qué hacer ante SLA u omisión según política (incl. plazos documentales) | PF · Leg. |
+| `cfg_calendario_feriados_institucional` | Feriados y asuetos con alcance por efector (`cfg_cfi_*`) | Leg. |
+| `cfg_circuito_ingreso` | Circuito de ingreso de la solicitud / trámite | PF |
+| `cfg_estado_articulo` | Disponibilidad del artículo en portal (`VIGENTE`, `OBSOLETO`, …) | PF |
+| `cfg_estado_solicitud_articulo` | Estados del trámite de solicitud | PF · Leg. |
+| `cfg_estado_version_articulo` | Ciclo de edición de la versión (`BORRADOR`, `PUBLICADA`) | PF |
+| `cfg_fuente_decision_solicitud` | Quién decide en conflicto de solicitud | Leg. |
+| `cfg_momento_entrega_documentacion` | Antes / después / mixto (entrega de documentación) | Leg. |
+| `cfg_motivo_rechazo_solicitud` | Motivos tipificados de rechazo | Leg. |
+| `cfg_nivel_ocupacion_dia` | Ocupación de celda intradía en grilla (exclusivo / parcial / informativo); no sustituye incompatibilidades normativas | PF |
+| `cfg_operador_comparacion` | Operadores para reglas de elegibilidad | PF |
+| `cfg_origen_alta_solicitud` | Origen del alta (coherente con delegación jefe) | Leg. |
+| `cfg_origen_normativo_articulo` | Clase de referencia normativa del artículo | PF |
+| `cfg_origen_saldo` | Origen de la bolsa de saldo (interno / externo informado / externo calculado) | PF |
+| `cfg_paso_workflow_articulo` | Pasos y responsabilidades del workflow | PF · Leg. |
+| `cfg_politica_superposicion` | Políticas de convivencia o resolución entre solicitudes / aportes | Leg. |
+| `cfg_prioridad_normativa` | Peso frente a otros aportes / MDC | Leg. |
+| `cfg_reinicio_ciclo_cuota` | Reinicio de ciclo de cuota (anual, mensual, diario, nunca, …) | PF |
+| `cfg_regla_computo_dias` | Regla de cómputo en días | PF |
+| `cfg_regla_computo_horas` | Regla de cómputo en horas | PF |
+| `cfg_regla_split_remanente` | Destino del remanente tras aprobación parcial (`cfg_rsr_*`) | Leg. |
+| `cfg_rol_aprobador` | Roles habilitados como aprobadores en workflow (referencia operativa; puede alinearse con `cfg_rol` global) | PF |
+| `cfg_tipo_acumulacion` | Tipo de acumulación de saldos / límites | PF |
+| `cfg_tipo_articulo` | Clase / naturaleza del artículo (`cfg_ta_*`) | PF · Leg. |
+| `cfg_tipo_computo_plazo` | Cómputo de plazo documental (corrido, hábil compuesto, …; `cfg_tcp_*`) | Leg. |
+| `cfg_tipo_convivencia_articulo` | Convivencia entre artículos (catálogo de políticas de convivencia) | PF |
+| `cfg_tipo_documentacion` | Tipos de exigencia documental | PF |
+| `cfg_tipo_evento` | Eventos RRHH; filas de artículos con prefijo `cfg_tev_art_*` | PF · Leg. |
+| `cfg_tipo_filtro_elegibilidad` | Ejes o tipos de filtro de elegibilidad | PF |
+| `cfg_tipo_fraccionamiento` | Fraccionamiento de uso / tope | PF |
+| `cfg_tipo_incompatibilidad_articulo` | Tipificación de incompatibilidad normativa entre artículos | PF |
+| `cfg_tipo_relacion_articulo` | Aristas del grafo (`prorroga_de`, `incompatible_con`, …) | PF |
+| `cfg_tipo_tope` | Tipos de tope (días, ocurrencias, …) | PF |
+| `cfg_unidad_medida_articulo` | Unidad de medida del artículo (días, horas, jornadas, …) | PF · Leg. |
+| `cfg_unidad_plazo` | Unidad semántica de plazo en el modelo PF (matriz §4) | PF |
+
+**Equivalencias a cerrar en RFC:** `cfg_unidad_plazo` (PF) vs `cfg_tipo_computo_plazo` (`cfg_tcp_*`, plazo documental en plan modular). Hasta definir un solo concepto o FK dual documentado, no mezclar filas entre colecciones.
+
+**Catálogo implícito en matriz PF (Bloque 2):** `justifica_sueldo_id` referencia filas tipo `cfg_js_*`; nombre de colección a fijar en seed (p. ej. `cfg_justifica_sueldo`) y prefijo en diccionario cuando exista.
 
 ---
 
@@ -108,6 +143,8 @@ Campos mínimos por fila sugeridos: `codigo_interno`, `titulo_ui`, `descripcion_
 
 ## 7. Referencias
 
+- [`PROTOCOLO_SEGURIDAD_REVERSION_ARTICULOS_V2.md`](./PROTOCOLO_SEGURIDAD_REVERSION_ARTICULOS_V2.md) (tag Git, export Firestore, rollback antes de código de estructura)
+- [`MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md`](./MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md) (§1.6–1.8, matriz §4, catálogos §3)
 - [`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md)
 - [`PLAN_UNIFICACION_EVENTOS_RRHH_2026-05-06.md`](./PLAN_UNIFICACION_EVENTOS_RRHH_2026-05-06.md)
 - [`ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md`](./ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md)
