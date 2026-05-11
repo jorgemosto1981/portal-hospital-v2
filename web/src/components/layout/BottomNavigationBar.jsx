@@ -34,6 +34,16 @@ const ICONS_BY_ID = {
       strokeWidth={1.5}
     />
   ),
+  "articulos-cfg": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
   antiguedad: () => (
     <path
       strokeLinecap="round"
@@ -132,7 +142,8 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
   const { user } = useAuthSession();
   const { hasPortalRoles } = useAuthClaims(user);
   const canManagement = hasPortalRoles(MANAGEMENT_PORTAL_ROLES);
-  const visibleTabs = tabs.filter((tab) => (tab.id === "rrhh" ? canManagement : true));
+  const requiresManagementTab = (id) => id === "rrhh" || id === "articulos-cfg";
+  const visibleTabs = tabs.filter((tab) => (requiresManagementTab(tab.id) ? canManagement : true));
 
   return (
     <nav

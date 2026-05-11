@@ -11,9 +11,12 @@ if (!process.env.FUNCTIONS_DISCOVERY_TIMEOUT) {
   process.env.FUNCTIONS_DISCOVERY_TIMEOUT = "60";
 }
 
+const extra = process.argv.slice(2);
+const base = ["firebase", "deploy", "--project", "portal-hospital-v2"];
+const args = extra.length ? [...base, ...extra] : [...base, "--only", "functions"];
 const r = spawnSync(
   "npx",
-  ["firebase", "deploy", "--project", "portal-hospital-v2", "--only", "functions"],
+  args,
   {
     stdio: "inherit",
     cwd: repoRoot,

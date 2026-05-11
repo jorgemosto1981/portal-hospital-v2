@@ -46,6 +46,7 @@ export default function Configuracion() {
     setEditProvinciaId,
     isLocalidad,
     tituloPanel,
+    soloLectura,
     accesoBloqueado,
     abrirAgregar,
     abrirEditar,
@@ -64,7 +65,9 @@ export default function Configuracion() {
         <p className="mt-2 max-w-prose text-sm leading-relaxed text-slate-500">
           Catálogos institucionales en vivo. Solo cuentas con rol{" "}
           <span className="font-mono text-slate-700">portal_role: &quot;rrhh&quot;</span> pueden listar y
-          guardar.
+          guardar. La sección <strong>Artículos (licencias V2)</strong> es solo lectura: los datos vienen del
+          seed <span className="font-mono text-slate-600">SEED_CATALOGOS_ARTICULOS_V2</span>; no editar desde aquí
+          (evita pisar <span className="font-mono">titulo_ui</span> / campos del contrato).
         </p>
         <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
           <p><strong>Objetivo:</strong> administrar catálogos institucionales cfg_* en una sola pantalla.</p>
@@ -151,10 +154,13 @@ export default function Configuracion() {
             <div>
               <h2 className="text-base font-semibold text-slate-900">{tituloPanel}</h2>
               <p className="mt-0.5 font-mono text-xs text-slate-400">{itemActual.collectionName}</p>
+              {soloLectura && (
+                <p className="mt-1 text-xs font-medium text-amber-800">Solo lectura — verificación de seed / contrato V2.</p>
+              )}
             </div>
             <button
               type="button"
-              disabled={!canWriteCatalogos}
+              disabled={!canWriteCatalogos || soloLectura}
               onClick={abrirAgregar}
               className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -228,7 +234,12 @@ export default function Configuracion() {
                             </p>
                           </div>
                         ) : (
-                          row.nombre ?? "—"
+                          <div>
+                            <p>{row.nombre ?? "—"}</p>
+                            {soloLectura && row.codigo_interno && (
+                              <p className="mt-0.5 font-mono text-[10px] text-slate-400">{row.codigo_interno}</p>
+                            )}
+                          </div>
                         )}
                       </td>
                       {isLocalidad && (
@@ -258,7 +269,7 @@ export default function Configuracion() {
                       <td className="px-4 py-3 text-right md:px-5">
                         <button
                           type="button"
-                          disabled={!canWriteCatalogos}
+                          disabled={!canWriteCatalogos || soloLectura}
                           onClick={() => abrirEditar(row)}
                           className="rounded-lg px-2 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >

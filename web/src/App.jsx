@@ -18,6 +18,7 @@ import NotificacionesEventosDatosPersonalesRRHH from "./pages/NotificacionesEven
 import PantallasCatalogo from "./pages/PantallasCatalogo.jsx";
 import Perfil from "./pages/Perfil.jsx";
 import Configuracion from "./pages/Configuracion.jsx";
+import ArticuloConfiguracion from "./pages/ArticuloConfiguracion.jsx";
 import SeguimientoEnrolamientoUsuariosRRHH from "./pages/SeguimientoEnrolamientoUsuariosRRHH.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import SistemasWeb from "./pages/SistemasWeb.jsx";
@@ -92,6 +93,7 @@ export default function App() {
               <Route path="sistemas-web" element={<SistemasWeb />} />
               <Route path="rrhh/alta" element={<AltaAgenteRRHH />} />
               <Route path="rrhh/antiguedad" element={<Antiguedad />} />
+              <Route path="rrhh/configuracion-articulos" element={<ArticuloConfiguracion />} />
               <Route path="rrhh/notificaciones-datos-personales" element={<NotificacionesEventosDatosPersonalesRRHH />} />
               <Route path="rrhh/seguimiento-enrolamiento" element={<SeguimientoEnrolamientoUsuariosRRHH />} />
             </Route>
@@ -108,6 +110,10 @@ export default function App() {
         <Route path="/configuracion" element={<LegacyNavigate to="/portal/configuracion" />} />
         <Route path="/rrhh/alta" element={<LegacyNavigate to="/portal/rrhh/alta" />} />
         <Route path="/rrhh/antiguedad" element={<LegacyNavigate to="/portal/rrhh/antiguedad" />} />
+        <Route
+          path="/rrhh/configuracion-articulos"
+          element={<LegacyNavigate to="/portal/rrhh/configuracion-articulos" />}
+        />
         <Route
           path="/rrhh/notificaciones-datos-personales"
           element={<LegacyNavigate to="/portal/rrhh/notificaciones-datos-personales" />}

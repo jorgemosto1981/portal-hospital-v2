@@ -14,10 +14,12 @@ const login = require("./modules/login");
 const rrhh = require("./modules/rrhh");
 const catalogos = require("./modules/catalogos");
 const onboarding = require("./modules/onboarding");
+const articulosCfg = require("./modules/articulosCfg");
 
 module.exports = {
   ...login,
   ...rrhh,
   ...catalogos,
   ...onboarding,
+  ...articulosCfg,
 };

@@ -15,6 +15,8 @@
     "verify:pre-coding": "node scripts/seed-v2/verify-pre-coding.mjs",
     "test:firestore:v2": "node scripts/seed-v2/test-firestore-v2-connection.mjs",
     "seed:cfg": "node scripts/seed-v2/seed-cfg.mjs",
+    "seed:catalogos-articulos-v2": "node scripts/seed-v2/seed-catalogos-articulos-v2.mjs",
+    "verify:catalogos-articulos-v2": "node scripts/seed-v2/verify-catalogos-articulos-v2.mjs",
     "seed:demo-primer-acceso": "node scripts/seed-v2/seed-demo-primer-acceso.mjs",
     "seed:demo-login-usuario": "node scripts/seed-v2/seed-demo-login-usuario.mjs",
     "seed:configuracion": "node src/scripts/seedConfiguracion.mjs",

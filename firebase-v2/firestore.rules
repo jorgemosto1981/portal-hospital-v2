@@ -80,6 +80,60 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    /** RRHH / admin: versiones parametrizadas de artículos (MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST §2.2). */
+    function portalArticulosMgmt() {
+      return signedIn() && (
+        request.auth.token.portal_role == 'rrhh' ||
+        request.auth.token.portal_role == 'admin' ||
+        request.auth.token.perfil_rol_id == 'CFG_RRHH'
+      );
+    }
+
+    function cfgArticuloIdValid(id) {
+      return id is string
+        && id.matches('^art_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    function cfgArticuloVersionIdValid(id) {
+      return id is string
+        && id.matches('^ver_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    /** Núcleo `cfg_articulos/{art_*}` — puntero `version_actual_id` actualizado en lote con la versión (panel RRHH). */
+    match /cfg_articulos/{articuloId} {
+      allow read: if portalArticulosMgmt() && cfgArticuloIdValid(articuloId);
+      allow create, update: if portalArticulosMgmt() && cfgArticuloIdValid(articuloId);
+      allow delete: if false;
+    }
+
+    match /cfg_articulos/{articuloId}/versiones/{versionId} {
+      allow read: if portalArticulosMgmt()
+        && cfgArticuloIdValid(articuloId)
+        && cfgArticuloVersionIdValid(versionId);
+      allow create, update: if portalArticulosMgmt()
+        && cfgArticuloIdValid(articuloId)
+        && cfgArticuloVersionIdValid(versionId);
+      allow delete: if false;
+    }
+
+    // Catálogos artículos V2 (seed SEED_CATALOGOS_ARTICULOS_V2) — lectura autenticada; escritura solo seed/Admin.
+    match /cfg_reinicio_ciclo_cuota/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /cfg_accion_saldo/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /cfg_origen_saldo/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /cfg_nivel_ocupacion_dia/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // Eventos y rate limits: solo backend (Admin SDK).
     match /eventos_ticket/{docId} {
       allow read, write: if false;

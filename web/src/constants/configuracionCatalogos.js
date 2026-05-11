@@ -1,10 +1,12 @@
 /**
  * Catálogos editables desde Configuración maestra (RRHH).
  * Para añadir una colección: agregar el ítem aquí y duplicar el `collectionName` en
- * `CFG_COLECCIONES_RRHH` de `functions/index.js` (lista blanca servidor).
+ * `CFG_COLECCIONES_RRHH` de `functions/modules/shared/constants.js` (lista blanca servidor).
  */
 
-/** @typedef {{ key: string; etiqueta: string; collectionName: string; idPrefix: string }} ItemCatalogoCfg */
+import { ITEMS_CATALOGO_ARTICULOS_V2 } from "./catalogosArticulosV2.js";
+
+/** @typedef {{ key: string; etiqueta: string; collectionName: string; idPrefix: string; soloLectura?: boolean }} ItemCatalogoCfg */
 /** @typedef {{ id: string; titulo: string; items: ItemCatalogoCfg[] }} SeccionCatalogoCfg */
 
 /** @type {SeccionCatalogoCfg[]} */
@@ -224,6 +226,11 @@ export const SECCIONES_CATALOGO_RRHH = [
         idPrefix: "CFG_EBR_",
       },
     ],
+  },
+  {
+    id: "articulos_v2",
+    titulo: "Artículos (licencias V2)",
+    items: [...ITEMS_CATALOGO_ARTICULOS_V2],
   },
 ];
 

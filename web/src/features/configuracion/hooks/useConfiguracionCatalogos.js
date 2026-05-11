@@ -68,6 +68,7 @@ export function useConfiguracionCatalogos() {
   const isLocalidad = itemActual.collectionName === "cfg_localidad";
   const isGrupoTrabajo = itemActual.collectionName === "grupos_de_trabajo";
   const tituloPanel = useMemo(() => itemActual.etiqueta, [itemActual.etiqueta]);
+  const soloLectura = itemActual.soloLectura === true;
   const canReadCatalogos = openAccessTemp || (!!user && isRrhh);
   const canWriteCatalogos = openAccessTemp || (!!user && isRrhh);
   const accesoBloqueado = !openAccessTemp && tokenReady && (!user || !isRrhh);
@@ -262,6 +263,7 @@ export function useConfiguracionCatalogos() {
     setEditProvinciaId,
     isLocalidad,
     tituloPanel,
+    soloLectura,
     accesoBloqueado,
     abrirAgregar,
     abrirEditar,

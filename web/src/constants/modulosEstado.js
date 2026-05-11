@@ -67,6 +67,13 @@ export const MODULOS_PORTAL = [
     grupo: "rrhh",
   },
   {
+    id: "articulos-cfg",
+    label: "Artículos",
+    path: "/portal/rrhh/configuracion-articulos",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
     id: "grilla",
     label: "Grilla",
     path: "/portal/grilla",
@@ -130,6 +137,7 @@ export const MODULOS_V2_ESTADO = [
  * @param {string} pathname
  */
 export function resolverTabPorPath(pathname) {
+  if (pathname.startsWith("/portal/rrhh/configuracion-articulos")) return "articulos-cfg";
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla";
