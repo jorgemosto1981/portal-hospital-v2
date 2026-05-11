@@ -19,11 +19,14 @@ export const verDocumentIdSchema = z.string().regex(new RegExp(`^ver_${ULID_RE}$
 export const carDocumentIdSchema = z.string().regex(new RegExp(`^car_${ULID_RE}$`));
 export const perDocumentIdSchema = z.string().regex(new RegExp(`^per_${ULID_RE}$`));
 
+/** Documento `solicitudes_articulo` / `sol_<ULID>` (capa operativa, §2.5). */
+export const solDocumentIdSchema = z.string().regex(new RegExp(`^sol_${ULID_RE}$`));
+
 /** Referencia a fila de catálogo cfg_* (id de documento). */
-const cfgRowIdSchema = z.string().min(1);
+export const cfgRowIdSchema = z.string().min(1);
 
 /** Timestamp Firestore, ISO o Date según capa cliente/Functions. */
-const firestoreDateLikeSchema = z.union([z.string(), z.date(), z.any()]);
+export const firestoreDateLikeSchema = z.union([z.string(), z.date(), z.any()]);
 
 // --- Bloques embebidos en la versión (§4) — sin arrays §1.7 ---
 
@@ -207,6 +210,7 @@ export const articuloIdSchemas = {
   verDocumentIdSchema,
   carDocumentIdSchema,
   perDocumentIdSchema,
+  solDocumentIdSchema,
 };
 
 export const cfgArticuloCoreWithIdSchema = cfgArticuloCoreSchema.extend({
