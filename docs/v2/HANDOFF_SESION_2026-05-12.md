@@ -14,6 +14,7 @@ Sesión(es) en **rama `feature/articulos-v2-triple-layer`**: además del trabajo
 |------|--------|
 | Rama activa al cerrar | `feature/articulos-v2-triple-layer` |
 | Remoto | `origin/feature/articulos-v2-triple-layer` (push completo al cerrar esta documentación) |
+| Commit de cierre (checkpoint documentado) | `ae636d4` — *feat(articulos-v2): Paso 0 LAO, matriz con validación, docs handoff y roadmap* |
 | Stash pendiente (histórico) | Revisar `stash@{0}` en `feature/articulos-v2-reborn` si aún aplica — no bloquea LAO |
 
 ---
