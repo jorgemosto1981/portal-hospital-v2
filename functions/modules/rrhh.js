@@ -15,6 +15,7 @@ const {
 } = require("./shared/constants");
 const { assertRrhh, normalizeDni } = require("./shared/helpers");
 const { calcularAntiguedad } = require("./shared/antiguedadCalculator");
+const { obtenerYmdHoyInstitucional } = require("./shared/fechaInstitucionalBa");
 const { buildEventoV21, buildPersonaLabel, persistEventoV21 } = require("./shared/eventosV2");
 
 const DDJJ_ESTADO_NO_INICIADA_ID = "CFG_DDJJ_01_NO_INICIADA";
@@ -23,11 +24,7 @@ function parseFechaCorteOrToday(rawFechaCorte) {
   if (typeof rawFechaCorte === "string" && rawFechaCorte.trim()) {
     return rawFechaCorte.trim();
   }
-  const now = new Date();
-  const yyyy = now.getUTCFullYear();
-  const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(now.getUTCDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  return obtenerYmdHoyInstitucional();
 }
 
 function resolveExternosDesdePersona(persona) {

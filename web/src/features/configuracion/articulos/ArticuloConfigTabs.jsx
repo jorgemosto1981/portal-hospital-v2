@@ -14,6 +14,8 @@ import {
   newVersionDocumentId,
   saveArticuloVersionAndPunteroCore,
 } from "../../../services/cfgArticuloVersionService.js";
+import FechaCorteAntiguedadDiaMesField from "./FechaCorteAntiguedadDiaMesField.jsx";
+import { normalizeFechaCorteAntiguedadIso } from "./fecCorteAntiguedadHelpers.js";
 
 /**
  * Estado inicial alineado a los campos de {@link cfgArticuloVersionSchema} (borrador UI).
@@ -226,7 +228,12 @@ export function buildVersionPayloadForZod(raw) {
     const corr = numOrUndef(out.bloque_topes_plazos_computo.correspondencia_anio);
     out.bloque_topes_plazos_computo.correspondencia_anio = corr === undefined ? null : corr;
     const fc = trimOrUndef(out.bloque_topes_plazos_computo.fecha_corte_antiguedad);
-    out.bloque_topes_plazos_computo.fecha_corte_antiguedad = fc === undefined ? null : fc;
+    if (fc === undefined) {
+      out.bloque_topes_plazos_computo.fecha_corte_antiguedad = null;
+    } else {
+      const norm = normalizeFechaCorteAntiguedadIso(fc);
+      out.bloque_topes_plazos_computo.fecha_corte_antiguedad = norm !== null ? norm : fc;
+    }
     const rowsRaw = out.bloque_topes_plazos_computo.matriz_antiguedad_reglas;
     const rows = Array.isArray(rowsRaw) ? rowsRaw : [];
     const cleaned = rows
@@ -372,7 +379,7 @@ const TAB_HELP = {
     "Todos los *_id deben apuntar a catálogos cfg_* vigentes.",
     "intervalo_gracia_dias: entero >= 0.",
     "depende_rda=true exige validación preventiva en backend.",
-    "LAO (solo si es_lao_anual en Identidad): correspondencia_anio = año fiscal del derecho; matriz con operador_id → cfg_operador_comparacion; fecha_corte_antiguedad ISO o vacío (null en motor).",
+    "LAO (solo si es_lao_anual en Identidad): correspondencia_anio = año fiscal del derecho; matriz con operador_id → cfg_operador_comparacion; fecha_corte_antiguedad: día/mes en UI, ISO canónica al guardar o vacío → null (motor §7).",
     "Matriz LAO: las filas se reordenan solas por umbral (años) ascendente; no puede haber dos filas con el mismo umbral y el mismo operador.",
   ],
   acumulacion: [
@@ -795,13 +802,17 @@ export default function ArticuloConfigTabs() {
                     min={1900}
                     helpText="Año fiscal/presupuestario al que pertenece esta parametrización (ej. 2025)."
                   />
-                  <FieldText
-                    label="bloque_topes_plazos_computo.fecha_corte_antiguedad (ISO)"
-                    value={form.bloque_topes_plazos_computo.fecha_corte_antiguedad}
-                    onChange={(v) => setBlock("bloque_topes_plazos_computo", "fecha_corte_antiguedad", v)}
-                    placeholder="2025-12-31"
-                    helpText="Corte para antigüedad; vacío → null y el motor usa 31/12 año anterior (obtenerFechaCorteLao)."
-                  />
+                  <div className="md:col-span-2 rounded-lg border border-emerald-100/80 bg-white/90 p-3">
+                    <FechaCorteAntiguedadDiaMesField
+                      value={form.bloque_topes_plazos_computo.fecha_corte_antiguedad}
+                      onChange={(v) => setBlock("bloque_topes_plazos_computo", "fecha_corte_antiguedad", v)}
+                      disabled={formBloqueadoPorCatalogos}
+                    />
+                    <p className="mt-2 text-[11px] text-slate-500">
+                      Persistencia: <span className="font-mono text-slate-700">bloque_topes_plazos_computo.fecha_corte_antiguedad</span> como fecha ISO (año{" "}
+                      <span className="font-mono">2000</span> técnico; el motor solo usa mes y día).
+                    </p>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">

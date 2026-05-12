@@ -145,3 +145,8 @@ export function callRegistrarSesionActiva(data) {
 export function callVerificarSesionConcurrente(data) {
   return httpsCallable(getFunctionsV2(), "verificarSesionConcurrente")(data);
 }
+
+/** Preview motor LAO (callable `simularLaoPreview`). */
+export function callSimularLaoPreview(data) {
+  return httpsCallable(getFunctionsV2(), "simularLaoPreview")(data);
+}

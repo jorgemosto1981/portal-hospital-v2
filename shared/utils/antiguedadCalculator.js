@@ -1,34 +1,54 @@
+import {
+  ZONA_HORARIA_INSTITUCIONAL,
+  civilDateInZonaToUtcAnchorMs,
+  obtenerYmdHoyInstitucional,
+  ymdEnZonaDesdeInstante,
+} from "./fechaInstitucionalBa.js";
+
+/** Reexport — consumidores (web/Functions) pueden anclar UI y payloads a la misma zona. */
+export { ZONA_HORARIA_INSTITUCIONAL };
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+/**
+ * Convierte fecha de corte o HLC a milisegutos UTC de anclaje por **día civil**
+ * en {@link ZONA_HORARIA_INSTITUCIONAL} (no usar calendario UTC del instante ni TZ del proceso).
+ * @param {string | Date | null | undefined} value
+ * @param {string} fieldName
+ * @returns {number | null}
+ */
 function toUtcDay(value, fieldName) {
   if (!value) return null;
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) {
       throw new Error(`Fecha inválida en ${fieldName}.`);
     }
-    return Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
+    const { year, month, day } = ymdEnZonaDesdeInstante(value.getTime());
+    return civilDateInZonaToUtcAnchorMs(year, month, day);
   }
 
   const raw = String(value).trim();
   if (!raw) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}T/i.test(raw) || /^\d{4}-\d{2}-\d{2}\s/.test(raw)) {
+    const normalized = raw.includes("T") ? raw : raw.replace(/^(\d{4}-\d{2}-\d{2})\s/, "$1T");
+    const ms = Date.parse(normalized);
+    if (Number.isNaN(ms)) {
+      throw new Error(`Formato de fecha/hora inválido en ${fieldName}.`);
+    }
+    const { year, month, day } = ymdEnZonaDesdeInstante(ms);
+    return civilDateInZonaToUtcAnchorMs(year, month, day);
+  }
+
   const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) {
-    throw new Error(`Formato de fecha inválido en ${fieldName}. Use YYYY-MM-DD.`);
+    throw new Error(`Formato de fecha inválido en ${fieldName}. Use YYYY-MM-DD o ISO-8601 con hora.`);
   }
 
   const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
+  const month = Number(match[2]);
   const day = Number(match[3]);
-  const utc = Date.UTC(year, month, day);
-  const parsed = new Date(utc);
-  if (
-    parsed.getUTCFullYear() !== year ||
-    parsed.getUTCMonth() !== month ||
-    parsed.getUTCDate() !== day
-  ) {
-    throw new Error(`Fecha inválida en ${fieldName}.`);
-  }
-  return utc;
+  return civilDateInZonaToUtcAnchorMs(year, month, day);
 }
 
 function formatUtcDay(utcMs) {
@@ -344,7 +364,7 @@ export function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasE
     ...desglose,
     totalDiasCalculados,
     detalleCalculo: {
-      versionAlgoritmo: "antiguedad-hlc-v2-amd-suma",
+      versionAlgoritmo: "antiguedad-hlc-v3-amd-suma-ba-civil",
       fechaCorteAplicada: formatUtcDay(corteUtc),
       diasExternosAplicados,
       amdHlc,
@@ -401,13 +421,14 @@ export function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasE
         "Los reconocimientos externos con fecha_impacto posterior a fecha de corte no se aplican.",
         "Tras validar fechas, el crédito externo (años/meses/días informados) se suma al desglose HLC (365/30).",
         "Acarreo: si días > 29 → +1 mes y −30 días; si meses > 11 → +1 año y −12 meses.",
+        `Fechas de calendario y objetos Date se interpretan en ${ZONA_HORARIA_INSTITUCIONAL} (medianoche local anclada en UTC; coherente navegador vs Cloud Functions).`,
       ],
     },
   };
 }
 
 export function obtenerFechaCortePorDefectoHoy() {
-  return formatUtcDay(toUtcDay(new Date(), "hoy"));
+  return obtenerYmdHoyInstitucional();
 }
 
 export function obtenerFechaCorteLao(anioEnCurso) {

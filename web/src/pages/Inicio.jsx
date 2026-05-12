@@ -7,12 +7,18 @@ export default function Inicio() {
       <p className="mt-3 max-w-prose text-sm leading-relaxed text-slate-500">
         Punto de entrada del usuario base. Desde aquí podés ir a tu perfil y mantener tus datos personales básicos.
       </p>
-      <div className="mt-6">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Link
           to="/portal/mi-perfil"
           className="inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 sm:w-auto"
         >
           Ir a Perfil
+        </Link>
+        <Link
+          to="/portal/solicitudes/lao"
+          className="inline-flex w-full items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-sm font-semibold text-emerald-900 shadow-sm transition-colors hover:bg-emerald-100 sm:w-auto"
+        >
+          Nueva solicitud LAO (preview)
         </Link>
       </div>
     </section>

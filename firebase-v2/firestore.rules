@@ -147,6 +147,72 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    function cfgPersonaIdValid(id) {
+      return id is string
+        && id.matches('(?i)^per_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    function cfgArticuloIdValidAgente(id) {
+      return id is string
+        && id.matches('(?i)^art_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    function cfgArticuloVersionIdValidAgente(id) {
+      return id is string
+        && id.matches('(?i)^ver_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    function solicitudArticuloIdValid(id) {
+      return id is string
+        && id.matches('(?i)^sol_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    function solicitudArticuloCreateShape() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'articulo_id',
+          'titular_persona_id',
+          'actor_alta_persona_id',
+          'version_aplicada',
+          'fecha_desde',
+          'anio_origen_bolsa',
+          'estado_solicitud_id',
+          'schema_version',
+          'creado_en',
+          'actualizado_en',
+        ])
+        && d.articulo_id is string
+        && cfgArticuloIdValidAgente(d.articulo_id)
+        && d.titular_persona_id is string
+        && cfgPersonaIdValid(d.titular_persona_id)
+        && d.actor_alta_persona_id is string
+        && cfgPersonaIdValid(d.actor_alta_persona_id)
+        && d.version_aplicada is string
+        && cfgArticuloVersionIdValidAgente(d.version_aplicada)
+        && d.fecha_desde is string
+        && d.fecha_desde.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && d.anio_origen_bolsa is int
+        && d.anio_origen_bolsa >= 1900
+        && d.anio_origen_bolsa <= 2200
+        && d.estado_solicitud_id == 'cfg_esa_borrador'
+        && d.schema_version == 1;
+    }
+
+    /** Alta operativa: el agente crea solo su solicitud en BORRADOR; transiciones las aplica el backend. */
+    match /solicitudes_articulo/{solId} {
+      allow read: if signedIn()
+        && resource.data.titular_persona_id is string
+        && resource.data.titular_persona_id == request.auth.token.persona_id;
+      allow create: if signedIn()
+        && solicitudArticuloIdValid(solId)
+        && request.auth.token.persona_id is string
+        && cfgPersonaIdValid(request.auth.token.persona_id)
+        && solicitudArticuloCreateShape()
+        && request.resource.data.titular_persona_id == request.auth.token.persona_id
+        && request.resource.data.actor_alta_persona_id == request.auth.token.persona_id;
+      allow update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

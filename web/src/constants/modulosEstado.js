@@ -60,6 +60,13 @@ export const MODULOS_PORTAL = [
     grupo: "rrhh",
   },
   {
+    id: "solicitud-lao",
+    label: "Solic. LAO",
+    path: "/portal/solicitudes/lao",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "usuario",
+  },
+  {
     id: "antiguedad",
     label: "Antigüedad",
     path: "/portal/rrhh/antiguedad",
@@ -141,6 +148,7 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla";
+  if (pathname.startsWith("/portal/solicitudes/lao")) return "solicitud-lao";
   if (pathname.startsWith("/portal/laboral") || pathname.startsWith("/laboral")) return "laboral";
   if (pathname.startsWith("/portal/mi-perfil")) return "perfil";
   if (pathname.startsWith("/portal/perfil") || pathname.startsWith("/perfil")) return "perfil-rrhh";

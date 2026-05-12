@@ -15,6 +15,8 @@ const rrhh = require("./modules/rrhh");
 const catalogos = require("./modules/catalogos");
 const onboarding = require("./modules/onboarding");
 const articulosCfg = require("./modules/articulosCfg");
+const solicitudesLao = require("./onCall/solicitudes/simularLaoPreview");
+const solicitudArticuloTriggers = require("./triggers/solicitudArticuloLaoOnCreate");
 
 module.exports = {
   ...login,
@@ -22,4 +24,6 @@ module.exports = {
   ...catalogos,
   ...onboarding,
   ...articulosCfg,
+  ...solicitudesLao,
+  ...solicitudArticuloTriggers,
 };

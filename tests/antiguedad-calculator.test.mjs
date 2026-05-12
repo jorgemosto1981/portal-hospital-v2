@@ -107,3 +107,16 @@ test("acarreo: dias > 29 suma un mes; meses > 11 suma un año", () => {
 test("fecha corte LAO devuelve 31/12 del año anterior", () => {
   assert.equal(obtenerFechaCorteLao(2026), "2025-12-31");
 });
+
+test("fechaCorte como Date usa calendario Buenos Aires (no UTC del instante)", () => {
+  const hlc = [{ fecha_inicio: "2024-01-01", fecha_fin: "2024-01-01" }];
+  const instant = new Date("2024-07-01T02:30:00.000Z");
+  const result = calcularAntiguedad(hlc, instant, 0);
+  assert.equal(result.detalleCalculo.fechaCorteAplicada, "2024-06-30");
+});
+
+test("fechaCorte como ISO con Z usa calendario Buenos Aires del instante", () => {
+  const hlc = [{ fecha_inicio: "2024-01-01", fecha_fin: "2024-01-01" }];
+  const result = calcularAntiguedad(hlc, "2024-07-01T02:30:00.000Z", 0);
+  assert.equal(result.detalleCalculo.fechaCorteAplicada, "2024-06-30");
+});

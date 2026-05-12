@@ -19,6 +19,7 @@ import PantallasCatalogo from "./pages/PantallasCatalogo.jsx";
 import Perfil from "./pages/Perfil.jsx";
 import Configuracion from "./pages/Configuracion.jsx";
 import ArticuloConfiguracion from "./pages/ArticuloConfiguracion.jsx";
+import SolicitudLaoAlta from "./pages/SolicitudLaoAlta.jsx";
 import SeguimientoEnrolamientoUsuariosRRHH from "./pages/SeguimientoEnrolamientoUsuariosRRHH.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import SistemasWeb from "./pages/SistemasWeb.jsx";
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="home" element={<Inicio />} />
             <Route path="mi-perfil" element={<PerfilUsuario />} />
             <Route path="laboral" element={<DatosLaborales />} />
+            <Route path="solicitudes/lao" element={<SolicitudLaoAlta />} />
             <Route path="perfil" element={<DatosPersonales />} />
             <Route path="perfil/:personaId" element={<Perfil />} />
             <Route path="grilla" element={<GrillaOperativa />} />
