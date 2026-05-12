@@ -19,7 +19,7 @@ Sesión(es) en **rama `feature/articulos-v2-triple-layer`**: además del trabajo
 | Rama activa al cerrar | `feature/articulos-v2-triple-layer` |
 | Remoto | `origin/feature/articulos-v2-triple-layer` |
 | Commit matriz / Paso 0 (histórico) | `ae636d4` — *feat(articulos-v2): Paso 0 LAO, matriz con validación, docs handoff y roadmap* |
-| Commit tramo Fase 6 + pausa | Tip de `feature/articulos-v2-triple-layer`: mensaje de commit *feat(articulos-v2): motor LAO Fases 3b-6, reglas y trigger solicitudes* — ver `git log -1 --oneline` tras `git pull`. |
+| Commit tramo Fase 6 + pausa | `0b9d180` — *feat(articulos-v2): motor LAO Fases 3b-6, reglas y trigger solicitudes* (publicado en `origin`; si hay commits posteriores, `git pull` y `git log -1`). |
 | Stash pendiente (histórico) | Revisar `stash@{0}` en `feature/articulos-v2-reborn` si aún aplica — no bloquea LAO |
 
 ---
