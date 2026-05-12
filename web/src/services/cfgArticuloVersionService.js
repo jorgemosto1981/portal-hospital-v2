@@ -129,12 +129,42 @@ export function expandArticuloVersionExplicitNulls(data, zodObj = cfgArticuloVer
 }
 
 /**
+ * Clon JSON del payload de versión (post-Zod) para aplicar reglas de negocio sin mutar el original.
+ * @param {import("../schemas/articulo.schema.js").ArticuloVersion} parsed
+ */
+function cloneArticuloVersionRecord(parsed) {
+  return /** @type {Record<string, unknown>} */ (JSON.parse(JSON.stringify(parsed)));
+}
+
+/**
+ * Guardián Paso 0 LAO: si no es LAO anual, fuerza `null` en parámetros LAO del Bloque 4 (evita basura en Firestore).
+ * @param {import("../schemas/articulo.schema.js").ArticuloVersion} parsed
+ * @returns {import("../schemas/articulo.schema.js").ArticuloVersion}
+ */
+export function applyLaoBloque4Guardian(parsed) {
+  const v = cloneArticuloVersionRecord(parsed);
+  const esLao = v?.bloque_identidad_naturaleza?.es_lao_anual === true;
+  const topes = v.bloque_topes_plazos_computo;
+  if (!topes || typeof topes !== "object") return /** @type {import("../schemas/articulo.schema.js").ArticuloVersion} */ (v);
+  if (!esLao) {
+    v.bloque_topes_plazos_computo = {
+      ...topes,
+      correspondencia_anio: null,
+      fecha_corte_antiguedad: null,
+      matriz_antiguedad_reglas: null,
+    };
+  }
+  return /** @type {import("../schemas/articulo.schema.js").ArticuloVersion} */ (v);
+}
+
+/**
  * Payload persistible: schema + política NULL explícito + metadatos de contrato para Functions / jobs.
  * @param {import("../schemas/articulo.schema.js").ArticuloVersion} parsed
  */
 export function buildFirestoreArticuloVersionDoc(parsed) {
+  const guarded = applyLaoBloque4Guardian(parsed);
   const expanded = expandArticuloVersionExplicitNulls(
-    /** @type {Record<string, unknown>} */ (parsed),
+    /** @type {Record<string, unknown>} */ (guarded),
   );
   const cleaned = deepUndefinedToNull(expanded);
   return {

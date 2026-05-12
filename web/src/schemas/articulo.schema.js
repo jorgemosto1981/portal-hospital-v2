@@ -90,9 +90,20 @@ export const bloqueElegibilidadFiltrosSchema = z
   })
   .strict();
 
+/** Una fila de la matriz de antigüedad LAO (Bloque 4); `operador_id` → `cfg_operador_comparacion`. */
+export const matrizAntiguedadReglaRowSchema = z
+  .object({
+    operador_id: cfgRowIdSchema,
+    /** Umbral en años de servicio (según operador). */
+    valor_anos: z.number().int().nonnegative(),
+    dias_otorgados: z.number().int().nonnegative(),
+  })
+  .strict();
+
 /**
  * Bloque 4 — Topes, plazos y cómputo (motor saldos / RDA para Cloud Functions).
  * `topes[]` excluido del documento principal (§1.7).
+ * Campos LAO (`correspondencia_anio`, `fecha_corte_antiguedad`, `matriz_antiguedad_reglas`): solo si `bloque_identidad_naturaleza.es_lao_anual`; el servicio fuerza `null` si no es LAO.
  */
 export const bloqueTopesPlazosComputoSchema = z
   .object({
@@ -105,6 +116,12 @@ export const bloqueTopesPlazosComputoSchema = z
     depende_rda: z.boolean().default(false),
     accion_saldo_id: cfgRowIdSchema,
     origen_saldo_id: cfgRowIdSchema,
+    /** Año fiscal/presupuestario del derecho (LAO); alinear con `anio_origen` de bolsas generadas. */
+    correspondencia_anio: z.number().int().nullable().optional(),
+    /** Corte antigüedad (ISO fecha, p. ej. `2025-12-31`); `null` → default vía `obtenerFechaCorteLao`. */
+    fecha_corte_antiguedad: z.string().min(1).nullable().optional(),
+    /** Escala tipo 1919/89 (pocas filas); excepción §1.7 por tamaño acotado. */
+    matriz_antiguedad_reglas: z.array(matrizAntiguedadReglaRowSchema).max(64).nullable().optional(),
   })
   .strict();
 
@@ -114,7 +131,8 @@ export const bloqueTopesPlazosComputoSchema = z
  */
 export const bloqueAcumulacionSucesionSchema = z
   .object({
-    caducidad_tipo_id: cfgRowIdSchema,
+    /** FK a `cfg_tipo_caducidad` (vencimiento de bolsa; independiente de `cfg_tipo_acumulacion`). */
+    caducidad_tipo_id: cfgRowIdSchema.describe("FK a cfg_tipo_caducidad"),
     caducidad_limite_meses: z.number().int().nonnegative().nullable().optional(),
     permite_prorroga: z.boolean().default(false),
     prorroga_articulo_relacion_id: carDocumentIdSchema.nullable().optional(),
@@ -159,7 +177,6 @@ export const cfgArticuloCoreSchema = z
     nombre: z.string().min(1),
     descripcion: z.string().optional(),
     origen_normativo_id: cfgRowIdSchema,
-    es_lao_anual: z.boolean().default(false),
     es_sancion: z.boolean().default(false),
     es_inasistencia: z.boolean().default(false),
     es_sin_goce: z.boolean().default(false),
@@ -229,4 +246,4 @@ export const cfgArticuloRelacionWithIdSchema = cfgArticuloRelacionesSchema.exten
 /** @typedef {import("zod").infer<typeof cfgArticuloVersionSchema>} ArticuloVersion */
 /** @typedef {import("zod").infer<typeof cfgArticuloRelacionesSchema>} ArticuloRelacion */
 
-export const ARTICULO_SCHEMA_VERSION = "v2-triple-layer-2026-05";
+export const ARTICULO_SCHEMA_VERSION = "v2-triple-layer-2026-05-paso0-lao";

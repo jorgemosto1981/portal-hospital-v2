@@ -76,7 +76,6 @@ Campos mínimos:
 - `nombre`
 - `descripcion`
 - `origen_normativo_id`
-- `es_lao_anual`
 - `es_sancion`
 - `es_inasistencia`
 - `es_sin_goce`
@@ -86,6 +85,8 @@ Campos mínimos:
 - `vigente_desde`
 - `vigente_hasta`
 - `version_actual_id`
+
+**Nota (Paso 0 LAO):** `es_lao_anual` **no** vive en la raíz del núcleo; la fuente de verdad es `bloque_identidad_naturaleza.es_lao_anual` en el documento de **versión** apuntado por `version_actual_id` (listados: resolver vía versión o callable).
 
 ### 2.2 Versionado de parámetros
 
@@ -178,6 +179,7 @@ El sistema se apoya en **tres capas** de documentos (patrón *read-optimized sna
 - `cfg_regla_computo_horas`
 - `cfg_tipo_tope`
 - `cfg_tipo_acumulacion`
+- `cfg_tipo_caducidad` (FK `caducidad_tipo_id` — política de vencimiento de bolsa; separado de acumulación)
 - `cfg_tipo_fraccionamiento`
 - `cfg_unidad_plazo`
 - `cfg_operador_comparacion`
@@ -270,12 +272,29 @@ Estructura de regla recomendada:
 | `depende_rda` | boolean | sí | `false` | producto (si true, bloquear solicitud sin RDA cargado para el periodo) |
 | `accion_saldo_id` | string (`cfg_*`) | sí | - | RRHH (`cfg_accion_saldo`) |
 | `origen_saldo_id` | string (`cfg_*`) | sí | - | RRHH (`cfg_origen_saldo`) |
+| `correspondencia_anio` | number (entero) | no | `null` | RRHH (LAO: año fiscal del derecho; invariante con `anio_origen` de bolsas) |
+| `fecha_corte_antiguedad` | string (ISO fecha) | no | `null` | RRHH (LAO: corte antigüedad; `null` → default `obtenerFechaCorteLao`) |
+| `matriz_antiguedad_reglas[]` | array filas | no | `null` | RRHH (LAO: escala acotada; excepción §1.7; `operador_id` → `cfg_operador_comparacion`, `valor_anos`, `dias_otorgados`; motor = último escalón que cumple) |
+
+### 4.1 LAO (Art. 40) — bifurcación Stock / Proporcional, bolsa y zona horaria
+
+- **Invariante bolsa ↔ versión:** al generar una bolsa en `saldos_articulo_agente`, `anio_origen` debe ser **igual** a `correspondencia_anio` de la **versión** que originó el saldo (auditoría).
+- **Año de solicitud:** extraído de `fecha_desde` de la solicitud en zona **`America/Argentina/Buenos_Aires`** (no depender de UTC silencioso del servidor).
+- **Regla (misma bolsa):** comparar año de solicitud con `anio_origen` de la bolsa consumida:
+
+| Relación | Camino | Lógica |
+|----------|--------|--------|
+| Año solicitud **>** `anio_origen` | **Stock** | Consumo de saldo cerrado; sin guardas 01/07 ni proporcional. |
+| Año solicitud **==** `anio_origen` | **Proporcional** | Guardas 01/07 + TSE ≥ 6 meses; cupo con `floor` según matriz y meses trabajados. |
+| Año solicitud **<** `anio_origen` | **Error** | No consumir “vacaciones del futuro” contra esa bolsa. |
+
+- **Gating configuración:** si `bloque_identidad_naturaleza.es_lao_anual !== true`, los tres campos LAO del Bloque 4 se persisten en **`null`** (servicio guardián).
 
 ## Bloque 5: Acumulación y Sucesión
 
 | Campo | Tipo | Obligatorio | Default | Fuente |
 |---|---|---|---|---|
-| `caducidad_tipo_id` | string (`cfg_*`) | sí | - | RRHH |
+| `caducidad_tipo_id` | string (`cfg_cad_*` → `cfg_tipo_caducidad`) | sí | - | RRHH |
 | `caducidad_limite_meses` | number | no | `null` | RRHH |
 | `permite_prorroga` | boolean | sí | `false` | RRHH |
 | `prorroga_articulo_relacion_id` | string | no | `null` | relación artículos |

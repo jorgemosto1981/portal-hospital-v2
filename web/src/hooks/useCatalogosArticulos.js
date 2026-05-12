@@ -18,7 +18,8 @@ export const DEFAULT_CATALOGOS_ARTICULOS_FORM = Object.freeze([
   "cfg_reinicio_ciclo_cuota",
   "cfg_accion_saldo",
   "cfg_origen_saldo",
-  "cfg_tipo_acumulacion",
+  "cfg_tipo_caducidad",
+  "cfg_operador_comparacion",
   "cfg_accion_incumplimiento_documental",
   "cfg_nivel_ocupacion_dia",
 ]);

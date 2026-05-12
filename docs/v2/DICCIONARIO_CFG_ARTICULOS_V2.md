@@ -27,6 +27,7 @@
 | `cfg_rsr_` | `cfg_regla_split_remanente` |
 | `cfg_tev_art_` | Filas nuevas de `cfg_tipo_evento` **exclusivas** del dominio artículos (misma colección global; ids reservados por prefijo) |
 | `cfg_cfi_` | `cfg_calendario_feriados_institucional` |
+| `cfg_cad_` | `cfg_tipo_caducidad` |
 | `cfg_tcp_` | `cfg_tipo_computo_plazo` |
 
 Referencias en documentos de negocio usan sufijo **`*_id`** (singular) o **`*_ids`** (listas).
@@ -63,8 +64,9 @@ Orden alfabético. **PF** = enumerado explícito en [`MODULO_ARTICULOS_V2_SCHEMA
 | `cfg_regla_computo_horas` | Regla de cómputo en horas | PF |
 | `cfg_regla_split_remanente` | Destino del remanente tras aprobación parcial (`cfg_rsr_*`) | Leg. |
 | `cfg_rol_aprobador` | Roles habilitados como aprobadores en workflow (referencia operativa; puede alinearse con `cfg_rol` global) | PF |
-| `cfg_tipo_acumulacion` | Tipo de acumulación de saldos / límites | PF |
+| `cfg_tipo_acumulacion` | Tipo de acumulación de cuota (anual, rolling, sin acumulación); **no** modela caducidad de bolsa (FK `caducidad_tipo_id` → `cfg_tipo_caducidad`) | PF |
 | `cfg_tipo_articulo` | Clase / naturaleza del artículo (`cfg_ta_*`) | PF · Leg. |
+| `cfg_tipo_caducidad` | Política de vencimiento de bolsa / saldo (`cfg_cad_*`; Bloque 5 `caducidad_tipo_id`) | PF |
 | `cfg_tipo_computo_plazo` | Cómputo de plazo documental (corrido, hábil compuesto, …; `cfg_tcp_*`) | Leg. |
 | `cfg_tipo_convivencia_articulo` | Convivencia entre artículos (catálogo de políticas de convivencia) | PF |
 | `cfg_tipo_documentacion` | Tipos de exigencia documental | PF |

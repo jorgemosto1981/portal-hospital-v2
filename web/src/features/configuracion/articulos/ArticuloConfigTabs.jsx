@@ -59,6 +59,9 @@ export function createEmptyArticuloVersionForm() {
       depende_rda: false,
       accion_saldo_id: "",
       origen_saldo_id: "",
+      correspondencia_anio: "",
+      fecha_corte_antiguedad: "",
+      matriz_antiguedad_reglas: [],
     },
     bloque_acumulacion_sucesion: {
       caducidad_tipo_id: "",
@@ -97,6 +100,77 @@ function numOrUndef(v) {
   if (v === "" || v === null || v === undefined) return undefined;
   const n = Number(v);
   return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * Ordena filas de matriz LAO por `valor_anos` ascendente (filas sin umbral válido al final).
+ * @param {unknown[]} rows
+ * @returns {unknown[]}
+ */
+export function sortMatrizAntiguedadReglas(rows) {
+  const arr = Array.isArray(rows) ? [...rows] : [];
+  arr.sort((a, b) => {
+    const na = Number(a?.valor_anos);
+    const nb = Number(b?.valor_anos);
+    const va = a?.valor_anos === "" || a?.valor_anos === undefined || !Number.isFinite(na) ? null : na;
+    const vb = b?.valor_anos === "" || b?.valor_anos === undefined || !Number.isFinite(nb) ? null : nb;
+    if (va === null && vb === null) return 0;
+    if (va === null) return 1;
+    if (vb === null) return -1;
+    if (va !== vb) return va - vb;
+    const oa = String(a?.operador_id ?? "");
+    const ob = String(b?.operador_id ?? "");
+    return oa.localeCompare(ob);
+  });
+  return arr;
+}
+
+/**
+ * Errores (bloquean guardado) y advertencias de coherencia de la matriz LAO.
+ * @param {unknown[]} rows
+ * @returns {{ errors: string[], warnings: string[] }}
+ */
+export function analyzeMatrizAntiguedadReglas(rows) {
+  const list = Array.isArray(rows) ? rows : [];
+  const complete = [];
+  for (let i = 0; i < list.length; i++) {
+    const r = list[i];
+    if (!r || typeof r !== "object") continue;
+    const op = trimOrUndef(r.operador_id);
+    const rawVa = r.valor_anos;
+    const n = Number(rawVa);
+    if (!op || rawVa === "" || rawVa === undefined || !Number.isFinite(n) || n < 0) continue;
+    complete.push({ fila: i + 1, operador_id: op, valor_anos: n });
+  }
+  const byPair = new Map();
+  for (const x of complete) {
+    const k = `${x.valor_anos}|${x.operador_id}`;
+    if (!byPair.has(k)) byPair.set(k, []);
+    byPair.get(k).push(x.fila);
+  }
+  const errors = [];
+  for (const [, filas] of byPair) {
+    if (filas.length > 1) {
+      const u = [...new Set(filas)].sort((a, b) => a - b);
+      errors.push(
+        `Matriz LAO: filas ${u.join(", ")} repiten el mismo umbral (años) y el mismo operador. Unificá en una sola fila o cambiá operador/umbral.`,
+      );
+    }
+  }
+  const byVa = new Map();
+  for (const x of complete) {
+    if (!byVa.has(x.valor_anos)) byVa.set(x.valor_anos, new Set());
+    byVa.get(x.valor_anos).add(x.operador_id);
+  }
+  const warnings = [];
+  for (const [va, ops] of byVa) {
+    if (ops.size > 1) {
+      warnings.push(
+        `Mismo umbral (${va} años) con distintos operadores en varias filas. El motor usa el último escalón cuya condición se cumple al recorrer la tabla en orden ascendente de años: revisá que el orden y los operadores reflejen la norma.`,
+      );
+    }
+  }
+  return { errors, warnings };
 }
 
 /**
@@ -142,6 +216,36 @@ export function buildVersionPayloadForZod(raw) {
     ...out.bloque_topes_plazos_computo,
     regla_computo_horas_id: rch,
   };
+
+  const esLao = out.bloque_identidad_naturaleza?.es_lao_anual === true;
+  if (!esLao) {
+    out.bloque_topes_plazos_computo.correspondencia_anio = null;
+    out.bloque_topes_plazos_computo.fecha_corte_antiguedad = null;
+    out.bloque_topes_plazos_computo.matriz_antiguedad_reglas = null;
+  } else {
+    const corr = numOrUndef(out.bloque_topes_plazos_computo.correspondencia_anio);
+    out.bloque_topes_plazos_computo.correspondencia_anio = corr === undefined ? null : corr;
+    const fc = trimOrUndef(out.bloque_topes_plazos_computo.fecha_corte_antiguedad);
+    out.bloque_topes_plazos_computo.fecha_corte_antiguedad = fc === undefined ? null : fc;
+    const rowsRaw = out.bloque_topes_plazos_computo.matriz_antiguedad_reglas;
+    const rows = Array.isArray(rowsRaw) ? rowsRaw : [];
+    const cleaned = rows
+      .filter((r) => r && typeof r === "object" && trimOrUndef(r.operador_id))
+      .map((r) => ({
+        operador_id: String(trimOrUndef(r.operador_id)),
+        valor_anos: Number(r.valor_anos),
+        dias_otorgados: Number(r.dias_otorgados),
+      }))
+      .filter(
+        (r) =>
+          Number.isFinite(r.valor_anos) &&
+          r.valor_anos >= 0 &&
+          Number.isFinite(r.dias_otorgados) &&
+          r.dias_otorgados >= 0,
+      );
+    const sortedClean = sortMatrizAntiguedadReglas(cleaned);
+    out.bloque_topes_plazos_computo.matriz_antiguedad_reglas = sortedClean.length ? sortedClean : null;
+  }
 
   const pr = trimOrUndef(out.bloque_acumulacion_sucesion.prorroga_articulo_relacion_id);
   out.bloque_acumulacion_sucesion = {
@@ -211,11 +315,12 @@ function FieldCheck({ label, checked, onChange, helpText, className = "" }) {
   );
 }
 
-function FieldSelect({ label, value, onChange, options, disabled, placeholder = "Elegí una opción…", helpText, className = "" }) {
+function FieldSelect({ label, value, onChange, options, disabled, placeholder = "Elegí una opción…", helpText, className = "", omitLabel = false }) {
   return (
     <label className={`block space-y-1 ${className}`.trim()}>
-      <span className="text-xs font-medium text-slate-600">{label}</span>
+      {!omitLabel ? <span className="text-xs font-medium text-slate-600">{label}</span> : null}
       <select
+        aria-label={omitLabel ? label : undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
@@ -267,6 +372,8 @@ const TAB_HELP = {
     "Todos los *_id deben apuntar a catálogos cfg_* vigentes.",
     "intervalo_gracia_dias: entero >= 0.",
     "depende_rda=true exige validación preventiva en backend.",
+    "LAO (solo si es_lao_anual en Identidad): correspondencia_anio = año fiscal del derecho; matriz con operador_id → cfg_operador_comparacion; fecha_corte_antiguedad ISO o vacío (null en motor).",
+    "Matriz LAO: las filas se reordenan solas por umbral (años) ascendente; no puede haber dos filas con el mismo umbral y el mismo operador.",
   ],
   acumulacion: [
     "caducidad_limite_meses y meses_arrastre: enteros >= 0.",
@@ -297,6 +404,15 @@ export default function ArticuloConfigTabs() {
   const [versionDocumentId, setVersionDocumentId] = useState("");
   const [saving, setSaving] = useState(false);
   const formBloqueadoPorCatalogos = catalogosLoading || Boolean(catalogosError);
+
+  const operadorComparacionOptions = useMemo(() => getOptions("cfg_operador_comparacion"), [getOptions]);
+
+  const matrizLaoFeedback = useMemo(() => {
+    if (!form.bloque_identidad_naturaleza.es_lao_anual) {
+      return { errors: [], warnings: [] };
+    }
+    return analyzeMatrizAntiguedadReglas(form.bloque_topes_plazos_computo.matriz_antiguedad_reglas || []);
+  }, [form.bloque_identidad_naturaleza.es_lao_anual, form.bloque_topes_plazos_computo.matriz_antiguedad_reglas]);
 
   useEffect(() => {
     const a = searchParams.get("articuloId");
@@ -332,8 +448,24 @@ export default function ArticuloConfigTabs() {
   }, [form]);
 
   const validar = useCallback(() => {
+    if (form.bloque_identidad_naturaleza.es_lao_anual) {
+      const { errors: mxErr } = analyzeMatrizAntiguedadReglas(form.bloque_topes_plazos_computo.matriz_antiguedad_reglas || []);
+      if (mxErr.length) {
+        toast.error("La matriz LAO tiene filas duplicadas (mismo umbral en años y mismo operador).");
+        setParseResult({
+          success: false,
+          error: {
+            issues: mxErr.map((message) => ({
+              path: ["bloque_topes_plazos_computo", "matriz_antiguedad_reglas"],
+              message,
+            })),
+          },
+        });
+        return;
+      }
+    }
     setParseResult(runVersionValidation());
-  }, [runVersionValidation]);
+  }, [form, runVersionValidation]);
 
   const guardarEnFirestore = useCallback(async () => {
     const artTrim = articuloDocumentId.trim();
@@ -348,6 +480,22 @@ export default function ArticuloConfigTabs() {
     if (!verR.success) {
       toast.error("version_id inválido: debe ser ver_ + ULID.");
       return;
+    }
+    if (form.bloque_identidad_naturaleza.es_lao_anual) {
+      const { errors: mxErr } = analyzeMatrizAntiguedadReglas(form.bloque_topes_plazos_computo.matriz_antiguedad_reglas || []);
+      if (mxErr.length) {
+        toast.error("No se puede guardar: la matriz LAO tiene filas duplicadas (mismo umbral y operador).");
+        setParseResult({
+          success: false,
+          error: {
+            issues: mxErr.map((message) => ({
+              path: ["bloque_topes_plazos_computo", "matriz_antiguedad_reglas"],
+              message,
+            })),
+          },
+        });
+        return;
+      }
     }
     const r = runVersionValidation();
     setParseResult(r);
@@ -376,7 +524,7 @@ export default function ArticuloConfigTabs() {
     } finally {
       setSaving(false);
     }
-  }, [articuloDocumentId, versionDocumentId, runVersionValidation]);
+  }, [articuloDocumentId, versionDocumentId, form, runVersionValidation]);
 
   const onSubmitFormulario = useCallback(
     (e) => {
@@ -388,8 +536,12 @@ export default function ArticuloConfigTabs() {
 
   const issuesText = useMemo(() => {
     if (!parseResult || parseResult.success) return null;
-    return parseResult.error.issues.map((i) => `${i.path.join(".") || "(raíz)"}: ${i.message}`).join("\n");
+    const issues = parseResult.error?.issues;
+    if (!Array.isArray(issues)) return null;
+    return issues.map((i) => `${(i.path && i.path.join(".")) || "(raíz)"}: ${i.message}`).join("\n");
   }, [parseResult]);
+
+  const matrizBloqueaGuardar = form.bloque_identidad_naturaleza.es_lao_anual && matrizLaoFeedback.errors.length > 0;
 
   return (
     <div className="space-y-4">
@@ -512,7 +664,25 @@ export default function ArticuloConfigTabs() {
             <FieldText label="normativa_habilitante.resolucion" value={form.bloque_identidad_naturaleza.normativa_habilitante.resolucion} onChange={(v) => setNested("bloque_identidad_naturaleza", "normativa_habilitante", "resolucion", v)} helpText="Número/cita de resolución complementaria." />
             <FieldText label="normativa_habilitante.interno_efector" value={form.bloque_identidad_naturaleza.normativa_habilitante.interno_efector} onChange={(v) => setNested("bloque_identidad_naturaleza", "normativa_habilitante", "interno_efector", v)} helpText="Referencia interna del efector/hospital para trazabilidad local." className="md:col-span-2" />
             <div className="md:col-span-2 grid gap-3 sm:grid-cols-2">
-              <FieldCheck label="es_lao_anual" checked={form.bloque_identidad_naturaleza.es_lao_anual} onChange={(v) => setBlock("bloque_identidad_naturaleza", "es_lao_anual", v)} helpText="Marca artículos LAO con ciclo anual y reglas específicas de saldo." />
+              <FieldCheck
+                label="es_lao_anual"
+                checked={form.bloque_identidad_naturaleza.es_lao_anual}
+                onChange={(v) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    bloque_identidad_naturaleza: { ...prev.bloque_identidad_naturaleza, es_lao_anual: v },
+                    bloque_topes_plazos_computo: v
+                      ? prev.bloque_topes_plazos_computo
+                      : {
+                          ...prev.bloque_topes_plazos_computo,
+                          correspondencia_anio: "",
+                          fecha_corte_antiguedad: "",
+                          matriz_antiguedad_reglas: [],
+                        },
+                  }));
+                }}
+                helpText="Única fuente de verdad LAO (Bloque 1). Si desmarcás, se limpian parámetros LAO del Bloque 4 al guardar."
+              />
               <FieldCheck label="es_sancion" checked={form.bloque_identidad_naturaleza.es_sancion} onChange={(v) => setBlock("bloque_identidad_naturaleza", "es_sancion", v)} helpText="Clasifica el artículo como sanción disciplinaria." />
               <FieldCheck label="es_inasistencia" checked={form.bloque_identidad_naturaleza.es_inasistencia} onChange={(v) => setBlock("bloque_identidad_naturaleza", "es_inasistencia", v)} helpText="Indica que computa como inasistencia en controles operativos." />
               <FieldCheck label="es_sin_goce" checked={form.bloque_identidad_naturaleza.es_sin_goce} onChange={(v) => setBlock("bloque_identidad_naturaleza", "es_sin_goce", v)} helpText="Define que no justifica haberes (sin goce)." />
@@ -609,6 +779,188 @@ export default function ArticuloConfigTabs() {
             <FieldNumber label="bloque_topes_plazos_computo.intervalo_gracia_dias" value={form.bloque_topes_plazos_computo.intervalo_gracia_dias} onChange={(v) => setBlock("bloque_topes_plazos_computo", "intervalo_gracia_dias", v)} min={0} helpText="Cantidad de días de tolerancia antes de consumir saldo." />
             <FieldCheck label="bloque_topes_plazos_computo.fraccionamiento_habilitado" checked={form.bloque_topes_plazos_computo.fraccionamiento_habilitado} onChange={(v) => setBlock("bloque_topes_plazos_computo", "fraccionamiento_habilitado", v)} helpText="Permite usar el artículo en partes/fracciones en lugar de bloque completo." />
             <FieldCheck label="bloque_topes_plazos_computo.depende_rda" checked={form.bloque_topes_plazos_computo.depende_rda} onChange={(v) => setBlock("bloque_topes_plazos_computo", "depende_rda", v)} helpText="Si está activo, la validación RDA debe resolverse en backend." className="md:col-span-2" />
+            {form.bloque_identidad_naturaleza.es_lao_anual ? (
+              <div className="md:col-span-2 space-y-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-900">LAO — Bloque 4 (solo si es LAO anual)</p>
+                <p className="text-[11px] text-emerald-900/90">
+                  <strong>correspondencia_anio</strong> es el año fiscal del derecho; cada bolsa en saldos debe llevar el mismo{" "}
+                  <span className="font-mono">anio_origen</span>. Motor: año de <span className="font-mono">fecha_desde</span> (Buenos Aires) vs{" "}
+                  <span className="font-mono">anio_origen</span> define Stock vs proporcional (ver MODULO PF).
+                </p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <FieldNumber
+                    label="bloque_topes_plazos_computo.correspondencia_anio"
+                    value={form.bloque_topes_plazos_computo.correspondencia_anio}
+                    onChange={(v) => setBlock("bloque_topes_plazos_computo", "correspondencia_anio", v)}
+                    min={1900}
+                    helpText="Año fiscal/presupuestario al que pertenece esta parametrización (ej. 2025)."
+                  />
+                  <FieldText
+                    label="bloque_topes_plazos_computo.fecha_corte_antiguedad (ISO)"
+                    value={form.bloque_topes_plazos_computo.fecha_corte_antiguedad}
+                    onChange={(v) => setBlock("bloque_topes_plazos_computo", "fecha_corte_antiguedad", v)}
+                    placeholder="2025-12-31"
+                    helpText="Corte para antigüedad; vacío → null y el motor usa 31/12 año anterior (obtenerFechaCorteLao)."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-emerald-900">matriz_antiguedad_reglas</span>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-emerald-200 bg-white px-2 py-1 text-xs font-medium text-emerald-900"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          bloque_topes_plazos_computo: {
+                            ...prev.bloque_topes_plazos_computo,
+                            matriz_antiguedad_reglas: sortMatrizAntiguedadReglas([
+                              ...(prev.bloque_topes_plazos_computo.matriz_antiguedad_reglas || []),
+                              { operador_id: "", valor_anos: "", dias_otorgados: "" },
+                            ]),
+                          },
+                        }))
+                      }
+                    >
+                      Añadir fila
+                    </button>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-emerald-900/90">
+                    <strong>Motor (proporcional):</strong> se recorre la tabla en orden ascendente de <span className="font-mono">valor_anos</span>. Para
+                    cada fila se evalúa si la antigüedad del agente cumple la condición del <span className="font-mono">operador_id</span> respecto a ese
+                    umbral; <strong>gana el último escalón cuya condición sea verdadera</strong> y de ahí se toman los{" "}
+                    <span className="font-mono">dias_otorgados</span> base para el proporcional (ver MODULO PF). Las filas se reordenan solas al editar.
+                  </p>
+                  {matrizLaoFeedback.errors.length > 0 ? (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-950">
+                      <p className="font-semibold">No se puede guardar hasta corregir:</p>
+                      <ul className="mt-1 list-inside list-disc space-y-0.5">
+                        {matrizLaoFeedback.errors.map((msg) => (
+                          <li key={msg}>{msg}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {matrizLaoFeedback.warnings.length > 0 ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2 text-[11px] text-amber-950">
+                      <p className="font-semibold">Revisar coherencia</p>
+                      <ul className="mt-1 list-inside list-disc space-y-0.5">
+                        {matrizLaoFeedback.warnings.map((msg) => (
+                          <li key={msg}>{msg}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  <div className="overflow-x-auto rounded-lg border border-emerald-100 bg-white">
+                    <table className="min-w-full text-left text-xs">
+                      <thead className="border-b border-slate-100 bg-slate-50 text-slate-600">
+                        <tr>
+                          <th className="px-2 py-2 min-w-[200px]">Operador</th>
+                          <th className="px-2 py-2">Umbral (años)</th>
+                          <th className="px-2 py-2">Días del escalón</th>
+                          <th className="px-2 py-2 w-16" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(form.bloque_topes_plazos_computo.matriz_antiguedad_reglas || []).map((row, idx) => (
+                          <tr key={idx} className="border-b border-slate-50">
+                            <td className="px-2 py-1 align-top">
+                              <FieldSelect
+                                label="Operador de comparación"
+                                omitLabel
+                                value={row.operador_id || ""}
+                                onChange={(v) =>
+                                  setForm((prev) => {
+                                    const rows = [...(prev.bloque_topes_plazos_computo.matriz_antiguedad_reglas || [])];
+                                    rows[idx] = { ...rows[idx], operador_id: v };
+                                    return {
+                                      ...prev,
+                                      bloque_topes_plazos_computo: {
+                                        ...prev.bloque_topes_plazos_computo,
+                                        matriz_antiguedad_reglas: sortMatrizAntiguedadReglas(rows),
+                                      },
+                                    };
+                                  })
+                                }
+                                options={operadorComparacionOptions}
+                                disabled={formBloqueadoPorCatalogos}
+                                placeholder="Elegí operador…"
+                                className="min-w-0"
+                              />
+                            </td>
+                            <td className="px-2 py-1 align-top">
+                              <input
+                                type="number"
+                                min={0}
+                                className="w-24 rounded border border-slate-200 px-1 py-1.5"
+                                value={row.valor_anos === "" || row.valor_anos === undefined ? "" : row.valor_anos}
+                                onChange={(e) =>
+                                  setForm((prev) => {
+                                    const rows = [...(prev.bloque_topes_plazos_computo.matriz_antiguedad_reglas || [])];
+                                    const raw = e.target.value;
+                                    rows[idx] = { ...rows[idx], valor_anos: raw === "" ? "" : Number(raw) };
+                                    return {
+                                      ...prev,
+                                      bloque_topes_plazos_computo: {
+                                        ...prev.bloque_topes_plazos_computo,
+                                        matriz_antiguedad_reglas: sortMatrizAntiguedadReglas(rows),
+                                      },
+                                    };
+                                  })
+                                }
+                              />
+                            </td>
+                            <td className="px-2 py-1 align-top">
+                              <input
+                                type="number"
+                                min={0}
+                                className="w-24 rounded border border-slate-200 px-1 py-1.5"
+                                value={row.dias_otorgados === "" || row.dias_otorgados === undefined ? "" : row.dias_otorgados}
+                                onChange={(e) =>
+                                  setForm((prev) => {
+                                    const rows = [...(prev.bloque_topes_plazos_computo.matriz_antiguedad_reglas || [])];
+                                    const raw = e.target.value;
+                                    rows[idx] = { ...rows[idx], dias_otorgados: raw === "" ? "" : Number(raw) };
+                                    return {
+                                      ...prev,
+                                      bloque_topes_plazos_computo: {
+                                        ...prev.bloque_topes_plazos_computo,
+                                        matriz_antiguedad_reglas: sortMatrizAntiguedadReglas(rows),
+                                      },
+                                    };
+                                  })
+                                }
+                              />
+                            </td>
+                            <td className="px-1 py-1 align-top">
+                              <button
+                                type="button"
+                                className="text-xs text-red-600 hover:underline"
+                                onClick={() =>
+                                  setForm((prev) => {
+                                    const rows = [...(prev.bloque_topes_plazos_computo.matriz_antiguedad_reglas || [])];
+                                    rows.splice(idx, 1);
+                                    return {
+                                      ...prev,
+                                      bloque_topes_plazos_computo: {
+                                        ...prev.bloque_topes_plazos_computo,
+                                        matriz_antiguedad_reglas: sortMatrizAntiguedadReglas(rows),
+                                      },
+                                    };
+                                  })
+                                }
+                              >
+                                Quitar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -618,9 +970,9 @@ export default function ArticuloConfigTabs() {
               label="bloque_acumulacion_sucesion.caducidad_tipo_id"
               value={form.bloque_acumulacion_sucesion.caducidad_tipo_id}
               onChange={(v) => setBlock("bloque_acumulacion_sucesion", "caducidad_tipo_id", v)}
-              options={getOptions("cfg_tipo_acumulacion")}
+              options={getOptions("cfg_tipo_caducidad")}
               disabled={formBloqueadoPorCatalogos}
-              helpText="Catálogo cfg_tipo_acumulacion (incluye opciones de caducidad en el plan vigente)."
+              helpText="Catálogo cfg_tipo_caducidad — vencimiento de bolsa (separado del tipo de acumulación en cfg_tipo_acumulacion)."
             />
             <FieldNumber label="bloque_acumulacion_sucesion.caducidad_limite_meses" value={form.bloque_acumulacion_sucesion.caducidad_limite_meses} onChange={(v) => setBlock("bloque_acumulacion_sucesion", "caducidad_limite_meses", v)} min={0} helpText="Meses máximos antes de vencer saldo/remanente (según tipo de caducidad)." />
             <FieldNumber label="bloque_acumulacion_sucesion.meses_arrastre" value={form.bloque_acumulacion_sucesion.meses_arrastre} onChange={(v) => setBlock("bloque_acumulacion_sucesion", "meses_arrastre", v)} min={0} helpText="Cuántos meses se arrastra saldo no usado al ciclo siguiente." />
@@ -673,7 +1025,7 @@ export default function ArticuloConfigTabs() {
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"
-          disabled={saving || formBloqueadoPorCatalogos}
+          disabled={saving || formBloqueadoPorCatalogos || matrizBloqueaGuardar}
           className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:scale-[0.99] disabled:opacity-50 md:hover:bg-emerald-700"
         >
           {saving ? "Guardando…" : "Guardar en Firestore"}

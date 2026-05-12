@@ -19,6 +19,7 @@
     "prefijos_id_documento": {
       "cfg_tipo_articulo": "cfg_ta_* (diccionario §1)",
       "cfg_tipo_acumulacion": "cfg_tac_* (propuesta seed; no colisionar con cfg_ta_*)",
+      "cfg_tipo_caducidad": "cfg_cad_* — FK `bloque_acumulacion_sucesion.caducidad_tipo_id` (RFC caducidad dedicada; separado de acumulación).",
       "cfg_tipo_evento_articulos": "cfg_tev_art_* + ULID real en despliegue (ejemplos con sufijos FAV, FB0… son ilustrativos; regenerar con ulid())"
     }
   },
@@ -778,26 +779,6 @@
       "activo": true,
       "vigente_desde": null,
       "vigente_hasta": null
-    },
-    {
-      "id": "cfg_tac_cad_sin_caducidad",
-      "codigo_interno": "CADUCIDAD_NUNCA",
-      "titulo_ui": "Sin caducidad explícita",
-      "descripcion_ui": "Uso posible como caducidad_tipo_id cuando no aplica límite.",
-      "orden": 40,
-      "activo": true,
-      "vigente_desde": null,
-      "vigente_hasta": null
-    },
-    {
-      "id": "cfg_tac_cad_fin_periodo",
-      "codigo_interno": "CADUCIDAD_FIN_PERIODO",
-      "titulo_ui": "Caduca al fin de periodo devengado",
-      "descripcion_ui": "Propuesta para caducidad_tipo_id (matriz Bloque 5) hasta catálogo dedicado.",
-      "orden": 50,
-      "activo": true,
-      "vigente_desde": null,
-      "vigente_hasta": null
     }
   ],
   "cfg_tipo_articulo": [
@@ -824,6 +805,48 @@
       "codigo_interno": "PERMISO",
       "titulo_ui": "Permiso",
       "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_tipo_caducidad": [
+    {
+      "id": "cfg_cad_nunca",
+      "codigo_interno": "NUNCA",
+      "titulo_ui": "Sin caducidad (Permanente)",
+      "descripcion_ui": "El saldo persiste hasta ser agotado o por cese del agente.",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cad_fin_ciclo",
+      "codigo_interno": "FIN_CICLO",
+      "titulo_ui": "Al finalizar el ciclo de reinicio",
+      "descripcion_ui": "El saldo vence el mismo día que se acredita el nuevo (ej: 31 de Dic).",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cad_fecha_fija",
+      "codigo_interno": "FECHA_FIJA",
+      "titulo_ui": "En una fecha fija anual",
+      "descripcion_ui": "Vence un día específico (ej: 31 de Marzo para LAO). Requiere mes/día.",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cad_ventana_movil",
+      "codigo_interno": "VENTANA_MOVIL",
+      "titulo_ui": "Ventana móvil (Rolling)",
+      "descripcion_ui": "Cada crédito vence N meses después de su generación.",
+      "orden": 40,
       "activo": true,
       "vigente_desde": null,
       "vigente_hasta": null

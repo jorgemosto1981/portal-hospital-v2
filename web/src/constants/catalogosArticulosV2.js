@@ -38,6 +38,7 @@ export const COLECCIONES_FIRESTORE_ARTICULOS_V2 = Object.freeze([
   "cfg_regla_split_remanente",
   "cfg_rol_aprobador",
   "cfg_tipo_acumulacion",
+  "cfg_tipo_caducidad",
   "cfg_tipo_articulo",
   "cfg_tipo_computo_plazo",
   "cfg_tipo_convivencia_articulo",
