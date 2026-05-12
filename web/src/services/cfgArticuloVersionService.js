@@ -1,7 +1,8 @@
 import { doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
+import { z } from "zod";
 
 import { dbV2 } from "./firebase.js";
-import { ARTICULO_SCHEMA_VERSION } from "../schemas/articulo.schema.js";
+import { ARTICULO_SCHEMA_VERSION, cfgArticuloVersionSchema } from "../schemas/articulo.schema.js";
 import { ulid } from "ulid";
 
 /** @returns {string} id `art_<ULID>` */
@@ -15,12 +16,129 @@ export function newVersionDocumentId() {
 }
 
 /**
- * Payload persistible: mismos campos que valida Zod + metadatos de contrato para Functions / jobs.
+ * Objeto plano JSON-like (no Date/FieldValue dentro del payload de versión validado).
+ * @param {unknown} value
+ */
+function isPlainObject(value) {
+  if (value === null || typeof value !== "object") return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+/**
+ * Política NULL explícito: cualquier `undefined` → `null` de forma recursiva.
+ * No altera instancias no planas (por si el payload incluye tipos especiales fuera del schema).
+ *
+ * @param {unknown} value
+ * @returns {unknown}
+ */
+export function deepUndefinedToNull(value) {
+  if (value === undefined) return null;
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map((item) => deepUndefinedToNull(item));
+  if (!isPlainObject(value)) return value;
+
+  /** @type {Record<string, unknown>} */
+  const out = {};
+  for (const k of Object.keys(value)) {
+    const v = value[k];
+    out[k] = v === undefined ? null : deepUndefinedToNull(v);
+  }
+  return out;
+}
+
+/**
+ * @param {import("zod").ZodTypeAny} schema
+ * @returns {import("zod").ZodObject | null}
+ */
+function getZodObject(schema) {
+  let s = schema;
+  if (s._def?.typeName === "ZodEffects") {
+    s = s._def.schema;
+  }
+  return s instanceof z.ZodObject ? s : null;
+}
+
+/**
+ * Quita solo Optional/Nullable externos (no Default), para detectar objeto anidado.
+ *
+ * @param {import("zod").ZodTypeAny} schema
+ */
+function unwrapOptionalNullable(schema) {
+  let s = schema;
+  while (s._def?.typeName === "ZodOptional" || s._def?.typeName === "ZodNullable") {
+    s = s._def.innerType;
+  }
+  return s;
+}
+
+/**
+ * Alinea el documento a llaves del schema: opcionales ausentes → `null`;
+ * objetos anidados siempre presentes con subcampos explícitos;
+ * respeta `ZodDefault` cuando falta el valor (p. ej. boolean false, intervalo_gracia 0).
+ *
+ * @param {Record<string, unknown>} data
+ * @param {import("zod").ZodObject} [zodObj]
+ * @returns {Record<string, unknown>}
+ */
+export function expandArticuloVersionExplicitNulls(data, zodObj = cfgArticuloVersionSchema) {
+  const obj = getZodObject(zodObj);
+  if (!obj) return /** @type {Record<string, unknown>} */ (deepUndefinedToNull(data));
+
+  const shape = obj.shape;
+  const src = isPlainObject(data) ? data : {};
+  /** @type {Record<string, unknown>} */
+  const out = {};
+
+  for (const key of Object.keys(shape)) {
+    const fieldSchema = shape[key];
+    const rawVal = src[key];
+
+    if (fieldSchema._def?.typeName === "ZodDefault") {
+      const innerType = fieldSchema._def.innerType;
+      const defFn = fieldSchema._def.defaultValue;
+      const defVal = typeof defFn === "function" ? defFn() : defFn;
+      const innerObj = getZodObject(innerType);
+
+      if (rawVal === undefined) {
+        out[key] = innerObj ? expandArticuloVersionExplicitNulls({}, innerObj) : defVal;
+      } else if (innerObj && isPlainObject(rawVal)) {
+        out[key] = expandArticuloVersionExplicitNulls(rawVal, innerObj);
+      } else {
+        out[key] = rawVal === undefined ? null : deepUndefinedToNull(rawVal);
+      }
+      continue;
+    }
+
+    const unwrapped = unwrapOptionalNullable(fieldSchema);
+    const nestedObj = getZodObject(unwrapped);
+
+    if (nestedObj) {
+      const childSrc = rawVal === undefined || rawVal === null ? {} : rawVal;
+      out[key] = expandArticuloVersionExplicitNulls(
+        isPlainObject(childSrc) ? childSrc : {},
+        nestedObj,
+      );
+      continue;
+    }
+
+    out[key] = rawVal === undefined ? null : deepUndefinedToNull(rawVal);
+  }
+
+  return out;
+}
+
+/**
+ * Payload persistible: schema + política NULL explícito + metadatos de contrato para Functions / jobs.
  * @param {import("../schemas/articulo.schema.js").ArticuloVersion} parsed
  */
 export function buildFirestoreArticuloVersionDoc(parsed) {
+  const expanded = expandArticuloVersionExplicitNulls(
+    /** @type {Record<string, unknown>} */ (parsed),
+  );
+  const cleaned = deepUndefinedToNull(expanded);
   return {
-    ...parsed,
+    ...cleaned,
     schema_contract_version: ARTICULO_SCHEMA_VERSION,
     actualizado_en: serverTimestamp(),
   };

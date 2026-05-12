@@ -10,9 +10,16 @@ import { listarColeccion } from "../services/configuracionCatalogosService.js";
  * Referencia estable para no disparar el efecto del hook en cada render.
  */
 export const DEFAULT_CATALOGOS_ARTICULOS_FORM = Object.freeze([
+  "cfg_estado_version_articulo",
+  "cfg_justifica_sueldo",
+  "cfg_regla_computo_dias",
+  "cfg_ambito_consumo",
+  "cfg_regla_computo_horas",
   "cfg_reinicio_ciclo_cuota",
   "cfg_accion_saldo",
   "cfg_origen_saldo",
+  "cfg_tipo_acumulacion",
+  "cfg_accion_incumplimiento_documental",
   "cfg_nivel_ocupacion_dia",
 ]);
 
