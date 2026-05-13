@@ -22,8 +22,8 @@
 | SLA / burbujeo | Temporizadores por paso; escalamiento | Campos `vencimiento_en`, `sla_*`, `escalamientos_*` |
 | Eventos RRHH | `eventos_ticket` / `cfg_tipo_evento`; prefijo `cfg_tev_art_*` | [`PLAN_UNIFICACION_EVENTOS_RRHH_2026-05-06.md`](./PLAN_UNIFICACION_EVENTOS_RRHH_2026-05-06.md) |
 | Notificaciones | Derivadas de eventos y preferencias | Pendiente contrato unificado si aplica |
-| Tomas de conocimiento | Paso opcional en workflow | Plantillas de conocimiento |
-| Reemplazos / contrataciones | Flags `admite_reemplazo`, `dispara_evento_contrataciones` | Backlog cruzado según política hospitalaria |
+| Tomas de conocimiento | Paso opcional en workflow; burbujeo de acuse por `hlg_*.nivel_jerarquico` hacia grupo padre | `toma_conocimiento_limitada` (bool) + `niveles_burbujeo` (tope de niveles; UI-only por ahora). Cloud Function usará `niveles_burbujeo` como límite del bucle de escalamiento. Plantillas de conocimiento pendientes |
+| Reemplazos / contrataciones | Flags `admite_reemplazo`, `dispara_evento_contrataciones`; señal upstream: `logistica_aviso_habilitada` en config de artículo | `logistica_aviso_habilitada` identifica artículos que generan necesidad de cobertura (ej. Art. 16-0, Tareas Diferentes). Backlog cruzado según política hospitalaria |
 
 ---
 

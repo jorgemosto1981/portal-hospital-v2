@@ -272,9 +272,30 @@ Estructura de regla recomendada:
 | `depende_rda` | boolean | sí | `false` | producto (si true, bloquear solicitud sin RDA cargado para el periodo) |
 | `accion_saldo_id` | string (`cfg_*`) | sí | - | RRHH (`cfg_accion_saldo`) |
 | `origen_saldo_id` | string (`cfg_*`) | sí | - | RRHH (`cfg_origen_saldo`) |
+| `cupo_dias_por_ciclo` | number (entero >= 0) | no | `null` | RRHH (cupo fijo para artículos no-LAO; en LAO el cupo sale de `matriz_antiguedad_reglas`) |
+| `tope_frecuencia_mensual` | number (entero >= 0) | no | `null` | RRHH (máximo de solicitudes aprobables en un mes calendario) |
+| `tope_dias_por_evento` | number (entero >= 0) | no | `null` | RRHH (máximo de días que se pueden pedir en una sola solicitud) |
 | `correspondencia_anio` | number (entero) | no | `null` | RRHH (LAO: año fiscal del derecho; invariante con `anio_origen` de bolsas) |
 | `fecha_corte_antiguedad` | string (ISO fecha) | no | `null` | RRHH (LAO: corte antigüedad; `null` → default `obtenerFechaCorteLao`) |
 | `matriz_antiguedad_reglas[]` | array filas | no | `null` | RRHH (LAO: escala acotada; excepción §1.7; `operador_id` → `cfg_operador_comparacion`, `valor_anos`, `dias_otorgados`; motor = último escalón que cumple) |
+
+### 4.0 Semántica: Ámbito de consumo, cupos y frecuencia
+
+**`ambito_consumo_id`** define la **ventana temporal** donde se mide el consumo de días para aplicar topes. No se refiere al "quién" (agente/servicio) sino al "cuándo" (período de cómputo):
+
+- **Año calendario** (`cfg_ac_anio_calendario`): el contador se reinicia el 1 de enero. Ej: licencias por trámites (Art. 55 Ley 8525).
+- **Año laboral / ciclo institucional** (`cfg_ac_anio_laboral`): el contador sigue una fecha de corte que no coincide con el año civil. Ej: LAO (Art. 40).
+- **Mes corriente** (`cfg_ac_mes_corriente`): solo cuenta lo usado en el mes en curso. Ej: permisos con tope mensual.
+
+**Motor de validación (Fase 7)** — pseudocódigo de evaluación:
+
+1. Determinar **cupo**: si `es_lao_anual` = true, calcular desde `matriz_antiguedad_reglas`; si no, usar `cupo_dias_por_ciclo`.
+2. Sumar días consumidos del agente en la ventana definida por `ambito_consumo_id`.
+3. Si `dias_consumidos + dias_solicitados > cupo` -> RECHAZAR.
+4. Si `tope_frecuencia_mensual` definido: contar solicitudes aprobadas en el mes actual; si `count >= tope_frecuencia_mensual` -> RECHAZAR.
+5. Si `tope_dias_por_evento` definido: si `dias_solicitados > tope_dias_por_evento` -> RECHAZAR.
+
+**Ejemplo Art. 64a**: `ambito_consumo_id` = año calendario, `cupo_dias_por_ciclo` = 6, `tope_frecuencia_mensual` = 1, `tope_dias_por_evento` = 1.
 
 ### 4.1 LAO (Art. 40) — bifurcación Stock / Proporcional, bolsa y zona horaria
 
@@ -313,6 +334,15 @@ Estructura de regla recomendada:
 | `sla_por_paso[]` | array | no | `[]` | SLA |
 | `logistica_aviso_habilitada` | boolean | sí | `false` | RRHH |
 | `toma_conocimiento_limitada` | boolean | sí | `false` | RRHH |
+| `niveles_burbujeo` | number (entero ≥ 1) | no | `null` | RRHH |
+
+### Semántica operativa — campos de cobertura y burbujeo
+
+**`logistica_aviso_habilitada`** — Identifica artículos que generan necesidad de cobertura de puesto. Cuando está activo, el sistema señaliza que al aprobarse una solicitud de este tipo debe gestionarse un aviso de reemplazo o contratación de personal suplente (ej. Art. 16-0 Tareas Diferentes Definitivas, licencias prolongadas). No dispara el reemplazo por sí solo; el módulo de Reemplazos/Contrataciones (Escenario 8, backlog) consumirá esta señal para orquestar el flujo. Campos futuros relacionados: `admite_reemplazo`, `dispara_evento_contrataciones`.
+
+**`toma_conocimiento_limitada`** — Controla el alcance del burbujeo de la notificación de acuse ("toma de conocimiento") tras la aprobación de una solicitud. Si es `false`, el acuse escala por toda la cadena jerárquica de grupos de trabajo (del grupo del agente hasta la dirección). Si es `true`, el burbujeo se corta según `niveles_burbujeo`.
+
+**`niveles_burbujeo`** — Solo relevante cuando `toma_conocimiento_limitada = true`. Define cuántos niveles de grupos de trabajo hacia arriba (vía `grupos_de_trabajo` padre) reciben la notificación de toma de conocimiento. Ejemplo: `niveles_burbujeo = 2` significa que solo el grupo inmediato y su padre reciben el acuse; la dirección general no se entera a menos que esté dentro de esos 2 niveles. La Cloud Function de burbujeo usará este valor como tope de su bucle/recursión sobre `hlg_*.nivel_jerarquico`. **Estado actual:** UI-only (campo en formulario, no persistido en Firestore aún); se incorporará al schema Zod y al backend cuando se implemente el módulo de Tomas de Conocimiento.
 
 ## Bloque 7: Documentación y Convivencia
 

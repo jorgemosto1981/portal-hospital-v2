@@ -79,6 +79,7 @@ const CFG_COLECCIONES_ARTICULOS_V2 = [
 
 const CFG_COLECCIONES_RRHH = new Set([
   ...CFG_COLECCIONES_ARTICULOS_V2,
+  "cfg_articulos",
   "cfg_rol",
   "cfg_estado_civil",
   "cfg_sexo_genero",

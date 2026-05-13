@@ -96,6 +96,8 @@ Incluye (lista no exhaustiva para implementación; definitivos en schema y RFC):
 - Split: `permite_aprobacion_parcial`, `regla_split_remanente_id`, `permite_remanente_sin_articulo`, `permite_nueva_solicitud_remanente`, `requiere_decision_rrhh_para_remanente`, `requiere_auditoria_medica`, …
 - Documentación: `documentacion_diferida_habilitada`, `momento_entrega_documentacion_id`, `plazo_documental_post_inicio_dias`, `plazo_documental_tipo_dias_id` → `cfg_tcp_*`, `accion_vencimiento_documental_id`
 - Impacto y conflictos: `admite_reemplazo`, `dispara_evento_contrataciones`, `prioridad_normativa_id`, `politica_superposicion_id`, `articulos_incompatibles_ids`, `filtros_elegibilidad`, `metadata`
+- Workflow / burbujeo: `logistica_aviso_habilitada` (señal de cobertura/reemplazo), `toma_conocimiento_limitada` (corta burbujeo de acuse), `niveles_burbujeo` (tope de niveles de grupo para el acuse; UI-only hasta módulo Tomas de Conocimiento)
+- Límites y cupos: `ambito_consumo_id` (ventana temporal del contador: año civil, ciclo laboral o mes), `cupo_dias_por_ciclo` (tope fijo para no-LAO), `tope_frecuencia_mensual` (max solicitudes/mes), `tope_dias_por_evento` (max días por solicitud)
 
 **`variantes_sarh[]`:** arreglo de objetos `{ codigo_sarh, etiqueta_ui, afecta_sueldo_porcentaje, activo }`.
 

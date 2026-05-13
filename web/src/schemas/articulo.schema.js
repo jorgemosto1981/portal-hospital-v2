@@ -64,6 +64,9 @@ export const bloqueIdentidadNaturalezaSchema = z
     es_sin_goce: z.boolean().default(false),
     requiere_dictamen: z.boolean().default(false),
     visualizacion: visualizacionSchema.optional(),
+    /** Ventana de aplicación de esta versión (motor de resolución §RFC vigencia doble nivel). */
+    fecha_desde: firestoreDateLikeSchema,
+    fecha_hasta: firestoreDateLikeSchema.nullable().optional(),
   })
   .strict();
 
@@ -116,6 +119,12 @@ export const bloqueTopesPlazosComputoSchema = z
     depende_rda: z.boolean().default(false),
     accion_saldo_id: cfgRowIdSchema,
     origen_saldo_id: cfgRowIdSchema,
+    /** Cupo fijo de días por ciclo (no-LAO); en LAO el cupo sale de `matriz_antiguedad_reglas`. */
+    cupo_dias_por_ciclo: z.number().int().nonnegative().nullable().optional(),
+    /** Máximo de solicitudes aprobables en un mes calendario. */
+    tope_frecuencia_mensual: z.number().int().nonnegative().nullable().optional(),
+    /** Máximo de días que se pueden pedir en una sola solicitud. */
+    tope_dias_por_evento: z.number().int().nonnegative().nullable().optional(),
     /** Año fiscal/presupuestario del derecho (LAO); alinear con `anio_origen` de bolsas generadas. */
     correspondencia_anio: z.number().int().nullable().optional(),
     /** Corte antigüedad (ISO fecha, p. ej. `2025-12-31`); `null` → default vía `obtenerFechaCorteLao`. */
@@ -182,6 +191,8 @@ export const cfgArticuloCoreSchema = z
     es_sin_goce: z.boolean().default(false),
     requiere_dictamen: z.boolean().default(false),
     activo: z.boolean(),
+    motivo_deshabilitado: z.string().nullable().optional(),
+    fecha_deshabilitado: firestoreDateLikeSchema.nullable().optional(),
     estado_articulo_id: cfgRowIdSchema,
     vigente_desde: firestoreDateLikeSchema.nullable().optional(),
     vigente_hasta: firestoreDateLikeSchema.nullable().optional(),

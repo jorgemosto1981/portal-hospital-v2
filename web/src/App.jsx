@@ -19,6 +19,7 @@ import PantallasCatalogo from "./pages/PantallasCatalogo.jsx";
 import Perfil from "./pages/Perfil.jsx";
 import Configuracion from "./pages/Configuracion.jsx";
 import ArticuloConfiguracion from "./pages/ArticuloConfiguracion.jsx";
+import ArticuloListadoGrilla from "./pages/ArticuloListadoGrilla.jsx";
 import SolicitudLaoAlta from "./pages/SolicitudLaoAlta.jsx";
 import SeguimientoEnrolamientoUsuariosRRHH from "./pages/SeguimientoEnrolamientoUsuariosRRHH.jsx";
 import Inicio from "./pages/Inicio.jsx";
@@ -95,7 +96,8 @@ export default function App() {
               <Route path="sistemas-web" element={<SistemasWeb />} />
               <Route path="rrhh/alta" element={<AltaAgenteRRHH />} />
               <Route path="rrhh/antiguedad" element={<Antiguedad />} />
-              <Route path="rrhh/configuracion-articulos" element={<ArticuloConfiguracion />} />
+              <Route path="rrhh/configuracion-articulos" element={<ArticuloListadoGrilla />} />
+              <Route path="rrhh/configuracion-articulos/:articuloId" element={<ArticuloConfiguracion />} />
               <Route path="rrhh/notificaciones-datos-personales" element={<NotificacionesEventosDatosPersonalesRRHH />} />
               <Route path="rrhh/seguimiento-enrolamiento" element={<SeguimientoEnrolamientoUsuariosRRHH />} />
             </Route>
