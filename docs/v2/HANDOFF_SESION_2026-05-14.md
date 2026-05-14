@@ -119,6 +119,23 @@ El listado leía `cfg_articulos/{id}` pero el servicio solo guardaba `version_ac
 - `web/src/pages/ArticuloListadoGrilla.jsx` — Grilla de listado mejorada
 - `docs/v2/SEED_CATALOGOS_ARTICULOS_V2.json` — Seed de catálogos
 
+## Agenda para la próxima sesión
+
+1. **Revisar etapas del plan general:** Analizar nuevamente las etapas del plan maestro de la ticketera y ajustar prioridades según el estado actual del configurador.
+
+2. **Rediseño del checkin de usuario nuevo — Antigüedad:** Se está evaluando un cambio importante en el flujo de onboarding/checkin del agente nuevo. En vez de que el usuario informe manualmente su antigüedad en formato AA/MM/DD (años, meses, días), la propuesta es:
+   - **Usar el calculador de antigüedad ya desarrollado** (`web/src/features/rrhh/antiguedad/`).
+   - El agente cargaría sus **HLC (Hoja de Liquidación de Cargos) históricas** directamente en la app.
+   - El sistema calcularía automáticamente la antigüedad a partir de los datos laborales reales.
+   - Esto elimina errores de carga manual, unifica la fuente de verdad y reutiliza el módulo de antigüedad existente.
+   - **Decisión pendiente:** definir alcance exacto (qué datos mínimos de HLC se piden, si es carga libre o guiada, etc.).
+
+3. **Continuar probando el configurador:** Cargar artículos reales para afinar el proceso.
+
+## Fix adicional aplicado post-commit
+
+- `web/src/components/layout/MobileLayout.jsx`: se extendió el `max-h` del shell en desktop de `64rem` fijo a `calc(100dvh - 2rem)` para que el panel derecho del configurador no se corte verticalmente.
+
 ## Contexto de conversación
 
 - UUID conversación: `5230c74b-610d-4f73-b4ef-89d0c26a31a1`

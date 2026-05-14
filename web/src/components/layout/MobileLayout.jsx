@@ -24,7 +24,7 @@ export default function MobileLayout({
       data-mobile-layout
     >
       <div
-        className="mx-auto flex min-h-dvh w-full max-w-md flex-1 flex-col overflow-x-hidden border-slate-100 bg-slate-50 sm:max-h-[min(100dvh,52rem)] sm:min-h-[min(100dvh,52rem)] sm:shrink-0 sm:rounded-3xl sm:border sm:border-slate-100 sm:shadow-md md:mx-6 md:my-4 md:max-h-[min(100dvh,64rem)] md:max-w-6xl md:rounded-2xl md:shadow-lg lg:max-w-7xl"
+        className="mx-auto flex min-h-dvh w-full max-w-md flex-1 flex-col overflow-x-hidden border-slate-100 bg-slate-50 sm:max-h-[min(100dvh,52rem)] sm:min-h-[min(100dvh,52rem)] sm:shrink-0 sm:rounded-3xl sm:border sm:border-slate-100 sm:shadow-md md:mx-6 md:my-4 md:max-h-[calc(100dvh-2rem)] md:max-w-6xl md:rounded-2xl md:shadow-lg lg:max-w-7xl"
         data-mobile-shell
       >
         <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col md:flex-row md:items-stretch">
