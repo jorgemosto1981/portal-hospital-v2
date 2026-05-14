@@ -132,9 +132,10 @@ El listado leía `cfg_articulos/{id}` pero el servicio solo guardaba `version_ac
 
 3. **Continuar probando el configurador:** Cargar artículos reales para afinar el proceso.
 
-## Fix adicional aplicado post-commit
+## Fixes adicionales aplicados post-commit
 
 - `web/src/components/layout/MobileLayout.jsx`: se extendió el `max-h` del shell en desktop de `64rem` fijo a `calc(100dvh - 2rem)` para que el panel derecho del configurador no se corte verticalmente.
+- `functions/modules/shared/antiguedadCalculator.js`: **fix filtro HLC deshabilitadas en cálculo de antigüedad.** Las HLC anuladas manualmente (con campo `deshabilitado_en`) ahora se excluyen del cómputo. Las HLC cerradas por baja laboral (`activo: false` sin `deshabilitado_en`) siguen computando porque representan períodos reales de trabajo. Cloud Functions re-deployadas.
 
 ## Contexto de conversación
 

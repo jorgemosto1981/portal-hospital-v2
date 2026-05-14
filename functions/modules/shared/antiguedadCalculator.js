@@ -60,6 +60,14 @@ function safeNonNegativeInt(value, fieldName) {
 }
 
 function normalizeHlcInterval(row, index, corteUtc) {
+  if (row && row.deshabilitado_en) {
+    return {
+      ok: false,
+      motivo: "HLC deshabilitada manualmente (anulada por corrección de carga).",
+      origen: row,
+      tipo: "DESHABILITADA_MANUAL",
+    };
+  }
   if (row && row.computa_antiguedad_licencias === false) {
     return {
       ok: false,
@@ -206,6 +214,7 @@ function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasExternos
   const hlcValidas = [];
   const hlcDescartadas = [];
   const hlcExcluidasNoComputaAntiguedad = [];
+  const hlcDeshabilitadasManual = [];
   for (let i = 0; i < hlcArray.length; i += 1) {
     const normalized = normalizeHlcInterval(hlcArray[i], i, corteUtc);
     if (normalized.ok) {
@@ -214,7 +223,9 @@ function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasExternos
     }
     const itemDescartado = { indice: i, motivo: normalized.motivo, origen: normalized.origen };
     hlcDescartadas.push(itemDescartado);
-    if (normalized.tipo === "NO_COMPUTA_ANTIGUEDAD_LICENCIAS") {
+    if (normalized.tipo === "DESHABILITADA_MANUAL") {
+      hlcDeshabilitadasManual.push(itemDescartado);
+    } else if (normalized.tipo === "NO_COMPUTA_ANTIGUEDAD_LICENCIAS") {
       hlcExcluidasNoComputaAntiguedad.push(itemDescartado);
     }
   }
@@ -291,6 +302,7 @@ function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasExternos
         cantidadHlcOriginales: hlcArray.length,
         cantidadHlcValidas: hlcValidas.length,
         cantidadHlcDescartadas: hlcDescartadas.length,
+        cantidadHlcDeshabilitadasManual: hlcDeshabilitadasManual.length,
         cantidadHlcExcluidasNoComputaAntiguedad: hlcExcluidasNoComputaAntiguedad.length,
         cantidadIntervalosFusionados: intervalosFusionados.length,
         diasHlcSinFusion,
@@ -332,6 +344,7 @@ function calcularAntiguedad(hlcArray = [], fechaCorte = new Date(), diasExternos
       externosExcluidosPorCorte,
       reglasAplicadas: [
         "Se topa fecha fin por fecha de corte.",
+        "HLC deshabilitadas manualmente (con campo deshabilitado_en) se excluyen del cómputo.",
         "Solo se incluyen HLC con computa_antiguedad_licencias=true (o campo ausente).",
         "Los tramos HLC superpuestos o continuos se fusionan (solo entre cargos HLC; no involucra al crédito externo).",
         "No se analiza solapamiento ni intersección temporal entre crédito externo y períodos HLC.",
