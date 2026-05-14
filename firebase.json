@@ -12,6 +12,7 @@
     "rules": "firebase-v2/storage.rules"
   },
   "functions": {
-    "source": "functions"
+    "source": "functions",
+    "predeploy": ["node scripts/sync-shared-to-functions.mjs"]
   }
 }

@@ -34,6 +34,10 @@ En esta sesión se diseñó y documentó el plan completo de la **Ticketera Puen
 | Alcance primera tanda config | Todo junto: campos + feriados + incompatibilidades + SLA |
 | Onboarding | Manual de a pocos. Masivo cuando haya experiencia |
 | Testing strategy | A analizar antes de Fase A |
+| `antiguedad_al_checkin` | **ELIMINADO.** Antigüedad siempre dinámica desde HLC via `calcularAntiguedad()`. Nunca se almacena en el checkin. (Sesión 2026-05-14) |
+| Prerequisito HLC para checkin | **OBLIGATORIO.** HLC completas (vigentes + históricas) deben estar cargadas antes del checkin. RRHH confirma con checkbox. (Sesión 2026-05-14) |
+| Checkin = puerta de ingreso | **SÍ.** El checkin es el acto formal de activación del usuario en el portal (migrados con historial, nuevos sin historial — mismo proceso). (Sesión 2026-05-14) |
+| antiguedadCalculator fuente única | `shared/utils/antiguedadCalculator.js` (ESM) es la fuente de verdad. Functions usa copia CJS auto-generada por `scripts/sync-shared-to-functions.mjs`. (Sesión 2026-05-14) |
 
 ## Próximo paso exacto (para retomar)
 

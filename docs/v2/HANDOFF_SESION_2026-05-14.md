@@ -119,17 +119,27 @@ El listado leía `cfg_articulos/{id}` pero el servicio solo guardaba `version_ac
 - `web/src/pages/ArticuloListadoGrilla.jsx` — Grilla de listado mejorada
 - `docs/v2/SEED_CATALOGOS_ARTICULOS_V2.json` — Seed de catálogos
 
-## Agenda para la próxima sesión
+## Decisiones cerradas en sesión vespertina (2026-05-14 ~18:00)
 
-1. **Revisar etapas del plan general:** Analizar nuevamente las etapas del plan maestro de la ticketera y ajustar prioridades según el estado actual del configurador.
+| Decisión | Resultado |
+|----------|-----------|
+| `antiguedad_al_checkin` | **ELIMINADO** del schema de `checkin_portal`. La antigüedad se calcula siempre al vuelo desde HLC. |
+| Prerequisito HLC para checkin | **OBLIGATORIO.** Todas las HLC (vigentes + históricas) deben estar cargadas antes del checkin. RRHH confirma con checkbox (`hlc_confirmadas_completas`). |
+| Checkin = puerta de ingreso | **SÍ.** Es el acto formal de activación del usuario (migrados con historial = saldos parciales; nuevos sin historial = saldos completos/cero). |
+| Fuente única del calculador | `shared/utils/antiguedadCalculator.js` (ESM). Functions usa copia CJS auto-generada por `scripts/sync-shared-to-functions.mjs` + hook predeploy en firebase.json. |
 
-2. **Rediseño del checkin de usuario nuevo — Antigüedad:** Se está evaluando un cambio importante en el flujo de onboarding/checkin del agente nuevo. En vez de que el usuario informe manualmente su antigüedad en formato AA/MM/DD (años, meses, días), la propuesta es:
-   - **Usar el calculador de antigüedad ya desarrollado** (`web/src/features/rrhh/antiguedad/`).
-   - El agente cargaría sus **HLC (Hoja de Liquidación de Cargos) históricas** directamente en la app.
-   - El sistema calcularía automáticamente la antigüedad a partir de los datos laborales reales.
-   - Esto elimina errores de carga manual, unifica la fuente de verdad y reutiliza el módulo de antigüedad existente.
-   - **Decisión pendiente:** definir alcance exacto (qué datos mínimos de HLC se piden, si es carga libre o guiada, etc.).
+**Acciones ejecutadas:**
+- Fix `deshabilitado_en` propagado a `shared/utils/antiguedadCalculator.js` (fuente ESM).
+- Creado `scripts/sync-shared-to-functions.mjs` (convierte ESM → CJS y sobreescribe `functions/modules/shared/`).
+- `functions/modules/shared/antiguedadCalculator.js` y `fechaInstitucionalBa.js` ahora son auto-generados (header "NO EDITAR MANUALMENTE").
+- Hook `predeploy` agregado a `firebase.json` → sincroniza antes de cada deploy.
+- Plan maestro de la ticketera (`ticketera_puente_mvp_538a748a.plan.md`) actualizado: Bloque 1 reescrito con nueva visión del checkin.
+- 9 tests del calculador pasan correctamente.
 
+## Agenda para la próxima sesión (2026-05-15)
+
+1. **Continuar con el plan de la ticketera:** Retomar implementación de campos del configurador (probar cargando artículos reales) y/o avanzar con los módulos pendientes (feriados, incompatibilidades, SLA).
+2. **Evaluar completitud del módulo HLC:** Verificar que el CRUD de HLC está 100% funcional para ambos escenarios (migrados con historial completo, nuevos con HLC única). Esto es prerequisito para implementar el checkin.
 3. **Continuar probando el configurador:** Cargar artículos reales para afinar el proceso.
 
 ## Fixes adicionales aplicados post-commit
