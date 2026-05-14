@@ -198,10 +198,19 @@ export async function saveArticuloVersionAndPunteroCore(articuloId, versionId, p
   const verRef = doc(dbV2, "cfg_articulos", articuloId, "versiones", versionId);
   const coreRef = doc(dbV2, "cfg_articulos", articuloId);
   batch.set(verRef, buildFirestoreArticuloVersionDoc(parsed), { merge: false });
+  const identidad = parsed.bloque_identidad_naturaleza ?? {};
   batch.set(
     coreRef,
     {
       version_actual_id: versionId,
+      codigo: identidad.codigo ?? null,
+      inciso_normativo: identidad.inciso_normativo ?? null,
+      nombre: identidad.nombre ?? null,
+      es_sancion: identidad.es_sancion ?? false,
+      es_inasistencia: identidad.es_inasistencia ?? false,
+      es_sin_goce: identidad.es_sin_goce ?? false,
+      requiere_dictamen: identidad.requiere_dictamen ?? false,
+      activo: true,
       actualizado_en: serverTimestamp(),
     },
     { merge: true },

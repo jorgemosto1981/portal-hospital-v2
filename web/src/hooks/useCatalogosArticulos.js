@@ -22,6 +22,16 @@ export const DEFAULT_CATALOGOS_ARTICULOS_FORM = Object.freeze([
   "cfg_operador_comparacion",
   "cfg_accion_incumplimiento_documental",
   "cfg_nivel_ocupacion_dia",
+  "cfg_politica_superposicion",
+  "cfg_unidad_medida_articulo",
+  "cfg_unidad_minima_consumo",
+  "cfg_rol",
+  "cfg_escalafon",
+  "cfg_agrupamiento",
+  "cfg_tipo_vinculo_laboral",
+  "cfg_cargo_funcional",
+  "cfg_sexo_genero",
+  "grupos_de_trabajo",
 ]);
 
 /** @type {Map<string, { rows: object[], fetchedAt: number }>} */
@@ -124,7 +134,11 @@ export function useCatalogosArticulos(colecciones = DEFAULT_CATALOGOS_ARTICULOS_
       const rows = catalogos[colName] || [];
       return rows.map((item) => ({
         value: item.id,
-        label: typeof item.titulo_ui === "string" && item.titulo_ui.trim() ? item.titulo_ui.trim() : item.id,
+        label:
+          (typeof item.titulo_ui === "string" && item.titulo_ui.trim()) ||
+          (typeof item.nombre === "string" && item.nombre.trim()) ||
+          (typeof item.codigo_interno === "string" && item.codigo_interno.trim()) ||
+          item.id,
         descripcion: typeof item.descripcion_ui === "string" ? item.descripcion_ui.trim() : undefined,
       }));
     },

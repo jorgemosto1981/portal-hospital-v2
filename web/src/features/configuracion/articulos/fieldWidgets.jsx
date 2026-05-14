@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PALETA_COLORES } from "./articuloLabels.js";
+import { listarColeccion } from "../../../services/configuracionCatalogosService.js";
 
 function RequiredBadge({ required }) {
   if (required === true) return <span className="ml-0.5 text-red-500">*</span>;
@@ -178,6 +179,264 @@ export function FieldColor({ label, value, onChange, required }) {
           ) : null}
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Dropdown de seleccion multiple con chips.
+ * `onChange` siempre devuelve un array (nunca null/undefined).
+ */
+export function FieldMultiSelect({
+  label, value = [], options, onChange, disabled,
+  placeholder = "Todos (sin restricción)", helpText, className = "", required,
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+  const selected = useMemo(() => new Set(Array.isArray(value) ? value : []), [value]);
+  const available = useMemo(() => options.filter((o) => !selected.has(o.value)), [options, selected]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    function onClickOutside(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open]);
+
+  const addItem = useCallback(
+    (val) => {
+      if (!val) return;
+      const next = [...(Array.isArray(value) ? value : []), val];
+      onChange(next);
+      setOpen(false);
+    },
+    [value, onChange],
+  );
+
+  const removeItem = useCallback(
+    (val) => {
+      const next = (Array.isArray(value) ? value : []).filter((v) => v !== val);
+      onChange(next);
+    },
+    [value, onChange],
+  );
+
+  const labelMap = useMemo(() => {
+    const m = new Map();
+    for (const o of options) m.set(o.value, o.label);
+    return m;
+  }, [options]);
+
+  return (
+    <div ref={containerRef} className={`relative block space-y-1 ${className}`.trim()}>
+      <span className="text-xs font-medium text-slate-600">
+        {label}
+        <RequiredBadge required={required} />
+      </span>
+      <div
+        className={[
+          "flex min-h-[38px] flex-wrap items-center gap-1.5 rounded-lg border bg-white px-2.5 py-1.5",
+          disabled ? "cursor-not-allowed border-slate-100 bg-slate-50" : "cursor-pointer border-slate-200",
+        ].join(" ")}
+        onClick={() => { if (!disabled) setOpen((p) => !p); }}
+      >
+        {selected.size === 0 ? (
+          <span className="text-sm text-slate-400">{placeholder}</span>
+        ) : (
+          Array.from(selected).map((id) => (
+            <span
+              key={id}
+              className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800"
+            >
+              {labelMap.get(id) || id}
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); removeItem(id); }}
+                  className="ml-0.5 text-blue-400 hover:text-blue-700"
+                  aria-label={`Quitar ${labelMap.get(id) || id}`}
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          ))
+        )}
+      </div>
+      {open && available.length > 0 && (
+        <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+          {available.map((o) => (
+            <li key={o.value}>
+              <button
+                type="button"
+                className="w-full px-3 py-1.5 text-left text-sm text-slate-800 hover:bg-blue-50"
+                onClick={() => addItem(o.value)}
+              >
+                {o.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {open && available.length === 0 && (
+        <div className="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-400 shadow-lg">
+          Sin opciones disponibles
+        </div>
+      )}
+      {helpText ? <span className="block text-[11px] text-slate-500">{helpText}</span> : null}
+    </div>
+  );
+}
+
+/**
+ * Buscador con autocompletado para la coleccion `personas`.
+ * Carga personas via listarColeccion y permite filtrar por nombre, apellido o DNI.
+ * `onChange` siempre devuelve un array (nunca null/undefined).
+ */
+export function FieldPersonaSearch({
+  label, value = [], onChange, helpText, disabled, className = "", required,
+}) {
+  const [personas, setPersonas] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+  const selected = useMemo(() => new Set(Array.isArray(value) ? value : []), [value]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const items = await listarColeccion("personas");
+        if (!cancelled) setPersonas(Array.isArray(items) ? items : []);
+      } catch {
+        if (!cancelled) setPersonas([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const personaLabel = useCallback((p) => {
+    const parts = [p.apellido, p.nombre].filter(Boolean);
+    const name = parts.length > 0 ? parts.join(", ") : null;
+    const dni = p.dni || p.documento_numero;
+    if (name && dni) return `${name} (${dni})`;
+    if (name) return name;
+    if (dni) return `DNI ${dni}`;
+    return p.id;
+  }, []);
+
+  const labelMap = useMemo(() => {
+    const m = new Map();
+    for (const p of personas) m.set(p.id, personaLabel(p));
+    return m;
+  }, [personas, personaLabel]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return personas.filter((p) => !selected.has(p.id)).slice(0, 20);
+    return personas
+      .filter((p) => {
+        if (selected.has(p.id)) return false;
+        const text = personaLabel(p).toLowerCase();
+        return text.includes(q) || (p.id && p.id.toLowerCase().includes(q));
+      })
+      .slice(0, 20);
+  }, [personas, query, selected, personaLabel]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    function onClickOutside(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open]);
+
+  const addItem = useCallback(
+    (id) => {
+      const next = [...(Array.isArray(value) ? value : []), id];
+      onChange(next);
+      setQuery("");
+      setOpen(false);
+    },
+    [value, onChange],
+  );
+
+  const removeItem = useCallback(
+    (id) => {
+      const next = (Array.isArray(value) ? value : []).filter((v) => v !== id);
+      onChange(next);
+    },
+    [value, onChange],
+  );
+
+  return (
+    <div ref={containerRef} className={`relative block space-y-1 ${className}`.trim()}>
+      <span className="text-xs font-medium text-slate-600">
+        {label}
+        <RequiredBadge required={required} />
+      </span>
+      <div className="space-y-1.5">
+        {selected.size > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {Array.from(selected).map((id) => (
+              <span
+                key={id}
+                className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800"
+              >
+                {labelMap.get(id) || id}
+                {!disabled && (
+                  <button
+                    type="button"
+                    onClick={() => removeItem(id)}
+                    className="ml-0.5 text-blue-400 hover:text-blue-700"
+                    aria-label={`Quitar ${labelMap.get(id) || id}`}
+                  >
+                    ×
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          disabled={disabled || loading}
+          placeholder={loading ? "Cargando personas…" : "Buscar por nombre, apellido o DNI…"}
+          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-blue-100 focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+        />
+      </div>
+      {open && !loading && filtered.length > 0 && (
+        <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+          {filtered.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                className="w-full px-3 py-1.5 text-left text-sm text-slate-800 hover:bg-blue-50"
+                onClick={() => addItem(p.id)}
+              >
+                {personaLabel(p)}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {open && !loading && filtered.length === 0 && query.trim() && (
+        <div className="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-400 shadow-lg">
+          Sin resultados
+        </div>
+      )}
+      {helpText ? <span className="block text-[11px] text-slate-500">{helpText}</span> : null}
     </div>
   );
 }

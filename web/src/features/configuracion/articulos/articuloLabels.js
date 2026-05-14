@@ -20,10 +20,11 @@ export const LABELS = Object.freeze({
   resolucion: "Resolución complementaria",
   interno_efector: "Referencia interna del efector",
   es_lao_anual: "Es Licencia Anual Ordinaria (LAO)",
-  es_sancion: "Es sanción disciplinaria",
+  es_sancion: "Es sanción disciplinaria (impacta legajo)",
   es_inasistencia: "Computa como inasistencia",
-  es_sin_goce: "Sin goce de haberes",
+  es_sin_goce: "Sin goce de haberes (afecta liquidación)",
   requiere_dictamen: "¿Requiere validación técnica (Legales / Medicina)?",
+  es_licencia_medica: "Es licencia médica (Caja Negra)",
   codigo_grilla: "Código en grilla",
   color_ui: "Color del artículo",
   fecha_desde: "Vigente desde",
@@ -40,17 +41,28 @@ export const LABELS = Object.freeze({
   // --- Elegibilidad (Bloque 3) ---
   requiere_declaracion_familiar: "Requiere declaración familiar",
   edad_limite_familiar: "Edad límite familiar",
+  escalafon_ids: "Escalafones habilitados",
+  agrupamiento_ids: "Agrupamientos",
+  tipo_vinculo_ids: "Tipos de vínculo",
+  cargo_funcional_ids: "Cargos funcionales",
+  grupo_trabajo_ids: "Grupos de trabajo",
+  persona_ids: "Agentes específicos",
+  genero_ids: "Género / Sexo permitido",
+  antiguedad_minima_meses: "Antigüedad mínima requerida (meses)",
 
   // --- Topes / cómputo (Bloque 4) ---
-  regla_computo_dias_id: "Tipo de días (corridos / hábiles)",
-  ambito_consumo_id: "Ámbito de consumo",
+  regla_computo_dias_id: "Criterio de descuento (Días corridos vs Hábiles)",
+  ambito_consumo_id: "Ámbito de renovación del cupo",
+  unidad_medida_id: "Unidad de medida del saldo",
+  unidad_minima_consumo_id: "Fracción mínima descontable",
+  modulo_fraccionamiento_minutos: "Redondeo por bloques (minutos)",
   regla_computo_horas_id: "Regla de cómputo en horas",
   fraccionamiento_habilitado: "Permite tomar en partes",
-  intervalo_gracia_dias: "Días de gracia",
-  depende_rda: "Depende de validación RDA",
-  reinicio_ciclo_id: "Comportamiento al fin de año",
-  accion_saldo_id: "Acción sobre el saldo",
-  origen_saldo_id: "¿De dónde descuenta días?",
+  intervalo_gracia_dias: "Días de gracia antes de descontar",
+  depende_rda: "Requiere validación de disponibilidad (RDA)",
+  reinicio_ciclo_id: "Momento de reseteo de la bolsa de días",
+  accion_saldo_id: "¿Qué pasa cuando el agente usa días?",
+  origen_saldo_id: "¿De dónde salen los días disponibles?",
 
   // --- Límites y cupos (Bloque 4) ---
   cupo_dias_por_ciclo: "Cupo de días por ciclo",
@@ -70,19 +82,26 @@ export const LABELS = Object.freeze({
   permite_prorroga: "Permite prórroga",
 
   // --- Workflow (Bloque 6) ---
+  circuito_ingreso_ids: "Roles habilitados para crear solicitud",
   plazo_preaviso_normativa_dias: "Preaviso por norma (días)",
   plazo_preaviso_interno_dias: "Preaviso interno (días)",
   logistica_aviso_habilitada: "Genera necesidad de cobertura / reemplazo",
   toma_conocimiento_limitada: "Toma de conocimiento limitada (burbujeo)",
+  permite_retroactividad: "Permite carga retroactiva (DDJJ)",
+  requiere_toma_conocimiento_superior: "Requiere toma de conocimiento del superior",
   niveles_burbujeo: "Niveles de burbujeo",
 
   // --- Documentación (Bloque 7) ---
+  requiere_adjunto_obligatorio: "Adjunto obligatorio para enviar la solicitud",
   requiere_doc_previa: "Requiere documentación previa",
   plazo_doc_previa_dias: "Plazo para doc. previa (días)",
   requiere_doc_posterior: "Requiere documentación posterior",
   plazo_doc_posterior_dias: "Plazo para doc. posterior (días)",
   accion_incumplimiento_doc_id: "Si falta documentación…",
+
+  // --- Superposición y convivencia (Bloque 4 bis) ---
   nivel_ocupacion_dia_id: "Nivel de ocupación del día",
+  politica_superposicion_id: "Comportamiento ante superposición de fechas",
 });
 
 /**

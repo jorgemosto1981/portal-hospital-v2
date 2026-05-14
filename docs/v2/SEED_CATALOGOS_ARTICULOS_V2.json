@@ -1200,6 +1200,44 @@
       "vigente_hasta": null
     }
   ],
+  "cfg_unidad_minima_consumo": [
+    {
+      "id": "cfg_umc_dia_completo",
+      "codigo_interno": "DIA_COMPLETO",
+      "titulo_ui": "Día completo",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_umc_medio_dia",
+      "codigo_interno": "MEDIO_DIA",
+      "titulo_ui": "Medio día",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_umc_horas",
+      "codigo_interno": "HORAS",
+      "titulo_ui": "Horas",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_umc_minutos",
+      "codigo_interno": "MINUTOS",
+      "titulo_ui": "Minutos",
+      "orden": 40,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
   "cfg_unidad_plazo": [
     {
       "id": "cfg_up_dias",

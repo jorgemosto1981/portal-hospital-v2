@@ -205,9 +205,9 @@ export default function ArticuloListadoGrilla() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <th className="px-4 py-3">Código</th>
+                <th className="px-4 py-3">Código del artículo</th>
                 <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3">Nombre</th>
+                <th className="px-4 py-3">Nombre del artículo</th>
                 <th className="hidden px-4 py-3 sm:table-cell">Versión actual</th>
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
@@ -215,21 +215,38 @@ export default function ArticuloListadoGrilla() {
             <tbody className="divide-y divide-slate-100">
               {articulos.map((art) => {
                 const inactivo = art.activo === false;
+                const idCorto = art.id ? `…${art.id.slice(-8)}` : "";
+                const verCorta = art.version_actual_id ? `…${art.version_actual_id.slice(-8)}` : "";
                 return (
                   <tr key={art.id} className={`transition-colors active:bg-slate-50 ${inactivo ? "opacity-60" : ""}`}>
-                    <td className="whitespace-nowrap px-4 py-3 font-mono text-slate-700">
-                      {art.codigo || "—"}
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <span className="font-mono font-semibold text-slate-800">{art.codigo || "—"}</span>
+                      {art.inciso_normativo && (
+                        <span className="ml-1.5 text-xs text-slate-400">{art.inciso_normativo}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <BadgeEstado activo={art.activo} />
                     </td>
-                    <td className="px-4 py-3 text-slate-900">
-                      {art.nombre || <span className="italic text-slate-400">Sin nombre</span>}
-                      {" "}
-                      <span className="italic text-slate-400">({art.id})</span>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium text-slate-900">
+                          {art.nombre || <span className="italic text-slate-400">Sin nombre</span>}
+                        </span>
+                        <span className="font-mono text-[11px] italic text-slate-400" title={art.id}>
+                          {idCorto}
+                        </span>
+                      </div>
                     </td>
-                    <td className="hidden whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-500 sm:table-cell">
-                      {art.version_actual_id || "—"}
+                    <td className="hidden whitespace-nowrap px-4 py-3 sm:table-cell">
+                      {art.version_actual_id ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600" title={art.version_actual_id}>
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                          {verCorta}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">

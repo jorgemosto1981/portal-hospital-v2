@@ -72,6 +72,7 @@ const CFG_COLECCIONES_ARTICULOS_V2 = [
   "cfg_tipo_relacion_articulo",
   "cfg_tipo_tope",
   "cfg_unidad_medida_articulo",
+  "cfg_unidad_minima_consumo",
   "cfg_unidad_plazo",
   "cfg_ambito_consumo",
   "cfg_justifica_sueldo",

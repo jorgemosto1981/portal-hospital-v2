@@ -18,7 +18,7 @@ import {
 } from "../../../services/cfgArticuloVersionService.js";
 import { EXPLICACIONES_OPCIONES, LABELS } from "./articuloLabels.js";
 import { normalizeFechaCorteAntiguedadIso } from "./fecCorteAntiguedadHelpers.js";
-import { FieldCheck, FieldColor, FieldNumber, FieldSelect, FieldText } from "./fieldWidgets.jsx";
+import { FieldCheck, FieldColor, FieldMultiSelect, FieldNumber, FieldPersonaSearch, FieldSelect, FieldText } from "./fieldWidgets.jsx";
 import MatrizAntiguedadEditor from "./MatrizAntiguedadEditor.jsx";
 
 /**
@@ -41,6 +41,7 @@ export function createEmptyArticuloVersionForm() {
       es_inasistencia: false,
       es_sin_goce: false,
       requiere_dictamen: false,
+      es_licencia_medica: false,
       visualizacion: { codigo_grilla: "", color_ui: "" },
       fecha_desde: "",
       fecha_hasta: "",
@@ -56,10 +57,21 @@ export function createEmptyArticuloVersionForm() {
     bloque_elegibilidad_filtros: {
       requiere_declaracion_familiar: false,
       edad_limite_familiar: "",
+      escalafon_ids: [],
+      agrupamiento_ids: [],
+      tipo_vinculo_ids: [],
+      cargo_funcional_ids: [],
+      grupo_trabajo_ids: [],
+      persona_ids: [],
+      genero_ids: [],
+      antiguedad_minima_meses: 0,
     },
     bloque_topes_plazos_computo: {
       regla_computo_dias_id: "",
       ambito_consumo_id: "",
+      unidad_medida_id: "",
+      unidad_minima_consumo_id: "",
+      modulo_fraccionamiento_minutos: 15,
       fraccionamiento_habilitado: false,
       intervalo_gracia_dias: 0,
       regla_computo_horas_id: "",
@@ -73,6 +85,8 @@ export function createEmptyArticuloVersionForm() {
       correspondencia_anio: "",
       fecha_corte_antiguedad: "",
       matriz_antiguedad_reglas: [],
+      nivel_ocupacion_dia_id: "",
+      politica_superposicion_id: "",
     },
     bloque_acumulacion_sucesion: {
       caducidad_tipo_id: "",
@@ -82,19 +96,22 @@ export function createEmptyArticuloVersionForm() {
       meses_arrastre: 0,
     },
     bloque_workflow_sla_cobertura: {
+      circuito_ingreso_ids: [],
       plazo_preaviso_normativa_dias: "",
       plazo_preaviso_interno_dias: "",
       logistica_aviso_habilitada: false,
       toma_conocimiento_limitada: false,
+      permite_retroactividad: false,
+      requiere_toma_conocimiento_superior: false,
       niveles_burbujeo: "",
     },
     bloque_documentacion_convivencia: {
+      requiere_adjunto_obligatorio: false,
       requiere_doc_previa: false,
       plazo_doc_previa_dias: "",
       requiere_doc_posterior: false,
       plazo_doc_posterior_dias: "",
       accion_incumplimiento_doc_id: "",
-      nivel_ocupacion_dia_id: "",
     },
   };
 }
@@ -250,9 +267,18 @@ export function buildVersionPayloadForZod(raw) {
   };
 
   const rch = trimOrUndef(out.bloque_topes_plazos_computo.regla_computo_horas_id);
+  const umId = trimOrUndef(out.bloque_topes_plazos_computo.unidad_medida_id);
+  const umcId = trimOrUndef(out.bloque_topes_plazos_computo.unidad_minima_consumo_id);
+  const modFrac = Number(out.bloque_topes_plazos_computo.modulo_fraccionamiento_minutos);
+  const polSupId = trimOrUndef(out.bloque_topes_plazos_computo.politica_superposicion_id);
   out.bloque_topes_plazos_computo = {
     ...out.bloque_topes_plazos_computo,
     regla_computo_horas_id: rch,
+    unidad_medida_id: umId,
+    unidad_minima_consumo_id: umcId,
+    modulo_fraccionamiento_minutos: Number.isFinite(modFrac) && modFrac >= 0 ? modFrac : 15,
+    intervalo_gracia_dias: Number(out.bloque_topes_plazos_computo.intervalo_gracia_dias) || 0,
+    politica_superposicion_id: polSupId,
     cupo_dias_por_ciclo: numOrUndef(out.bloque_topes_plazos_computo.cupo_dias_por_ciclo),
     tope_frecuencia_mensual: numOrUndef(out.bloque_topes_plazos_computo.tope_frecuencia_mensual),
     tope_dias_por_evento: numOrUndef(out.bloque_topes_plazos_computo.tope_dias_por_evento),
@@ -634,29 +660,45 @@ export default function ArticuloConfigTabs() {
                 <FieldText label={LABELS.interno_efector} value={form.bloque_identidad_naturaleza.normativa_habilitante.interno_efector} onChange={(v) => setNested("bloque_identidad_naturaleza", "normativa_habilitante", "interno_efector", v)} helpText="Referencia interna del efector/hospital." className="md:col-span-2" required={false} />
               </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FieldCheck
-                label={LABELS.es_lao_anual}
-                checked={form.bloque_identidad_naturaleza.es_lao_anual}
-                onChange={(v) => {
-                  setForm((prev) => ({
-                    ...prev,
-                    bloque_identidad_naturaleza: { ...prev.bloque_identidad_naturaleza, es_lao_anual: v },
-                    bloque_topes_plazos_computo: v
-                      ? prev.bloque_topes_plazos_computo
-                      : {
-                          ...prev.bloque_topes_plazos_computo,
-                          correspondencia_anio: "",
-                          fecha_corte_antiguedad: "",
-                          matriz_antiguedad_reglas: [],
-                        },
-                  }));
-                }}
-              />
-              <FieldCheck label={LABELS.es_sancion} checked={form.bloque_identidad_naturaleza.es_sancion} onChange={(v) => setBlock("bloque_identidad_naturaleza", "es_sancion", v)} helpText="Marca este artículo como sanción disciplinaria. Afecta el legajo y puede tener consecuencias en la carrera del agente." />
-              <FieldCheck label={LABELS.es_inasistencia} checked={form.bloque_identidad_naturaleza.es_inasistencia} onChange={(v) => setBlock("bloque_identidad_naturaleza", "es_inasistencia", v)} helpText="Se registra como inasistencia en los controles operativos. Puede afectar presentismo y otros indicadores." />
-              <FieldCheck label={LABELS.es_sin_goce} checked={form.bloque_identidad_naturaleza.es_sin_goce} onChange={(v) => setBlock("bloque_identidad_naturaleza", "es_sin_goce", v)} helpText="El agente no cobra haberes durante la licencia. Impacta directamente en la liquidación del período." />
-              <FieldCheck label={LABELS.requiere_dictamen} checked={form.bloque_identidad_naturaleza.requiere_dictamen} onChange={(v) => setBlock("bloque_identidad_naturaleza", "requiere_dictamen", v)} helpText="Pausa la solicitud para que un experto emita un dictamen antes de la aprobación final." />
+            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+              <p className="mb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Naturaleza y clasificación</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FieldCheck
+                  label={LABELS.es_lao_anual}
+                  checked={form.bloque_identidad_naturaleza.es_lao_anual}
+                  onChange={(v) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      bloque_identidad_naturaleza: { ...prev.bloque_identidad_naturaleza, es_lao_anual: v },
+                      bloque_topes_plazos_computo: v
+                        ? prev.bloque_topes_plazos_computo
+                        : {
+                            ...prev.bloque_topes_plazos_computo,
+                            correspondencia_anio: "",
+                            fecha_corte_antiguedad: "",
+                            matriz_antiguedad_reglas: [],
+                          },
+                    }));
+                  }}
+                  helpText="Marca este artículo como Licencia Anual Ordinaria. Al activar esto, recordá configurar la Matriz de Antigüedad (aparece debajo) para que el sistema sepa cuántos días otorgar según los años de servicio del agente."
+                />
+                <FieldCheck label={LABELS.es_sancion} checked={form.bloque_identidad_naturaleza.es_sancion} onChange={(v) => setBlock("bloque_identidad_naturaleza", "es_sancion", v)} helpText="[¡IMPORTANTE!] Marca este artículo como sanción disciplinaria. Queda asentado en el legajo del agente y puede tener consecuencias gremiales y en la carrera administrativa. Verificá con el área legal antes de activar." />
+                <FieldCheck label={LABELS.es_inasistencia} checked={form.bloque_identidad_naturaleza.es_inasistencia} onChange={(v) => setBlock("bloque_identidad_naturaleza", "es_inasistencia", v)} helpText="Se registra como inasistencia en los controles operativos. Puede afectar presentismo y otros indicadores." />
+                <FieldCheck label={LABELS.es_sin_goce} checked={form.bloque_identidad_naturaleza.es_sin_goce} onChange={(v) => setBlock("bloque_identidad_naturaleza", "es_sin_goce", v)} helpText="[¡IMPORTANTE!] El agente no cobra haberes durante el período de esta licencia. Impacta directamente en la liquidación de sueldos y puede generar reclamos si se configura por error. Confirmá con Liquidaciones antes de activar." />
+                <FieldCheck label={LABELS.requiere_dictamen} checked={form.bloque_identidad_naturaleza.requiere_dictamen} onChange={(v) => setBlock("bloque_identidad_naturaleza", "requiere_dictamen", v)} helpText="Pausa la solicitud para que un experto emita un dictamen antes de la aprobación final." />
+                <FieldCheck
+                  label={LABELS.es_licencia_medica}
+                  checked={form.bloque_identidad_naturaleza.es_licencia_medica}
+                  onChange={(v) => {
+                    setBlock("bloque_identidad_naturaleza", "es_licencia_medica", v);
+                    if (v && !form.bloque_documentacion_convivencia.requiere_adjunto_obligatorio) {
+                      setBlock("bloque_documentacion_convivencia", "requiere_adjunto_obligatorio", true);
+                      toast("Se activó 'Adjunto obligatorio' automáticamente por tratarse de una Licencia Médica.", { icon: "ℹ️", duration: 5000 });
+                    }
+                  }}
+                  helpText="[¡IMPORTANTE!] Activa el protocolo de Caja Negra Médica: los datos clínicos de la solicitud serán visibles solo para el rol MÉDICO. RRHH y jefes verán únicamente el período y el estado, sin diagnóstico ni detalle médico. Al activar, se habilita automáticamente 'Adjunto obligatorio' en la pestaña Avanzado > Documentación."
+                />
+              </div>
             </div>
             <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
               <p className="mb-2 text-xs font-semibold text-slate-500">Visualización en grilla</p>
@@ -709,7 +751,7 @@ export default function ArticuloConfigTabs() {
             />
             <div className="grid gap-3 sm:grid-cols-2">
               <FieldCheck label={LABELS.suma_para_sac} checked={form.bloque_impacto_economico.suma_para_sac} onChange={(v) => setBlock("bloque_impacto_economico", "suma_para_sac", v)} helpText="Si se activa, los días de esta licencia cuentan para el cálculo del aguinaldo." />
-              <FieldCheck label={LABELS.afecta_presentismo} checked={form.bloque_impacto_economico.afecta_presentismo} onChange={(v) => setBlock("bloque_impacto_economico", "afecta_presentismo", v)} helpText="Si se activa, usar este artículo reduce o anula el premio por presentismo del mes." />
+              <FieldCheck label={LABELS.afecta_presentismo} checked={form.bloque_impacto_economico.afecta_presentismo} onChange={(v) => setBlock("bloque_impacto_economico", "afecta_presentismo", v)} helpText="[¡IMPORTANTE!] Si se activa, usar este artículo reduce o anula el premio por presentismo del mes. Es una de las configuraciones más consultadas por los gremios." />
               <FieldCheck label={LABELS.acumula_reparto_obra_social} checked={form.bloque_impacto_economico.acumula_reparto_obra_social} onChange={(v) => setBlock("bloque_impacto_economico", "acumula_reparto_obra_social", v)} helpText="Los días se consideran para el cálculo de aportes a la obra social." />
               <FieldCheck label={LABELS.invalida_reparto_obra_social} checked={form.bloque_impacto_economico.invalida_reparto_obra_social} onChange={(v) => setBlock("bloque_impacto_economico", "invalida_reparto_obra_social", v)} helpText="Excluye al agente del reparto de obra social durante el período." />
               <FieldCheck label={LABELS.suma_antiguedad_lao} checked={form.bloque_impacto_economico.suma_antiguedad_lao} onChange={(v) => setBlock("bloque_impacto_economico", "suma_antiguedad_lao", v)} helpText="Los días cuentan como antigüedad para el cálculo de vacaciones (LAO)." />
@@ -718,10 +760,94 @@ export default function ArticuloConfigTabs() {
 
           {/* --- Sección: Elegibilidad --- */}
           <Card className="space-y-4 p-4 shadow-sm md:p-6">
-            <h3 className="text-sm font-semibold text-slate-700">Elegibilidad</h3>
+            <h3 className="text-sm font-semibold text-slate-700">Elegibilidad y filtros</h3>
+            <p className="text-xs italic text-slate-500 mt-1 mb-4">Restringí a qué agentes aplica este artículo. Dejar vacío para que aplique a todos.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <FieldCheck label={LABELS.requiere_declaracion_familiar} checked={form.bloque_elegibilidad_filtros.requiere_declaracion_familiar} onChange={(v) => setBlock("bloque_elegibilidad_filtros", "requiere_declaracion_familiar", v)} helpText="El agente debe declarar un familiar directo para acceder a este artículo." />
               <FieldNumber label={LABELS.edad_limite_familiar} value={form.bloque_elegibilidad_filtros.edad_limite_familiar} onChange={(v) => setBlock("bloque_elegibilidad_filtros", "edad_limite_familiar", v)} min={0} helpText="Edad tope en años; dejar vacío si no aplica." required={false} />
+            </div>
+            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+              <p className="mb-3 text-xs font-semibold text-slate-500">Filtros por datos laborales</p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FieldMultiSelect
+                  label={LABELS.escalafon_ids}
+                  value={form.bloque_elegibilidad_filtros.escalafon_ids}
+                  onChange={(v) => setBlock("bloque_elegibilidad_filtros", "escalafon_ids", v)}
+                  options={getOptions("cfg_escalafon")}
+                  disabled={formBloqueadoPorCatalogos}
+                  required={false}
+                  helpText="Dejar vacío para que aplique a todos los escalafones."
+                />
+                <FieldMultiSelect
+                  label={LABELS.agrupamiento_ids}
+                  value={form.bloque_elegibilidad_filtros.agrupamiento_ids}
+                  onChange={(v) => setBlock("bloque_elegibilidad_filtros", "agrupamiento_ids", v)}
+                  options={getOptions("cfg_agrupamiento")}
+                  disabled={formBloqueadoPorCatalogos}
+                  required={false}
+                  helpText="Dejar vacío para que aplique a todos los agrupamientos."
+                />
+                <FieldMultiSelect
+                  label={LABELS.tipo_vinculo_ids}
+                  value={form.bloque_elegibilidad_filtros.tipo_vinculo_ids}
+                  onChange={(v) => setBlock("bloque_elegibilidad_filtros", "tipo_vinculo_ids", v)}
+                  options={getOptions("cfg_tipo_vinculo_laboral")}
+                  disabled={formBloqueadoPorCatalogos}
+                  required={false}
+                  helpText="Dejar vacío para que aplique a todos los tipos de vínculo."
+                />
+                <FieldMultiSelect
+                  label={LABELS.cargo_funcional_ids}
+                  value={form.bloque_elegibilidad_filtros.cargo_funcional_ids}
+                  onChange={(v) => setBlock("bloque_elegibilidad_filtros", "cargo_funcional_ids", v)}
+                  options={getOptions("cfg_cargo_funcional")}
+                  disabled={formBloqueadoPorCatalogos}
+                  required={false}
+                  helpText="Dejar vacío para que aplique a todos los cargos."
+                />
+                <FieldMultiSelect
+                  label={LABELS.grupo_trabajo_ids}
+                  value={form.bloque_elegibilidad_filtros.grupo_trabajo_ids}
+                  onChange={(v) => setBlock("bloque_elegibilidad_filtros", "grupo_trabajo_ids", v)}
+                  options={getOptions("grupos_de_trabajo")}
+                  disabled={formBloqueadoPorCatalogos}
+                  required={false}
+                  helpText="Dejar vacío para que aplique a todos los grupos."
+                />
+                <FieldMultiSelect
+                  label={LABELS.genero_ids}
+                  value={form.bloque_elegibilidad_filtros.genero_ids}
+                  onChange={(v) => setBlock("bloque_elegibilidad_filtros", "genero_ids", v)}
+                  options={getOptions("cfg_sexo_genero")}
+                  disabled={formBloqueadoPorCatalogos}
+                  required={false}
+                  helpText="Dejar vacío para que aplique a todos los géneros."
+                />
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+              <p className="mb-3 text-xs font-semibold text-slate-500">Filtros por agente y antigüedad</p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FieldPersonaSearch
+                  label={LABELS.persona_ids}
+                  value={form.bloque_elegibilidad_filtros.persona_ids}
+                  onChange={(v) => setBlock("bloque_elegibilidad_filtros", "persona_ids", v)}
+                  disabled={formBloqueadoPorCatalogos}
+                  required={false}
+                  helpText="Dejar vacío para que aplique a todos los agentes."
+                />
+                <FieldNumber
+                  label={LABELS.antiguedad_minima_meses}
+                  value={form.bloque_elegibilidad_filtros.antiguedad_minima_meses}
+                  onChange={(v) => {
+                    const n = typeof v === "number" ? v : parseInt(v, 10);
+                    setBlock("bloque_elegibilidad_filtros", "antiguedad_minima_meses", Number.isFinite(n) && n >= 0 ? n : 0);
+                  }}
+                  min={0}
+                  helpText="Meses de antigüedad necesarios para solicitar. Dejar en 0 para habilitar desde el primer día de ingreso."
+                  required={false}
+                />
+              </div>
             </div>
           </Card>
 
@@ -744,9 +870,38 @@ export default function ArticuloConfigTabs() {
         <div className="space-y-6">
           {/* --- Sección: Cómputo --- */}
           <Card className="space-y-4 p-4 shadow-sm md:p-6">
-            <h3 className="text-sm font-semibold text-slate-700">Cómputo de días</h3>
-            <p className="text-xs italic text-slate-500 mt-1 mb-4">Establece cómo se cuentan los días de esta licencia: si incluyen fines de semana, si se pueden tomar fraccionados y cuánta tolerancia hay.</p>
+            <h3 className="text-sm font-semibold text-slate-700">Cómputo y unidad de medida</h3>
+            <p className="text-xs italic text-slate-500 mt-1 mb-4">Establece cómo se cuentan los días de esta licencia, la unidad de medida del saldo y la fracción mínima descontable por solicitud.</p>
             <div className="grid gap-4 md:grid-cols-2">
+              <FieldSelect
+                label={LABELS.unidad_medida_id}
+                value={form.bloque_topes_plazos_computo.unidad_medida_id}
+                onChange={(v) => setBlock("bloque_topes_plazos_computo", "unidad_medida_id", v)}
+                options={getOptions("cfg_unidad_medida_articulo")}
+                disabled={formBloqueadoPorCatalogos}
+                required={false}
+                helpText="[¡IMPORTANTE!] Define si el saldo de la bolsa se cuenta en días, horas o jornadas. Este valor determina cómo se descuentan todas las solicitudes de este artículo. Un error aquí afecta el cálculo de saldo de todos los agentes."
+              />
+              <FieldSelect
+                label={LABELS.unidad_minima_consumo_id}
+                value={form.bloque_topes_plazos_computo.unidad_minima_consumo_id}
+                onChange={(v) => setBlock("bloque_topes_plazos_computo", "unidad_minima_consumo_id", v)}
+                options={getOptions("cfg_unidad_minima_consumo")}
+                disabled={formBloqueadoPorCatalogos}
+                required={false}
+                helpText="Fracción mínima que el sistema permite descontar en una sola solicitud."
+              />
+              <FieldNumber
+                label={LABELS.modulo_fraccionamiento_minutos}
+                value={form.bloque_topes_plazos_computo.modulo_fraccionamiento_minutos}
+                onChange={(v) => {
+                  const n = typeof v === "number" ? v : parseInt(v, 10);
+                  setBlock("bloque_topes_plazos_computo", "modulo_fraccionamiento_minutos", Number.isFinite(n) && n >= 0 ? n : 15);
+                }}
+                min={0}
+                helpText="Bloques de redondeo en minutos para artículos en horas (ej: 15 min). Si un agente pide 18 min, el sistema redondea al bloque siguiente: 30 min. Usar 0 para sin redondeo."
+                required={false}
+              />
               <FieldSelect
                 label={LABELS.regla_computo_dias_id}
                 value={form.bloque_topes_plazos_computo.regla_computo_dias_id}
@@ -777,6 +932,11 @@ export default function ArticuloConfigTabs() {
               />
               <FieldNumber label={LABELS.intervalo_gracia_dias} value={form.bloque_topes_plazos_computo.intervalo_gracia_dias} onChange={(v) => setBlock("bloque_topes_plazos_computo", "intervalo_gracia_dias", v)} min={0} helpText="Días de tolerancia antes de consumir saldo." required={false} />
             </div>
+            {form.bloque_topes_plazos_computo.unidad_medida_id === "cfg_uma_dias" && form.bloque_topes_plazos_computo.modulo_fraccionamiento_minutos > 0 && (
+              <p className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                La unidad de medida es "Días" pero el módulo de fraccionamiento está en {form.bloque_topes_plazos_computo.modulo_fraccionamiento_minutos} minutos. Este valor solo tiene efecto para artículos en horas. Si este artículo se consume en días completos, considerá poner el módulo en 0.
+              </p>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
               <FieldCheck label={LABELS.fraccionamiento_habilitado} checked={form.bloque_topes_plazos_computo.fraccionamiento_habilitado} onChange={(v) => setBlock("bloque_topes_plazos_computo", "fraccionamiento_habilitado", v)} helpText="El agente puede usar los días en partes (ej. 3 días ahora, 2 después) en vez de un bloque continuo." />
               <FieldCheck label={LABELS.depende_rda} checked={form.bloque_topes_plazos_computo.depende_rda} onChange={(v) => setBlock("bloque_topes_plazos_computo", "depende_rda", v)} helpText="El sistema verificará disponibilidad del servicio (RDA) antes de aprobar la solicitud." />
@@ -785,8 +945,8 @@ export default function ArticuloConfigTabs() {
 
           {/* --- Sección: Ciclo y saldo --- */}
           <Card className="space-y-4 p-4 shadow-sm md:p-6">
-            <h3 className="text-sm font-semibold text-slate-700">Ciclo y saldo</h3>
-            <p className="text-xs italic text-slate-500 mt-1 mb-4">Controla qué pasa con los días disponibles: de dónde salen, qué ocurre al usarlos y cómo se renuevan cada año.</p>
+            <h3 className="text-sm font-semibold text-slate-700">Configuración de la bolsa de días / horas</h3>
+            <p className="text-xs italic text-slate-500 mt-1 mb-4">Controla de dónde salen los días disponibles, qué ocurre cuando el agente los usa y cómo se renuevan al cambiar de ciclo.</p>
             <div className="grid gap-4 md:grid-cols-2">
               <FieldSelect
                 label={LABELS.reinicio_ciclo_id}
@@ -821,14 +981,40 @@ export default function ArticuloConfigTabs() {
 
           {/* --- Sección: Límites y cupos --- */}
           <Card className="space-y-4 p-4 shadow-sm md:p-6">
-            <h3 className="text-sm font-semibold text-slate-700">Límites y cupos</h3>
-            <p className="text-xs italic text-slate-500 mt-1 mb-4">Define los topes de cantidad y frecuencia que el motor de validación aplicará al evaluar cada solicitud.</p>
+            <h3 className="text-sm font-semibold text-slate-700">Límites de consumo y frenos de seguridad</h3>
+            <p className="text-xs italic text-slate-500 mt-1 mb-4">Define los topes máximos de cantidad y frecuencia que el sistema aplicará para evitar abusos o errores de carga.</p>
             <div className="grid gap-4 md:grid-cols-2">
               {!form.bloque_identidad_naturaleza.es_lao_anual && (
                 <FieldNumber label={LABELS.cupo_dias_por_ciclo} value={form.bloque_topes_plazos_computo.cupo_dias_por_ciclo} onChange={(v) => setBlock("bloque_topes_plazos_computo", "cupo_dias_por_ciclo", v)} min={0} helpText="Total de días disponibles por ciclo (según el ámbito de consumo). En LAO el cupo sale de la Matriz de Antigüedad." required={false} />
               )}
               <FieldNumber label={LABELS.tope_frecuencia_mensual} value={form.bloque_topes_plazos_computo.tope_frecuencia_mensual} onChange={(v) => setBlock("bloque_topes_plazos_computo", "tope_frecuencia_mensual", v)} min={0} helpText="Máximo de solicitudes aprobables en un mes calendario. Ej: 1 = solo una vez por mes." required={false} />
               <FieldNumber label={LABELS.tope_dias_por_evento} value={form.bloque_topes_plazos_computo.tope_dias_por_evento} onChange={(v) => setBlock("bloque_topes_plazos_computo", "tope_dias_por_evento", v)} min={0} helpText="Máximo de días que se pueden pedir en una sola solicitud. Ej: 1 = solo de a un día por vez." required={false} />
+            </div>
+          </Card>
+
+          {/* --- Sección: Superposición y convivencia --- */}
+          <Card className="space-y-4 p-4 shadow-sm md:p-6">
+            <h3 className="text-sm font-semibold text-slate-700">Superposición y convivencia</h3>
+            <p className="text-xs italic text-slate-500 mt-1 mb-4">Define qué pasa si dos solicitudes caen el mismo día: cuánto espacio del día bloquea cada una y cómo reacciona el motor ante colisiones.</p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <FieldSelect
+                label={LABELS.nivel_ocupacion_dia_id}
+                value={form.bloque_topes_plazos_computo.nivel_ocupacion_dia_id}
+                onChange={(v) => setBlock("bloque_topes_plazos_computo", "nivel_ocupacion_dia_id", v)}
+                options={getOptions("cfg_nivel_ocupacion_dia")}
+                disabled={formBloqueadoPorCatalogos}
+                required
+                helpText="Define cuánto espacio del día bloquea esta solicitud. Ejemplo: Un franco de 24hs ocupa 'Jornada Completa'. Un permiso de lactancia de 1 hora ocupa 'Franja Horaria'."
+              />
+              <FieldSelect
+                label={LABELS.politica_superposicion_id}
+                value={form.bloque_topes_plazos_computo.politica_superposicion_id}
+                onChange={(v) => setBlock("bloque_topes_plazos_computo", "politica_superposicion_id", v)}
+                options={getOptions("cfg_politica_superposicion")}
+                disabled={formBloqueadoPorCatalogos}
+                required={false}
+                helpText="Define qué hace el motor si ya existe otra solicitud para ese mismo día. Ejemplo: Política 'Bloqueo Estricto' rechaza la solicitud nueva si el agente ya está de vacaciones. Política 'Permitir coexistencia' deja que un agente en Art. 14 (Médica) pida a la vez una Licencia por Nacimiento de Hijo."
+              />
             </div>
           </Card>
         </div>
@@ -839,8 +1025,8 @@ export default function ArticuloConfigTabs() {
         <div className="space-y-6">
           {/* --- Sección: Caducidad y arrastre --- */}
           <Card className="space-y-4 p-4 shadow-sm md:p-6">
-            <h3 className="text-sm font-semibold text-slate-700">Caducidad y arrastre</h3>
-            <p className="text-xs italic text-slate-500 mt-1 mb-4">Configura si los días no usados se pierden, se acumulan o se trasladan al siguiente ciclo.</p>
+            <h3 className="text-sm font-semibold text-slate-700">Vencimiento y arrastre de saldo</h3>
+            <p className="text-xs italic text-slate-500 mt-1 mb-4">Configura si los días no usados se pierden al terminar el ciclo, se acumulan indefinidamente o se pueden trasladar al período siguiente.</p>
             <div className="grid gap-4 md:grid-cols-2">
               <FieldSelect
                 label={LABELS.caducidad_tipo_id}
@@ -860,8 +1046,18 @@ export default function ArticuloConfigTabs() {
 
           {/* --- Sección: Workflow y preaviso --- */}
           <Card className="space-y-4 p-4 shadow-sm md:p-6">
-            <h3 className="text-sm font-semibold text-slate-700">Workflow y preaviso</h3>
-            <p className="text-xs italic text-slate-500 mt-1 mb-4">Define los plazos de anticipación y las notificaciones automáticas que rigen el circuito de solicitud y aprobación.</p>
+            <h3 className="text-sm font-semibold text-slate-700">Circuito de aprobación y preaviso</h3>
+            <p className="text-xs italic text-slate-500 mt-1 mb-4">Define quién puede crear solicitudes, con cuánta anticipación deben pedirse y cómo fluye la aprobación en la cadena jerárquica.</p>
+            <FieldMultiSelect
+              label={LABELS.circuito_ingreso_ids}
+              value={form.bloque_workflow_sla_cobertura.circuito_ingreso_ids}
+              onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "circuito_ingreso_ids", v)}
+              options={getOptions("cfg_rol")}
+              disabled={formBloqueadoPorCatalogos}
+              required
+              placeholder="Elegí al menos un rol…"
+              helpText="Definí qué roles de aplicación pueden crear una solicitud de este artículo. Debe haber al menos uno."
+            />
             <div className="grid gap-4 md:grid-cols-2">
               <FieldNumber label={LABELS.plazo_preaviso_normativa_dias} value={form.bloque_workflow_sla_cobertura.plazo_preaviso_normativa_dias} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "plazo_preaviso_normativa_dias", v)} min={0} helpText="Días mínimos que la norma exige de anticipación antes de tomar la licencia." required={false} />
               <FieldNumber label={LABELS.plazo_preaviso_interno_dias} value={form.bloque_workflow_sla_cobertura.plazo_preaviso_interno_dias} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "plazo_preaviso_interno_dias", v)} min={0} helpText="Anticipación operativa que el hospital define internamente para organizar la cobertura." required={false} />
@@ -869,6 +1065,8 @@ export default function ArticuloConfigTabs() {
             <div className="grid gap-3 sm:grid-cols-2">
               <FieldCheck label={LABELS.logistica_aviso_habilitada} checked={form.bloque_workflow_sla_cobertura.logistica_aviso_habilitada} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "logistica_aviso_habilitada", v)} helpText="Identifica artículos que generan necesidad de cobertura. Activa la señal para que el sistema gestione avisos de reemplazo o contratación de personal (ej. Art. 16-0 o Tareas Diferentes)." />
               <FieldCheck label={LABELS.toma_conocimiento_limitada} checked={form.bloque_workflow_sla_cobertura.toma_conocimiento_limitada} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "toma_conocimiento_limitada", v)} helpText="Evita que la notificación de acuse escale por toda la cadena jerárquica, limitándola a los niveles inmediatos." />
+              <FieldCheck label={LABELS.permite_retroactividad} checked={form.bloque_workflow_sla_cobertura.permite_retroactividad} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "permite_retroactividad", v)} helpText="Permite al usuario crear una solicitud con fecha de inicio anterior a hoy. Si se activa, el sistema ignorará los días de preaviso configurados arriba, siempre que el usuario firme una Declaración Jurada (DDJJ)." />
+              <FieldCheck label={LABELS.requiere_toma_conocimiento_superior} checked={form.bloque_workflow_sla_cobertura.requiere_toma_conocimiento_superior} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "requiere_toma_conocimiento_superior", v)} helpText="Si está activo, la solicitud debe pasar por el superior jerárquico del servicio antes de llegar a RRHH. Si está desactivado, la solicitud va directo del jefe inmediato a RRHH." />
             </div>
             {form.bloque_workflow_sla_cobertura.toma_conocimiento_limitada && (
               <FieldNumber label={LABELS.niveles_burbujeo} value={form.bloque_workflow_sla_cobertura.niveles_burbujeo} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "niveles_burbujeo", v)} min={1} helpText="Define cuántos grupos hacia arriba reciben el aviso de toma de conocimiento de una solicitud." required={false} />
@@ -877,8 +1075,14 @@ export default function ArticuloConfigTabs() {
 
           {/* --- Sección: Documentación --- */}
           <Card className="space-y-4 p-4 shadow-sm md:p-6">
-            <h3 className="text-sm font-semibold text-slate-700">Documentación</h3>
-            <p className="text-xs italic text-slate-500 mt-1 mb-4">Configura qué documentación se exige al agente y qué ocurre si no la presenta a tiempo.</p>
+            <h3 className="text-sm font-semibold text-slate-700">Documentación y respaldos</h3>
+            <p className="text-xs italic text-slate-500 mt-1 mb-4">Configura qué documentación se exige al agente (certificados, notas, constancias) y qué consecuencia tiene no presentarla a tiempo.</p>
+            <FieldCheck
+              label={LABELS.requiere_adjunto_obligatorio}
+              checked={form.bloque_documentacion_convivencia.requiere_adjunto_obligatorio}
+              onChange={(v) => setBlock("bloque_documentacion_convivencia", "requiere_adjunto_obligatorio", v)}
+              helpText="Si está activo, el sistema bloqueará el botón 'Enviar' si el agente no subió un PDF/Imagen. Ejemplo: El Art. 14 (Licencia Médica) DEBE tener esto activo porque exige certificado. El Art. 64-a (Particular) lo tiene desactivado."
+            />
             <div className="grid gap-4 md:grid-cols-2">
               <FieldSelect
                 label={LABELS.accion_incumplimiento_doc_id}
@@ -889,16 +1093,6 @@ export default function ArticuloConfigTabs() {
                 className="md:col-span-2"
                 required
                 helpText="Define la consecuencia si el agente no presenta la documentación en plazo."
-              />
-              <FieldSelect
-                label={LABELS.nivel_ocupacion_dia_id}
-                value={form.bloque_documentacion_convivencia.nivel_ocupacion_dia_id}
-                onChange={(v) => setBlock("bloque_documentacion_convivencia", "nivel_ocupacion_dia_id", v)}
-                options={getOptions("cfg_nivel_ocupacion_dia")}
-                disabled={formBloqueadoPorCatalogos}
-                className="md:col-span-2"
-                required
-                helpText="Indica si el día se computa como jornada completa, media jornada, etc."
               />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">

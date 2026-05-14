@@ -63,6 +63,7 @@ export const bloqueIdentidadNaturalezaSchema = z
     es_inasistencia: z.boolean().default(false),
     es_sin_goce: z.boolean().default(false),
     requiere_dictamen: z.boolean().default(false),
+    es_licencia_medica: z.boolean().default(false),
     visualizacion: visualizacionSchema.optional(),
     /** Ventana de aplicación de esta versión (motor de resolución §RFC vigencia doble nivel). */
     fecha_desde: firestoreDateLikeSchema,
@@ -90,6 +91,14 @@ export const bloqueElegibilidadFiltrosSchema = z
   .object({
     requiere_declaracion_familiar: z.boolean().default(false),
     edad_limite_familiar: z.number().int().nonnegative().nullable().optional(),
+    escalafon_ids: z.array(cfgRowIdSchema).default([]),
+    agrupamiento_ids: z.array(cfgRowIdSchema).default([]),
+    tipo_vinculo_ids: z.array(cfgRowIdSchema).default([]),
+    cargo_funcional_ids: z.array(cfgRowIdSchema).default([]),
+    grupo_trabajo_ids: z.array(cfgRowIdSchema).default([]),
+    persona_ids: z.array(cfgRowIdSchema).default([]),
+    genero_ids: z.array(cfgRowIdSchema).default([]),
+    antiguedad_minima_meses: z.number().int().nonnegative().default(0),
   })
   .strict();
 
@@ -112,6 +121,9 @@ export const bloqueTopesPlazosComputoSchema = z
   .object({
     regla_computo_dias_id: cfgRowIdSchema,
     ambito_consumo_id: cfgRowIdSchema,
+    unidad_medida_id: cfgRowIdSchema.nullable().optional(),
+    unidad_minima_consumo_id: cfgRowIdSchema.nullable().optional(),
+    modulo_fraccionamiento_minutos: z.number().int().nonnegative().default(15),
     fraccionamiento_habilitado: z.boolean().default(false),
     intervalo_gracia_dias: z.number().int().nonnegative().default(0),
     regla_computo_horas_id: cfgRowIdSchema.nullable().optional(),
@@ -126,11 +138,13 @@ export const bloqueTopesPlazosComputoSchema = z
     /** Máximo de días que se pueden pedir en una sola solicitud. */
     tope_dias_por_evento: z.number().int().nonnegative().nullable().optional(),
     /** Año fiscal/presupuestario del derecho (LAO); alinear con `anio_origen` de bolsas generadas. */
-    correspondencia_anio: z.number().int().nullable().optional(),
+    correspondencia_anio: z.number().int().min(1900).max(2100).nullable().optional(),
     /** Corte antigüedad (ISO fecha, p. ej. `2025-12-31`); `null` → default vía `obtenerFechaCorteLao`. */
     fecha_corte_antiguedad: z.string().min(1).nullable().optional(),
     /** Escala tipo 1919/89 (pocas filas); excepción §1.7 por tamaño acotado. */
     matriz_antiguedad_reglas: z.array(matrizAntiguedadReglaRowSchema).max(64).nullable().optional(),
+    nivel_ocupacion_dia_id: cfgRowIdSchema,
+    politica_superposicion_id: cfgRowIdSchema.nullable().optional(),
   })
   .strict();
 
@@ -155,10 +169,13 @@ export const bloqueAcumulacionSucesionSchema = z
  */
 export const bloqueWorkflowSlaCoberturaSchema = z
   .object({
+    circuito_ingreso_ids: z.array(cfgRowIdSchema).min(1),
     plazo_preaviso_normativa_dias: z.number().int().nonnegative().nullable().optional(),
     plazo_preaviso_interno_dias: z.number().int().nonnegative().nullable().optional(),
     logistica_aviso_habilitada: z.boolean().default(false),
     toma_conocimiento_limitada: z.boolean().default(false),
+    permite_retroactividad: z.boolean().default(false),
+    requiere_toma_conocimiento_superior: z.boolean().default(false),
   })
   .strict();
 
@@ -168,12 +185,12 @@ export const bloqueWorkflowSlaCoberturaSchema = z
  */
 export const bloqueDocumentacionConvivenciaSchema = z
   .object({
+    requiere_adjunto_obligatorio: z.boolean().default(false),
     requiere_doc_previa: z.boolean().default(false),
     plazo_doc_previa_dias: z.number().int().nonnegative().nullable().optional(),
     requiere_doc_posterior: z.boolean().default(false),
     plazo_doc_posterior_dias: z.number().int().nonnegative().nullable().optional(),
     accion_incumplimiento_doc_id: cfgRowIdSchema,
-    nivel_ocupacion_dia_id: cfgRowIdSchema,
   })
   .strict();
 
