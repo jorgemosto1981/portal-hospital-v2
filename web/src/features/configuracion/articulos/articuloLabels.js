@@ -69,6 +69,7 @@ export const LABELS = Object.freeze({
   cupo_dias_por_ciclo: "Cupo de días por ciclo",
   tope_frecuencia_mensual: "Tope de frecuencia mensual",
   tope_dias_por_evento: "Máximo de días por solicitud",
+  dias_minimos_por_evento: "Mínimo de días por solicitud",
 
   // --- LAO (Bloque 4, condicional) ---
   correspondencia_anio: "Año fiscal del derecho",
@@ -127,16 +128,20 @@ export const PALETA_COLORES = Object.freeze([
  */
 export const EXPLICACIONES_OPCIONES = Object.freeze({
   // cfg_regla_computo_dias
-  dias_corridos: "Cuenta fines de semana y feriados. Es el estándar para Vacaciones (LAO).",
-  dias_habiles: "Solo cuenta de Lunes a Viernes. Ignora feriados. Ideal para permisos cortos.",
+  cfg_rcd_corridos: "Cuenta sábados, domingos y feriados. Estándar para vacaciones (LAO) y la mayoría de licencias anuales.",
+  cfg_rcd_habiles_simple: "Solo lun–vie; feriados no consumen salvo norma específica. Permisos cortos administrativos.",
+  cfg_rcd_habiles_compuesto: "Hábiles con reglas compuestas (feriados móviles, etc.). Usar cuando la norma lo exige.",
 
   // cfg_reinicio_ciclo_cuota
-  sin_reinicio: "El saldo no vence. Al terminar el año, los días sobrantes siguen disponibles.",
-  anio_civil: "Reinicio anual. El 1 de enero el contador vuelve a cero o se actualiza.",
+  cfg_rcc_anual: "Reinicio por año civil o ciclo LAO. Ej: vacaciones — cupo nuevo cada período fiscal.",
+  cfg_rcc_mensual: "El contador se reinicia cada mes. Ej: permiso con tope de 2 días por mes calendario.",
+  cfg_rcc_diario: "Ventana diaria (uso poco frecuente). Ej: controles puntuales de presentismo.",
+  cfg_rcc_nunca: "El saldo no se resetea solo; cambia al consumir o por carga RRHH. Ej: bolsa única de compensatorio.",
 
   // cfg_origen_saldo
-  bolsa_anual: "Los días salen de un cupo anual. Cada año se genera una bolsa nueva.",
-  bolsa_unica: "El agente tiene una sola bolsa de días para toda la vigencia del artículo.",
+  cfg_os_interno: "El portal calcula y descuenta la bolsa (saldos_articulo_agente). LAO, francos, horas extra acreditadas.",
+  cfg_os_externo_informado: "RRHH informa el disponible (planilla o sistema legado). El portal valida pero no recalcula el cupo.",
+  cfg_os_externo_calculado: "Cupo derivado de reglas externas; el portal registra movimientos según integración futura.",
 
   // cfg_accion_saldo (motor aritmético)
   cfg_as_suma: "El valor ingresado incrementa el saldo (ej: carga de horas extra).",

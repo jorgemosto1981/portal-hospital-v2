@@ -117,11 +117,14 @@ export const matrizAntiguedadReglaRowSchema = z
  * `topes[]` excluido del documento principal (§1.7).
  * Campos LAO (`correspondencia_anio`, `fecha_corte_antiguedad`, `matriz_antiguedad_reglas`): solo si `bloque_identidad_naturaleza.es_lao_anual`; el servicio fuerza `null` si no es LAO.
  */
+const CFG_UMA_DIAS = "cfg_uma_dias";
+const CFG_UMA_HORAS = "cfg_uma_horas";
+
 export const bloqueTopesPlazosComputoSchema = z
   .object({
-    regla_computo_dias_id: cfgRowIdSchema,
+    regla_computo_dias_id: cfgRowIdSchema.nullable().optional(),
     ambito_consumo_id: cfgRowIdSchema,
-    unidad_medida_id: cfgRowIdSchema.nullable().optional(),
+    unidad_medida_id: cfgRowIdSchema,
     unidad_minima_consumo_id: cfgRowIdSchema.nullable().optional(),
     modulo_fraccionamiento_minutos: z.number().int().nonnegative().default(15),
     fraccionamiento_habilitado: z.boolean().default(false),
@@ -146,6 +149,8 @@ export const bloqueTopesPlazosComputoSchema = z
     tope_frecuencia_mensual: z.number().int().nonnegative().nullable().optional(),
     /** Máximo de días que se pueden pedir en una sola solicitud. */
     tope_dias_por_evento: z.number().int().nonnegative().nullable().optional(),
+    /** Mínimo de días por solicitud (flujo días; ej. LAO 5 días por pedido). */
+    dias_minimos_por_evento: z.number().int().nonnegative().nullable().optional(),
     /** Año fiscal/presupuestario del derecho (LAO); alinear con `anio_origen` de bolsas generadas. */
     correspondencia_anio: z.number().int().min(1900).max(2100).nullable().optional(),
     /** Corte antigüedad (ISO fecha, p. ej. `2025-12-31`); `null` → default vía `obtenerFechaCorteLao`. */
@@ -155,7 +160,51 @@ export const bloqueTopesPlazosComputoSchema = z
     nivel_ocupacion_dia_id: cfgRowIdSchema,
     politica_superposicion_id: cfgRowIdSchema.nullable().optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    const um = data.unidad_medida_id;
+    if (um === CFG_UMA_DIAS) {
+      if (!data.regla_computo_dias_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Con unidad Días, el criterio de descuento (corridos/hábiles) es obligatorio.",
+          path: ["regla_computo_dias_id"],
+        });
+      }
+      if (data.regla_computo_horas_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Con unidad Días, la regla de cómputo en horas debe quedar vacía.",
+          path: ["regla_computo_horas_id"],
+        });
+      }
+    }
+    if (um === CFG_UMA_HORAS) {
+      if (!data.regla_computo_horas_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Con unidad Horas, la regla de cómputo en horas es obligatoria.",
+          path: ["regla_computo_horas_id"],
+        });
+      }
+      if (data.regla_computo_dias_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Con unidad Horas, el criterio de días corridos/hábiles debe quedar vacío.",
+          path: ["regla_computo_dias_id"],
+        });
+      }
+    }
+    const minD = data.dias_minimos_por_evento;
+    const maxD = data.tope_dias_por_evento;
+    if (minD != null && maxD != null && minD > maxD) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "El mínimo de días por solicitud no puede ser mayor que el máximo.",
+        path: ["dias_minimos_por_evento"],
+      });
+    }
+  });
 
 /**
  * Bloque 5 — Acumulación y sucesión.

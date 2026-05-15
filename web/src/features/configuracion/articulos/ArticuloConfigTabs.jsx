@@ -16,6 +16,8 @@ import {
   newVersionDocumentId,
   saveArticuloVersionAndPunteroCore,
 } from "../../../services/cfgArticuloVersionService.js";
+import { CFG_UMA_DIAS, CFG_UMA_HORAS } from "./articuloComputoConstants.js";
+import ImpactoSaldoTabSections from "./ImpactoSaldoTabSections.jsx";
 import { EXPLICACIONES_OPCIONES, LABELS } from "./articuloLabels.js";
 import { normalizeFechaCorteAntiguedadIso } from "./fecCorteAntiguedadHelpers.js";
 import { FieldCheck, FieldColor, FieldMultiSelect, FieldNumber, FieldPersonaSearch, FieldSelect, FieldText } from "./fieldWidgets.jsx";
@@ -83,6 +85,7 @@ export function createEmptyArticuloVersionForm() {
       cupo_dias_por_ciclo: "",
       tope_frecuencia_mensual: "",
       tope_dias_por_evento: "",
+      dias_minimos_por_evento: "",
       correspondencia_anio: "",
       fecha_corte_antiguedad: "",
       matriz_antiguedad_reglas: [],
@@ -267,30 +270,46 @@ export function buildVersionPayloadForZod(raw) {
     edad_limite_familiar: edad === undefined ? undefined : edad,
   };
 
-  const rch = trimOrUndef(out.bloque_topes_plazos_computo.regla_computo_horas_id);
   const umId = trimOrUndef(out.bloque_topes_plazos_computo.unidad_medida_id);
+  let reglaDias = trimOrUndef(out.bloque_topes_plazos_computo.regla_computo_dias_id);
+  let rch = trimOrUndef(out.bloque_topes_plazos_computo.regla_computo_horas_id);
   const umcId = trimOrUndef(out.bloque_topes_plazos_computo.unidad_minima_consumo_id);
-  const modFrac = Number(out.bloque_topes_plazos_computo.modulo_fraccionamiento_minutos);
+  let modFrac = Number(out.bloque_topes_plazos_computo.modulo_fraccionamiento_minutos);
+  let intervaloGracia = Number(out.bloque_topes_plazos_computo.intervalo_gracia_dias) || 0;
+  let fraccionamiento = out.bloque_topes_plazos_computo.fraccionamiento_habilitado === true;
+  if (umId === CFG_UMA_DIAS) {
+    rch = null;
+    modFrac = 0;
+  } else if (umId === CFG_UMA_HORAS) {
+    reglaDias = null;
+    intervaloGracia = 0;
+    fraccionamiento = false;
+  }
   const polSupId = trimOrUndef(out.bloque_topes_plazos_computo.politica_superposicion_id);
   const accionSaldoId = trimOrUndef(out.bloque_topes_plazos_computo.accion_saldo_id);
   let multRaw = Number(out.bloque_topes_plazos_computo.multiplicador_valor);
   if (!Number.isFinite(multRaw) || multRaw < 0.1) multRaw = 1;
   const horasConImpacto =
-    umId === "cfg_uma_horas" && accionSaldoId && accionSaldoId !== "cfg_as_neutro";
+    umId === CFG_UMA_HORAS && accionSaldoId && accionSaldoId !== "cfg_as_neutro";
   const multiplicador_valor = horasConImpacto ? Math.min(10, Math.max(0.1, multRaw)) : 1;
+  const diasMin = numOrUndef(out.bloque_topes_plazos_computo.dias_minimos_por_evento);
   out.bloque_topes_plazos_computo = {
     ...out.bloque_topes_plazos_computo,
-    regla_computo_horas_id: rch,
     unidad_medida_id: umId,
+    regla_computo_dias_id: reglaDias ?? null,
+    regla_computo_horas_id: rch ?? null,
     unidad_minima_consumo_id: umcId,
-    modulo_fraccionamiento_minutos: Number.isFinite(modFrac) && modFrac >= 0 ? modFrac : 15,
-    intervalo_gracia_dias: Number(out.bloque_topes_plazos_computo.intervalo_gracia_dias) || 0,
+    modulo_fraccionamiento_minutos: Number.isFinite(modFrac) && modFrac >= 0 ? modFrac : umId === CFG_UMA_HORAS ? 15 : 0,
+    intervalo_gracia_dias: intervaloGracia,
+    fraccionamiento_habilitado: fraccionamiento,
     politica_superposicion_id: polSupId,
     accion_saldo_id: accionSaldoId,
     multiplicador_valor,
     cupo_dias_por_ciclo: numOrUndef(out.bloque_topes_plazos_computo.cupo_dias_por_ciclo),
     tope_frecuencia_mensual: numOrUndef(out.bloque_topes_plazos_computo.tope_frecuencia_mensual),
-    tope_dias_por_evento: numOrUndef(out.bloque_topes_plazos_computo.tope_dias_por_evento),
+    tope_dias_por_evento:
+      umId === CFG_UMA_DIAS ? numOrUndef(out.bloque_topes_plazos_computo.tope_dias_por_evento) : null,
+    dias_minimos_por_evento: umId === CFG_UMA_DIAS ? diasMin : null,
   };
 
   const esLao = out.bloque_identidad_naturaleza?.es_lao_anual === true;
@@ -435,6 +454,28 @@ export default function ArticuloConfigTabs() {
       ...prev,
       [block]: { ...prev[block], [key]: value },
     }));
+  }, []);
+
+  const onUnidadMedidaChange = useCallback((v) => {
+    setForm((prev) => {
+      const prevUm = prev.bloque_topes_plazos_computo.unidad_medida_id;
+      const topes = { ...prev.bloque_topes_plazos_computo, unidad_medida_id: v };
+      if (v === CFG_UMA_DIAS) {
+        topes.regla_computo_horas_id = "";
+        topes.modulo_fraccionamiento_minutos = 0;
+      } else if (v === CFG_UMA_HORAS) {
+        topes.regla_computo_dias_id = "";
+        topes.intervalo_gracia_dias = 0;
+        topes.fraccionamiento_habilitado = false;
+        topes.dias_minimos_por_evento = "";
+      }
+      if (prevUm && v && prevUm !== v) {
+        queueMicrotask(() => {
+          toast("Se limpiaron campos incompatibles con la nueva unidad.", { icon: "ℹ️" });
+        });
+      }
+      return { ...prev, bloque_topes_plazos_computo: topes };
+    });
   }, []);
 
   const setNested = useCallback((block, nested, key, value) => {
@@ -876,196 +917,14 @@ export default function ArticuloConfigTabs() {
 
       {/* ═══════════════ PESTAÑA 2: IMPACTO Y SALDO ═══════════════ */}
       {tab === "saldo" && (
-        <div className="space-y-6">
-          {/* --- Sección: Cómputo --- */}
-          <Card className="space-y-4 p-4 shadow-sm md:p-6">
-            <h3 className="text-sm font-semibold text-slate-700">Cómputo y unidad de medida</h3>
-            <p className="text-xs italic text-slate-500 mt-1 mb-4">Establece cómo se cuentan los días de esta licencia, la unidad de medida del saldo y la fracción mínima descontable por solicitud.</p>
-            <div className="grid gap-4 md:grid-cols-2">
-              <FieldSelect
-                label={LABELS.unidad_medida_id}
-                value={form.bloque_topes_plazos_computo.unidad_medida_id}
-                onChange={(v) => setBlock("bloque_topes_plazos_computo", "unidad_medida_id", v)}
-                options={getOptions("cfg_unidad_medida_articulo")}
-                disabled={formBloqueadoPorCatalogos}
-                required={false}
-                helpText="[¡IMPORTANTE!] Define si el saldo de la bolsa se cuenta en días, horas o jornadas. Este valor determina cómo se descuentan todas las solicitudes de este artículo. Un error aquí afecta el cálculo de saldo de todos los agentes."
-              />
-              <FieldSelect
-                label={LABELS.unidad_minima_consumo_id}
-                value={form.bloque_topes_plazos_computo.unidad_minima_consumo_id}
-                onChange={(v) => setBlock("bloque_topes_plazos_computo", "unidad_minima_consumo_id", v)}
-                options={getOptions("cfg_unidad_minima_consumo")}
-                disabled={formBloqueadoPorCatalogos}
-                required={false}
-                helpText="Fracción mínima que el sistema permite descontar en una sola solicitud."
-              />
-              <FieldNumber
-                label={LABELS.modulo_fraccionamiento_minutos}
-                value={form.bloque_topes_plazos_computo.modulo_fraccionamiento_minutos}
-                onChange={(v) => {
-                  const n = typeof v === "number" ? v : parseInt(v, 10);
-                  setBlock("bloque_topes_plazos_computo", "modulo_fraccionamiento_minutos", Number.isFinite(n) && n >= 0 ? n : 15);
-                }}
-                min={0}
-                helpText="Bloques de redondeo en minutos para artículos en horas (ej: 15 min). Si un agente pide 18 min, el sistema redondea al bloque siguiente: 30 min. Usar 0 para sin redondeo."
-                required={false}
-              />
-              <FieldSelect
-                label={LABELS.regla_computo_dias_id}
-                value={form.bloque_topes_plazos_computo.regla_computo_dias_id}
-                onChange={(v) => setBlock("bloque_topes_plazos_computo", "regla_computo_dias_id", v)}
-                options={getOptions("cfg_regla_computo_dias")}
-                disabled={formBloqueadoPorCatalogos}
-                required
-                explicaciones={EXPLICACIONES_OPCIONES}
-              />
-              <FieldSelect
-                label={LABELS.ambito_consumo_id}
-                value={form.bloque_topes_plazos_computo.ambito_consumo_id}
-                onChange={(v) => setBlock("bloque_topes_plazos_computo", "ambito_consumo_id", v)}
-                options={getOptions("cfg_ambito_consumo")}
-                disabled={formBloqueadoPorCatalogos}
-                required
-                explicaciones={EXPLICACIONES_OPCIONES}
-                helpText="Ventana temporal en la que el sistema suma los días consumidos para aplicar topes (año civil, ciclo laboral o mes)."
-              />
-              <FieldSelect
-                label={LABELS.regla_computo_horas_id}
-                value={form.bloque_topes_plazos_computo.regla_computo_horas_id}
-                onChange={(v) => setBlock("bloque_topes_plazos_computo", "regla_computo_horas_id", v)}
-                options={getOptions("cfg_regla_computo_horas")}
-                disabled={formBloqueadoPorCatalogos}
-                required={false}
-                helpText="Solo para artículos que se miden en horas en vez de días."
-              />
-              <FieldNumber label={LABELS.intervalo_gracia_dias} value={form.bloque_topes_plazos_computo.intervalo_gracia_dias} onChange={(v) => setBlock("bloque_topes_plazos_computo", "intervalo_gracia_dias", v)} min={0} helpText="Días de tolerancia antes de consumir saldo." required={false} />
-            </div>
-            {form.bloque_topes_plazos_computo.unidad_medida_id === "cfg_uma_dias" && form.bloque_topes_plazos_computo.modulo_fraccionamiento_minutos > 0 && (
-              <p className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
-                La unidad de medida es "Días" pero el módulo de fraccionamiento está en {form.bloque_topes_plazos_computo.modulo_fraccionamiento_minutos} minutos. Este valor solo tiene efecto para artículos en horas. Si este artículo se consume en días completos, considerá poner el módulo en 0.
-              </p>
-            )}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FieldCheck label={LABELS.fraccionamiento_habilitado} checked={form.bloque_topes_plazos_computo.fraccionamiento_habilitado} onChange={(v) => setBlock("bloque_topes_plazos_computo", "fraccionamiento_habilitado", v)} helpText="El agente puede usar los días en partes (ej. 3 días ahora, 2 después) en vez de un bloque continuo." />
-              <FieldCheck label={LABELS.depende_rda} checked={form.bloque_topes_plazos_computo.depende_rda} onChange={(v) => setBlock("bloque_topes_plazos_computo", "depende_rda", v)} helpText="El sistema verificará disponibilidad del servicio (RDA) antes de aprobar la solicitud." />
-            </div>
-          </Card>
-
-          {/* --- Sección: Ciclo y saldo --- */}
-          <Card className="space-y-4 p-4 shadow-sm md:p-6">
-            <h3 className="text-sm font-semibold text-slate-700">Configuración de la bolsa de días / horas</h3>
-            <p className="text-xs italic text-slate-500 mt-1 mb-4">Controla de dónde salen los días disponibles, qué ocurre cuando el agente los usa y cómo se renuevan al cambiar de ciclo.</p>
-            <div className="grid gap-4 md:grid-cols-2">
-              <FieldSelect
-                label={LABELS.reinicio_ciclo_id}
-                value={form.bloque_topes_plazos_computo.reinicio_ciclo_id}
-                onChange={(v) => setBlock("bloque_topes_plazos_computo", "reinicio_ciclo_id", v)}
-                options={getOptions("cfg_reinicio_ciclo_cuota")}
-                disabled={formBloqueadoPorCatalogos}
-                required
-                explicaciones={EXPLICACIONES_OPCIONES}
-              />
-              <FieldSelect
-                label={LABELS.origen_saldo_id}
-                value={form.bloque_topes_plazos_computo.origen_saldo_id}
-                onChange={(v) => setBlock("bloque_topes_plazos_computo", "origen_saldo_id", v)}
-                options={getOptions("cfg_origen_saldo")}
-                disabled={formBloqueadoPorCatalogos}
-                required
-                explicaciones={EXPLICACIONES_OPCIONES}
-              />
-            </div>
-          </Card>
-
-          <Card className="space-y-4 p-4 shadow-sm md:p-6">
-            <h3 className="text-sm font-semibold text-slate-700">Motor aritmético del saldo</h3>
-            <p className="mt-1 mb-4 text-xs italic text-slate-500">
-              Suma, resta o registro neutro. El multiplicador solo aplica si la unidad es{" "}
-              <strong>Horas</strong> (tarjeta «Cómputo y unidad de medida» arriba).
-            </p>
-            <div className="grid gap-4 md:grid-cols-2">
-              <FieldSelect
-                label={LABELS.accion_saldo_id}
-                value={form.bloque_topes_plazos_computo.accion_saldo_id}
-                onChange={(v) => setBlock("bloque_topes_plazos_computo", "accion_saldo_id", v)}
-                options={getOptions("cfg_accion_saldo")}
-                disabled={formBloqueadoPorCatalogos || !form.bloque_topes_plazos_computo.unidad_medida_id}
-                required={!!form.bloque_topes_plazos_computo.unidad_medida_id}
-                explicaciones={EXPLICACIONES_OPCIONES}
-                helpText={
-                  form.bloque_topes_plazos_computo.unidad_medida_id
-                    ? "Define si la solicitud suma crédito (ej. horas extra), descuenta (ej. permiso) o es informativa."
-                    : "Elegí primero «Unidad de medida del saldo» en la tarjeta de arriba."
-                }
-              />
-              {form.bloque_topes_plazos_computo.unidad_medida_id === "cfg_uma_horas" &&
-              form.bloque_topes_plazos_computo.accion_saldo_id &&
-              form.bloque_topes_plazos_computo.accion_saldo_id !== "cfg_as_neutro" ? (
-                <FieldNumber
-                  label={LABELS.multiplicador_valor}
-                  value={form.bloque_topes_plazos_computo.multiplicador_valor}
-                  onChange={(v) => {
-                    const n = typeof v === "number" ? v : parseFloat(v);
-                    setBlock(
-                      "bloque_topes_plazos_computo",
-                      "multiplicador_valor",
-                      Number.isFinite(n) && n >= 0.1 ? n : 1,
-                    );
-                  }}
-                  min={0.1}
-                  max={10}
-                  required={false}
-                  helpText="[¡IMPORTANTE!] El sistema multiplicará el tiempo ingresado por este factor antes de impactar el saldo (ej: 1.5 para horas al 50%)."
-                />
-              ) : form.bloque_topes_plazos_computo.unidad_medida_id &&
-                form.bloque_topes_plazos_computo.unidad_medida_id !== "cfg_uma_horas" ? (
-                <p className="self-end rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                  Con unidad en días no se usa multiplicador; solo elegí Suma, Resta o Neutro.
-                </p>
-              ) : null}
-            </div>
-          </Card>
-
-          {/* --- Sección: Límites y cupos --- */}
-          <Card className="space-y-4 p-4 shadow-sm md:p-6">
-            <h3 className="text-sm font-semibold text-slate-700">Límites de consumo y frenos de seguridad</h3>
-            <p className="text-xs italic text-slate-500 mt-1 mb-4">Define los topes máximos de cantidad y frecuencia que el sistema aplicará para evitar abusos o errores de carga.</p>
-            <div className="grid gap-4 md:grid-cols-2">
-              {!form.bloque_identidad_naturaleza.es_lao_anual && (
-                <FieldNumber label={LABELS.cupo_dias_por_ciclo} value={form.bloque_topes_plazos_computo.cupo_dias_por_ciclo} onChange={(v) => setBlock("bloque_topes_plazos_computo", "cupo_dias_por_ciclo", v)} min={0} helpText="Total de días disponibles por ciclo (según el ámbito de consumo). En LAO el cupo sale de la Matriz de Antigüedad." required={false} />
-              )}
-              <FieldNumber label={LABELS.tope_frecuencia_mensual} value={form.bloque_topes_plazos_computo.tope_frecuencia_mensual} onChange={(v) => setBlock("bloque_topes_plazos_computo", "tope_frecuencia_mensual", v)} min={0} helpText="Máximo de solicitudes aprobables en un mes calendario. Ej: 1 = solo una vez por mes." required={false} />
-              <FieldNumber label={LABELS.tope_dias_por_evento} value={form.bloque_topes_plazos_computo.tope_dias_por_evento} onChange={(v) => setBlock("bloque_topes_plazos_computo", "tope_dias_por_evento", v)} min={0} helpText="Máximo de días que se pueden pedir en una sola solicitud. Ej: 1 = solo de a un día por vez." required={false} />
-            </div>
-          </Card>
-
-          {/* --- Sección: Superposición y convivencia --- */}
-          <Card className="space-y-4 p-4 shadow-sm md:p-6">
-            <h3 className="text-sm font-semibold text-slate-700">Superposición y convivencia</h3>
-            <p className="text-xs italic text-slate-500 mt-1 mb-4">Define qué pasa si dos solicitudes caen el mismo día: cuánto espacio del día bloquea cada una y cómo reacciona el motor ante colisiones.</p>
-            <div className="grid gap-4 md:grid-cols-2">
-              <FieldSelect
-                label={LABELS.nivel_ocupacion_dia_id}
-                value={form.bloque_topes_plazos_computo.nivel_ocupacion_dia_id}
-                onChange={(v) => setBlock("bloque_topes_plazos_computo", "nivel_ocupacion_dia_id", v)}
-                options={getOptions("cfg_nivel_ocupacion_dia")}
-                disabled={formBloqueadoPorCatalogos}
-                required
-                helpText="Define cuánto espacio del día bloquea esta solicitud. Ejemplo: Un franco de 24hs ocupa 'Jornada Completa'. Un permiso de lactancia de 1 hora ocupa 'Franja Horaria'."
-              />
-              <FieldSelect
-                label={LABELS.politica_superposicion_id}
-                value={form.bloque_topes_plazos_computo.politica_superposicion_id}
-                onChange={(v) => setBlock("bloque_topes_plazos_computo", "politica_superposicion_id", v)}
-                options={getOptions("cfg_politica_superposicion")}
-                disabled={formBloqueadoPorCatalogos}
-                required={false}
-                helpText="Define qué hace el motor si ya existe otra solicitud para ese mismo día. Ejemplo: Política 'Bloqueo Estricto' rechaza la solicitud nueva si el agente ya está de vacaciones. Política 'Permitir coexistencia' deja que un agente en Art. 14 (Médica) pida a la vez una Licencia por Nacimiento de Hijo."
-              />
-            </div>
-          </Card>
-        </div>
+        <ImpactoSaldoTabSections
+          form={form}
+          setBlock={setBlock}
+          onUnidadMedidaChange={onUnidadMedidaChange}
+          getOptions={getOptions}
+          formBloqueadoPorCatalogos={formBloqueadoPorCatalogos}
+          esLaoAnual={form.bloque_identidad_naturaleza.es_lao_anual}
+        />
       )}
 
       {/* ═══════════════ PESTAÑA 3: AVANZADO ═══════════════ */}
