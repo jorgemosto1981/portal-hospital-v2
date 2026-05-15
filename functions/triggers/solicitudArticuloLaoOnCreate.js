@@ -11,6 +11,13 @@ const { logger } = require("firebase-functions");
 const { db, FieldValue } = require("../modules/shared/context");
 const { runLaoPreviewSimulacion } = require("../modules/shared/laoPreviewMotor");
 const { gatherLaoAltaMotorContext } = require("../modules/shared/solicitudLaoAltaMotorContext");
+const { assertVersionInvariantForBolsa } = require("../modules/shared/laoVersionResolver");
+const {
+  saldoAnualDocId,
+  pickBolsaParaConsumo,
+  assertFifoAnioOrigen,
+  mergeBolsasFromSaldoDocs,
+} = require("../modules/shared/laoSaldosBolsa");
 const {
   ESTADO_SOLICITUD_BORRADOR,
   ESTADO_SOLICITUD_RECHAZADA,
@@ -19,32 +26,11 @@ const {
 
 const COL_SALDOS = "saldos_articulo_agente";
 
-function saldoAnualDocId(personaId, anioCalendario) {
-  const m = /^per_([0-9A-HJKMNP-TV-Z]{26})$/i.exec(String(personaId || "").trim());
-  if (!m) return null;
-  const y = Number(anioCalendario);
-  if (!Number.isInteger(y) || y < 1900 || y > 2200) return null;
-  return `sal_${y}_per_${m[1]}`;
-}
-
 function resolveDiasConsumo(resultado) {
   if (!resultado || !resultado.eligible) return 0;
   if (resultado.camino === "stock") return Number(resultado.matriz?.dias_base) || 0;
   if (resultado.camino === "proporcional") return Number(resultado.proporcional?.dias_proporcionales_piso) || 0;
   return 0;
-}
-
-function pickBolsaParaConsumo(saldosData, articuloId, anioOrigenBolsa) {
-  const bolsas = saldosData && typeof saldosData.bolsas === "object" ? saldosData.bolsas : {};
-  const art = String(articuloId || "").trim();
-  const anio = Number(anioOrigenBolsa);
-  for (const [bolsaId, b] of Object.entries(bolsas)) {
-    if (!b || typeof b !== "object") continue;
-    if (String(b.articulo_id || "").trim() !== art) continue;
-    if (Number(b.anio_origen) !== anio) continue;
-    return { bolsaId, bolsa: b };
-  }
-  return null;
 }
 
 const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
@@ -99,6 +85,34 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
       return;
     }
 
+    try {
+      assertVersionInvariantForBolsa(ctx.versionData, anioOrigenBolsa);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await solRef.update({
+        estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+        motor_motivos_ineligibilidad: [msg],
+        motor_validado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    try {
+      const salPersonaSnap = await db.collection(COL_SALDOS).where("persona_id", "==", personaId).get();
+      const mergedFifo = mergeBolsasFromSaldoDocs(salPersonaSnap.docs.map((doc) => doc.data() || {}));
+      assertFifoAnioOrigen(mergedFifo, articuloId, anioOrigenBolsa);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await solRef.update({
+        estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+        motor_motivos_ineligibilidad: [msg],
+        motor_validado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
     let resultado;
     try {
       resultado = runLaoPreviewSimulacion({
@@ -134,7 +148,7 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
 
     const diasConsumo = resolveDiasConsumo(resultado);
     const anioSolicitud = resultado.anio_solicitud;
-    const salId = saldoAnualDocId(personaId, anioSolicitud);
+    const salId = saldoAnualDocId(personaId, anioOrigenBolsa);
     const salRef = salId ? db.collection(COL_SALDOS).doc(salId) : null;
 
     const motorOkPayload = {

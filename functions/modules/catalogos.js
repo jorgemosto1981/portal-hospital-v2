@@ -2,6 +2,7 @@
 
 const {
   listarColeccion,
+  listarVersionesCfgArticulo,
   guardarOpcion,
   listarCatalogoOnboarding,
   listarColeccionPublicaTemporal,
@@ -19,6 +20,7 @@ const {
 
 module.exports = {
   listarColeccion,
+  listarVersionesCfgArticulo,
   guardarOpcion,
   listarCatalogoOnboarding,
   listarColeccionPublicaTemporal,

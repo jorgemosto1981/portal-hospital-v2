@@ -43,6 +43,11 @@ export const bolsaSaldoSchema = z
     fecha_vencimiento: firestoreDateLikeSchema.nullable().optional(),
     es_arrastre: z.boolean().default(false),
     origen_saldo_id: cfgRowIdSchema,
+    /** Versión LAO que originó la bolsa (`correspondencia_anio` = `anio_origen`). */
+    version_id_origen: z
+      .string()
+      .regex(new RegExp(`^ver_${ULID_RE}$`))
+      .optional(),
     ultima_actualizacion: firestoreDateLikeSchema,
   })
   .strict();

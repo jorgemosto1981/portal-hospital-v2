@@ -2,6 +2,10 @@
 
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { logger } = require("firebase-functions");
+const {
+  CFG_EST_VER_PUBLICADA,
+  getCorrespondenciaAnioFromVersion,
+} = require("./shared/laoVersionResolver");
 
 /**
  * Punto de enganche para sincronización / read-models (triple capa).
@@ -36,5 +40,17 @@ exports.onCfgArticuloVersionWritten = onDocumentWritten(
       estado_version_id: data.estado_version_id ?? null,
       version_semantica: data.version_semantica ?? null,
     });
+
+    const esLao = data?.bloque_identidad_naturaleza?.es_lao_anual === true;
+    const publicada = String(data.estado_version_id || "").trim() === CFG_EST_VER_PUBLICADA;
+    const correspondenciaAnio = getCorrespondenciaAnioFromVersion(data);
+    if (esLao && publicada && correspondenciaAnio != null) {
+      logger.info("lao_version_publicada_lista_acreditacion", {
+        articuloId: event.params.articuloId,
+        versionId: event.params.versionId,
+        correspondencia_anio: correspondenciaAnio,
+        nota: "Invocar acreditarLaoBolsaAgente por agente/ejercicio (batch ticketera).",
+      });
+    }
   },
 );

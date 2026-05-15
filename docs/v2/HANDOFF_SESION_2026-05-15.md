@@ -1,5 +1,7 @@
 # Handoff sesión 2026-05-15 — LAO 2024 (guía), bolsas, check-in y plan maestro
 
+> **Continuación técnica / smoke (2026-05-16):** [`HANDOFF_SESION_2026-05-16.md`](./HANDOFF_SESION_2026-05-16.md) — grilla «ver versiones», callable, check-in merge fix, scripts smoke, pausa.
+
 ## Resumen ejecutivo
 
 Sesión de **producto y documentación** (sin implementación de motor/check-in): guía campo a campo para artículo **LAO año 2024**, alineación de política de **bolsas por año**, definición de **check-in vs antigüedad**, y cierre de reglas de **solicitud** y **FIFO**. Se generó plan maestro persistente en repo para continuar desde otra PC.
@@ -11,7 +13,7 @@ Sesión de **producto y documentación** (sin implementación de motor/check-in)
 | Rama | `feature/ticketera-puente-campos-config` |
 | Último commit previo a este handoff | `ab2a1e5` — docs(ticketera): UAT 64-A… |
 | Working tree (antes del commit de cierre) | Cambios locales en configurador (`ArticuloConfigTabs.jsx`, `articuloLabels.js`, `articulo.schema.js`) + docs nuevos |
-| Etapa | **Plan LAO cerrado**; pendiente carga RRHH versión LAO 2024 y RFCs de implementación |
+| Etapa | **LAO 2024 auditado**; regla **A** en check-in; **RFCs implementados** (callables + trigger); pendiente UI ticketera y versiones RRHH 2023/A |
 
 ## Contexto de la conversación
 
@@ -29,9 +31,11 @@ Sesión de **producto y documentación** (sin implementación de motor/check-in)
 
 ### Año A (corte check-in vs motor)
 
-- **A = año calendario de go-live del portal** (acordado en plan).
-- Ejemplo: go-live **2026** → check-in solo **≤ 2025**; acreditación motor **≥ 2026**.
-- **Opción 1** explícita: check-in **no** carga años ≥ A.
+- **A = año calendario de go-live del portal** — **confirmado RRHH 2026-05-15** (regla cerrada).
+- **Valor numérico de A:** **no** se fija por adelantado en documentación ni config estática; se **indica al realizar el check-in** (mismo acto de activación del agente).
+- **Copy acordado en check-in (orientación RRHH):** *«A partir del año **A** inclusive en adelante…»* → acreditación por motor/antigüedad; años **&lt; A** → carga histórica de bolsas en check-in.
+- Ejemplo ilustrativo: si en check-in **A = 2026** → check-in solo **≤ 2025**; motor **≥ 2026**.
+- **Opción 1** explícita: check-in **no** carga años **≥ A**.
 
 ### Solicitudes LAO
 
@@ -59,22 +63,39 @@ Sesión de **producto y documentación** (sin implementación de motor/check-in)
 
 Plan Cursor (copia de trabajo): `lao_bolsas_y_check-in` en `.cursor/plans` del IDE (sincronizar con el doc en repo).
 
-## Brecha técnica (no implementado en sesión)
+## Brecha técnica
 
 | Tema | Estado repo |
 |------|-------------|
-| Check-in → escritura `saldos_articulo_agente` | No existe pantalla/flujo |
-| Acreditación anual automática | Solo preview/callable LAO; sin job de apertura de bolsa |
-| Descuento en trigger | Usa cupo agregado del preview; falta cómputo hábiles del rango |
-| FIFO bloqueo año | UI MVP pide `anio_origen_bolsa` manual ([`SolicitudLaoAlta.jsx`](../../web/src/pages/SolicitudLaoAlta.jsx)) |
-| Matriz Art. 40 completa en doc | RRHH debe transcribir escalones al configurador |
+| Check-in → saldos | Callable [`persistirCheckinLaoBolsas`](./RFC_LAO_CHECKIN_SALDOS_V2.md); UI ticketera pendiente |
+| Acreditación anual | Callable [`acreditarLaoBolsaAgente`](./RFC_LAO_ACREDITACION_ANUAL_V2.md) + hook publicación versión |
+| Resolver versión por año | [`shared/utils/laoVersionResolver.js`](../../shared/utils/laoVersionResolver.js), web [`laoVersionResolverService.js`](../../web/src/services/laoVersionResolverService.js) |
+| FIFO + invariante versión | Trigger [`solicitudArticuloLaoOnCreate.js`](../../functions/triggers/solicitudArticuloLaoOnCreate.js) |
+| Solicitud UI | [`SolicitudLaoAlta.jsx`](../../web/src/pages/SolicitudLaoAlta.jsx) — auto `ver_*` por `anio_origen_bolsa` |
+| Versiones RRHH faltantes | [`LAO_VERSIONES_RRHH_BACKLOG.md`](./LAO_VERSIONES_RRHH_BACKLOG.md) |
+| Descuento hábiles rango | Pendiente (preview usa cupo matriz) |
+| Matriz Art. 40 + `cfg_*` LAO 2024 | **Auditado** (`ver_01KRNYDP…`) |
 
-Referencias código: [`functions/triggers/solicitudArticuloLaoOnCreate.js`](../../functions/triggers/solicitudArticuloLaoOnCreate.js), [`functions/modules/shared/laoPreviewMotor.js`](../../functions/modules/shared/laoPreviewMotor.js), [`web/src/schemas/articulo.tripleLayer.schema.js`](../../web/src/schemas/articulo.tripleLayer.schema.js).
+Referencias: [`PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md`](./PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md), [`RFC_LAO_SOLICITUD_VERSION_FIFO_V2.md`](./RFC_LAO_SOLICITUD_VERSION_FIFO_V2.md).
+
+## Artículo LAO 2024 publicado (2026-05-15)
+
+Referencia operativa para check-in histórico, acreditación y solicitudes LAO.
+
+| Campo | Valor |
+|--------|--------|
+| `articulo_id` | `art_01KRNYDN5WR7RER7MWXRZ817E7` |
+| `version_id` | `ver_01KRNYDP14Y5V6F73DFXPBFATM` |
+| Ejercicio | **2024** (`correspondencia_anio` = 2024; versión LAO del ejercicio) |
+| Uso | Parametrización / bolsas históricas **&lt; A** vía check-in; ver [`PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md`](./PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md) |
+
+**Configurador:** `/portal/rrhh/configuracion-articulos/art_01KRNYDN5WR7RER7MWXRZ817E7`
+
+**Auditoría RRHH (2026-05-15):** matriz Art. 40, `cfg_*` del plan y publicación — **listo**.
 
 ## Guía LAO 2024 — estado
 
-- Estructura de pestañas documentada en plan (Identidad, matriz, Impacto y saldo, Avanzado).
-- **Pendiente RRHH:** cargar filas de matriz desde Decreto 1919/89 Art. 40 y publicar versión 2024 en configurador.
+- Versión **2024** publicada y validada en configurador (ids arriba).
 
 ## Artículo piloto de referencia (otro trámite)
 
@@ -82,11 +103,12 @@ Referencias código: [`functions/triggers/solicitudArticuloLaoOnCreate.js`](../.
 
 ## Agenda próxima sesión
 
-1. **Git pull** en `feature/ticketera-puente-campos-config` y leer este handoff + [`PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md`](./PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md).
-2. Confirmar **A** (año go-live real del hospital).
-3. Completar/publicar **versión LAO 2024** en configurador (matriz + `cfg_*` del plan).
-4. Priorizar **RFC check-in** vs **RFC solicitud una bolsa + bloqueo FIFO año** según avance ticketera.
-5. Opcional: continuar afinado local del configurador (archivos `ArticuloConfigTabs` / labels / schema si quedaron cambios WIP).
+1. ~~**Git pull**~~ y lectura de handoff + plan — hecho en PC de retomo.
+2. ~~Regla **A**~~ — cerrada; valor numérico **en check-in** + copy *«a partir del año A inclusive en adelante…»*.
+3. ~~LAO 2024~~ — publicado y **auditado** (`art_01KRNYDN…` / `ver_01KRNYDP…`).
+4. RRHH: publicar versiones [`LAO_VERSIONES_RRHH_BACKLOG.md`](./LAO_VERSIONES_RRHH_BACKLOG.md).
+5. UI ticketera: pantalla check-in (callable listo) y selector de bolsas en solicitud LAO.
+6. Desplegar Functions (`persistirCheckinLaoBolsas`, `acreditarLaoBolsaAgente`).
 
 ## Comandos para otra PC
 

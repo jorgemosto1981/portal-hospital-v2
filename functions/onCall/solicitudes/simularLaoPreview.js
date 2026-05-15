@@ -11,6 +11,7 @@ const runtimeFlags = require("../../modules/shared/runtimeFlags.json");
 const { assertAgenteConPersonaId, tokenHasRrhhAccess } = require("../../modules/shared/helpers");
 const { runLaoPreviewSimulacion, parseYmd } = require("../../modules/shared/laoPreviewMotor");
 const { gatherLaoAltaMotorContext } = require("../../modules/shared/solicitudLaoAltaMotorContext");
+const { assertVersionInvariantForBolsa } = require("../../modules/shared/laoVersionResolver");
 
 function resolvePersonaIdParaPreview(request, data) {
   if (runtimeFlags.OPEN_ACCESS_TEMP === true) {
@@ -66,6 +67,12 @@ const simularLaoPreview = onCall(async (request) => {
     if (code === "not-found") throw new HttpsError("not-found", msg);
     if (code === "invalid-argument") throw new HttpsError("invalid-argument", msg);
     throw new HttpsError("failed-precondition", msg);
+  }
+
+  try {
+    assertVersionInvariantForBolsa(ctx.versionData, anioOrigenBolsa);
+  } catch (err) {
+    throw new HttpsError("invalid-argument", err instanceof Error ? err.message : String(err));
   }
 
   try {

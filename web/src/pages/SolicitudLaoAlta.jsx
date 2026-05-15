@@ -1,11 +1,14 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { useSearchParams } from "react-router-dom";
 
 import LaoPreviewInfo from "../features/articulos/LaoPreviewInfo.jsx";
 import { useLaoAltaPreview } from "../features/articulos/useLaoAltaPreview.js";
+import { useLaoVersionAutoResolve } from "../features/articulos/useLaoVersionAutoResolve.js";
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
 import Card from "../components/ui/Card.jsx";
+import { LAO_ARTICULO_ID } from "../constants/laoArticulo.js";
 import { crearSolicitudArticuloLaoBorrador } from "../services/solicitudesArticuloV2Service.js";
 
 /**
@@ -15,12 +18,28 @@ export default function SolicitudLaoAlta() {
   const { user } = useAuthSession();
   const { claims, claimsLoading } = useAuthClaims(user);
   const personaId = String((claims && claims.persona_id) || "").trim();
+  const [searchParams] = useSearchParams();
 
-  const [articuloId, setArticuloId] = useState("");
+  const [articuloId, setArticuloId] = useState(() => searchParams.get("articulo_id") || LAO_ARTICULO_ID);
   const [versionId, setVersionId] = useState("");
   const [fechaDesde, setFechaDesde] = useState("");
   const [anioOrigenBolsa, setAnioOrigenBolsa] = useState("");
   const [enviando, setEnviando] = useState(false);
+
+  const onResolvedVersionId = useCallback((verId) => {
+    setVersionId(verId);
+  }, []);
+
+  const { resolviendo, errorVersion } = useLaoVersionAutoResolve({
+    articuloId,
+    anioOrigenBolsa,
+    onResolvedVersionId,
+  });
+
+  useEffect(() => {
+    const qArt = searchParams.get("articulo_id");
+    if (qArt && /^art_/i.test(qArt)) setArticuloId(qArt);
+  }, [searchParams]);
 
   const { simulacion, error, cargando, puedeLlamar } = useLaoAltaPreview({
     articuloId,
@@ -84,9 +103,13 @@ export default function SolicitudLaoAlta() {
             spellCheck={false}
             value={versionId}
             onChange={(e) => setVersionId(e.target.value)}
-            placeholder="ver_…"
+            placeholder="ver_… (auto por año bolsa)"
             className="min-h-[44px] w-full touch-manipulation rounded-lg border border-slate-200 px-3 py-2 text-base text-slate-900 outline-none ring-blue-100 focus-visible:ring-2"
           />
+          {resolviendo ? (
+            <p className="text-xs text-slate-500">Resolviendo versión LAO del ejercicio…</p>
+          ) : null}
+          {errorVersion ? <p className="text-xs text-amber-700">{errorVersion}</p> : null}
         </label>
         <label className="block space-y-1">
           <span className="text-xs font-medium text-slate-600">anio_origen_bolsa</span>

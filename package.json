@@ -13,6 +13,8 @@
     "firebase:grant-callables-invoker": "node scripts/grant-cloud-run-invoker-callables.mjs",
     "dev:set-rrhh-claims": "node scripts/dev-set-portal-role-rrhh.mjs",
     "verify:pre-coding": "node scripts/seed-v2/verify-pre-coding.mjs",
+    "smoke:lao-checkin": "node scripts/lao-smoke-checkin-bolsas.mjs",
+    "smoke:lao-solicitud": "node scripts/lao-smoke-solicitud-borrador.mjs",
     "test:firestore:v2": "node scripts/seed-v2/test-firestore-v2-connection.mjs",
     "seed:cfg": "node scripts/seed-v2/seed-cfg.mjs",
     "seed:catalogos-articulos-v2": "node scripts/seed-v2/seed-catalogos-articulos-v2.mjs",

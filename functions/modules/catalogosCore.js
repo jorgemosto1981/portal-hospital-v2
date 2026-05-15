@@ -16,6 +16,29 @@ const {
 } = require("./shared/helpers");
 const { COLECCIONES_PUBLICAS_TEMPORALES, normalizeGrupoTrabajoIdV2 } = require("./catalogosShared");
 
+const CFG_ARTICULO_ID_RE = /^art_[0-9A-HJKMNP-TV-Z]{26}$/;
+
+/**
+ * RRHH: lista documentos de `cfg_articulos/{id}/versiones` (Admin SDK).
+ * El cliente no usa `getDocs` en la subcolección porque las Rules suelen fallar aunque `listarColeccion` sí funcione.
+ */
+const listarVersionesCfgArticulo = onCall(async (request) => {
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
+  const raw = request.data && request.data.articuloId;
+  const articuloId = typeof raw === "string" ? raw.trim() : "";
+  if (!CFG_ARTICULO_ID_RE.test(articuloId)) {
+    throw new HttpsError("invalid-argument", "[VAL-CFG-ART-VER] articuloId inválido.");
+  }
+  const snap = await db.collection("cfg_articulos").doc(articuloId).collection("versiones").get();
+  const items = snap.docs.map((doc) => {
+    const data = doc.data() || {};
+    const flat = serializeFirestoreValue(data);
+    const dataOut = typeof flat === "object" && flat !== null && !Array.isArray(flat) ? flat : {};
+    return { versionId: doc.id, data: dataOut };
+  });
+  return { items };
+});
+
 const listarColeccion = onCall(async (request) => {
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
   const col = assertColeccionRrhh(request.data && request.data.collectionName);
@@ -153,6 +176,7 @@ const listarColeccionPublicaTemporal = onCall(async (request) => {
 
 module.exports = {
   listarColeccion,
+  listarVersionesCfgArticulo,
   guardarOpcion,
   listarCatalogoOnboarding,
   listarColeccionPublicaTemporal,

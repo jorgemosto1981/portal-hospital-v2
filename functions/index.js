@@ -16,6 +16,8 @@ const catalogos = require("./modules/catalogos");
 const onboarding = require("./modules/onboarding");
 const articulosCfg = require("./modules/articulosCfg");
 const solicitudesLao = require("./onCall/solicitudes/simularLaoPreview");
+const persistirCheckinLaoBolsas = require("./onCall/solicitudes/persistirCheckinLaoBolsas");
+const acreditarLaoBolsaAgente = require("./onCall/solicitudes/acreditarLaoBolsaAgente");
 const solicitudArticuloTriggers = require("./triggers/solicitudArticuloLaoOnCreate");
 
 module.exports = {
@@ -25,5 +27,7 @@ module.exports = {
   ...onboarding,
   ...articulosCfg,
   ...solicitudesLao,
+  ...persistirCheckinLaoBolsas,
+  ...acreditarLaoBolsaAgente,
   ...solicitudArticuloTriggers,
 };

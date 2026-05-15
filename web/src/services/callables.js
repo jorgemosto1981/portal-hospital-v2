@@ -62,6 +62,11 @@ export function callListarColeccion(data) {
   return httpsCallable(getFunctionsV2(), "listarColeccion")(data);
 }
 
+/** RRHH: listar subcolección `cfg_articulos/{articuloId}/versiones` vía Admin (evita fallos de Rules en cliente). */
+export function callListarVersionesCfgArticulo(data) {
+  return httpsCallable(getFunctionsV2(), "listarVersionesCfgArticulo")(data);
+}
+
 /** Temporal: lectura pública acotada a colecciones laborales mientras se ajustan Rules. */
 export function callListarColeccionPublicaTemporal(data) {
   return httpsCallable(getFunctionsV2(), "listarColeccionPublicaTemporal")(data);
@@ -149,4 +154,14 @@ export function callVerificarSesionConcurrente(data) {
 /** Preview motor LAO (callable `simularLaoPreview`). */
 export function callSimularLaoPreview(data) {
   return httpsCallable(getFunctionsV2(), "simularLaoPreview")(data);
+}
+
+/** Check-in LAO histórico → bolsas (callable `persistirCheckinLaoBolsas`). */
+export function callPersistirCheckinLaoBolsas(data) {
+  return httpsCallable(getFunctionsV2(), "persistirCheckinLaoBolsas")(data);
+}
+
+/** Acreditación LAO motor por agente/ejercicio (callable `acreditarLaoBolsaAgente`). */
+export function callAcreditarLaoBolsaAgente(data) {
+  return httpsCallable(getFunctionsV2(), "acreditarLaoBolsaAgente")(data);
 }

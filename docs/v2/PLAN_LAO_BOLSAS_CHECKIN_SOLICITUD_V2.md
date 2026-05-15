@@ -15,7 +15,7 @@
 | Cómputo consumo | `cfg_rcd_habiles_compuesto` (+ `cfg_calendario_feriados_institucional`). |
 | Origen artículo | `cfg_os_interno`; bolsas check-in con `origen_saldo_id` = `cfg_os_externo_informado` + `es_arrastre: true`. |
 | Check-in vs motor | **Opción 1:** check-in solo años **&lt; A**; desde **A** solo acreditación por antigüedad/matriz. |
-| **A** | **Año calendario de go-live del portal** (ej. go-live 2026 → check-in ≤ 2025; acreditación motor ≥ 2026). |
+| **A** | **Año calendario de go-live del portal.** El **número** se informa/indica **en el acto de check-in** (no config estática previa). Copy RRHH: *«A partir del año **A** inclusive en adelante…»* (motor); años **&lt; A** = carga histórica. Ej.: A=2026 → check-in ≤ 2025, motor ≥ 2026. |
 | Solicitudes | **Una solicitud = un solo año de bolsa** (`anio_origen_bolsa`). **Prohibido** repartir un mismo `sol_*` entre varias bolsas/años. Dos años → **dos solicitudes**. |
 | FIFO | Al elegir año: portal **sugiere/bloquea** consumir primero la bolsa con menor `anio_origen` y `disponible > 0` (recomendación producto: **bloqueo** si existe saldo en año más viejo). **No** repartir días entre años en un trámite. |
 
@@ -27,6 +27,10 @@
 - Versiones publicadas por año con `correspondencia_anio` = ejercicio (ej. versión **2024** para parametrización histórica; versiones ≥ **A** para acreditación viva).
 - Parámetros fijos (Impacto y saldo + Avanzado): hábiles compuesto, `cfg_rcc_nunca`, `cfg_os_interno`, `cfg_cad_nunca`, `cfg_as_resta`, unidad días, `es_lao_anual`, matriz Art. 40 + corte **31/12** (salvo cambio RRHH).
 - Referencia de carga similar a artículo piloto **64-A**: [`HANDOFF_SESION_2026-05-14.md`](./HANDOFF_SESION_2026-05-14.md).
+- **LAO 2024 publicado:** `art_01KRNYDN5WR7RER7MWXRZ817E7` / `ver_01KRNYDP14Y5V6F73DFXPBFATM` — ver [`HANDOFF_SESION_2026-05-15.md`](./HANDOFF_SESION_2026-05-15.md).
+- **Regla A:** confirmada; valor numérico en **check-in** + copy acordado (ver tabla decisiones).
+- **LAO 2024:** auditado RRHH 2026-05-15 (`ver_01KRNYDP14Y5V6F73DFXPBFATM`).
+- **Estrategia versiones:** una versión **publicada** por cada `correspondencia_anio` (aunque la matriz sea idéntica). Backlog RRHH: [`LAO_VERSIONES_RRHH_BACKLOG.md`](./LAO_VERSIONES_RRHH_BACKLOG.md).
 
 ### Tabla rápida configurador (todas las versiones LAO)
 
@@ -88,11 +92,12 @@ flowchart TB
 |---------------|---------|
 | Prerequisito | `hlc_confirmadas_completas` |
 | Filas | `anio_origen`, `dias_disponibles`, observación fuente |
-| Persistencia | `es_arrastre: true`, `origen_saldo_id: cfg_os_externo_informado` |
+| Persistencia | `es_arrastre: true`, `origen_saldo_id: cfg_os_externo_informado`, `version_id_origen` = versión con `correspondencia_anio` = `anio_origen` |
 | Idempotencia | No duplicar año; si `consumido > 0` → ajuste manual RRHH |
 | Año ≥ A | Rechazar en check-in |
+| Versión por fila | Resolver `ver_*` publicada por `correspondencia_anio` (una por año) |
 
-Módulo check-in: **no implementado** en repo (depende ticketera).
+**RFC:** [`RFC_LAO_CHECKIN_SALDOS_V2.md`](./RFC_LAO_CHECKIN_SALDOS_V2.md) — callable `persistirCheckinLaoBolsas`.
 
 ---
 
@@ -103,6 +108,8 @@ Módulo check-in: **no implementado** en repo (depende ticketera).
 - Bolsa: `es_arrastre: false`, `origen_saldo_id: cfg_os_interno`.
 - **No sobrescribir** bolsas con `es_arrastre: true`.
 
+**RFC:** [`RFC_LAO_ACREDITACION_ANUAL_V2.md`](./RFC_LAO_ACREDITACION_ANUAL_V2.md) — callable `acreditarLaoBolsaAgente` + hook publicación versión.
+
 ---
 
 ## Brecha vs implementación actual
@@ -111,19 +118,41 @@ Módulo check-in: **no implementado** en repo (depende ticketera).
 |-----------|---------------|----------|
 | FIFO multi-año en un descuento | Roadmap | **No** aplicar; una bolsa por solicitud |
 | Descuento trigger | Agregado preview motor | Días hábiles del rango |
-| Check-in → saldos | No existe | RFC + UI RRHH |
-| Acreditación anual | Parcial (preview) | Job apertura bolsa |
-| Config LAO 2024 | Pendiente RRHH | Publicar versión |
+| Check-in → saldos | Callable [`persistirCheckinLaoBolsas`](./RFC_LAO_CHECKIN_SALDOS_V2.md) | UI ticketera |
+| Acreditación anual | Callable [`acreditarLaoBolsaAgente`](./RFC_LAO_ACREDITACION_ANUAL_V2.md) + hook versión | Batch por agente |
+| Config LAO 2024 | **Publicado y auditado** | Ver handoff 2026-05-15 |
+| Resolver versión por `anio_origen` | `shared/utils/laoVersionResolver.js` | UI solicitud + triggers |
+| Validación bolsa↔versión | Trigger solicitud LAO | Invariante §4.1 |
+| FIFO año en solicitud | Trigger + UI | Bloqueo si saldo en año más viejo |
 
 ---
 
-## RFCs sugeridos (orden)
+## RFCs (orden de implementación)
 
-1. Plan estable (este doc) + **A** en config maestra (año go-live).
-2. Check-in → `saldos_articulo_agente` (años &lt; A).
-3. Acreditación anual (años ≥ A).
-4. Solicitud LAO: una bolsa, hábiles rango, FIFO año (bloqueo).
-5. Ajustes manuales RRHH post-consumo.
+| # | RFC | Entregable |
+|---|-----|------------|
+| 1 | Plan estable (este doc) | **A** informado en check-in (no config maestra estática) |
+| 2 | [`RFC_LAO_CHECKIN_SALDOS_V2.md`](./RFC_LAO_CHECKIN_SALDOS_V2.md) | Callable check-in + `version_id_origen` en bolsa |
+| 3 | [`RFC_LAO_ACREDITACION_ANUAL_V2.md`](./RFC_LAO_ACREDITACION_ANUAL_V2.md) | Callable acreditación + hook `onCfgArticuloVersionWritten` |
+| 4 | [`RFC_LAO_SOLICITUD_VERSION_FIFO_V2.md`](./RFC_LAO_SOLICITUD_VERSION_FIFO_V2.md) | Resolver versión, validación, FIFO |
+| 5 | Ajustes manuales RRHH post-consumo | Pendiente ticketera |
+
+---
+
+## Smoke Fase 3 (check-in motor / saldos)
+
+Script Admin (mismo contrato que callable `persistirCheckinLaoBolsas`): `scripts/lao-smoke-checkin-bolsas.mjs`.
+
+- Dry-run: `npm run smoke:lao-checkin`
+- Aplicar (proyecto del JSON de credenciales): `node scripts/lao-smoke-checkin-bolsas.mjs --apply`
+- Opciones: `--dni=`, `--anio-a=2026`, `--articulo=`, `--2024-dias=`, `--2025-dias=`
+
+**Solicitud (trigger `onSolicitudArticuloLaoMotorValidate`):**  
+`npm run smoke:lao-solicitud` (dry-run) · `node scripts/lao-smoke-solicitud-borrador.mjs --apply --anio-bolsa=2024`  
+
+Nota: el motor **stock** descontará `dias_base` de la matriz (~27); la bolsa debe tener `disponible` suficiente o la solicitud quedará rechazada (comportamiento correcto).
+
+Ejemplo piloto DNI **28914247**: por defecto **10** días bolsa 2024 y **8** días bolsa 2025, **A=2026**.
 
 ---
 
@@ -140,6 +169,13 @@ Módulo check-in: **no implementado** en repo (depende ticketera).
 
 ## Próxima sesión
 
-1. Cargar/publicar **versión LAO 2024** en configurador (matriz Art. 40 desde RRHH).
-2. Fijar **A** (año go-live) en documentación institucional.
-3. Abrir RFC check-in o alinear solicitud según prioridad ticketera.
+**Pausa 2026-05-16** — Smoke Fase 3 ejecutado (piloto DNI 28914247): check-in bolsas 2024/2025, primera solicitud rechazada por saldo vs `dias_base` motor (~27); tras fix **`update`** en callable check-in sobre `sal_*` existente, segunda solicitud OK (`sol_01KRPV0R…`). Para dejar estado limpio, **se borraron en BD manualmente ambas bolsas** piloto (`saldos_articulo_agente` ese `per_*`). Al retomar: repetir check-in antes de nuevas pruebas T1–T6 si se requiere saldo fresco; opcional borrar docs `sol_*` de smoke en `solicitudes_articulo`.
+
+1. ~~Publicar **LAO 2024**~~ — hecho (`ver_01KRNYDP…`).
+2. ~~Regla **A**~~ — valor en check-in + copy acordado.
+3. ~~LAO 2023~~ — `ver_01KRPPTZ86XK1GR4MNCJA804TE` (Firestore OK).
+4. ~~**UI «Ver versiones»** por artículo~~ — cubierta (grilla + callable `listarVersionesCfgArticulo`).
+5. ~~RRHH: **2025** y versión ejercicio **2026** (A de ejemplo piloto)~~ — `ver_01KRPT6XEF3MD46NZT9SKW42C4` en `art_01KRNYDN5WR7RER7MWXRZ817E7`.
+6. ~~Registrar `version_id` LAO 2026 en backlog~~ — [`LAO_VERSIONES_RRHH_BACKLOG.md`](./LAO_VERSIONES_RRHH_BACKLOG.md).
+7. Pruebas T1–T6 (callables desplegados).
+8. UI ticketera: check-in y solicitud LAO (selector bolsas + FIFO).
