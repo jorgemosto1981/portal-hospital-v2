@@ -966,27 +966,38 @@ export default function ArticuloConfigTabs() {
                 required
                 explicaciones={EXPLICACIONES_OPCIONES}
               />
-              {form.bloque_topes_plazos_computo.unidad_medida_id ? (
-                <FieldSelect
-                  label={LABELS.accion_saldo_id}
-                  value={form.bloque_topes_plazos_computo.accion_saldo_id}
-                  onChange={(v) => setBlock("bloque_topes_plazos_computo", "accion_saldo_id", v)}
-                  options={getOptions("cfg_accion_saldo")}
-                  disabled={formBloqueadoPorCatalogos}
-                  required
-                  explicaciones={EXPLICACIONES_OPCIONES}
-                  helpText="Define si la solicitud suma crédito (ej. horas extra), descuenta (ej. permiso) o es informativa."
-                />
-              ) : null}
               <FieldSelect
                 label={LABELS.origen_saldo_id}
                 value={form.bloque_topes_plazos_computo.origen_saldo_id}
                 onChange={(v) => setBlock("bloque_topes_plazos_computo", "origen_saldo_id", v)}
                 options={getOptions("cfg_origen_saldo")}
                 disabled={formBloqueadoPorCatalogos}
-                className="md:col-span-2"
                 required
                 explicaciones={EXPLICACIONES_OPCIONES}
+              />
+            </div>
+          </Card>
+
+          <Card className="space-y-4 p-4 shadow-sm md:p-6">
+            <h3 className="text-sm font-semibold text-slate-700">Motor aritmético del saldo</h3>
+            <p className="mt-1 mb-4 text-xs italic text-slate-500">
+              Suma, resta o registro neutro. El multiplicador solo aplica si la unidad es{" "}
+              <strong>Horas</strong> (tarjeta «Cómputo y unidad de medida» arriba).
+            </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <FieldSelect
+                label={LABELS.accion_saldo_id}
+                value={form.bloque_topes_plazos_computo.accion_saldo_id}
+                onChange={(v) => setBlock("bloque_topes_plazos_computo", "accion_saldo_id", v)}
+                options={getOptions("cfg_accion_saldo")}
+                disabled={formBloqueadoPorCatalogos || !form.bloque_topes_plazos_computo.unidad_medida_id}
+                required={!!form.bloque_topes_plazos_computo.unidad_medida_id}
+                explicaciones={EXPLICACIONES_OPCIONES}
+                helpText={
+                  form.bloque_topes_plazos_computo.unidad_medida_id
+                    ? "Define si la solicitud suma crédito (ej. horas extra), descuenta (ej. permiso) o es informativa."
+                    : "Elegí primero «Unidad de medida del saldo» en la tarjeta de arriba."
+                }
               />
               {form.bloque_topes_plazos_computo.unidad_medida_id === "cfg_uma_horas" &&
               form.bloque_topes_plazos_computo.accion_saldo_id &&
@@ -1007,6 +1018,11 @@ export default function ArticuloConfigTabs() {
                   required={false}
                   helpText="[¡IMPORTANTE!] El sistema multiplicará el tiempo ingresado por este factor antes de impactar el saldo (ej: 1.5 para horas al 50%)."
                 />
+              ) : form.bloque_topes_plazos_computo.unidad_medida_id &&
+                form.bloque_topes_plazos_computo.unidad_medida_id !== "cfg_uma_horas" ? (
+                <p className="self-end rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                  Con unidad en días no se usa multiplicador; solo elegí Suma, Resta o Neutro.
+                </p>
               ) : null}
             </div>
           </Card>
