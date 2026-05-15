@@ -36,7 +36,7 @@ export const LABELS = Object.freeze({
   afecta_presentismo: "Afecta presentismo",
   acumula_reparto_obra_social: "Acumula para obra social",
   invalida_reparto_obra_social: "Excluye de obra social",
-  suma_antiguedad_lao: "Suma antigüedad para LAO",
+  suma_antiguedad_lao: "Cuenta para antigüedad (vacaciones / LAO)",
 
   // --- Elegibilidad (Bloque 3) ---
   requiere_declaracion_familiar: "Requiere declaración familiar",
@@ -126,6 +126,16 @@ export const PALETA_COLORES = Object.freeze([
  * Clave = ID del documento en la colección cfg_*.
  * Se prioriza sobre `descripcion_ui` de Firestore cuando existe.
  */
+/** Textos de ayuda largos (checkboxes y campos que lo requieran). */
+export const HELP_TEXTS = Object.freeze({
+  suma_antiguedad_lao:
+    "El tiempo de esta licencia cuenta para antigüedad. Activado: no se descuentan estos días del tiempo de servicio para vacaciones (LAO). Desactivado: el motor LAO puede excluir ese período del cómputo de servicio efectivo (ej.: licencias sin goce de haberes).",
+  acumula_reparto_obra_social:
+    "Los días se consideran para acumulación de licencias para el cálculo de aportes a la obra social.",
+  invalida_reparto_obra_social:
+    "Este artículo excluye al agente del reparto de obra social durante el período mensual.",
+});
+
 export const EXPLICACIONES_OPCIONES = Object.freeze({
   // cfg_regla_computo_dias
   cfg_rcd_corridos: "Cuenta sábados, domingos y feriados. Estándar para vacaciones (LAO) y la mayoría de licencias anuales.",

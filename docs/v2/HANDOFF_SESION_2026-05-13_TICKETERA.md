@@ -98,6 +98,10 @@ Detalles:
 - `web/src/constants/catalogosArticulosV2.js` — Lista de 35 colecciones cfg_*
 - `docs/v2/SEED_CATALOGOS_ARTICULOS_V2.json` — Filas de catálogos
 
+## Artículo piloto y elegibilidad laboral (alta de solicitud)
+
+Al implementar el alta de solicitudes, usar como referencia de regresión el **64-A publicado** y los casos T1/T2 (HLC 2695 vs 9282) documentados en [`HANDOFF_SESION_2026-05-14.md`](./HANDOFF_SESION_2026-05-14.md) — sección *Artículo piloto publicado — 64-A* y *Registro para desarrollo — filtro de elegibilidad*.
+
 ## Contexto de la conversación
 
 - UUID conversación: `ba8632b2-c64d-4404-98b8-6e208ea006cc`

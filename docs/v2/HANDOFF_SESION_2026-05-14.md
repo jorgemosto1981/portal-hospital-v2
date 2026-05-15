@@ -142,6 +142,77 @@ El listado leía `cfg_articulos/{id}` pero el servicio solo guardaba `version_ac
 2. **Evaluar completitud del módulo HLC:** Verificar que el CRUD de HLC está 100% funcional para ambos escenarios (migrados con historial completo, nuevos con HLC única). Esto es prerequisito para implementar el checkin.
 3. **Continuar probando el configurador:** Cargar artículos reales para afinar el proceso.
 
+## Artículo piloto publicado — 64-A Asuntos particulares (2026-05-15)
+
+Referencia operativa para el **módulo de solicitudes / ticketera** cuando implemente filtros de elegibilidad y circuito de ingreso.
+
+| Campo | Valor |
+|-------|--------|
+| `articulo_id` | `art_01KRNK10V10CH7W5M2W6V558GS` |
+| `version_id` | `ver_01KRNKNBXNBFC9HZN7CZJGPRDH` |
+| `estado_version_id` | `cfg_est_ver_publicada` (confirmado en Firestore; `publicada_en` puede quedar null hasta completar metadatos de publicación) |
+| Código / nombre | `64-A` — ASUNTOS PARTICULARES |
+| Norma | Decreto `1919/89`, inciso `Art 64 inc A` |
+
+### Parámetros de negocio relevantes (versión publicada)
+
+- **Cómputo:** días corridos (`cfg_rcd_corridos`), unidad días, ámbito año calendario, cupo 6, 1 solicitud/mes, 1 día por evento (mín. 1).
+- **Elegibilidad (`bloque_elegibilidad_filtros`):** solo `escalafon_ids` = [`CFG_ESC_02_ADMINISTRACION`] (Administración Pública Decreto 2695); `agrupamiento_ids` vacío → todos los agrupamientos **dentro** de ese escalafón (Enfermería, Administración, etc.).
+- **Exclusión normativa deseada:** agentes con HLC vigente y `escalafon_id` = `CFG_ESC_01_PROFESIONAL` (Profesional de la Salud, Ley 9282) **no** deben poder usar este artículo.
+- **Impacto LAO:** `suma_antiguedad_lao` = true (el período cuenta para antigüedad / no se descuenta del servicio efectivo para vacaciones).
+- **Circuito de ingreso (revisión RRHH):** conviene **solo** `CFG_USUARIO` (rol agente estándar); semántica del campo = lista blanca **OR** de roles que pueden **crear** la solicitud. Incluir `CFG_RRHH` / `CFG_MEDICO` amplía quién puede iniciar, no restringe al agente. Verificar valor guardado al implementar el alta.
+
+Ids de escalafón en seed de configuración maestra: `src/scripts/seedConfiguracion.mjs` (`CFG_ESC_01_PROFESIONAL`, `CFG_ESC_02_ADMINISTRACION`).
+
+---
+
+## Registro para desarrollo — filtro de elegibilidad en alta de solicitud
+
+**Estado:** la versión del artículo ya define reglas en `bloque_elegibilidad_filtros`; **aún no está acordado en código** cómo el módulo de solicitudes resuelve la cadena laboral al validar. Definir e implementar al desarrollar solicitudes.
+
+### Fuente de verdad laboral (V2)
+
+- La elegibilidad del configurador apunta a datos de **persona + historial laboral**, no a duplicar escalafón en el artículo salvo como filtro.
+- Referencia de integración: [`MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md`](./MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md) §5 (Laboral: `hlc_*`, `hlg_*`, efectores, grupos).
+- Al implementar, documentar en el mismo handoff o en el RFC de solicitudes **qué documento(s)** se leen: típicamente **HLC vigente** para `escalafon_id`, `agrupamiento_id`, `cargo_funcional_id`, `tipo_vinculo_id`; y si intervienen **HLG** / **HLD** (p. ej. grupo de trabajo, efector, cadena HLc→HLd→HLg del login).
+
+### Semántica acordada de arrays vacíos vs poblados
+
+| Campo en versión | `[]` vacío | Lista con ids |
+|------------------|------------|----------------|
+| `escalafon_ids` | Todos los escalafones | Solo si `escalafon_id` de la HLC vigente está en la lista |
+| `agrupamiento_ids` | Todos los agrupamientos (dentro del escalafón ya filtrado) | Solo agrupamientos listados |
+| (análogo) `tipo_vinculo_ids`, `cargo_funcional_ids`, `grupo_trabajo_ids`, `persona_ids`, `genero_ids` | Sin restricción en ese eje | Debe cumplir intersección con el valor del agente |
+
+`antiguedad_minima_meses`: comparar contra antigüedad calculada (motor dinámico HLC; ver `antiguedadCalculator`), no valor almacenado en checkin.
+
+### Casos de prueba obligatorios (64-A)
+
+Usar la versión publicada arriba. Criterio de éxito cuando exista pantalla/callable de **alta de solicitud**:
+
+| # | Perfil de prueba | HLC vigente (mínimo) | Resultado esperado |
+|---|------------------|----------------------|-------------------|
+| T1 | Agente planta administrativa 2695 | `escalafon_id` = `CFG_ESC_02_ADMINISTRACION`, agrupamiento cualquiera permitido por hospital | **Puede** elegir artículo 64-A y crear solicitud (si rol ∈ `circuito_ingreso_ids`) |
+| T2 | Agente profesional de la salud 9282 | `escalafon_id` = `CFG_ESC_01_PROFESIONAL`, cargo vigente | **No** puede elegir 64-A — rechazo de elegibilidad con mensaje claro |
+| T3 | Agente con HLC 2695 pero rol solo RRHH (si circuito = solo USUARIO) | 2695 | RRHH **no** crea en nombre propio salvo que también tenga `CFG_USUARIO` |
+| T4 | Doble vínculo / cambio de HLC | Probar transición 9282 → 2695 | Acceso debe seguir la **HLC vigente** a la fecha de la solicitud |
+
+Registrar en el PR del módulo solicitudes: resultado de T1 y T2 como prueba de regresión del filtro.
+
+### Circuito de ingreso (`circuito_ingreso_ids`)
+
+- Campo en `bloque_workflow_sla_cobertura`; ids son **`cfg_rol`** (`CFG_USUARIO`, `CFG_RRHH`, `CFG_MEDICO`, …).
+- Semántica: **OR** — puede iniciar quien tenga al menos un rol listado.
+- Para 64-A, RRHH definió: basta **`CFG_USUARIO`** para acceso agente; roles extra en la lista solo amplían iniciadores.
+
+### Pendiente de diseño (explicitar al codificar)
+
+1. ¿Elegibilidad se evalúa contra **HLC vigente** a `fecha_desde` de la solicitud o contra “hoy”?
+2. ¿`grupo_trabajo_ids` usa membresía en `grupos_de_trabajo` / HLG o solo ids en HLC?
+3. ¿Mensaje de error único “No cumple requisitos del artículo” vs detalle por filtro fallido (escalafón, antigüedad, etc.)?
+
+---
+
 ## Fixes adicionales aplicados post-commit
 
 - `web/src/components/layout/MobileLayout.jsx`: se extendió el `max-h` del shell en desktop de `64rem` fijo a `calc(100dvh - 2rem)` para que el panel derecho del configurador no se corte verticalmente.

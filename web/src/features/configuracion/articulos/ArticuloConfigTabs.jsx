@@ -18,7 +18,7 @@ import {
 } from "../../../services/cfgArticuloVersionService.js";
 import { CFG_UMA_DIAS, CFG_UMA_HORAS } from "./articuloComputoConstants.js";
 import ImpactoSaldoTabSections from "./ImpactoSaldoTabSections.jsx";
-import { EXPLICACIONES_OPCIONES, LABELS } from "./articuloLabels.js";
+import { EXPLICACIONES_OPCIONES, HELP_TEXTS, LABELS } from "./articuloLabels.js";
 import { normalizeFechaCorteAntiguedadIso } from "./fecCorteAntiguedadHelpers.js";
 import { FieldCheck, FieldColor, FieldMultiSelect, FieldNumber, FieldPersonaSearch, FieldSelect, FieldText } from "./fieldWidgets.jsx";
 import MatrizAntiguedadEditor from "./MatrizAntiguedadEditor.jsx";
@@ -790,7 +790,9 @@ export default function ArticuloConfigTabs() {
           {/* --- Sección: Impacto económico --- */}
           <Card className="space-y-4 p-4 shadow-sm md:p-6">
             <h3 className="text-sm font-semibold text-slate-700">Impacto económico</h3>
-            <p className="text-xs italic text-slate-500 mt-1 mb-4">Define cómo afecta este artículo al sueldo, presentismo y obra social del agente durante el período otorgado.</p>
+            <p className="text-xs italic text-slate-500 mt-1 mb-4">
+              Define cómo afecta este artículo al sueldo, presentismo y antigüedad para vacaciones durante el período otorgado.
+            </p>
             <FieldSelect
               label={LABELS.justifica_sueldo_id}
               value={form.bloque_impacto_economico.justifica_sueldo_id}
@@ -802,9 +804,36 @@ export default function ArticuloConfigTabs() {
             <div className="grid gap-3 sm:grid-cols-2">
               <FieldCheck label={LABELS.suma_para_sac} checked={form.bloque_impacto_economico.suma_para_sac} onChange={(v) => setBlock("bloque_impacto_economico", "suma_para_sac", v)} helpText="Si se activa, los días de esta licencia cuentan para el cálculo del aguinaldo." />
               <FieldCheck label={LABELS.afecta_presentismo} checked={form.bloque_impacto_economico.afecta_presentismo} onChange={(v) => setBlock("bloque_impacto_economico", "afecta_presentismo", v)} helpText="[¡IMPORTANTE!] Si se activa, usar este artículo reduce o anula el premio por presentismo del mes. Es una de las configuraciones más consultadas por los gremios." />
-              <FieldCheck label={LABELS.acumula_reparto_obra_social} checked={form.bloque_impacto_economico.acumula_reparto_obra_social} onChange={(v) => setBlock("bloque_impacto_economico", "acumula_reparto_obra_social", v)} helpText="Los días se consideran para el cálculo de aportes a la obra social." />
-              <FieldCheck label={LABELS.invalida_reparto_obra_social} checked={form.bloque_impacto_economico.invalida_reparto_obra_social} onChange={(v) => setBlock("bloque_impacto_economico", "invalida_reparto_obra_social", v)} helpText="Excluye al agente del reparto de obra social durante el período." />
-              <FieldCheck label={LABELS.suma_antiguedad_lao} checked={form.bloque_impacto_economico.suma_antiguedad_lao} onChange={(v) => setBlock("bloque_impacto_economico", "suma_antiguedad_lao", v)} helpText="Los días cuentan como antigüedad para el cálculo de vacaciones (LAO)." />
+              <FieldCheck
+                label={LABELS.suma_antiguedad_lao}
+                checked={form.bloque_impacto_economico.suma_antiguedad_lao}
+                onChange={(v) => setBlock("bloque_impacto_economico", "suma_antiguedad_lao", v)}
+                helpText={HELP_TEXTS.suma_antiguedad_lao}
+                className="sm:col-span-2"
+              />
+            </div>
+          </Card>
+
+          <Card className="space-y-4 p-4 shadow-sm md:p-6">
+            <h3 className="text-sm font-semibold text-slate-700">
+              Impacto en liquidación entre agentes por obras sociales (módulo específico)
+            </h3>
+            <p className="mt-1 mb-4 text-xs italic text-slate-500">
+              Parámetros para el reparto y la acumulación de licencias en el módulo de obras sociales (cuando esté operativo).
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FieldCheck
+                label={LABELS.acumula_reparto_obra_social}
+                checked={form.bloque_impacto_economico.acumula_reparto_obra_social}
+                onChange={(v) => setBlock("bloque_impacto_economico", "acumula_reparto_obra_social", v)}
+                helpText={HELP_TEXTS.acumula_reparto_obra_social}
+              />
+              <FieldCheck
+                label={LABELS.invalida_reparto_obra_social}
+                checked={form.bloque_impacto_economico.invalida_reparto_obra_social}
+                onChange={(v) => setBlock("bloque_impacto_economico", "invalida_reparto_obra_social", v)}
+                helpText={HELP_TEXTS.invalida_reparto_obra_social}
+              />
             </div>
           </Card>
 
