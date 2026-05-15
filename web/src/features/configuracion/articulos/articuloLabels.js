@@ -61,7 +61,8 @@ export const LABELS = Object.freeze({
   intervalo_gracia_dias: "Días de gracia antes de descontar",
   depende_rda: "Requiere validación de disponibilidad (RDA)",
   reinicio_ciclo_id: "Momento de reseteo de la bolsa de días",
-  accion_saldo_id: "¿Qué pasa cuando el agente usa días?",
+  accion_saldo_id: "Efecto de la solicitud sobre el saldo",
+  multiplicador_valor: "Factor multiplicador de horas",
   origen_saldo_id: "¿De dónde salen los días disponibles?",
 
   // --- Límites y cupos (Bloque 4) ---
@@ -137,9 +138,10 @@ export const EXPLICACIONES_OPCIONES = Object.freeze({
   bolsa_anual: "Los días salen de un cupo anual. Cada año se genera una bolsa nueva.",
   bolsa_unica: "El agente tiene una sola bolsa de días para toda la vigencia del artículo.",
 
-  // cfg_accion_saldo
-  descontar_saldo: "Resta del total. Cada día pedido se deduce del saldo disponible del agente.",
-  no_descontar: "No consume saldo. El artículo se registra pero no resta días de ninguna bolsa.",
+  // cfg_accion_saldo (motor aritmético)
+  cfg_as_suma: "El valor ingresado incrementa el saldo (ej: carga de horas extra).",
+  cfg_as_resta: "El valor ingresado descuenta del saldo (ej: uso de licencia).",
+  cfg_as_neutro: "Solo registro informativo, no afecta la bolsa de días/horas.",
 
   // cfg_ambito_consumo
   cfg_ac_anio_calendario: "El contador se reinicia el 1 de enero. Los días usados se suman dentro del año civil (ej. licencias por trámites, exámenes).",

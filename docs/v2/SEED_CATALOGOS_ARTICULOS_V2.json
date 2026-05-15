@@ -57,12 +57,45 @@
   ],
   "cfg_accion_saldo": [
     {
+      "id": "cfg_as_suma",
+      "codigo_interno": "SUMA",
+      "titulo_ui": "Suma al saldo",
+      "descripcion_ui": "Incrementa la bolsa (ej. horas extra acreditadas).",
+      "factor_signo": 1,
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_as_resta",
+      "codigo_interno": "RESTA",
+      "titulo_ui": "Resta del saldo",
+      "descripcion_ui": "Descuenta de la bolsa (ej. uso de licencia o permiso).",
+      "factor_signo": -1,
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_as_neutro",
+      "codigo_interno": "NEUTRO",
+      "titulo_ui": "Registro neutro",
+      "descripcion_ui": "Solo registro informativo; no modifica disponible ni consumido.",
+      "factor_signo": 0,
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
       "id": "cfg_as_descuenta_disponible",
       "codigo_interno": "DESCUENTA_DISPONIBLE",
       "titulo_ui": "Descuenta saldo disponible",
-      "descripcion_ui": "Consume cupo de la bolsa indicada por origen_saldo_id.",
-      "orden": 10,
-      "activo": true,
+      "descripcion_ui": "Legacy — reemplazado por RESTA.",
+      "orden": 110,
+      "activo": false,
       "vigente_desde": null,
       "vigente_hasta": null
     },
@@ -70,9 +103,9 @@
       "id": "cfg_as_acumula_uso_sin_descuento",
       "codigo_interno": "ACUMULA_USO",
       "titulo_ui": "Acumula uso sin descontar",
-      "descripcion_ui": "Registra consumo para cómputo / auditoría sin mover bolsa disponible.",
-      "orden": 20,
-      "activo": true,
+      "descripcion_ui": "Legacy — reemplazado por NEUTRO.",
+      "orden": 120,
+      "activo": false,
       "vigente_desde": null,
       "vigente_hasta": null
     },
@@ -80,9 +113,9 @@
       "id": "cfg_as_reserva_provisoria",
       "codigo_interno": "RESERVA_PROVISORIA",
       "titulo_ui": "Reserva provisoria",
-      "descripcion_ui": "Bloquea cupo hasta resolución del trámite.",
-      "orden": 30,
-      "activo": true,
+      "descripcion_ui": "Legacy — reservado para workflow ticketera.",
+      "orden": 130,
+      "activo": false,
       "vigente_desde": null,
       "vigente_hasta": null
     }

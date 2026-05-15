@@ -78,6 +78,7 @@ export function createEmptyArticuloVersionForm() {
       reinicio_ciclo_id: "",
       depende_rda: false,
       accion_saldo_id: "",
+      multiplicador_valor: 1,
       origen_saldo_id: "",
       cupo_dias_por_ciclo: "",
       tope_frecuencia_mensual: "",
@@ -271,6 +272,12 @@ export function buildVersionPayloadForZod(raw) {
   const umcId = trimOrUndef(out.bloque_topes_plazos_computo.unidad_minima_consumo_id);
   const modFrac = Number(out.bloque_topes_plazos_computo.modulo_fraccionamiento_minutos);
   const polSupId = trimOrUndef(out.bloque_topes_plazos_computo.politica_superposicion_id);
+  const accionSaldoId = trimOrUndef(out.bloque_topes_plazos_computo.accion_saldo_id);
+  let multRaw = Number(out.bloque_topes_plazos_computo.multiplicador_valor);
+  if (!Number.isFinite(multRaw) || multRaw < 0.1) multRaw = 1;
+  const horasConImpacto =
+    umId === "cfg_uma_horas" && accionSaldoId && accionSaldoId !== "cfg_as_neutro";
+  const multiplicador_valor = horasConImpacto ? Math.min(10, Math.max(0.1, multRaw)) : 1;
   out.bloque_topes_plazos_computo = {
     ...out.bloque_topes_plazos_computo,
     regla_computo_horas_id: rch,
@@ -279,6 +286,8 @@ export function buildVersionPayloadForZod(raw) {
     modulo_fraccionamiento_minutos: Number.isFinite(modFrac) && modFrac >= 0 ? modFrac : 15,
     intervalo_gracia_dias: Number(out.bloque_topes_plazos_computo.intervalo_gracia_dias) || 0,
     politica_superposicion_id: polSupId,
+    accion_saldo_id: accionSaldoId,
+    multiplicador_valor,
     cupo_dias_por_ciclo: numOrUndef(out.bloque_topes_plazos_computo.cupo_dias_por_ciclo),
     tope_frecuencia_mensual: numOrUndef(out.bloque_topes_plazos_computo.tope_frecuencia_mensual),
     tope_dias_por_evento: numOrUndef(out.bloque_topes_plazos_computo.tope_dias_por_evento),
@@ -957,15 +966,18 @@ export default function ArticuloConfigTabs() {
                 required
                 explicaciones={EXPLICACIONES_OPCIONES}
               />
-              <FieldSelect
-                label={LABELS.accion_saldo_id}
-                value={form.bloque_topes_plazos_computo.accion_saldo_id}
-                onChange={(v) => setBlock("bloque_topes_plazos_computo", "accion_saldo_id", v)}
-                options={getOptions("cfg_accion_saldo")}
-                disabled={formBloqueadoPorCatalogos}
-                required
-                explicaciones={EXPLICACIONES_OPCIONES}
-              />
+              {form.bloque_topes_plazos_computo.unidad_medida_id ? (
+                <FieldSelect
+                  label={LABELS.accion_saldo_id}
+                  value={form.bloque_topes_plazos_computo.accion_saldo_id}
+                  onChange={(v) => setBlock("bloque_topes_plazos_computo", "accion_saldo_id", v)}
+                  options={getOptions("cfg_accion_saldo")}
+                  disabled={formBloqueadoPorCatalogos}
+                  required
+                  explicaciones={EXPLICACIONES_OPCIONES}
+                  helpText="Define si la solicitud suma crédito (ej. horas extra), descuenta (ej. permiso) o es informativa."
+                />
+              ) : null}
               <FieldSelect
                 label={LABELS.origen_saldo_id}
                 value={form.bloque_topes_plazos_computo.origen_saldo_id}
@@ -976,6 +988,26 @@ export default function ArticuloConfigTabs() {
                 required
                 explicaciones={EXPLICACIONES_OPCIONES}
               />
+              {form.bloque_topes_plazos_computo.unidad_medida_id === "cfg_uma_horas" &&
+              form.bloque_topes_plazos_computo.accion_saldo_id &&
+              form.bloque_topes_plazos_computo.accion_saldo_id !== "cfg_as_neutro" ? (
+                <FieldNumber
+                  label={LABELS.multiplicador_valor}
+                  value={form.bloque_topes_plazos_computo.multiplicador_valor}
+                  onChange={(v) => {
+                    const n = typeof v === "number" ? v : parseFloat(v);
+                    setBlock(
+                      "bloque_topes_plazos_computo",
+                      "multiplicador_valor",
+                      Number.isFinite(n) && n >= 0.1 ? n : 1,
+                    );
+                  }}
+                  min={0.1}
+                  max={10}
+                  required={false}
+                  helpText="[¡IMPORTANTE!] El sistema multiplicará el tiempo ingresado por este factor antes de impactar el saldo (ej: 1.5 para horas al 50%)."
+                />
+              ) : null}
             </div>
           </Card>
 

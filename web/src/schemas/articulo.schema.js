@@ -130,6 +130,15 @@ export const bloqueTopesPlazosComputoSchema = z
     reinicio_ciclo_id: cfgRowIdSchema,
     depende_rda: z.boolean().default(false),
     accion_saldo_id: cfgRowIdSchema,
+    /** Factor aplicado a la cantidad antes del signo (horas extra, etc.). Forzado a 1 si unidad ≠ horas o acción neutra. */
+    multiplicador_valor: z
+      .number()
+      .min(0.1)
+      .max(10)
+      .default(1)
+      .refine((n) => Math.abs(n * 10 - Math.round(n * 10)) < 1e-6, {
+        message: "Máximo un decimal",
+      }),
     origen_saldo_id: cfgRowIdSchema,
     /** Cupo fijo de días por ciclo (no-LAO); en LAO el cupo sale de `matriz_antiguedad_reglas`. */
     cupo_dias_por_ciclo: z.number().int().nonnegative().nullable().optional(),
