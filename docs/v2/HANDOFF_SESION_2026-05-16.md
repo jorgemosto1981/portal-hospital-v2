@@ -90,17 +90,51 @@ Registrado en [`LAO_VERSIONES_RRHH_BACKLOG.md`](./LAO_VERSIONES_RRHH_BACKLOG.md)
 
 | Prioridad | Ítem |
 |-----------|------|
+| ~~D2 ayuda~~ | **Hecho** — botón ℹ️ + modal + PDF en `ImpactoSaldoTabSections.jsx` (ver RFC §8). |
 | Alta | UI **ticketera**: check-in (filas año &lt; A, persistencia contra callable) + solicitud LAO mejorada según PLAN. |
 | Media | Repetir o formalizar checklist **T1–T6** del plan tras limpieza de datos piloto si hace falta. |
 | Técnica | Motor: descuento por **hábiles del rango** donde el plan aún lo marca como brecha vs `dias_base` stock (ver [`PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md`](./PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md) tabla brecha). |
-| Opcional | Limpieza manual de docs `sol_*` de smoke si no deben persistir en entorno piloto.
+| Opcional | Limpieza manual de docs `sol_*` de smoke si no deben persistir en entorno piloto. |
+
+---
+
+## 9. Fase documental saldos A/B/C — **cerrada 2026-05-16**
+
+**Registro maestro:** [`REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md`](./REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md).
+
+| Artefacto | Estado |
+|-----------|--------|
+| RFC §10–§11 | [`RFC_SALDOS_PATRONES_ABC_V2.md`](./RFC_SALDOS_PATRONES_ABC_V2.md) |
+| Casos borde 1–8 | [`CASOS_BORDE_SALDOS_V2.md`](./CASOS_BORDE_SALDOS_V2.md) |
+| Guía RRHH | [`GUIA_RRHH_SALDOS_V2.md`](./GUIA_RRHH_SALDOS_V2.md) |
+| Calendario feriados | [`MODULO_CALENDARIO_FERIADOS_V2.md`](./MODULO_CALENDARIO_FERIADOS_V2.md) |
+| Indexación | `README.md`, `DICCIONARIO`, `PLAN_LAO`, `MODULO_ARTICULOS` §8.6 |
+
+**D2 implementado:** `ayudaPatronesBolsaSaldo.js`, `AyudaPatronesBolsaModal.jsx`, botón en card bolsa (Impacto y Saldo).
+
+**Código pendiente:** Callable Mis saldos (D3), Patrón B (D4), seeds `cfg_esb_*` / `cfg_fechas_cierre_ciclo`.
+
+---
+
+## 10. Entregable D2 — modal ayuda Impacto y Saldo (detalle)
+
+| Ítem | Detalle |
+|------|---------|
+| **Acceso** | RRHH → configurador artículo → pestaña **Impacto y Saldo** → card *Configuración de la bolsa de días / horas* → **ℹ️** |
+| **Copy SSoT** | `web/src/features/configuracion/articulos/ayudaPatronesBolsaSaldo.js` (sincronizar con RFC §7 al cambiar producto) |
+| **UI** | `AyudaPatronesBolsaModal.jsx` — pestañas: Guía A/B/C, Resumen RRHH, Casos borde |
+| **PDF** | `window.print()` + `ayudaPatronesBolsaPrint.css` |
+| **Integración** | `ImpactoSaldoTabSections.jsx` — `useState` ayuda + modal portal-less en árbol React |
+| **Doc** | [`REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md`](./REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md) §8 · RFC §8 tabla implementación |
+
+**Comandos:** `npm run dev:web` (probar) · `npm run build` en `web/` (OK 2026-05-16).
 
 ---
 
 ## 8. Archivos tocados (orientación rápida)
 
-- **Docs:** `docs/v2/PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md`, `LAO_VERSIONES_*`, `README.md`, RFCs/checklist, **`HANDOFF_SESION_2026-05-16.md`** (este).
-- **Web:** grilla RRHH artículos, `App.jsx`, servicios callable, `articuloVersionesListService.js`, `callables.js`, página opcional versiones listado.
+- **Docs:** `docs/v2/PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md`, `LAO_VERSIONES_*`, `README.md`, **`REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md`**, `RFC_SALDOS_PATRONES_ABC_V2.md`, `CASOS_BORDE_SALDOS_V2.md`, `GUIA_RRHH_SALDOS_V2.md`, `MODULO_CALENDARIO_FERIADOS_V2.md`, **`HANDOFF_SESION_2026-05-16.md`** (este).
+- **Web:** grilla RRHH artículos, `App.jsx`, servicios callable, `articuloVersionesListService.js`, `callables.js`, página opcional versiones listado; **D2:** `ayudaPatronesBolsaSaldo.js`, `AyudaPatronesBolsaModal.jsx`, `ayudaPatronesBolsaPrint.css`, `ImpactoSaldoTabSections.jsx`.
 - **Functions:** `catalogosCore.js`, `catalogos.js`, `persistirCheckinLaoBolsas.js`, índice exports `index.js`, shared `lao*` sincronizado desde `shared/utils/`.
 - **Scripts:** `lao-smoke-checkin-bolsas.mjs`, `lao-smoke-solicitud-borrador.mjs`, entradas en `package.json` (`smoke:lao-*`).
 

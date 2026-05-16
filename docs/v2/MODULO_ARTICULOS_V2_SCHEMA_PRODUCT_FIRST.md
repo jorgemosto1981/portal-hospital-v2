@@ -415,3 +415,4 @@ Estructura de regla recomendada:
 3. **RDA:** si el artículo depende de RDA, **validación preventiva en servidor** antes de aceptar escrituras costosas o cascadas (**§2.5**).
 4. **Inmutabilidad:** versiones publicadas **solo lectura**; cambios normativos → nueva versión con vigencia futura; **sin** recálculo masivo de saldos por cambios de parámetros (**§2.6**).
 5. **Cómputo:** reglas de negocio pesadas y actualización de capas **Saldos** / **Vista** en **servidor** (Functions), no en el cliente.
+6. **Panel «Mis saldos» (agente):** el remanente y la clasificación por estado de bolsa se entregan vía Callable agregador (`obtenerResumenSaldosAgente`); el cliente **no** recalcula saldos a partir de versiones cacheadas. Contrato: [`RFC_SALDOS_PATRONES_ABC_V2.md`](./RFC_SALDOS_PATRONES_ABC_V2.md) §4 y §11 (enmienda explícita a interpretaciones previas de este §8).

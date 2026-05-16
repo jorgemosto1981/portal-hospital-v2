@@ -47,3 +47,15 @@ Plantilla: `../.env.v2.example`.
 `personas`, `usuarios_cuenta`, `formacion_agente`, `consentimientos`, `declaraciones_grupo_familiar`, `eventos_ticket`, `cfg_*`, y el resto según [`PLAN_MODULOS_V2.md`](../docs/v2/PLAN_MODULOS_V2.md) / [`RULEBOOK_V2.md`](../docs/v2/RULEBOOK_V2.md).
 
 Cualquier cambio de forma o permisos: actualizar **primero** la documentación acordada y las **Rules** en `firebase-v2/`, luego el código.
+
+## 5. Configurador de artículos — ayuda saldos (D2)
+
+| Tema | Documento / código |
+|------|-------------------|
+| Contrato patrones A/B/C, consumo, Callable futuro | [`docs/v2/RFC_SALDOS_PATRONES_ABC_V2.md`](../docs/v2/RFC_SALDOS_PATRONES_ABC_V2.md) |
+| Registro de cierre doc + D2 | [`docs/v2/REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md`](../docs/v2/REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md) §8 |
+| Copy UI (SSoT en repo) | `src/features/configuracion/articulos/ayudaPatronesBolsaSaldo.js` |
+| Modal + botón ℹ️ | `AyudaPatronesBolsaModal.jsx`, `ImpactoSaldoTabSections.jsx` (pestaña Impacto y Saldo) |
+| Impresión / PDF | `ayudaPatronesBolsaPrint.css` · `window.print()` |
+
+Al cambiar textos de ayuda: editar `ayudaPatronesBolsaSaldo.js` y, si aplica, reflejar en RFC §7 / `GUIA_RRHH_SALDOS_V2.md`.

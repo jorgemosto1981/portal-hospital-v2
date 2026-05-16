@@ -26,7 +26,10 @@
 | `cfg_pwa_` | `cfg_paso_workflow_articulo` |
 | `cfg_rsr_` | `cfg_regla_split_remanente` |
 | `cfg_tev_art_` | Filas nuevas de `cfg_tipo_evento` **exclusivas** del dominio artículos (misma colección global; ids reservados por prefijo) |
-| `cfg_cfi_` | `cfg_calendario_feriados_institucional` |
+| `cfg_cfi_` | `cfg_calendario_feriados_institucional` (docs anuales `cfg_cal_YYYY`; ver [`MODULO_CALENDARIO_FERIADOS_V2.md`](./MODULO_CALENDARIO_FERIADOS_V2.md)) |
+| `cfg_cal_` | Documento anual del calendario (`cfg_cal_2026`, …) |
+| `cfg_esb_` | `cfg_estado_bolsa_saldo` (`activo`, `agotado`, `expirado`) |
+| `cfg_fcc_` | `cfg_fechas_cierre_ciclo` (parámetros de job expirado por `reinicio_ciclo_id`) |
 | `cfg_cad_` | `cfg_tipo_caducidad` |
 | `cfg_tcp_` | `cfg_tipo_computo_plazo` |
 
@@ -46,7 +49,9 @@ Orden alfabético. **PF** = enumerado explícito en [`MODULO_ARTICULOS_V2_SCHEMA
 | `cfg_calendario_feriados_institucional` | Feriados y asuetos con alcance por efector (`cfg_cfi_*`) | Leg. |
 | `cfg_circuito_ingreso` | Circuito de ingreso de la solicitud / trámite | PF |
 | `cfg_estado_articulo` | Disponibilidad del artículo en portal (`VIGENTE`, `OBSOLETO`, …) | PF |
-| `cfg_estado_solicitud_articulo` | Estados del trámite de solicitud | PF · Leg. |
+| `cfg_estado_solicitud_articulo` | Estados del trámite de solicitud (incl. `cfg_esa_ajuste_rrhh` — Caso 7) | PF · Leg. |
+| `cfg_estado_bolsa_saldo` | Estado lógico de entrada en `bolsas{}` (`cfg_esb_activo`, `agotado`, `expirado`) | [`RFC_SALDOS_PATRONES_ABC_V2.md`](./RFC_SALDOS_PATRONES_ABC_V2.md) |
+| `cfg_fechas_cierre_ciclo` | Fecha/día de gracia post-ciclo para job Patrón B, por `reinicio_ciclo_id` | RFC §10.3 |
 | `cfg_estado_version_articulo` | Ciclo de edición de la versión (`BORRADOR`, `PUBLICADA`) | PF |
 | `cfg_fuente_decision_solicitud` | Quién decide en conflicto de solicitud | Leg. |
 | `cfg_momento_entrega_documentacion` | Antes / después / mixto (entrega de documentación) | Leg. |
@@ -140,7 +145,9 @@ Campos mínimos por fila sugeridos: `codigo_interno`, `titulo_ui`, `descripcion_
 
 ## 6. Catálogo institucional y cómputo
 
-- **`cfg_calendario_feriados_institucional` (`cfg_cfi_*`):** campos mínimos acordados en plan: `fecha`, `tipo`, `alcance_efector_id`, `activo` (más campos comunes de `cfg_*` según MODULO_CONFIGURACION).
+- **`cfg_calendario_feriados_institucional`:** un documento por año (`cfg_cal_YYYY`) con mapa `dias_no_laborables` (`YYYY-MM-DD` → `motivo`, `tipo_dia_id`: `feriado` \| `asueto`). Ver [`MODULO_CALENDARIO_FERIADOS_V2.md`](./MODULO_CALENDARIO_FERIADOS_V2.md). El prefijo `cfg_cfi_*` queda reservado para filas legacy si se migra a modelo por fila; **SSoT V2.1 = docs anuales**.
+- **`cfg_estado_bolsa_saldo` (`cfg_esb_*`):** filas mínimas `activo`, `agotado`, `expirado` en cada bolsa de `saldos_articulo_agente`.
+- **`cfg_fechas_cierre_ciclo`:** parametrización del cron de expiración Patrón B indexada por `cfg_reinicio_ciclo_cuota`.
 - **`cfg_tipo_computo_plazo` (`cfg_tcp_*`):** define si el plazo documental usa días corridos, hábil compuesto u otras semánticas según filas del catálogo (sin hardcode en motor).
 
 ---
@@ -152,3 +159,4 @@ Campos mínimos por fila sugeridos: `codigo_interno`, `titulo_ui`, `descripcion_
 - [`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md)
 - [`PLAN_UNIFICACION_EVENTOS_RRHH_2026-05-06.md`](./PLAN_UNIFICACION_EVENTOS_RRHH_2026-05-06.md)
 - [`ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md`](./ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md)
+- [`RFC_SALDOS_PATRONES_ABC_V2.md`](./RFC_SALDOS_PATRONES_ABC_V2.md) · [`CASOS_BORDE_SALDOS_V2.md`](./CASOS_BORDE_SALDOS_V2.md) · [`REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md`](./REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md)

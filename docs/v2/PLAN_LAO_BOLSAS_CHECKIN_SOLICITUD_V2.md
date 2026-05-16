@@ -1,7 +1,7 @@
 # Plan maestro — LAO bolsas, check-in y solicitudes (V2)
 
 **Estado:** acordado en sesión 2026-05-15 (producto/RRHH). **Implementación:** por fases (RFCs al final).  
-**Relación:** [`DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md`](./DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md), [`MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md`](./MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md) §4.1, [`ROADMAP_MOTOR_LAO_V2_POST_CHECKPOINT.md`](./ROADMAP_MOTOR_LAO_V2_POST_CHECKPOINT.md), handoff [`HANDOFF_SESION_2026-05-15.md`](./HANDOFF_SESION_2026-05-15.md).
+**Relación:** [`DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md`](./DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md), [`MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md`](./MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md) §4.1, [`RFC_SALDOS_PATRONES_ABC_V2.md`](./RFC_SALDOS_PATRONES_ABC_V2.md) §10, [`CASOS_BORDE_SALDOS_V2.md`](./CASOS_BORDE_SALDOS_V2.md), [`REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md`](./REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md), [`ROADMAP_MOTOR_LAO_V2_POST_CHECKPOINT.md`](./ROADMAP_MOTOR_LAO_V2_POST_CHECKPOINT.md), handoff [`HANDOFF_SESION_2026-05-15.md`](./HANDOFF_SESION_2026-05-15.md).
 
 ---
 
@@ -167,6 +167,22 @@ Ejemplo piloto DNI **28914247**: por defecto **10** días bolsa 2024 y **8** dí
 
 ---
 
+## Estados de bolsa y consumo (acordado 2026-05-16)
+
+Alineado a [`RFC_SALDOS_PATRONES_ABC_V2.md`](./RFC_SALDOS_PATRONES_ABC_V2.md) §3 y §10:
+
+| Transición | Cuándo |
+|------------|--------|
+| `cfg_esb_agotado` | Al confirmar consumo que deja `disponible === 0` en la bolsa (trigger post-inicio de trámite) |
+| `cfg_esb_expirado` | Patrón B: job según `cfg_fechas_cierre_ciclo` por `reinicio_ciclo_id` — **no** aplica a LAO (Patrón A, `cfg_rcc_nunca`) |
+| Reverso | Rechazo/anulación devuelve días a la bolsa de `_debito_origen` / `anio_origen_bolsa` (Caso 3 — implementación pendiente) |
+
+**Prohibido en producto:** borrado físico de bolsas en `saldos_articulo_agente` salvo limpieza piloto auditada (handoff 2026-05-16).
+
+**Consumo LAO:** al **iniciar trámite** (`onDocumentCreated` en `solicitudArticuloLaoOnCreate.js`); aprobación jefe no vuelve a descontar.
+
+---
+
 ## Próxima sesión
 
 **Pausa 2026-05-16** — Smoke Fase 3 ejecutado (piloto DNI 28914247): check-in bolsas 2024/2025, primera solicitud rechazada por saldo vs `dias_base` motor (~27); tras fix **`update`** en callable check-in sobre `sal_*` existente, segunda solicitud OK (`sol_01KRPV0R…`). Para dejar estado limpio, **se borraron en BD manualmente ambas bolsas** piloto (`saldos_articulo_agente` ese `per_*`). Al retomar: repetir check-in antes de nuevas pruebas T1–T6 si se requiere saldo fresco; opcional borrar docs `sol_*` de smoke en `solicitudes_articulo`.
@@ -179,3 +195,4 @@ Ejemplo piloto DNI **28914247**: por defecto **10** días bolsa 2024 y **8** dí
 6. ~~Registrar `version_id` LAO 2026 en backlog~~ — [`LAO_VERSIONES_RRHH_BACKLOG.md`](./LAO_VERSIONES_RRHH_BACKLOG.md).
 7. Pruebas T1–T6 (callables desplegados).
 8. UI ticketera: check-in y solicitud LAO (selector bolsas + FIFO).
+9. ~~**Configurador — ayuda Impacto y Saldo (D2)**~~ — **hecho** 2026-05-16: ver [`REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md`](./REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md) §8.

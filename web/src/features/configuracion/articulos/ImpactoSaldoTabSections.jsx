@@ -1,6 +1,8 @@
+import { useState } from "react";
 import Card from "../../../components/ui/Card.jsx";
 import { CFG_UMA_DIAS, CFG_UMA_HORAS, filterUnidadMedidaOptions, filterUnidadMinimaPorMedida } from "./articuloComputoConstants.js";
 import { EXPLICACIONES_OPCIONES, LABELS } from "./articuloLabels.js";
+import AyudaPatronesBolsaModal from "./AyudaPatronesBolsaModal.jsx";
 import { FieldCheck, FieldNumber, FieldSelect } from "./fieldWidgets.jsx";
 
 /**
@@ -21,6 +23,8 @@ export default function ImpactoSaldoTabSections({
   formBloqueadoPorCatalogos,
   esLaoAnual,
 }) {
+  const [ayudaAbierta, setAyudaAbierta] = useState(false);
+  const [ayudaTab, setAyudaTab] = useState("guia");
   const topes = form.bloque_topes_plazos_computo;
   const umId = topes.unidad_medida_id;
   const hasUm = !!umId;
@@ -154,10 +158,23 @@ export default function ImpactoSaldoTabSections({
       </Card>
 
       <Card className="space-y-4 p-4 shadow-sm md:p-6">
-        <h3 className="text-sm font-semibold text-slate-700">Configuración de la bolsa de días / horas</h3>
-        <p className="mt-1 mb-4 text-xs italic text-slate-500">
-          De dónde sale el cupo, cuándo se renueva y cómo se alimenta la bolsa en el portal o desde RRHH.
-        </p>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700">Configuración de la bolsa de días / horas</h3>
+            <p className="mt-1 text-xs italic text-slate-500">
+              De dónde sale el cupo, cuándo se renueva y cómo se alimenta la bolsa en el portal o desde RRHH.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAyudaAbierta(true)}
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg leading-none text-slate-600 touch-manipulation active:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-500"
+            aria-label="Abrir guía de configuración de saldos"
+            title="Guía de patrones A/B/C"
+          >
+            ℹ️
+          </button>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <FieldSelect
             label={LABELS.reinicio_ciclo_id}
@@ -179,6 +196,13 @@ export default function ImpactoSaldoTabSections({
           />
         </div>
       </Card>
+
+      <AyudaPatronesBolsaModal
+        open={ayudaAbierta}
+        onClose={() => setAyudaAbierta(false)}
+        tabActiva={ayudaTab}
+        onTabChange={setAyudaTab}
+      />
 
       <Card className="space-y-4 p-4 shadow-sm md:p-6">
         <h3 className="text-sm font-semibold text-slate-700">Motor aritmético del saldo</h3>

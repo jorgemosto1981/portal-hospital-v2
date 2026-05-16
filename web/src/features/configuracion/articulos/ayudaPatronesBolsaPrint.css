@@ -1,0 +1,40 @@
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .ayuda-patrones-overlay,
+  .ayuda-patrones-overlay * {
+    visibility: visible;
+  }
+
+  .ayuda-patrones-overlay {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background: white;
+    padding: 0;
+  }
+
+  .ayuda-patrones-panel {
+    max-height: none !important;
+    max-width: none !important;
+    width: 100% !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .ayuda-patrones-no-print {
+    display: none !important;
+  }
+
+  .ayuda-patrones-print-header,
+  .ayuda-patrones-print-footer {
+    display: block !important;
+  }
+
+  .ayuda-patrones-print-area {
+    overflow: visible !important;
+  }
+}
