@@ -108,7 +108,9 @@
 
 ---
 
-## 9. Inventario git (lote saldos V2.1 — sin commit automático)
+## 9. Inventario git (lote saldos V2.1)
+
+**Commit:** `e6fbbd5` en rama `feature/ticketera-puente-campos-config` — mensaje `docs(saldos): contrato V2.1 A/B/C y ayuda configurador (D2)`.
 
 Rutas del lote acordado (documentación + D2):
 
@@ -150,4 +152,4 @@ RFC_SALDOS_PATRONES_ABC_V2.md (contrato)
 | Fecha | Cambio |
 |-------|--------|
 | 2026-05-16 | Cierre fase documental; registro maestro e indexación en README, DICCIONARIO, PLAN_LAO, HANDOFF |
-| 2026-05-16 | D2 implementado; §8 detalle web; inventario git; errata ayuda JS cerrada |
+| 2026-05-16 | D2 implementado; §8 detalle web; commit `e6fbbd5`; errata ayuda JS cerrada |
