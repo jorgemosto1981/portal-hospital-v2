@@ -6,7 +6,7 @@
 
 **Ruta web:** `/portal/rrhh/checkin-saldos` (legado `/portal/rrhh/lao-checkin` → misma página).
 
-> **Oleada 2 (2026-05-18 tarde):** implementada en código (pendiente deploy Functions + smoke). Ver registro § Implementación.
+> **Epic check-in + alta RRHH:** oleadas 1–3 y refactor #21 en rama; matriz de cierre: [`CHECKIN_SALDOS_MATRIZ_PRUEBAS.md`](./CHECKIN_SALDOS_MATRIZ_PRUEBAS.md).
 
 ---
 
@@ -14,7 +14,7 @@
 
 | ID | Decisión | Estado |
 |----|----------|--------|
-| 16 | `anio_corte_portal_a` en persona se escribe en **guardados parciales** (LAO, B, C) y en **cierre global** — comportamiento actual; revisar en oleada producto si debe quedar solo en cierre. | Documentado |
+| 16 | `anio_corte_portal_a` en persona se escribe en **guardados parciales** (LAO, B, C) y en **cierre global** — **comportamiento vigente** (sin cambio planificado hasta nueva decisión RRHH). | Vigente |
 | 17 | En la **guía de alta RRHH**, el paso check-in “Listo” exige **`checkin_saldos_portal_en`** (cierre global), no solo LAO parcial. | Documentado |
 | 18 | El **cierre global** no garantiza que estén cargadas todas las bolsas B/C ni LAO; es cierre administrativo del portal para la persona. | Documentado |
 
@@ -58,7 +58,7 @@
 | 21 | Refactor `useCheckinSaldosPage` en hooks más chicos | L | Hecho (2026-05-18) |
 | 22 | Tests unitarios: validadores, precarga, patrón, onboarding | M | Oleada 2 |
 | 23 | Ampliar smoke `lao-smoke-checkin-bolsas.mjs` (B/C / rectificación) | M | Oleada 3 (nota en script) |
-| 24 | `obtenerSaldosCheckinPersona`: revisar campos expuestos | S | Pendiente |
+| 24 | `obtenerSaldosCheckinPersona`: revisar campos expuestos | S | Revisado 2026-05-18 — ver § Contrato precarga |
 | 25 | **`persona_id` en URL**: no pisar selección manual del operador | S | Oleada 1 |
 
 ---
@@ -94,5 +94,22 @@
 | Fecha | Oleada | Notas |
 |-------|--------|--------|
 | 2026-05-18 | 1 | Backlog creado. Implementado: enteros A/B (FE+BE parcial), copy C, toast precarga acotado, `callCerrarCheckinGlobal`, mensaje IAM, sync URL persona sin pisar selección manual, eliminación `laoCheckin/` legacy, deprecación `cerrarCheckinSaldosPortal` en Functions. Índice en `docs/v2/README.md`, enlace en handoff y flujo onboarding. |
-| 2026-05-18 | 2 | Modal cierre 3 pasos + checklist advertencias; HLc servidor en LAO/B/C/cierre global; precarga acotada `obtenerSaldosCheckinPersona`; avisos meta B/C; cache meta artículo; `obtenerResumenAltaOnboardingPersona`; tests Vitest (`npm run test --prefix web`). Pendiente: deploy Functions + smoke operativo. |
+| 2026-05-18 | 2 | Modal cierre 3 pasos + checklist advertencias; HLc servidor en LAO/B/C/cierre global; precarga acotada `obtenerSaldosCheckinPersona`; avisos meta B/C; cache meta artículo; `obtenerResumenAltaOnboardingPersona`; tests Vitest. Deploy Functions OK. |
 | 2026-05-18 | 3 | `persistirCheckinSaldoEstandarLote` (transacción B/C); `buscarPersonasCheckinRrhh`; FE lote + búsqueda personas; fix modo rectificación con cierre global; reglas RRHH lectura `personas`. |
+| 2026-05-18 | — | Refactor hooks (#21 + `useCheckinPersonaFlow`); fix setters precarga; **Fase A:** matriz pruebas, cierre epic doc, contrato precarga #24. |
+
+---
+
+## Contrato precarga (`obtenerSaldosCheckinPersona`) — revisión #24
+
+**Callable:** solo RRHH (`tokenHasRrhhAccess`). Entrada: `persona_id`, `anio_corte_a`.
+
+**Lectura acotada:** docs `sal_global_per_*`, `sal_{A}_per_*`, e históricos `anio_calendario < A` (fallback listado por persona si falla índice).
+
+**Respuesta:** `{ ok, persona_id, anio_corte_a, docs[] }` donde cada doc incluye `id` + campos serializados del documento `saldos_articulo_agente` con `bolsas` **filtradas** (solo bolsas global C, ciclo `anio_origen === A`, o LAO `anio_origen < A`).
+
+**Campos de bolsa que usa el FE** (`parseSaldosCheckinPrecarga`): `articulo_id`, `bolsa_id`, `anio_origen`, `consumido`, `disponible`, `cantidad_inicial`.
+
+**Hoy se envían objetos bolsa completos** (p. ej. `version_id_origen`, `codigo_grilla`, `estado_bolsa_id`, etc.). Riesgo bajo (solo RRHH); mejora opcional futura: whitelist en servidor antes de responder.
+
+**Campos de documento raíz:** el cliente hoy solo consume `bolsas` vía `mergeBolsasFromSaldoDocs`; el resto del doc es redundante para precarga pero inofensivo.

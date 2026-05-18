@@ -1,8 +1,8 @@
 # Handoff sesión 2026-05-18 — Check-in de saldos RRHH (patrones A/B/C)
 
-**Rama:** `feature/ticketera-puente-campos-config` (u homóloga activa)  
-**Estado:** **Validado en BD** (piloto: LAO 2024/2025, art. 64-A ciclo 2026, cierre global).  
-**Relación:** [`RFC_SALDOS_PATRONES_ABC_V2.md`](./RFC_SALDOS_PATRONES_ABC_V2.md) · [`PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md`](./PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md) · [`FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md`](./FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md)
+**Rama:** `feature/ticketera-puente-campos-config`  
+**Estado:** **Epic cerrado en código** — validación formal: [`CHECKIN_SALDOS_MATRIZ_PRUEBAS.md`](./CHECKIN_SALDOS_MATRIZ_PRUEBAS.md). Piloto BD OK (LAO 2024/2025, 64-A, cierre global).  
+**Relación:** [`RFC_SALDOS_PATRONES_ABC_V2.md`](./RFC_SALDOS_PATRONES_ABC_V2.md) · [`PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md`](./PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md) · [`FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md`](./FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md) · [`CHECKIN_SALDOS_BACKLOG.md`](./CHECKIN_SALDOS_BACKLOG.md)
 
 ---
 
@@ -24,7 +24,7 @@ Pantalla unificada de **check-in de saldos** para RRHH: fotografía inicial por 
 | 4 | Si hay check-in previo → elegir **Check-in nuevo** o **Rectificación** |
 | 5 | Pestañas: **LAO Disponibles (A)** · **Ciclos anuales (B)** · **Cuenta continua (C)** |
 | 6 | **Guardado parcial** por pestaña (solo filas/artículos informados) |
-| 7 | **Finalizar check-in global** (modal resumen en 2 pasos) — solo modo nuevo |
+| 7 | **Finalizar check-in global** (modal resumen en **3 pasos** + checklist advertencias) — solo modo nuevo |
 
 **Rectificación:** no exige HLC de nuevo; no reabre cierre global; solo actualiza bolsas que se guardan en esa sesión. Conserva `version_id_origen` / `codigo_grilla` cuando la bolsa ya existía.
 
@@ -38,7 +38,9 @@ Pantalla unificada de **check-in de saldos** para RRHH: fotografía inicial por 
 |----------|-----|
 | `obtenerSaldosCheckinPersona` | Precarga bolsas (`persona_id`, `anio_corte_a`) — Admin SDK |
 | `persistirCheckinLaoBolsas` | Patrón A — `rectificacion_saldo`, `forzar_recarga_global` |
-| `persistirCheckinSaldoEstandar` | Patrones B y C — mismo flags |
+| `persistirCheckinSaldoEstandarLote` | Patrones B y C — guardado **atómico** (transacción) |
+| `buscarPersonasCheckinRrhh` | Combobox agente (check-in + guía alta) |
+| `obtenerResumenAltaOnboardingPersona` | Tracker guía alta sin listar colecciones |
 | `cerrarCheckinGlobal` | Cierre global (`checkin_saldos_portal_en`) — **usar este nombre en cliente** |
 | `cerrarCheckinSaldosPortal` | Legacy — servicio Cloud Run con IAM roto en primer deploy; no usar desde web |
 
@@ -68,9 +70,12 @@ Helpers: `shared/utils/laoSaldosBolsa.js` (sincronizado a `functions/modules/sha
 | Área | Ruta |
 |------|------|
 | Página | `web/src/pages/CheckinSaldosAgente.jsx` |
-| Hook | `web/src/features/checkinSaldos/useCheckinSaldosPage.js` |
+| Orquestador | `useCheckinSaldosPage.js` |
+| Formulario / guardados / cierre | `useCheckinFormState.js`, `useCheckinGuardados.js`, `useCheckinResumenCierre.js` |
+| Persona + precarga + modo | `useCheckinPersonaFlow.js` → `useCheckinPersonaSeleccion`, `useCheckinPersonaDatos`, `useCheckinModoCheckin`, `useCheckinPrecarga` |
 | Patrones | `resolvePatronSaldo.js`, `useArticulosPorPatron.js`, `parseSaldosCheckinPrecarga.js` |
 | Callables cliente | `web/src/services/callables.js` |
+| Guía alta | `web/src/pages/AltaAgenteOnboardingRRHH.jsx`, `useAltaOnboardingTracker.js` |
 
 Menú RRHH: ítem `checkin-saldos` en `modulosEstado.js`.
 
@@ -84,13 +89,17 @@ Menú RRHH: ítem `checkin-saldos` en `modulosEstado.js`.
 
 ---
 
-## 7. Backlog y mejoras
+## 7. Backlog, pruebas y cierre
 
-Tareas priorizadas (oleadas 1–3), decisiones de producto y registro de avance: [`CHECKIN_SALDOS_BACKLOG.md`](./CHECKIN_SALDOS_BACKLOG.md).
+- Oleadas 1–3 y refactor #21: **hechas** — [`CHECKIN_SALDOS_BACKLOG.md`](./CHECKIN_SALDOS_BACKLOG.md).
+- Matriz de prueba manual: [`CHECKIN_SALDOS_MATRIZ_PRUEBAS.md`](./CHECKIN_SALDOS_MATRIZ_PRUEBAS.md).
+- Handoff epic completo: [`HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md`](./HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md).
+
+**Siguiente foco equipo:** configurador de artículos (más altas para ticketera).
 
 ---
 
-## 8. Pendientes / no incluido en esta tanda
+## 8. Pendientes / fuera del epic
 
 - Panel agente «Mis saldos» (`obtenerResumenSaldosAgente`) — doc D3
 - Ajuste RRHH `cfg_esa_ajuste_rrhh` — Caso borde 7

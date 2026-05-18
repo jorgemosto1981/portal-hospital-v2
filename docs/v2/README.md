@@ -35,7 +35,8 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`HANDOFF_SESION_2026-05-16.md`](./HANDOFF_SESION_2026-05-16.md) | Sesión 2026-05-16: versiones RRHH, smoke LAO Fase 3, fix check-in merge; **§9** cierre fase documental saldos A/B/C |
 | [`HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md`](./HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md) | UI check-in saldos A/B/C, rectificación, `cerrarCheckinGlobal`, callables y rutas web |
 | [`CHECKIN_SALDOS_BACKLOG.md`](./CHECKIN_SALDOS_BACKLOG.md) | **Backlog** check-in saldos: tareas S/M/L, oleadas y decisiones de producto |
-| [`HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md`](./HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md) | **PAUSA** sesión alta+check-in: deploy, git, qué falta (retomar obligatorio) |
+| [`HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md`](./HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md) | Epic **check-in + alta RRHH** cerrado (oleadas 1–3); siguiente: configurador |
+| [`CHECKIN_SALDOS_MATRIZ_PRUEBAS.md`](./CHECKIN_SALDOS_MATRIZ_PRUEBAS.md) | Matriz manual check-in + guía alta (cierre epic) |
 | [`FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md`](./FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md) | Ciclo propuesto alta RRHH: cáscara → `/portal/laboral` → `/portal/rrhh/checkin-saldos` |
 | [`LEY_8525_1979_EGAP_SANTA_FE_V2.md`](./LEY_8525_1979_EGAP_SANTA_FE_V2.md) | Ley 8525/79 — Estatuto General de la Administración Pública (Santa Fe): texto de consulta para RRHH, disciplina, derechos/deberes, indemnizaciones (referencia; validar ante fuente oficial) |
 | [`CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md`](./CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md) | Estados agente: **activo laboral**, **inactivo laboral (baja)**, **deshabilitado**; RRHH; reactivación + login |
