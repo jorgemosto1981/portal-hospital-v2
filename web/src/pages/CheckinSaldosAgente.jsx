@@ -123,11 +123,6 @@ export default function CheckinSaldosAgente() {
         <div className={p.formularioBloqueado ? "pointer-events-none opacity-50" : ""}>
           {p.categoriaTab === "A" ? (
             <div className="space-y-3">
-              {p.laoArticulo ? (
-                <p className="text-xs text-slate-600">
-                  Artículo: <strong>{p.laoArticulo.codigo}</strong> — {p.laoArticulo.nombre}
-                </p>
-              ) : null}
               <CheckinLaoFilasEditor
                 anioA={p.anioA ?? null}
                 filas={p.filas}
