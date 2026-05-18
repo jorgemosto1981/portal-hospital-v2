@@ -81,6 +81,13 @@ export const MODULOS_PORTAL = [
     grupo: "rrhh",
   },
   {
+    id: "checkin-saldos",
+    label: "Check-in saldos",
+    path: "/portal/rrhh/checkin-saldos",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
     id: "grilla",
     label: "Grilla",
     path: "/portal/grilla",
@@ -92,6 +99,13 @@ export const MODULOS_PORTAL = [
     label: "RRHH",
     path: "/portal/rrhh/alta",
     estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "rrhh",
+  },
+  {
+    id: "alta-agente-guia",
+    label: "Alta agente (guía)",
+    path: "/portal/rrhh/alta-agente",
+    estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
   },
   {
@@ -144,6 +158,9 @@ export const MODULOS_V2_ESTADO = [
  * @param {string} pathname
  */
 export function resolverTabPorPath(pathname) {
+  if (pathname.startsWith("/portal/rrhh/checkin-saldos") || pathname.startsWith("/portal/rrhh/lao-checkin")) {
+    return "checkin-saldos";
+  }
   if (pathname.startsWith("/portal/rrhh/configuracion-articulos")) return "articulos-cfg";
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";

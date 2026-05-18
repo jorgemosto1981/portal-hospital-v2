@@ -54,6 +54,16 @@ const ICONS_BY_ID = {
       strokeWidth={1.5}
     />
   ),
+  "checkin-saldos": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
   antiguedad: () => (
     <path
       strokeLinecap="round"
@@ -152,7 +162,7 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
   const { user } = useAuthSession();
   const { hasPortalRoles } = useAuthClaims(user);
   const canManagement = hasPortalRoles(MANAGEMENT_PORTAL_ROLES);
-  const requiresManagementTab = (id) => id === "rrhh" || id === "articulos-cfg";
+  const requiresManagementTab = (id) => id === "rrhh" || id === "articulos-cfg" || id === "checkin-saldos";
   const visibleTabs = tabs.filter((tab) => (requiresManagementTab(tab.id) ? canManagement : true));
 
   return (
@@ -230,7 +240,7 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
                             fill="none"
                             aria-hidden
                           >
-                            {tab.icon()}
+                            {typeof tab.icon === "function" ? tab.icon() : null}
                           </svg>
                           <span
                             className={[

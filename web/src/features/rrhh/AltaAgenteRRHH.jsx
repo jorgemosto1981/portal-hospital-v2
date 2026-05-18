@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import {
@@ -32,6 +32,7 @@ import {
 const OPEN_ACCESS_TEMP = runtimeFlags.OPEN_ACCESS_TEMP === true;
 
 export default function AltaAgenteRRHH() {
+  const navigate = useNavigate();
   const { user } = useAuthSession();
   const [personas, setPersonas] = useState(/** @type {{ id: string, nombre?: string, apellido?: string, dni?: string }[]} */ ([]));
   const [personasConCuentaIds, setPersonasConCuentaIds] = useState(/** @type {Set<string>} */ (new Set()));
@@ -160,7 +161,31 @@ export default function AltaAgenteRRHH() {
         buildAltaAgentePayload({ dni, nombre, apellido }),
       );
       if (data?.ok) {
-        toast.success(`Creado ${data.persona_id} — ` + `Cuenta ${data.cuenta_id}`, { id: t, duration: 5_000 });
+        const per = String(data.persona_id || "").trim();
+        toast.success(
+          (toastId) => (
+            <span className="flex flex-col gap-2 text-sm">
+              <span>
+                Creado {per} — Cuenta {data.cuenta_id}
+              </span>
+              {/^per_/i.test(per) ? (
+                <button
+                  type="button"
+                  className="text-left font-semibold text-blue-700 underline"
+                  onClick={() => {
+                    toast.dismiss(toastId);
+                    navigate(
+                      `/portal/rrhh/alta-agente?persona_id=${encodeURIComponent(per)}`,
+                    );
+                  }}
+                >
+                  Continuar guía de alta completa →
+                </button>
+              ) : null}
+            </span>
+          ),
+          { id: t, duration: 8_000 },
+        );
         setDni("");
         setNombre("");
         setApellido("");
@@ -319,6 +344,10 @@ export default function AltaAgenteRRHH() {
           </p>
         )}
         <div className="mb-4 mt-4">
+          <Link to="/portal/rrhh/alta-agente" className="text-sm text-blue-600">
+            Guía alta completa (cáscara + laboral + check-in)
+          </Link>
+          <span className="mx-2 text-slate-300">|</span>
           <Link to="/portal/home" className="text-sm text-blue-600">
             Volver a la app
           </Link>

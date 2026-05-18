@@ -1,6 +1,7 @@
 import Card from "../components/ui/Card.jsx";
 import { deshabilitarCicloHlc, guardarRegistroLaboral } from "../services/datosLaboralesService.js";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AYUDA_CAMPOS, INITIAL_FORM_DATA_LABORAL } from "./datos-laborales/constants.js";
 import ColeccionesLaboralesCards from "./datos-laborales/sections/ColeccionesLaboralesCards.jsx";
 import FasesLaboralesTables from "./datos-laborales/sections/FasesLaboralesTables.jsx";
@@ -127,6 +128,7 @@ function buildPersonaSearchOption(p) {
 }
 
 export default function DatosLaborales() {
+  const [searchParams] = useSearchParams();
   const {
     rowsByCollection,
     loadingByCollection,
@@ -167,6 +169,15 @@ export default function DatosLaborales() {
   const [grupoVistaId, setGrupoVistaId] = useState("");
   const [grupoVistaFecha, setGrupoVistaFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [formData, setFormData] = useState(() => ({ ...INITIAL_FORM_DATA_LABORAL }));
+
+  useEffect(() => {
+    const fromUrl = String(searchParams.get("persona_id") || "").trim();
+    if (!/^per_/i.test(fromUrl)) return;
+    setFormData((prev) => {
+      if (String(prev.persona_id || "").trim() === fromUrl) return prev;
+      return { ...prev, persona_id: fromUrl };
+    });
+  }, [searchParams]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [modoAvanzado, setModoAvanzado] = useState(() => {
     if (typeof window === "undefined") return false;

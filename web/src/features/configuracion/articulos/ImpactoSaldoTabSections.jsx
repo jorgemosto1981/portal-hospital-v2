@@ -237,6 +237,7 @@ export default function ImpactoSaldoTabSections({
                 }}
                 min={0.1}
                 max={10}
+                step={0.1}
                 required={false}
                 helpText="[¡IMPORTANTE!] El sistema multiplicará el tiempo ingresado por este factor antes de impactar el saldo (ej: 1.5 para horas al 50%)."
               />

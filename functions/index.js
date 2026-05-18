@@ -17,6 +17,10 @@ const onboarding = require("./modules/onboarding");
 const articulosCfg = require("./modules/articulosCfg");
 const solicitudesLao = require("./onCall/solicitudes/simularLaoPreview");
 const persistirCheckinLaoBolsas = require("./onCall/solicitudes/persistirCheckinLaoBolsas");
+const persistirCheckinSaldoEstandar = require("./onCall/solicitudes/persistirCheckinSaldoEstandar");
+const cerrarCheckinSaldosPortal = require("./onCall/solicitudes/cerrarCheckinSaldosPortal");
+const cerrarCheckinGlobal = require("./onCall/solicitudes/cerrarCheckinGlobal");
+const obtenerSaldosCheckinPersona = require("./onCall/solicitudes/obtenerSaldosCheckinPersona");
 const acreditarLaoBolsaAgente = require("./onCall/solicitudes/acreditarLaoBolsaAgente");
 const solicitudArticuloTriggers = require("./triggers/solicitudArticuloLaoOnCreate");
 
@@ -28,6 +32,10 @@ module.exports = {
   ...articulosCfg,
   ...solicitudesLao,
   ...persistirCheckinLaoBolsas,
+  ...persistirCheckinSaldoEstandar,
+  ...cerrarCheckinSaldosPortal,
+  ...cerrarCheckinGlobal,
+  ...obtenerSaldosCheckinPersona,
   ...acreditarLaoBolsaAgente,
   ...solicitudArticuloTriggers,
 };

@@ -22,6 +22,9 @@ import ArticuloConfiguracion from "./pages/ArticuloConfiguracion.jsx";
 import ArticuloListadoGrilla from "./pages/ArticuloListadoGrilla.jsx";
 import ArticuloVersionesListado from "./pages/ArticuloVersionesListado.jsx";
 import SolicitudLaoAlta from "./pages/SolicitudLaoAlta.jsx";
+import CheckinSaldosAgente from "./pages/CheckinSaldosAgente.jsx";
+import AltaAgenteOnboardingRRHH from "./pages/AltaAgenteOnboardingRRHH.jsx";
+import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
 import SeguimientoEnrolamientoUsuariosRRHH from "./pages/SeguimientoEnrolamientoUsuariosRRHH.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import SistemasWeb from "./pages/SistemasWeb.jsx";
@@ -96,7 +99,10 @@ export default function App() {
             <Route element={<RoleGuard />}>
               <Route path="sistemas-web" element={<SistemasWeb />} />
               <Route path="rrhh/alta" element={<AltaAgenteRRHH />} />
+              <Route path="rrhh/alta-agente" element={<AltaAgenteOnboardingRRHH />} />
               <Route path="rrhh/antiguedad" element={<Antiguedad />} />
+              <Route path="rrhh/checkin-saldos" element={<CheckinSaldosAgente />} />
+              <Route path="rrhh/lao-checkin" element={<LaoCheckinRRHH />} />
               <Route path="rrhh/configuracion-articulos" element={<ArticuloListadoGrilla />} />
               <Route
                 path="rrhh/configuracion-articulos/:articuloId/versiones"

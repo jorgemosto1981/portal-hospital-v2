@@ -161,6 +161,26 @@ export function callPersistirCheckinLaoBolsas(data) {
   return httpsCallable(getFunctionsV2(), "persistirCheckinLaoBolsas")(data);
 }
 
+/** Check-in Patrón B / C (`persistirCheckinSaldoEstandar`). */
+export function callPersistirCheckinSaldoEstandar(data) {
+  return httpsCallable(getFunctionsV2(), "persistirCheckinSaldoEstandar")(data);
+}
+
+/** Cierra el check-in global de la persona (`cerrarCheckinGlobal`). */
+export function callCerrarCheckinGlobal(data) {
+  return httpsCallable(getFunctionsV2(), "cerrarCheckinGlobal")(data);
+}
+
+/** @deprecated Usar `callCerrarCheckinGlobal`. */
+export function callCerrarCheckinSaldosPortal(data) {
+  return callCerrarCheckinGlobal(data);
+}
+
+/** Bolsas existentes para precargar check-in RRHH (`obtenerSaldosCheckinPersona`). */
+export function callObtenerSaldosCheckinPersona(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerSaldosCheckinPersona")(data);
+}
+
 /** Acreditación LAO motor por agente/ejercicio (callable `acreditarLaoBolsaAgente`). */
 export function callAcreditarLaoBolsaAgente(data) {
   return httpsCallable(getFunctionsV2(), "acreditarLaoBolsaAgente")(data);

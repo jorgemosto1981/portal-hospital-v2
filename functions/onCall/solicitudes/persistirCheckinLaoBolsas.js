@@ -14,6 +14,7 @@ const {
   saldoAnualDocId,
   buildBolsaPayload,
   pickBolsaParaConsumo,
+  resolveCodigoGrillaForBolsa,
   CFG_OS_EXTERNO_INFORMADO,
 } = require("../../modules/shared/laoSaldosBolsa");
 
@@ -32,7 +33,8 @@ const persistirCheckinLaoBolsas = onCall(async (request) => {
   const personaId = typeof d.persona_id === "string" ? d.persona_id.trim() : "";
   const articuloId = typeof d.articulo_id === "string" ? d.articulo_id.trim() : "";
   const anioCorteA = Number(d.anio_corte_a);
-  const hlcOk = d.hlc_confirmadas_completas === true;
+  const rectificacion = d.rectificacion_saldo === true;
+  const hlcOk = d.hlc_confirmadas_completas === true || rectificacion;
   const filas = Array.isArray(d.filas) ? d.filas : [];
 
   if (!/^per_/i.test(personaId)) {
@@ -47,12 +49,22 @@ const persistirCheckinLaoBolsas = onCall(async (request) => {
   if (!hlcOk) {
     throw new HttpsError("failed-precondition", "hlc_confirmadas_completas debe ser true.");
   }
+
+  const personaSnapPre = await db.collection("personas").doc(personaId).get();
+  const forzarGlobal = d.forzar_recarga_global === true || rectificacion;
+  if (personaSnapPre.exists && personaSnapPre.data()?.checkin_saldos_portal_en && !forzarGlobal) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Check-in global cerrado. Use forzar_recarga_global para modificar bolsas.",
+    );
+  }
+
   if (!filas.length) {
     throw new HttpsError("invalid-argument", "filas debe tener al menos un año de saldo histórico.");
   }
 
   const coreSnap = await db.collection("cfg_articulos").doc(articuloId).get();
-  const codigoGrilla =
+  const articuloCodigoFallback =
     (coreSnap.exists && (coreSnap.data()?.codigo || coreSnap.data()?.nombre)) || "LAO";
 
   /** @type {Array<{ anio_origen: number, bolsa_id: string, version_id: string }>} */
@@ -62,12 +74,16 @@ const persistirCheckinLaoBolsas = onCall(async (request) => {
     const anioOrigen = Number(fila?.anio_origen);
     const dias = Number(fila?.dias_disponibles);
     let versionId = typeof fila?.version_id === "string" ? fila.version_id.trim() : "";
+    let versionData = null;
 
     if (!Number.isInteger(anioOrigen) || anioOrigen < 1900) {
       throw new HttpsError("invalid-argument", "Cada fila requiere anio_origen entero válido.");
     }
-    if (!Number.isFinite(dias) || dias < 0) {
-      throw new HttpsError("invalid-argument", `dias_disponibles inválido para año ${anioOrigen}.`);
+    if (!Number.isInteger(dias) || dias < 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        `dias_disponibles del año ${anioOrigen} debe ser entero ≥ 0.`,
+      );
     }
 
     try {
@@ -80,13 +96,27 @@ const persistirCheckinLaoBolsas = onCall(async (request) => {
       try {
         const resolved = await resolvePublishedLaoVersion(db, articuloId, anioOrigen);
         versionId = resolved.versionId;
+        versionData = resolved.versionData;
       } catch (err) {
         const code = err && typeof err.code === "string" ? err.code : "failed-precondition";
         const msg = err instanceof Error ? err.message : String(err);
         if (code === "not-found") throw new HttpsError("not-found", msg);
         throw new HttpsError("failed-precondition", msg);
       }
+    } else {
+      const vSnap = await db
+        .collection("cfg_articulos")
+        .doc(articuloId)
+        .collection("versiones")
+        .doc(versionId)
+        .get();
+      if (!vSnap.exists) {
+        throw new HttpsError("not-found", `version_id ${versionId} no encontrada.`);
+      }
+      versionData = vSnap.data();
     }
+
+    const codigoGrilla = resolveCodigoGrillaForBolsa(versionData, anioOrigen, articuloCodigoFallback);
 
     const salId = saldoAnualDocId(personaId, anioOrigen);
     if (!salId) {
@@ -97,12 +127,13 @@ const persistirCheckinLaoBolsas = onCall(async (request) => {
     const salSnap = await salRef.get();
     const salData = salSnap.exists ? salSnap.data() || {} : {};
     const existente = pickBolsaParaConsumo(salData, articuloId, anioOrigen);
-    if (existente) {
+    const permiteSobreescribirBolsa = rectificacion || forzarGlobal;
+    if (existente && !permiteSobreescribirBolsa) {
       const cons = Number(existente.bolsa.consumido) || 0;
       if (cons > 0) {
         throw new HttpsError(
           "already-exists",
-          `Ya existe bolsa ${anioOrigen} con consumo (${cons} días). Ajuste manual RRHH.`,
+          `Ya existe bolsa ${anioOrigen} con consumo (${cons} días). Use rectificación de saldos o forzar_recarga_global.`,
         );
       }
     }
@@ -110,12 +141,23 @@ const persistirCheckinLaoBolsas = onCall(async (request) => {
     const { bolsaId, bolsa } = buildBolsaPayload({
       articuloId,
       versionId,
-      codigoGrilla: String(codigoGrilla),
+      codigoGrilla,
       anioOrigen,
       cantidadInicial: dias,
       esArrastre: true,
       origenSaldoId: CFG_OS_EXTERNO_INFORMADO,
     });
+
+    if (existente && permiteSobreescribirBolsa) {
+      const prev = existente.bolsa;
+      const cons = Number(prev.consumido) || 0;
+      bolsa.version_id_origen = String(prev.version_id_origen || bolsa.version_id_origen).trim();
+      bolsa.codigo_grilla = String(prev.codigo_grilla || bolsa.codigo_grilla).trim();
+      bolsa.origen_saldo_id = String(prev.origen_saldo_id || bolsa.origen_saldo_id).trim();
+      bolsa.cantidad_inicial = dias;
+      bolsa.consumido = cons;
+      bolsa.disponible = Math.max(0, dias - cons);
+    }
 
     bolsa.ultima_actualizacion = FieldValue.serverTimestamp();
 
@@ -139,16 +181,19 @@ const persistirCheckinLaoBolsas = onCall(async (request) => {
     escritas.push({ anio_origen: anioOrigen, bolsa_id: bolsaId, version_id: versionId });
   }
 
-  await db.collection("personas").doc(personaId).set(
-    {
-      anio_corte_portal_a: anioCorteA,
-      checkin_lao_registrado_en: FieldValue.serverTimestamp(),
-    },
-    { merge: true },
-  );
+  if (!rectificacion) {
+    await db.collection("personas").doc(personaId).set(
+      {
+        anio_corte_portal_a: anioCorteA,
+        checkin_lao_registrado_en: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  }
 
   return {
     ok: true,
+    rectificacion_saldo: rectificacion,
     persona_id: personaId,
     articulo_id: articuloId,
     anio_corte_a: anioCorteA,

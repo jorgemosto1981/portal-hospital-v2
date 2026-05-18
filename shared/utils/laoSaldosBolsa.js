@@ -29,6 +29,120 @@ export function buildBolsaKey(articuloId, anioOrigen) {
 }
 
 /**
+ * @param {string} personaId
+ */
+export function saldoGlobalDocId(personaId) {
+  const m = new RegExp(`^per_(${ULID_RE})$`, "i").exec(String(personaId || "").trim());
+  if (!m) return null;
+  return `sal_global_per_${m[1]}`;
+}
+
+/**
+ * @param {string} articuloId
+ */
+export function buildBolsaKeyGlobal(articuloId) {
+  return `bol_${String(articuloId || "").trim()}_global`;
+}
+
+/**
+ * Patrón B — ciclo en sal_YYYY (check-in: cupo versión − ya consumidos).
+ */
+export function buildBolsaCheckinPatronB(params) {
+  const {
+    articuloId,
+    versionId,
+    codigoGrilla = "",
+    anioCiclo,
+    cupoDias,
+    diasConsumidosPrevios,
+    origenSaldoId = CFG_OS_INTERNO,
+  } = params;
+
+  const cupo = Number(cupoDias);
+  const usados = Number(diasConsumidosPrevios);
+  if (!Number.isFinite(cupo) || cupo < 0) throw new Error("Cupo del ciclo inválido.");
+  if (!Number.isFinite(usados) || usados < 0) throw new Error("Días consumidos previos inválidos.");
+  if (usados > cupo) throw new Error("Los días usados no pueden superar el cupo del ciclo.");
+
+  const anio = Number(anioCiclo);
+  const disponible = cupo - usados;
+  const bolsaId = buildBolsaKey(articuloId, anio);
+
+  return {
+    bolsaId,
+    bolsa: {
+      bolsa_id: bolsaId,
+      articulo_id: String(articuloId).trim(),
+      codigo_grilla: String(codigoGrilla).trim() || "ART",
+      anio_origen: anio,
+      cantidad_inicial: cupo,
+      consumido: usados,
+      disponible,
+      fecha_vencimiento: null,
+      es_arrastre: false,
+      origen_saldo_id: origenSaldoId,
+      version_id_origen: String(versionId).trim(),
+      ultima_actualizacion: null,
+    },
+  };
+}
+
+/**
+ * Patrón C — bolsa global; saldo inicial firmado (default 0).
+ */
+export function buildBolsaCheckinPatronC(params) {
+  const { articuloId, versionId, codigoGrilla = "", saldoDisponible = 0, origenSaldoId = CFG_OS_EXTERNO_INFORMADO } =
+    params;
+
+  const disp = Number(saldoDisponible);
+  if (!Number.isFinite(disp)) throw new Error("Saldo inicial inválido.");
+
+  const bolsaId = buildBolsaKeyGlobal(articuloId);
+  const cantidadInicial = Math.max(0, disp);
+  const consumido = disp < 0 ? -disp : 0;
+
+  return {
+    bolsaId,
+    bolsa: {
+      bolsa_id: bolsaId,
+      articulo_id: String(articuloId).trim(),
+      codigo_grilla: String(codigoGrilla).trim() || "ART",
+      anio_origen: 0,
+      cantidad_inicial: cantidadInicial,
+      consumido,
+      disponible: disp,
+      fecha_vencimiento: null,
+      es_arrastre: true,
+      origen_saldo_id: origenSaldoId,
+      version_id_origen: String(versionId).trim(),
+      ultima_actualizacion: null,
+    },
+  };
+}
+
+/**
+ * Código corto denormalizado en la bolsa (grilla / UI), alineado al ejercicio de la versión.
+ * @param {object | null | undefined} versionData
+ * @param {number} anioOrigen
+ * @param {string} [articuloCodigoFallback] — p. ej. código del núcleo `cfg_articulos`
+ */
+export function resolveCodigoGrillaForBolsa(versionData, anioOrigen, articuloCodigoFallback = "LAO") {
+  const fromVersion =
+    versionData?.bloque_identidad_naturaleza?.visualizacion?.codigo_grilla ??
+    versionData?.visualizacion?.codigo_grilla;
+  if (typeof fromVersion === "string" && fromVersion.trim()) {
+    return fromVersion.trim();
+  }
+  const y = Number(anioOrigen);
+  const raw = String(articuloCodigoFallback || "LAO").trim() || "LAO";
+  const base = raw.replace(/-\d{4}$/, "") || raw;
+  if (Number.isInteger(y) && y >= 1900 && y <= 2100) {
+    return `${base}-${y}`;
+  }
+  return raw;
+}
+
+/**
  * @param {{
  *   articuloId: string,
  *   versionId: string,

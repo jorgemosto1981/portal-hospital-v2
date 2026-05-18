@@ -40,6 +40,7 @@ const {
   saldoAnualDocId,
   buildBolsaPayload,
   pickBolsaParaConsumo,
+  resolveCodigoGrillaForBolsa,
   CFG_OS_EXTERNO_INFORMADO,
 } = require(join(repoRoot, "functions/modules/shared/laoSaldosBolsa.js"));
 const { resolvePublishedLaoVersion } = require(join(repoRoot, "functions/modules/shared/laoVersionResolverDb.js"));
@@ -124,7 +125,7 @@ if (ps.size > 1) {
 const personaId = ps.docs[0].id;
 
 const coreSnap = await db.collection("cfg_articulos").doc(articuloId).get();
-const codigoGrilla =
+const articuloCodigoFallback =
   (coreSnap.exists && (coreSnap.data()?.codigo || coreSnap.data()?.nombre)) || "LAO";
 
 console.log("[lao-smoke-checkin] proyecto:", db.app?.options?.projectId ?? "(default)");
@@ -140,9 +141,11 @@ for (const fila of filas) {
   const dias = fila.dias_disponibles;
   assertCheckinAnioAllowed(anioOrigen, anioCorteA);
   let versionId;
+  let versionData;
   try {
     const resolved = await resolvePublishedLaoVersion(db, articuloId, anioOrigen);
     versionId = resolved.versionId;
+    versionData = resolved.versionData;
   } catch (e) {
     console.error("[lao-smoke-checkin] No se resolvió versión publicada para año", anioOrigen, e?.message ?? e);
     process.exit(1);
@@ -154,10 +157,12 @@ for (const fila of filas) {
     process.exit(1);
   }
 
+  const codigoGrilla = resolveCodigoGrillaForBolsa(versionData, anioOrigen, articuloCodigoFallback);
+
   const { bolsaId, bolsa } = buildBolsaPayload({
     articuloId,
     versionId,
-    codigoGrilla: String(codigoGrilla),
+    codigoGrilla,
     anioOrigen,
     cantidadInicial: dias,
     esArrastre: true,

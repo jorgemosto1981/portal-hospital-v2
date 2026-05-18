@@ -69,7 +69,7 @@
 | **D2** | `ayudaPatronesBolsaSaldo.js` + `AyudaPatronesBolsaModal.jsx` + botón ℹ️ en pestaña **Impacto y Saldo** + export PDF/imprimir | **Completado** 2026-05-16 |
 | D3 | `obtenerResumenSaldosAgente` + Rules + UI «Mis saldos» | Pendiente |
 | D4 | Patrón B + job expirado + Callable retro RRHH | Pendiente |
-| D5 | `sal_global`, check-in universal, ajustes, ABM feriados | Pendiente |
+| D5 | `sal_global`, check-in universal (UI RRHH **implementada** — ver handoff 2026-05-18), ajustes, ABM feriados | Parcial (UI check-in) |
 | D6 | Reverso FIFO Caso 3; Caso 8 fase 2 | Pendiente |
 
 ---

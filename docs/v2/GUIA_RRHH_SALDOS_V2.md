@@ -7,6 +7,8 @@
 
 Este documento define las directrices que controlan la interfaz del operador de RRHH en el **modal de gestión de legajos** y en el **configurador de artículos** (pestaña Impacto y Saldo).
 
+**Check-in inicial / rectificación (pantalla dedicada):** [`HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md`](./HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md). **Alta de agente (cáscara + laboral + check-in):** [`FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md`](./FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md).
+
 ---
 
 ## 1. La pestaña «Resumen contable RRHH»

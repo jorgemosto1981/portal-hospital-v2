@@ -38,7 +38,7 @@ Cada fila:
 2. Versión publicada LAO con `correspondencia_anio === anio_origen`.
 3. Bolsa: `es_arrastre: true`, `origen_saldo_id: cfg_os_externo_informado`, `version_id_origen`.
 4. Documento `sal_{anio_origen}_per_{ulid}`: si **no existe** → `set` con `merge`; si **ya existe el doc** `sal_*` → usar **`update`** con `bolsas.{bolsaId}` objeto completo (evitar fusión superficial de `set`+`merge` que deje campos antiguos de la bolsa, p. ej. `disponible`).
-5. Idempotencia: si ya existe bolsa mismo `articulo_id` + `anio_origen` y `consumido > 0` → error.
+5. Idempotencia (check-in **nuevo**): si ya existe bolsa mismo `articulo_id` + `anio_origen` y `consumido > 0` → error. Con **`rectificacion_saldo`** o **`forzar_recarga_global`**: actualización controlada (ver `persistirCheckinLaoBolsas.js`).
 
 ---
 
@@ -60,8 +60,11 @@ Constante: `CHECKIN_COPY_ANIO_A` en `shared/utils/laoVersionResolver.js`.
 
 ---
 
-## Persistencia en persona (recomendado ticketera)
+## Persistencia en persona
 
-Al cerrar check-in, guardar en `personas` o `checkin_portal`:
+Callable **`cerrarCheckinGlobal`** (cliente web; no usar `cerrarCheckinSaldosPortal` — IAM legacy roto):
 
-- `anio_corte_portal_a` = **A** usado en esa activación (para acreditación y auditoría).
+- `anio_corte_portal_a` = **A**
+- `checkin_saldos_portal_en` = timestamp de cierre global
+
+UI: [`HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md`](./HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md). Flujo alto nivel alta RRHH: [`FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md`](./FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md).

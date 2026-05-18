@@ -28,7 +28,11 @@ export function FieldText({ label, value, onChange, placeholder, inputMode, help
   );
 }
 
-export function FieldNumber({ label, value, onChange, min = 0, helpText, required }) {
+export function FieldNumber({
+  label, value, onChange, min = 0, max, step, helpText, required,
+}) {
+  const useDecimals = step != null && Number(step) > 0 && Number(step) < 1;
+
   return (
     <label className="block space-y-1">
       <span className="text-xs font-medium text-slate-600">
@@ -38,8 +42,18 @@ export function FieldNumber({ label, value, onChange, min = 0, helpText, require
       <input
         type="number"
         min={min}
+        max={max}
+        step={step}
         value={value === "" ? "" : value}
-        onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw === "") {
+            onChange("");
+            return;
+          }
+          const n = useDecimals ? parseFloat(raw) : Number(raw);
+          onChange(Number.isFinite(n) ? n : "");
+        }}
         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-blue-100 focus:ring-2"
       />
       {helpText ? <span className="block text-[11px] text-slate-500">{helpText}</span> : null}
