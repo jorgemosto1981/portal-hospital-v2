@@ -71,6 +71,8 @@ Ver registro en [`CHECKIN_SALDOS_BACKLOG.md`](./CHECKIN_SALDOS_BACKLOG.md) § Re
 
 ## 3. Deploy (esta sesión)
 
+**Ejecutado 2026-05-18:** `npm run firebase:deploy:functions` → **Deploy complete** en `portal-hospital-v2` (incl. `persistirCheckinLaoBolsas`, `persistirCheckinSaldoEstandar`, `obtenerSaldosCheckinPersona`, `cerrarCheckinGlobal`, `cerrarCheckinSaldosPortal`).
+
 Comando estándar:
 
 ```bash
@@ -123,7 +125,8 @@ cd web && npm install && npm run dev
 
 ## 6. Commits / git
 
-Los cambios de esta pausa deben estar en **`origin/feature/ticketera-puente-campos-config`** tras `git push` de la sesión (ver mensaje de commit en log).
+**Commit:** `ad86cbf` — `feat(check-in): UI saldos A/B/C, guía alta RRHH y oleada 1`  
+**Rama remota:** `origin/feature/ticketera-puente-campos-config` (tras `git push` de esta sesión).
 
 ---
 
