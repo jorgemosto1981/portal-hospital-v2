@@ -232,3 +232,6 @@ for (const row of plan) {
 }
 
 console.log("[lao-smoke-checkin] Siguiente smoke: alta solicitud borrador LAO contra `titular_persona_id` este per_* (trigger onCreate). Ver PLAN T1–T3.");
+console.log(
+  "[lao-smoke-checkin] Patrones B/C: probar en UI con rectificación o `persistirCheckinSaldoEstandarLote` (oleada 3).",
+);

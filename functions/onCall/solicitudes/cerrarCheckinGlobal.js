@@ -8,6 +8,7 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db, FieldValue } = require("../../modules/shared/context");
 const { tokenHasRrhhAccess } = require("../../modules/shared/helpers");
+const { assertHlcOperativoCheckinNuevo } = require("../../modules/shared/hlcCheckinAssert");
 
 const cerrarCheckinGlobal = onCall({ invoker: "public" }, async (request) => {
   try {
@@ -29,6 +30,11 @@ const cerrarCheckinGlobal = onCall({ invoker: "public" }, async (request) => {
     const snap = await ref.get();
     if (!snap.exists) {
       throw new HttpsError("not-found", "Persona no encontrada.");
+    }
+
+    const personaData = snap.data() || {};
+    if (!personaData.checkin_saldos_portal_en) {
+      await assertHlcOperativoCheckinNuevo(db, personaId);
     }
 
     await ref.set(

@@ -64,9 +64,9 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Ficha persona: id = claim persona_id (tras registrarPrimerAcceso + syncSessionClaims + getIdToken(true)).
+    // Ficha persona: agente lee la propia; RRHH lee cualquier per_* (check-in, alta, bandejas).
     match /personas/{personaId} {
-      allow read: if ownsPersona(personaId);
+      allow read: if ownsPersona(personaId) || portalRrhhOrAdmin();
       allow create: if ownsPersona(personaId);
       allow update: if ownsPersona(personaId);
       allow delete: if false;
@@ -80,13 +80,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    /** RRHH / admin: versiones parametrizadas de artículos (MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST §2.2). */
-    function portalArticulosMgmt() {
+    /** RRHH / admin (claims syncSessionClaims / dev:set-rrhh-claims). */
+    function portalRrhhOrAdmin() {
       return signedIn() && (
         request.auth.token.portal_role == 'rrhh' ||
         request.auth.token.portal_role == 'admin' ||
         request.auth.token.perfil_rol_id == 'CFG_RRHH'
       );
+    }
+
+    /** RRHH / admin: versiones parametrizadas de artículos (MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST §2.2). */
+    function portalArticulosMgmt() {
+      return portalRrhhOrAdmin();
     }
 
     function cfgArticuloIdValid(id) {

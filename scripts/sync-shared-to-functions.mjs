@@ -23,6 +23,7 @@ const FILES_TO_SYNC = [
   "antiguedadCalculator.js",
   "laoVersionResolver.js",
   "laoSaldosBolsa.js",
+  "hlcOperativo.js",
 ];
 
 function esmToCjs(source, filename) {

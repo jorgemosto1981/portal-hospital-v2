@@ -1,6 +1,7 @@
 import Card from "../components/ui/Card.jsx";
 import { CheckinAnioCorteField } from "../features/checkinSaldos/CheckinAnioCorteField.jsx";
 import { CheckinCategoriaTabs } from "../features/checkinSaldos/CheckinCategoriaTabs.jsx";
+import { CheckinArticulosAvisos } from "../features/checkinSaldos/CheckinArticulosAvisos.jsx";
 import { CheckinGlobalCierreModal } from "../features/checkinSaldos/CheckinGlobalCierreModal.jsx";
 import { CheckinHlcConfirmField } from "../features/checkinSaldos/CheckinHlcConfirmField.jsx";
 import { CheckinLaoFilasEditor } from "../features/checkinSaldos/CheckinLaoFilasEditor.jsx";
@@ -102,7 +103,9 @@ export default function CheckinSaldosAgente() {
 
         {p.necesitaElegirModo ? (
           <p className="rounded-lg border border-violet-200 bg-violet-50/50 px-3 py-3 text-sm text-violet-950">
-            Elegí arriba si es check-in nuevo o rectificación para continuar.
+            {p.yaCheckinGlobal
+              ? "El check-in global está cerrado: elegí «Rectificación» o autorizá recarga en el banner."
+              : "Elegí arriba si es check-in nuevo o rectificación para continuar."}
           </p>
         ) : null}
 
@@ -134,24 +137,30 @@ export default function CheckinSaldosAgente() {
           ) : null}
 
           {p.categoriaTab === "B" ? (
-            <CheckinPatronBTab
-              articulosPatron={p.articulosB}
-              loading={p.loadingB}
-              anioA={p.anioA ?? 0}
-              diasPorArticulo={p.diasPorArticuloB}
-              onDiasChange={p.onDiasBChange}
-              disabled={p.formularioBloqueado}
-            />
+            <div className="space-y-3">
+              <CheckinArticulosAvisos articulos={p.articulosProblemaB} patronLabel="B" />
+              <CheckinPatronBTab
+                articulosPatron={p.articulosB}
+                loading={p.loadingB}
+                anioA={p.anioA ?? 0}
+                diasPorArticulo={p.diasPorArticuloB}
+                onDiasChange={p.onDiasBChange}
+                disabled={p.formularioBloqueado}
+              />
+            </div>
           ) : null}
 
           {p.categoriaTab === "C" ? (
-            <CheckinPatronCTab
-              articulosPatron={p.articulosC}
-              loading={p.loadingC}
-              saldosPorArticulo={p.saldosPorArticuloC}
-              onSaldoChange={p.onSaldoCChange}
-              disabled={p.formularioBloqueado}
-            />
+            <div className="space-y-3">
+              <CheckinArticulosAvisos articulos={p.articulosProblemaC} patronLabel="C" />
+              <CheckinPatronCTab
+                articulosPatron={p.articulosC}
+                loading={p.loadingC}
+                saldosPorArticulo={p.saldosPorArticuloC}
+                onSaldoChange={p.onSaldoCChange}
+                disabled={p.formularioBloqueado}
+              />
+            </div>
           ) : null}
         </div>
 
@@ -193,6 +202,10 @@ export default function CheckinSaldosAgente() {
         open={p.modalGlobal.open}
         step={p.modalGlobal.step}
         lineas={p.lineasResumen}
+        advertencias={p.advertenciasCierre}
+        acks={p.modalCierreAcks}
+        onToggleAck={p.onToggleAckCierre}
+        todosAckMarcados={p.todosAckCierreMarcados}
         enviando={p.enviando}
         onCerrar={p.onCerrarModal}
         onContinuar={p.onModalContinuar}

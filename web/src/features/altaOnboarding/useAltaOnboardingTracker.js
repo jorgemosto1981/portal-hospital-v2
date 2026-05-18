@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
 
-import { db } from "../../config/firebase.js";
-import { callListarColeccion } from "../../services/callables.js";
-import { evalAltaOnboardingPasos, isHlcOperativo } from "./evalAltaOnboardingPasos.js";
+import { callObtenerResumenAltaOnboardingPersona } from "../../services/callables.js";
+import { evalAltaOnboardingPasos } from "./evalAltaOnboardingPasos.js";
 
 /**
- * Carga persona, cuenta y HLc operativos para evaluar los 3 pasos de alta RRHH.
+ * Carga persona y resumen acotado (cuenta + HLc) para los 3 pasos de alta RRHH.
  * @param {string} personaId
  */
 export function useAltaOnboardingTracker(personaId) {
@@ -34,25 +32,13 @@ export function useAltaOnboardingTracker(personaId) {
 
     (async () => {
       try {
-        const [personaSnap, rCuentas, rHlc] = await Promise.all([
-          getDoc(doc(db, "personas", per)),
-          callListarColeccion({ collectionName: "usuarios_cuenta" }),
-          callListarColeccion({ collectionName: "historial_laboral_cargos" }),
-        ]);
+        const resumen = await callObtenerResumenAltaOnboardingPersona({ persona_id: per });
         if (cancelled) return;
 
-        setPersonaDoc(personaSnap.exists() ? personaSnap.data() : null);
-
-        const cuentas = (rCuentas?.data?.items) || [];
-        setTieneCuenta(
-          cuentas.some((u) => String(u?.persona_id || "").trim() === per),
-        );
-
-        const hlcs = (rHlc?.data?.items) || [];
-        const count = hlcs.filter(
-          (row) => String(row?.persona_id || "").trim() === per && isHlcOperativo(row),
-        ).length;
-        setHlcOperativos(count);
+        const data = resumen?.data || {};
+        setPersonaDoc(data.persona && typeof data.persona === "object" ? data.persona : null);
+        setTieneCuenta(data.tiene_cuenta === true);
+        setHlcOperativos(Number(data.hlc_operativos) || 0);
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e : new Error(String(e)));

@@ -21,6 +21,9 @@ const persistirCheckinSaldoEstandar = require("./onCall/solicitudes/persistirChe
 const cerrarCheckinSaldosPortal = require("./onCall/solicitudes/cerrarCheckinSaldosPortal");
 const cerrarCheckinGlobal = require("./onCall/solicitudes/cerrarCheckinGlobal");
 const obtenerSaldosCheckinPersona = require("./onCall/solicitudes/obtenerSaldosCheckinPersona");
+const obtenerResumenAltaOnboardingPersona = require("./onCall/rrhh/obtenerResumenAltaOnboardingPersona");
+const buscarPersonasCheckinRrhh = require("./onCall/rrhh/buscarPersonasCheckinRrhh");
+const persistirCheckinSaldoEstandarLote = require("./onCall/solicitudes/persistirCheckinSaldoEstandarLote");
 const acreditarLaoBolsaAgente = require("./onCall/solicitudes/acreditarLaoBolsaAgente");
 const solicitudArticuloTriggers = require("./triggers/solicitudArticuloLaoOnCreate");
 
@@ -36,6 +39,9 @@ module.exports = {
   ...cerrarCheckinSaldosPortal,
   ...cerrarCheckinGlobal,
   ...obtenerSaldosCheckinPersona,
+  ...obtenerResumenAltaOnboardingPersona,
+  ...buscarPersonasCheckinRrhh,
+  ...persistirCheckinSaldoEstandarLote,
   ...acreditarLaoBolsaAgente,
   ...solicitudArticuloTriggers,
 };

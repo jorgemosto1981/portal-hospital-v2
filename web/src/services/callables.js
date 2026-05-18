@@ -166,6 +166,16 @@ export function callPersistirCheckinSaldoEstandar(data) {
   return httpsCallable(getFunctionsV2(), "persistirCheckinSaldoEstandar")(data);
 }
 
+/** Check-in RRHH: guardado atómico de varias bolsas patrón B o C (`persistirCheckinSaldoEstandarLote`). */
+export function callPersistirCheckinSaldoEstandarLote(data) {
+  return httpsCallable(getFunctionsV2(), "persistirCheckinSaldoEstandarLote")(data);
+}
+
+/** Check-in / guía alta: búsqueda acotada de personas activas. */
+export function callBuscarPersonasCheckinRrhh(data) {
+  return httpsCallable(getFunctionsV2(), "buscarPersonasCheckinRrhh")(data);
+}
+
 /** Cierra el check-in global de la persona (`cerrarCheckinGlobal`). */
 export function callCerrarCheckinGlobal(data) {
   return httpsCallable(getFunctionsV2(), "cerrarCheckinGlobal")(data);
@@ -179,6 +189,11 @@ export function callCerrarCheckinSaldosPortal(data) {
 /** Bolsas existentes para precargar check-in RRHH (`obtenerSaldosCheckinPersona`). */
 export function callObtenerSaldosCheckinPersona(data) {
   return httpsCallable(getFunctionsV2(), "obtenerSaldosCheckinPersona")(data);
+}
+
+/** RRHH: cuenta + HLc operativos de una persona (guía alta, sin listar colecciones enteras). */
+export function callObtenerResumenAltaOnboardingPersona(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerResumenAltaOnboardingPersona")(data);
 }
 
 /** Acreditación LAO motor por agente/ejercicio (callable `acreditarLaoBolsaAgente`). */

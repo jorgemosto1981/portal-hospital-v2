@@ -7,8 +7,8 @@ export function CheckinModoSelector({ modo, onSelect, disabled }) {
     <div className="space-y-3 rounded-xl border border-violet-200 bg-violet-50/60 p-4">
       <p className="text-sm font-semibold text-violet-950">Este agente ya tiene check-in previo</p>
       <p className="text-xs leading-relaxed text-violet-900/90">
-        Elegí <strong>check-in nuevo</strong> (primera carga) o <strong>rectificación</strong> (corregir solo las bolsas
-        que guardés (LAO, art. 64, etc.); no revalida HLC ni licencias; no altera otros artículos).
+        Si el <strong>cierre global ya está hecho</strong>, usá <strong>rectificación</strong> para corregir bolsas. El
+        check-in nuevo solo aplica en la primera carga (o marcando recarga autorizada en el banner).
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <button

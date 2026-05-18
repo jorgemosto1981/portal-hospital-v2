@@ -17,6 +17,7 @@ const {
   resolveCodigoGrillaForBolsa,
   pickBolsaParaConsumo,
 } = require("../../modules/shared/laoSaldosBolsa");
+const { assertHlcOperativoCheckinNuevo } = require("../../modules/shared/hlcCheckinAssert");
 
 const COL_SALDOS = "saldos_articulo_agente";
 const PATRON_B = "B";
@@ -65,6 +66,10 @@ const persistirCheckinSaldoEstandar = onCall(async (request) => {
 
   const personaSnap = await db.collection("personas").doc(personaId).get();
   assertPortalCheckinAbierto(personaSnap.exists ? personaSnap.data() : null, forzarGlobal);
+
+  if (!rectificacion && !forzarGlobal) {
+    await assertHlcOperativoCheckinNuevo(db, personaId);
+  }
 
   const coreSnap = await db.collection("cfg_articulos").doc(articuloId).get();
   const articuloCodigo =

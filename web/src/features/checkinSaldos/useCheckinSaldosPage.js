@@ -1,22 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
 import toast from "react-hot-toast";
 
 import { LAO_ANIO_CORTE_PORTAL_A, LAO_ARTICULO_ID } from "../../constants/laoArticulo.js";
-import { db } from "../../config/firebase.js";
 import {
   callCerrarCheckinGlobal,
-  callListarColeccionPublicaTemporal,
   callObtenerSaldosCheckinPersona,
   callPersistirCheckinLaoBolsas,
-  callPersistirCheckinSaldoEstandar,
+  callPersistirCheckinSaldoEstandarLote,
 } from "../../services/callables.js";
+import { collectPendientesPatronB, collectPendientesPatronC } from "./collectPendientesPatronBC.js";
+import { fetchPersonaCheckinRrhh } from "./fetchPersonaCheckinRrhh.js";
+import { usePersonasCheckinBusqueda } from "./usePersonasCheckinBusqueda.js";
 import { parseSaldosCheckinPrecarga } from "./parseSaldosCheckinPrecarga.js";
 import { PATRON_SALDO_B, PATRON_SALDO_C } from "./resolvePatronSaldo.js";
 import { validateCheckinPatronC } from "./validateCheckinPatronC.js";
 import { CHECKIN_COPY_ANIO_A } from "../../../../shared/utils/laoVersionResolver.js";
 import { buildCheckinResumen } from "./buildCheckinResumen.js";
+import { buildCheckinCierreAdvertencias } from "./buildCheckinCierreAdvertencias.js";
 import { detectHayCheckinPrevio } from "./detectHayCheckinPrevio.js";
 
 import { useArticulosActivosCheckin } from "./useArticulosActivosCheckin.js";
@@ -46,14 +47,6 @@ function callableMessage(err) {
   return code ? `${msg} (${code})` : msg;
 }
 
-function personaEsActiva(p) {
-  if (!p || typeof p !== "object") return false;
-  if (p.activo === false) return false;
-  const est = String(p.estado || "").trim().toUpperCase();
-  if (est === "INACTIVO" || est === "BAJA") return false;
-  return true;
-}
-
 export function useCheckinSaldosPage() {
   const [searchParams] = useSearchParams();
   const { articulos, loadingArticulos } = useArticulosActivosCheckin();
@@ -62,12 +55,18 @@ export function useCheckinSaldosPage() {
   const [anioCorteA, setAnioCorteA] = useState(String(LAO_ANIO_CORTE_PORTAL_A));
   const anioA = useMemo(() => parseAnioCorteA(anioCorteA), [anioCorteA]);
 
-  const [personas, setPersonas] = useState([]);
-  const [loadPersonas, setLoadPersonas] = useState(true);
   const [personaId, setPersonaId] = useState("");
-  const [personaQuery, setPersonaQuery] = useState("");
-  const [personaOpen, setPersonaOpen] = useState(false);
   const personaWrapRef = useRef(null);
+  const {
+    loadPersonas,
+    personaQuery,
+    setPersonaQuery,
+    personaOpen,
+    setPersonaOpen,
+    personaOptions,
+    personaOptionsFiltradas,
+    refetchPersonas,
+  } = usePersonasCheckinBusqueda();
 
   const [personaData, setPersonaData] = useState(null);
   const [loadingPersonaData, setLoadingPersonaData] = useState(false);
@@ -83,6 +82,7 @@ export function useCheckinSaldosPage() {
   const [ultimoResultado, setUltimoResultado] = useState(null);
 
   const [modalGlobal, setModalGlobal] = useState({ open: false, step: 1 });
+  const [modalCierreAcks, setModalCierreAcks] = useState({});
   const [loadingPrecarga, setLoadingPrecarga] = useState(false);
   const [tieneBolsasFirestore, setTieneBolsasFirestore] = useState(false);
   const precargaKeyRef = useRef("");
@@ -104,6 +104,7 @@ export function useCheckinSaldosPage() {
     setConfirmarRecargaGlobal(false);
     setUltimoResultado(null);
     setModalGlobal({ open: false, step: 1 });
+    setModalCierreAcks({});
     setTieneBolsasFirestore(false);
     setPersonaData(null);
     setLoadingPrecarga(false);
@@ -137,8 +138,17 @@ export function useCheckinSaldosPage() {
   );
   const esRectificacion = modoCheckin === "rectificacion";
   const esNuevoCheckin = modoCheckin === "nuevo";
+  const yaCheckinGlobalEarly = Boolean(personaData?.checkin_saldos_portal_en);
+  /** Cierre global + modo «nuevo» sin recarga → forzar rectificación o checkbox de recarga. */
+  const modoNuevoInvalidoConGlobalCerrado =
+    yaCheckinGlobalEarly && esNuevoCheckin && !confirmarRecargaGlobal;
   const necesitaElegirModo =
-    hayCheckinPrevio && modoCheckin === null && Boolean(personaId) && anioA != null && !loadingPrecarga;
+    Boolean(personaId) &&
+    anioA != null &&
+    !loadingPrecarga &&
+    !loadingPersonaData &&
+    hayCheckinPrevio &&
+    (modoCheckin === null || modoNuevoInvalidoConGlobalCerrado);
 
   const prerequisitosOk =
     Boolean(personaId) &&
@@ -146,19 +156,17 @@ export function useCheckinSaldosPage() {
     modoCheckin != null &&
     (esNuevoCheckin ? hlcConfirmadas : true);
 
-  const { articulosPatron: articulosB, loadingPatronList: loadingB } = useArticulosPorPatron(
-    articulos,
-    PATRON_SALDO_B,
-    anioA,
-    prerequisitosOk && categoriaTab === "B",
-  );
+  const {
+    articulosPatron: articulosB,
+    articulosConProblema: articulosProblemaB,
+    loadingPatronList: loadingB,
+  } = useArticulosPorPatron(articulos, PATRON_SALDO_B, anioA, prerequisitosOk && categoriaTab === "B");
 
-  const { articulosPatron: articulosC, loadingPatronList: loadingC } = useArticulosPorPatron(
-    articulos,
-    PATRON_SALDO_C,
-    anioA,
-    prerequisitosOk && categoriaTab === "C",
-  );
+  const {
+    articulosPatron: articulosC,
+    articulosConProblema: articulosProblemaC,
+    loadingPatronList: loadingC,
+  } = useArticulosPorPatron(articulos, PATRON_SALDO_C, anioA, prerequisitosOk && categoriaTab === "C");
 
   const laoArticulo = useMemo(
     () => articulos.find((a) => a.id === LAO_ARTICULO_ID) || null,
@@ -166,31 +174,13 @@ export function useCheckinSaldosPage() {
   );
 
   const refreshPersona = useCallback(async (per) => {
-    const snap = await getDoc(doc(db, "personas", per));
-    if (snap.exists()) setPersonaData(snap.data());
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    setLoadPersonas(true);
-    callListarColeccionPublicaTemporal({ collectionName: "personas", pageSize: 400 })
-      .then((resp) => {
-        if (!mounted) return;
-        setPersonas((resp?.data?.items || []).filter(personaEsActiva));
-      })
-      .catch((e) => toast.error(e?.message || "No se pudo cargar personas."))
-      .finally(() => {
-        if (mounted) setLoadPersonas(false);
-      });
-    return () => {
-      mounted = false;
-    };
+    const { persona } = await fetchPersonaCheckinRrhh(per);
+    setPersonaData(persona);
   }, []);
 
   useEffect(() => {
     const fromUrl = String(searchParams.get("persona_id") || "").trim();
     if (!/^per_/i.test(fromUrl)) return;
-    if (loadPersonas) return;
     const current = String(personaId || "").trim();
     const prevUrl = lastUrlPersonaRef.current;
     if (prevUrl && current && current !== prevUrl && fromUrl === prevUrl) {
@@ -202,7 +192,13 @@ export function useCheckinSaldosPage() {
     }
     setPersonaIdCheckin(fromUrl);
     lastUrlPersonaRef.current = fromUrl;
-  }, [searchParams, loadPersonas, personaId, setPersonaIdCheckin]);
+    void refetchPersonas(fromUrl);
+  }, [searchParams, personaId, setPersonaIdCheckin, refetchPersonas]);
+
+  useEffect(() => {
+    const per = String(personaId || "").trim();
+    if (/^per_/i.test(per)) void refetchPersonas(per);
+  }, [personaId, refetchPersonas]);
 
   useEffect(() => {
     if (!personaOpen) return;
@@ -220,15 +216,24 @@ export function useCheckinSaldosPage() {
     }
     let cancelled = false;
     setLoadingPersonaData(true);
-    void getDoc(doc(db, "personas", per))
-      .then((snap) => {
+    void fetchPersonaCheckinRrhh(per)
+      .then(({ persona, anioCortePortalA }) => {
         if (cancelled) return;
-        setPersonaData(snap.exists() ? snap.data() : null);
-        const a = snap.data()?.anio_corte_portal_a;
-        if (a != null && Number.isInteger(Number(a))) setAnioCorteA(String(a));
+        setPersonaData(persona);
+        if (anioCortePortalA != null) setAnioCorteA(String(anioCortePortalA));
       })
-      .catch(() => {
-        if (!cancelled) setPersonaData(null);
+      .catch((e) => {
+        if (!cancelled) {
+          setPersonaData(null);
+          const code = e?.code ? String(e.code) : "";
+          if (code.includes("permission-denied")) {
+            toast.error(
+              "Sin permiso RRHH para leer la persona. Cerrá sesión, volvé a entrar o ejecutá dev:set-rrhh-claims.",
+            );
+          } else {
+            toast.error(e?.message || "No se pudo cargar el estado del agente.");
+          }
+        }
       })
       .finally(() => {
         if (!cancelled) setLoadingPersonaData(false);
@@ -309,11 +314,24 @@ export function useCheckinSaldosPage() {
   }, [personaId, anioA]);
 
   useEffect(() => {
-    if (loadingPrecarga || !personaId || anioA == null) return;
+    if (loadingPrecarga || loadingPersonaData || !personaId || anioA == null) return;
     if (!hayCheckinPrevio) {
       setModoCheckin("nuevo");
+      return;
     }
-  }, [hayCheckinPrevio, loadingPrecarga, personaId, anioA]);
+    if (personaData?.checkin_saldos_portal_en && modoCheckin === "nuevo" && !confirmarRecargaGlobal) {
+      setModoCheckin(null);
+    }
+  }, [
+    hayCheckinPrevio,
+    loadingPrecarga,
+    loadingPersonaData,
+    personaId,
+    anioA,
+    personaData?.checkin_saldos_portal_en,
+    modoCheckin,
+    confirmarRecargaGlobal,
+  ]);
 
   const yaCheckinGlobal = Boolean(personaData?.checkin_saldos_portal_en);
   const yaCheckinLao = Boolean(personaData?.checkin_lao_registrado_en);
@@ -321,28 +339,10 @@ export function useCheckinSaldosPage() {
   const bloqueoLaoSinRecarga = yaCheckinLao && !confirmarRecargaLao && !esRectificacion;
   const forzarRecarga = esRectificacion || confirmarRecargaGlobal || confirmarRecargaLao;
 
-  const personaOptions = useMemo(
-    () =>
-      personas.map((p) => {
-        const nombre = `${String(p?.nombre || "").trim()} ${String(p?.apellido || "").trim()}`.trim();
-        const dni = String(p?.dni || "").trim();
-        const label = nombre ? `${nombre} · DNI ${dni || "—"}` : `DNI ${dni || "—"}`;
-        const id = String(p.id || "");
-        return { value: id, label, secondary: id, search: `${nombre} ${dni} ${id}`.toLowerCase() };
-      }),
-    [personas],
-  );
-
   const personaSeleccionadaLabel = useMemo(() => {
     const hit = personaOptions.find((o) => o.value === personaId);
-    return hit ? hit.label : "";
+    return hit ? hit.label : personaId ? String(personaId) : "";
   }, [personaId, personaOptions]);
-
-  const personaOptionsFiltradas = useMemo(() => {
-    const q = personaQuery.trim().toLowerCase();
-    if (!q) return personaOptions.slice(0, 80);
-    return personaOptions.filter((o) => o.search.includes(q)).slice(0, 80);
-  }, [personaOptions, personaQuery]);
 
   const assertBase = useCallback(() => {
     const per = String(personaId || "").trim();
@@ -363,7 +363,9 @@ export function useCheckinSaldosPage() {
       return null;
     }
     if (bloqueoGlobalSinRecarga) {
-      toast.error("Check-in global cerrado. Autorizá recarga global o usá rectificación.");
+      toast.error(
+        "Check-in global cerrado. Elegí «Rectificación» arriba o marcá «Autorizo recargar bolsas» en el banner.",
+      );
       return null;
     }
     return per;
@@ -450,64 +452,32 @@ export function useCheckinSaldosPage() {
     const per = assertBase();
     if (!per || anioA == null) return;
 
-    const idsB = new Set([
-      ...articulosB.map((a) => a.id),
-      ...Object.keys(diasPorArticuloB).filter((id) => String(diasPorArticuloB[id] ?? "").trim() !== ""),
-    ]);
-    const pendientes = [...idsB]
-      .map((id) => {
-        const a = articulosB.find((x) => x.id === id) || articulos.find((x) => x.id === id);
-        if (!a) return null;
-        const meta = articulosB.find((x) => x.id === id);
-        const cupo = meta?.cupoDiasPorCiclo ?? null;
-        const versionId = meta?.versionId ?? "";
-        const raw = String(diasPorArticuloB[id] ?? "").trim();
-        if (raw === "") return null;
-        const v = validateCheckinEstandar({
-          anioCiclo: String(anioA),
-          diasConsumidosPrevios: raw,
-          cupoDiasPorCiclo: cupo,
-          anioA,
-        });
-        if (!v.ok) return { codigo: a.codigo, error: v.message };
-        return { articulo: { ...a, cupoDiasPorCiclo: cupo, versionId }, v };
-      })
-      .filter(Boolean);
-
-    if (!pendientes.length) {
-      toast.error("Ingresá días usados en al menos un artículo patrón B.");
-      return;
-    }
-    const invalid = pendientes.find((p) => p.error);
-    if (invalid) {
-      toast.error(`${invalid.codigo}: ${invalid.error}`);
+    const collected = collectPendientesPatronB({
+      articulosB,
+      articulos,
+      diasPorArticuloB,
+      anioA,
+    });
+    if (!collected.ok) {
+      toast.error(collected.message);
       return;
     }
 
     setEnviando(true);
-    let okCount = 0;
     try {
-      for (const item of pendientes) {
-        if (item.error) continue;
-        const a = item.articulo;
-        await callPersistirCheckinSaldoEstandar({
-          persona_id: per,
-          articulo_id: a.id,
-          patron: "B",
-          anio_corte_a: anioA,
-          anio_ciclo: anioA,
-          dias_consumidos_previos: item.v.usados,
-          ...(a.cupoDiasPorCiclo != null ? { cupo_dias_por_ciclo: a.cupoDiasPorCiclo } : {}),
-          ...(a.versionId ? { version_id: a.versionId } : {}),
-          ...(forzarRecarga ? { forzar_recarga_global: true } : {}),
-          ...(esRectificacion ? { rectificacion_saldo: true } : {}),
-        });
-        okCount += 1;
-      }
+      const resp = await callPersistirCheckinSaldoEstandarLote({
+        persona_id: per,
+        patron: "B",
+        anio_corte_a: anioA,
+        items: collected.items,
+        ...(forzarRecarga ? { forzar_recarga_global: true } : {}),
+        ...(esRectificacion ? { rectificacion_saldo: true } : {}),
+      });
+      const n = Number(resp?.data?.count) || collected.items.length;
       toast.success(
         esRectificacion
-          ? `Rectificación B: ${okCount} artículo(s) actualizado(s).`
-          : `Patrón B: ${okCount} artículo(s) guardado(s).`,
+          ? `Rectificación B: ${n} artículo(s) en un solo guardado.`
+          : `Patrón B: ${n} artículo(s) guardado(s) (atómico).`,
       );
       await refreshPersona(per);
     } catch (e) {
@@ -521,57 +491,31 @@ export function useCheckinSaldosPage() {
     const per = assertBase();
     if (!per || anioA == null) return;
 
-    const idsC = new Set([
-      ...articulosC.map((a) => a.id),
-      ...Object.keys(saldosPorArticuloC).filter((id) => String(saldosPorArticuloC[id] ?? "").trim() !== ""),
-    ]);
-    const pendientes = [...idsC]
-      .map((id) => {
-        const a = articulosC.find((x) => x.id === id) || articulos.find((x) => x.id === id);
-        if (!a) return null;
-        const meta = articulosC.find((x) => x.id === id);
-        const raw = String(saldosPorArticuloC[id] ?? "").trim();
-        if (raw === "") return null;
-        const vc = validateCheckinPatronC(raw);
-        if (!vc.ok) return { codigo: a.codigo, error: vc.message };
-        return {
-          articulo: { ...a, versionId: meta?.versionId ?? "" },
-          saldo: vc.saldo,
-        };
-      })
-      .filter(Boolean);
-
-    if (!pendientes.length) {
-      toast.error("Ingresá saldo en al menos un artículo patrón C.");
-      return;
-    }
-    const invalid = pendientes.find((p) => p.error);
-    if (invalid) {
-      toast.error(`${invalid.codigo}: ${invalid.error}`);
+    const collected = collectPendientesPatronC({
+      articulosC,
+      articulos,
+      saldosPorArticuloC,
+    });
+    if (!collected.ok) {
+      toast.error(collected.message);
       return;
     }
 
     setEnviando(true);
-    let okCount = 0;
     try {
-      for (const item of pendientes) {
-        if (item.error) continue;
-        await callPersistirCheckinSaldoEstandar({
-          persona_id: per,
-          articulo_id: item.articulo.id,
-          patron: "C",
-          anio_corte_a: anioA,
-          saldo_disponible_inicial: item.saldo,
-          ...(item.articulo.versionId ? { version_id: item.articulo.versionId } : {}),
-          ...(forzarRecarga ? { forzar_recarga_global: true } : {}),
-          ...(esRectificacion ? { rectificacion_saldo: true } : {}),
-        });
-        okCount += 1;
-      }
+      const resp = await callPersistirCheckinSaldoEstandarLote({
+        persona_id: per,
+        patron: "C",
+        anio_corte_a: anioA,
+        items: collected.items,
+        ...(forzarRecarga ? { forzar_recarga_global: true } : {}),
+        ...(esRectificacion ? { rectificacion_saldo: true } : {}),
+      });
+      const n = Number(resp?.data?.count) || collected.items.length;
       toast.success(
         esRectificacion
-          ? `Rectificación C: ${okCount} artículo(s) actualizado(s).`
-          : `Patrón C: ${okCount} artículo(s) guardado(s).`,
+          ? `Rectificación C: ${n} artículo(s) en un solo guardado.`
+          : `Patrón C: ${n} artículo(s) guardado(s) (atómico).`,
       );
       await refreshPersona(per);
     } catch (e) {
@@ -648,6 +592,22 @@ export function useCheckinSaldosPage() {
     saldosPorArticuloC,
   ]);
 
+  const advertenciasCierre = useMemo(
+    () =>
+      buildCheckinCierreAdvertencias({
+        esNuevoCheckin,
+        hlcConfirmadas,
+        lineasResumen,
+        tieneBolsasFirestore,
+      }),
+    [esNuevoCheckin, hlcConfirmadas, lineasResumen, tieneBolsasFirestore],
+  );
+
+  const todosAckCierreMarcados = useMemo(() => {
+    if (!advertenciasCierre.length) return true;
+    return advertenciasCierre.every((a) => modalCierreAcks[a.id] === true);
+  }, [advertenciasCierre, modalCierreAcks]);
+
   const onAbrirCierreGlobal = useCallback(() => {
     if (esRectificacion) {
       toast.error("En rectificación no se vuelve a cerrar el check-in global.");
@@ -655,15 +615,42 @@ export function useCheckinSaldosPage() {
     }
     const per = assertBase();
     if (!per) return;
+    const adv = buildCheckinCierreAdvertencias({
+      esNuevoCheckin,
+      hlcConfirmadas,
+      lineasResumen,
+      tieneBolsasFirestore,
+    });
+    const ackInit = {};
+    adv.forEach((a) => {
+      ackInit[a.id] = false;
+    });
+    setModalCierreAcks(ackInit);
     setModalGlobal({ open: true, step: 1 });
-  }, [assertBase, esRectificacion]);
+  }, [
+    assertBase,
+    esRectificacion,
+    esNuevoCheckin,
+    hlcConfirmadas,
+    lineasResumen,
+    tieneBolsasFirestore,
+  ]);
 
   const onCerrarModal = useCallback(() => {
     setModalGlobal({ open: false, step: 1 });
+    setModalCierreAcks({});
   }, []);
 
   const onModalContinuar = useCallback(() => {
-    setModalGlobal((m) => ({ ...m, step: 2 }));
+    setModalGlobal((m) => {
+      if (m.step === 1) return { ...m, step: 2 };
+      if (m.step === 2) return { ...m, step: 3 };
+      return m;
+    });
+  }, []);
+
+  const onToggleAckCierre = useCallback((id) => {
+    setModalCierreAcks((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
   const onConfirmarCierreGlobal = useCallback(async () => {
@@ -676,6 +663,7 @@ export function useCheckinSaldosPage() {
       await refreshPersona(per);
       setConfirmarRecargaGlobal(false);
       setModalGlobal({ open: false, step: 1 });
+      setModalCierreAcks({});
     } catch (e) {
       toast.error(callableMessage(e));
     } finally {
@@ -699,8 +687,10 @@ export function useCheckinSaldosPage() {
     loadingArticulos,
     laoArticulo,
     articulosB,
+    articulosProblemaB,
     loadingB,
     articulosC,
+    articulosProblemaC,
     loadingC,
     personaWrapRef,
     loadPersonas,
@@ -740,10 +730,14 @@ export function useCheckinSaldosPage() {
     enviando,
     ultimoResultado,
     modalGlobal,
+    advertenciasCierre,
+    modalCierreAcks,
+    todosAckCierreMarcados,
     lineasResumen,
     onAbrirCierreGlobal,
     onCerrarModal,
     onModalContinuar,
+    onToggleAckCierre,
     onConfirmarCierreGlobal,
     loadingPrecarga,
     hayCheckinPrevio,

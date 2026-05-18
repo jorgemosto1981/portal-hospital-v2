@@ -17,6 +17,7 @@ const {
   resolveCodigoGrillaForBolsa,
   CFG_OS_EXTERNO_INFORMADO,
 } = require("../../modules/shared/laoSaldosBolsa");
+const { assertHlcOperativoCheckinNuevo } = require("../../modules/shared/hlcCheckinAssert");
 
 const COL_SALDOS = "saldos_articulo_agente";
 
@@ -52,6 +53,10 @@ const persistirCheckinLaoBolsas = onCall(async (request) => {
 
   const personaSnapPre = await db.collection("personas").doc(personaId).get();
   const forzarGlobal = d.forzar_recarga_global === true || rectificacion;
+
+  if (!rectificacion && !forzarGlobal) {
+    await assertHlcOperativoCheckinNuevo(db, personaId);
+  }
   if (personaSnapPre.exists && personaSnapPre.data()?.checkin_saldos_portal_en && !forzarGlobal) {
     throw new HttpsError(
       "failed-precondition",
