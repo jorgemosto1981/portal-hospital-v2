@@ -55,7 +55,7 @@
 |---|--------|------|--------|
 | 19 | Eliminar carpeta legacy **`web/src/features/laoCheckin/`** (ruta legada sigue en página unificada) | S | Oleada 1 |
 | 20 | Una sola copia de **`checkinFilasUtils`** (solo `checkinSaldos/`) | S | Oleada 1 |
-| 21 | Refactor `useCheckinSaldosPage` en hooks más chicos | L | Pendiente |
+| 21 | Refactor `useCheckinSaldosPage` en hooks más chicos | L | Hecho (2026-05-18) |
 | 22 | Tests unitarios: validadores, precarga, patrón, onboarding | M | Oleada 2 |
 | 23 | Ampliar smoke `lao-smoke-checkin-bolsas.mjs` (B/C / rectificación) | M | Oleada 3 (nota en script) |
 | 24 | `obtenerSaldosCheckinPersona`: revisar campos expuestos | S | Pendiente |
