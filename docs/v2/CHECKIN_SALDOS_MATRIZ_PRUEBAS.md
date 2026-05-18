@@ -85,13 +85,28 @@ cd web && npm test -- --run checkinOleada2
 
 ---
 
+## H. Artículos básicos — check-in (piloto 2026-05-18)
+
+| # | Artículo | Patrón | Paso | Resultado esperado | Piloto | OK |
+|---|----------|--------|------|-------------------|--------|-----|
+| H1 | LAO | A | Rectificación o nuevo: años &lt; A | Bolsas `sal_{anio}_per_*` | 2024/2025 sesiones previas | |
+| H2 | 64-A | B | Informar días usados, guardar lote | `sal_{A}_per_*`, cupo 6, consumo coherente | consumido 1, disp. 5 | |
+| H3 | 64-B | B | Ídem en misma pestaña/ciclo | Segunda bolsa; versión `es_sin_goce` | consumido 1, disp. 5 | |
+| H4 | 68-B | C | Saldo horas + rectificación | `sal_global_per_*`, unidad horas | 100 h; toast rectificación C | |
+| H5 | — | — | `inspect-articulo-version-checkin.mjs` | Patrón A/B/C según catálogo | los 4 artículos | |
+
+**Catálogo:** [`ARTICULOS_BASICOS_OPERATIVOS_V2.md`](./ARTICULOS_BASICOS_OPERATIVOS_V2.md) · **Piloto:** `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ`
+
+---
+
 ## Cierre del epic
 
 | Criterio | OK |
 |----------|-----|
 | Matriz A–E ejecutada en entorno acordado (local o hosting desplegado) | |
+| § H artículos básicos en piloto | |
 | Sin fallas bloqueantes abiertas | |
 | Backlog #24 revisado (contrato precarga) | |
 | Decisiones 16–18 documentadas como **comportamiento vigente** | |
 
-**Siguiente foco acordado:** configurador de artículos (altas adicionales para ticketera).
+**Siguiente foco:** ticketera con artículos básicos — [`HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md)

@@ -86,6 +86,9 @@ Menú RRHH: ítem `checkin-saldos` en `modulosEstado.js`.
 - Cierre global: OK (`cerrarCheckinGlobal`)
 - Actualización bolsas LAO y artículo **64-A**: OK en BD
 - Piloto histórico: persona con bolsa 2024 con consumo (27 d) — rectificación vía flags anteriores
+- **Catálogo básico** acordado: LAO + 64-A + 64-B + 68-B — ver [`ARTICULOS_BASICOS_OPERATIVOS_V2.md`](./ARTICULOS_BASICOS_OPERATIVOS_V2.md)
+- Piloto `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ`: 64-A y 64-B en `sal_2026_per_*`; 68-B en `sal_global_per_*` (rectificación C)
+- Continuidad y próximos pasos: [`HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md)
 
 ---
 
@@ -95,7 +98,7 @@ Menú RRHH: ítem `checkin-saldos` en `modulosEstado.js`.
 - Matriz de prueba manual: [`CHECKIN_SALDOS_MATRIZ_PRUEBAS.md`](./CHECKIN_SALDOS_MATRIZ_PRUEBAS.md).
 - Handoff epic completo: [`HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md`](./HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md).
 
-**Siguiente foco equipo:** configurador de artículos (más altas para ticketera).
+**Siguiente foco equipo:** ticketera con artículos básicos (T1–T4); luego altas adicionales en configurador.
 
 ---
 

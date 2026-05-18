@@ -27,6 +27,8 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`RFC_SALDOS_PATRONES_ABC_V2.md`](./RFC_SALDOS_PATRONES_ABC_V2.md) | **Capa contable:** patrones A/B/C, consumo al iniciar trámite (§10), cierre configurable, Callable «Mis saldos», check-in universal |
 | [`CASOS_BORDE_SALDOS_V2.md`](./CASOS_BORDE_SALDOS_V2.md) | **SSoT casos borde 1–8** (cruce año, FIFO reverso, cierre ciclo, ajustes RRHH, feriados, LAO+enfermedad) |
 | [`GUIA_RRHH_SALDOS_V2.md`](./GUIA_RRHH_SALDOS_V2.md) | Manual operativo RRHH: resumen contable, ajustes, retroactivo, export PDF desde modal |
+| [`GUIA_ALTA_ARTICULO_68B_COMPENSATORIO_V2.md`](./GUIA_ALTA_ARTICULO_68B_COMPENSATORIO_V2.md) | Alta configurador: **68-B** compensatorio, Patrón C, unidad horas |
+| [`ARTICULOS_BASICOS_OPERATIVOS_V2.md`](./ARTICULOS_BASICOS_OPERATIVOS_V2.md) | **Catálogo básico** LAO + 64-A + 64-B + 68-B (ids y patrón check-in) |
 | [`MODULO_CALENDARIO_FERIADOS_V2.md`](./MODULO_CALENDARIO_FERIADOS_V2.md) | Calendario institucional `cfg_cal_YYYY` — feriados y asuetos para cómputo de días hábiles |
 | [`RFC_LAO_CHECKIN_SALDOS_V2.md`](./RFC_LAO_CHECKIN_SALDOS_V2.md) | RFC check-in → bolsas + `version_id_origen` |
 | [`RFC_LAO_SOLICITUD_VERSION_FIFO_V2.md`](./RFC_LAO_SOLICITUD_VERSION_FIFO_V2.md) | RFC solicitud: versión por bolsa + FIFO |
@@ -35,8 +37,10 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`HANDOFF_SESION_2026-05-16.md`](./HANDOFF_SESION_2026-05-16.md) | Sesión 2026-05-16: versiones RRHH, smoke LAO Fase 3, fix check-in merge; **§9** cierre fase documental saldos A/B/C |
 | [`HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md`](./HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md) | UI check-in saldos A/B/C, rectificación, `cerrarCheckinGlobal`, callables y rutas web |
 | [`CHECKIN_SALDOS_BACKLOG.md`](./CHECKIN_SALDOS_BACKLOG.md) | **Backlog** check-in saldos: tareas S/M/L, oleadas y decisiones de producto |
-| [`HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md`](./HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md) | Epic **check-in + alta RRHH** cerrado (oleadas 1–3); siguiente: configurador |
-| [`CHECKIN_SALDOS_MATRIZ_PRUEBAS.md`](./CHECKIN_SALDOS_MATRIZ_PRUEBAS.md) | Matriz manual check-in + guía alta (cierre epic) |
+| [`HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md`](./HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md) | Epic **check-in + alta RRHH** cerrado (oleadas 1–3); siguiente: ticketera básica |
+| [`HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md) | **Registro + plan:** catálogo LAO/64-A/64-B/68-B, piloto BD, cómo seguir |
+| [`CHECKIN_SALDOS_MATRIZ_PRUEBAS.md`](./CHECKIN_SALDOS_MATRIZ_PRUEBAS.md) | Matriz manual check-in + guía alta + § H artículos básicos |
+| [`GUIA_OPERATIVA_CHECKIN_SALDOS_RRHH.md`](./GUIA_OPERATIVA_CHECKIN_SALDOS_RRHH.md) | Guía operador RRHH check-in (copy SSoT en `checkinSaldosAyudaRrhh.js`) |
 | [`FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md`](./FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md) | Ciclo propuesto alta RRHH: cáscara → `/portal/laboral` → `/portal/rrhh/checkin-saldos` |
 | [`LEY_8525_1979_EGAP_SANTA_FE_V2.md`](./LEY_8525_1979_EGAP_SANTA_FE_V2.md) | Ley 8525/79 — Estatuto General de la Administración Pública (Santa Fe): texto de consulta para RRHH, disciplina, derechos/deberes, indemnizaciones (referencia; validar ante fuente oficial) |
 | [`CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md`](./CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md) | Estados agente: **activo laboral**, **inactivo laboral (baja)**, **deshabilitado**; RRHH; reactivación + login |

@@ -10,7 +10,7 @@
 ## Aviso — siguiente foco
 
 > **Epic check-in + alta RRHH:** oleadas **1, 2 y 3** implementadas; refactor hooks (#21) hecho.  
-> **Siguiente tanda acordada:** **configurador de artículos** (altas de artículos adicionales para ticketera). Ver plan ticketera en [`HANDOFF_SESION_2026-05-13_TICKETERA.md`](./HANDOFF_SESION_2026-05-13_TICKETERA.md) (campo por campo; primer pendiente histórico: `circuito_ingreso_ids`).
+> **Siguiente tanda acordada:** **ticketera** con catálogo básico (LAO, 64-A, 64-B, 68-B) — ver [`HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md). Luego configurador (más `art_*` fuera del básico).
 
 ---
 
@@ -96,5 +96,7 @@ cd web && npm install && npm run dev
 | Mañana 18/05 | Guía alta + oleada 1 + deploy + pausa documental |
 | Tarde 18/05 | Oleadas 2–3, fixes RRHH/rectificación, refactors, push remoto |
 | Cierre Fase A | Matriz pruebas, actualización handoffs, contrato #24, epic cerrado en doc |
+| Tarde (cont.) | Altas 64-B y 68-B en configurador; validación B/C en piloto; catálogo básico documentado |
 
-**Fecha cierre epic (documental):** 2026-05-18.
+**Fecha cierre epic (documental):** 2026-05-18.  
+**Handoff continuidad:** [`HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md)

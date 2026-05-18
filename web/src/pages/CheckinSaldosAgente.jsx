@@ -1,4 +1,7 @@
+import { useState } from "react";
+
 import Card from "../components/ui/Card.jsx";
+import { CheckinSaldosAyudaModal } from "../features/checkinSaldos/CheckinSaldosAyudaModal.jsx";
 import { CheckinAnioCorteField } from "../features/checkinSaldos/CheckinAnioCorteField.jsx";
 import { CheckinCategoriaTabs } from "../features/checkinSaldos/CheckinCategoriaTabs.jsx";
 import { CheckinArticulosAvisos } from "../features/checkinSaldos/CheckinArticulosAvisos.jsx";
@@ -15,6 +18,8 @@ import { useCheckinSaldosPage } from "../features/checkinSaldos/useCheckinSaldos
 
 export default function CheckinSaldosAgente() {
   const p = useCheckinSaldosPage();
+  const [ayudaAbierta, setAyudaAbierta] = useState(false);
+  const [ayudaTab, setAyudaTab] = useState("objetivo");
 
   const guardarParcial =
     p.categoriaTab === "A"
@@ -43,8 +48,26 @@ export default function CheckinSaldosAgente() {
 
   return (
     <div className="mx-auto w-full max-w-lg px-4 py-6 md:max-w-3xl">
-      <h1 className="text-xl font-semibold text-slate-900">Check-in de saldos (RRHH)</h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1 className="text-xl font-semibold text-slate-900">Check-in de saldos (RRHH)</h1>
+        <button
+          type="button"
+          onClick={() => setAyudaAbierta(true)}
+          className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-base font-semibold italic text-slate-700 touch-manipulation active:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-500"
+          aria-label="Información sobre check-in de saldos"
+          title="Información para RRHH"
+        >
+          i
+        </button>
+      </div>
       <p className="mt-2 text-sm leading-relaxed text-slate-600">{intro}</p>
+
+      <CheckinSaldosAyudaModal
+        open={ayudaAbierta}
+        onClose={() => setAyudaAbierta(false)}
+        tabActiva={ayudaTab}
+        onTabChange={setAyudaTab}
+      />
 
       <Card className="mt-6 space-y-5 p-4 md:p-5">
         <CheckinPersonaField
