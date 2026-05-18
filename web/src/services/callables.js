@@ -200,3 +200,13 @@ export function callObtenerResumenAltaOnboardingPersona(data) {
 export function callAcreditarLaoBolsaAgente(data) {
   return httpsCallable(getFunctionsV2(), "acreditarLaoBolsaAgente")(data);
 }
+
+/** Contexto laboral vigente en fecha_desde (slice 64-A). */
+export function callResolverContextoLaboralSolicitud(data) {
+  return httpsCallable(getFunctionsV2(), "resolverContextoLaboralSolicitud")(data);
+}
+
+/** Artículos Patrón B elegibles para el agente en fecha_desde. */
+export function callListarArticulosIngresoAgente(data) {
+  return httpsCallable(getFunctionsV2(), "listarArticulosIngresoAgente")(data);
+}

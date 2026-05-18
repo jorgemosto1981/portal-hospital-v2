@@ -22,6 +22,7 @@ import ArticuloConfiguracion from "./pages/ArticuloConfiguracion.jsx";
 import ArticuloListadoGrilla from "./pages/ArticuloListadoGrilla.jsx";
 import ArticuloVersionesListado from "./pages/ArticuloVersionesListado.jsx";
 import SolicitudLaoAlta from "./pages/SolicitudLaoAlta.jsx";
+import Solicitud64AAlta from "./pages/Solicitud64AAlta.jsx";
 import CheckinSaldosAgente from "./pages/CheckinSaldosAgente.jsx";
 import AltaAgenteOnboardingRRHH from "./pages/AltaAgenteOnboardingRRHH.jsx";
 import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
@@ -90,6 +91,7 @@ export default function App() {
             <Route path="mi-perfil" element={<PerfilUsuario />} />
             <Route path="laboral" element={<DatosLaborales />} />
             <Route path="solicitudes/lao" element={<SolicitudLaoAlta />} />
+            <Route path="solicitudes/asuntos-particulares" element={<Solicitud64AAlta />} />
             <Route path="perfil" element={<DatosPersonales />} />
             <Route path="perfil/:personaId" element={<Perfil />} />
             <Route path="grilla" element={<GrillaOperativa />} />

@@ -168,7 +168,7 @@ Ids de escalafón en seed de configuración maestra: `src/scripts/seedConfigurac
 
 ## Registro para desarrollo — filtro de elegibilidad en alta de solicitud
 
-**Estado:** la versión del artículo ya define reglas en `bloque_elegibilidad_filtros`; **aún no está acordado en código** cómo el módulo de solicitudes resuelve la cadena laboral al validar. Definir e implementar al desarrollar solicitudes.
+**Estado:** reglas en versión documentadas; **contrato de resolución** en [`RFC_TICKETERA_SLICE_64A_MVP_V2.md`](./RFC_TICKETERA_SLICE_64A_MVP_V2.md) §5–6. Implementación: Oleada 1 (pendiente código).
 
 ### Fuente de verdad laboral (V2)
 
@@ -205,11 +205,13 @@ Registrar en el PR del módulo solicitudes: resultado de T1 y T2 como prueba de 
 - Semántica: **OR** — puede iniciar quien tenga al menos un rol listado.
 - Para 64-A, RRHH definió: basta **`CFG_USUARIO`** para acceso agente; roles extra en la lista solo amplían iniciadores.
 
-### Pendiente de diseño (explicitar al codificar)
+### Decisiones de diseño — cerradas (Oleada 0, 2026-05-18)
 
-1. ¿Elegibilidad se evalúa contra **HLC vigente** a `fecha_desde` de la solicitud o contra “hoy”?
-2. ¿`grupo_trabajo_ids` usa membresía en `grupos_de_trabajo` / HLG o solo ids en HLC?
-3. ¿Mensaje de error único “No cumple requisitos del artículo” vs detalle por filtro fallido (escalafón, antigüedad, etc.)?
+Ver [`RFC_TICKETERA_SLICE_64A_MVP_V2.md`](./RFC_TICKETERA_SLICE_64A_MVP_V2.md) §4:
+
+1. Elegibilidad contra **HLC vigente en `fecha_desde`** (zona BA), no “hoy”.
+2. `grupo_trabajo_ids` MVP: solo **`grupo_de_trabajo_id` de HLC**; HLG en slice posterior.
+3. Errores: **código estable** + mensaje legible (tabla `ELEG_*`, `SALDO_*`, `CIRCUITO_ROL`).
 
 ---
 

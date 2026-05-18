@@ -1,0 +1,156 @@
+"use strict";
+
+/**
+ * Trigger: alta solicitud Patrón B en BORRADOR → valida y descuenta saldo ciclo.
+ */
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { logger } = require("firebase-functions");
+
+const { db, FieldValue } = require("../modules/shared/context");
+const { pickBolsaParaConsumo } = require("../modules/shared/laoSaldosBolsa");
+const {
+  ESTADO_SOLICITUD_BORRADOR,
+  ESTADO_SOLICITUD_RECHAZADA,
+  ESTADO_SOLICITUD_EN_REVISION_JEFE,
+} = require("../modules/shared/solicitudesArticuloEstados");
+const { runPatronBAltaMotor } = require("../modules/shared/solicitudPatronBAltaMotor");
+
+const COL_SALDOS = "saldos_articulo_agente";
+
+const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
+  { document: "solicitudes_articulo/{solId}", region: "southamerica-east1" },
+  async (event) => {
+    const solId = event.params.solId;
+    const snap = event.data;
+    if (!snap) return;
+
+    const d = snap.data() || {};
+    const schemaVersion = Number(d.schema_version);
+    const patron = String(d.patron_saldo || "").trim();
+
+    if (schemaVersion !== 2 && patron !== "B") return;
+    if (d.estado_solicitud_id !== ESTADO_SOLICITUD_BORRADOR) return;
+
+    const solRef = db.collection("solicitudes_articulo").doc(solId);
+
+    let motor;
+    try {
+      motor = await runPatronBAltaMotor({
+        db,
+        solicitud: d,
+        excludeSolId: solId,
+        authToken: null,
+      });
+    } catch (err) {
+      logger.error("solicitud_patron_b_motor_error", {
+        solId,
+        message: err instanceof Error ? err.message : String(err),
+      });
+      await solRef.update({
+        estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+        motor_codigos: ["MOTOR_ERROR"],
+        motor_mensajes: ["Error al validar la solicitud."],
+        motor_validado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    if (!motor.ok) {
+      await solRef.update({
+        estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+        motor_codigos: motor.codigos || [],
+        motor_mensajes: motor.mensajes || [],
+        motor_validado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    const diasConsumo = motor.dias_consumo;
+    const salRef = db.collection(COL_SALDOS).doc(motor.saldo_doc_id);
+    const motorOkPayload = {
+      estado_solicitud_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
+      hlc_id_elegibilidad: motor.hlc_id || null,
+      motor_validado_en: FieldValue.serverTimestamp(),
+      actualizado_en: FieldValue.serverTimestamp(),
+      motor_descuento_aplicado: false,
+    };
+
+    try {
+      await db.runTransaction(async (tx) => {
+        const sSnap = await tx.get(solRef);
+        if (!sSnap.exists) return;
+        const cur = sSnap.data() || {};
+        if (cur.estado_solicitud_id !== ESTADO_SOLICITUD_BORRADOR) return;
+
+        const salSnap = await tx.get(salRef);
+        if (!salSnap.exists) {
+          tx.update(solRef, {
+            ...motorOkPayload,
+            estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+            motor_codigos: ["SALDO_CICLO"],
+            motor_mensajes: ["No hay saldo disponible en el ciclo."],
+          });
+          return;
+        }
+
+        const match = pickBolsaParaConsumo(salSnap.data() || {}, motor.articulo_id, motor.anio_ciclo_consumo);
+        if (!match) {
+          tx.update(solRef, {
+            ...motorOkPayload,
+            estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+            motor_codigos: ["SALDO_CICLO"],
+            motor_mensajes: ["No hay saldo disponible en el ciclo."],
+          });
+          return;
+        }
+
+        const disp = Number(match.bolsa.disponible);
+        const cons = Number(match.bolsa.consumido) || 0;
+        if (!Number.isFinite(disp) || disp < diasConsumo) {
+          tx.update(solRef, {
+            estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+            motor_codigos: ["SALDO_CICLO"],
+            motor_mensajes: ["No hay saldo disponible en el ciclo."],
+            motor_validado_en: FieldValue.serverTimestamp(),
+            actualizado_en: FieldValue.serverTimestamp(),
+          });
+          return;
+        }
+
+        const debito = {
+          bolsa_id: match.bolsaId,
+          anio_origen: motor.anio_ciclo_consumo,
+          dias: diasConsumo,
+        };
+
+        tx.update(salRef, {
+          [`bolsas.${match.bolsaId}.consumido`]: cons + diasConsumo,
+          [`bolsas.${match.bolsaId}.disponible`]: disp - diasConsumo,
+          [`bolsas.${match.bolsaId}.ultima_actualizacion`]: FieldValue.serverTimestamp(),
+          "metadata.ultima_sincronizacion": FieldValue.serverTimestamp(),
+        });
+
+        tx.update(solRef, {
+          ...motorOkPayload,
+          motor_descuento_aplicado: true,
+          motor_bolsa_id: match.bolsaId,
+          motor_dias_descontados: diasConsumo,
+          _debito_origen: [debito],
+        });
+      });
+    } catch (err) {
+      logger.error("solicitud_patron_b_tx_error", { solId, message: err instanceof Error ? err.message : String(err) });
+      await solRef.update({
+        estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+        motor_codigos: ["MOTOR_TX"],
+        motor_mensajes: ["Error al aplicar descuento de saldo."],
+        motor_validado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+    }
+  },
+);
+
+module.exports = { onSolicitudArticuloPatronBOnCreate };

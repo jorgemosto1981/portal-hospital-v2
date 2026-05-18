@@ -26,6 +26,9 @@ const buscarPersonasCheckinRrhh = require("./onCall/rrhh/buscarPersonasCheckinRr
 const persistirCheckinSaldoEstandarLote = require("./onCall/solicitudes/persistirCheckinSaldoEstandarLote");
 const acreditarLaoBolsaAgente = require("./onCall/solicitudes/acreditarLaoBolsaAgente");
 const solicitudArticuloTriggers = require("./triggers/solicitudArticuloLaoOnCreate");
+const solicitudPatronBTriggers = require("./triggers/solicitudArticuloPatronBOnCreate");
+const resolverContextoLaboralSolicitud = require("./onCall/solicitudes/resolverContextoLaboralSolicitud");
+const listarArticulosIngresoAgente = require("./onCall/solicitudes/listarArticulosIngresoAgente");
 
 module.exports = {
   ...login,
@@ -44,4 +47,7 @@ module.exports = {
   ...persistirCheckinSaldoEstandarLote,
   ...acreditarLaoBolsaAgente,
   ...solicitudArticuloTriggers,
+  ...solicitudPatronBTriggers,
+  ...resolverContextoLaboralSolicitud,
+  ...listarArticulosIngresoAgente,
 };

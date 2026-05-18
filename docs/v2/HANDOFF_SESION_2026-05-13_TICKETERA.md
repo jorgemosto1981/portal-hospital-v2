@@ -41,9 +41,11 @@ En esta sesión se diseñó y documentó el plan completo de la **Ticketera Puen
 
 ## Próximo paso exacto (para retomar)
 
-**Implementar campos nuevos en el configurador de artículos, uno por uno con aprobación del usuario.**
+**2026-05-18 — PAUSA:** Oleada 1 **implementada y probada T1/T6 en piloto.**  
+**Retomar desde:** [`HANDOFF_SESION_2026-05-18_TICKETERA_64A_PAUSA.md`](./HANDOFF_SESION_2026-05-18_TICKETERA_64A_PAUSA.md) (ancla única).  
+**Siguiente trabajo:** completar matriz T2–T8 + R1–R2; opcional 64-B en UI; deploy hosting si aplica.
 
-Primer campo aprobado para implementar: **`circuito_ingreso_ids`**
+~~Primer campo aprobado para implementar: **`circuito_ingreso_ids`**~~ (hecho en schema/UI)
 
 Detalles:
 - Schema: `bloqueWorkflowSlaCoberturaSchema` → `circuito_ingreso_ids: z.array(cfgRowIdSchema).min(1)`

@@ -9,8 +9,8 @@
 
 ## Aviso — siguiente foco
 
-> **Epic check-in + alta RRHH:** oleadas **1, 2 y 3** implementadas; refactor hooks (#21) hecho.  
-> **Siguiente tanda acordada:** **ticketera** con catálogo básico (LAO, 64-A, 64-B, 68-B) — ver [`HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md). Luego configurador (más `art_*` fuera del básico).
+> **Epic check-in + alta RRHH:** cerrado.  
+> **Ticketera slice 64-A (Oleada 1):** implementada 2026-05-18 — **PAUSA** → retomar en [`HANDOFF_SESION_2026-05-18_TICKETERA_64A_PAUSA.md`](./HANDOFF_SESION_2026-05-18_TICKETERA_64A_PAUSA.md).
 
 ---
 

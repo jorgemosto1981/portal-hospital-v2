@@ -7,6 +7,8 @@
 
 **Relación:** [`ARTICULOS_BASICOS_OPERATIVOS_V2.md`](./ARTICULOS_BASICOS_OPERATIVOS_V2.md) · [`HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md`](./HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md) · [`HANDOFF_SESION_2026-05-13_TICKETERA.md`](./HANDOFF_SESION_2026-05-13_TICKETERA.md)
 
+> **Ticketera 64-A (2026-05-18 noche):** implementación Oleada 1 **pausada** — continuidad en [`HANDOFF_SESION_2026-05-18_TICKETERA_64A_PAUSA.md`](./HANDOFF_SESION_2026-05-18_TICKETERA_64A_PAUSA.md).
+
 ---
 
 ## 1. Registro de lo hecho (esta tanda)
@@ -54,6 +56,7 @@ Detalle de versiones publicadas y parámetros: [`ARTICULOS_BASICOS_OPERATIVOS_V2
 | Guía alta 68-B | `docs/v2/GUIA_ALTA_ARTICULO_68B_COMPENSATORIO_V2.md` |
 | Modal ayuda (botón **i**) | `web/src/features/checkinSaldos/checkinSaldosAyudaRrhh.js`, `CheckinSaldosAyudaModal.jsx` |
 | Integración página | `web/src/pages/CheckinSaldosAgente.jsx` (modificado) |
+| Modal ayuda (botón **i**) | **OK navegador** — operador confirma 2026-05-18 |
 
 ### Git (al cerrar sesión doc)
 
@@ -94,17 +97,19 @@ Ejecución formal pendiente; en piloto ya cubierto en parte:
 3. Correr **G1** Vitest `checkinOleada2`.
 4. Si todo OK → epic check-in **cerrado operativamente** (no solo en código).
 
-### Paso 2 — Ticketera con artículos básicos (siguiente epic lógico)
+### Oleada 0 — RFC slice 64-A (2026-05-18) ✅ documental
 
-Seguir [`HANDOFF_SESION_2026-05-13_TICKETERA.md`](./HANDOFF_SESION_2026-05-13_TICKETERA.md):
+- [`RFC_TICKETERA_SLICE_64A_MVP_V2.md`](./RFC_TICKETERA_SLICE_64A_MVP_V2.md) — alcance, decisiones D1–D3, contratos Callable/trigger/UI.
+- [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md`](./TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md) — T1–T8 + regresión.
+- **Pendiente:** checklist §13 del RFC (aprobación RRHH) antes de codificar.
+
+### Paso 2 — Ticketera slice 64-A (Oleada 1, tras aprobar RFC)
 
 | Prioridad | Tarea |
 |-----------|--------|
-| **T1** | Solicitud **64-A** — consumo bolsa Patrón B, cupo/mes/evento |
-| **T2** | Solicitud **64-B** — misma bolsa ciclo, `es_sin_goce` / justificación |
-| **T3** | Solicitud **68-B** — horas, Patrón C global |
-| **T4** | Solicitud **LAO** — FIFO por año bolsa (ya probado en smoke previo; regresión) |
-| Config | Completar campos puente artículo ↔ ticket (`circuito_ingreso_ids`, etc.) |
+| **I1–I6** | Ver RFC §2.1 — resolver laboral, listar artículos, UI, create, trigger Patrón B, matriz T1–T6 |
+| **Slice 2** | 64-B, 68-B, regresión LAO |
+| Config | `circuito_ingreso_ids` ya en schema; verificar valor 64-A en Firestore |
 
 ### Paso 3 — Configurador (ampliación catálogo)
 
@@ -141,9 +146,10 @@ npm run firebase:deploy:functions
 ## 5. Criterio de “listo para ticketera piloto”
 
 - [ ] Matriz A–E sin fallas bloqueantes
-- [ ] Catálogo básico commiteado y enlazado en README
+- [x] Catálogo básico commiteado y enlazado en README
+- [x] Modal ayuda check-in (botón **i**) — OK navegador
 - [ ] Al menos **una solicitud OK** por 64-A y 64-B en piloto
 - [ ] 68-B: solicitud o movimiento que descuente horas en `sal_global_per_*`
 - [ ] Documentar IDs de ticket de prueba en handoff ticketera
 
-**Siguiente sesión recomendada:** Paso 0 (commit) → Paso 1 (matriz) → Paso 2 T1/T2.
+**Siguiente sesión recomendada:** Aprobar RFC §13 → Oleada 1 (código I1–I6) → matriz [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md`](./TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md).

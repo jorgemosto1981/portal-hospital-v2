@@ -49,6 +49,7 @@ Marcar **OK** / **Falla** / **N/A** y anotar `persona_id` / fecha / operador.
 | D1 | Abrir combobox y escribir DNI/nombre | `buscarPersonasCheckinRrhh` devuelve opciones (server-side) | |
 | D2 | Entrar con `?persona_id=per_…` | Precarga agente; no pisa si el operador ya eligió otro manualmente | |
 | D3 | Cambiar de agente | Formulario y modo se reinician | |
+| D4 | Botón **i** junto al título | Modal ayuda; copy 4 pestañas legible | OK |
 
 ---
 

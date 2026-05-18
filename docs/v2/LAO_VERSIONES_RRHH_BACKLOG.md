@@ -30,6 +30,20 @@
 
 ---
 
+## Circuito de ingreso (todas las versiones publicadas)
+
+`circuito_ingreso_ids`: **`CFG_USUARIO`**, **`CFG_RRHH`**, **`CFG_MEDICO`**, **`CFG_VISUALIZADOR`** (acordado 2026-05-18).
+
+| `correspondencia_anio` | `version_id` |
+|------------------------|--------------|
+| 2022 | `ver_01KRXKS1TZPHRRG2NNWFHS78GC` |
+| 2023 | `ver_01KRPPTZ86XK1GR4MNCJA804TE` |
+| 2024 | `ver_01KRNYDP14Y5V6F73DFXPBFATM` |
+| 2025 | `ver_01KRPQDTM7BHZKYGKR91BEXHTR` |
+| 2026 | `ver_01KRPT6XEF3MD46NZT9SKW42C4` |
+
+---
+
 ## Parámetros fijos (todas las versiones LAO)
 
 | Campo | Valor |

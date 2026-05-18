@@ -5,6 +5,21 @@
 
 ---
 
+## Circuito de ingreso (estándar operativo)
+
+Todas las versiones publicadas de los artículos básicos deben incluir en `bloque_workflow_sla_cobertura.circuito_ingreso_ids`:
+
+| Rol (`cfg_rol`) | Uso |
+|-----------------|-----|
+| `CFG_USUARIO` | Agente estándar |
+| `CFG_RRHH` | Personal RRHH (menú agente + extras) |
+| `CFG_MEDICO` | Personal médico |
+| `CFG_VISUALIZADOR` | Visualizador |
+
+**Auditoría:** `node scripts/auditar-circuito-ingreso-articulos.mjs`
+
+---
+
 ## Resumen por patrón
 
 | Patrón | Rol | Artículos básicos |
@@ -25,7 +40,9 @@
 | Código | LAO (referencia grilla) |
 | Patrón | A — `cfg_rcc_nunca` + `cfg_os_interno` + `es_lao_anual: true` |
 | Check-in | Pestaña **LAO (A)** — filas por año &lt; A |
-| Notas | Versión 2026 piloto: `ver_01KRPT6XEF3MD46NZT9SKW42C4` ([`LAO_VERSIONES_RRHH_BACKLOG.md`](./LAO_VERSIONES_RRHH_BACKLOG.md)) |
+| Circuito | `CFG_USUARIO`, `CFG_RRHH`, `CFG_MEDICO`, `CFG_VISUALIZADOR` (todas las versiones publicadas) |
+| Versiones publicadas (ejercicio) | 2022 `ver_01KRXKS1TZPHRRG2NNWFHS78GC` · 2023 `ver_01KRPPTZ86XK1GR4MNCJA804TE` · 2024 `ver_01KRNYDP14Y5V6F73DFXPBFATM` · 2025 `ver_01KRPQDTM7BHZKYGKR91BEXHTR` · 2026 `ver_01KRPT6XEF3MD46NZT9SKW42C4` |
+| Notas | Detalle RRHH: [`LAO_VERSIONES_RRHH_BACKLOG.md`](./LAO_VERSIONES_RRHH_BACKLOG.md) |
 
 ### 64-A — Asuntos particulares **con goce** (Patrón B)
 
@@ -38,7 +55,7 @@
 | `es_sin_goce` | **false** |
 | Cupo | 6 días/ciclo, 1/mes, 1 por evento |
 | Elegibilidad | Escalafón `CFG_ESC_02_ADMINISTRACION` |
-| Circuito | `CFG_USUARIO` |
+| Circuito | `CFG_USUARIO`, `CFG_RRHH`, `CFG_MEDICO`, `CFG_VISUALIZADOR` |
 | Check-in | Pestaña **B** — días consumidos en ciclo A |
 | Doc | [`HANDOFF_SESION_2026-05-14.md`](./HANDOFF_SESION_2026-05-14.md) § 64-A |
 
@@ -68,6 +85,7 @@
 | Unidad | **Horas** (`cfg_uma_horas`) |
 | `es_sin_goce` | false (compensatorio ≠ licencia sin goce 64-B) |
 | Check-in | Pestaña **C** — saldo global en `sal_global_per_*` |
+| Circuito | `CFG_USUARIO`, `CFG_RRHH`, `CFG_MEDICO`, `CFG_VISUALIZADOR` |
 | Doc | [`GUIA_ALTA_ARTICULO_68B_COMPENSATORIO_V2.md`](./GUIA_ALTA_ARTICULO_68B_COMPENSATORIO_V2.md) |
 
 ---

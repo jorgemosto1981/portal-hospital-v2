@@ -20,6 +20,12 @@ export default function Inicio() {
         >
           Nueva solicitud LAO (preview)
         </Link>
+        <Link
+          to="/portal/solicitudes/asuntos-particulares"
+          className="inline-flex w-full items-center justify-center rounded-xl border border-sky-200 bg-sky-50 px-4 py-3.5 text-sm font-semibold text-sky-900 shadow-sm transition-colors hover:bg-sky-100 sm:w-auto"
+        >
+          Asuntos particulares (64-A)
+        </Link>
       </div>
     </section>
   );

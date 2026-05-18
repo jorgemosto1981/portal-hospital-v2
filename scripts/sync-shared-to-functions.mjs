@@ -24,6 +24,9 @@ const FILES_TO_SYNC = [
   "laoVersionResolver.js",
   "laoSaldosBolsa.js",
   "hlcOperativo.js",
+  "hlcVigenciaFecha.js",
+  "resolvePatronSaldo.js",
+  "solicitudElegibilidadLaboral.js",
 ];
 
 function esmToCjs(source, filename) {

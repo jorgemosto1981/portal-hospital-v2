@@ -43,6 +43,10 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
     const d = snap.data() || {};
     if (d.estado_solicitud_id !== ESTADO_SOLICITUD_BORRADOR) return;
 
+    const schemaVersion = Number(d.schema_version);
+    const patronSaldo = String(d.patron_saldo || "").trim();
+    if (schemaVersion === 2 || patronSaldo === "B") return;
+
     const personaId = typeof d.titular_persona_id === "string" ? d.titular_persona_id.trim() : "";
     const articuloId = typeof d.articulo_id === "string" ? d.articulo_id.trim() : "";
     const versionId =
