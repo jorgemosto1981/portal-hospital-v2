@@ -1,6 +1,6 @@
 # Plan maestro — Ticketera / solicitudes V2
 
-**Estado del documento:** plan vivo · **última revisión:** 2026-05-19  
+**Estado del documento:** plan vivo · **última revisión:** 2026-05-19 · **PAUSA implementación:** [`HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md`](./HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md)  
 **Ámbito:** ingreso agente, motores por patrón de saldo, bandejas (jefe / médico futuro), relación con `cfg_articulos`.
 
 **Visión de producto (incorporada):** [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md) — herramienta **dinámica**, fechas impuestas, preview, subflujos LAO y licencias médicas.
