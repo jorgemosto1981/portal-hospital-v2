@@ -1,5 +1,11 @@
 import Card from "../components/ui/Card.jsx";
-import { deshabilitarCicloHlc, guardarRegistroLaboral } from "../services/datosLaboralesService.js";
+import {
+  deshabilitarAsignacionHlg,
+  deshabilitarCicloHlc,
+  guardarRegistroLaboral,
+} from "../services/datosLaboralesService.js";
+import { callSyncSessionClaims } from "../services/callables.js";
+import { useAuthSession } from "../features/auth/useAuthSession.js";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AYUDA_CAMPOS, INITIAL_FORM_DATA_LABORAL } from "./datos-laborales/constants.js";
@@ -34,7 +40,14 @@ import {
   buildRegistrosEdicionDetallados,
   buildTimelineResumen,
   buildIntegridadLaboral,
+  buildPlanillaCargaSemanal,
   formatDateDdMmAaaa,
+  obtenerYmdHoyInstitucional,
+  hlcFechaDesdeYmd,
+  hlcFechaHastaYmd,
+  hldHlgFechaFinYmd,
+  hldHlgFechaInicioYmd,
+  registroLaboralVigenteEnHoy,
 } from "./datos-laborales/utils.js";
 
 const EMPTY_ROWS = [];
@@ -68,23 +81,31 @@ function formatFechaVisible(value, fallback = "—") {
   return formatDateDdMmAaaa(value, fallback);
 }
 
-function isVigenteByFecha(row) {
-  const hasta = String(row?.fecha_hasta || row?.fecha_fin || "").trim();
-  return !hasta;
+function planillaCargaInicial(opcionesDiaSemana) {
+  const planilla = buildPlanillaCargaSemanal(opcionesDiaSemana, []);
+  return planilla.length > 0 ? planilla : [emptyCargaDia()];
+}
+
+function isHlgOHldVigenteEnHoy(row) {
+  if (!row || typeof row !== "object") return false;
+  if (row.activo === false) return false;
+  return registroLaboralVigenteEnHoy(row, "hlg");
 }
 
 function isHlcOperativo(row) {
   if (!row || typeof row !== "object") return false;
   if (row.activo === false) return false;
   if (String(row.motivo_deshabilitacion_id || "").trim()) return false;
-  return isVigenteByFecha(row);
+  return registroLaboralVigenteEnHoy(row, "hlc");
 }
 
 function isHlcHistoricoVisible(row) {
   if (!row || typeof row !== "object") return false;
   if (row.activo === false) return false;
   if (String(row.motivo_deshabilitacion_id || "").trim()) return false;
-  return !isVigenteByFecha(row);
+  const hasta = hlcFechaHastaYmd(row);
+  if (!hasta) return false;
+  return !registroLaboralVigenteEnHoy(row, "hlc");
 }
 
 function sumarHorasSemana(cargaPorDiaSemana) {
@@ -154,6 +175,15 @@ export default function DatosLaborales() {
     comentario: "",
     confirmar_impacto: false,
   });
+  const [deshabilitarHlgModalAbierto, setDeshabilitarHlgModalAbierto] = useState(false);
+  const [hlgDeshabilitarId, setHlgDeshabilitarId] = useState("");
+  const [deshabilitarHlgError, setDeshabilitarHlgError] = useState("");
+  const [deshabilitarHlgForm, setDeshabilitarHlgForm] = useState({
+    motivo: "",
+    fecha_corte: "",
+    confirmar: false,
+  });
+  const { user: authUser } = useAuthSession();
   const [cargaPorDiaRows, setCargaPorDiaRows] = useState([emptyCargaDia()]);
   const [timelinePersonaId, setTimelinePersonaId] = useState("");
   const [timelineFiltro, setTimelineFiltro] = useState("todos");
@@ -215,6 +245,16 @@ export default function DatosLaborales() {
   const opcionesRegimenHorario = rowsByCollection.cfg_regimen_horario || [];
   const opcionesCentroCosto = rowsByCollection.cfg_centro_costo || [];
   const opcionesDiaSemana = rowsByCollection.cfg_dia_semana || [];
+
+  async function refrescarClaimsSesion() {
+    if (!authUser) return;
+    try {
+      await callSyncSessionClaims();
+      await authUser.getIdToken(true);
+    } catch {
+      // No bloquear flujo laboral si falla la actualización del token.
+    }
+  }
   const opcionesPersonasSearch = useMemo(
     () => (opcionesPersonas || []).map(buildPersonaSearchOption).filter(Boolean),
     [opcionesPersonas],
@@ -252,8 +292,8 @@ export default function DatosLaborales() {
       categoria: labelDesdeIndice(idxCategorias, cargo.categoria_id),
       funcion: labelDesdeIndice(idxFunciones, cargo.cargo_funcional_id),
       cargaHoraria: String(cargo.carga_horaria_total || "—"),
-      vigencia: `Desde ${formatFechaVisible(cargo.fecha_desde)} · ${
-        String(cargo.fecha_hasta || "").trim() ? formatFechaVisible(cargo.fecha_hasta) : "Vigente"
+      vigencia: `Desde ${formatFechaVisible(hlcFechaDesdeYmd(cargo))} · ${
+        hlcFechaHastaYmd(cargo) ? formatFechaVisible(hlcFechaHastaYmd(cargo)) : "Vigente"
       }`,
     };
   }, [
@@ -312,9 +352,9 @@ export default function DatosLaborales() {
     const hlgPersona = hlgRows.filter((r) => String(r.persona_id || "") === personaId);
     const hldPersona = hldRows.filter((r) => String(r.persona_id || "") === personaId);
     const hlcVigentes = hlcPersona.filter(isHlcOperativo);
-    const hlgVigentes = hlgPersona.filter(isVigenteByFecha);
-    const hldVigentes = hldPersona.filter(isVigenteByFecha);
-    const hlcCerrados = hlcPersona.filter((r) => !isVigenteByFecha(r));
+    const hlgVigentes = hlgPersona.filter(isHlgOHldVigenteEnHoy);
+    const hldVigentes = hldPersona.filter(isHlgOHldVigenteEnHoy);
+    const hlcCerrados = hlcPersona.filter(isHlcHistoricoVisible);
     const merged = [...hlcPersona, ...hlgPersona, ...hldPersona];
     const lastUpdate = merged
       .map((r) => r.actualizado_en || r.creado_en || null)
@@ -335,13 +375,13 @@ export default function DatosLaborales() {
 
     const bloquesVigentes = hlcVigentes
       .slice()
-      .sort((a, b) => String(b.fecha_desde || "").localeCompare(String(a.fecha_desde || "")))
+      .sort((a, b) => hlcFechaDesdeYmd(b).localeCompare(hlcFechaDesdeYmd(a)))
       .map((hlc) => {
         const hldAsociados = hldByCargo.get(String(hlc.id || "")) || [];
         const hldAsociadosIds = new Set(hldAsociados.map((row) => String(row.id || "")));
         const hlgAsociados = hlgPersona.filter((r) => hldAsociadosIds.has(String(r.dato_laboral_id || "")));
-        const hlgVigDelHlc = hlgAsociados.filter(isVigenteByFecha);
-        const hlgHistDelHlc = hlgAsociados.filter((r) => !isVigenteByFecha(r));
+        const hlgVigDelHlc = hlgAsociados.filter(isHlgOHldVigenteEnHoy);
+        const hlgHistDelHlc = hlgAsociados.filter((r) => !isHlgOHldVigenteEnHoy(r));
         const hldRelacionado =
           hlgVigDelHlc
             .map((r) => idxHld.get(String(r.dato_laboral_id || "")))
@@ -360,18 +400,18 @@ export default function DatosLaborales() {
             id: String(r.id || ""),
             grupo: labelDesdeIndice(idxGrupos, r.grupo_de_trabajo_id),
             funcion: labelDesdeIndice(idxFunciones, hldRef && hldRef.funcion_real_id),
-            periodo: `Desde ${formatFechaVisible(r.fecha_inicio)} · ${
-              String(r.fecha_fin || "").trim() ? formatFechaVisible(r.fecha_fin) : "Vigente"
+            periodo: `Desde ${formatFechaVisible(hldHlgFechaInicioYmd(r))} · ${
+              hldHlgFechaFinYmd(r) ? formatFechaVisible(hldHlgFechaFinYmd(r)) : "Vigente"
             }`,
             cargaHorariaGrupo: cargaHorariaGrupo > 0 ? cargaHorariaGrupo : 0,
             warningHlg,
           };
         };
-        const vigenciaHlc = `Desde ${formatFechaVisible(hlc.fecha_desde)} · ${
-          String(hlc.fecha_hasta || "").trim() ? formatFechaVisible(hlc.fecha_hasta) : "Vigente"
+        const vigenciaHlc = `Desde ${formatFechaVisible(hlcFechaDesdeYmd(hlc))} · ${
+          hlcFechaHastaYmd(hlc) ? formatFechaVisible(hlcFechaHastaYmd(hlc)) : "Vigente"
         }`;
         const hldLabel = hldRelacionado
-          ? `Vigente desde ${formatFechaVisible(hldRelacionado.fecha_desde || hldRelacionado.fecha_inicio)}`
+          ? `Vigente desde ${formatFechaVisible(hldHlgFechaInicioYmd(hldRelacionado))}`
           : "Sin vínculo HLD vigente";
         const totalCargaHlg = hlgVigDelHlc.reduce((acc, row) => acc + sumarHorasSemana(row.carga_por_dia_semana), 0);
         const warningsHlc = [];
@@ -428,7 +468,7 @@ export default function DatosLaborales() {
       .filter((r) => String(r.persona_id || "") === personaId)
       .filter(isHlcHistoricoVisible)
       .slice()
-      .sort((a, b) => String(b.fecha_hasta || "").localeCompare(String(a.fecha_hasta || "")));
+      .sort((a, b) => hlcFechaHastaYmd(b).localeCompare(hlcFechaHastaYmd(a)));
     return hlcCerrados.map((hlc, idx) => {
       const hldDelPeriodo = hldRows.filter(
         (r) =>
@@ -440,8 +480,8 @@ export default function DatosLaborales() {
           String(r.persona_id || "") === personaId &&
           hldDelPeriodoIds.has(String(r.dato_laboral_id || "")),
       );
-      const hlgVigDelHlc = hlgDelPeriodo.filter(isVigenteByFecha);
-      const hlgHistDelHlc = hlgDelPeriodo.filter((r) => !isVigenteByFecha(r));
+      const hlgVigDelHlc = hlgDelPeriodo.filter(isHlgOHldVigenteEnHoy);
+      const hlgHistDelHlc = hlgDelPeriodo.filter((r) => !isHlgOHldVigenteEnHoy(r));
       const mapHlg = (r) => {
         const hldRef = idxHld.get(String(r.dato_laboral_id || "")) || null;
         const cargaHorariaGrupo = sumarHorasSemana(r.carga_por_dia_semana);
@@ -449,8 +489,8 @@ export default function DatosLaborales() {
           id: String(r.id || ""),
           grupo: labelDesdeIndice(idxGrupos, r.grupo_de_trabajo_id),
           funcion: labelDesdeIndice(idxFunciones, hldRef && hldRef.funcion_real_id),
-          periodo: `Desde ${formatFechaVisible(r.fecha_inicio)} · ${
-            String(r.fecha_fin || "").trim() ? formatFechaVisible(r.fecha_fin) : "Vigente"
+          periodo: `Desde ${formatFechaVisible(hldHlgFechaInicioYmd(r))} · ${
+            hldHlgFechaFinYmd(r) ? formatFechaVisible(hldHlgFechaFinYmd(r)) : "Vigente"
           }`,
           cargaHorariaGrupo: cargaHorariaGrupo > 0 ? cargaHorariaGrupo : 0,
         };
@@ -459,7 +499,7 @@ export default function DatosLaborales() {
         idxEfectores,
         hlc.efector_cumplimiento_id,
       )}`;
-      const periodo = `Desde ${formatFechaVisible(hlc.fecha_desde)} · Hasta ${formatFechaVisible(hlc.fecha_hasta)}`;
+      const periodo = `Desde ${formatFechaVisible(hlcFechaDesdeYmd(hlc))} · Hasta ${formatFechaVisible(hlcFechaHastaYmd(hlc))}`;
       return {
         id: String(hlc.id || `hlc-cerrado-${idx}`),
         hlcId: String(hlc.id || ""),
@@ -627,7 +667,7 @@ export default function DatosLaborales() {
     setDeshabilitarError("");
     setDeshabilitarForm({
       motivo_id: "",
-      fecha_corte: "",
+      fecha_corte: obtenerYmdHoyInstitucional(),
       comentario: "",
       confirmar_impacto: false,
     });
@@ -687,6 +727,7 @@ export default function DatosLaborales() {
           : `${baseMsg} Observaciones: ${warnings
               .map((w) => (w.code ? `${w.code}: ${w.message}` : w.message))
               .join(" | ")}`;
+      await refrescarClaimsSesion();
       await cargarTodo();
       setDeshabilitarModalAbierto(false);
       setHlcDeshabilitarId("");
@@ -700,12 +741,83 @@ export default function DatosLaborales() {
     }
   }
 
+  function abrirModalDeshabilitarHlg(hlgId) {
+    const target = hlgRows.find((r) => String(r.id || "") === String(hlgId || ""));
+    if (!target) return;
+    setHlgDeshabilitarId(String(target.id));
+    setDeshabilitarHlgError("");
+    setDeshabilitarHlgForm({
+      motivo: "",
+      fecha_corte: obtenerYmdHoyInstitucional(),
+      confirmar: false,
+    });
+    setDeshabilitarHlgModalAbierto(true);
+  }
+
+  function cerrarModalDeshabilitarHlg() {
+    if (deshabilitando) return;
+    setDeshabilitarHlgModalAbierto(false);
+    setHlgDeshabilitarId("");
+    setDeshabilitarHlgError("");
+  }
+
+  async function confirmarDeshabilitacionHlg() {
+    const motivo = String(deshabilitarHlgForm.motivo || "").trim();
+    const fechaCorte = String(deshabilitarHlgForm.fecha_corte || "").trim();
+    if (!hlgDeshabilitarId) {
+      setDeshabilitarHlgError("No se encontró la asignación HLg a deshabilitar.");
+      return;
+    }
+    if (!deshabilitarHlgForm.confirmar) {
+      setDeshabilitarHlgError("Debés confirmar la deshabilitación para continuar.");
+      return;
+    }
+    if (motivo.length > 100) {
+      setDeshabilitarHlgError("El motivo no puede superar los 100 caracteres.");
+      return;
+    }
+    if (fechaCorte && !/^\d{4}-\d{2}-\d{2}$/.test(fechaCorte)) {
+      setDeshabilitarHlgError("La fecha de corte es inválida. Usá el formato AAAA-MM-DD.");
+      return;
+    }
+    setDeshabilitarHlgError("");
+    setDeshabilitando(true);
+    try {
+      const payload = { hlg_id: hlgDeshabilitarId };
+      if (fechaCorte) payload.fecha_corte = fechaCorte;
+      if (motivo) payload.motivo = motivo;
+      const r = await deshabilitarAsignacionHlg(payload);
+      const warnings = normalizarWarnings(r && r.warnings);
+      const fechaAplicadaRaw = String((r && r.fecha_corte_aplicada) || fechaCorte || "hoy");
+      const fechaAplicada =
+        fechaAplicadaRaw === "hoy" ? "hoy" : formatFechaVisible(fechaAplicadaRaw, fechaAplicadaRaw);
+      const baseMsg = `Asignación deshabilitada correctamente. Fecha de corte: ${fechaAplicada}.`;
+      const finalMsg =
+        warnings.length === 0
+          ? baseMsg
+          : `${baseMsg} Observaciones: ${warnings
+              .map((w) => (w.code ? `${w.code}: ${w.message}` : w.message))
+              .join(" | ")}`;
+      await refrescarClaimsSesion();
+      await cargarTodo();
+      setDeshabilitarHlgModalAbierto(false);
+      setHlgDeshabilitarId("");
+      setResultadoModalMsg(finalMsg);
+      setResultadoModalAbierto(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "No se pudo deshabilitar la asignación.";
+      setDeshabilitarHlgError(msg);
+    } finally {
+      setDeshabilitando(false);
+    }
+  }
+
   function cerrarFlujoFormularioManteniendoPersona() {
     const personaId = String(formData.persona_id || "").trim();
     setModoEdicion(false);
     setRegistroEditId("");
     setTipoAlta("historial_laboral_cargos");
-    setCargaPorDiaRows([emptyCargaDia()]);
+    setCargaPorDiaRows(planillaCargaInicial(opcionesDiaSemana));
     setFormData({
       ...INITIAL_FORM_DATA_LABORAL,
       persona_id: personaId,
@@ -754,7 +866,7 @@ export default function DatosLaborales() {
       funcion_real_id: "",
       nivel_jerarquico: "",
     }));
-    setCargaPorDiaRows([emptyCargaDia()]);
+    setCargaPorDiaRows(planillaCargaInicial(opcionesDiaSemana));
     setMostrarFormulario(true);
   }
 
@@ -802,11 +914,16 @@ export default function DatosLaborales() {
     setTimelineWarningTipo("todos");
   }
 
+  /** Solo al cambiar tipo de alta (selector); no resetear mientras se edita un registro. */
   useEffect(() => {
-    setModoEdicion(false);
+    if (modoEdicion) return;
     setRegistroEditId("");
-    setCargaPorDiaRows([emptyCargaDia()]);
-  }, [tipoAlta]);
+    if (tipoAlta === "historial_laboral_grupos") {
+      setCargaPorDiaRows(planillaCargaInicial(opcionesDiaSemana));
+    } else {
+      setCargaPorDiaRows([emptyCargaDia()]);
+    }
+  }, [tipoAlta, opcionesDiaSemana, modoEdicion]);
 
   useEffect(() => {
     if (tipoAlta !== "historial_laboral_grupos") return;
@@ -824,14 +941,24 @@ export default function DatosLaborales() {
   useEffect(() => {
     if (!modoEdicion) return;
     if (!registroEditId) return;
+    if (tipoAlta === "historial_laboral_grupos") {
+      const exists = hlgRows.some((r) => String(r.id) === String(registroEditId));
+      if (!exists) setRegistroEditId("");
+      return;
+    }
     const exists = registrosPorTipoFiltrados.some((r) => String(r.id) === String(registroEditId));
     if (!exists) {
       setRegistroEditId("");
     }
-  }, [modoEdicion, registroEditId, registrosPorTipoFiltrados]);
+  }, [modoEdicion, registroEditId, registrosPorTipoFiltrados, tipoAlta, hlgRows]);
 
   function cargarRegistroEnFormulario(record) {
-    const next = buildFormDataFromRecord({ record, idxHld, prevFormData: formData });
+    const next = buildFormDataFromRecord({
+      record,
+      idxHld,
+      prevFormData: formData,
+      opcionesDiaSemana,
+    });
     if (!next) return;
     setFormData(next.formData);
     setCargaPorDiaRows(next.cargaPorDiaRows);
@@ -863,12 +990,15 @@ export default function DatosLaborales() {
         r = await guardarRegistroLaboral("historial_laboral_cargos", payload);
         warnings = normalizarWarnings(r && r.warnings);
       } else {
+        const hldIdExistente = String(formData.dato_laboral_id || "").trim();
         const payloadHld = buildHldPayload({ formData, modoEdicion, registroEditId });
         const hld = await guardarRegistroLaboral("historial_laboral_datos", payloadHld);
         warnings = warnings.concat(normalizarWarnings(hld && hld.warnings));
+        const hldIdParaHlg =
+          hldIdExistente || (hld && typeof hld.id === "string" ? hld.id : "") || "";
         const payloadHlg = buildHlgPayload({
           formData,
-          hldId: hld.id,
+          hldId: hldIdParaHlg,
           cargaPorDiaRows,
           modoEdicion,
           registroEditId,
@@ -888,6 +1018,7 @@ export default function DatosLaborales() {
         setSaveMsg(advertenciaMsg);
         setResultadoModalMsg(advertenciaMsg);
       }
+      await refrescarClaimsSesion();
       await cargarTodo();
       setResultadoModalAbierto(true);
     } catch (err) {
@@ -1033,13 +1164,22 @@ export default function DatosLaborales() {
                                 ))}
                               </div>
                             ) : null}
-                            <button
-                              type="button"
-                              onClick={() => abrirFormularioEdicionHlg(hlg.id)}
-                              className="mt-2 h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 active:bg-slate-50"
-                            >
-                              Editar este grupo
-                            </button>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => abrirFormularioEdicionHlg(hlg.id)}
+                                className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 active:bg-slate-50"
+                              >
+                                Editar este grupo
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => abrirModalDeshabilitarHlg(hlg.id)}
+                                className="h-8 rounded-lg border border-rose-300 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 active:bg-rose-100"
+                              >
+                                Deshabilitar asignación
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1310,9 +1450,7 @@ export default function DatosLaborales() {
                 opcionesCentroCosto={opcionesCentroCosto}
                 opcionesFuncion={opcionesFuncion}
                 cargaPorDiaRows={cargaPorDiaRows}
-                onAddCargaRow={onAddCargaRow}
                 onChangeCargaRow={onChangeCargaRow}
-                onRemoveCargaRow={onRemoveCargaRow}
                 opcionesDiaSemana={opcionesDiaSemana}
                 ayudaCampos={AYUDA_CAMPOS}
               />
@@ -1491,6 +1629,65 @@ export default function DatosLaborales() {
                   className="h-10 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
                 >
                   {deshabilitando ? "Deshabilitando..." : "Deshabilitar ciclo"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {deshabilitarHlgModalAbierto ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 px-4">
+            <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:p-5">
+              <p className="text-base font-semibold text-slate-900">Deshabilitar asignación a grupo (HLg)</p>
+              <p className="mt-1 text-sm text-slate-600">
+                La asignación quedará inactiva y cerrada en la fecha de corte (vigencia inclusiva).
+              </p>
+              <div className="mt-4 space-y-3">
+                <LabeledTextField
+                  label="Fecha de corte"
+                  value={deshabilitarHlgForm.fecha_corte}
+                  onValueChange={(v) => setDeshabilitarHlgForm((prev) => ({ ...prev, fecha_corte: v }))}
+                  placeholder="AAAA-MM-DD"
+                />
+                <LabeledTextField
+                  label="Motivo (opcional, auditoría)"
+                  value={deshabilitarHlgForm.motivo}
+                  onValueChange={(v) =>
+                    setDeshabilitarHlgForm((prev) => ({ ...prev, motivo: String(v || "").slice(0, 100) }))
+                  }
+                  placeholder="Hasta 100 caracteres"
+                />
+                <label className="flex items-start gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={deshabilitarHlgForm.confirmar}
+                    onChange={(e) =>
+                      setDeshabilitarHlgForm((prev) => ({ ...prev, confirmar: e.target.checked }))
+                    }
+                    className="mt-1"
+                  />
+                  Confirmo deshabilitar esta asignación HLg.
+                </label>
+              </div>
+              {deshabilitarHlgError ? (
+                <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{deshabilitarHlgError}</p>
+              ) : null}
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={cerrarModalDeshabilitarHlg}
+                  disabled={deshabilitando}
+                  className="h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 disabled:opacity-60"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmarDeshabilitacionHlg}
+                  disabled={deshabilitando}
+                  className="h-10 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  {deshabilitando ? "Deshabilitando..." : "Deshabilitar asignación"}
                 </button>
               </div>
             </div>

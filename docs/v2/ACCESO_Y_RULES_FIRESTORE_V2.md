@@ -53,8 +53,15 @@ Leyenda: **S** servidor (Admin SDK / función privilegiada); **C** cliente auten
 
 ## 4. Paso A — RRHH
 
-- **Creación** de `personas` + `usuarios_cuenta`: preferentemente **Callable o job** con rol RRHH verificado (custom claims `role_ids` / grupo admin), **no** regla que permita a cualquier usuario autenticado crear `personas` ajenas.
+- **Creación** de `personas` + `usuarios_cuenta`: preferentemente **Callable o job** con rol RRHH verificado (`request.auth.token.roles_hlc_vigentes` contiene `CFG_RRHH`, o legacy admin; ver [`RFC_ACCESO_ROLES_HLC_MENUS_V2.md`](./RFC_ACCESO_ROLES_HLC_MENUS_V2.md) y `firebase-v2/firestore.rules` → `portalRrhhOrAdmin()`), **no** regla que permita a cualquier usuario autenticado crear `personas` ajenas.
 - Documento cuenta: `username: null`, `auth_uid: null`, `estado_acceso` = id cfg *pendiente registro*.
+
+### 4.1 Configurador de artículos (`cfg_articulos` / `versiones`)
+
+- **Grilla y listado de versiones (web):** `listarColeccion("cfg_articulos")` y `listarVersionesCfgArticulo` — solo **Callable** con `assertRrhh` (token `CFG_RRHH` ∈ `roles_hlc_vigentes` o legacy `portal_role`).
+- **Editor «Gestionar» versión:** lectura/escritura **directa** en cliente sobre `cfg_articulos/{art_*}` y subcolección `versiones/{ver_*}` — exige **`portalRrhhOrAdmin()`** en [`firebase-v2/firestore.rules`](../../firebase-v2/firestore.rules).
+- **Operación:** tras cambiar claims o rules, **`firebase deploy --only firestore:rules`** y **re-login**; si la grilla funciona pero falla Gestionar, casi siempre son rules desactualizadas o JWT sin `roles_hlc_vigentes`.
+- **Handoff:** [`HANDOFF_SESION_2026-05-19_ROLES_HLC_CLAIMS.md`](./HANDOFF_SESION_2026-05-19_ROLES_HLC_CLAIMS.md) §3.
 
 ---
 
@@ -126,3 +133,5 @@ Ajustar según si los catálogos sensibles (p. ej. sexo/género) deben ocultarse
 | 2026-04-22 | Nota **§1.1 Login:** validación PIN 6 y rate limit en Callables paso B. |
 | 2026-04-30 | §5: explicitado bloqueo por actor en `personas` para campos sensibles (`dni`, `nombre`, `apellido`, `activo`, `motivo_baja_id`), validado en backend (no solo UI). |
 | 2026-04-30 | §5: agregado control por `accion_habilitada` para edición de `personas` en rol usuario y canal de notificación RRHH para cambios post-onboarding en foto/formación/DDJJ/consentimientos. |
+| 2026-05-19 | §4: verificación RRHH en Rules/Callables alineada a **`roles_hlc_vigentes`** (`CFG_RRHH`). |
+| 2026-05-19 | §4.1: configurador artículos — grilla por Callable vs `getDoc` versión (Rules). |

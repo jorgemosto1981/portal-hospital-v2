@@ -80,12 +80,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    /** RRHH / admin (claims syncSessionClaims / dev:set-rrhh-claims). */
+    /** RRHH / admin — roles HLC en token (+ legacy dev). */
     function portalRrhhOrAdmin() {
       return signedIn() && (
-        request.auth.token.portal_role == 'rrhh' ||
-        request.auth.token.portal_role == 'admin' ||
-        request.auth.token.perfil_rol_id == 'CFG_RRHH'
+        (request.auth.token.roles_hlc_vigentes is list
+          && request.auth.token.roles_hlc_vigentes.hasAny(['CFG_RRHH']))
+        || request.auth.token.portal_role == 'rrhh'
+        || request.auth.token.portal_role == 'admin'
+        || request.auth.token.perfil_rol_id == 'CFG_RRHH'
       );
     }
 

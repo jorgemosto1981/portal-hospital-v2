@@ -13,7 +13,7 @@ const { isHlcVigenteEnFecha } = require("./hlcVigenciaFecha");
 
 const CFG_USUARIO = "CFG_USUARIO";
 
-/** Roles de login que heredan menú y flujos del agente (usuario + extras). */
+/** Roles de login legacy (solo compat lectura; no escribir en claims nuevos). */
 const PORTAL_ROLES_FLUJO_AGENTE = [
   "usuario",
   "rrhh",
@@ -22,6 +22,36 @@ const PORTAL_ROLES_FLUJO_AGENTE = [
   "jefe",
   "visualizador",
 ];
+
+/**
+ * @param {unknown} token
+ * @returns {string[]}
+ */
+function rolesHlcFromAuthToken(token) {
+  if (!token || typeof token !== "object") return [];
+  const raw = token.roles_hlc_vigentes;
+  if (Array.isArray(raw)) {
+    return [...new Set(raw.map((x) => String(x || "").trim()).filter(Boolean))];
+  }
+  const legacy = typeof token.perfil_rol_id === "string" ? token.perfil_rol_id.trim() : "";
+  return legacy ? [legacy] : [];
+}
+
+/**
+ * ¿Sesión válida para flujos agente (listar/crear solicitudes)?
+ * Canónico: cargo activo + al menos un rol HLC en token.
+ * @param {unknown} token
+ */
+function isPortalRoleUsuario(token) {
+  if (!token || typeof token !== "object") return false;
+  if (token.cargo_activo === true) {
+    const roles = rolesHlcFromAuthToken(token);
+    if (roles.length > 0) return true;
+  }
+  const role = typeof token.portal_role === "string" ? token.portal_role.trim().toLowerCase() : "";
+  if (PORTAL_ROLES_FLUJO_AGENTE.includes(role)) return true;
+  return rolesHlcFromAuthToken(token).includes("CFG_RRHH");
+}
 const CODIGO_CIRCUITO_ROL = "CIRCUITO_ROL";
 const CODIGO_ELEG_SIN_HLC = "ELEG_SIN_HLC";
 const CODIGO_ELEG_ESCALAFON = "ELEG_ESCALAFON";
@@ -50,18 +80,6 @@ const MENSAJES = {
   [CODIGO_SALDO_EVENTO]: "Este artículo permite un solo día por solicitud.",
   [CODIGO_FECHA_RANGO]: "Revisá las fechas del pedido.",
 };
-
-/**
- * ¿Puede actuar como agente en solicitudes? (menú Rol usuario para todos los roles con extras.)
- * @param {unknown} token
- */
-function isPortalRoleUsuario(token) {
-  if (!token || typeof token !== "object") return false;
-  const role = typeof token.portal_role === "string" ? token.portal_role.trim().toLowerCase() : "";
-  if (PORTAL_ROLES_FLUJO_AGENTE.includes(role)) return true;
-  const perfil = typeof token.perfil_rol_id === "string" ? token.perfil_rol_id.trim().toUpperCase() : "";
-  return perfil === "CFG_RRHH";
-}
 
 /**
  * @param {unknown} row
@@ -137,7 +155,8 @@ function evaluarFiltrosElegibilidadHlc(filtros, hlc, personaId, antiguedadMeses)
  * @param {Record<string, unknown>} hlc
  */
 function evaluarCircuitoIngreso(versionData, authToken, hlc, opts = {}) {
-  if (!opts.skipPortalRoleCheck && !isPortalRoleUsuario(authToken)) return CODIGO_CIRCUITO_ROL;
+  void authToken;
+  void opts;
 
   const bloque = versionData?.bloque_workflow_sla_cobertura;
   const circuito = bloque && typeof bloque === "object" ? bloque.circuito_ingreso_ids : [];
@@ -238,4 +257,4 @@ function mensajeParaCodigo(codigo) {
   return MENSAJES[codigo] || "No cumple requisitos del artículo.";
 }
 
-module.exports = { CFG_USUARIO, PORTAL_ROLES_FLUJO_AGENTE, CODIGO_CIRCUITO_ROL, CODIGO_ELEG_SIN_HLC, CODIGO_ELEG_ESCALAFON, CODIGO_ELEG_AGRUPAMIENTO, CODIGO_ELEG_CARGO, CODIGO_ELEG_VINCULO, CODIGO_ELEG_ANTIGUEDAD, CODIGO_ELEG_PERSONA, CODIGO_SALDO_CICLO, CODIGO_SALDO_MES, CODIGO_SALDO_EVENTO, CODIGO_FECHA_RANGO, isPortalRoleUsuario, mapHlcRow, filterHlcVigentesEnFecha, evaluarFiltrosElegibilidadHlc, evaluarCircuitoIngreso, computeAntiguedadMeses, resolverElegibilidadSolicitud, mensajeParaCodigo };
+module.exports = { CFG_USUARIO, rolesHlcFromAuthToken, isPortalRoleUsuario, CODIGO_CIRCUITO_ROL, CODIGO_ELEG_SIN_HLC, CODIGO_ELEG_ESCALAFON, CODIGO_ELEG_AGRUPAMIENTO, CODIGO_ELEG_CARGO, CODIGO_ELEG_VINCULO, CODIGO_ELEG_ANTIGUEDAD, CODIGO_ELEG_PERSONA, CODIGO_SALDO_CICLO, CODIGO_SALDO_MES, CODIGO_SALDO_EVENTO, CODIGO_FECHA_RANGO, mapHlcRow, filterHlcVigentesEnFecha, evaluarFiltrosElegibilidadHlc, evaluarCircuitoIngreso, computeAntiguedadMeses, resolverElegibilidadSolicitud, mensajeParaCodigo };

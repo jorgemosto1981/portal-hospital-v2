@@ -5,7 +5,8 @@
 **Firebase:** `portal-hospital-v2` · Functions región `southamerica-east1`  
 **Piloto:** `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ` (DNI **28914247**)
 
-> **Retomar mañana desde aquí.** Este documento es el ancla única de continuidad para ticketera 64-A.
+> **Retomar mañana desde aquí.** Este documento es el ancla única de continuidad para ticketera 64-A.  
+> **Continuidad 2026-05-19:** claims `roles_hlc_vigentes` + deploy Functions — [`HANDOFF_SESION_2026-05-19_ROLES_HLC_CLAIMS.md`](./HANDOFF_SESION_2026-05-19_ROLES_HLC_CLAIMS.md).
 
 **Relacionados:** [`RFC_TICKETERA_SLICE_64A_MVP_V2.md`](./RFC_TICKETERA_SLICE_64A_MVP_V2.md) · [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md`](./TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md) · [`ARTICULOS_BASICOS_OPERATIVOS_V2.md`](./ARTICULOS_BASICOS_OPERATIVOS_V2.md) · [`HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md)
 
@@ -17,7 +18,7 @@
 |------|--------|
 | **Slice MVP 64-A — flujo agente** | **CERRADO en piloto** (alta → trigger → revisión jefe → descuento saldo) |
 | **Solicitud de referencia OK** | `sol_01KRYPRDBP92V5MH77EWZ27RDM` |
-| **Matriz ticketera T1–T8** | T1 + T6 validados en piloto; resto **pendiente** |
+| **Matriz ticketera T1–T8** | **Cerrada** — ver [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md`](./TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md) (2026-05-19) |
 | **64-B en misma pantalla** | No probado end-to-end |
 | **LAO solicitud** | Regresión R1 no re-ejecutada en esta sesión |
 | **Hosting UI** | Cambios en `web/` — verificar deploy si se prueba URL publicada |

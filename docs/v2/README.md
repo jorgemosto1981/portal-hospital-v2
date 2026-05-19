@@ -18,6 +18,8 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`REVISION_ALINEACION_PLAN_V2.md`](./REVISION_ALINEACION_PLAN_V2.md) | **Conciliación** `PLAN_DESARROLLO_VERSION2.md` ↔ `docs/v2` (nombres de colecciones, laborales, auditoría) |
 | [`UNIFICACION_OTRA_PC_Y_TICKET.md`](./UNIFICACION_OTRA_PC_Y_TICKET.md) | Fusión otra PC + Ticket — pasos git, pautas, compatibilidad, checklist |
 | [`CUESTIONES_ROLES_MENUS_ARQUITECTURA_V2.md`](./CUESTIONES_ROLES_MENUS_ARQUITECTURA_V2.md) | Roles (`cfg_rol`), menús, módulo “Jefe”, master, UX/mobile — orientación y pendientes |
+| [`RFC_ACCESO_ROLES_HLC_MENUS_V2.md`](./RFC_ACCESO_ROLES_HLC_MENUS_V2.md) | **Implementado:** `roles_hlc_vigentes`, menú RRHH, circuito artículos, flujo claims post-alta/laboral |
+| [`HANDOFF_SESION_2026-05-19_ROLES_HLC_CLAIMS.md`](./HANDOFF_SESION_2026-05-19_ROLES_HLC_CLAIMS.md) | Sesión 2026-05-19: fix T2/portal_role, deploy Functions, retomar matriz 64-A |
 | [`CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md`](./CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md) | Ticket: solicitud iniciada por **jefe** para **subordinado** (configurable por artículo, auditoría) |
 | [`DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md`](./DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md) | Criterios V2 de antigüedad + LAO (Art. 40 y Art. 46), no retroactividad, proporcional y base para Ticket/Solicitudes |
 | [`PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md`](./PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md) | **Plan maestro LAO:** bolsas por año, check-in (&lt; A), acreditación antigüedad (≥ A), una solicitud por año, FIFO de año, `cfg_*` acordados |
@@ -41,7 +43,8 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md`](./HANDOFF_SESION_2026-05-18_PAUSA_ALTA_CHECKIN.md) | Epic **check-in + alta RRHH** cerrado (oleadas 1–3); siguiente: ticketera básica |
 | [`HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md) | **Registro + plan:** catálogo LAO/64-A/64-B/68-B, piloto BD, cómo seguir |
 | [`RFC_TICKETERA_SLICE_64A_MVP_V2.md`](./RFC_TICKETERA_SLICE_64A_MVP_V2.md) | **Oleada 0:** contrato MVP solicitud 64-A (elegibilidad HLC, trigger Patrón B, fuera de alcance MDC) |
-| [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md`](./TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md) | Matriz T1–T8 + regresión slice 64-A |
+| [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md`](./TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md) | Matriz T1–T8 + regresión slice 64-A (**cerrada** piloto 2026-05-19) |
+| [`PLAN_TICKETERA_SLICE_64B_V2.md`](./PLAN_TICKETERA_SLICE_64B_V2.md) | **Plan** slice 64-B (Patrón B sin goce) — siguiente oleada ticketera |
 | [`CHECKIN_SALDOS_MATRIZ_PRUEBAS.md`](./CHECKIN_SALDOS_MATRIZ_PRUEBAS.md) | Matriz manual check-in + guía alta + § H artículos básicos |
 | [`GUIA_OPERATIVA_CHECKIN_SALDOS_RRHH.md`](./GUIA_OPERATIVA_CHECKIN_SALDOS_RRHH.md) | Guía operador RRHH check-in (copy SSoT en `checkinSaldosAyudaRrhh.js`) |
 | [`FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md`](./FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md) | Ciclo propuesto alta RRHH: cáscara → `/portal/laboral` → `/portal/rrhh/checkin-saldos` |

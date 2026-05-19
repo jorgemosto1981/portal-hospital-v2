@@ -10,6 +10,7 @@ const {
 const {
   guardarRegistroLaboralTemporal,
   rrhhDeshabilitarHlc,
+  rrhhDeshabilitarHlg,
   listarReadModelLaboralOperativoTemporal,
 } = require("./catalogosLaborales");
 const {
@@ -26,6 +27,7 @@ module.exports = {
   listarColeccionPublicaTemporal,
   guardarRegistroLaboralTemporal,
   rrhhDeshabilitarHlc,
+  rrhhDeshabilitarHlg,
   listarReadModelLaboralOperativoTemporal,
   guardarRegistroPersonalTemporal,
   rrhhMarcarEventoDatosPersonalesVisto,

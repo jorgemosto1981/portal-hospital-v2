@@ -1,6 +1,13 @@
-import { isoToDateInput, normalizeCargaRowsFromRecord } from "./utils.js";
+import {
+  buildPlanillaCargaSemanal,
+  cargaSemanalTieneHorasPositivas,
+  formatDateDdMmAaaa,
+  hlcFechaDesdeYmd,
+  hlcFechaHastaYmd,
+  isoToDateInput,
+} from "./utils.js";
 
-export function buildFormDataFromRecord({ record, idxHld, prevFormData }) {
+export function buildFormDataFromRecord({ record, idxHld, prevFormData, opcionesDiaSemana }) {
   if (!record || typeof record !== "object") return null;
   const datoRef = idxHld.get(String(record.dato_laboral_id || ""));
   const nextFormData = {
@@ -65,7 +72,7 @@ export function buildFormDataFromRecord({ record, idxHld, prevFormData }) {
   };
   return {
     formData: nextFormData,
-    cargaPorDiaRows: normalizeCargaRowsFromRecord(record.carga_por_dia_semana),
+    cargaPorDiaRows: buildPlanillaCargaSemanal(opcionesDiaSemana, record.carga_por_dia_semana),
   };
 }
 
@@ -139,39 +146,31 @@ export function validateLaboralForm({ tipoAlta, formData, cargaPorDiaRows, idxHl
   if (tipoAlta === "historial_laboral_grupos") {
     const cargoRef = idxHlc && formData.cargo_id ? idxHlc.get(String(formData.cargo_id || "")) : null;
     if (cargoRef) {
-      const cargoDesde = String(cargoRef.fecha_desde || "").trim();
-      const cargoHasta = String(cargoRef.fecha_hasta || "").trim();
+      const cargoDesde = hlcFechaDesdeYmd(cargoRef);
+      const cargoHasta = hlcFechaHastaYmd(cargoRef);
       const fechaDesde = String(formData.fecha_desde || "").trim();
       const fechaHasta = String(formData.fecha_hasta || "").trim();
       if (cargoDesde && fechaDesde && fechaDesde < cargoDesde) {
-        return "La fecha de inicio del detalle/asignacion no puede ser anterior al inicio del cargo.";
+        return `La fecha de inicio no puede ser anterior al inicio del cargo (${formatDateDdMmAaaa(cargoDesde)}).`;
       }
       if (cargoHasta && !fechaHasta) {
-        return "El cargo seleccionado esta cerrado; debés informar fecha de fin en el detalle/asignación.";
+        return `El cargo cierra el ${formatDateDdMmAaaa(cargoHasta)}; debés informar fecha de fin en la asignación.`;
       }
       if (cargoHasta && fechaHasta && fechaHasta > cargoHasta) {
-        return "La fecha de fin del detalle/asignación no puede superar la fecha de fin del cargo.";
+        return `La fecha de fin no puede superar la del cargo (${formatDateDdMmAaaa(cargoHasta)}).`;
       }
     }
-    const rowsValidas = (cargaPorDiaRows || [])
-      .map((row) => ({
-        dia_semana_id: String(row.dia_semana_id || "").trim(),
-        horas: String(row.horas || "").trim(),
-      }))
-      .filter((row) => row.dia_semana_id || row.horas);
-    if (rowsValidas.length === 0) {
-      return "Completá al menos una fila de carga_por_dia_semana (día + horas).";
+    const rows = cargaPorDiaRows || [];
+    for (const row of rows) {
+      const horasStr = String(row.horas ?? "").trim();
+      if (!horasStr) continue;
+      const n = Number(horasStr);
+      if (!Number.isFinite(n) || n < 0 || n > 24) {
+        return "Cada día debe tener horas entre 0 y 24.";
+      }
     }
-    const seen = new Set();
-    for (const row of rowsValidas) {
-      if (!row.dia_semana_id) return "Cada fila de carga_por_dia_semana requiere dia_semana_id.";
-      if (seen.has(row.dia_semana_id)) {
-        return `dia_semana_id duplicado en carga_por_dia_semana: ${row.dia_semana_id}.`;
-      }
-      seen.add(row.dia_semana_id);
-      if (!Number.isFinite(Number(row.horas)) || Number(row.horas) < 0 || Number(row.horas) > 24) {
-        return `Horas inválidas para ${row.dia_semana_id}. Debe estar entre 0 y 24.`;
-      }
+    if (!cargaSemanalTieneHorasPositivas(rows)) {
+      return 'Un grupo debe tener al menos un día con carga horaria asignada. Si el grupo ya no opera, utilice la opción "Deshabilitar asignación".';
     }
   }
   return "";

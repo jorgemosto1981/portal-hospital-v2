@@ -2,7 +2,7 @@
 
 **Oleada:** 0 — cierre documental (sin implementación en este entregable).  
 **Fecha:** 2026-05-18  
-**Estado:** Oleada 1 backend **en implementación** (2026-05-18). Aprobación operativa §13 pendiente RRHH.  
+**Estado:** Oleada 1 backend **implementada** (2026-05-18); **D4** actualizado 2026-05-19 (roles HLC). Aprobación operativa §13 pendiente RRHH.  
 **Rama de referencia:** `feature/ticketera-puente-campos-config`  
 **Firebase:** `portal-hospital-v2`
 
@@ -98,11 +98,13 @@ Resuelven las tres preguntas abiertas del handoff 2026-05-14 § «Pendiente de d
 
 **Motivo:** 64-A no filtra por grupo en versión publicada; evita depender de HLG/jerarquía antes de tener bandeja jefe. Cuando un artículo exija grupo vía HLG, ampliar en RFC de slice 2 con callable compartido.
 
-### D4 — Circuito de ingreso (acordado con RRHH)
+### D4 — Circuito de ingreso (acordado con RRHH, actualizado 2026-05-19)
 
-**Decisión:** el actor debe tener un **`portal_role`** que herede el menú agente (`usuario`, `rrhh`, `medico`, …). La HLC vigente debe tener **`rol_id`** ∈ `circuito_ingreso_ids` de la versión publicada (64-A piloto: `CFG_USUARIO`, `CFG_RRHH`, `CFG_MEDICO` — configuración en Firestore, sin lógica implícita en código).
+**Decisión:** la **HLC vigente** evaluada debe tener **`rol_id`** ∈ `circuito_ingreso_ids` de la versión publicada (64-A piloto: `CFG_USUARIO`, `CFG_RRHH`, `CFG_MEDICO`, `CFG_VISUALIZADOR` — configuración en Firestore).
 
-En el **trigger** (sin token Auth) se omite la verificación de `portal_role` y se valida solo `rol_id` ∈ circuito (el alta ya pasó Rules).
+**Sesión agente (callable):** exige **`cargo_activo`** y **`roles_hlc_vigentes`** no vacío en el JWT (ver [`RFC_ACCESO_ROLES_HLC_MENUS_V2.md`](./RFC_ACCESO_ROLES_HLC_MENUS_V2.md)). **No** se usa `portal_role` para circuito.
+
+En el **trigger** (sin token Auth) se valida solo `rol_id` ∈ circuito + reglas de saldo/elegibilidad.
 
 ### D3 — Mensajes de rechazo
 
@@ -117,13 +119,13 @@ En el **trigger** (sin token Auth) se omite la verificación de `portal_role` y 
 | `ELEG_VINCULO` | Falla `tipo_vinculo_ids` | Tu tipo de vínculo no está habilitado. |
 | `ELEG_ANTIGUEDAD` | `antiguedad_minima_meses` | No alcanzás la antigüedad mínima requerida. |
 | `ELEG_PERSONA` | `persona_ids` whitelist | Este artículo no está disponible para tu legajo. |
-| `CIRCUITO_ROL` | Rol token ∉ `circuito_ingreso_ids` | Tu perfil no puede iniciar solicitudes de este artículo. |
+| `CIRCUITO_ROL` | `hlc.rol_id` ∉ `circuito_ingreso_ids` | Tu perfil no puede iniciar solicitudes de este artículo. |
 | `SALDO_CICLO` | Sin bolsa o `disponible` insuficiente | No hay saldo disponible en el ciclo. |
 | `SALDO_MES` | Supera `tope_frecuencia_mensual` | Ya usaste la solicitud permitida este mes. |
 | `SALDO_EVENTO` | Días pedidos ≠ tope (64-A: 1) | Este artículo permite un solo día por solicitud. |
 | `FECHA_RANGO` | `fecha_hasta` inválida o año distinto | Revisá las fechas del pedido. |
 
-El listado en UI de artículos **no muestra** artículos que ya fallan elegibilidad o circuito (fail-fast en `listarArticulosIngresoAgente`). El alta valida de nuevo en servidor (nunca confiar solo en cliente).
+El listado en UI de artículos **no muestra** artículos que ya fallan elegibilidad o circuito (fail-fast en `listarArticulosIngresoAgente`). La **entrada de menú** y accesos directos (Inicio) usan el mismo callable a fecha Argentina (`articuloIngresoId` en `MODULOS_PORTAL`); la ruta de alta redirige a Inicio si el artículo no está en el listado. El alta valida de nuevo en servidor (nunca confiar solo en cliente).
 
 ---
 

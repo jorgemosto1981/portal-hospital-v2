@@ -2,7 +2,7 @@
 // AUTO-GENERADO por scripts/sync-shared-to-functions.mjs
 // NO EDITAR MANUALMENTE — editar shared/utils/ y correr el script.
 
-const { civilDateInZonaToUtcAnchorMs } = require("./fechaInstitucionalBa");
+const { civilDateInZonaToUtcAnchorMs, ymdEnZonaDesdeInstante } = require("./fechaInstitucionalBa");
 
 /**
  * Vigencia de HLC en una fecha civil (BA). Complementa isHlcOperativo (solo “ahora”).
@@ -35,8 +35,8 @@ function hlcFechaToAnchor(raw) {
   if (raw == null) return null;
   if (typeof raw === "object" && typeof raw.toDate === "function") {
     try {
-      const d = raw.toDate();
-      return civilDateInZonaToUtcAnchorMs(d.getFullYear(), d.getMonth() + 1, d.getDate());
+      const { year, month, day } = ymdEnZonaDesdeInstante(raw.toDate().getTime());
+      return civilDateInZonaToUtcAnchorMs(year, month, day);
     } catch {
       return null;
     }

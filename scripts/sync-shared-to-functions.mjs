@@ -20,6 +20,7 @@ const HEADER = `"use strict";
 
 const FILES_TO_SYNC = [
   "fechaInstitucionalBa.js",
+  "fechaLaboralYmd.js",
   "antiguedadCalculator.js",
   "laoVersionResolver.js",
   "laoSaldosBolsa.js",

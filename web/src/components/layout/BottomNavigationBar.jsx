@@ -2,6 +2,10 @@ import { GRUPOS_MENU_RAIZ, MODULOS_PORTAL } from "../../constants/modulosEstado.
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
 import { MANAGEMENT_PORTAL_ROLES } from "../../features/routing/portalRole.js";
+import {
+  filtrarModulosPorArticulosIngreso,
+  useArticulosIngresoMenu,
+} from "../../features/solicitudes/ArticulosIngresoProvider.jsx";
 
 const ICONS_BY_ID = {
   inicio: () => (
@@ -161,6 +165,7 @@ const tabs = MODULOS_PORTAL.map((m) => ({
   id: m.id,
   label: m.label,
   grupo: m.grupo,
+  articuloIngresoId: m.articuloIngresoId,
   icon: ICONS_BY_ID[m.id],
 }));
 
@@ -171,9 +176,15 @@ const tabs = MODULOS_PORTAL.map((m) => ({
 export default function BottomNavigationBar({ activeTab, onTabChange, className = "" }) {
   const { user } = useAuthSession();
   const { hasPortalRoles } = useAuthClaims(user);
+  const { puedeSolicitarArticulo } = useArticulosIngresoMenu();
   const canManagement = hasPortalRoles(MANAGEMENT_PORTAL_ROLES);
   const requiresManagementTab = (id) => id === "rrhh" || id === "articulos-cfg" || id === "checkin-saldos";
-  const visibleTabs = tabs.filter((tab) => (requiresManagementTab(tab.id) ? canManagement : true));
+  const modulosVisibles = filtrarModulosPorArticulosIngreso(MODULOS_PORTAL, puedeSolicitarArticulo);
+  const visibleIds = new Set(modulosVisibles.map((m) => m.id));
+  const visibleTabs = tabs.filter((tab) => {
+    if (!visibleIds.has(tab.id)) return false;
+    return requiresManagementTab(tab.id) ? canManagement : true;
+  });
 
   return (
     <nav

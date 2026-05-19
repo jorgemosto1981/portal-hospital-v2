@@ -21,6 +21,7 @@ export default function Solicitud64AAlta() {
     setArticuloSel,
     cargando,
     error,
+    motivoVacio,
     enviando,
     recargar,
     enviar,
@@ -63,7 +64,8 @@ export default function Solicitud64AAlta() {
 
         {!cargando && articulos.length === 0 && !error ? (
           <p className="text-sm text-slate-600">
-            No hay artículos disponibles para esa fecha (revisá escalafón, rol en cargo o saldo en check-in).
+            {motivoVacio ||
+              "No hay artículos disponibles para esa fecha (revisá cargo vigente, rol en cargo o requisitos del artículo)."}
           </p>
         ) : null}
 

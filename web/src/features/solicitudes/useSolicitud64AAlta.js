@@ -19,24 +19,33 @@ export function useSolicitud64AAlta({ personaId }) {
   const [articuloSel, setArticuloSel] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
+  const [motivoVacio, setMotivoVacio] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   const recargar = useCallback(async () => {
     if (!/^per_/i.test(personaId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaDesde)) {
       setArticulos([]);
       setArticuloSel(null);
+      setMotivoVacio("");
       return;
     }
     setCargando(true);
     setError("");
+    setMotivoVacio("");
     try {
       const res = await callListarArticulosIngresoAgente({ fecha_desde: fechaDesde });
       const list = res?.data?.articulos || [];
       setArticulos(list);
       setArticuloSel(list.length === 1 ? list[0] : null);
+      if (list.length === 0) {
+        const ev = res?.data?.elegibilidad_vacia;
+        const msg = Array.isArray(ev?.mensajes) ? String(ev.mensajes[0] || "").trim() : "";
+        setMotivoVacio(msg);
+      }
     } catch (e) {
       setArticulos([]);
       setArticuloSel(null);
+      setMotivoVacio("");
       setError(e?.message || "No se pudieron cargar los artículos disponibles.");
     } finally {
       setCargando(false);
@@ -77,6 +86,7 @@ export function useSolicitud64AAlta({ personaId }) {
     setArticuloSel,
     cargando,
     error,
+    motivoVacio,
     enviando,
     recargar,
     enviar,

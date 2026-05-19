@@ -26,17 +26,14 @@ function validEmail(s) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
 }
 
+const { tokenHasRrhhLaborAccess } = require("./laborProfile");
+
 /**
- * Misma política que assertRrhh: `portal_role` rrhh/admin o `perfil_rol_id` CFG_RRHH (HLc).
+ * RRHH: `CFG_RRHH` ∈ `roles_hlc_vigentes` o legacy dev (`portal_role`).
  * @param {unknown} token - `request.auth.token`
  */
 function tokenHasRrhhAccess(token) {
-  if (!token || typeof token !== "object") return false;
-  const roleRaw = token.portal_role;
-  const role = typeof roleRaw === "string" ? roleRaw.trim().toLowerCase() : "";
-  if (role === "rrhh" || role === "admin") return true;
-  const perfil = typeof token.perfil_rol_id === "string" ? token.perfil_rol_id.trim().toUpperCase() : "";
-  return perfil === "CFG_RRHH";
+  return tokenHasRrhhLaborAccess(token);
 }
 
 function assertRrhh(request) {
@@ -47,6 +44,29 @@ function assertRrhh(request) {
     return;
   }
   throw new HttpsError("permission-denied", "Solo personal autorizado (RRHH).");
+}
+
+/**
+ * Escritura laboral: RRHH cualquier persona_id; agente solo el propio (BOLA / IDOR).
+ * @param {import("firebase-functions/v2/https").CallableRequest} request
+ * @param {string | null | undefined} payloadPersonaId
+ */
+function assertEscrituraLaboral(request, payloadPersonaId) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Se requiere sesión.");
+  }
+  if (tokenHasRrhhAccess(request.auth.token)) {
+    return;
+  }
+  const actor =
+    request.auth.token && typeof request.auth.token.persona_id === "string"
+      ? request.auth.token.persona_id.trim()
+      : "";
+  const target = payloadPersonaId == null ? "" : String(payloadPersonaId).trim();
+  if (actor && target && actor === target) {
+    return;
+  }
+  throw new HttpsError("permission-denied", "No tenés permisos para modificar este perfil laboral.");
 }
 
 function assertAgenteConPersonaId(request) {
@@ -205,6 +225,7 @@ module.exports = {
   validEmail,
   tokenHasRrhhAccess,
   assertRrhh,
+  assertEscrituraLaboral,
   assertAgenteConPersonaId,
   assertColeccionOnboardingLectura,
   assertColeccionRrhh,

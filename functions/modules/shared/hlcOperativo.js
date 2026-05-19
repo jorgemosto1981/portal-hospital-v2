@@ -2,17 +2,26 @@
 // AUTO-GENERADO por scripts/sync-shared-to-functions.mjs
 // NO EDITAR MANUALMENTE — editar shared/utils/ y correr el script.
 
+const {
+  hlcFechaDesdeYmd,
+  hlcFechaHastaYmd,
+  obtenerYmdHoyInstitucional,
+  vigenteEnFechaInclusivaYmd,
+} = require("./fechaLaboralYmd");
 
 /**
- * HLc operativo vigente (sin baja ni fecha fin).
+ * HLc operativo vigente a hoy (BA): vigencia inclusiva + activo + sin baja administrativa.
+ */
+
+/**
  * @param {unknown} row
  */
 function isHlcOperativo(row) {
   if (!row || typeof row !== "object") return false;
   if (row.activo === false) return false;
   if (String(row.motivo_deshabilitacion_id || "").trim()) return false;
-  const hasta = String(row.fecha_hasta || row.fecha_fin || "").trim();
-  return !hasta;
+  const ref = obtenerYmdHoyInstitucional();
+  return vigenteEnFechaInclusivaYmd(hlcFechaDesdeYmd(row), hlcFechaHastaYmd(row) || null, ref);
 }
 
 module.exports = { isHlcOperativo };

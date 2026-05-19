@@ -46,8 +46,9 @@ export function buildHldPayload({ formData, modoEdicion, registroEditId }) {
     fecha_inicio: toNull(formData.fecha_desde),
     fecha_fin: toNull(formData.fecha_hasta),
   };
-  if (modoEdicion && registroEditId && formData.dato_laboral_id) {
-    payload.id = formData.dato_laboral_id;
+  const hldId = String(formData.dato_laboral_id || "").trim();
+  if (hldId) {
+    payload.id = hldId;
   }
   return payload;
 }
@@ -59,11 +60,13 @@ export function buildHlgPayload({ formData, hldId, cargaPorDiaRows, modoEdicion,
     grupo_de_trabajo_id: formData.grupo_de_trabajo_id,
     nivel_jerarquico: toNull(formData.nivel_jerarquico),
     carga_por_dia_semana: (cargaPorDiaRows || [])
-      .map((row) => ({
-        dia_semana_id: String(row.dia_semana_id || "").trim() || null,
-        horas: row.horas === "" ? null : Number(row.horas),
-      }))
-      .filter((row) => row.dia_semana_id && Number.isFinite(row.horas)),
+      .map((row) => {
+        const diaId = String(row.dia_semana_id || "").trim();
+        const horasRaw = row.horas === "" || row.horas == null ? 0 : Number(row.horas);
+        const horas = Number.isFinite(horasRaw) ? horasRaw : 0;
+        return { dia_semana_id: diaId || null, horas };
+      })
+      .filter((row) => row.dia_semana_id),
     fecha_inicio: toNull(formData.fecha_desde),
     fecha_fin: toNull(formData.fecha_hasta),
   };

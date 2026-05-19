@@ -21,10 +21,11 @@ const listarArticulosIngresoAgente = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Se requiere sesión.");
   }
-  if (!isPortalRoleUsuario(request.auth.token)) {
+  const token = request.auth.token || {};
+  if (!isPortalRoleUsuario(token)) {
     throw new HttpsError(
       "permission-denied",
-      "Tu perfil de acceso al portal no puede listar artículos de ingreso como agente.",
+      "No tenés un cargo laboral vigente completo (HLc→HLd→HLg) para operar solicitudes. Pedí a RRHH la carga o sincronizá sesión tras actualizar datos laborales.",
     );
   }
 
@@ -48,6 +49,8 @@ const listarArticulosIngresoAgente = onCall(async (request) => {
   const articulosSnap = await db.collection("cfg_articulos").get();
   /** @type {Array<object>} */
   const out = [];
+  /** @type {{ codigos: string[], mensajes: string[] } | null} */
+  let elegibilidadVacia = null;
 
   for (const artDoc of articulosSnap.docs) {
     const articuloId = artDoc.id;
@@ -74,7 +77,15 @@ const listarArticulosIngresoAgente = onCall(async (request) => {
       diasExternos: externos,
       authToken: request.auth.token,
     });
-    if (!eleg.ok) continue;
+    if (!eleg.ok) {
+      if (!elegibilidadVacia && Array.isArray(eleg.codigos) && eleg.codigos.length) {
+        elegibilidadVacia = {
+          codigos: eleg.codigos,
+          mensajes: Array.isArray(eleg.mensajes) ? eleg.mensajes : [],
+        };
+      }
+      continue;
+    }
 
     const core = artDoc.data() || {};
     out.push({
@@ -86,7 +97,12 @@ const listarArticulosIngresoAgente = onCall(async (request) => {
     });
   }
 
-  return { articulos: out, fecha_desde: fechaDesde, persona_id: personaId };
+  return {
+    articulos: out,
+    fecha_desde: fechaDesde,
+    persona_id: personaId,
+    ...(elegibilidadVacia && out.length === 0 ? { elegibilidad_vacia: elegibilidadVacia } : {}),
+  };
 });
 
 module.exports = { listarArticulosIngresoAgente };

@@ -7,8 +7,8 @@ import { isHlcVigenteEnFecha } from "./hlcVigenciaFecha.js";
 
 export const CFG_USUARIO = "CFG_USUARIO";
 
-/** Roles de login que heredan menú y flujos del agente (usuario + extras). */
-export const PORTAL_ROLES_FLUJO_AGENTE = [
+/** Roles de login legacy (solo compat lectura; no escribir en claims nuevos). */
+const PORTAL_ROLES_FLUJO_AGENTE = [
   "usuario",
   "rrhh",
   "admin",
@@ -16,6 +16,36 @@ export const PORTAL_ROLES_FLUJO_AGENTE = [
   "jefe",
   "visualizador",
 ];
+
+/**
+ * @param {unknown} token
+ * @returns {string[]}
+ */
+export function rolesHlcFromAuthToken(token) {
+  if (!token || typeof token !== "object") return [];
+  const raw = token.roles_hlc_vigentes;
+  if (Array.isArray(raw)) {
+    return [...new Set(raw.map((x) => String(x || "").trim()).filter(Boolean))];
+  }
+  const legacy = typeof token.perfil_rol_id === "string" ? token.perfil_rol_id.trim() : "";
+  return legacy ? [legacy] : [];
+}
+
+/**
+ * ¿Sesión válida para flujos agente (listar/crear solicitudes)?
+ * Canónico: cargo activo + al menos un rol HLC en token.
+ * @param {unknown} token
+ */
+export function isPortalRoleUsuario(token) {
+  if (!token || typeof token !== "object") return false;
+  if (token.cargo_activo === true) {
+    const roles = rolesHlcFromAuthToken(token);
+    if (roles.length > 0) return true;
+  }
+  const role = typeof token.portal_role === "string" ? token.portal_role.trim().toLowerCase() : "";
+  if (PORTAL_ROLES_FLUJO_AGENTE.includes(role)) return true;
+  return rolesHlcFromAuthToken(token).includes("CFG_RRHH");
+}
 export const CODIGO_CIRCUITO_ROL = "CIRCUITO_ROL";
 export const CODIGO_ELEG_SIN_HLC = "ELEG_SIN_HLC";
 export const CODIGO_ELEG_ESCALAFON = "ELEG_ESCALAFON";
@@ -44,18 +74,6 @@ const MENSAJES = {
   [CODIGO_SALDO_EVENTO]: "Este artículo permite un solo día por solicitud.",
   [CODIGO_FECHA_RANGO]: "Revisá las fechas del pedido.",
 };
-
-/**
- * ¿Puede actuar como agente en solicitudes? (menú Rol usuario para todos los roles con extras.)
- * @param {unknown} token
- */
-export function isPortalRoleUsuario(token) {
-  if (!token || typeof token !== "object") return false;
-  const role = typeof token.portal_role === "string" ? token.portal_role.trim().toLowerCase() : "";
-  if (PORTAL_ROLES_FLUJO_AGENTE.includes(role)) return true;
-  const perfil = typeof token.perfil_rol_id === "string" ? token.perfil_rol_id.trim().toUpperCase() : "";
-  return perfil === "CFG_RRHH";
-}
 
 /**
  * @param {unknown} row
@@ -131,7 +149,8 @@ export function evaluarFiltrosElegibilidadHlc(filtros, hlc, personaId, antigueda
  * @param {Record<string, unknown>} hlc
  */
 export function evaluarCircuitoIngreso(versionData, authToken, hlc, opts = {}) {
-  if (!opts.skipPortalRoleCheck && !isPortalRoleUsuario(authToken)) return CODIGO_CIRCUITO_ROL;
+  void authToken;
+  void opts;
 
   const bloque = versionData?.bloque_workflow_sla_cobertura;
   const circuito = bloque && typeof bloque === "object" ? bloque.circuito_ingreso_ids : [];

@@ -1,7 +1,7 @@
 /**
  * Vigencia de HLC en una fecha civil (BA). Complementa isHlcOperativo (solo “ahora”).
  */
-import { civilDateInZonaToUtcAnchorMs } from "./fechaInstitucionalBa.js";
+import { civilDateInZonaToUtcAnchorMs, ymdEnZonaDesdeInstante } from "./fechaInstitucionalBa.js";
 
 /**
  * @param {string | null | undefined} ymd
@@ -30,8 +30,8 @@ export function hlcFechaToAnchor(raw) {
   if (raw == null) return null;
   if (typeof raw === "object" && typeof raw.toDate === "function") {
     try {
-      const d = raw.toDate();
-      return civilDateInZonaToUtcAnchorMs(d.getFullYear(), d.getMonth() + 1, d.getDate());
+      const { year, month, day } = ymdEnZonaDesdeInstante(raw.toDate().getTime());
+      return civilDateInZonaToUtcAnchorMs(year, month, day);
     } catch {
       return null;
     }

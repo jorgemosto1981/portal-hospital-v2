@@ -5,6 +5,7 @@ import {
   callGuardarRegistroLaboralTemporal,
   callListarColeccionPublicaTemporal,
   callRrhhDeshabilitarHlc,
+  callRrhhDeshabilitarHlg,
 } from "./callables.js";
 
 /**
@@ -70,5 +71,10 @@ export async function guardarRegistroLaboral(collectionName, datos) {
 
 export async function deshabilitarCicloHlc(data) {
   const r = await callRrhhDeshabilitarHlc(data);
+  return r && r.data && typeof r.data === "object" ? r.data : {};
+}
+
+export async function deshabilitarAsignacionHlg(data) {
+  const r = await callRrhhDeshabilitarHlg(data);
   return r && r.data && typeof r.data === "object" ? r.data : {};
 }

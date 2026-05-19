@@ -1,72 +1,36 @@
 "use strict";
 
 const { db } = require("./context");
+const {
+  hlcFechaDesdeYmd,
+  hlcFechaHastaYmd,
+  hldHlgFechaFinYmd,
+  hldHlgFechaInicioYmd,
+  obtenerYmdHoyInstitucional,
+  vigenteEnFechaInclusivaYmd,
+} = require("./fechaLaboralYmd");
 
 const COL_HLC = "historial_laboral_cargos";
 const COL_HLD = "historial_laboral_datos";
 const COL_HLG = "historial_laboral_grupos";
 
-const TZ_AR = "America/Argentina/Buenos_Aires";
-
-/** Fecha local Argentina YYYY-MM-DD (vigencias laborales vs «hoy» institucional). */
 function fechaReferenciaArgentina() {
-  const fmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: TZ_AR,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const parts = fmt.formatToParts(new Date());
-  const y = parts.find((p) => p.type === "year")?.value;
-  const m = parts.find((p) => p.type === "month")?.value;
-  const d = parts.find((p) => p.type === "day")?.value;
-  if (!y || !m || !d) return new Date().toISOString().slice(0, 10);
-  return `${y}-${m}-${d}`;
-}
-
-function toDateKey(value) {
-  if (value == null || value === "") return "";
-  if (typeof value === "object" && value !== null && typeof value.toDate === "function") {
-    try {
-      return value.toDate().toISOString().slice(0, 10);
-    } catch {
-      return "";
-    }
-  }
-  const raw = String(value).trim();
-  const match = raw.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (match) return match[1];
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().slice(0, 10);
-}
-
-function vigenteEnFechaInclusiva(desde, hasta, fecha) {
-  if (!desde || !fecha) return false;
-  if (desde > fecha) return false;
-  if (hasta && hasta < fecha) return false;
-  return true;
+  return obtenerYmdHoyInstitucional();
 }
 
 function hlcVigente(h, fechaRef) {
   if (h.activo === false) return false;
-  const desde = toDateKey(h.fecha_desde);
-  const hastaRaw = h.fecha_hasta != null && h.fecha_hasta !== "" ? toDateKey(h.fecha_hasta) : "";
-  return vigenteEnFechaInclusiva(desde, hastaRaw || null, fechaRef);
+  return vigenteEnFechaInclusivaYmd(hlcFechaDesdeYmd(h), hlcFechaHastaYmd(h) || null, fechaRef);
 }
 
 function hldVigente(h, fechaRef) {
   if (h.activo === false) return false;
-  const desde = toDateKey(h.fecha_inicio);
-  const hastaRaw = h.fecha_fin != null && h.fecha_fin !== "" ? toDateKey(h.fecha_fin) : "";
-  return vigenteEnFechaInclusiva(desde, hastaRaw || null, fechaRef);
+  return vigenteEnFechaInclusivaYmd(hldHlgFechaInicioYmd(h), hldHlgFechaFinYmd(h) || null, fechaRef);
 }
 
 function hlgVigente(h, fechaRef) {
   if (h.activo === false) return false;
-  const desde = toDateKey(h.fecha_inicio);
-  const hastaRaw = h.fecha_fin != null && h.fecha_fin !== "" ? toDateKey(h.fecha_fin) : "";
-  return vigenteEnFechaInclusiva(desde, hastaRaw || null, fechaRef);
+  return vigenteEnFechaInclusivaYmd(hldHlgFechaInicioYmd(h), hldHlgFechaFinYmd(h) || null, fechaRef);
 }
 
 /**
@@ -77,7 +41,7 @@ async function computeLaborProfileForPersona(personaId) {
   const fechaRef = fechaReferenciaArgentina();
   if (!personaId || typeof personaId !== "string" || !personaId.trim()) {
     return {
-      perfil_rol_id: null,
+      roles_hlc_vigentes: [],
       cargo_activo: false,
       rol_conflicto: false,
       fecha_referencia: fechaRef,
@@ -124,49 +88,46 @@ async function computeLaborProfileForPersona(personaId) {
     }
   }
 
-  let perfil_rol_id = null;
+  const roles_hlc_vigentes = Array.from(rolesInChains)
+    .map((r) => String(r || "").trim())
+    .filter(Boolean)
+    .sort();
+
   let rol_conflicto = false;
-  if (rolesInChains.size === 1) {
-    perfil_rol_id = Array.from(rolesInChains)[0];
-  } else if (rolesInChains.size > 1) {
+  if (roles_hlc_vigentes.length > 1) {
     rol_conflicto = true;
   }
 
   return {
-    perfil_rol_id,
+    roles_hlc_vigentes,
     cargo_activo: cargoActivo,
     rol_conflicto,
     fecha_referencia: fechaRef,
   };
 }
 
-function mapCfgRolIdToPortalRole(perfilRolId) {
-  if (!perfilRolId || typeof perfilRolId !== "string") return null;
-  const u = perfilRolId.trim().toUpperCase();
-  if (u === "CFG_RRHH") return "rrhh";
-  return null;
+/** @param {unknown} token */
+function rolesHlcFromAuthToken(token) {
+  if (!token || typeof token !== "object") return [];
+  const raw = token.roles_hlc_vigentes;
+  if (Array.isArray(raw)) {
+    return [...new Set(raw.map((x) => String(x || "").trim()).filter(Boolean))];
+  }
+  const legacy = typeof token.perfil_rol_id === "string" ? token.perfil_rol_id.trim() : "";
+  return legacy ? [legacy] : [];
 }
 
-/**
- * Compatibilidad: panel RRHH en consola (`portal_role`) mientras no exista cadena HL;
- * con cadena vigente manda el catálogo (`perfil_rol_id` en HLc).
- */
-function resolvePortalRoleForClaims({ perfilRolId, cargoActivo, prevClaims }) {
-  const fromLabor = mapCfgRolIdToPortalRole(perfilRolId);
-  if (fromLabor) return fromLabor;
-  if (perfilRolId) return null;
-  if (cargoActivo) return null;
-  const prev =
-    prevClaims && typeof prevClaims.portal_role === "string"
-      ? prevClaims.portal_role.trim().toLowerCase()
-      : "";
-  if (prev === "rrhh" || prev === "admin") return prev;
-  return null;
+/** Acceso panel / callables RRHH desde claims (HLC canónico + legacy dev). */
+function tokenHasRrhhLaborAccess(token) {
+  if (!token || typeof token !== "object") return false;
+  if (rolesHlcFromAuthToken(token).includes("CFG_RRHH")) return true;
+  const role = typeof token.portal_role === "string" ? token.portal_role.trim().toLowerCase() : "";
+  return role === "rrhh" || role === "admin";
 }
 
 module.exports = {
   computeLaborProfileForPersona,
-  mapCfgRolIdToPortalRole,
-  resolvePortalRoleForClaims,
+  rolesHlcFromAuthToken,
+  tokenHasRrhhLaborAccess,
   fechaReferenciaArgentina,
 };

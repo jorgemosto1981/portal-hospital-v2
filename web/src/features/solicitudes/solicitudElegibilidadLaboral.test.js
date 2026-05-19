@@ -36,11 +36,20 @@ const HLC_9282 = {
 };
 
 describe("solicitudElegibilidadLaboral", () => {
-  it("portal_role con acceso a flujos de agente", () => {
+  it("sesión agente: roles HLC + cargo activo (canónico)", () => {
+    expect(
+      isPortalRoleUsuario({ cargo_activo: true, roles_hlc_vigentes: ["CFG_USUARIO"] }),
+    ).toBe(true);
+    expect(isPortalRoleUsuario({ cargo_activo: false, roles_hlc_vigentes: ["CFG_USUARIO"] })).toBe(
+      false,
+    );
+    expect(isPortalRoleUsuario({ cargo_activo: true, roles_hlc_vigentes: [] })).toBe(false);
+  });
+
+  it("legacy portal_role / perfil_rol_id (compat)", () => {
     expect(isPortalRoleUsuario({ portal_role: "usuario" })).toBe(true);
     expect(isPortalRoleUsuario({ portal_role: "rrhh" })).toBe(true);
-    expect(isPortalRoleUsuario({ portal_role: "medico" })).toBe(true);
-    expect(isPortalRoleUsuario({ perfil_rol_id: "CFG_RRHH" })).toBe(true);
+    expect(isPortalRoleUsuario({ roles_hlc_vigentes: ["CFG_RRHH"], cargo_activo: true })).toBe(true);
     expect(isPortalRoleUsuario({ portal_role: "invitado" })).toBe(false);
   });
 

@@ -1,3 +1,5 @@
+import { ARTICULO_64A_ID } from "./solicitudesArticuloV2.js";
+
 export const ESTADOS_MODULO = {
   ACTIVO: "activo",
   MVP: "mvp",
@@ -72,6 +74,8 @@ export const MODULOS_PORTAL = [
     path: "/portal/solicitudes/asuntos-particulares",
     estado: ESTADOS_MODULO.MVP,
     grupo: "usuario",
+    /** Visible en menú solo si {@link listarArticulosIngresoAgente} incluye este artículo (filtros vigentes). */
+    articuloIngresoId: ARTICULO_64A_ID,
   },
   {
     id: "antiguedad",

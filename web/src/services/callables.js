@@ -82,6 +82,11 @@ export function callRrhhDeshabilitarHlc(data) {
   return httpsCallable(getFunctionsV2(), "rrhhDeshabilitarHlc")(data);
 }
 
+/** Deshabilita una asignación HLg (activo=false, fecha_fin=corte). */
+export function callRrhhDeshabilitarHlg(data) {
+  return httpsCallable(getFunctionsV2(), "rrhhDeshabilitarHlg")(data);
+}
+
 /** Read-model laboral operativo (C1) para Ticket/RDA/Grilla, con filtros por fecha/persona/grupo. */
 export function callListarReadModelLaboralOperativoTemporal(data) {
   return httpsCallable(getFunctionsV2(), "listarReadModelLaboralOperativoTemporal")(data);

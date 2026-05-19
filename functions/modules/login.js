@@ -73,7 +73,7 @@ const syncSessionClaims = onCall(async (request) => {
     ok: true,
     persona_id: personaId,
     cuenta_id: cuentaId,
-    perfil_rol_id: profile.perfil_rol_id || null,
+    roles_hlc_vigentes: profile.roles_hlc_vigentes || [],
     cargo_activo: profile.cargo_activo === true,
     labor_rol_conflicto: profile.rol_conflicto === true,
     fecha_referencia_laboral: profile.fecha_referencia || null,

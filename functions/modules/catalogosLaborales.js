@@ -4,7 +4,7 @@ const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { ulid } = require("ulid");
 const { db, FieldValue } = require("./shared/context");
 const runtimeFlags = require("./shared/runtimeFlags.json");
-const { assertRrhh } = require("./shared/helpers");
+const { assertEscrituraLaboral, assertRrhh } = require("./shared/helpers");
 const { buildEventoV21, persistEventoV21 } = require("./shared/eventosV2");
 const {
   COLECCIONES_ESCRITURA_LABORAL_TEMPORAL,
@@ -19,19 +19,25 @@ const {
   buildWarningReconciliacionCarga,
   pushWarning,
   validarCargaPorDiaSemana,
+  cargaSemanalTieneHorasPositivas,
 } = require("./catalogosShared");
+const { refreshSessionClaimsForPersona } = require("./shared/authClaims");
+const {
+  hlcFechaDesdeYmd,
+  hlcFechaHastaYmd,
+  hldHlgFechaFinYmd,
+  hldHlgFechaInicioYmd,
+  obtenerYmdHoyInstitucional,
+  vigenteEnFechaInclusivaYmd,
+  ymdDesdeValorLaboral,
+} = require("./shared/fechaLaboralYmd");
 
-function toDateKey(value) {
-  const raw = toNullableTrimmedString(value);
-  if (!raw) return "";
-  const match = raw.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (match) return match[1];
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return "";
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+async function refreshClaimsLaboralPersona(personaId) {
+  try {
+    await refreshSessionClaimsForPersona(personaId);
+  } catch {
+    // No bloquear guardado laboral si Auth falla.
+  }
 }
 
 function vigenteEnFechaInclusiva(desde, hasta, fecha) {
@@ -67,28 +73,18 @@ function haySolapeInclusivo(aDesde, aHasta, bDesde, bHasta) {
   return aDesde <= bFin && bDesde <= aFin;
 }
 
-function fechaHoyIsoUtc() {
-  const now = new Date();
-  const yyyy = now.getUTCFullYear();
-  const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(now.getUTCDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+function parseFechaCorteOrThrow(rawFechaCorte) {
+  const raw = toNullableTrimmedString(rawFechaCorte) || obtenerYmdHoyInstitucional();
+  const ymd = ymdDesdeValorLaboral(raw);
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+    throw new HttpsError("invalid-argument", "[VAL-HLC-DES-007] La fecha de corte es invalida. Usa el formato AAAA-MM-DD.");
+  }
+  return ymd;
 }
 
-function parseFechaCorteOrThrow(rawFechaCorte) {
-  const raw = toNullableTrimmedString(rawFechaCorte) || fechaHoyIsoUtc();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-    throw new HttpsError("invalid-argument", "[VAL-HLC-DES-007] La fecha de corte es invalida. Usa el formato AAAA-MM-DD.");
-  }
-  const d = new Date(`${raw}T00:00:00.000Z`);
-  if (Number.isNaN(d.getTime())) {
-    throw new HttpsError("invalid-argument", "[VAL-HLC-DES-007] La fecha de corte es invalida. Usa el formato AAAA-MM-DD.");
-  }
-  const normalized = d.toISOString().slice(0, 10);
-  if (normalized !== raw) {
-    throw new HttpsError("invalid-argument", "[VAL-HLC-DES-007] La fecha de corte es invalida. Usa el formato AAAA-MM-DD.");
-  }
-  return raw;
+function laboralYmdOrNull(value) {
+  const y = ymdDesdeValorLaboral(value);
+  return y || null;
 }
 
 function resolveFechaCierre(fechaExistente, fechaCorte) {
@@ -185,13 +181,14 @@ function laboralEscrituraSinAssertRrhh() {
 }
 
 const guardarRegistroLaboralTemporal = onCall(async (request) => {
-  if (!laboralEscrituraSinAssertRrhh()) assertRrhh(request);
   const d = request.data && typeof request.data === "object" ? request.data : {};
   const colRaw = typeof d.collectionName === "string" ? d.collectionName.trim() : "";
   if (!COLECCIONES_ESCRITURA_LABORAL_TEMPORAL.has(colRaw)) {
     throw new HttpsError("invalid-argument", "[VAL-HLB-001] La coleccion indicada no esta habilitada para guardado laboral temporal.");
   }
   const datos = d.datos && typeof d.datos === "object" ? d.datos : {};
+  const personaPayload = toNullableTrimmedString(datos.persona_id);
+  if (!laboralEscrituraSinAssertRrhh()) assertEscrituraLaboral(request, personaPayload);
   const now = FieldValue.serverTimestamp();
   const actorUid = request && request.auth ? request.auth.uid || null : null;
   const actorPersonaId =
@@ -246,6 +243,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     await assertDocExistsOrNull("cfg_escalafon", escalafonId, "escalafon_id");
     await assertDocExistsOrNull("cfg_agrupamiento", agrupamientoId, "agrupamiento_id");
     await assertDocExistsOrNull("cfg_categorias", categoriaId, "categoria_id");
+    await assertDocExistsOrNull("cfg_rol", rolId, "rol_id");
     await assertDocExistsOrNull("cfg_cargo_funcional", cargoFuncionalId, "cargo_funcional_id");
     await assertDocExistsOrNull(
       "cfg_causal_fin_asignacion_laboral",
@@ -298,8 +296,8 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       referencias_normativa_designacion: referenciasNormalizadas,
       estado_asignacion_id: estadoAsignacionId,
       carga_horaria_total: cargaHorariaTotal,
-      fecha_desde: toNullableTrimmedString(datos.fecha_desde),
-      fecha_hasta: toNullableTrimmedString(datos.fecha_hasta),
+      fecha_desde: laboralYmdOrNull(datos.fecha_desde),
+      fecha_hasta: laboralYmdOrNull(datos.fecha_hasta),
       activo: datos.activo !== false,
       actualizado_en: now,
     };
@@ -353,7 +351,11 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
         }
       }
     }
-    const cargoActivo = payload.activo !== false && !payload.fecha_hasta;
+    const hoyRef = obtenerYmdHoyInstitucional();
+    const cargoActivo =
+      payload.activo !== false &&
+      !String(payload.motivo_deshabilitacion_id || "").trim() &&
+      vigenteEnFechaInclusivaYmd(payload.fecha_desde, payload.fecha_hasta, hoyRef);
     if (cargoActivo && !tieneGrupoAsignado) {
       pushWarning(
         warnings,
@@ -386,6 +388,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       contexto: { hlc_id: id },
       cambios,
     });
+    await refreshClaimsLaboralPersona(personaId);
     return { ok: true, id, warnings, evento_id: eventoId };
   }
 
@@ -405,7 +408,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     }
     const funcionRealId = toNullableTrimmedString(datos.funcion_real_id);
     const nivelJerarquico = toNumberOrNull(datos.nivel_jerarquico);
-    const fechaInicio = toNullableTrimmedString(datos.fecha_inicio);
+    const fechaInicio = laboralYmdOrNull(datos.fecha_inicio);
     if (!funcionRealId || nivelJerarquico == null || !fechaInicio) {
       throw new HttpsError(
         "invalid-argument",
@@ -423,7 +426,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       funcion_real_id: funcionRealId,
       nivel_jerarquico: nivelJerarquico,
       fecha_inicio: fechaInicio,
-      fecha_fin: toNullableTrimmedString(datos.fecha_fin),
+      fecha_fin: laboralYmdOrNull(datos.fecha_fin),
       activo: datos.activo !== false,
       actualizado_en: now,
     };
@@ -436,8 +439,8 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     await assertHldDentroDeHlc({
       fechaInicioHld: payload.fecha_inicio,
       fechaFinHld: payload.fecha_fin,
-      fechaDesdeHlc: toNullableTrimmedString(cargoSnap.get("fecha_desde")),
-      fechaHastaHlc: toNullableTrimmedString(cargoSnap.get("fecha_hasta")),
+      fechaDesdeHlc: laboralYmdOrNull(cargoSnap.get("fecha_desde")),
+      fechaHastaHlc: laboralYmdOrNull(cargoSnap.get("fecha_hasta")),
     });
     await assertDocExistsOrNull("cfg_regimen_horario", payload.regimen_horario_id, "regimen_horario_id");
     await assertDocExistsOrNull("cfg_centro_costo", payload.centro_costo_id, "centro_costo_id");
@@ -465,6 +468,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       contexto: { hld_id: id, hlc_id: cargoId },
       cambios,
     });
+    await refreshClaimsLaboralPersona(personaId);
     return { ok: true, id, evento_id: eventoId };
   }
 
@@ -509,8 +513,8 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     grupo_de_trabajo_id: grupoId,
     nivel_jerarquico: toNumberOrNull(datos.nivel_jerarquico),
     carga_por_dia_semana: carga,
-    fecha_inicio: toNullableTrimmedString(datos.fecha_inicio),
-    fecha_fin: toNullableTrimmedString(datos.fecha_fin),
+    fecha_inicio: laboralYmdOrNull(datos.fecha_inicio),
+    fecha_fin: laboralYmdOrNull(datos.fecha_fin),
     activo: datos.activo !== false,
     actualizado_en: now,
   };
@@ -519,6 +523,12 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     throw new HttpsError(
       "invalid-argument",
       "[VAL-HLG-013] Debes informar la carga horaria por dia con al menos un dia cargado.",
+    );
+  }
+  if (!cargaSemanalTieneHorasPositivas(payload.carga_por_dia_semana)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "[VAL-HLG-013] Debes informar la carga horaria por dia con al menos un dia con horas mayores a cero.",
     );
   }
   if (!payload.fecha_inicio) {
@@ -603,11 +613,11 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     contexto: { hlg_id: id, hld_id: datoLaboralId, hlc_id: cargoId },
     cambios,
   });
+  await refreshClaimsLaboralPersona(personaId);
   return { ok: true, id, warnings, evento_id: eventoId };
 });
 
 const rrhhDeshabilitarHlc = onCall(async (request) => {
-  if (!laboralEscrituraSinAssertRrhh()) assertRrhh(request);
   const d = request.data && typeof request.data === "object" ? request.data : {};
   const hlcId = toNullableTrimmedString(d.hlc_id);
   const motivoDeshabilitacionId = toNullableTrimmedString(d.motivo_deshabilitacion_id);
@@ -637,10 +647,12 @@ const rrhhDeshabilitarHlc = onCall(async (request) => {
     throw new HttpsError("not-found", "[VAL-HLC-DES-001] No se encontro el ciclo HLC indicado. Verifica el registro e intenta nuevamente.");
   }
   const hlc = hlcSnap.data() || {};
+  const personaHlc = toNullableTrimmedString(hlc.persona_id);
+  if (!laboralEscrituraSinAssertRrhh()) assertEscrituraLaboral(request, personaHlc);
   if (hlc.activo === false && !forzar) {
     throw new HttpsError("failed-precondition", "[VAL-HLC-DES-003] El ciclo HLC ya esta deshabilitado. No se aplicaron cambios.");
   }
-  const fechaDesdeHlc = toNullableTrimmedString(hlc.fecha_desde);
+  const fechaDesdeHlc = laboralYmdOrNull(hlc.fecha_desde);
   if (fechaDesdeHlc && fechaCorte < fechaDesdeHlc) {
     throw new HttpsError("invalid-argument", "[VAL-HLC-DES-004] La fecha de corte no puede ser anterior al inicio del ciclo HLC.");
   }
@@ -782,6 +794,9 @@ const rrhhDeshabilitarHlc = onCall(async (request) => {
     cambios,
   });
 
+  const personaAfectada = toNullableTrimmedString(hlc.persona_id);
+  if (personaAfectada) await refreshClaimsLaboralPersona(personaAfectada);
+
   return {
     ok: true,
     hlc_id: hlcId,
@@ -796,12 +811,144 @@ const rrhhDeshabilitarHlc = onCall(async (request) => {
   };
 });
 
+const rrhhDeshabilitarHlg = onCall(async (request) => {
+  const d = request.data && typeof request.data === "object" ? request.data : {};
+  const hlgId = toNullableTrimmedString(d.hlg_id);
+  const motivo = toNullableTrimmedString(d.motivo);
+  const fechaCorte = parseFechaCorteOrThrow(d.fecha_corte);
+  const forzar = d.forzar === true;
+
+  if (!hlgId) {
+    throw new HttpsError(
+      "invalid-argument",
+      "[VAL-HLG-DES-001] No se encontro la asignacion HLg indicada. Verifica el registro e intenta nuevamente.",
+    );
+  }
+  if (motivo && motivo.length > 100) {
+    throw new HttpsError(
+      "invalid-argument",
+      "[VAL-HLG-DES-004] El motivo no puede superar los 100 caracteres.",
+    );
+  }
+
+  const warnings = [];
+  const hlgRef = db.collection("historial_laboral_grupos").doc(hlgId);
+  const hlgSnap = await hlgRef.get();
+  if (!hlgSnap.exists) {
+    throw new HttpsError(
+      "not-found",
+      "[VAL-HLG-DES-001] No se encontro la asignacion HLg indicada. Verifica el registro e intenta nuevamente.",
+    );
+  }
+  const hlg = hlgSnap.data() || {};
+  const personaHlg = toNullableTrimmedString(hlg.persona_id);
+  if (!laboralEscrituraSinAssertRrhh()) assertEscrituraLaboral(request, personaHlg);
+
+  if (hlg.activo === false && !forzar) {
+    throw new HttpsError(
+      "failed-precondition",
+      "[VAL-HLG-DES-002] La asignacion HLg ya esta deshabilitada. No se aplicaron cambios.",
+    );
+  }
+
+  const fechaInicioHlg = hldHlgFechaInicioYmd(hlg) || laboralYmdOrNull(hlg.fecha_inicio);
+  if (fechaInicioHlg && fechaCorte < fechaInicioHlg) {
+    throw new HttpsError(
+      "invalid-argument",
+      "[VAL-HLG-DES-003] La fecha de corte no puede ser anterior al inicio de la asignacion HLg.",
+    );
+  }
+
+  if (laboralYmdOrNull(hlg.fecha_fin)) {
+    pushWarning(
+      warnings,
+      "VAL-HLG-DES-W001",
+      "La asignacion HLg ya estaba cerrada por fecha. Se aplico la deshabilitacion administrativa.",
+      { hlg_id: hlgId, fecha_corte: fechaCorte, collection: "historial_laboral_grupos" },
+    );
+  }
+
+  const now = FieldValue.serverTimestamp();
+  const actorUid = (request.auth && request.auth.uid) || null;
+  const actorPersonaId = toNullableTrimmedString(request.auth && request.auth.token && request.auth.token.persona_id);
+
+  await db.runTransaction(async (tx) => {
+    const fresh = await tx.get(hlgRef);
+    if (!fresh.exists) {
+      throw new HttpsError(
+        "not-found",
+        "[VAL-HLG-DES-001] No se encontro la asignacion HLg indicada. Verifica el registro e intenta nuevamente.",
+      );
+    }
+    const freshData = fresh.data() || {};
+    if (freshData.activo === false && !forzar) {
+      throw new HttpsError(
+        "failed-precondition",
+        "[VAL-HLG-DES-002] La asignacion HLg ya esta deshabilitada. No se aplicaron cambios.",
+      );
+    }
+    const inicioFresh = hldHlgFechaInicioYmd(freshData) || laboralYmdOrNull(freshData.fecha_inicio);
+    if (inicioFresh && fechaCorte < inicioFresh) {
+      throw new HttpsError(
+        "invalid-argument",
+        "[VAL-HLG-DES-003] La fecha de corte no puede ser anterior al inicio de la asignacion HLg.",
+      );
+    }
+    const fechaFin = resolveFechaCierre(freshData.fecha_fin, fechaCorte);
+    tx.set(
+      hlgRef,
+      {
+        activo: false,
+        fecha_fin: fechaFin,
+        actualizado_en: now,
+      },
+      { merge: true },
+    );
+  });
+
+  const eventoId = await crearEventoDatosLaborales({
+    tipoEventoId: "cfg_tev_datos_laborales",
+    accion: "deshabilitar_hlg",
+    personaId: personaHlg,
+    actorUid,
+    actorPersonaId,
+    entidad: "historial_laboral_grupos",
+    contexto: {
+      hlg_id: hlgId,
+      fecha_corte: fechaCorte,
+      motivo: motivo || null,
+      dato_laboral_id: toNullableTrimmedString(hlg.dato_laboral_id),
+    },
+    cambios: [
+      {
+        campo: "activo",
+        label: "Estado de asignacion",
+        antes: true,
+        despues: false,
+        antes_label: "Operativo",
+        despues_label: "Deshabilitado",
+        tipo: "boolean",
+      },
+    ],
+  });
+
+  if (personaHlg) await refreshClaimsLaboralPersona(personaHlg);
+
+  return {
+    ok: true,
+    hlg_id: hlgId,
+    fecha_corte_aplicada: fechaCorte,
+    warnings,
+    evento_id: eventoId,
+  };
+});
+
 const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
   if (!laboralEscrituraSinAssertRrhh()) assertRrhh(request);
   const data = request && request.data && typeof request.data === "object" ? request.data : {};
   const personaId = toNullableTrimmedString(data.persona_id);
   const grupoId = toNullableTrimmedString(data.grupo_de_trabajo_id);
-  const fechaCorte = toDateKey(data.fecha_corte) || new Date().toISOString().slice(0, 10);
+  const fechaCorte = ymdDesdeValorLaboral(data.fecha_corte) || obtenerYmdHoyInstitucional();
   const incluirNoVigentes = data.incluir_no_vigentes === true;
 
   const [hlcSnap, hldSnap, hlgSnap, personasSnap, gruposSnap] = await Promise.all([
@@ -828,8 +975,8 @@ const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
     const hld = idxHld.get(String(hlg.dato_laboral_id || ""));
     const cargoId = toNullableTrimmedString(hld && hld.cargo_id);
     const rowGrupoId = toNullableTrimmedString(hlg.grupo_de_trabajo_id);
-    const fechaInicio = toDateKey(hlg.fecha_inicio);
-    const fechaFin = toDateKey(hlg.fecha_fin);
+    const fechaInicio = hldHlgFechaInicioYmd(hlg);
+    const fechaFin = hldHlgFechaFinYmd(hlg);
     hlgEnriquecidos.push({
       id: doc.id,
       hlg,
@@ -950,5 +1097,6 @@ const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
 module.exports = {
   guardarRegistroLaboralTemporal,
   rrhhDeshabilitarHlc,
+  rrhhDeshabilitarHlg,
   listarReadModelLaboralOperativoTemporal,
 };

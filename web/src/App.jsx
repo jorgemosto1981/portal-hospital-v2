@@ -23,6 +23,8 @@ import ArticuloListadoGrilla from "./pages/ArticuloListadoGrilla.jsx";
 import ArticuloVersionesListado from "./pages/ArticuloVersionesListado.jsx";
 import SolicitudLaoAlta from "./pages/SolicitudLaoAlta.jsx";
 import Solicitud64AAlta from "./pages/Solicitud64AAlta.jsx";
+import GuardArticuloIngreso from "./features/solicitudes/GuardArticuloIngreso.jsx";
+import { ARTICULO_64A_ID } from "./constants/solicitudesArticuloV2.js";
 import CheckinSaldosAgente from "./pages/CheckinSaldosAgente.jsx";
 import AltaAgenteOnboardingRRHH from "./pages/AltaAgenteOnboardingRRHH.jsx";
 import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
@@ -91,7 +93,14 @@ export default function App() {
             <Route path="mi-perfil" element={<PerfilUsuario />} />
             <Route path="laboral" element={<DatosLaborales />} />
             <Route path="solicitudes/lao" element={<SolicitudLaoAlta />} />
-            <Route path="solicitudes/asuntos-particulares" element={<Solicitud64AAlta />} />
+            <Route
+              path="solicitudes/asuntos-particulares"
+              element={
+                <GuardArticuloIngreso articuloId={ARTICULO_64A_ID}>
+                  <Solicitud64AAlta />
+                </GuardArticuloIngreso>
+              }
+            />
             <Route path="perfil" element={<DatosPersonales />} />
             <Route path="perfil/:personaId" element={<Perfil />} />
             <Route path="grilla" element={<GrillaOperativa />} />

@@ -1,3 +1,13 @@
+import {
+  hlcFechaDesdeYmd,
+  hlcFechaHastaYmd,
+  hldHlgFechaFinYmd,
+  hldHlgFechaInicioYmd,
+  obtenerYmdHoyInstitucional,
+  vigenteEnFechaInclusivaYmd,
+  ymdDesdeValorLaboral,
+} from "../../../../shared/utils/fechaLaboralYmd.js";
+
 export function formatValue(v) {
   if (v == null) return "—";
   if (Array.isArray(v)) return `[${v.length}]`;
@@ -15,13 +25,7 @@ export function formatCargaPorDia(v) {
 }
 
 export function isoToDateInput(iso) {
-  if (!iso || typeof iso !== "string") return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return ymdDesdeValorLaboral(iso);
 }
 
 export function formatDateDdMmAaaa(value, fallback = "—") {
@@ -29,7 +33,47 @@ export function formatDateDdMmAaaa(value, fallback = "—") {
   if (!iso) return fallback;
   const [yyyy, mm, dd] = iso.split("-");
   if (!yyyy || !mm || !dd) return fallback;
-  return `${dd} ${mm} ${yyyy}`;
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+export function sortOpcionesDiaSemana(opciones) {
+  return [...(opciones || [])].sort((a, b) => {
+    const oa = Number(a && a.orden);
+    const ob = Number(b && b.orden);
+    if (Number.isFinite(oa) && Number.isFinite(ob)) return oa - ob;
+    return String((a && a.id) || "").localeCompare(String((b && b.id) || ""));
+  });
+}
+
+/** Planilla fija de 7 días según catálogo `cfg_dia_semana` (horas vacías = 0 al persistir). */
+export function buildPlanillaCargaSemanal(opcionesDiaSemana, rawCarga) {
+  const dias = sortOpcionesDiaSemana(opcionesDiaSemana);
+  if (dias.length === 0) return normalizeCargaRowsFromRecord(rawCarga);
+  const horasPorDia = new Map();
+  if (Array.isArray(rawCarga)) {
+    rawCarga.forEach((item) => {
+      if (item && typeof item === "object" && !Array.isArray(item)) {
+        const id = String(item.dia_semana_id || "").trim();
+        if (id) horasPorDia.set(id, item.horas == null ? "" : String(item.horas));
+        return;
+      }
+      const n = Number(item);
+      if (Number.isFinite(n)) {
+        // Legacy: sin dia_semana_id no se puede mapear a planilla fija.
+      }
+    });
+  }
+  return dias.map((dia) => ({
+    dia_semana_id: String(dia.id || ""),
+    horas: horasPorDia.has(String(dia.id)) ? horasPorDia.get(String(dia.id)) : "",
+  }));
+}
+
+export function cargaSemanalTieneHorasPositivas(cargaPorDiaRows) {
+  return (cargaPorDiaRows || []).some((row) => {
+    const n = Number(row && row.horas);
+    return Number.isFinite(n) && n > 0;
+  });
 }
 
 export function takeFirst(items, max = 5) {
@@ -135,16 +179,27 @@ function personaIdNombre(idxPersonas, personaId) {
 }
 
 function toDateKey(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  const isoDateMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (isoDateMatch) return isoDateMatch[1];
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return "";
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return ymdDesdeValorLaboral(value);
+}
+
+/** Vigencia inclusiva [desde, hasta] respecto a hoy institucional (BA). */
+export {
+  hlcFechaDesdeYmd,
+  hlcFechaHastaYmd,
+  hldHlgFechaFinYmd,
+  hldHlgFechaInicioYmd,
+  obtenerYmdHoyInstitucional,
+  vigenteEnFechaInclusivaYmd,
+  ymdDesdeValorLaboral,
+};
+
+export function registroLaboralVigenteEnHoy(row, tipo) {
+  if (!row || typeof row !== "object") return false;
+  const ref = obtenerYmdHoyInstitucional();
+  if (tipo === "hlc") {
+    return vigenteEnFechaInclusivaYmd(hlcFechaDesdeYmd(row), hlcFechaHastaYmd(row) || null, ref);
+  }
+  return vigenteEnFechaInclusivaYmd(hldHlgFechaInicioYmd(row), hldHlgFechaFinYmd(row) || null, ref);
 }
 
 function compareIsoDesc(a, b) {
@@ -155,7 +210,7 @@ function compareIsoDesc(a, b) {
 }
 
 function estadoDesdeFechas(desde, hasta) {
-  const nowIso = new Date().toISOString().slice(0, 10);
+  const nowIso = obtenerYmdHoyInstitucional();
   if (!desde) return "desconocido";
   if (hasta && hasta < nowIso) return "cerrado";
   if (desde > nowIso) return "pendiente";
@@ -213,8 +268,8 @@ export function buildTimelineItemsByPersona({
   (hlcRows || [])
     .filter((row) => includeAllPersonas || String(row.persona_id || "") === persona)
     .forEach((row) => {
-      const desde = toDateKey(row.fecha_desde);
-      const hasta = toDateKey(row.fecha_hasta);
+      const desde = hlcFechaDesdeYmd(row);
+      const hasta = hlcFechaHastaYmd(row);
       const conflictos = [];
       const warningCodes = [];
       if (row.grupo_de_trabajo_id && !idxGrupos.get(String(row.grupo_de_trabajo_id))) {
@@ -257,8 +312,8 @@ export function buildTimelineItemsByPersona({
   (hldRows || [])
     .filter((row) => includeAllPersonas || String(row.persona_id || "") === persona)
     .forEach((row) => {
-      const desde = toDateKey(row.fecha_inicio);
-      const hasta = toDateKey(row.fecha_fin);
+      const desde = hldHlgFechaInicioYmd(row);
+      const hasta = hldHlgFechaFinYmd(row);
       const cargo = idxHlc.get(String(row.cargo_id || ""));
       const conflictos = [];
       const warningCodes = [];
@@ -301,8 +356,8 @@ export function buildTimelineItemsByPersona({
   (hlgRows || [])
     .filter((row) => includeAllPersonas || String(row.persona_id || "") === persona)
     .forEach((row) => {
-      const desde = toDateKey(row.fecha_inicio);
-      const hasta = toDateKey(row.fecha_fin);
+      const desde = hldHlgFechaInicioYmd(row);
+      const hasta = hldHlgFechaFinYmd(row);
       const dato = idxHld.get(String(row.dato_laboral_id || ""));
       const conflictos = [];
       const warningCodes = [];
@@ -316,16 +371,16 @@ export function buildTimelineItemsByPersona({
       const cargo = dato ? idxHlc.get(String(dato.cargo_id || "")) : null;
       const cargoId = String((cargo && cargo.id) || "");
       const grupoId = String(row.grupo_de_trabajo_id || "");
-      const rowDesde = toDateKey(row.fecha_inicio);
-      const rowHasta = toDateKey(row.fecha_fin);
+      const rowDesde = hldHlgFechaInicioYmd(row);
+      const rowHasta = hldHlgFechaFinYmd(row);
       const solape = (hlgRows || []).find((other) => {
         if (String(other.id || "") === String(row.id || "")) return false;
         const otherDato = idxHld.get(String(other.dato_laboral_id || ""));
         const otherCargoId = String((otherDato && otherDato.cargo_id) || "");
         if (!cargoId || !otherCargoId || otherCargoId !== cargoId) return false;
         if (String(other.grupo_de_trabajo_id || "") !== grupoId) return false;
-        const otherDesde = toDateKey(other.fecha_inicio);
-        const otherHasta = toDateKey(other.fecha_fin);
+        const otherDesde = hldHlgFechaInicioYmd(other);
+        const otherHasta = hldHlgFechaFinYmd(other);
         return rangoSolapadoInclusivo(rowDesde, rowHasta, otherDesde, otherHasta);
       });
       if (solape) {
@@ -372,7 +427,7 @@ export function buildTimelineItemsByPersona({
 
 export function filterTimelineItems(items, { filtro, fecha }) {
   const list = Array.isArray(items) ? items : [];
-  const fechaIso = fecha ? toDateKey(fecha) : new Date().toISOString().slice(0, 10);
+  const fechaIso = fecha ? toDateKey(fecha) : obtenerYmdHoyInstitucional();
   if (!filtro || filtro === "todos") return list;
   if (filtro === "activos") return list.filter((item) => item.estado === "activo");
   if (filtro === "no_activos") return list.filter((item) => item.estado !== "activo");
@@ -472,9 +527,9 @@ export function buildVistaGrupoItems({
 
   return rows
     .map((row) => {
-      const desde = toDateKey(row.fecha_inicio);
-      const hasta = toDateKey(row.fecha_fin);
-      const activoEnFecha = !!desde && desde <= fechaIso && (!hasta || hasta >= fechaIso);
+      const desde = hldHlgFechaInicioYmd(row);
+      const hasta = hldHlgFechaFinYmd(row);
+      const activoEnFecha = vigenteEnFechaInclusivaYmd(desde, hasta || null, fechaIso);
       const personaId = String(row.persona_id || "");
       const persona = idxPersonas.get(personaId);
       const dato = idxHld.get(String(row.dato_laboral_id || ""));
@@ -489,10 +544,10 @@ export function buildVistaGrupoItems({
         const otherCargoId = String((otherDato && otherDato.cargo_id) || "");
         if (!cargoId || !otherCargoId || otherCargoId !== cargoId) return false;
         return rangoSolapadoInclusivo(
-          toDateKey(row.fecha_inicio),
-          toDateKey(row.fecha_fin),
-          toDateKey(other.fecha_inicio),
-          toDateKey(other.fecha_fin),
+          hldHlgFechaInicioYmd(row),
+          hldHlgFechaFinYmd(row),
+          hldHlgFechaInicioYmd(other),
+          hldHlgFechaFinYmd(other),
         );
       });
       if (solape) {
@@ -653,7 +708,7 @@ export function buildIntegridadLaboral({
     hlgByHld.set(hldId, true);
   });
   const hlcActivosSinGrupo = (hlcRows || []).filter((row) => {
-    const activo = row.activo !== false && !row.fecha_hasta;
+    const activo = row.activo !== false && !hlcFechaHastaYmd(row);
     if (!activo) return false;
     const hldIds = hldByCargo.get(String(row.id || "")) || [];
     if (hldIds.length === 0) return true;

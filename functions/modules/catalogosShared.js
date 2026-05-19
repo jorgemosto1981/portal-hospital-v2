@@ -2,6 +2,7 @@
 
 const { HttpsError } = require("firebase-functions/v2/https");
 const { db } = require("./shared/context");
+const { ymdDesdeValorLaboral } = require("./shared/fechaLaboralYmd");
 
 const COLECCIONES_PUBLICAS_TEMPORALES = new Set([
   "grupos_de_trabajo",
@@ -84,27 +85,23 @@ function toNumberOrNull(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-function parseIsoDateOrNull(v) {
-  const raw = toNullableTrimmedString(v);
-  if (!raw) return null;
-  const d = new Date(raw);
-  return Number.isNaN(d.getTime()) ? null : d;
+function ymdLaboralOrNull(v) {
+  const y = ymdDesdeValorLaboral(v);
+  return y || null;
 }
 
 function hasRangoSolapado({ desdeA, hastaA, desdeB, hastaB }) {
-  const inicioA = parseIsoDateOrNull(desdeA);
-  const finA = parseIsoDateOrNull(hastaA);
-  const inicioB = parseIsoDateOrNull(desdeB);
-  const finB = parseIsoDateOrNull(hastaB);
+  const inicioA = ymdLaboralOrNull(desdeA);
+  const finA = ymdLaboralOrNull(hastaA) || "9999-12-31";
+  const inicioB = ymdLaboralOrNull(desdeB);
+  const finB = ymdLaboralOrNull(hastaB) || "9999-12-31";
   if (!inicioA || !inicioB) return false;
-  const endA = finA || new Date("9999-12-31T00:00:00.000Z");
-  const endB = finB || new Date("9999-12-31T00:00:00.000Z");
-  return inicioA <= endB && inicioB <= endA;
+  return inicioA <= finB && inicioB <= finA;
 }
 
 function isRangoInvalido(desde, hasta) {
-  const inicio = parseIsoDateOrNull(desde);
-  const fin = parseIsoDateOrNull(hasta);
+  const inicio = ymdLaboralOrNull(desde);
+  const fin = ymdLaboralOrNull(hasta);
   if (!inicio || !fin) return false;
   return inicio > fin;
 }
@@ -204,17 +201,32 @@ async function resolveEstadoPerfilDatosIdDefault(rawEstadoPerfilId) {
 
 async function findSolapeHlc({ id, personaId, fechaDesde, fechaHasta }) {
   const snap = await db.collection("historial_laboral_cargos").where("persona_id", "==", personaId).get();
+  const desdeNorm = ymdLaboralOrNull(fechaDesde);
+  const candidatos = snap.docs.filter((doc) => {
+    if (doc.id === id) return false;
+    const hastaB = ymdLaboralOrNull(doc.get("fecha_hasta"));
+    if (!hastaB) return true;
+    if (!desdeNorm) return true;
+    return hastaB >= desdeNorm;
+  });
   return (
-    snap.docs.find((doc) => {
-      if (doc.id === id) return false;
-      return hasRangoSolapado({
+    candidatos.find((doc) =>
+      hasRangoSolapado({
         desdeA: fechaDesde,
         hastaA: fechaHasta,
         desdeB: doc.get("fecha_desde"),
         hastaB: doc.get("fecha_hasta"),
-      });
-    }) || null
+      }),
+    ) || null
   );
+}
+
+function cargaSemanalTieneHorasPositivas(cargaPorDiaSemana) {
+  if (!Array.isArray(cargaPorDiaSemana)) return false;
+  return cargaPorDiaSemana.some((item) => {
+    const horas = item && typeof item === "object" && !Array.isArray(item) ? Number(item.horas) : Number(item);
+    return Number.isFinite(horas) && horas > 0;
+  });
 }
 
 async function findSolapeHlgMismoCargo({ id, grupoId, cargoId, fechaInicio, fechaFin }) {
@@ -239,10 +251,10 @@ async function findSolapeHlgMismoCargo({ id, grupoId, cargoId, fechaInicio, fech
 }
 
 async function assertHlgDentroDeHlc({ fechaInicioHlg, fechaFinHlg, fechaDesdeHlc, fechaHastaHlc }) {
-  const inicioHlg = parseIsoDateOrNull(fechaInicioHlg);
-  const finHlg = parseIsoDateOrNull(fechaFinHlg);
-  const inicioHlc = parseIsoDateOrNull(fechaDesdeHlc);
-  const finHlc = parseIsoDateOrNull(fechaHastaHlc);
+  const inicioHlg = ymdLaboralOrNull(fechaInicioHlg);
+  const finHlg = ymdLaboralOrNull(fechaFinHlg);
+  const inicioHlc = ymdLaboralOrNull(fechaDesdeHlc);
+  const finHlc = ymdLaboralOrNull(fechaHastaHlc);
   if (!inicioHlg || !inicioHlc) return;
   if (inicioHlg < inicioHlc) {
     throw new HttpsError(
@@ -266,10 +278,10 @@ async function assertHlgDentroDeHlc({ fechaInicioHlg, fechaFinHlg, fechaDesdeHlc
 }
 
 async function assertHldDentroDeHlc({ fechaInicioHld, fechaFinHld, fechaDesdeHlc, fechaHastaHlc }) {
-  const inicioHld = parseIsoDateOrNull(fechaInicioHld);
-  const finHld = parseIsoDateOrNull(fechaFinHld);
-  const inicioHlc = parseIsoDateOrNull(fechaDesdeHlc);
-  const finHlc = parseIsoDateOrNull(fechaHastaHlc);
+  const inicioHld = ymdLaboralOrNull(fechaInicioHld);
+  const finHld = ymdLaboralOrNull(fechaFinHld);
+  const inicioHlc = ymdLaboralOrNull(fechaDesdeHlc);
+  const finHlc = ymdLaboralOrNull(fechaHastaHlc);
   if (!inicioHld || !inicioHlc) return;
   if (inicioHld < inicioHlc) {
     throw new HttpsError(
@@ -372,4 +384,5 @@ module.exports = {
   pushWarning,
   hasFamiliarIncompleto,
   validarCargaPorDiaSemana,
+  cargaSemanalTieneHorasPositivas,
 };

@@ -9,9 +9,7 @@ export default function LaboralFormHlgFields({
   opcionesCentroCosto,
   opcionesFuncion,
   cargaPorDiaRows,
-  onAddCargaRow,
   onChangeCargaRow,
-  onRemoveCargaRow,
   opcionesDiaSemana,
   ayudaCampos,
 }) {
@@ -57,49 +55,33 @@ export default function LaboralFormHlgFields({
         technicalName="nivel_jerarquico"
         showTechnicalName={modoAvanzado}
       />
-      <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <label className="block text-sm font-medium text-slate-700">
-            Carga por día de semana
-            {modoAvanzado ? (
-              <span className="block text-xs font-normal text-slate-500">Campo técnico: carga_por_dia_semana</span>
-            ) : null}
-          </label>
-          <button
-            type="button"
-            onClick={onAddCargaRow}
-            className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 active:bg-slate-50"
-          >
-            Agregar día
-          </button>
-        </div>
+      <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white p-3">
+        <label className="mb-2 block text-sm font-medium text-slate-700">
+          Carga por día de semana (7 días)
+          {modoAvanzado ? (
+            <span className="block text-xs font-normal text-slate-500">Campo técnico: carga_por_dia_semana</span>
+          ) : null}
+        </label>
         <p className="mb-2 text-xs text-slate-500">{ayudaCampos.carga_por_dia_semana}</p>
         <div className="space-y-2">
-          {cargaPorDiaRows.map((row, idx) => (
-            <div key={`carga-dia-${idx}`} className="grid gap-2 md:grid-cols-[1fr_140px_auto]">
-              <LabeledSelect
-                bare
-                value={row.dia_semana_id}
-                onValueChange={(v) => onChangeCargaRow(idx, "dia_semana_id", v)}
-                options={opcionesDiaSemana}
-                placeholder="Seleccionar día..."
-              />
-              <LabeledTextField
-                bare
-                value={row.horas}
-                onValueChange={(v) => onChangeCargaRow(idx, "horas", v)}
-                placeholder="Horas (0..24)"
-                inputMode="decimal"
-              />
-              <button
-                type="button"
-                onClick={() => onRemoveCargaRow(idx)}
-                className="h-11 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-700 touch-manipulation active:bg-rose-100"
-              >
-                Quitar
-              </button>
-            </div>
-          ))}
+          {cargaPorDiaRows.map((row, idx) => {
+            const diaOpt = (opcionesDiaSemana || []).find((o) => String(o.id) === String(row.dia_semana_id));
+            const diaLabel = diaOpt && diaOpt.nombre ? String(diaOpt.nombre) : row.dia_semana_id || `Día ${idx + 1}`;
+            return (
+              <div key={`carga-dia-${row.dia_semana_id || idx}`} className="grid gap-2 md:grid-cols-[1fr_140px]">
+                <p className="flex h-11 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800">
+                  {diaLabel}
+                </p>
+                <LabeledTextField
+                  bare
+                  value={row.horas}
+                  onValueChange={(v) => onChangeCargaRow(idx, "horas", v)}
+                  placeholder="0..24"
+                  inputMode="decimal"
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

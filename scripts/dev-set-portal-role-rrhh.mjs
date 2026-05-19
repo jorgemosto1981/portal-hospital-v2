@@ -1,5 +1,5 @@
 /**
- * Asigna `portal_role: "rrhh"` en custom claims (Firebase Auth).
+ * Asigna `roles_hlc_vigentes: ["CFG_RRHH"]` en custom claims (Firebase Auth).
  * Las callables de RRHH (`rrhhAltaAgente`, etc.) exigen este claim; no basta con datos en Firestore.
  *
  * Uso (raíz del repo, con cuenta de servicio vía .env.v2.local → GOOGLE_APPLICATION_CREDENTIALS):
@@ -94,7 +94,10 @@ const user = await auth.getUser(uid);
 const prev = user.customClaims && typeof user.customClaims === "object" ? { ...user.customClaims } : {};
 await auth.setCustomUserClaims(uid, {
   ...prev,
-  portal_role: "rrhh",
+  roles_hlc_vigentes: ["CFG_RRHH"],
+  cargo_activo: prev.cargo_activo === true,
+  portal_role: null,
+  perfil_rol_id: null,
 });
-console.log(`[OK] portal_role=rrhh para uid=${uid} (${isDni ? "DNI " + String(arg).replace(/\D/g, "") : user.email || arg})`);
+console.log(`[OK] roles_hlc_vigentes=[CFG_RRHH] para uid=${uid} (${isDni ? "DNI " + String(arg).replace(/\D/g, "") : user.email || arg})`);
 console.log("Cerrá sesión en el navegador o pedí un token nuevo (F5 luego de login) para ver el claim.");
