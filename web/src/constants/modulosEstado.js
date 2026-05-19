@@ -1,4 +1,4 @@
-import { ARTICULO_64A_ID } from "./solicitudesArticuloV2.js";
+import { ARTICULO_IDS_PATRON_B_MVP } from "./solicitudesArticuloV2.js";
 
 export const ESTADOS_MODULO = {
   ACTIVO: "activo",
@@ -62,20 +62,14 @@ export const MODULOS_PORTAL = [
     grupo: "rrhh",
   },
   {
-    id: "solicitud-lao",
-    label: "Solic. LAO",
-    path: "/portal/solicitudes/lao",
+    id: "ticketera",
+    label: "Solicitudes",
+    path: "/portal/solicitudes",
     estado: ESTADOS_MODULO.MVP,
     grupo: "usuario",
-  },
-  {
-    id: "solicitud-64a",
-    label: "64-A",
-    path: "/portal/solicitudes/asuntos-particulares",
-    estado: ESTADOS_MODULO.MVP,
-    grupo: "usuario",
-    /** Visible en menú solo si {@link listarArticulosIngresoAgente} incluye este artículo (filtros vigentes). */
-    articuloIngresoId: ARTICULO_64A_ID,
+    /** Hub visible si hay Patrón B hoy o siempre (incluye carril LAO en pantalla). */
+    articulosIngresoIds: ARTICULO_IDS_PATRON_B_MVP,
+    ticketeraSiempreVisible: true,
   },
   {
     id: "antiguedad",
@@ -99,11 +93,27 @@ export const MODULOS_PORTAL = [
     grupo: "rrhh",
   },
   {
+    id: "bandeja-solicitudes-rrhh",
+    label: "Bandeja solic.",
+    path: "/portal/rrhh/solicitudes-articulo",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    bandejaRrhhMenu: true,
+  },
+  {
     id: "grilla",
     label: "Grilla",
     path: "/portal/grilla",
     estado: ESTADOS_MODULO.BORRADOR,
     grupo: "jefe",
+  },
+  {
+    id: "bandeja-solicitudes-jefe",
+    label: "Bandeja solic.",
+    path: "/portal/jefe/solicitudes",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "jefe",
+    bandejaJefeMenu: true,
   },
   {
     id: "rrhh",
@@ -169,6 +179,7 @@ export const MODULOS_V2_ESTADO = [
  * @param {string} pathname
  */
 export function resolverTabPorPath(pathname) {
+  if (pathname.startsWith("/portal/rrhh/solicitudes-articulo")) return "bandeja-solicitudes-rrhh";
   if (pathname.startsWith("/portal/rrhh/checkin-saldos") || pathname.startsWith("/portal/rrhh/lao-checkin")) {
     return "checkin-saldos";
   }
@@ -176,8 +187,8 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla";
-  if (pathname.startsWith("/portal/solicitudes/lao")) return "solicitud-lao";
-  if (pathname.startsWith("/portal/solicitudes/asuntos-particulares")) return "solicitud-64a";
+  if (pathname.startsWith("/portal/jefe/solicitudes")) return "bandeja-solicitudes-jefe";
+  if (pathname.startsWith("/portal/solicitudes")) return "ticketera";
   if (pathname.startsWith("/portal/laboral") || pathname.startsWith("/laboral")) return "laboral";
   if (pathname.startsWith("/portal/mi-perfil")) return "perfil";
   if (pathname.startsWith("/portal/perfil") || pathname.startsWith("/perfil")) return "perfil-rrhh";

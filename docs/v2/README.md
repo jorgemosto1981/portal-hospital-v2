@@ -44,7 +44,10 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-18_ARTICULOS_BASICOS_Y_CONTINUIDAD.md) | **Registro + plan:** catálogo LAO/64-A/64-B/68-B, piloto BD, cómo seguir |
 | [`RFC_TICKETERA_SLICE_64A_MVP_V2.md`](./RFC_TICKETERA_SLICE_64A_MVP_V2.md) | **Oleada 0:** contrato MVP solicitud 64-A (elegibilidad HLC, trigger Patrón B, fuera de alcance MDC) |
 | [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md`](./TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md) | Matriz T1–T8 + regresión slice 64-A (**cerrada** piloto 2026-05-19) |
-| [`PLAN_TICKETERA_SLICE_64B_V2.md`](./PLAN_TICKETERA_SLICE_64B_V2.md) | **Plan** slice 64-B (Patrón B sin goce) — siguiente oleada ticketera |
+| [`PLAN_TICKETERA_SLICE_64B_V2.md`](./PLAN_TICKETERA_SLICE_64B_V2.md) | **Plan** slice 64-B (Patrón B sin goce) — piloto cerrado 2026-05-19 |
+| [`PLAN_TICKETERA_V2.md`](./PLAN_TICKETERA_V2.md) | **Plan maestro ticketera** — dónde estamos, fases, roadmap (Fase 1 cerrada → Fase 2 dinámica) |
+| [`HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md`](./HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md) | **PAUSA Fase 2–4** — bandejas jefe/RRHH, evidencia piloto, **próxima sesión: autorizaciones vs toma de conocimiento** |
+| [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md) | Visión producto (incorporada en plan maestro §2) |
 | [`CHECKIN_SALDOS_MATRIZ_PRUEBAS.md`](./CHECKIN_SALDOS_MATRIZ_PRUEBAS.md) | Matriz manual check-in + guía alta + § H artículos básicos |
 | [`GUIA_OPERATIVA_CHECKIN_SALDOS_RRHH.md`](./GUIA_OPERATIVA_CHECKIN_SALDOS_RRHH.md) | Guía operador RRHH check-in (copy SSoT en `checkinSaldosAyudaRrhh.js`) |
 | [`FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md`](./FLUJO_ONBOARDING_RRHH_ALTA_AGENTE_V2.md) | Ciclo propuesto alta RRHH: cáscara → `/portal/laboral` → `/portal/rrhh/checkin-saldos` |
@@ -80,7 +83,10 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`HANDOFF_SESION_2026-05-09.md`](./HANDOFF_SESION_2026-05-09.md) | Documentación módulo **Artículos** (`cfg_articulos`, SARH 1:N, Gate RFC), docs nuevos en `docs/v2/`, tag Git `snapshot-2026-05-09-articulos-docs-backup` antes de más código |
 | [`HANDOFF_SESION_2026-05-12.md`](./HANDOFF_SESION_2026-05-12.md) | Artículos V2 — Paso 0 LAO, §7 en MODULO PF, guardián Bloque 4, migración `migrate-step0-lao-identity`, matriz UI |
 | [`HANDOFF_SESION_2026-05-13.md`](./HANDOFF_SESION_2026-05-13.md) | Refactorización UX/UI "RRHH-First" del Configurador de Artículos — 3 pestañas humanas, widgets extraídos, labels/ayuda contextual, banner Reactivar, campos cupo/frecuencia/evento, definición operativa workflow/burbujeo, corrección `ambito_consumo_id` |
+| [`HANDOFF_SESION_2026-05-19.md`](./HANDOFF_SESION_2026-05-19.md) | **Datos laborales:** fechas YMD BA, BOLA, `rrhhDeshabilitarHlg`, planilla 7 días, HLg ocultos en UI, panel HLD, refactor web (tarjetas/modales/hooks), docs arquitectura + auditoría |
 | [`ROADMAP_MOTOR_LAO_V2_POST_CHECKPOINT.md`](./ROADMAP_MOTOR_LAO_V2_POST_CHECKPOINT.md) | **Plan técnico** post-checkpoint Motor LAO V2 (fases 3b, 4, 5) y comando “retomar aquí” |
 | [`REFACTOR_WEB_DATOS_LABORALES_FORMULARIO_V2.md`](./REFACTOR_WEB_DATOS_LABORALES_FORMULARIO_V2.md) | Refactor UI del formulario datos laborales: `LabeledSelect` / `LabeledTextField`, modo `bare`, fix edición por persona; lista de archivos y pendientes |
+| [`DATOS_LABORALES_ARQUITECTURA_WEB_V2.md`](./DATOS_LABORALES_ARQUITECTURA_WEB_V2.md) | **Arquitectura web** Datos laborales: árbol `datos-laborales/`, hooks, snapshots, tarjetas/modales, reglas UI (HLg ocultos, HLD vs HLc/HLg, guardar deshabilitado) |
+| [`DATOS_LABORALES_AUDITORIA_E_IMPLEMENTACION_2026-05-19.md`](./DATOS_LABORALES_AUDITORIA_E_IMPLEMENTACION_2026-05-19.md) | Auditoría e implementación **may 2026**: fechas YMD, BOLA, `rrhhDeshabilitarHlg`, planilla 7 días, IAM callables; enlace a arquitectura web |
 
 **Lecciones desde código V1 (en referencia V1):** [`../referencia_v1/PROBLEMA_LOGIN_PERMISOS.md`](../referencia_v1/PROBLEMA_LOGIN_PERMISOS.md) y el resto de `docs/referencia_v1/` según necesidad.

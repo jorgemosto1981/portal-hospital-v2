@@ -14,6 +14,8 @@
 
 **Fecha:** 22 de abril de 2026.
 
+**Implementación web (cliente `/portal/laboral`):** mapa de archivos, hooks, reglas de UI (HLg `activo`, panel HLD, validación del modal) en [`DATOS_LABORALES_ARQUITECTURA_WEB_V2.md`](./DATOS_LABORALES_ARQUITECTURA_WEB_V2.md). Cambios funcionales y backend de mayo 2026: [`DATOS_LABORALES_AUDITORIA_E_IMPLEMENTACION_2026-05-19.md`](./DATOS_LABORALES_AUDITORIA_E_IMPLEMENTACION_2026-05-19.md).
+
 ---
 
 ## 1. Objetivo del módulo

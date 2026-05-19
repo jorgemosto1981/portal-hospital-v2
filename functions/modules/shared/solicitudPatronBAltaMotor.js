@@ -142,6 +142,8 @@ async function runPatronBAltaMotor(params) {
     return { ok: false, codigos: eleg.codigos, mensajes: eleg.mensajes, hlc_id: null };
   }
 
+  /** @type {{ en_mes: number, tope_mes: number } | null} */
+  let frecuenciaMes = null;
   if (Number.isFinite(topeMes) && topeMes > 0) {
     const enMes = await countSolicitudesMesArticulo(
       db,
@@ -151,6 +153,7 @@ async function runPatronBAltaMotor(params) {
       pDesde.mo,
       excludeSolId || "",
     );
+    frecuenciaMes = { en_mes: enMes, tope_mes: Math.floor(topeMes) };
     if (enMes >= topeMes) {
       return { ok: false, codigos: [CODIGO_SALDO_MES], mensajes: [mensajeParaCodigo(CODIGO_SALDO_MES)] };
     }
@@ -186,6 +189,9 @@ async function runPatronBAltaMotor(params) {
     bolsa_id: match.bolsaId,
     saldo_doc_id: salId,
     articulo_id: articuloId,
+    saldo_disponible: disp,
+    saldo_restante_preview: disp - diasPedidos,
+    frecuencia_mes: frecuenciaMes,
   };
 }
 

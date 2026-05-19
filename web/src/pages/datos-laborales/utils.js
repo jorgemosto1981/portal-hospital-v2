@@ -193,13 +193,65 @@ export {
   ymdDesdeValorLaboral,
 };
 
+/** Documento laboral no dado de baja administrativa (`activo !== false`). */
+export function registroLaboralActivo(row) {
+  if (!row || typeof row !== "object") return true;
+  const a = row.activo;
+  if (a === false || a === "false" || a === 0) return false;
+  return true;
+}
+
 export function registroLaboralVigenteEnHoy(row, tipo) {
   if (!row || typeof row !== "object") return false;
+  if (!registroLaboralActivo(row)) return false;
   const ref = obtenerYmdHoyInstitucional();
   if (tipo === "hlc") {
     return vigenteEnFechaInclusivaYmd(hlcFechaDesdeYmd(row), hlcFechaHastaYmd(row) || null, ref);
   }
   return vigenteEnFechaInclusivaYmd(hldHlgFechaInicioYmd(row), hldHlgFechaFinYmd(row) || null, ref);
+}
+
+/** HLg/HLd dados de baja administrativa (no operativos en UI). */
+export function isHlgAsignacionDeshabilitada(row) {
+  return !registroLaboralActivo(row);
+}
+
+/** HLg que se muestran en pantalla (excluye `activo: false`). */
+export function hlgVisibleEnPantalla(row) {
+  return registroLaboralActivo(row);
+}
+
+/** Vigencia del dato laboral (HLD) para la ficha — distinta del período de cargo (HLc) y del grupo (HLg). */
+export function formatVigenciaHldPantalla(hldRow) {
+  if (!hldRow || typeof hldRow !== "object") return null;
+  const desdeYmd = hldHlgFechaInicioYmd(hldRow);
+  if (!desdeYmd) return null;
+  const hastaYmd = hldHlgFechaFinYmd(hldRow);
+  const desde = formatDateDdMmAaaa(desdeYmd, "—");
+  if (hastaYmd) {
+    return `Desde ${desde} · Hasta ${formatDateDdMmAaaa(hastaYmd, "—")}`;
+  }
+  return `Desde ${desde} · Vigente`;
+}
+
+export function isHlgOHldVigenteEnHoy(row) {
+  return registroLaboralVigenteEnHoy(row, "hlg");
+}
+
+export function isHlcOperativo(row) {
+  if (!row || typeof row !== "object") return false;
+  if (row.activo === false) return false;
+  if (String(row.motivo_deshabilitacion_id || "").trim()) return false;
+  return registroLaboralVigenteEnHoy(row, "hlc");
+}
+
+export function isHlcHistoricoVisible(row) {
+  if (!row || typeof row !== "object") return false;
+  if (row.activo === false) return false;
+  if (String(row.motivo_deshabilitacion_id || "").trim()) return false;
+  const hasta = hlcFechaHastaYmd(row);
+  if (!hasta) return false;
+  return !registroLaboralVigenteEnHoy(row, "hlc");
 }
 
 function compareIsoDesc(a, b) {
@@ -215,6 +267,10 @@ function estadoDesdeFechas(desde, hasta) {
   if (hasta && hasta < nowIso) return "cerrado";
   if (desde > nowIso) return "pendiente";
   return "activo";
+}
+
+export function sumarHorasSemana(cargaPorDiaSemana) {
+  return sumCargaPorDiaSemana(cargaPorDiaSemana);
 }
 
 function sumCargaPorDiaSemana(carga) {
@@ -256,6 +312,7 @@ export function buildTimelineItemsByPersona({
   const cargoTotalHlg = new Map();
 
   (hlgRows || []).forEach((row) => {
+    if (!hlgVisibleEnPantalla(row)) return;
     const rowPersona = String(row.persona_id || "");
     if (!includeAllPersonas && rowPersona !== persona) return;
     const dato = idxHld.get(String(row.dato_laboral_id || ""));
@@ -354,6 +411,7 @@ export function buildTimelineItemsByPersona({
     });
 
   (hlgRows || [])
+    .filter((row) => hlgVisibleEnPantalla(row))
     .filter((row) => includeAllPersonas || String(row.persona_id || "") === persona)
     .forEach((row) => {
       const desde = hldHlgFechaInicioYmd(row);
@@ -511,9 +569,9 @@ export function buildVistaGrupoItems({
   const includeAllGrupos = !targetGrupo;
   const fechaIso = fechaCorte ? toDateKey(fechaCorte) : new Date().toISOString().slice(0, 10);
   const epsilon = 0.01;
-  const rows = (hlgRows || []).filter(
-    (row) => includeAllGrupos || String(row.grupo_de_trabajo_id || "") === targetGrupo,
-  );
+  const rows = (hlgRows || [])
+    .filter((row) => hlgVisibleEnPantalla(row))
+    .filter((row) => includeAllGrupos || String(row.grupo_de_trabajo_id || "") === targetGrupo);
   const cargoTotalHlg = new Map();
   rows.forEach((row) => {
     const dato = idxHld.get(String(row.dato_laboral_id || ""));
@@ -676,7 +734,9 @@ export function buildIntegridadLaboral({
   idxEfectores,
 }) {
   const hldSinCargo = (hldRows || []).filter((row) => !idxHlc.has(String(row.cargo_id || "")));
-  const hlgSinDato = (hlgRows || []).filter((row) => !idxHld.has(String(row.dato_laboral_id || "")));
+  const hlgSinDato = (hlgRows || [])
+    .filter((row) => hlgVisibleEnPantalla(row))
+    .filter((row) => !idxHld.has(String(row.dato_laboral_id || "")));
   const hlcConGrupoInvalido = (hlcRows || []).filter(
     (row) => row.grupo_de_trabajo_id && !idxGrupos.has(String(row.grupo_de_trabajo_id)),
   );
@@ -703,6 +763,7 @@ export function buildIntegridadLaboral({
   });
   const hlgByHld = new Map();
   (hlgRows || []).forEach((row) => {
+    if (!hlgVisibleEnPantalla(row)) return;
     const hldId = String(row.dato_laboral_id || "");
     if (!hldId) return;
     hlgByHld.set(hldId, true);

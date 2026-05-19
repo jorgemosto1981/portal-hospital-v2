@@ -23,8 +23,13 @@ import ArticuloListadoGrilla from "./pages/ArticuloListadoGrilla.jsx";
 import ArticuloVersionesListado from "./pages/ArticuloVersionesListado.jsx";
 import SolicitudLaoAlta from "./pages/SolicitudLaoAlta.jsx";
 import Solicitud64AAlta from "./pages/Solicitud64AAlta.jsx";
+import TicketeraShell from "./features/solicitudes/TicketeraShell.jsx";
+import TicketeraHub from "./pages/TicketeraHub.jsx";
+import TicketeraPatronB from "./pages/TicketeraPatronB.jsx";
+import BandejaJefeSolicitudes from "./pages/BandejaJefeSolicitudes.jsx";
+import BandejaRrhhSolicitudes from "./pages/BandejaRrhhSolicitudes.jsx";
 import GuardArticuloIngreso from "./features/solicitudes/GuardArticuloIngreso.jsx";
-import { ARTICULO_64A_ID } from "./constants/solicitudesArticuloV2.js";
+import { ARTICULO_IDS_PATRON_B_MVP } from "./constants/solicitudesArticuloV2.js";
 import CheckinSaldosAgente from "./pages/CheckinSaldosAgente.jsx";
 import AltaAgenteOnboardingRRHH from "./pages/AltaAgenteOnboardingRRHH.jsx";
 import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
@@ -92,18 +97,23 @@ export default function App() {
             <Route path="home" element={<Inicio />} />
             <Route path="mi-perfil" element={<PerfilUsuario />} />
             <Route path="laboral" element={<DatosLaborales />} />
-            <Route path="solicitudes/lao" element={<SolicitudLaoAlta />} />
-            <Route
-              path="solicitudes/asuntos-particulares"
-              element={
-                <GuardArticuloIngreso articuloId={ARTICULO_64A_ID}>
-                  <Solicitud64AAlta />
-                </GuardArticuloIngreso>
-              }
-            />
+            <Route path="solicitudes" element={<TicketeraShell />}>
+              <Route index element={<TicketeraHub />} />
+              <Route
+                path="patron-b"
+                element={
+                  <GuardArticuloIngreso articuloIds={ARTICULO_IDS_PATRON_B_MVP}>
+                    <TicketeraPatronB />
+                  </GuardArticuloIngreso>
+                }
+              />
+              <Route path="lao" element={<SolicitudLaoAlta />} />
+            </Route>
+            <Route path="solicitudes/asuntos-particulares" element={<Solicitud64AAlta />} />
             <Route path="perfil" element={<DatosPersonales />} />
             <Route path="perfil/:personaId" element={<Perfil />} />
             <Route path="grilla" element={<GrillaOperativa />} />
+            <Route path="jefe/solicitudes" element={<BandejaJefeSolicitudes />} />
             <Route path="modulos" element={<EstadoModulos />} />
             <Route path="pantallas" element={<PantallasCatalogo />} />
             <Route path="configuracion" element={<Configuracion />} />
@@ -112,6 +122,7 @@ export default function App() {
               <Route path="rrhh/alta" element={<AltaAgenteRRHH />} />
               <Route path="rrhh/alta-agente" element={<AltaAgenteOnboardingRRHH />} />
               <Route path="rrhh/antiguedad" element={<Antiguedad />} />
+              <Route path="rrhh/solicitudes-articulo" element={<BandejaRrhhSolicitudes />} />
               <Route path="rrhh/checkin-saldos" element={<CheckinSaldosAgente />} />
               <Route path="rrhh/lao-checkin" element={<LaoCheckinRRHH />} />
               <Route path="rrhh/configuracion-articulos" element={<ArticuloListadoGrilla />} />

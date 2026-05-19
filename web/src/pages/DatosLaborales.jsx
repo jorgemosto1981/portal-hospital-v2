@@ -6,31 +6,28 @@ import {
 } from "../services/datosLaboralesService.js";
 import { callSyncSessionClaims } from "../services/callables.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { AYUDA_CAMPOS, INITIAL_FORM_DATA_LABORAL } from "./datos-laborales/constants.js";
-import ColeccionesLaboralesCards from "./datos-laborales/sections/ColeccionesLaboralesCards.jsx";
-import FasesLaboralesTables from "./datos-laborales/sections/FasesLaboralesTables.jsx";
+import { INITIAL_FORM_DATA_LABORAL } from "./datos-laborales/constants.js";
 import IntegridadReferencialCard from "./datos-laborales/sections/IntegridadReferencialCard.jsx";
-import LaboralFormCabeceraFields from "./datos-laborales/sections/LaboralFormCabeceraFields.jsx";
 import PersonaSearchSelect from "./datos-laborales/components/PersonaSearchSelect.jsx";
-import LaboralFormHlcFields from "./datos-laborales/sections/LaboralFormHlcFields.jsx";
-import LaboralFormHlgFields from "./datos-laborales/sections/LaboralFormHlgFields.jsx";
-import LaboralFormVigenciaFields from "./datos-laborales/sections/LaboralFormVigenciaFields.jsx";
+import LaboralCargosActivosCard from "./datos-laborales/sections/LaboralCargosActivosCard.jsx";
+import LaboralFormularioModal from "./datos-laborales/sections/LaboralFormularioModal.jsx";
+import LaboralCargosHistoricosCard from "./datos-laborales/sections/LaboralCargosHistoricosCard.jsx";
+import LaboralModalesOperativos from "./datos-laborales/sections/LaboralModalesOperativos.jsx";
+import { formatDateTime, formatFechaVisible } from "./datos-laborales/laboralDisplayFormat.js";
+import { useLaboralSnapshots } from "./datos-laborales/useLaboralSnapshots.js";
+import { useLaboralAnalisisOperativa } from "./datos-laborales/useLaboralAnalisisOperativa.js";
 import TimelineLaboralPersonaCard from "./datos-laborales/sections/TimelineLaboralPersonaCard.jsx";
 import VistaOperativaGrupoCard from "./datos-laborales/sections/VistaOperativaGrupoCard.jsx";
 import { useDatosLaboralesCollections } from "./datos-laborales/useDatosLaboralesCollections.js";
 import { buildFormDataFromRecord, validateLaboralForm } from "./datos-laborales/formLogic.js";
+import { laboralCallableErrorMessage } from "./datos-laborales/callableErrorMessage.js";
 import { buildHlcPayload, buildHldPayload, buildHlgPayload } from "./datos-laborales/payloadBuilders.js";
 import LabeledSelect from "./datos-laborales/components/LabeledSelect.jsx";
-import LabeledTextField from "./datos-laborales/components/LabeledTextField.jsx";
 import {
-  buildVistaGrupoItems,
-  buildTimelineItemsByPersona,
   crearIndicePorId,
   emptyCargaDia,
-  filterTimelineItemsAdvanced,
-  filterTimelineItems,
   labelDesdeIndice,
   normalizarWarnings,
   updateFormDataField,
@@ -38,82 +35,20 @@ import {
   addCargaPorDiaRow,
   removeCargaPorDiaRow,
   buildRegistrosEdicionDetallados,
-  buildTimelineResumen,
-  buildIntegridadLaboral,
   buildPlanillaCargaSemanal,
-  formatDateDdMmAaaa,
   obtenerYmdHoyInstitucional,
   hlcFechaDesdeYmd,
   hlcFechaHastaYmd,
-  hldHlgFechaFinYmd,
-  hldHlgFechaInicioYmd,
-  registroLaboralVigenteEnHoy,
+  hlgVisibleEnPantalla,
 } from "./datos-laborales/utils.js";
 
 const EMPTY_ROWS = [];
 
-const OPCIONES_TIPO_ALTA = [
-  { id: "historial_laboral_cargos", nombre: "HLc · historial_laboral_cargos" },
-  {
-    id: "historial_laboral_grupos",
-    nombre: "HLg · historial_laboral_grupos (con vínculo a cargo)",
-  },
-];
 const STORAGE_KEY_MODO_AVANZADO = "rrhh_datos_laborales_modo_avanzado_v1";
-
-function toDateSafe(value) {
-  const d = new Date(String(value || ""));
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function formatDateTime(value) {
-  const d = toDateSafe(value);
-  if (!d) return "—";
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = String(d.getFullYear());
-  const hh = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return `${dd} ${mm} ${yyyy} ${hh}:${min}`;
-}
-
-function formatFechaVisible(value, fallback = "—") {
-  return formatDateDdMmAaaa(value, fallback);
-}
 
 function planillaCargaInicial(opcionesDiaSemana) {
   const planilla = buildPlanillaCargaSemanal(opcionesDiaSemana, []);
   return planilla.length > 0 ? planilla : [emptyCargaDia()];
-}
-
-function isHlgOHldVigenteEnHoy(row) {
-  if (!row || typeof row !== "object") return false;
-  if (row.activo === false) return false;
-  return registroLaboralVigenteEnHoy(row, "hlg");
-}
-
-function isHlcOperativo(row) {
-  if (!row || typeof row !== "object") return false;
-  if (row.activo === false) return false;
-  if (String(row.motivo_deshabilitacion_id || "").trim()) return false;
-  return registroLaboralVigenteEnHoy(row, "hlc");
-}
-
-function isHlcHistoricoVisible(row) {
-  if (!row || typeof row !== "object") return false;
-  if (row.activo === false) return false;
-  if (String(row.motivo_deshabilitacion_id || "").trim()) return false;
-  const hasta = hlcFechaHastaYmd(row);
-  if (!hasta) return false;
-  return !registroLaboralVigenteEnHoy(row, "hlc");
-}
-
-function sumarHorasSemana(cargaPorDiaSemana) {
-  if (!Array.isArray(cargaPorDiaSemana)) return 0;
-  return cargaPorDiaSemana.reduce((acc, row) => {
-    const horas = Number(row && typeof row === "object" ? row.horas : row);
-    return Number.isFinite(horas) ? acc + horas : acc;
-  }, 0);
 }
 
 function labelPersonaOpcion(p) {
@@ -184,6 +119,7 @@ export default function DatosLaborales() {
     confirmar: false,
   });
   const { user: authUser } = useAuthSession();
+  const planillaHlgCargadaRef = useRef("");
   const [cargaPorDiaRows, setCargaPorDiaRows] = useState([emptyCargaDia()]);
   const [timelinePersonaId, setTimelinePersonaId] = useState("");
   const [timelineFiltro, setTimelineFiltro] = useState("todos");
@@ -217,6 +153,11 @@ export default function DatosLaborales() {
   const hlcRows = rowsByCollection.historial_laboral_cargos ?? EMPTY_ROWS;
   const hldRows = rowsByCollection.historial_laboral_datos ?? EMPTY_ROWS;
   const hlgRows = rowsByCollection.historial_laboral_grupos ?? EMPTY_ROWS;
+  /** Asignaciones dadas de baja (`activo: false`) no se listan en la UI operativa. */
+  const hlgRowsVisibles = useMemo(
+    () => hlgRows.filter((r) => hlgVisibleEnPantalla(r)),
+    [hlgRows],
+  );
   const idxEfectores = crearIndicePorId(rowsByCollection.cfg_efectores || []);
   const idxGrupos = crearIndicePorId(rowsByCollection.grupos_de_trabajo || []);
   const idxPersonas = crearIndicePorId(rowsByCollection.personas || []);
@@ -315,7 +256,13 @@ export default function DatosLaborales() {
     }
     return modoEdicion ? "Editar este grupo" : "Crear nuevo grupo";
   }, [tipoAlta, modoEdicion]);
-  const registrosPorTipo = rowsByCollection[tipoAlta] ?? EMPTY_ROWS;
+  const registrosPorTipo = useMemo(() => {
+    const raw = rowsByCollection[tipoAlta] ?? EMPTY_ROWS;
+    if (tipoAlta === "historial_laboral_grupos") {
+      return raw.filter((r) => hlgVisibleEnPantalla(r));
+    }
+    return raw;
+  }, [rowsByCollection, tipoAlta]);
   const registrosPorTipoFiltrados = useMemo(() => {
     const pid = String(formData.persona_id || "").trim();
     if (!pid) return [];
@@ -337,120 +284,11 @@ export default function DatosLaborales() {
       idxHlc,
     });
   }, [registrosPorTipoFiltrados, tipoAlta, idxPersonas, idxFunciones, idxGrupos, idxHld, idxHlc]);
-  const snapshotActual = useMemo(() => {
-    const personaId = String(formData.persona_id || "").trim();
-    if (!personaId) {
-      return {
-        bloquesVigentes: [],
-        totalHlcPersona: 0,
-        tieneHistorico: false,
-        lastUpdate: null,
-        alertas: [],
-      };
-    }
-    const hlcPersona = hlcRows.filter((r) => String(r.persona_id || "") === personaId);
-    const hlgPersona = hlgRows.filter((r) => String(r.persona_id || "") === personaId);
-    const hldPersona = hldRows.filter((r) => String(r.persona_id || "") === personaId);
-    const hlcVigentes = hlcPersona.filter(isHlcOperativo);
-    const hlgVigentes = hlgPersona.filter(isHlgOHldVigenteEnHoy);
-    const hldVigentes = hldPersona.filter(isHlgOHldVigenteEnHoy);
-    const hlcCerrados = hlcPersona.filter(isHlcHistoricoVisible);
-    const merged = [...hlcPersona, ...hlgPersona, ...hldPersona];
-    const lastUpdate = merged
-      .map((r) => r.actualizado_en || r.creado_en || null)
-      .filter(Boolean)
-      .sort((a, b) => String(b).localeCompare(String(a)))[0] || null;
-    const alertas = [];
-    if (hlcVigentes.length > 1) alertas.push("Más de un HLC vigente");
-    if (hlcVigentes.length === 0 && hlgVigentes.length > 0) alertas.push("HLG vigente sin HLC vigente");
-    if (hldVigentes.length === 0 && hlgVigentes.length > 0) alertas.push("HLG vigente sin HLD vigente");
-
-    const hldByCargo = hldPersona.reduce((acc, hld) => {
-      const cargoId = String(hld.cargo_id || "").trim();
-      if (!cargoId) return acc;
-      if (!acc.has(cargoId)) acc.set(cargoId, []);
-      acc.get(cargoId).push(hld);
-      return acc;
-    }, new Map());
-
-    const bloquesVigentes = hlcVigentes
-      .slice()
-      .sort((a, b) => hlcFechaDesdeYmd(b).localeCompare(hlcFechaDesdeYmd(a)))
-      .map((hlc) => {
-        const hldAsociados = hldByCargo.get(String(hlc.id || "")) || [];
-        const hldAsociadosIds = new Set(hldAsociados.map((row) => String(row.id || "")));
-        const hlgAsociados = hlgPersona.filter((r) => hldAsociadosIds.has(String(r.dato_laboral_id || "")));
-        const hlgVigDelHlc = hlgAsociados.filter(isHlgOHldVigenteEnHoy);
-        const hlgHistDelHlc = hlgAsociados.filter((r) => !isHlgOHldVigenteEnHoy(r));
-        const hldRelacionado =
-          hlgVigDelHlc
-            .map((r) => idxHld.get(String(r.dato_laboral_id || "")))
-            .find(Boolean) || null;
-        const tituloHlc = `${labelDesdeIndice(idxFunciones, hlc.cargo_funcional_id)} · ${labelDesdeIndice(
-          idxEfectores,
-          hlc.efector_cumplimiento_id,
-        )}`;
-        const mapHlg = (r) => {
-          const hldRef = idxHld.get(String(r.dato_laboral_id || "")) || null;
-          const cargaHorariaGrupo = sumarHorasSemana(r.carga_por_dia_semana);
-          const warningHlg = [];
-          if (cargaHorariaGrupo <= 0) warningHlg.push("Sin carga horaria asignada al grupo.");
-          if (!hldRef || !hldRef.funcion_real_id) warningHlg.push("Sin función real asociada.");
-          return {
-            id: String(r.id || ""),
-            grupo: labelDesdeIndice(idxGrupos, r.grupo_de_trabajo_id),
-            funcion: labelDesdeIndice(idxFunciones, hldRef && hldRef.funcion_real_id),
-            periodo: `Desde ${formatFechaVisible(hldHlgFechaInicioYmd(r))} · ${
-              hldHlgFechaFinYmd(r) ? formatFechaVisible(hldHlgFechaFinYmd(r)) : "Vigente"
-            }`,
-            cargaHorariaGrupo: cargaHorariaGrupo > 0 ? cargaHorariaGrupo : 0,
-            warningHlg,
-          };
-        };
-        const vigenciaHlc = `Desde ${formatFechaVisible(hlcFechaDesdeYmd(hlc))} · ${
-          hlcFechaHastaYmd(hlc) ? formatFechaVisible(hlcFechaHastaYmd(hlc)) : "Vigente"
-        }`;
-        const hldLabel = hldRelacionado
-          ? `Vigente desde ${formatFechaVisible(hldHlgFechaInicioYmd(hldRelacionado))}`
-          : "Sin vínculo HLD vigente";
-        const totalCargaHlg = hlgVigDelHlc.reduce((acc, row) => acc + sumarHorasSemana(row.carga_por_dia_semana), 0);
-        const warningsHlc = [];
-        const cargaHlcNum = Number(hlc.carga_horaria_total);
-        if (hlgVigDelHlc.length === 0) warningsHlc.push("Cargo vigente sin asignación vigente a grupo de trabajo.");
-        if (Number.isFinite(cargaHlcNum) && hlgVigDelHlc.length > 0 && Math.abs(totalCargaHlg - cargaHlcNum) > 0.01) {
-          warningsHlc.push(`Carga horaria inconsistente: HLC ${cargaHlcNum} hs vs HLG ${totalCargaHlg} hs.`);
-        }
-        return {
-          id: String(hlc.id || ""),
-          hlcId: String(hlc.id || ""),
-          tipoVinculo: labelDesdeIndice(idxTipoVinculo, hlc.tipo_vinculo_id),
-          rolHlc: labelDesdeIndice(idxRoles, hlc.rol_id),
-          escalafon: labelDesdeIndice(idxEscalafon, hlc.escalafon_id),
-          agrupamiento: labelDesdeIndice(idxAgrupamiento, hlc.agrupamiento_id),
-          categoria: labelDesdeIndice(idxCategorias, hlc.categoria_id),
-          funcion: labelDesdeIndice(idxFunciones, hlc.cargo_funcional_id),
-          cargaHoraria: String(hlc.carga_horaria_total || "—"),
-          tituloHlc,
-          vigenciaHlc,
-          hlgVigentes: hlgVigDelHlc.map(mapHlg),
-          hlgHistoricos: hlgHistDelHlc.map(mapHlg),
-          hldLabel,
-          warningsHlc,
-        };
-      });
-
-    return {
-      bloquesVigentes,
-      totalHlcPersona: hlcPersona.length,
-      tieneHistorico: hlcCerrados.length > 0,
-      lastUpdate,
-      alertas,
-    };
-  }, [
-    formData.persona_id,
+  const { snapshotActual, snapshotHistorico } = useLaboralSnapshots({
+    personaId: formData.persona_id,
     hlcRows,
-    hlgRows,
     hldRows,
+    hlgRowsVisibles,
     idxHld,
     idxFunciones,
     idxEfectores,
@@ -460,125 +298,31 @@ export default function DatosLaborales() {
     idxEscalafon,
     idxAgrupamiento,
     idxCategorias,
-  ]);
-  const snapshotHistorico = useMemo(() => {
-    const personaId = String(formData.persona_id || "").trim();
-    if (!personaId) return [];
-    const hlcCerrados = hlcRows
-      .filter((r) => String(r.persona_id || "") === personaId)
-      .filter(isHlcHistoricoVisible)
-      .slice()
-      .sort((a, b) => hlcFechaHastaYmd(b).localeCompare(hlcFechaHastaYmd(a)));
-    return hlcCerrados.map((hlc, idx) => {
-      const hldDelPeriodo = hldRows.filter(
-        (r) =>
-          String(r.persona_id || "") === personaId && String(r.cargo_id || "") === String(hlc.id || ""),
-      );
-      const hldDelPeriodoIds = new Set(hldDelPeriodo.map((row) => String(row.id || "")));
-      const hlgDelPeriodo = hlgRows.filter(
-        (r) =>
-          String(r.persona_id || "") === personaId &&
-          hldDelPeriodoIds.has(String(r.dato_laboral_id || "")),
-      );
-      const hlgVigDelHlc = hlgDelPeriodo.filter(isHlgOHldVigenteEnHoy);
-      const hlgHistDelHlc = hlgDelPeriodo.filter((r) => !isHlgOHldVigenteEnHoy(r));
-      const mapHlg = (r) => {
-        const hldRef = idxHld.get(String(r.dato_laboral_id || "")) || null;
-        const cargaHorariaGrupo = sumarHorasSemana(r.carga_por_dia_semana);
-        return {
-          id: String(r.id || ""),
-          grupo: labelDesdeIndice(idxGrupos, r.grupo_de_trabajo_id),
-          funcion: labelDesdeIndice(idxFunciones, hldRef && hldRef.funcion_real_id),
-          periodo: `Desde ${formatFechaVisible(hldHlgFechaInicioYmd(r))} · ${
-            hldHlgFechaFinYmd(r) ? formatFechaVisible(hldHlgFechaFinYmd(r)) : "Vigente"
-          }`,
-          cargaHorariaGrupo: cargaHorariaGrupo > 0 ? cargaHorariaGrupo : 0,
-        };
-      };
-      const titulo = `${labelDesdeIndice(idxFunciones, hlc.cargo_funcional_id)} · ${labelDesdeIndice(
-        idxEfectores,
-        hlc.efector_cumplimiento_id,
-      )}`;
-      const periodo = `Desde ${formatFechaVisible(hlcFechaDesdeYmd(hlc))} · Hasta ${formatFechaVisible(hlcFechaHastaYmd(hlc))}`;
-      return {
-        id: String(hlc.id || `hlc-cerrado-${idx}`),
-        hlcId: String(hlc.id || ""),
-        tipoVinculo: labelDesdeIndice(idxTipoVinculo, hlc.tipo_vinculo_id),
-        rolHlc: labelDesdeIndice(idxRoles, hlc.rol_id),
-        escalafon: labelDesdeIndice(idxEscalafon, hlc.escalafon_id),
-        agrupamiento: labelDesdeIndice(idxAgrupamiento, hlc.agrupamiento_id),
-        categoria: labelDesdeIndice(idxCategorias, hlc.categoria_id),
-        funcion: labelDesdeIndice(idxFunciones, hlc.cargo_funcional_id),
-        cargaHoraria: String(hlc.carga_horaria_total || "—"),
-        orden: idx + 1,
-        titulo,
-        periodo,
-        asignaciones: hlgDelPeriodo.length,
-        hlgVigentes: hlgVigDelHlc.map(mapHlg),
-        hlgHistoricos: hlgHistDelHlc.map(mapHlg),
-      };
-    });
-  }, [
-    formData.persona_id,
-    hlcRows,
-    hldRows,
-    hlgRows,
-    idxHld,
-    idxFunciones,
-    idxEfectores,
-    idxGrupos,
-    idxRoles,
-    idxTipoVinculo,
-    idxEscalafon,
-    idxAgrupamiento,
-    idxCategorias,
-  ]);
-  const timelineItemsBase = useMemo(
-    () =>
-      buildTimelineItemsByPersona({
-        personaId: timelinePersonaId,
-        hlcRows,
-        hldRows,
-        hlgRows,
-        idxHlc,
-        idxHld,
-        idxGrupos,
-        idxEfectores,
-        idxPersonas,
-        idxRoles,
-        idxFunciones,
-      }),
-    [
-      timelinePersonaId,
-      hlcRows,
-      hldRows,
-      hlgRows,
-      idxHlc,
-      idxHld,
-      idxGrupos,
-      idxEfectores,
-      idxPersonas,
-      idxRoles,
-      idxFunciones,
-    ],
-  );
-  const timelineItems = useMemo(() => {
-    const base = filterTimelineItems(timelineItemsBase, {
-      filtro: timelineFiltro,
-      fecha: timelineFecha,
-    });
-    return filterTimelineItemsAdvanced(base, {
-      tipo: timelineTipoTramo,
-      grupoId: timelineGrupoId,
-      estadoAsignacionId: timelineEstadoAsignacionId,
-      nivelMin: timelineNivelMin,
-      nivelMax: timelineNivelMax,
-      onlySinReferencias: timelineOnlySinReferencias,
-      onlySolape: timelineOnlySolape,
-      warningTipo: timelineWarningTipo,
-    });
-  }, [
+  });
+  const {
     timelineItemsBase,
+    timelineItems,
+    timelineResumen,
+    vistaGrupoItems,
+    hldSinCargo,
+    hlgSinDato,
+    hlcConGrupoInvalido,
+    hlcConEfectorDesignacionInvalido,
+    hlcConEfectorCumplimientoInvalido,
+    totalAlertasIntegridad,
+    hlcActivosSinGrupo,
+  } = useLaboralAnalisisOperativa({
+    hlcRows,
+    hldRows,
+    hlgRowsVisibles,
+    idxHlc,
+    idxHld,
+    idxGrupos,
+    idxEfectores,
+    idxPersonas,
+    idxRoles,
+    idxFunciones,
+    timelinePersonaId,
     timelineFiltro,
     timelineFecha,
     timelineTipoTramo,
@@ -589,43 +333,21 @@ export default function DatosLaborales() {
     timelineOnlySinReferencias,
     timelineOnlySolape,
     timelineWarningTipo,
-  ]);
-  const timelineResumen = useMemo(() => {
-    return buildTimelineResumen(timelineItemsBase);
-  }, [timelineItemsBase]);
-  const vistaGrupoItems = useMemo(
+    grupoVistaId,
+    grupoVistaFecha,
+  });
+
+  const errorValidacionFormulario = useMemo(
     () =>
-      buildVistaGrupoItems({
-        grupoId: grupoVistaId,
-        fechaCorte: grupoVistaFecha,
-        hlgRows,
-        idxPersonas,
-        idxHld,
+      validateLaboralForm({
+        tipoAlta,
+        formData,
+        cargaPorDiaRows,
         idxHlc,
       }),
-    [grupoVistaId, grupoVistaFecha, hlgRows, idxPersonas, idxHld, idxHlc],
+    [tipoAlta, formData, cargaPorDiaRows, idxHlc],
   );
-  const {
-    hldSinCargo,
-    hlgSinDato,
-    hlcConGrupoInvalido,
-    hlcConEfectorDesignacionInvalido,
-    hlcConEfectorCumplimientoInvalido,
-    totalAlertasIntegridad,
-    hlcActivosSinGrupo,
-  } = useMemo(
-    () =>
-      buildIntegridadLaboral({
-        hlcRows,
-        hldRows,
-        hlgRows,
-        idxHlc,
-        idxHld,
-        idxGrupos,
-        idxEfectores,
-      }),
-    [hlcRows, hldRows, hlgRows, idxHlc, idxHld, idxGrupos, idxEfectores],
-  );
+  const puedeGuardarFormulario = !errorValidacionFormulario;
 
   useEffect(() => {
     if (timelinePersonaId) return;
@@ -805,8 +527,9 @@ export default function DatosLaborales() {
       setResultadoModalMsg(finalMsg);
       setResultadoModalAbierto(true);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "No se pudo deshabilitar la asignación.";
-      setDeshabilitarHlgError(msg);
+      setDeshabilitarHlgError(
+        laboralCallableErrorMessage(err, "No se pudo deshabilitar la asignación."),
+      );
     } finally {
       setDeshabilitando(false);
     }
@@ -840,6 +563,7 @@ export default function DatosLaborales() {
   function abrirFormularioEdicionHlg(hlgId) {
     const target = hlgRows.find((r) => String(r.id || "") === String(hlgId || ""));
     if (!target) return;
+    planillaHlgCargadaRef.current = "";
     setTipoAlta("historial_laboral_grupos");
     setModoEdicion(true);
     setModoAvanzado(false);
@@ -925,6 +649,18 @@ export default function DatosLaborales() {
     }
   }, [tipoAlta, opcionesDiaSemana, modoEdicion]);
 
+  /** Si el catálogo de días llega después de abrir edición HLg, rehidratar planilla desde Firestore. */
+  useEffect(() => {
+    if (!modoEdicion || tipoAlta !== "historial_laboral_grupos" || !registroEditId) return;
+    if (!opcionesDiaSemana.length) return;
+    const key = `${registroEditId}:${opcionesDiaSemana.length}`;
+    if (planillaHlgCargadaRef.current === key) return;
+    const full = hlgRows.find((r) => String(r.id) === String(registroEditId));
+    if (!full) return;
+    planillaHlgCargadaRef.current = key;
+    setCargaPorDiaRows(buildPlanillaCargaSemanal(opcionesDiaSemana, full.carga_por_dia_semana));
+  }, [modoEdicion, tipoAlta, registroEditId, opcionesDiaSemana, hlgRows]);
+
   useEffect(() => {
     if (tipoAlta !== "historial_laboral_grupos") return;
     if (!formData.cargo_id) return;
@@ -964,21 +700,11 @@ export default function DatosLaborales() {
     setCargaPorDiaRows(next.cargaPorDiaRows);
   }
 
-  function validarFormulario() {
-    return validateLaboralForm({
-      tipoAlta,
-      formData,
-      cargaPorDiaRows,
-      idxHlc,
-    });
-  }
-
   async function onGuardarRegistro(e) {
     e.preventDefault();
     setSaveMsg("");
-    const errorValidacion = validarFormulario();
-    if (errorValidacion) {
-      setSaveMsg(errorValidacion);
+    if (errorValidacionFormulario) {
+      setSaveMsg(errorValidacionFormulario);
       return;
     }
     setSaving(true);
@@ -1080,414 +806,61 @@ export default function DatosLaborales() {
           </div>
         </Card>
 
-        <Card className="px-4 py-4 md:px-5">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-base font-semibold text-slate-900">CARGOS ACTIVOS</p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {snapshotActual.bloquesVigentes.length === 0 ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                {snapshotActual.totalHlcPersona === 0 ? (
-                  <>
-                    <p className="text-sm font-semibold text-slate-900">Esta persona no tiene cargos registrados</p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      No existen períodos de cargo vigentes ni históricos para la persona seleccionada.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm font-semibold text-slate-900">No hay período de cargo vigente</p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      La persona tiene cargos registrados, pero ninguno vigente en este momento.
-                    </p>
-                  </>
-                )}
-              </div>
-            ) : (
-              snapshotActual.bloquesVigentes.map((bloque, idx) => (
-                <div key={bloque.id} className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                  <div className="mb-2 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
-                    Ciclo {idx + 1}
-                  </div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Período de cargo vigente
-                  </p>
-                  <p className="mt-1 text-base font-semibold text-slate-900">{bloque.tituloHlc}</p>
-                  <ul className="mt-1 space-y-1 text-xs text-slate-700">
-                    <li>- Tipo de vínculo: {bloque.tipoVinculo || "—"}</li>
-                    <li>- Rol asignado: {bloque.rolHlc || "—"}</li>
-                    <li>- Escalafón: {bloque.escalafon || "—"}</li>
-                    <li>- Agrupamiento: {bloque.agrupamiento || "—"}</li>
-                    <li>- Categoría: {bloque.categoria || "—"}</li>
-                    <li>- Función: {bloque.funcion || "—"}</li>
-                    <li>- Carga horaria: {bloque.cargaHoraria || "—"}</li>
-                    <li>- {bloque.vigenciaHlc}</li>
-                  </ul>
-                  {bloque.warningsHlc.length > 0 ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {bloque.warningsHlc.map((warning) => (
-                        <span
-                          key={`${bloque.id}-${warning}`}
-                          className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800"
-                        >
-                          Advertencia · {warning}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                  <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Períodos de asignación a grupos de trabajo vigentes ({bloque.hlgVigentes.length})
-                    </p>
-                    {bloque.hlgVigentes.length === 0 ? (
-                      <span className="mt-2 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                        Inconsistencia: cargo sin asignación a grupo de trabajo
-                      </span>
-                    ) : (
-                      <div className="mt-2 space-y-2">
-                        {bloque.hlgVigentes.map((hlg) => (
-                          <div key={hlg.id} className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2">
-                            <p className="text-sm font-semibold text-slate-900">{hlg.grupo} · {hlg.funcion}</p>
-                            <ul className="mt-0.5 space-y-1 text-xs text-slate-600">
-                              <li>- {hlg.periodo}</li>
-                              <li>- Carga horaria: {hlg.cargaHorariaGrupo} hs/semana</li>
-                            </ul>
-                            {hlg.warningHlg.length > 0 ? (
-                              <div className="mt-1 flex flex-wrap gap-2">
-                                {hlg.warningHlg.map((warning) => (
-                                  <span
-                                    key={`${hlg.id}-${warning}`}
-                                    className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
-                                  >
-                                    {warning}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : null}
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={() => abrirFormularioEdicionHlg(hlg.id)}
-                                className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 active:bg-slate-50"
-                              >
-                                Editar este grupo
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => abrirModalDeshabilitarHlg(hlg.id)}
-                                className="h-8 rounded-lg border border-rose-300 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 active:bg-rose-100"
-                              >
-                                Deshabilitar asignación
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <div className="mt-2">
-                      <button
-                        type="button"
-                        onClick={() => abrirFormularioNuevoHlgEnHlc(bloque.hlcId)}
-                        className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 active:bg-slate-50"
-                      >
-                        Crear nuevo grupo
-                      </button>
-                    </div>
-                  </div>
-                  {bloque.hlgHistoricos.length > 0 ? (
-                    <div className="mt-2 rounded-lg border border-slate-300 bg-slate-100 px-2.5 py-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Períodos de asignación a grupos de trabajo históricos ({bloque.hlgHistoricos.length})
-                      </p>
-                      <div className="mt-2 space-y-2">
-                        {bloque.hlgHistoricos.map((hlg) => (
-                          <div key={hlg.id} className="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-2">
-                            <p className="text-sm font-semibold text-slate-900">{hlg.grupo} · {hlg.funcion}</p>
-                            <ul className="mt-0.5 space-y-1 text-xs text-slate-600">
-                              <li>- {hlg.periodo}</li>
-                              <li>- Carga horaria: {hlg.cargaHorariaGrupo} hs/semana</li>
-                            </ul>
-                            <button
-                              type="button"
-                              onClick={() => abrirFormularioEdicionHlg(hlg.id)}
-                              className="mt-2 h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 active:bg-slate-50"
-                            >
-                              Editar este grupo
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                  <p className="mt-2 text-xs text-slate-600">{bloque.hldLabel}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => abrirFormularioEdicionHlc(bloque.hlcId)}
-                      className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 active:bg-slate-50"
-                    >
-                      Editar período de cargo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => abrirModalDeshabilitarHlc(bloque.hlcId)}
-                      className="h-9 rounded-lg border border-rose-300 bg-rose-50 px-3 text-xs font-semibold text-rose-700 active:bg-rose-100"
-                    >
-                      Deshabilitar ciclo HLC
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
-            <p className="mb-1 text-xs text-slate-500">Última actualización: {formatDateTime(snapshotActual.lastUpdate)}</p>
-            <p className="text-sm font-semibold text-slate-900">Consistencia</p>
-            {snapshotActual.alertas.length === 0 ? (
-              <div className="mt-2">
-                <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                  OK · Sin alertas críticas
-                </span>
-              </div>
-            ) : (
-              <ul className="mt-2 flex flex-wrap gap-2 text-sm text-amber-800">
-                {snapshotActual.alertas.map((a) => (
-                  <li
-                    key={a}
-                    className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800"
-                  >
-                    Advertencia · {a}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Card>
+        <LaboralCargosActivosCard
+          snapshotActual={snapshotActual}
+          modoAvanzado={modoAvanzado}
+          ultimaActualizacionTexto={formatDateTime(snapshotActual.lastUpdate)}
+          onEditarHlg={abrirFormularioEdicionHlg}
+          onDeshabilitarHlg={abrirModalDeshabilitarHlg}
+          onNuevoHlgEnHlc={abrirFormularioNuevoHlgEnHlc}
+          onEditarHlc={abrirFormularioEdicionHlc}
+          onDeshabilitarHlc={abrirModalDeshabilitarHlc}
+        />
 
-        <Card className="px-4 py-4 md:px-5">
-          <p className="text-base font-semibold text-slate-900">CARGOS CERRADOS O HISTÓRICOS</p>
-          {snapshotHistorico.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-600">Sin períodos cerrados para la persona seleccionada.</p>
-          ) : (
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-              {snapshotHistorico.map((item) => (
-                <div key={item.id} className="rounded-xl border border-slate-300 bg-slate-50 p-3">
-                  <div className="mb-2 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
-                    Ciclo {item.orden}
-                  </div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Período de cargo cerrado</p>
-                  <p className="mt-1 text-base font-semibold text-slate-900">{item.titulo}</p>
-                  <ul className="mt-1 space-y-1 text-xs text-slate-700">
-                    <li>- Tipo de vínculo: {item.tipoVinculo || "—"}</li>
-                    <li>- Rol asignado: {item.rolHlc || "—"}</li>
-                    <li>- Escalafón: {item.escalafon || "—"}</li>
-                    <li>- Agrupamiento: {item.agrupamiento || "—"}</li>
-                    <li>- Categoría: {item.categoria || "—"}</li>
-                    <li>- Función: {item.funcion || "—"}</li>
-                    <li>- Carga horaria: {item.cargaHoraria || "—"}</li>
-                    <li>- {item.periodo}</li>
-                    <li>- Períodos de asignación a grupos de trabajo: {item.asignaciones}</li>
-                  </ul>
-                  {item.hlgVigentes.length > 0 ? (
-                    <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Períodos de asignación a grupos de trabajo vigentes ({item.hlgVigentes.length})
-                      </p>
-                      <div className="mt-2 space-y-2">
-                        {item.hlgVigentes.map((hlg) => (
-                          <div key={hlg.id} className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2">
-                            <p className="text-sm font-semibold text-slate-900">{hlg.grupo} · {hlg.funcion}</p>
-                            <ul className="mt-0.5 space-y-1 text-xs text-slate-600">
-                              <li>- {hlg.periodo}</li>
-                              <li>- Carga horaria: {hlg.cargaHorariaGrupo} hs/semana</li>
-                            </ul>
-                            <button
-                              type="button"
-                              onClick={() => abrirFormularioEdicionHlg(hlg.id)}
-                              className="mt-2 h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 active:bg-slate-50"
-                            >
-                              Editar este grupo
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                  {item.hlgHistoricos.length > 0 ? (
-                    <div className="mt-2 rounded-lg border border-slate-300 bg-slate-100 px-2.5 py-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Períodos de asignación a grupos de trabajo históricos ({item.hlgHistoricos.length})
-                      </p>
-                      <div className="mt-2 space-y-2">
-                        {item.hlgHistoricos.map((hlg) => (
-                          <div key={hlg.id} className="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-2">
-                            <p className="text-sm font-semibold text-slate-900">{hlg.grupo} · {hlg.funcion}</p>
-                            <ul className="mt-0.5 space-y-1 text-xs text-slate-600">
-                              <li>- {hlg.periodo}</li>
-                              <li>- Carga horaria: {hlg.cargaHorariaGrupo} hs/semana</li>
-                            </ul>
-                            <button
-                              type="button"
-                              onClick={() => abrirFormularioEdicionHlg(hlg.id)}
-                              className="mt-2 h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 active:bg-slate-50"
-                            >
-                              Editar este grupo
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => abrirFormularioEdicionHlc(item.hlcId)}
-                      className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 active:bg-slate-50"
-                    >
-                      Editar período de cargo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => abrirModalDeshabilitarHlc(item.hlcId)}
-                      className="h-9 rounded-lg border border-rose-300 bg-rose-50 px-3 text-xs font-semibold text-rose-700 active:bg-rose-100"
-                    >
-                      Deshabilitar ciclo HLC
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
+        <LaboralCargosHistoricosCard
+          snapshotHistorico={snapshotHistorico}
+          onEditarHlg={abrirFormularioEdicionHlg}
+          onEditarHlc={abrirFormularioEdicionHlc}
+          onDeshabilitarHlc={abrirModalDeshabilitarHlc}
+        />
 
-        {mostrarFormulario && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/45 px-4 py-4 md:py-8">
-          <div className="w-full max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:max-h-[90vh] md:p-5">
-          <p className="text-base font-semibold text-slate-900">
-            Carga y edición laboral
-          </p>
-          <p className="mt-1 text-sm text-slate-600">
-            Completá la información por nivel de registro. Los campos seleccionables se cargan desde
-            catálogos y colecciones operativas.
-          </p>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Criterio operativo: <span className="font-semibold">Cargo funcional</span> representa la
-              función por normativa/designación formal, mientras que{" "}
-              <span className="font-semibold">Función real</span> representa la función efectivamente
-              ejercida.
-              {modoAvanzado ? (
-                <span>
-                  {" "}Campos técnicos: <span className="font-semibold">cargo_funcional_id</span> y{" "}
-                  <span className="font-semibold">funcion_real_id</span>.
-                </span>
-              ) : null}
-            </p>
-            <button
-              type="button"
-              onClick={() => setModoAvanzado((prev) => !prev)}
-              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 touch-manipulation active:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-300"
-            >
-              Modo: {modoAvanzado ? "Avanzado" : "Estándar"}
-            </button>
-          </div>
-          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contexto de la acción</p>
-            <p className="mt-1 text-sm font-semibold text-blue-700">{accionFormularioLabel}</p>
-            <p className="mt-1 text-sm font-semibold text-slate-900">{personaActivaLabel}</p>
-            {cargoContexto ? (
-              <div className="mt-1 text-xs text-slate-700">
-                <p className="font-semibold">Período de cargo seleccionado</p>
-                <p>{cargoContexto.titulo}</p>
-                <p>Rol asignado: {cargoContexto.rol || "—"}</p>
-                <p>Escalafón: {cargoContexto.escalafon || "—"} · Agrupamiento: {cargoContexto.agrupamiento || "—"}</p>
-                <p>
-                  Categoría: {cargoContexto.categoria || "—"} · Función: {cargoContexto.funcion || "—"} · Carga horaria:{" "}
-                  {cargoContexto.cargaHoraria}
-                </p>
-                <p>{cargoContexto.vigencia}</p>
-              </div>
-            ) : null}
-          </div>
-          <form className="mt-4 space-y-4" onSubmit={onGuardarRegistro}>
-            <LaboralFormCabeceraFields
-              tipoAlta={tipoAlta}
-              setTipoAlta={setTipoAlta}
-              opcionesTipoAlta={OPCIONES_TIPO_ALTA}
-              showNivelRegistro={false}
-              modoAvanzado={modoAvanzado}
-              formData={formData}
-              onChangeField={onChangeField}
-              opcionesGrupos={opcionesGrupos}
-              ayudaCampos={AYUDA_CAMPOS}
-            />
-
-            {tipoAlta === "historial_laboral_cargos" && (
-              <LaboralFormHlcFields
-                modoAvanzado={modoAvanzado}
-                formData={formData}
-                onChangeField={onChangeField}
-                opcionesEfectores={opcionesEfectores}
-                opcionesRol={opcionesRol}
-                opcionesEstadoAsignacion={opcionesEstadoAsignacion}
-                opcionesEscalafon={opcionesEscalafon}
-                opcionesAgrupamiento={opcionesAgrupamiento}
-                opcionesTipoVinculo={opcionesTipoVinculo}
-                opcionesCategorias={opcionesCategorias}
-                opcionesFuncion={opcionesFuncion}
-                opcionesModalidadJornada={opcionesModalidadJornada}
-                opcionesTipoActo={opcionesTipoActo}
-                ayudaCampos={AYUDA_CAMPOS}
-              />
-            )}
-
-            {tipoAlta === "historial_laboral_grupos" && (
-              <LaboralFormHlgFields
-                modoAvanzado={modoAvanzado}
-                formData={formData}
-                onChangeField={onChangeField}
-                opcionesRegimenHorario={opcionesRegimenHorario}
-                opcionesCentroCosto={opcionesCentroCosto}
-                opcionesFuncion={opcionesFuncion}
-                cargaPorDiaRows={cargaPorDiaRows}
-                onChangeCargaRow={onChangeCargaRow}
-                opcionesDiaSemana={opcionesDiaSemana}
-                ayudaCampos={AYUDA_CAMPOS}
-              />
-            )}
-
-            <LaboralFormVigenciaFields
-              tipoAlta={tipoAlta}
-              modoAvanzado={modoAvanzado}
-              formData={formData}
-              onChangeField={onChangeField}
-              opcionesCausalFinAsignacion={opcionesCausalFinAsignacion}
-              ayudaCampos={AYUDA_CAMPOS}
-            />
-
-            <div className="flex justify-end">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={cerrarFlujoFormularioManteniendoPersona}
-                  disabled={saving}
-                  className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60"
-                >
-                  {saving ? "Guardando..." : modoEdicion ? "Guardar cambios" : "Guardar registro"}
-                </button>
-              </div>
-            </div>
-          </form>
-          </div>
-        </div>
-        )}
+        {mostrarFormulario ? (
+          <LaboralFormularioModal
+            tipoAlta={tipoAlta}
+            setTipoAlta={setTipoAlta}
+            modoAvanzado={modoAvanzado}
+            setModoAvanzado={setModoAvanzado}
+            modoEdicion={modoEdicion}
+            formData={formData}
+            onChangeField={onChangeField}
+            cargaPorDiaRows={cargaPorDiaRows}
+            onChangeCargaRow={onChangeCargaRow}
+            accionFormularioLabel={accionFormularioLabel}
+            personaActivaLabel={personaActivaLabel}
+            cargoContexto={cargoContexto}
+            opcionesGrupos={opcionesGrupos}
+            opcionesEfectores={opcionesEfectores}
+            opcionesRol={opcionesRol}
+            opcionesEstadoAsignacion={opcionesEstadoAsignacion}
+            opcionesEscalafon={opcionesEscalafon}
+            opcionesAgrupamiento={opcionesAgrupamiento}
+            opcionesTipoVinculo={opcionesTipoVinculo}
+            opcionesCategorias={opcionesCategorias}
+            opcionesFuncion={opcionesFuncion}
+            opcionesModalidadJornada={opcionesModalidadJornada}
+            opcionesTipoActo={opcionesTipoActo}
+            opcionesRegimenHorario={opcionesRegimenHorario}
+            opcionesCentroCosto={opcionesCentroCosto}
+            opcionesDiaSemana={opcionesDiaSemana}
+            opcionesCausalFinAsignacion={opcionesCausalFinAsignacion}
+            errorValidacionFormulario={errorValidacionFormulario}
+            saveMsg={saveMsg}
+            saving={saving}
+            puedeGuardarFormulario={puedeGuardarFormulario}
+            onSubmit={onGuardarRegistro}
+            onCancelar={cerrarFlujoFormularioManteniendoPersona}
+          />
+        ) : null}
 
         {!mostrarFormulario && (
         <Card className="px-4 py-4 md:px-5">
@@ -1550,183 +923,26 @@ export default function DatosLaborales() {
           items={vistaGrupoItems}
         />
 
-        {deshabilitarModalAbierto ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 px-4">
-            <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:p-5">
-              <p className="text-base font-semibold text-slate-900">Deshabilitar ciclo HLC</p>
-              <p className="mt-1 text-sm text-slate-600">
-                Esta acción retira el ciclo de los flujos operativos, cierra y deshabilita la cadena asociada (HLd/HLg) sin borrar historial.
-              </p>
-              <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
-                No se podrá rehabilitar este ciclo. Si se requiere continuidad, deberás crear un nuevo ciclo HLC.
-              </div>
-              <div className="mt-4 grid gap-3">
-                <label className="grid gap-1 text-sm">
-                  <span className="font-semibold text-slate-800">Motivo de deshabilitación</span>
-                  <select
-                    value={deshabilitarForm.motivo_id}
-                    onChange={(e) => setDeshabilitarForm((prev) => ({ ...prev, motivo_id: e.target.value }))}
-                    className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 focus-visible:ring-2 focus-visible:ring-blue-300"
-                  >
-                    <option value="">Seleccioná un motivo</option>
-                    {opcionesMotivoDeshabilitacionHlc.map((opt) => (
-                      <option key={String(opt.id)} value={String(opt.id)}>
-                        {String(opt.nombre || opt.label || opt.descripcion || "Sin nombre")}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-1 text-sm">
-                  <span className="font-semibold text-slate-800">Fecha de corte (opcional)</span>
-                  <input
-                    type="date"
-                    value={deshabilitarForm.fecha_corte}
-                    onChange={(e) => setDeshabilitarForm((prev) => ({ ...prev, fecha_corte: e.target.value }))}
-                    className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 focus-visible:ring-2 focus-visible:ring-blue-300"
-                  />
-                  <span className="text-xs text-slate-500">Si no la informás, se usa la fecha de hoy.</span>
-                </label>
-                <label className="grid gap-1 text-sm">
-                  <span className="font-semibold text-slate-800">Comentario (opcional)</span>
-                  <textarea
-                    value={deshabilitarForm.comentario}
-                    onChange={(e) => setDeshabilitarForm((prev) => ({ ...prev, comentario: e.target.value.slice(0, 500) }))}
-                    rows={3}
-                    className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus-visible:ring-2 focus-visible:ring-blue-300"
-                    placeholder="Observación interna"
-                  />
-                </label>
-                <label className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={deshabilitarForm.confirmar_impacto}
-                    onChange={(e) =>
-                      setDeshabilitarForm((prev) => ({ ...prev, confirmar_impacto: e.target.checked }))
-                    }
-                    className="mt-0.5 h-4 w-4 rounded border-slate-300"
-                  />
-                  <span>
-                    Confirmo que se deshabilitará el HLC y se cerrarán/deshabilitarán sus HLd/HLg asociados.
-                  </span>
-                </label>
-              </div>
-              {deshabilitarError ? (
-                <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{deshabilitarError}</p>
-              ) : null}
-              <div className="mt-4 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={cerrarModalDeshabilitarHlc}
-                  disabled={deshabilitando}
-                  className="h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 disabled:opacity-60"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmarDeshabilitacionHlc}
-                  disabled={deshabilitando}
-                  className="h-10 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
-                >
-                  {deshabilitando ? "Deshabilitando..." : "Deshabilitar ciclo"}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {deshabilitarHlgModalAbierto ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 px-4">
-            <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:p-5">
-              <p className="text-base font-semibold text-slate-900">Deshabilitar asignación a grupo (HLg)</p>
-              <p className="mt-1 text-sm text-slate-600">
-                La asignación quedará inactiva y cerrada en la fecha de corte (vigencia inclusiva).
-              </p>
-              <div className="mt-4 space-y-3">
-                <LabeledTextField
-                  label="Fecha de corte"
-                  value={deshabilitarHlgForm.fecha_corte}
-                  onValueChange={(v) => setDeshabilitarHlgForm((prev) => ({ ...prev, fecha_corte: v }))}
-                  placeholder="AAAA-MM-DD"
-                />
-                <LabeledTextField
-                  label="Motivo (opcional, auditoría)"
-                  value={deshabilitarHlgForm.motivo}
-                  onValueChange={(v) =>
-                    setDeshabilitarHlgForm((prev) => ({ ...prev, motivo: String(v || "").slice(0, 100) }))
-                  }
-                  placeholder="Hasta 100 caracteres"
-                />
-                <label className="flex items-start gap-2 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={deshabilitarHlgForm.confirmar}
-                    onChange={(e) =>
-                      setDeshabilitarHlgForm((prev) => ({ ...prev, confirmar: e.target.checked }))
-                    }
-                    className="mt-1"
-                  />
-                  Confirmo deshabilitar esta asignación HLg.
-                </label>
-              </div>
-              {deshabilitarHlgError ? (
-                <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{deshabilitarHlgError}</p>
-              ) : null}
-              <div className="mt-4 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={cerrarModalDeshabilitarHlg}
-                  disabled={deshabilitando}
-                  className="h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 disabled:opacity-60"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmarDeshabilitacionHlg}
-                  disabled={deshabilitando}
-                  className="h-10 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
-                >
-                  {deshabilitando ? "Deshabilitando..." : "Deshabilitar asignación"}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {resultadoModalAbierto ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 px-4">
-            <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:p-5">
-              <p className="text-base font-semibold text-slate-900">Resultado de la operación</p>
-              <p
-                className={`mt-3 max-h-[40vh] overflow-y-auto rounded-lg px-3 py-2 text-sm ${
-                  resultadoModalMsg.startsWith("Guardado correctamente")
-                    ? "bg-emerald-50 text-emerald-700"
-                    : resultadoModalMsg.startsWith("Guardado con advertencias:")
-                      ? "bg-amber-50 text-amber-800"
-                      : "bg-rose-50 text-rose-700"
-                }`}
-              >
-                {resultadoModalMsg}
-              </p>
-              <div className="mt-4 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const fueGuardado =
-                      resultadoModalMsg.startsWith("Guardado correctamente") ||
-                      resultadoModalMsg.startsWith("Guardado con advertencias:");
-                    setResultadoModalAbierto(false);
-                    if (fueGuardado) cerrarFlujoFormularioManteniendoPersona();
-                  }}
-                  className="h-10 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
-                >
-                  Aceptar
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <LaboralModalesOperativos
+          deshabilitarModalAbierto={deshabilitarModalAbierto}
+          deshabilitarForm={deshabilitarForm}
+          setDeshabilitarForm={setDeshabilitarForm}
+          opcionesMotivoDeshabilitacionHlc={opcionesMotivoDeshabilitacionHlc}
+          deshabilitarError={deshabilitarError}
+          deshabilitando={deshabilitando}
+          cerrarModalDeshabilitarHlc={cerrarModalDeshabilitarHlc}
+          confirmarDeshabilitacionHlc={confirmarDeshabilitacionHlc}
+          deshabilitarHlgModalAbierto={deshabilitarHlgModalAbierto}
+          deshabilitarHlgForm={deshabilitarHlgForm}
+          setDeshabilitarHlgForm={setDeshabilitarHlgForm}
+          deshabilitarHlgError={deshabilitarHlgError}
+          cerrarModalDeshabilitarHlg={cerrarModalDeshabilitarHlg}
+          confirmarDeshabilitacionHlg={confirmarDeshabilitacionHlg}
+          resultadoModalAbierto={resultadoModalAbierto}
+          resultadoModalMsg={resultadoModalMsg}
+          setResultadoModalAbierto={setResultadoModalAbierto}
+          cerrarFlujoFormularioManteniendoPersona={cerrarFlujoFormularioManteniendoPersona}
+        />
         </>
         ) : null}
       </div>

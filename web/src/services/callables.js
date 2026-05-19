@@ -215,3 +215,28 @@ export function callResolverContextoLaboralSolicitud(data) {
 export function callListarArticulosIngresoAgente(data) {
   return httpsCallable(getFunctionsV2(), "listarArticulosIngresoAgente")(data);
 }
+
+/** Preview Patrón B (elegibilidad + saldos) sin crear solicitud. */
+export function callPrevisualizarSolicitudPatronB(data) {
+  return httpsCallable(getFunctionsV2(), "previsualizarSolicitudPatronB")(data);
+}
+
+/** Bandeja jefe: solicitudes en revisión jerárquica. */
+export function callListarSolicitudesBandejaJefe(data) {
+  return httpsCallable(getFunctionsV2(), "listarSolicitudesBandejaJefe")(data || {});
+}
+
+/** Aprobar (→ RRHH) o rechazar solicitud en bandeja jefe. */
+export function callResolverDecisionJefeSolicitud(data) {
+  return httpsCallable(getFunctionsV2(), "resolverDecisionJefeSolicitud")(data);
+}
+
+/** Bandeja RRHH: solicitudes en revisión RRHH (post jefe). */
+export function callListarSolicitudesBandejaRrhh(data) {
+  return httpsCallable(getFunctionsV2(), "listarSolicitudesBandejaRrhh")(data || {});
+}
+
+/** Aprobar (definitivo) o rechazar solicitud en bandeja RRHH. */
+export function callResolverDecisionRrhhSolicitud(data) {
+  return httpsCallable(getFunctionsV2(), "resolverDecisionRrhhSolicitud")(data);
+}

@@ -1,8 +1,9 @@
 # Plan — Ticketera slice 64-B (Patrón B, sin goce)
 
-**Estado:** plan de trabajo post-cierre matriz **64-A** (2026-05-19)  
+**Estado:** **piloto cerrado** (2026-05-19) — pasos 1–3 OK · deploy Functions + Hosting  
 **Prerequisito:** [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md`](./TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md) cerrada · [`RFC_TICKETERA_SLICE_64A_MVP_V2.md`](./RFC_TICKETERA_SLICE_64A_MVP_V2.md)  
-**Catálogo:** [`ARTICULOS_BASICOS_OPERATIVOS_V2.md`](./ARTICULOS_BASICOS_OPERATIVOS_V2.md) § 64-B
+**Catálogo:** [`ARTICULOS_BASICOS_OPERATIVOS_V2.md`](./ARTICULOS_BASICOS_OPERATIVOS_V2.md) § 64-B  
+**Visión ticketera dinámica:** [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md)
 
 ---
 
@@ -53,7 +54,7 @@ Clonar filas T1–T8 de 64-A sustituyendo artículo y mensajes esperados iguales
 
 | # | Caso | Notas 64-B |
 |---|------|------------|
-| B1 | Alta OK 1 día | `sol_*` + bolsa `bol_art_01KRYEX0…` consumido |
+| B1 | Alta OK 1 día | `sol_*` + bolsa `bol_art_01KRYEX0…` consumido | **OK** | `sol_01KS015BQNZ2QCDBBMB3YG4BAP` — 2026-05-19 · **F2 ticketera:** `sol_01KS06QVPZD80YPHV6QJVYBX2T` (2026-09-17) — [`TICKETERA_FASE2_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE2_EVIDENCIA_PILOTO.md) |
 | B2 | Agente sin escalafón | Igual 64-A / T2 |
 | B5–B7 | Saldo ciclo / mes | Misma lógica Patrón B |
 | BR1 | 64-A sigue OK | Regresión obligatoria |
@@ -64,11 +65,11 @@ Documento final sugerido: `TICKETERA_SLICE_64B_MATRIZ_PRUEBAS.md` (crear al empe
 
 ## 4. Orden de implementación
 
-1. Backend: whitelist / listado incluye 64-B.
-2. Web: listado muestra dos artículos si ambos pasan elegibilidad; envío con `articulo_id` correcto.
-3. Piloto: una solicitud OK + verificar Firestore `sal_2026_per_*` bolsa 64-B.
-4. Regresión: una 64-A más en otro mes o legajo (T7 ya cubierto en 64-A).
-5. Deploy Functions + Hosting; doc matriz 64-B.
+1. Backend: whitelist / listado incluye 64-B. — **Hecho** (`listarArticulosIngresoAgente` + constantes web).
+2. Web: listado muestra dos artículos si ambos pasan elegibilidad; envío con `articulo_id` correcto. — **Hecho** (pantalla asuntos particulares + menú/Inicio).
+3. Piloto: una solicitud OK + verificar Firestore `sal_2026_per_*` bolsa 64-B. — **OK** `sol_01KS015BQNZ2QCDBBMB3YG4BAP`
+4. Regresión 64-A: tope mensual **por artículo** (64-B no bloquea 64-A; 28914247 ya tenía 64-A en el mes).
+5. Deploy Functions + Hosting. — **OK**
 
 ---
 

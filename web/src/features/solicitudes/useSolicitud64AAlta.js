@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { callListarArticulosIngresoAgente } from "../../services/callables.js";
+import { callListarArticulosIngresoAgente, callPrevisualizarSolicitudPatronB } from "../../services/callables.js";
 import {
   crearSolicitudArticuloPatronBBorrador,
   esperarValidacionMotorPatronB,
@@ -11,16 +11,29 @@ function ymdHoyBa() {
 }
 
 /**
- * @param {{ personaId: string }} params
+ * @param {{ personaId: string, fechaDesdeInicial?: string }} params
  */
-export function useSolicitud64AAlta({ personaId }) {
-  const [fechaDesde, setFechaDesde] = useState(ymdHoyBa);
+export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
+  const inicial =
+    typeof fechaDesdeInicial === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fechaDesdeInicial)
+      ? fechaDesdeInicial
+      : ymdHoyBa();
+  const [fechaDesde, setFechaDesde] = useState(inicial);
+
+  useEffect(() => {
+    if (typeof fechaDesdeInicial === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fechaDesdeInicial)) {
+      setFechaDesde(fechaDesdeInicial);
+    }
+  }, [fechaDesdeInicial]);
   const [articulos, setArticulos] = useState([]);
   const [articuloSel, setArticuloSel] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [motivoVacio, setMotivoVacio] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [preview, setPreview] = useState(/** @type {Record<string, unknown> | null} */ (null));
+  const [previewCargando, setPreviewCargando] = useState(false);
+  const [previewError, setPreviewError] = useState("");
 
   const recargar = useCallback(async () => {
     if (!/^per_/i.test(personaId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaDesde)) {
@@ -56,8 +69,54 @@ export function useSolicitud64AAlta({ personaId }) {
     recargar();
   }, [recargar]);
 
+  useEffect(() => {
+    setPreview(null);
+    setPreviewError("");
+  }, [fechaDesde, articuloSel?.articulo_id]);
+
+  const fechaHasta =
+    articuloSel?.fecha_hasta && /^\d{4}-\d{2}-\d{2}$/.test(String(articuloSel.fecha_hasta))
+      ? String(articuloSel.fecha_hasta)
+      : fechaDesde;
+
+  const diasSolicitados =
+    Number.isFinite(Number(articuloSel?.dias_solicitados)) && Number(articuloSel.dias_solicitados) > 0
+      ? Math.floor(Number(articuloSel.dias_solicitados))
+      : 1;
+
+  const previsualizar = useCallback(async () => {
+    if (!articuloSel || previewCargando || !/^per_/i.test(personaId)) return;
+    setPreviewCargando(true);
+    setPreviewError("");
+    setPreview(null);
+    try {
+      const res = await callPrevisualizarSolicitudPatronB({
+        articulo_id: articuloSel.articulo_id,
+        version_id: articuloSel.version_id,
+        fecha_desde: fechaDesde,
+        dias_solicitados: diasSolicitados,
+      });
+      setPreview((res?.data && typeof res.data === "object" ? res.data : null) || null);
+    } catch (e) {
+      setPreview(null);
+      setPreviewError(e?.message || "No se pudo previsualizar la solicitud.");
+    } finally {
+      setPreviewCargando(false);
+    }
+  }, [articuloSel, diasSolicitados, fechaDesde, personaId, previewCargando]);
+
+  const previewVigente =
+    preview &&
+    articuloSel &&
+    String(preview.articulo_id) === String(articuloSel.articulo_id) &&
+    String(preview.fecha_desde) === fechaDesde &&
+    Number(preview.dias_solicitados) === diasSolicitados;
+
+  const puedeEnviarTrasPreview =
+    previewVigente && (preview.eligible === true || preview.ok === true);
+
   const enviar = useCallback(async () => {
-    if (!articuloSel || enviando) return null;
+    if (!articuloSel || enviando || !puedeEnviarTrasPreview) return null;
     setEnviando(true);
     setError("");
     try {
@@ -66,7 +125,7 @@ export function useSolicitud64AAlta({ personaId }) {
         articuloId: articuloSel.articulo_id,
         versionAplicadaId: articuloSel.version_id,
         fechaDesde,
-        diasSolicitados: 1,
+        diasSolicitados,
       });
       await esperarValidacionMotorPatronB(solicitud_id);
       return solicitud_id;
@@ -76,10 +135,12 @@ export function useSolicitud64AAlta({ personaId }) {
     } finally {
       setEnviando(false);
     }
-  }, [articuloSel, enviando, fechaDesde, personaId]);
+  }, [articuloSel, diasSolicitados, enviando, fechaDesde, personaId, puedeEnviarTrasPreview]);
 
   return {
     fechaDesde,
+    fechaHasta,
+    diasSolicitados,
     setFechaDesde,
     articulos,
     articuloSel,
@@ -90,5 +151,10 @@ export function useSolicitud64AAlta({ personaId }) {
     enviando,
     recargar,
     enviar,
+    preview,
+    previewCargando,
+    previewError,
+    previsualizar,
+    puedeEnviarTrasPreview,
   };
 }

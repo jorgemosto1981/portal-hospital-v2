@@ -1,3 +1,11 @@
+export const OPCIONES_TIPO_ALTA = [
+  { id: "historial_laboral_cargos", nombre: "HLc · historial_laboral_cargos" },
+  {
+    id: "historial_laboral_grupos",
+    nombre: "HLg · historial_laboral_grupos (con vínculo a cargo)",
+  },
+];
+
 export const COLECCIONES_FORM = [
   "personas",
   "cfg_estado_asignacion_laboral",

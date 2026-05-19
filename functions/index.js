@@ -29,6 +29,11 @@ const solicitudArticuloTriggers = require("./triggers/solicitudArticuloLaoOnCrea
 const solicitudPatronBTriggers = require("./triggers/solicitudArticuloPatronBOnCreate");
 const resolverContextoLaboralSolicitud = require("./onCall/solicitudes/resolverContextoLaboralSolicitud");
 const listarArticulosIngresoAgente = require("./onCall/solicitudes/listarArticulosIngresoAgente");
+const previsualizarSolicitudPatronB = require("./onCall/solicitudes/previsualizarSolicitudPatronB");
+const listarSolicitudesBandejaJefe = require("./onCall/solicitudes/listarSolicitudesBandejaJefe");
+const resolverDecisionJefeSolicitud = require("./onCall/solicitudes/resolverDecisionJefeSolicitud");
+const listarSolicitudesBandejaRrhh = require("./onCall/solicitudes/listarSolicitudesBandejaRrhh");
+const resolverDecisionRrhhSolicitud = require("./onCall/solicitudes/resolverDecisionRrhhSolicitud");
 
 module.exports = {
   ...login,
@@ -50,4 +55,9 @@ module.exports = {
   ...solicitudPatronBTriggers,
   ...resolverContextoLaboralSolicitud,
   ...listarArticulosIngresoAgente,
+  ...previsualizarSolicitudPatronB,
+  ...listarSolicitudesBandejaJefe,
+  ...resolverDecisionJefeSolicitud,
+  ...listarSolicitudesBandejaRrhh,
+  ...resolverDecisionRrhhSolicitud,
 };

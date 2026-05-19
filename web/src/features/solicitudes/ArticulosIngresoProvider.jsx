@@ -67,6 +67,13 @@ export function useArticulosIngresoMenu() {
  */
 export function filtrarModulosPorArticulosIngreso(modulos, puedeSolicitarArticulo) {
   return modulos.filter((m) => {
+    if (m.ticketeraSiempreVisible === true) return true;
+    if (m.bandejaJefeMenu === true) return true;
+    if (m.bandejaRrhhMenu === true) return true;
+    const ids = m.articulosIngresoIds;
+    if (Array.isArray(ids) && ids.length > 0) {
+      return ids.some((id) => puedeSolicitarArticulo(id));
+    }
     const artId = m.articuloIngresoId;
     if (!artId) return true;
     return puedeSolicitarArticulo(artId);

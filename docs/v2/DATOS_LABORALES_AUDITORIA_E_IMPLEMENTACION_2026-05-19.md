@@ -3,7 +3,9 @@
 **Tag de referencia (pre-implementación en commit):** `audit/datos-laborales-pre-impl-2026-05-19`  
 **Pantalla:** `/portal/laboral` · [`web/src/pages/DatosLaborales.jsx`](../../web/src/pages/DatosLaborales.jsx)  
 **Matriz de errores:** [`MATRIZ_WARN_ERROR_LABORAL_V2.md`](./MATRIZ_WARN_ERROR_LABORAL_V2.md)  
-**Módulo normativo:** [`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md)
+**Módulo normativo:** [`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md)  
+**Arquitectura web (refactor mayo 2026):** [`DATOS_LABORALES_ARQUITECTURA_WEB_V2.md`](./DATOS_LABORALES_ARQUITECTURA_WEB_V2.md)  
+**Handoff de sesión:** [`HANDOFF_SESION_2026-05-19.md`](./HANDOFF_SESION_2026-05-19.md)
 
 ---
 
@@ -104,4 +106,15 @@ No depender solo de ocultar botones en React.
 | Shared | `fechaLaboralYmd.js`, `hlcOperativo.js`, `hlcVigenciaFecha.js` |
 | Functions | `catalogosLaborales.js`, `catalogosShared.js`, `helpers.js`, `catalogos.js` |
 | Web | `DatosLaborales.jsx`, `datos-laborales/*`, `callables.js`, `datosLaboralesService.js` |
-| Docs | Esta nota, actualización matriz si hay `VAL-HLG-DES-*` |
+| Docs | Esta nota, [`DATOS_LABORALES_ARQUITECTURA_WEB_V2.md`](./DATOS_LABORALES_ARQUITECTURA_WEB_V2.md), actualización matriz si hay `VAL-HLG-DES-*` |
+
+---
+
+## 11. Refactor web documentado (misma ventana)
+
+Sin cambiar contratos Firestore ni payloads de Callables ya desplegados:
+
+- **HLg** con `activo: false` excluidos de listados y snapshots en UI (`hlgRowsVisibles`).
+- **Tres vigencias** visibles: HLc (cargo), HLg (grupo), HLD (panel dedicado; no confundir con “vigente desde” del cargo).
+- **Modal:** validación reactiva; botón Guardar deshabilitado y mensaje de error visible.
+- **Estructura:** ver mapa completo en [`DATOS_LABORALES_ARQUITECTURA_WEB_V2.md`](./DATOS_LABORALES_ARQUITECTURA_WEB_V2.md) §2–§5.

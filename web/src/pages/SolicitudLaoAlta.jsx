@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 
 import LaoPreviewInfo from "../features/articulos/LaoPreviewInfo.jsx";
 import { useLaoAltaPreview } from "../features/articulos/useLaoAltaPreview.js";
@@ -15,6 +15,8 @@ import { crearSolicitudArticuloLaoBorrador } from "../services/solicitudesArticu
  * Alta de solicitud LAO (MVP): formulario mínimo + preview en vivo y bloqueo de envío según `eligible`.
  */
 export default function SolicitudLaoAlta() {
+  const location = useLocation();
+  const enTicketera = location.pathname.includes("/portal/solicitudes/lao");
   const { user } = useAuthSession();
   const { claims, claimsLoading } = useAuthClaims(user);
   const personaId = String((claims && claims.persona_id) || "").trim();
@@ -75,8 +77,9 @@ export default function SolicitudLaoAlta() {
   }, [anioOrigenBolsa, articuloId, enviarHabilitado, enviando, fechaDesde, personaId, versionId]);
 
   return (
-    <div className="mx-auto w-full max-w-lg px-4 py-6">
-      <h1 className="text-xl font-semibold text-slate-900">Nueva solicitud (LAO)</h1>
+    <div className={enTicketera ? "" : "mx-auto w-full max-w-lg px-4 py-6"}>
+      {enTicketera ? <p className="mb-2 text-xs text-slate-500">Paso 2 · Patrón A (LAO)</p> : null}
+      <h2 className="text-lg font-semibold text-slate-900">Nueva solicitud (LAO)</h2>
       <p className="mt-2 text-sm leading-relaxed text-slate-600">
         Completá los datos y el sistema simula Stock vs proporcional, guardas 01/07 y TSE. El envío queda bloqueado si la
         simulación no habilita el trámite.

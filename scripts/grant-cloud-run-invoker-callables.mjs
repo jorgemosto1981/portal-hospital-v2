@@ -31,6 +31,8 @@ const CALLABLE_EXPORT_IDS = [
   "listarCatalogoOnboarding",
   "listarColeccionPublicaTemporal",
   "guardarRegistroLaboralTemporal",
+  "rrhhDeshabilitarHlc",
+  "rrhhDeshabilitarHlg",
   "listarReadModelLaboralOperativoTemporal",
   "guardarRegistroPersonalTemporal",
   "rrhhMarcarEventoDatosPersonalesVisto",

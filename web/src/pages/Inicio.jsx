@@ -1,12 +1,6 @@
 import { Link } from "react-router-dom";
 
-import { ARTICULO_64A_ID } from "../constants/solicitudesArticuloV2.js";
-import { useArticulosIngresoMenu } from "../features/solicitudes/ArticulosIngresoProvider.jsx";
-
 export default function Inicio() {
-  const { puedeSolicitarArticulo } = useArticulosIngresoMenu();
-  const muestra64A = puedeSolicitarArticulo(ARTICULO_64A_ID);
-
   return (
     <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm md:p-8">
       <h1 className="text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">Inicio</h1>
@@ -21,19 +15,11 @@ export default function Inicio() {
           Ir a Perfil
         </Link>
         <Link
-          to="/portal/solicitudes/lao"
-          className="inline-flex w-full items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-sm font-semibold text-emerald-900 shadow-sm transition-colors hover:bg-emerald-100 sm:w-auto"
+          to="/portal/solicitudes"
+          className="inline-flex w-full items-center justify-center rounded-xl border border-sky-200 bg-sky-50 px-4 py-3.5 text-sm font-semibold text-sky-900 shadow-sm transition-colors hover:bg-sky-100 sm:w-auto"
         >
-          Nueva solicitud LAO (preview)
+          Nueva solicitud
         </Link>
-        {muestra64A ? (
-          <Link
-            to="/portal/solicitudes/asuntos-particulares"
-            className="inline-flex w-full items-center justify-center rounded-xl border border-sky-200 bg-sky-50 px-4 py-3.5 text-sm font-semibold text-sky-900 shadow-sm transition-colors hover:bg-sky-100 sm:w-auto"
-          >
-            Asuntos particulares (64-A)
-          </Link>
-        ) : null}
       </div>
     </section>
   );

@@ -12,6 +12,8 @@ Marcar **OK** / **Falla** / **N/A** · anotar `sol_*` y fecha.
 
 **Estado:** matriz **cerrada** en piloto (confirmación operador 2026-05-19). Siguiente: slice 64-B / bandeja jefe o §13 formal RRHH si el hospital lo exige por escrito.
 
+**Addendum Fase 2 (ticketera shell + preview, no reabre matriz):** [`TICKETERA_FASE2_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE2_EVIDENCIA_PILOTO.md) — **F2-1 OK** `sol_01KS06F95Z0X1P6713PHKERAK5` (2026-08-14, local 5173).
+
 ---
 
 ## Elegibilidad y circuito

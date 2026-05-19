@@ -1,5 +1,5 @@
 import Card from "../../../components/ui/Card.jsx";
-import { formatCargaPorDia, formatValue } from "../utils.js";
+import { formatCargaPorDia, formatValue, isHlgAsignacionDeshabilitada } from "../utils.js";
 
 export default function FasesLaboralesTables({
   loadingByCollection,
@@ -171,14 +171,19 @@ export default function FasesLaboralesTables({
                   <th className="px-3 py-2">Carga por día</th>
                   <th className="px-3 py-2">Desde</th>
                   <th className="px-3 py-2">Hasta</th>
+                  <th className="px-3 py-2">Estado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
                 {hlgRows.slice(0, 40).map((row, idx) => {
                   const datoLaboral = idxHld.get(String(row.dato_laboral_id || ""));
                   const cargo = datoLaboral ? idxHlc.get(String(datoLaboral.cargo_id || "")) : null;
+                  const deshabilitado = isHlgAsignacionDeshabilitada(row);
                   return (
-                    <tr key={row.id || `hlg-row-${idx}`}>
+                    <tr
+                      key={row.id || `hlg-row-${idx}`}
+                      className={deshabilitado ? "bg-rose-50/50 text-slate-600" : undefined}
+                    >
                       <td className="px-3 py-2 font-mono">{row.id}</td>
                       <td className="px-3 py-2 font-mono">{formatValue(row.dato_laboral_id)}</td>
                       <td className="px-3 py-2 font-mono">{formatValue(datoLaboral && datoLaboral.cargo_id)}</td>
@@ -201,6 +206,13 @@ export default function FasesLaboralesTables({
                       <td className="px-3 py-2 font-mono">{formatCargaPorDia(row.carga_por_dia_semana)}</td>
                       <td className="px-3 py-2">{formatValue(row.fecha_inicio)}</td>
                       <td className="px-3 py-2">{formatValue(row.fecha_fin)}</td>
+                      <td className="px-3 py-2">
+                        {deshabilitado ? (
+                          <span className="font-semibold text-rose-700">Deshabilitado</span>
+                        ) : (
+                          "Activo"
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

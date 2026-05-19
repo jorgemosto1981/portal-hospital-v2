@@ -128,3 +128,12 @@ La página principal queda como **orquestador** (estado, hooks y callbacks), sin
 
 - Contrato laboral V2: [`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md).
 - Convenciones web del repo: `.cursor/rules/portal-hospital-v2-web.mdc`, modo atómico mobile-first.
+
+---
+
+## 8. Continuación — refactor de ficha y orquestación (19 mayo 2026)
+
+Sesión posterior al formulario: extracción de **tarjetas de cargos** (`LaboralCargosActivosCard`, `LaboralCargosHistoricosCard`), **panel HLD**, **modales** (`LaboralFormularioModal`, `LaboralModalesOperativos`), **`laboralSnapshots.js`** + hooks `useLaboralSnapshots` / `useLaboralAnalisisOperativa`, y reducción de `DatosLaborales.jsx` a orquestador (~900 líneas).
+
+Documentación unificada del cliente: [`DATOS_LABORALES_ARQUITECTURA_WEB_V2.md`](./DATOS_LABORALES_ARQUITECTURA_WEB_V2.md).  
+Implementación de negocio y Functions en la misma ventana: [`DATOS_LABORALES_AUDITORIA_E_IMPLEMENTACION_2026-05-19.md`](./DATOS_LABORALES_AUDITORIA_E_IMPLEMENTACION_2026-05-19.md).

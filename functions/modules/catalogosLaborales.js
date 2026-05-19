@@ -87,8 +87,20 @@ function laboralYmdOrNull(value) {
   return y || null;
 }
 
+async function resolveHlgFechaInicioYmd(hlgData) {
+  if (!hlgData || typeof hlgData !== "object") return null;
+  let ymd = hldHlgFechaInicioYmd(hlgData) || laboralYmdOrNull(hlgData.fecha_inicio);
+  if (ymd) return ymd;
+  const hldId = toNullableTrimmedString(hlgData.dato_laboral_id);
+  if (!hldId) return null;
+  const hldSnap = await db.collection("historial_laboral_datos").doc(hldId).get();
+  if (!hldSnap.exists) return null;
+  const hld = hldSnap.data() || {};
+  return hldHlgFechaInicioYmd(hld) || laboralYmdOrNull(hld.fecha_inicio);
+}
+
 function resolveFechaCierre(fechaExistente, fechaCorte) {
-  const existente = toNullableTrimmedString(fechaExistente);
+  const existente = laboralYmdOrNull(fechaExistente);
   if (!existente) return fechaCorte;
   return existente <= fechaCorte ? existente : fechaCorte;
 }
@@ -811,92 +823,70 @@ const rrhhDeshabilitarHlc = onCall(async (request) => {
   };
 });
 
-const rrhhDeshabilitarHlg = onCall(async (request) => {
-  const d = request.data && typeof request.data === "object" ? request.data : {};
-  const hlgId = toNullableTrimmedString(d.hlg_id);
-  const motivo = toNullableTrimmedString(d.motivo);
-  const fechaCorte = parseFechaCorteOrThrow(d.fecha_corte);
-  const forzar = d.forzar === true;
+const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
+  try {
+    const d = request.data && typeof request.data === "object" ? request.data : {};
+    const hlgId = toNullableTrimmedString(d.hlg_id);
+    const motivo = toNullableTrimmedString(d.motivo);
+    const fechaCorte = parseFechaCorteOrThrow(d.fecha_corte);
+    const forzar = d.forzar === true;
 
-  if (!hlgId) {
-    throw new HttpsError(
-      "invalid-argument",
-      "[VAL-HLG-DES-001] No se encontro la asignacion HLg indicada. Verifica el registro e intenta nuevamente.",
-    );
-  }
-  if (motivo && motivo.length > 100) {
-    throw new HttpsError(
-      "invalid-argument",
-      "[VAL-HLG-DES-004] El motivo no puede superar los 100 caracteres.",
-    );
-  }
+    if (!hlgId) {
+      throw new HttpsError(
+        "invalid-argument",
+        "[VAL-HLG-DES-001] No se encontro la asignacion HLg indicada. Verifica el registro e intenta nuevamente.",
+      );
+    }
+    if (motivo && motivo.length > 100) {
+      throw new HttpsError(
+        "invalid-argument",
+        "[VAL-HLG-DES-004] El motivo no puede superar los 100 caracteres.",
+      );
+    }
 
-  const warnings = [];
-  const hlgRef = db.collection("historial_laboral_grupos").doc(hlgId);
-  const hlgSnap = await hlgRef.get();
-  if (!hlgSnap.exists) {
-    throw new HttpsError(
-      "not-found",
-      "[VAL-HLG-DES-001] No se encontro la asignacion HLg indicada. Verifica el registro e intenta nuevamente.",
-    );
-  }
-  const hlg = hlgSnap.data() || {};
-  const personaHlg = toNullableTrimmedString(hlg.persona_id);
-  if (!laboralEscrituraSinAssertRrhh()) assertEscrituraLaboral(request, personaHlg);
-
-  if (hlg.activo === false && !forzar) {
-    throw new HttpsError(
-      "failed-precondition",
-      "[VAL-HLG-DES-002] La asignacion HLg ya esta deshabilitada. No se aplicaron cambios.",
-    );
-  }
-
-  const fechaInicioHlg = hldHlgFechaInicioYmd(hlg) || laboralYmdOrNull(hlg.fecha_inicio);
-  if (fechaInicioHlg && fechaCorte < fechaInicioHlg) {
-    throw new HttpsError(
-      "invalid-argument",
-      "[VAL-HLG-DES-003] La fecha de corte no puede ser anterior al inicio de la asignacion HLg.",
-    );
-  }
-
-  if (laboralYmdOrNull(hlg.fecha_fin)) {
-    pushWarning(
-      warnings,
-      "VAL-HLG-DES-W001",
-      "La asignacion HLg ya estaba cerrada por fecha. Se aplico la deshabilitacion administrativa.",
-      { hlg_id: hlgId, fecha_corte: fechaCorte, collection: "historial_laboral_grupos" },
-    );
-  }
-
-  const now = FieldValue.serverTimestamp();
-  const actorUid = (request.auth && request.auth.uid) || null;
-  const actorPersonaId = toNullableTrimmedString(request.auth && request.auth.token && request.auth.token.persona_id);
-
-  await db.runTransaction(async (tx) => {
-    const fresh = await tx.get(hlgRef);
-    if (!fresh.exists) {
+    const warnings = [];
+    const hlgRef = db.collection("historial_laboral_grupos").doc(hlgId);
+    const hlgSnap = await hlgRef.get();
+    if (!hlgSnap.exists) {
       throw new HttpsError(
         "not-found",
         "[VAL-HLG-DES-001] No se encontro la asignacion HLg indicada. Verifica el registro e intenta nuevamente.",
       );
     }
-    const freshData = fresh.data() || {};
-    if (freshData.activo === false && !forzar) {
+    const hlg = hlgSnap.data() || {};
+    const personaHlg = toNullableTrimmedString(hlg.persona_id);
+    if (!laboralEscrituraSinAssertRrhh()) assertEscrituraLaboral(request, personaHlg);
+
+    if (hlg.activo === false && !forzar) {
       throw new HttpsError(
         "failed-precondition",
         "[VAL-HLG-DES-002] La asignacion HLg ya esta deshabilitada. No se aplicaron cambios.",
       );
     }
-    const inicioFresh = hldHlgFechaInicioYmd(freshData) || laboralYmdOrNull(freshData.fecha_inicio);
-    if (inicioFresh && fechaCorte < inicioFresh) {
+
+    const fechaInicioHlg = await resolveHlgFechaInicioYmd(hlg);
+    if (fechaInicioHlg && fechaCorte < fechaInicioHlg) {
       throw new HttpsError(
         "invalid-argument",
         "[VAL-HLG-DES-003] La fecha de corte no puede ser anterior al inicio de la asignacion HLg.",
       );
     }
-    const fechaFin = resolveFechaCierre(freshData.fecha_fin, fechaCorte);
-    tx.set(
-      hlgRef,
+
+    if (laboralYmdOrNull(hlg.fecha_fin)) {
+      pushWarning(
+        warnings,
+        "VAL-HLG-DES-W001",
+        "La asignacion HLg ya estaba cerrada por fecha. Se aplico la deshabilitacion administrativa.",
+        { hlg_id: hlgId, fecha_corte: fechaCorte, collection: "historial_laboral_grupos" },
+      );
+    }
+
+    const now = FieldValue.serverTimestamp();
+    const actorUid = (request.auth && request.auth.uid) || null;
+    const actorPersonaId = toNullableTrimmedString(request.auth && request.auth.token && request.auth.token.persona_id);
+
+    const fechaFin = resolveFechaCierre(hlg.fecha_fin, fechaCorte);
+    await hlgRef.set(
       {
         activo: false,
         fecha_fin: fechaFin,
@@ -904,43 +894,63 @@ const rrhhDeshabilitarHlg = onCall(async (request) => {
       },
       { merge: true },
     );
-  });
 
-  const eventoId = await crearEventoDatosLaborales({
-    tipoEventoId: "cfg_tev_datos_laborales",
-    accion: "deshabilitar_hlg",
-    personaId: personaHlg,
-    actorUid,
-    actorPersonaId,
-    entidad: "historial_laboral_grupos",
-    contexto: {
+    let eventoId = null;
+    try {
+      eventoId = await crearEventoDatosLaborales({
+        tipoEventoId: "cfg_tev_datos_laborales",
+        accion: "deshabilitar_hlg",
+        personaId: personaHlg,
+        actorUid,
+        actorPersonaId,
+        entidad: "historial_laboral_grupos",
+        contexto: {
+          id: hlgId,
+          hlg_id: hlgId,
+          fecha_corte: fechaCorte,
+          motivo: motivo || null,
+          dato_laboral_id: toNullableTrimmedString(hlg.dato_laboral_id),
+        },
+        cambios: [
+          {
+            campo: "activo",
+            label: "Estado de asignacion",
+            antes: true,
+            despues: false,
+            antes_label: "Operativo",
+            despues_label: "Deshabilitado",
+            tipo: "boolean",
+          },
+        ],
+      });
+    } catch (eventoErr) {
+      console.error("rrhhDeshabilitarHlg: fallo evento auditoria", eventoErr);
+      pushWarning(
+        warnings,
+        "VAL-HLG-DES-W002",
+        "La asignacion se deshabilito, pero no se pudo registrar el evento de auditoria.",
+        { hlg_id: hlgId },
+      );
+    }
+
+    if (personaHlg) await refreshClaimsLaboralPersona(personaHlg);
+
+    return {
+      ok: true,
       hlg_id: hlgId,
-      fecha_corte: fechaCorte,
-      motivo: motivo || null,
-      dato_laboral_id: toNullableTrimmedString(hlg.dato_laboral_id),
-    },
-    cambios: [
-      {
-        campo: "activo",
-        label: "Estado de asignacion",
-        antes: true,
-        despues: false,
-        antes_label: "Operativo",
-        despues_label: "Deshabilitado",
-        tipo: "boolean",
-      },
-    ],
-  });
-
-  if (personaHlg) await refreshClaimsLaboralPersona(personaHlg);
-
-  return {
-    ok: true,
-    hlg_id: hlgId,
-    fecha_corte_aplicada: fechaCorte,
-    warnings,
-    evento_id: eventoId,
-  };
+      fecha_corte_aplicada: fechaCorte,
+      warnings,
+      evento_id: eventoId,
+    };
+  } catch (err) {
+    if (err instanceof HttpsError) throw err;
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("rrhhDeshabilitarHlg", err);
+    throw new HttpsError(
+      "internal",
+      `[VAL-HLG-DES-500] No se pudo deshabilitar la asignacion HLg: ${msg}`,
+    );
+  }
 });
 
 const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
