@@ -1,6 +1,6 @@
 # Plan maestro — Ticketera / solicitudes V2
 
-**Estado del documento:** plan vivo · **última revisión:** 2026-05-19 · **PAUSA implementación:** [`HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md`](./HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md)  
+**Estado del documento:** plan vivo · **última revisión:** 2026-05-19 · **PAUSA implementación:** [`HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md`](./HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md) · **Siguiente bloque:** [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md) (RFC autorización + Oleada A)  
 **Ámbito:** ingreso agente, motores por patrón de saldo, bandejas (jefe / médico futuro), relación con `cfg_articulos`.
 
 **Visión de producto (incorporada):** [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md) — herramienta **dinámica**, fechas impuestas, preview, subflujos LAO y licencias médicas.
@@ -22,7 +22,7 @@ Leyenda: **Hecho** · **Parcial** · **Pendiente**
 | **F2b — Preview + fechas impuestas** | **Hecho** | Deploy `previsualizarSolicitudPatronB` · evidencia F2-1 |
 | **F3a — LAO dentro del concepto ticketera** | **Parcial** | Motor y ruta `/portal/solicitudes/lao`; no shell unificado |
 | **F3b — Bandeja jefe** | **Hecho (piloto J2–J3)** | [`TICKETERA_FASE3_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE3_EVIDENCIA_PILOTO.md) |
-| **F4 — Bandeja RRHH solicitudes** | **Parcial (piloto R2)** | [`TICKETERA_FASE4_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE4_EVIDENCIA_PILOTO.md) · R3 pendiente |
+| **F4 — Bandeja RRHH solicitudes** | **Parcial (MVP)** — **TO-BE en RFC** | [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) · implementar Oleada A |
 | **F5 — Lic. médicas + bandeja médico** | **Pendiente** | Concepto §4.3 del documento visión |
 | **F6 — Delegación jefe → subordinado** | **Pendiente** | [`CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md`](./CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md) |
 
@@ -139,9 +139,11 @@ Leyenda: **Hecho** · **Parcial** · **Pendiente**
 
 ## 5. Criterio de “siguiente sprint”
 
-**Recomendado:** Fase **2.0 + 2.1** (RFC ticketera dinámica + listado performante) **antes** de más artículos en whitelist.
+**Recomendado (may 2026):** **Oleada A** del [`PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md`](./PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md) — autorización + TC RRHH (RFC cerrado en taller).
 
-**Alternativa:** Fase **3** (bandeja jefe) si negocio prioriza cerrar ciclo aprobación del piloto 64-A.
+**En paralelo si hay capacidad:** Fase **2.1** listado performante (P0).
+
+**Después:** Oleada B (emisor MDC) → épica Asistencia (Oleada C / GSO).
 
 ---
 

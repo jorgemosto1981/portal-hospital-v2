@@ -5,7 +5,15 @@
 **Firebase:** `portal-hospital-v2` · Functions `southamerica-east1` · Firestore `southamerica-east1`  
 **Piloto habitual:** DNI **28914247** · `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ`
 
-> **Retomar en próxima sesión desde § 6 (pendiente de producto)** y validar snapshot Firestore de `sol_01KS0896610NA49M9G6VABMMEK` en `cfg_esa_aprobada`.
+> **Retomar desde** [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md) (RFC + plan Oleada A). La pregunta de producto §4 quedó **cerrada** en RFC; implementación **pendiente**.
+
+## 0. Continuidad post-taller (2026-05-19 tarde)
+
+| Documento | Rol |
+|-----------|-----|
+| [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) | Contrato TO-BE |
+| [`PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md`](./PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md) | Oleadas A/B/C |
+| [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md) | **Entrada única** para retomar |
 
 **Índice de evidencia:**  
 [`PLAN_TICKETERA_V2.md`](./PLAN_TICKETERA_V2.md) · F2 [`TICKETERA_FASE2_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE2_EVIDENCIA_PILOTO.md) · F3 [`TICKETERA_FASE3_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE3_EVIDENCIA_PILOTO.md) · F4 [`TICKETERA_FASE4_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE4_EVIDENCIA_PILOTO.md)
@@ -106,11 +114,11 @@ stateDiagram-v2
 
 ## 6. Próxima sesión — checklist
 
-- [ ] Reunión corta producto: **autorizaciones vs toma de conocimiento** (§ 4).
-- [ ] Confirmar en Firestore `sol_01KS0896610NA49M9G6VABMMEK`: `cfg_esa_aprobada` + `rrhh_revision_*`.
-- [ ] Ejecutar **R3** si se mantiene doble etapa con rechazo en RRHH.
-- [ ] Deploy **hosting** si se prueba desde URL publicada.
-- [ ] Commit ya en remoto — en otra PC: `git fetch` + checkout rama § cabecera.
+- [x] Reunión producto: autorizaciones vs toma de conocimiento → **RFC** (2026-05-19).
+- [ ] Implementar **Oleada A** según [`PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md`](./PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md).
+- [ ] Confirmar en Firestore `sol_01KS0896610NA49M9G6VABMMEK`: histórico MVP (`en_revision_rrhh` → `aprobada`).
+- [ ] Matrices F3/F4: actualizar a TO-BE (R3 AS-IS obsoleto).
+- [ ] `git pull` en otra PC — ver handoff autorización § 9.
 
 ---
 
