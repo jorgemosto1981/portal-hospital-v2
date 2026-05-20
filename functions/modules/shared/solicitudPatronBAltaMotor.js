@@ -15,11 +15,19 @@ const {
   CODIGO_SALDO_MES,
   CODIGO_SALDO_EVENTO,
   CODIGO_FECHA_RANGO,
+  CODIGO_SUPERPOSICION,
+  CODIGO_GRUPO_ANCLA_REQUERIDO,
+  CODIGO_GRUPO_ANCLA_INVALIDO,
+  CODIGO_SIN_GRUPO_VIGENTE,
 } = require("./solicitudElegibilidadLaboral");
+const { validarSuperposicionFechasPatronB } = require("./patronBSuperposicionValidacion");
+const { resolverGrupoTrabajoIdAnclaParaSolicitud } = require("./solicitudGrupoTrabajoAncla");
 
 const ESTADOS_CUENTAN_FRECUENCIA_MES = new Set([
   "cfg_esa_borrador",
   "cfg_esa_en_revision_jefe",
+  "cfg_esa_en_revision_rrhh",
+  "cfg_esa_aprobada",
 ]);
 
 function patronFromVersion(versionData) {
@@ -142,6 +150,41 @@ async function runPatronBAltaMotor(params) {
     return { ok: false, codigos: eleg.codigos, mensajes: eleg.mensajes, hlc_id: null };
   }
 
+  const grupoAncla = await resolverGrupoTrabajoIdAnclaParaSolicitud(db, {
+    persona_id: personaId,
+    fecha_desde: fechaDesde,
+    grupo_trabajo_id_ancla:
+      String(solicitud.grupo_trabajo_id_ancla || solicitud.grupo_de_trabajo_id || "").trim() ||
+      null,
+  });
+  if (!grupoAncla.ok) {
+    return {
+      ok: false,
+      codigos: [grupoAncla.codigo || CODIGO_GRUPO_ANCLA_REQUERIDO],
+      mensajes: [grupoAncla.mensaje || mensajeParaCodigo(CODIGO_GRUPO_ANCLA_REQUERIDO)],
+      hlc_id: eleg.hlc_id,
+      requiere_seleccion_grupo: grupoAncla.requiere_seleccion === true,
+      grupos_trabajo_vigentes: grupoAncla.grupos_vigentes || [],
+    };
+  }
+
+  const superpos = await validarSuperposicionFechasPatronB(db, {
+    persona_id: personaId,
+    fecha_desde: fechaDesde,
+    fecha_hasta: fechaHasta,
+    exclude_sol_id: excludeSolId || "",
+    version_data: versionData,
+  });
+  if (!superpos.ok) {
+    return {
+      ok: false,
+      codigos: [superpos.codigo || CODIGO_SUPERPOSICION],
+      mensajes: [superpos.mensaje || mensajeParaCodigo(CODIGO_SUPERPOSICION)],
+      hlc_id: eleg.hlc_id,
+      conflicto_solicitud_id: superpos.conflicto_solicitud_id || null,
+    };
+  }
+
   /** @type {{ en_mes: number, tope_mes: number } | null} */
   let frecuenciaMes = null;
   if (Number.isFinite(topeMes) && topeMes > 0) {
@@ -184,6 +227,8 @@ async function runPatronBAltaMotor(params) {
     codigos: [],
     mensajes: [],
     hlc_id: eleg.hlc_id,
+    grupo_trabajo_id_ancla: grupoAncla.grupo_trabajo_id_ancla,
+    grupos_trabajo_vigentes: grupoAncla.grupos_vigentes || [],
     dias_consumo: diasPedidos,
     anio_ciclo_consumo: anioCiclo,
     bolsa_id: match.bolsaId,

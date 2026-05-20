@@ -6,6 +6,7 @@ const { assertAgenteConPersonaId } = require("../../modules/shared/helpers");
 const { parseYmd } = require("../../modules/shared/laoPreviewMotor");
 const { isPortalRoleUsuario } = require("../../modules/shared/solicitudElegibilidadLaboral");
 const { runPatronBAltaMotor } = require("../../modules/shared/solicitudPatronBAltaMotor");
+const { validarGrillaHorariaParaSolicitud } = require("../../modules/shared/mdcGrillaHorariaGate");
 const {
   diasSolicitadosDesdeVersion,
   fechaHastaDesdeVersionPatronB,
@@ -53,6 +54,15 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
     .doc(versionId)
     .get();
   const versionData = versionSnap.exists ? versionSnap.data() || {} : {};
+  const topes = versionData.bloque_topes_plazos_computo || {};
+  const dependeRda = topes.depende_rda === true;
+  const grupoTrabajoId =
+    typeof d.grupo_trabajo_id_ancla === "string"
+      ? d.grupo_trabajo_id_ancla.trim()
+      : typeof d.grupo_de_trabajo_id === "string"
+        ? d.grupo_de_trabajo_id.trim()
+        : "";
+
   const diasVersion = diasSolicitadosDesdeVersion(versionData);
   const diasSolicitados =
     Number.isFinite(diasRaw) && diasRaw > 0 ? Math.floor(diasRaw) : diasVersion;
@@ -68,15 +78,68 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
       fecha_hasta: fechaHasta,
       dias_solicitados: diasSolicitados,
       anio_ciclo_consumo: pDesde.y,
+      grupo_trabajo_id_ancla: grupoTrabajoId || null,
     },
     authToken: request.auth.token,
   });
+
+  if (!motor.ok) {
+    return {
+      ok: false,
+      eligible: false,
+      codigos: Array.isArray(motor.codigos) ? motor.codigos : [],
+      mensajes: Array.isArray(motor.mensajes) ? motor.mensajes : [],
+      grupo_trabajo_id_ancla: motor.grupo_trabajo_id_ancla || null,
+      grupos_trabajo_vigentes: Array.isArray(motor.grupos_trabajo_vigentes)
+        ? motor.grupos_trabajo_vigentes
+        : [],
+      requiere_seleccion_grupo: motor.requiere_seleccion_grupo === true,
+      fecha_desde: fechaDesde,
+      fecha_hasta: fechaHasta,
+      dias_solicitados: diasSolicitados,
+      persona_id: personaId,
+      articulo_id: articuloId,
+      version_id: versionId,
+      hlc_id: motor.hlc_id || null,
+    };
+  }
+
+  const gateGrilla = await validarGrillaHorariaParaSolicitud(db, {
+    depende_rda: dependeRda,
+    persona_id: personaId,
+    fecha_desde: fechaDesde,
+    fecha_hasta: fechaHasta,
+    grupo_trabajo_id: motor.grupo_trabajo_id_ancla || undefined,
+  });
+  if (!gateGrilla.ok) {
+    return {
+      ok: false,
+      eligible: false,
+      codigos: [gateGrilla.codigo || "GRILLA_NO_AUTORIZADA"],
+      mensajes: [gateGrilla.mensaje || "Grilla horaria no autorizada."],
+      grupo_trabajo_id_ancla: motor.grupo_trabajo_id_ancla || null,
+      grupos_trabajo_vigentes: motor.grupos_trabajo_vigentes || [],
+      requiere_seleccion_grupo: false,
+      fecha_desde: fechaDesde,
+      fecha_hasta: fechaHasta,
+      dias_solicitados: diasSolicitados,
+      persona_id: personaId,
+      articulo_id: articuloId,
+      version_id: versionId,
+      hlc_id: motor.hlc_id || null,
+    };
+  }
 
   return {
     ok: motor.ok === true,
     eligible: motor.ok === true,
     codigos: Array.isArray(motor.codigos) ? motor.codigos : [],
     mensajes: Array.isArray(motor.mensajes) ? motor.mensajes : [],
+    grupo_trabajo_id_ancla: motor.grupo_trabajo_id_ancla || null,
+    grupos_trabajo_vigentes: Array.isArray(motor.grupos_trabajo_vigentes)
+      ? motor.grupos_trabajo_vigentes
+      : [],
+    requiere_seleccion_grupo: motor.requiere_seleccion_grupo === true,
     fecha_desde: fechaDesde,
     fecha_hasta: fechaHasta,
     dias_solicitados: diasSolicitados,

@@ -240,6 +240,19 @@ flowchart TB
 }
 ```
 
+### 7.4 Sincronización atómica y fan-out de estados (mandato RDA V2)
+
+Alineación: [`ANEXO_ALINEACION_RDA_GEMINI_V6_A_V2.md`](./ANEXO_ALINEACION_RDA_GEMINI_V6_A_V2.md). **SSoT diario** `asi_<per>_<YYYYMMDD>`; **vista** `vis_<YYYY>_<MM>_per_<ULID>` en `vistas_grilla_mes_agente`.
+
+Todo cambio de estado en una solicitud (creación, aprobación, rechazo, anulación) debe ejecutarse bajo este **fan-out atómico**:
+
+1. **Escritura en SSoT (`asi_*`):** el worker MDC realiza la escritura principal en el documento diario del rango afectado. Es la única fuente de verdad del día (`capa_teorica`, `aportes_normativos` / `capa_solicitudes`, `fichadas`, `estado_consolidado`).
+2. **Sincronización a vista materializada (`vis_*`):** tras confirmar la escritura en `asi_*`, el proceso dispara de inmediato un `update` (o batch) sobre el documento mensual `vis_*` del agente.
+3. **Consistencia de UI:** `vis_*` solo actualiza campos de visualización del día afectado (`eventos[]`, `es_franco`, flags de conflicto / sombra). La GSO no recalcula veredictos en cliente.
+4. **Bloqueo por grilla (regla V6 §5.2):** antes de alta con `depende_rda: true`, el backend valida planificación horaria **AUTORIZADA** para el período. Si el plan está `BORRADOR` o `EN_REVISION` (o falta `capa_teorica` en `asi_*` mientras no exista Epic P), abortar con **403** y mensaje: *«Acción bloqueada: su servicio no registra una grilla horaria aprobada por la dirección para el período solicitado. Contacte a su jefatura.»*
+
+**Oleada B:** implementación en `functions/modules/shared/mdc*`. La transición humana en `sol_*` **no espera** al MDC (S2); fallos MDC → `mdc_consolidacion_pendiente` + reintento.
+
 ---
 
 ## 8. Registros y campos `sol_*`
@@ -288,8 +301,8 @@ En `listarArticulosIngresoAgente` / `previsualizarSolicitudPatronB`: si titular 
 | Oleada | Entregable | Incluye | No incluye |
 |--------|------------|---------|------------|
 | **A** | Motor autorización + bandejas TO-BE | Algoritmo §5.2; quitar `en_revision_rrhh` en flujo normal; RRHH TC; revalidación F3; huérfana; sin bypass RRHH en jefe; `grupo_trabajo_id_ancla` en alta; snapshot versión | MDC real, GSO |
-| **B** | Emisor MDC | Cola Tasks/Pub/Sub; stub consumidor; flags `mdc_consolidacion_pendiente`; handlers en trigger y resolver | Persistencia `asi_*` |
-| **C** | Asistencia RDA + GSO | Colección RDA, MDC worker, celdas sombra/sólido, `vis_*` | Cambios de negocio en §2 |
+| **B** | Emisor + **MDC worker** | Fan-out `asi_*` → `vis_*`; idempotencia; gate grilla §7.4; cableado trigger/bandejas | `recalcularVeredicto` completo; cola Tasks/PubSub productiva |
+| **C** | Asistencia RDA + GSO | GSO consume `vis_*`; planificación mensual; biométrico; permutas | Cambios de negocio §2 no cubiertos en B |
 
 **Callables impactados (Oleada A):**
 
@@ -382,9 +395,25 @@ Opción C (workflow 100% configurable) queda en roadmap [`PLAN_TICKETERA_V2.md`]
 
 ---
 
-## 15. Changelog
+## 15. Criterios de aceptación global (D.O.D.)
+
+Todo entregable (código, trigger o función) relacionado con RDA debe cumplir:
+
+| # | Criterio |
+|---|----------|
+| 1 | **Integridad transaccional (fan-out):** toda mutación de estado en solicitud impacta `asi_*` (SSoT) y deriva en `vis_*` (vista mensual). No se aceptan desincronizaciones entre diario y mensual. |
+| 2 | **Regla de dureza operativa:** alta con `depende_rda: true` solo si existe grilla horaria **AUTORIZADA** en el rango; si no, **403** (§7.4). |
+| 3 | **Soberanía RRHH (no automatismos):** el sistema es auditor pasivo. Fichada en franco/dobra **no** inyecta horas en `sal_*` sin acto manual RRHH. |
+| 4 | **Retroactividad médica:** licencias médicas solo dentro del rango del aviso genérico del agente; extensión por médico bloqueada; excepciones solo RRHH (épica M). |
+| 5 | **Eficiencia O(agentes):** carga grilla RRHH por lectura directa de `vis_*` por ID; sin scan masivo de `asi_*` ni cómputo en vivo en UI. |
+| 6 | **Permutas quirúrgicas:** doble consentimiento + parche atómico `capa_teorica` en dos `asi_*` del día; sin reabrir plan mensual (épica T). |
+
+---
+
+## 16. Changelog
 
 | Fecha | Cambio |
 |-------|--------|
 | 2026-05-19 | RFC creado tras taller producto; decisiones §2; contrato MDC §7; integración SIGAL §6. |
 | 2026-05-19 | Handoff + plan implementación; ver [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md). |
+| 2026-05-20 | §7.4 fan-out `asi_*`/`vis_*`; §15 D.O.D.; mandato V2 vs Gemini V6 en anexo. |

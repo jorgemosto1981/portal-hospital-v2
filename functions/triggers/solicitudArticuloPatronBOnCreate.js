@@ -14,6 +14,11 @@ const {
   ESTADO_SOLICITUD_EN_REVISION_JEFE,
 } = require("../modules/shared/solicitudesArticuloEstados");
 const { runPatronBAltaMotor } = require("../modules/shared/solicitudPatronBAltaMotor");
+const { loadArticuloDisplay } = require("../modules/shared/solicitudBandejaJefeCore");
+const {
+  dispararMdcDesdeSolicitudAsync,
+  MDC_COMANDO_PROYECTAR_PENDIENTE,
+} = require("../modules/shared/mdcTicketeraEmisor");
 
 const COL_SALDOS = "saldos_articulo_agente";
 
@@ -137,6 +142,7 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
           motor_descuento_aplicado: true,
           motor_bolsa_id: match.bolsaId,
           motor_dias_descontados: diasConsumo,
+          grupo_trabajo_id_ancla: motor.grupo_trabajo_id_ancla || null,
           _debito_origen: [debito],
         });
       });
@@ -148,6 +154,24 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
         motor_mensajes: ["Error al aplicar descuento de saldo."],
         motor_validado_en: FieldValue.serverTimestamp(),
         actualizado_en: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    try {
+      const artCache = new Map();
+      const artDisplay = await loadArticuloDisplay(db, motor.articulo_id, artCache);
+      const postSnap = await solRef.get();
+      const postData = postSnap.exists ? postSnap.data() || {} : d;
+      dispararMdcDesdeSolicitudAsync(db, solId, {
+        ...postData,
+        codigo_grilla: artDisplay.codigo_grilla,
+        articulo_id: motor.articulo_id,
+      }, MDC_COMANDO_PROYECTAR_PENDIENTE);
+    } catch (mdcErr) {
+      logger.warn("solicitud_patron_b_mdc_emit", {
+        solId,
+        message: mdcErr instanceof Error ? mdcErr.message : String(mdcErr),
       });
     }
   },

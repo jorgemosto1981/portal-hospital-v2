@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { callListarArticulosIngresoAgente, callPrevisualizarSolicitudPatronB } from "../../services/callables.js";
+import {
+  callListarArticulosIngresoAgente,
+  callPrevisualizarSolicitudPatronB,
+  callResolverContextoLaboralSolicitud,
+} from "../../services/callables.js";
 import {
   crearSolicitudArticuloPatronBBorrador,
   esperarValidacionMotorPatronB,
@@ -34,6 +38,40 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
   const [preview, setPreview] = useState(/** @type {Record<string, unknown> | null} */ (null));
   const [previewCargando, setPreviewCargando] = useState(false);
   const [previewError, setPreviewError] = useState("");
+  const [gruposVigentes, setGruposVigentes] = useState(/** @type {Array<Record<string, unknown>>} */ ([]));
+  const [grupoAnclaId, setGrupoAnclaId] = useState("");
+  const [gruposCargando, setGruposCargando] = useState(false);
+
+  const recargarGrupos = useCallback(async () => {
+    if (!/^per_/i.test(personaId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaDesde)) {
+      setGruposVigentes([]);
+      setGrupoAnclaId("");
+      return;
+    }
+    setGruposCargando(true);
+    try {
+      const res = await callResolverContextoLaboralSolicitud({ fecha_desde: fechaDesde });
+      const list = res?.data?.grupos_trabajo_vigentes || [];
+      setGruposVigentes(Array.isArray(list) ? list : []);
+      const sugerido = String(res?.data?.grupo_trabajo_id_ancla_sugerido || "").trim();
+      if (sugerido && list.some((g) => g.grupo_de_trabajo_id === sugerido)) {
+        setGrupoAnclaId(sugerido);
+      } else if (list.length === 1) {
+        setGrupoAnclaId(String(list[0]?.grupo_de_trabajo_id || ""));
+      } else {
+        setGrupoAnclaId("");
+      }
+    } catch {
+      setGruposVigentes([]);
+      setGrupoAnclaId("");
+    } finally {
+      setGruposCargando(false);
+    }
+  }, [fechaDesde, personaId]);
+
+  useEffect(() => {
+    recargarGrupos();
+  }, [recargarGrupos]);
 
   const recargar = useCallback(async () => {
     if (!/^per_/i.test(personaId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaDesde)) {
@@ -72,7 +110,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
   useEffect(() => {
     setPreview(null);
     setPreviewError("");
-  }, [fechaDesde, articuloSel?.articulo_id]);
+  }, [fechaDesde, articuloSel?.articulo_id, grupoAnclaId]);
 
   const fechaHasta =
     articuloSel?.fecha_hasta && /^\d{4}-\d{2}-\d{2}$/.test(String(articuloSel.fecha_hasta))
@@ -84,26 +122,46 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
       ? Math.floor(Number(articuloSel.dias_solicitados))
       : 1;
 
+  const requiereSeleccionGrupo = gruposVigentes.length > 1;
+  const grupoAnclaOk =
+    !requiereSeleccionGrupo || (requiereSeleccionGrupo && /^gdt_/i.test(grupoAnclaId));
+
   const previsualizar = useCallback(async () => {
-    if (!articuloSel || previewCargando || !/^per_/i.test(personaId)) return;
+    if (!articuloSel || previewCargando || !/^per_/i.test(personaId) || !grupoAnclaOk) return;
     setPreviewCargando(true);
     setPreviewError("");
     setPreview(null);
     try {
-      const res = await callPrevisualizarSolicitudPatronB({
+      const body = {
         articulo_id: articuloSel.articulo_id,
         version_id: articuloSel.version_id,
         fecha_desde: fechaDesde,
         dias_solicitados: diasSolicitados,
-      });
-      setPreview((res?.data && typeof res.data === "object" ? res.data : null) || null);
+      };
+      if (/^gdt_/i.test(grupoAnclaId)) {
+        body.grupo_trabajo_id_ancla = grupoAnclaId;
+      }
+      const res = await callPrevisualizarSolicitudPatronB(body);
+      const data = res?.data && typeof res.data === "object" ? res.data : null;
+      setPreview(data);
+      if (data?.grupo_trabajo_id_ancla && /^gdt_/i.test(String(data.grupo_trabajo_id_ancla))) {
+        setGrupoAnclaId(String(data.grupo_trabajo_id_ancla));
+      }
     } catch (e) {
       setPreview(null);
       setPreviewError(e?.message || "No se pudo previsualizar la solicitud.");
     } finally {
       setPreviewCargando(false);
     }
-  }, [articuloSel, diasSolicitados, fechaDesde, personaId, previewCargando]);
+  }, [
+    articuloSel,
+    diasSolicitados,
+    fechaDesde,
+    grupoAnclaId,
+    grupoAnclaOk,
+    personaId,
+    previewCargando,
+  ]);
 
   const previewVigente =
     preview &&
@@ -126,6 +184,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
         versionAplicadaId: articuloSel.version_id,
         fechaDesde,
         diasSolicitados,
+        grupoTrabajoIdAncla: grupoAnclaOk ? grupoAnclaId : undefined,
       });
       await esperarValidacionMotorPatronB(solicitud_id);
       return solicitud_id;
@@ -135,7 +194,16 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     } finally {
       setEnviando(false);
     }
-  }, [articuloSel, diasSolicitados, enviando, fechaDesde, personaId, puedeEnviarTrasPreview]);
+  }, [
+    articuloSel,
+    diasSolicitados,
+    enviando,
+    fechaDesde,
+    grupoAnclaId,
+    grupoAnclaOk,
+    personaId,
+    puedeEnviarTrasPreview,
+  ]);
 
   return {
     fechaDesde,
@@ -156,5 +224,11 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     previewError,
     previsualizar,
     puedeEnviarTrasPreview,
+    gruposVigentes,
+    grupoAnclaId,
+    setGrupoAnclaId,
+    gruposCargando,
+    requiereSeleccionGrupo,
+    grupoAnclaOk,
   };
 }

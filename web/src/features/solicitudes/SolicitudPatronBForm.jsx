@@ -25,6 +25,12 @@ import { etiquetaArticulo } from "./ticketeraUtils.js";
  *   previewError?: string,
  *   puedeEnviarTrasPreview?: boolean,
  *   showFechaDesde?: boolean,
+ *   gruposVigentes?: Array<Record<string, unknown>>,
+ *   grupoAnclaId?: string,
+ *   setGrupoAnclaId?: (v: string) => void,
+ *   gruposCargando?: boolean,
+ *   requiereSeleccionGrupo?: boolean,
+ *   grupoAnclaOk?: boolean,
  *   titulo?: string,
  *   descripcion?: string,
  * }} props
@@ -50,16 +56,30 @@ export default function SolicitudPatronBForm({
   previewError = "",
   puedeEnviarTrasPreview = false,
   showFechaDesde = true,
+  gruposVigentes = [],
+  grupoAnclaId = "",
+  setGrupoAnclaId,
+  gruposCargando = false,
+  requiereSeleccionGrupo = false,
+  grupoAnclaOk = true,
   titulo = "Asuntos particulares y similares",
   descripcion = "Un día por solicitud. El saldo del ciclo se reserva al enviar. Solo aparecen artículos para los que cumplís requisitos de cargo y rol.",
 }) {
   const puedePrevisualizar =
-    Boolean(articuloSel) && !cargando && !enviando && !previewCargando && /^per_/i.test(personaId);
+    Boolean(articuloSel) &&
+    !cargando &&
+    !enviando &&
+    !previewCargando &&
+    !gruposCargando &&
+    grupoAnclaOk &&
+    /^per_/i.test(personaId);
   const puedeEnviar =
     Boolean(articuloSel) &&
     !cargando &&
     !enviando &&
     !previewCargando &&
+    !gruposCargando &&
+    grupoAnclaOk &&
     /^per_/i.test(personaId) &&
     puedeEnviarTrasPreview;
 
@@ -83,6 +103,43 @@ export default function SolicitudPatronBForm({
               className="min-h-[44px] w-full touch-manipulation rounded-lg border border-slate-200 px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
             />
           </label>
+        ) : null}
+
+        {gruposCargando ? (
+          <p className="text-sm text-slate-500">Cargando grupos de trabajo vigentes…</p>
+        ) : null}
+
+        {!gruposCargando && gruposVigentes.length === 0 && !error ? (
+          <p className="text-sm text-amber-800">
+            No hay grupo de trabajo vigente para la fecha elegida.
+          </p>
+        ) : null}
+
+        {requiereSeleccionGrupo && setGrupoAnclaId ? (
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-slate-700">Grupo de trabajo (ancla)</span>
+            <select
+              value={grupoAnclaId}
+              onChange={(e) => setGrupoAnclaId(e.target.value)}
+              className="min-h-[44px] w-full touch-manipulation rounded-lg border border-slate-200 px-3 py-2 text-base"
+            >
+              <option value="">Elegí el grupo sobre el que pedís la licencia</option>
+              {gruposVigentes.map((g) => (
+                <option key={String(g.grupo_de_trabajo_id)} value={String(g.grupo_de_trabajo_id)}>
+                  {String(g.etiqueta_ui || g.grupo_de_trabajo_id)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+
+        {!requiereSeleccionGrupo && gruposVigentes.length === 1 ? (
+          <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            Grupo:{" "}
+            <span className="font-medium">
+              {String(gruposVigentes[0]?.etiqueta_ui || gruposVigentes[0]?.grupo_de_trabajo_id || "—")}
+            </span>
+          </p>
         ) : null}
 
         {cargando ? <p className="text-sm text-slate-500">Buscando artículos disponibles…</p> : null}

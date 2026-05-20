@@ -1,6 +1,6 @@
 # Plan de implementación — RFC autorización y toma de conocimiento
 
-**Estado:** plan vivo · **2026-05-19** · **sin código aún**  
+**Estado:** plan vivo · **2026-05-20** · Oleada **B** MDC worker en `functions/modules/shared/mdc*.js`  
 **Handoff sesión:** [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md)  
 **Contrato:** [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md)  
 **AS-IS clave:** jefe aprueba → `cfg_esa_en_revision_rrhh`; RRHH aprueba → `cfg_esa_aprobada`; bypass RRHH en bandeja jefe ([`solicitudBandejaJefeCore.js`](../../functions/modules/shared/solicitudBandejaJefeCore.js)).
@@ -133,21 +133,29 @@ Refactor [`solicitudBandejaRrhhCore.js`](functions/modules/shared/solicitudBande
 
 ## Oleada B — Emisor MDC (sin persistencia `asi_*`)
 
-### B1 — Módulo emisor
+### B1 — Módulo worker MDC (implementado)
 
-- Nuevo `functions/modules/shared/mdcComandosTicketera.js`: enum comandos `PROYECTAR_PENDIENTE`, `CONSOLIDAR_APROBADO`, `REVERTIR_PROYECCION`, `REINTENTAR_CONSOLIDACION`; builder payload RFC §7.3.
-- Implementación inicial: **log estructurado + no-op** o escritura en colección `mdc_comandos_pendientes` (cola manual) — sin worker RDA.
+| Archivo | Rol |
+|---------|-----|
+| `mdcComandosConstants.js` | Comandos y colecciones |
+| `mdcRdaDocumentIds.js` | Ids `asi_*`, `vis_*` |
+| `mdcWorkerCore.js` | SSoT `asi_*` |
+| `mdcFanOutVis.js` | Fan-out `vis_*` |
+| `mdcGrillaHorariaGate.js` | Gate `depende_rda` |
+| `mdcTicketeraEmisor.js` | Emisor async |
 
-### B2 — Cableado en ticketera
+### B2 — Cableado (implementado)
 
 | Punto | Comando |
 |-------|---------|
 | Trigger → `en_revision_jefe` | `PROYECTAR_PENDIENTE` |
-| Jefe/RRHH sustituta aprueba | `CONSOLIDAR_APROBADO` |
-| Rechazo / cancelación C3 | `REVERTIR_PROYECCION` |
-| Fallo simulado | `mdc_consolidacion_pendiente: true` en `sol_*` (S2) |
+| RRHH aprueba (MVP) | `CONSOLIDAR_APROBADO` |
+| Rechazo jefe/RRHH | `REVERTIR_PROYECCION` |
+| Preview `depende_rda` | gate 403 |
 
-- Diseño transporte: interfaz `encolarMdcComando(payload)` preparada para Cloud Tasks/PubSub (implementación infra en B3).
+### B3 — Infra cola (futuro)
+
+Tasks/PubSub si hace falta desacoplar el worker.
 
 ### B3 — Infra cola (cuando producto apruebe Tasks vs Pub/Sub)
 

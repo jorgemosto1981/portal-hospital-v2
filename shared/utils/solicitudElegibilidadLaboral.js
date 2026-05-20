@@ -58,6 +58,10 @@ export const CODIGO_SALDO_CICLO = "SALDO_CICLO";
 export const CODIGO_SALDO_MES = "SALDO_MES";
 export const CODIGO_SALDO_EVENTO = "SALDO_EVENTO";
 export const CODIGO_FECHA_RANGO = "FECHA_RANGO";
+export const CODIGO_SUPERPOSICION = "SUPERPOSICION_FECHAS";
+export const CODIGO_GRUPO_ANCLA_REQUERIDO = "GRUPO_ANCLA_REQUERIDO";
+export const CODIGO_GRUPO_ANCLA_INVALIDO = "GRUPO_ANCLA_INVALIDO";
+export const CODIGO_SIN_GRUPO_VIGENTE = "SIN_GRUPO_VIGENTE";
 
 const MENSAJES = {
   [CODIGO_CIRCUITO_ROL]: "Tu perfil no puede iniciar solicitudes de este artículo.",
@@ -73,6 +77,13 @@ const MENSAJES = {
   [CODIGO_SALDO_MES]: "Ya usaste la solicitud permitida este mes.",
   [CODIGO_SALDO_EVENTO]: "Este artículo permite un solo día por solicitud.",
   [CODIGO_FECHA_RANGO]: "Revisá las fechas del pedido.",
+  [CODIGO_SUPERPOSICION]:
+    "Ya hay un trámite que ocupa esa fecha. Esperá la resolución o contactá a RRHH.",
+  [CODIGO_GRUPO_ANCLA_REQUERIDO]:
+    "Elegí el grupo de trabajo sobre el que pedís la licencia.",
+  [CODIGO_GRUPO_ANCLA_INVALIDO]: "El grupo elegido no está vigente en esa fecha.",
+  [CODIGO_SIN_GRUPO_VIGENTE]:
+    "No tenés un grupo de trabajo vigente para la fecha elegida.",
 };
 
 /**

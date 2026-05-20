@@ -79,6 +79,7 @@ export async function crearSolicitudArticuloLaoBorrador(params) {
  *   versionAplicadaId: string,
  *   fechaDesde: string,
  *   diasSolicitados?: number,
+ *   grupoTrabajoIdAncla?: string,
  * }} params
  */
 export async function crearSolicitudArticuloPatronBBorrador(params) {
@@ -87,6 +88,7 @@ export async function crearSolicitudArticuloPatronBBorrador(params) {
   const versionAplicadaId = String(params.versionAplicadaId || "").trim();
   const fechaDesde = String(params.fechaDesde || "").trim().slice(0, 10);
   const diasSolicitados = Number(params.diasSolicitados ?? 1);
+  const grupoTrabajoIdAncla = String(params.grupoTrabajoIdAncla || "").trim();
 
   if (!/^per_/i.test(personaId)) throw new Error("persona_id inválido.");
   if (!/^art_/i.test(articuloId)) throw new Error("articulo_id inválido.");
@@ -104,7 +106,7 @@ export async function crearSolicitudArticuloPatronBBorrador(params) {
   if (!SOL_ULID_RE.test(solicitud_id)) throw new Error("No se pudo generar solicitud_id.");
 
   const ref = doc(dbV2, "solicitudes_articulo", solicitud_id);
-  await setDoc(ref, {
+  const payload = {
     articulo_id: articuloId,
     titular_persona_id: personaId,
     actor_alta_persona_id: personaId,
@@ -118,7 +120,11 @@ export async function crearSolicitudArticuloPatronBBorrador(params) {
     schema_version: SCHEMA_SOLICITUD_PATRON_B,
     creado_en: serverTimestamp(),
     actualizado_en: serverTimestamp(),
-  });
+  };
+  if (/^gdt_/i.test(grupoTrabajoIdAncla)) {
+    payload.grupo_trabajo_id_ancla = grupoTrabajoIdAncla;
+  }
+  await setDoc(ref, payload);
 
   return { solicitud_id };
 }

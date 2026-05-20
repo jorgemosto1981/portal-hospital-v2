@@ -59,6 +59,12 @@ export default function TicketeraPatronB() {
         previewCargando={form.previewCargando}
         previewError={form.previewError}
         puedeEnviarTrasPreview={form.puedeEnviarTrasPreview}
+        gruposVigentes={form.gruposVigentes}
+        grupoAnclaId={form.grupoAnclaId}
+        setGrupoAnclaId={form.setGrupoAnclaId}
+        gruposCargando={form.gruposCargando}
+        requiereSeleccionGrupo={form.requiereSeleccionGrupo}
+        grupoAnclaOk={form.grupoAnclaOk}
         showFechaDesde
       />
     </div>

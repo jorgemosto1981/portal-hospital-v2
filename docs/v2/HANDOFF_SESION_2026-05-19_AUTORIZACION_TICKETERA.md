@@ -5,7 +5,7 @@
 **Firebase:** `portal-hospital-v2` · Functions `southamerica-east1` · Firestore `southamerica-east1`  
 **Piloto:** DNI **28914247** · titular ejemplo `per_01KR3HD24AMJ6YX3N7B3GPAZJ4` · `sol_01KS0896610NA49M9G6VABMMEK`
 
-> **Retomar mañana desde § 7** (Oleada A0). Leer primero el RFC §2 y el plan de implementación.
+> **Superseded por código:** ver [`HANDOFF_SESION_2026-05-20_MDC_OLEADA_B_PAUSA.md`](./HANDOFF_SESION_2026-05-20_MDC_OLEADA_B_PAUSA.md) §8 (Oleada A es el próximo paso; Oleada B ya implementada).
 
 ---
 

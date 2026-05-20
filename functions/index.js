@@ -34,6 +34,7 @@ const listarSolicitudesBandejaJefe = require("./onCall/solicitudes/listarSolicit
 const resolverDecisionJefeSolicitud = require("./onCall/solicitudes/resolverDecisionJefeSolicitud");
 const listarSolicitudesBandejaRrhh = require("./onCall/solicitudes/listarSolicitudesBandejaRrhh");
 const resolverDecisionRrhhSolicitud = require("./onCall/solicitudes/resolverDecisionRrhhSolicitud");
+const reprocesarMdcSolicitudPatronB = require("./onCall/solicitudes/reprocesarMdcSolicitudPatronB");
 
 module.exports = {
   ...login,
@@ -60,4 +61,5 @@ module.exports = {
   ...resolverDecisionJefeSolicitud,
   ...listarSolicitudesBandejaRrhh,
   ...resolverDecisionRrhhSolicitud,
+  ...reprocesarMdcSolicitudPatronB,
 };

@@ -46,10 +46,12 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md`](./TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md) | Matriz T1–T8 + regresión slice 64-A (**cerrada** piloto 2026-05-19) |
 | [`PLAN_TICKETERA_SLICE_64B_V2.md`](./PLAN_TICKETERA_SLICE_64B_V2.md) | **Plan** slice 64-B (Patrón B sin goce) — piloto cerrado 2026-05-19 |
 | [`PLAN_TICKETERA_V2.md`](./PLAN_TICKETERA_V2.md) | **Plan maestro ticketera** — dónde estamos, fases, roadmap (Fase 1 cerrada → Fase 2 dinámica) |
-| [**`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`**](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md) | **RETOMAR AQUÍ** — RFC autorización + plan implementación; pausa hasta Oleada A0 |
+| [**`HANDOFF_SESION_2026-05-20_MDC_OLEADA_B_PAUSA.md`**](./HANDOFF_SESION_2026-05-20_MDC_OLEADA_B_PAUSA.md) | **RETOMAR AQUÍ** — Oleada B MDC desplegada; validaciones; grupo ancla; §8 próximo paso |
+| [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md) | RFC autorización + plan (doc); superseded por handoff 20-may para código |
 | [`HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md`](./HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md) | PAUSA Fase 2–4 MVP bandejas (AS-IS desplegado) |
 | [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) | RFC contrato — autorización, TC RRHH, MDC, oleadas A/B/C |
 | [`PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md`](./PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md) | Plan código Oleada A → B → C |
+| [`ANEXO_ALINEACION_RDA_GEMINI_V6_A_V2.md`](./ANEXO_ALINEACION_RDA_GEMINI_V6_A_V2.md) | Mandato RDA diario `asi_*` + vista `vis_*` (vs Gemini V6) |
 | [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md) | Visión producto (incorporada en plan maestro §2) |
 | [`CHECKIN_SALDOS_MATRIZ_PRUEBAS.md`](./CHECKIN_SALDOS_MATRIZ_PRUEBAS.md) | Matriz manual check-in + guía alta + § H artículos básicos |
 | [`GUIA_OPERATIVA_CHECKIN_SALDOS_RRHH.md`](./GUIA_OPERATIVA_CHECKIN_SALDOS_RRHH.md) | Guía operador RRHH check-in (copy SSoT en `checkinSaldosAyudaRrhh.js`) |

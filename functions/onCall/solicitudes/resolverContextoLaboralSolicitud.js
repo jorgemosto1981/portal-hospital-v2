@@ -10,6 +10,7 @@ const {
   computeAntiguedadMeses,
 } = require("../../modules/shared/solicitudElegibilidadLaboral");
 const { loadHlcArray } = require("../../modules/shared/solicitudPatronBAltaMotor");
+const { listarGruposTrabajoVigentesEnFecha } = require("../../modules/shared/solicitudGrupoTrabajoAncla");
 
 function resolvePersonaId(request, data) {
   if (request.auth && tokenHasRrhhAccess(request.auth.token)) {
@@ -51,11 +52,16 @@ const resolverContextoLaboralSolicitud = onCall(async (request) => {
   const diasExt = Number(persona.antiguedad_reconocida_dias);
   const externos = Number.isFinite(diasExt) && diasExt >= 0 ? Math.floor(diasExt) : 0;
   const antiguedad_meses = computeAntiguedadMeses(hlcArray, fechaDesde, externos);
+  const grupos_trabajo_vigentes = await listarGruposTrabajoVigentesEnFecha(db, personaId, fechaDesde);
 
   return {
     persona_id: personaId,
     fecha_desde: fechaDesde,
     hlc_vigentes: hlcVigentes,
+    grupos_trabajo_vigentes,
+    grupo_trabajo_id_ancla_sugerido:
+      grupos_trabajo_vigentes.length === 1 ? grupos_trabajo_vigentes[0].grupo_de_trabajo_id : null,
+    requiere_seleccion_grupo: grupos_trabajo_vigentes.length > 1,
     antiguedad_meses,
     elegibilidad_base_ok: hlcVigentes.length > 0,
   };

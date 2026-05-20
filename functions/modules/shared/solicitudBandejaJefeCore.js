@@ -3,6 +3,11 @@
 const { FieldValue } = require("./context");
 const { revertirMotorBolsaPatronBEnTx } = require("./solicitudPatronBReversoSaldo");
 const {
+  dispararMdcDesdeSolicitudAsync,
+  MDC_COMANDO_AUTORIZAR_JEFE,
+  MDC_COMANDO_REVERTIR_PROYECCION,
+} = require("./mdcTicketeraEmisor");
+const {
   ESTADO_SOLICITUD_EN_REVISION_JEFE,
   ESTADO_SOLICITUD_RECHAZADA,
   ESTADO_SOLICITUD_EN_REVISION_RRHH,
@@ -197,6 +202,13 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
       jefe_motivo: motivo || null,
       actualizado_en: FieldValue.serverTimestamp(),
     });
+    const artCache = new Map();
+    const artDisplay = await loadArticuloDisplay(db, String(sol.articulo_id || ""), artCache);
+    dispararMdcDesdeSolicitudAsync(db, solId, {
+      ...sol,
+      estado_solicitud_id: ESTADO_SOLICITUD_EN_REVISION_RRHH,
+      codigo_grilla: artDisplay.codigo_grilla,
+    }, MDC_COMANDO_AUTORIZAR_JEFE);
     return {
       ok: true,
       solicitud_id: solId,
@@ -222,6 +234,13 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
         actualizado_en: FieldValue.serverTimestamp(),
       });
     });
+    const artCache = new Map();
+    const artDisplay = await loadArticuloDisplay(db, String(sol.articulo_id || ""), artCache);
+    dispararMdcDesdeSolicitudAsync(db, solId, {
+      ...sol,
+      codigo_grilla: artDisplay.codigo_grilla,
+    }, MDC_COMANDO_REVERTIR_PROYECCION);
+
     return {
       ok: true,
       solicitud_id: solId,
