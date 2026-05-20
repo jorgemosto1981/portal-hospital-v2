@@ -2,7 +2,7 @@
 
 **Estado:** **PAUSA** — Oleada B **implementada y desplegada** en Firebase; Oleada A (bandejas TO-BE) **pendiente**.  
 **Rama:** `feature/ticketera-puente-campos-config`  
-**Commit de esta pausa:** (ver `git log -1` tras push)  
+**Commit de esta pausa:** `0dcdb53` — `feat(ticketera): Oleada B MDC/RDA, validaciones Patron B y handoff pausa`  
 **Firebase:** `portal-hospital-v2` · Functions `southamerica-east1` · Firestore `southamerica-east1`
 
 > **Retomar en la próxima sesión desde § 8** (primer paso concreto). Leer § 5 (qué ya corre en prod) antes de tocar código.
