@@ -158,7 +158,7 @@ Orden recomendado (**casa limpia** antes de Oleada C):
 | 1 | **Smoke prod:** hosting + bandeja solicitudes RRHH + toast alta 64-A | ☐ |
 | 2 | **Repo:** `git checkout -- functions/modules/shared/solicitudElegibilidadLaboral.js` (solo CRLF) | ✅ |
 | 3 | **Deuda §5.4:** eventos `articulos` sin proyección bandeja RRHH + deploy functions | ✅ (21-may prod) |
-| 4 | **Oleada C:** asistencia / GSO / grilla operativa (épica) | ☐ |
+| 4 | **Oleada C:** Slice 1 GSO `vis_*` — [`OLEADA_C_SLICE1_GSO_VISTA_MES.md`](./OLEADA_C_SLICE1_GSO_VISTA_MES.md) | en curso |
 
 ```text
 Oleada A + B (MDC validado) → CERRADAS en prod.

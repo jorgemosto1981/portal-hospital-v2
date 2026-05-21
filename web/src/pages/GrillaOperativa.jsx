@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 
+import GrillaMesLicenciasPanel from "../features/grilla/GrillaMesLicenciasPanel.jsx";
 import { listarReadModelLaboralOperativo } from "../services/readModelLaboralService.js";
 
 export default function GrillaOperativa() {
+  const [tab, setTab] = useState("laboral");
   const [fechaCorte, setFechaCorte] = useState(() => new Date().toISOString().slice(0, 10));
   const [personaId, setPersonaId] = useState("");
   const [grupoId, setGrupoId] = useState("");
@@ -143,6 +145,37 @@ export default function GrillaOperativa() {
   return (
     <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm md:p-6">
       <h1 className="text-xl font-semibold tracking-tight text-slate-900">Grilla operativa</h1>
+      <div className="mt-3 flex gap-2 border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setTab("laboral")}
+          className={[
+            "border-b-2 px-3 py-2 text-sm font-medium",
+            tab === "laboral"
+              ? "border-slate-900 text-slate-900"
+              : "border-transparent text-slate-500 hover:text-slate-700",
+          ].join(" ")}
+        >
+          Vista laboral
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("licencias")}
+          className={[
+            "border-b-2 px-3 py-2 text-sm font-medium",
+            tab === "licencias"
+              ? "border-violet-700 text-violet-900"
+              : "border-transparent text-slate-500 hover:text-slate-700",
+          ].join(" ")}
+        >
+          Calendario licencias (MDC)
+        </button>
+      </div>
+
+      {tab === "licencias" ? <GrillaMesLicenciasPanel /> : null}
+
+      {tab === "laboral" ? (
+        <>
       <p className="mt-2 text-sm text-slate-600">
         Read-model laboral unificado para Ticket/RDA/Grilla mensual (persona, cargo, grupo, vigencia y carga).
       </p>
@@ -236,6 +269,8 @@ export default function GrillaOperativa() {
           </tbody>
         </table>
       </div>
+        </>
+      ) : null}
     </section>
   );
 }

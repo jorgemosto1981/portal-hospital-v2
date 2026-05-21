@@ -36,6 +36,7 @@ const listarSolicitudesBandejaRrhh = require("./onCall/solicitudes/listarSolicit
 const resolverDecisionRrhhSolicitud = require("./onCall/solicitudes/resolverDecisionRrhhSolicitud");
 const registrarTomaConocimientoRrhhSolicitud = require("./onCall/solicitudes/registrarTomaConocimientoRrhhSolicitud");
 const reprocesarMdcSolicitudPatronB = require("./onCall/solicitudes/reprocesarMdcSolicitudPatronB");
+const obtenerVistaGrillaMesAgente = require("./onCall/grilla/obtenerVistaGrillaMesAgente");
 
 module.exports = {
   ...login,
@@ -64,4 +65,5 @@ module.exports = {
   ...resolverDecisionRrhhSolicitud,
   ...registrarTomaConocimientoRrhhSolicitud,
   ...reprocesarMdcSolicitudPatronB,
+  ...obtenerVistaGrillaMesAgente,
 };

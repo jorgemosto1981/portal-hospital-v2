@@ -245,3 +245,8 @@ export function callResolverDecisionRrhhSolicitud(data) {
 export function callRegistrarTomaConocimientoRrhhSolicitud(data) {
   return httpsCallable(getFunctionsV2(), "registrarTomaConocimientoRrhhSolicitud")(data);
 }
+
+/** Oleada C — vista mensual `vistas_grilla_mes_agente` (fan-out MDC). */
+export function callObtenerVistaGrillaMesAgente(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerVistaGrillaMesAgente")(data);
+}
