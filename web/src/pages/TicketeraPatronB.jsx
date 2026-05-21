@@ -1,5 +1,5 @@
 import toast from "react-hot-toast";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import SolicitudPatronBForm from "../features/solicitudes/SolicitudPatronBForm.jsx";
@@ -16,6 +16,7 @@ function fechaDesdeQuery(searchParams) {
 export default function TicketeraPatronB() {
   const [searchParams] = useSearchParams();
   const fechaInicial = useMemo(() => fechaDesdeQuery(searchParams), [searchParams]);
+  const [wizardSeed, setWizardSeed] = useState(0);
 
   const { user } = useAuthSession();
   const { claims, claimsLoading } = useAuthClaims(user);
@@ -30,18 +31,20 @@ export default function TicketeraPatronB() {
         `Solicitud enviada (${solId}). Quedó pendiente de jefatura; el cierre del trámite lo hace el autorizador jerárquico.`,
       );
       await form.recargar();
+      setWizardSeed((n) => n + 1);
     }
   }
 
   return (
     <div>
       <p className="mb-3 text-xs text-slate-500">
-        Paso 2 · Patrón B ·{" "}
+        Patrón B · asistente en 3 pasos ·{" "}
         <Link to="/portal/solicitudes" className="font-medium text-blue-700 hover:underline">
           cambiar fecha o carril
         </Link>
       </p>
       <SolicitudPatronBForm
+        wizardSeed={wizardSeed}
         personaId={personaId}
         claimsLoading={claimsLoading}
         fechaDesde={form.fechaDesde}
@@ -67,7 +70,6 @@ export default function TicketeraPatronB() {
         gruposCargando={form.gruposCargando}
         requiereSeleccionGrupo={form.requiereSeleccionGrupo}
         grupoAnclaOk={form.grupoAnclaOk}
-        showFechaDesde
       />
     </div>
   );

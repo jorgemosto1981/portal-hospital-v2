@@ -1,6 +1,6 @@
 # RFC — Ticketera Fase 2 (dinámica + rendimiento)
 
-**Estado:** borrador operativo · **2026-05-19**  
+**Estado:** **implementado (P0 + wizard UI)** · **2026-05-21**  
 **Plan:** [`PLAN_TICKETERA_V2.md`](./PLAN_TICKETERA_V2.md) § Fase 2 · **Visión:** [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md)
 
 ---
@@ -49,11 +49,13 @@ Auth: agente con `persona_id`, `isPortalRoleUsuario` (HL completa).
 | Modo | Cuándo | Lecturas Firestore (orden de magnitud) |
 |------|--------|----------------------------------------|
 | **Whitelist MVP** | `ARTICULO_IDS_MVP.length > 0` (hoy) | `2 × |MVP|` paralelo: doc artículo + query versión publicada |
-| **Catálogo Patrón B** | lista MVP vacía (Fase 2.5) | 1× `collectionGroup("versiones")` + `getAll` artículos distintos |
+| **Catálogo Patrón B** | `TICKETERA_LISTAR_TODOS_PATRON_B=1` o lista MVP vacía (Fase 2.5) | 1× `collectionGroup("versiones")` filtrado por `estado_version_id` + `getAll` en chunks de 10 |
 
-Implementación: `functions/modules/shared/listarArticulosIngresoCore.js`, IDs en `ticketeraArticulosMvp.js`.
+Implementación: `functions/modules/shared/listarArticulosIngresoCore.js`, IDs en `ticketeraArticulosMvp.js`, helper `firestoreGetAllChunked.js`.
 
-**Prohibido en hot path:** `cfg_articulos.get()` sin filtro.
+**Prohibido en hot path:** `cfg_articulos.get()` sin filtro · scan sin `where` en collection group.
+
+**Índice Firestore:** query `collectionGroup("versiones").where("estado_version_id")` usa índice de campo único (auto por consola); no requiere entrada compuesta en `firestore.indexes.json`.
 
 ### 2.4 Reglas `dias_solicitados` / `fecha_hasta`
 
@@ -81,9 +83,9 @@ Referencia LAO: `simularLaoPreview`.
 
 | Oleada | Entrega |
 |--------|---------|
-| 2.2 | Shell `/portal/solicitudes` — wizard por `patron_saldo` |
-| 2.3 | Campo `fecha_hasta` RO + `dias_solicitados` desde listado (**parcial:** pantalla asuntos partic.) |
-| 2.4 | Botón Previsualizar → callable §3 |
+| 2.2 | `TicketeraPatronB` + `SolicitudPatronBForm` wizard 3 pasos · auto-avance si 1 artículo |
+| 2.3 | `fecha_hasta` RO + `dias_solicitados` desde listado (paso 2) |
+| 2.4 | Paso 3: Previsualizar explícito → callable §3 → Confirmar envío |
 
 ---
 

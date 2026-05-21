@@ -48,7 +48,10 @@ export function useGrillaMesVista({ personaId, claims, esRrhh }) {
     setResolverCargando(true);
     setResolverError("");
     try {
-      const res = await callResolverContextoLaboralSolicitud({ fecha_desde: fechaCorte });
+      const res = await callResolverContextoLaboralSolicitud({
+        persona_id: personaId,
+        fecha_desde: fechaCorte,
+      });
       const list = res?.data?.grupos_trabajo_vigentes || [];
       const vigentes = Array.isArray(list) ? list : [];
       setGruposEquipo(vigentes);

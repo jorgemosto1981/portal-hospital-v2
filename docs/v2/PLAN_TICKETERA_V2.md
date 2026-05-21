@@ -18,9 +18,9 @@ Leyenda: **Hecho** · **Parcial** · **Pendiente**
 | **F1-create — Contrato alta Patrón B (Bloque A)** | **Hecho (21-may)** | `version_id_aplicada` + `grupo_trabajo_id_ancla` · [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) |
 | **F1b — Roles HLC + claims + rules** | **Hecho** | [`RFC_ACCESO_ROLES_HLC_MENUS_V2.md`](./RFC_ACCESO_ROLES_HLC_MENUS_V2.md), deploy rules 2026-05-19 |
 | **F1c — Slice 64-B (mismo carril B)** | **Hecho** | [`PLAN_TICKETERA_SLICE_64B_V2.md`](./PLAN_TICKETERA_SLICE_64B_V2.md), `sol_01KS015…` |
-| **F2 — Ticketera dinámica (UX completa)** | **Hecho (piloto)** | [`TICKETERA_FASE2_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE2_EVIDENCIA_PILOTO.md) — 64-A/64-B sept + preview |
-| **F2a — Listado performante** | **Hecho** | Deploy `listarArticulosIngresoAgente` 2026-05-19 |
-| **F2b — Preview + fechas impuestas** | **Hecho** | Deploy `previsualizarSolicitudPatronB` · evidencia F2-1 |
+| **F2 — Ticketera dinámica (UX completa)** | **Hecho (21-may)** | Wizard 3 pasos Patrón B · [`RFC_TICKETERA_FASE2_DINAMICA_V2.md`](./RFC_TICKETERA_FASE2_DINAMICA_V2.md) |
+| **F2a — Listado performante (P0)** | **Hecho (21-may)** | `listarArticulosIngresoCore` MVP/catalogo · deploy Functions 21-may |
+| **F2b — Preview + fechas impuestas** | **Hecho** | Paso 3 wizard + `fecha_hasta` RO en paso 2 |
 | **F3a — LAO dentro del concepto ticketera** | **Parcial** | Motor y ruta `/portal/solicitudes/lao`; no shell unificado |
 | **F3b — Bandeja jefe** | **Hecho (piloto J2–J3)** | [`TICKETERA_FASE3_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE3_EVIDENCIA_PILOTO.md) |
 | **F4 — Bandeja RRHH solicitudes** | **Parcial (MVP)** — **TO-BE en RFC** | [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) · implementar Oleada A |

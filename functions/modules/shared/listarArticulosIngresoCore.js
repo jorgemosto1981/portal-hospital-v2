@@ -7,13 +7,39 @@ const {
   resolverElegibilidadSolicitud,
 } = require("./solicitudElegibilidadLaboral");
 const { loadHlcArray, patronFromVersion } = require("./solicitudPatronBAltaMotor");
-const { ARTICULO_IDS_MVP } = require("./ticketeraArticulosMvp");
+const {
+  ARTICULO_IDS_MVP,
+  modoListadoArticulosIngreso,
+  usaCatalogoPatronBCompleto,
+} = require("./ticketeraArticulosMvp");
 const {
   diasSolicitadosDesdeVersion,
   fechaHastaDesdeVersionPatronB,
 } = require("./patronBFechasSolicitud");
+const { getAllDocsChunked } = require("./firestoreGetAllChunked");
 
 const CFG_EST_VER_PUBLICADA = "cfg_est_ver_publicada";
+
+/**
+ * @param {Record<string, unknown> | null | undefined} core
+ */
+function esArticuloOperativo(core) {
+  if (!core || typeof core !== "object") return false;
+  if (core.activo === false) return false;
+  return true;
+}
+
+/**
+ * @param {Record<string, unknown>} versionData
+ * @param {Record<string, unknown>} versionDataOther
+ */
+function versionPublicadaEsMasReciente(versionData, versionDataOther) {
+  const a = String(versionData.vigente_desde || "").slice(0, 10);
+  const b = String(versionDataOther.vigente_desde || "").slice(0, 10);
+  if (!a) return false;
+  if (!b) return true;
+  return a > b;
+}
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
@@ -32,12 +58,15 @@ async function loadArticuloPatronBVersionPublicada(db, articuloId) {
   ]);
   if (!artSnap.exists || verSnap.empty) return null;
 
+  const core = artSnap.data() || {};
+  if (!esArticuloOperativo(core)) return null;
+
   const versionData = verSnap.docs[0].data() || {};
   if (patronFromVersion(versionData) !== PATRON_SALDO_B) return null;
 
   return {
     articuloId,
-    core: artSnap.data() || {},
+    core,
     versionData,
     versionId: verSnap.docs[0].id,
   };
@@ -57,25 +86,30 @@ async function discoverArticulosPatronBPublicados(db) {
   const porArticulo = new Map();
   for (const verDoc of verSnap.docs) {
     const articuloId = verDoc.ref.parent?.parent?.id;
-    if (!articuloId || porArticulo.has(articuloId)) continue;
+    if (!articuloId) continue;
     const versionData = verDoc.data() || {};
     if (patronFromVersion(versionData) !== PATRON_SALDO_B) continue;
+    const prev = porArticulo.get(articuloId);
+    if (prev && !versionPublicadaEsMasReciente(versionData, prev.versionData)) continue;
     porArticulo.set(articuloId, { versionData, versionId: verDoc.id });
   }
 
   const ids = [...porArticulo.keys()];
   if (!ids.length) return [];
 
-  const artSnaps = await db.getAll(...ids.map((id) => db.collection("cfg_articulos").doc(id)));
+  const refs = ids.map((id) => db.collection("cfg_articulos").doc(id));
+  const artSnaps = await getAllDocsChunked(db, refs);
   /** @type {Array<{ articuloId: string, core: Record<string, unknown>, versionData: Record<string, unknown>, versionId: string }>} */
   const out = [];
   for (const artSnap of artSnaps) {
     if (!artSnap.exists) continue;
+    const core = artSnap.data() || {};
+    if (!esArticuloOperativo(core)) continue;
     const meta = porArticulo.get(artSnap.id);
     if (!meta) continue;
     out.push({
       articuloId: artSnap.id,
-      core: artSnap.data() || {},
+      core,
       versionData: meta.versionData,
       versionId: meta.versionId,
     });
@@ -87,8 +121,10 @@ async function discoverArticulosPatronBPublicados(db) {
  * @param {import("firebase-admin/firestore").Firestore} db
  */
 async function cargarCandidatosPatronB(db) {
-  if (ARTICULO_IDS_MVP.length > 0) {
-    const loaded = await Promise.all(ARTICULO_IDS_MVP.map((id) => loadArticuloPatronBVersionPublicada(db, id)));
+  if (!usaCatalogoPatronBCompleto()) {
+    const loaded = await Promise.all(
+      ARTICULO_IDS_MVP.map((id) => loadArticuloPatronBVersionPublicada(db, id)),
+    );
     return loaded.filter(Boolean);
   }
   return discoverArticulosPatronBPublicados(db);
@@ -162,6 +198,10 @@ async function listarArticulosIngresoPatronB(params) {
     articulos,
     fecha_desde: fechaDesde,
     persona_id: personaId,
+    meta: {
+      listado_modo: modoListadoArticulosIngreso(),
+      candidatos_evaluados: candidatos.length,
+    },
     ...(elegibilidadVacia && articulos.length === 0 ? { elegibilidad_vacia: elegibilidadVacia } : {}),
   };
 }
@@ -170,4 +210,6 @@ module.exports = {
   listarArticulosIngresoPatronB,
   loadArticuloPatronBVersionPublicada,
   discoverArticulosPatronBPublicados,
+  esArticuloOperativo,
+  versionPublicadaEsMasReciente,
 };

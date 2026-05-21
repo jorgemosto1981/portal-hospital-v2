@@ -50,7 +50,10 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     }
     setGruposCargando(true);
     try {
-      const res = await callResolverContextoLaboralSolicitud({ fecha_desde: fechaDesde });
+      const res = await callResolverContextoLaboralSolicitud({
+        persona_id: personaId,
+        fecha_desde: fechaDesde,
+      });
       const list = res?.data?.grupos_trabajo_vigentes || [];
       setGruposVigentes(Array.isArray(list) ? list : []);
       const sugerido = String(res?.data?.grupo_trabajo_id_ancla_sugerido || "").trim();
@@ -173,6 +176,13 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
   const puedeEnviarTrasPreview =
     previewVigente && (preview.eligible === true || preview.ok === true);
 
+  const resetTrasEnvio = useCallback(() => {
+    setPreview(null);
+    setPreviewError("");
+    setError("");
+    setArticuloSel(articulos.length === 1 ? articulos[0] : null);
+  }, [articulos]);
+
   const enviar = useCallback(async () => {
     if (!articuloSel || enviando || !puedeEnviarTrasPreview) return null;
     setEnviando(true);
@@ -190,6 +200,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
         grupoTrabajoIdAncla: grupoAnclaId,
       });
       await esperarValidacionMotorPatronB(solicitud_id);
+      resetTrasEnvio();
       return solicitud_id;
     } catch (e) {
       setError(e?.message || "No se pudo enviar la solicitud.");
@@ -206,6 +217,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     grupoAnclaOk,
     personaId,
     puedeEnviarTrasPreview,
+    resetTrasEnvio,
   ]);
 
   return {
@@ -233,5 +245,6 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     gruposCargando,
     requiereSeleccionGrupo,
     grupoAnclaOk,
+    resetTrasEnvio,
   };
 }
