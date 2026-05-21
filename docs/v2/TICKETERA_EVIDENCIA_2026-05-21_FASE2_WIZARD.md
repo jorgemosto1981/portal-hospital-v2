@@ -3,7 +3,7 @@
 **Fecha:** 2026-05-21  
 **Proyecto:** `portal-hospital-v2`  
 **Rama:** `feature/ticketera-puente-campos-config`  
-**Commit referencia:** `6f1fdbf` — `feat(ticketera): Fase 2 dinámica — P0 listado, wizard 3 pasos y docs`
+**Commits referencia:** `6f1fdbf` (wizard inicial) · `469d7d9` (paso 2 UI + callable) · `72c8ae6` (fix RRHH persona_id) · **HEAD:** `72c8ae6`
 
 **RFC:** [`RFC_TICKETERA_FASE2_DINAMICA_V2.md`](./RFC_TICKETERA_FASE2_DINAMICA_V2.md)
 
@@ -17,6 +17,7 @@
 | 2.2 | Wizard 3 pasos (`TicketeraPatronB` + `SolicitudPatronBForm`) | UI local/prod |
 | 2.3 | `fecha_hasta` solo lectura + `dias_solicitados` desde listado | Paso 2 wizard |
 | 2.4 | Preview explícito antes de envío | Paso 3 wizard |
+| 2c | Paso 2 `validarEntornoOperativoSolicitud` bloquea 2→3 | `469d7d9` + deploy Functions/Hosting 21-may |
 | Integración | Visible en grilla MDC (Oleada C) | **`sol_01KS65K…` §2** |
 
 ---
@@ -51,14 +52,29 @@
 
 ---
 
-## 4. Próximo (no bloquea este cierre)
+## 4. Paso 2 entorno (tarde 21-may)
 
-| Ítem | Doc |
-|------|-----|
-| F3a LAO en shell ticketera (`fecha` desde hub) | [`PLAN_TICKETERA_V2.md`](./PLAN_TICKETERA_V2.md) Fase 4 |
-| F2.5 catálogo completo Patrón B | `TICKETERA_LISTAR_TODOS_PATRON_B=1` |
-| Hosting deploy bundle wizard si prod aún muestra formulario plano | `npm run build:web` + `firebase deploy --only hosting` |
+| Verificación | Resultado |
+|--------------|-----------|
+| Callable `validarEntornoOperativoSolicitud` en prod | ✅ deploy `9319bf7` |
+| Wizard «Continuar» llama callable | ✅ `469d7d9` + hosting |
+| Tests unitarios T2-ent-01…05 | ✅ |
+| Smoke E2E operador post-fix RRHH (`72c8ae6`) | ⏳ **mañana** — ver handoff §6 |
+| Caso bloqueo turno/grilla en UI (mensajes rojos) | ⏳ anotar captura + `codigos[]` |
+
+**Handoff:** [`HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md`](./HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md)
 
 ---
 
-*Evidencia Fase 2 — operador confirma grilla OK con `sol_01KS65KJW3Q163YEJ32GHDW12E`.*
+## 5. Próximo (sesión siguiente)
+
+| Ítem | Doc |
+|------|-----|
+| Smoke paso 2 → 3 → envío → grilla | Handoff §6 P0 |
+| F3a LAO en shell ticketera (`fecha` desde hub) | [`PLAN_TICKETERA_V2.md`](./PLAN_TICKETERA_V2.md) F3a |
+| F2.5 catálogo completo Patrón B | `TICKETERA_LISTAR_TODOS_PATRON_B=1` |
+| Oleada A autorización + TC | [`PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md`](./PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md) |
+
+---
+
+*Evidencia Fase 2 — `sol_01KS65K…` en grilla OK; paso 2 callable cableado 21-may tarde.*

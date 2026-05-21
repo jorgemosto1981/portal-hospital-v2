@@ -76,13 +76,14 @@ Ver [`OLEADA_C_SMOKE_HOSTING_2026-05-21_C2C_C2D.md`](./OLEADA_C_SMOKE_HOSTING_20
 
 ---
 
-## 5. Contexto ticketera (sin reabrir)
+## 5. Contexto ticketera (sin reabrir grilla)
 
 | Oleada | Estado |
 |--------|--------|
 | **A** autorización + TC | ✅ cerrada · `sol_01KS57Y…` |
 | **B** MDC / `vis_*` | ✅ evidencia día 21 `64-A` |
 | **C** GSO calendario licencias | ✅ **épica cerrada** (este handoff) |
+| **F2 + paso 2 entorno** | ✅ cableado 21-may tarde · [`HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md`](./HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md) @ `72c8ae6` |
 
 **No reabrir** Oleada C salvo regresión en prod. Mejoras futuras GSO (planificación rotativa, `vis_grupo_*`, export CSV) = **nueva épica**, no slice C.
 
@@ -97,7 +98,7 @@ Ver [`OLEADA_C_SMOKE_HOSTING_2026-05-21_C2C_C2D.md`](./OLEADA_C_SMOKE_HOSTING_20
 
 ```text
 PAUSA 2026-05-21 — Grilla licencias MDC lista para piloto operativo.
-HEAD remoto: feature/ticketera-puente-campos-config @ f782ce2 (tras push).
+HEAD remoto ticketera: feature/ticketera-puente-campos-config @ 72c8ae6 (ver handoff paso 2).
 ```
 
 ---

@@ -1,6 +1,7 @@
 # RFC — Ticketera flujo progresivo · Paso 2 entorno operativo (HLg / turno / grilla)
 
-**Estado:** borrador de contrato · **2026-05-21**  
+**Estado:** **implementado (backend + wizard React)** · **2026-05-21**  
+**Handoff:** [`HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md`](./HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md)  
 **Relacionados:** [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md) · [`RFC_TICKETERA_FASE2_DINAMICA_V2.md`](./RFC_TICKETERA_FASE2_DINAMICA_V2.md) · [`RFC_TICKETERA_SLICE_64A_MVP_V2.md`](./RFC_TICKETERA_SLICE_64A_MVP_V2.md) §5.1
 
 ---
@@ -19,14 +20,15 @@
 
 ---
 
-## 2. Situación actual (deuda)
+## 2. Situación actual (post-implementación)
 
-| Callable hoy | Usado en wizard | Limitación |
-|--------------|-----------------|------------|
-| `resolverContextoLaboralSolicitud` | Paso 2 UI | **No** recibe `articulo_id` / `version_id`; no corre gate grilla ni turno |
-| `previsualizarSolicitudPatronB` | Paso 3 UI | Ejecuta **todo** el motor (incl. saldos + grilla); duplica trabajo si paso 2 no existía |
+| Callable | Uso en wizard | Notas |
+|----------|---------------|--------|
+| `validarEntornoOperativoSolicitud` | **Continuar** paso 2 → paso 3 | Gate HLg, grilla RDA, turno; sin saldos |
+| `resolverContextoLaboralSolicitud` | Carga select HLg en paso 2 | Solo `fecha` + `persona_id`; no sustituye el gate |
+| `previsualizarSolicitudPatronB` | Paso 3 | Motor saldos; UI exige `entornoOk` previo |
 
-**Decisión:** no extender semánticamente `resolverContextoLaboralSolicitud` (queda para grilla GSO / RRHH con solo `fecha`). El wizard Patrón B usa el **nuevo** callable unificado del §3.
+**RRHH en flujo propio:** `resolvePersonaIdSolicitudFlujoAgente` — si no envía `persona_id` en body, usa la del token (`72c8ae6`).
 
 ---
 
@@ -206,14 +208,15 @@ Cuando la versión del artículo defina restricciones de turno/regimen (campo TB
 
 ---
 
-## 5. Cambios UI (después del callable)
+## 5. Cambios UI (**hecho** — `469d7d9`, `72c8ae6`)
 
 | Componente | Cambio |
 |------------|--------|
-| `useSolicitud64AAlta` | Al salir paso 2: `callValidarEntornoOperativoSolicitud`; guardar `entornoOk` |
-| `SolicitudPatronBForm` | Botón «Continuar» paso 2 → callable; mensajes por `checks` |
-| `callables.js` | Export `callValidarEntornoOperativoSolicitud` |
-| `resolverContextoLaboralSolicitud` | Mantener para grilla/equipo; wizard deja de depender solo de él |
+| `useSolicitud64AAlta` | `validarEntornoPaso2()`; `entornoOk`, `entornoMensajes`, `fechaHastaCalc`; reset al cambiar fecha/artículo/ancla |
+| `SolicitudPatronBForm` | «Continuar» paso 2 async; alerta `entornoMensajes`; deshabilitado mientras `validandoEntorno` |
+| `callables.js` | `callValidarEntornoOperativoSolicitud` vía `getFunctionsV2()` |
+| `TicketeraPatronB.jsx` | Props cableadas al form |
+| `resolverContextoLaboralSolicitud` | Sigue para listado HLg en UI |
 
 ---
 
@@ -242,12 +245,14 @@ Tests unitarios: core sin Firestore (mocks) + integración opcional con emulador
 
 `mdcGrillaHorariaGate.js` delega en `evaluarGrillaTurnoEntorno` (motor/trigger mantiene códigos legacy en rechazo).
 
-## 8. Próximo paso
+## 8. Próximo paso (sesión siguiente)
 
-1. **Deploy** `validarEntornoOperativoSolicitud` a Functions.  
-2. **Cablear wizard** paso 2 (React) — sin UI hasta tests OK en prod opcional.  
-3. **Refactor opcional** preview comparte core paso 2–8 (PR2).
+1. **Smoke E2E** operador: paso 2 Continuar (RRHH y agente puro) → preview → envío → grilla MDC.  
+2. **Evidencia:** anotar `sol_*` y checklist en [`TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md`](./TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md).  
+3. **Refactor opcional (PR2):** preview/trigger comparten más checks con core paso 2 (sin redeploy masivo urgente).
+
+**Handoff operativo:** [`HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md`](./HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md)
 
 ---
 
-*RFC Paso 2 — formalizar antes de React, alineado al flujo progresivo acordado 2026-05-21.*
+*RFC Paso 2 — implementado 2026-05-21 (backend `9319bf7`, UI `469d7d9`, fix RRHH `72c8ae6`).*

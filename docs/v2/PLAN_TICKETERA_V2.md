@@ -1,6 +1,6 @@
 # Plan maestro — Ticketera / solicitudes V2
 
-**Estado del documento:** plan vivo · **última revisión:** 2026-05-21 · **Fase 2:** [`TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md`](./TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md) · **Create Patrón B (Bloque A):** [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) · **Continuidad:** [`HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md) · **PAUSA bandejas MVP:** [`HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md`](./HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md) · **Siguiente bloque código:** Oleada A — [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md)  
+**Estado del documento:** plan vivo · **última revisión:** 2026-05-21 (cierre tarde) · **Handoff sesión:** [`HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md`](./HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md) · **Fase 2:** [`TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md`](./TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md) · **Paso 2 entorno:** [`RFC_TICKETERA_FLUJO_PROGRESIVO_PASO2_ENTORNO_V2.md`](./RFC_TICKETERA_FLUJO_PROGRESIVO_PASO2_ENTORNO_V2.md) · **PAUSA bandejas MVP:** [`HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md`](./HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md)  
 **Ámbito:** ingreso agente, motores por patrón de saldo, bandejas (jefe / médico futuro), relación con `cfg_articulos`.
 
 **Visión de producto (incorporada):** [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md) — herramienta **dinámica**, fechas impuestas, preview, subflujos LAO y licencias médicas.
@@ -21,15 +21,16 @@ Leyenda: **Hecho** · **Parcial** · **Pendiente**
 | **F2 — Ticketera dinámica (UX completa)** | **Hecho (21-may)** | Wizard 3 pasos Patrón B · [`RFC_TICKETERA_FASE2_DINAMICA_V2.md`](./RFC_TICKETERA_FASE2_DINAMICA_V2.md) |
 | **F2a — Listado performante (P0)** | **Hecho (21-may)** | `listarArticulosIngresoCore` MVP/catalogo · deploy Functions 21-may |
 | **F2b — Preview + fechas impuestas** | **Hecho** | Paso 3 wizard + `fecha_hasta` RO en paso 2 |
+| **F2c — Paso 2 entorno (HLg / grilla / turno)** | **Hecho (21-may)** | `validarEntornoOperativoSolicitud` + UI gate · commits `9319bf7`–`72c8ae6` |
 | **F3a — LAO dentro del concepto ticketera** | **Parcial (21-may)** | Hub pasa `fecha` · enlace vuelta al hub · wizard LAO pendiente |
 | **F3b — Bandeja jefe** | **Hecho (piloto J2–J3)** | [`TICKETERA_FASE3_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE3_EVIDENCIA_PILOTO.md) |
 | **F4 — Bandeja RRHH solicitudes** | **Parcial (MVP)** — **TO-BE en RFC** | [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) · implementar Oleada A |
 | **F5 — Lic. médicas + bandeja médico** | **Pendiente** | Concepto §4.3 del documento visión |
 | **F6 — Delegación jefe → subordinado** | **Pendiente** | [`CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md`](./CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md) |
 
-**Resumen en una frase:** el **motor** y los **filtros** de elegibilidad están probados en piloto (64-A/64-B); falta la **ticketera como producto** (una entrada, listado rápido, preview, fechas solo lectura, bandejas).
+**Resumen en una frase:** ticketera Patrón B con **wizard 3 pasos**, listado P0, **gate paso 2** y preview en prod; **pendiente smoke E2E** post-cableado paso 2 y elección de siguiente P1 (LAO / catálogo completo / Oleada A).
 
-**Código sin commit (rama local):** cambios 64-B + UI multi-artículo + docs; conviene commit cuando cierre operador.
+**Rama remota:** `feature/ticketera-puente-campos-config` @ `72c8ae6` — sincronizada para otra PC.
 
 ---
 
@@ -51,7 +52,7 @@ Leyenda: **Hecho** · **Parcial** · **Pendiente**
 |---|------|------------------------|
 | 1 | Entrada ticketera | **Parcial** — menú **Solicitudes** → hub; LAO/Patrón B como carriles |
 | 2 | `fecha_desde` | **Hecho** |
-| 3 | Listado artículos elegibles | **Parcial** — P0 en core; deploy + shell única pendientes |
+| 3 | Listado artículos elegibles | **Hecho** — P0 + wizard paso 1 |
 | 4 | Elegir artículo | **Hecho** (selector 64-A/64-B) |
 | 5 | `fecha_hasta` impuesta (RO) | **Parcial** — DTO + campo RO en asuntos partic.; motor sigue 1 día |
 | 6 | Previsualizar | **Hecho** Patrón B; LAO mantiene `simularLaoPreview` |
@@ -130,6 +131,8 @@ Leyenda: **Hecho** · **Parcial** · **Pendiente**
 | [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md) | Visión producto (incorporada en §2) |
 | [`RFC_TICKETERA_SLICE_64A_MVP_V2.md`](./RFC_TICKETERA_SLICE_64A_MVP_V2.md) | Contrato Fase 1 slice A |
 | [`RFC_TICKETERA_FASE2_DINAMICA_V2.md`](./RFC_TICKETERA_FASE2_DINAMICA_V2.md) | Contrato Fase 2 listado / preview |
+| [`RFC_TICKETERA_FLUJO_PROGRESIVO_PASO2_ENTORNO_V2.md`](./RFC_TICKETERA_FLUJO_PROGRESIVO_PASO2_ENTORNO_V2.md) | Callable paso 2 entorno |
+| [`HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md`](./HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md) | **Retomar otra PC** |
 | [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md`](./TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md) | Pruebas Fase 1 |
 | [`PLAN_TICKETERA_SLICE_64B_V2.md`](./PLAN_TICKETERA_SLICE_64B_V2.md) | Entrega 64-B |
 | [`RFC_ACCESO_ROLES_HLC_MENUS_V2.md`](./RFC_ACCESO_ROLES_HLC_MENUS_V2.md) | Menú / claims transversal |
@@ -138,13 +141,13 @@ Leyenda: **Hecho** · **Parcial** · **Pendiente**
 
 ---
 
-## 5. Criterio de “siguiente sprint”
+## 5. Criterio de “siguiente sesión” (2026-05-22)
 
-**Recomendado (may 2026):** **Oleada A** del [`PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md`](./PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md) — autorización + TC RRHH (RFC cerrado en taller).
+**P0:** Smoke E2E wizard con paso 2 callable — ver [`HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md`](./HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md) §6.
 
-**En paralelo si hay capacidad:** Fase **2.1** listado performante (P0).
+**P1 (elegir uno):** matriz bloqueos paso 2 · F3a LAO en hub · F2.5 catálogo Patrón B · Oleada A autorización TC.
 
-**Después:** Oleada B (emisor MDC) → épica Asistencia (Oleada C / GSO).
+**Cerrado:** Fase 2 listado + wizard + paso 2 entorno · Grilla Oleada C (no reabrir).
 
 ---
 
@@ -153,3 +156,4 @@ Leyenda: **Hecho** · **Parcial** · **Pendiente**
 | Fecha | Cambio |
 |-------|--------|
 | 2026-05-19 | Plan maestro creado; visión dinámica incorporada; tabla “dónde estamos” vs fases. |
+| 2026-05-21 | F2c paso 2 entorno; handoff [`HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md`](./HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md); rama @ `72c8ae6`. |

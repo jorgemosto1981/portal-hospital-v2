@@ -1,7 +1,7 @@
 # RFC — Ticketera Fase 2 (dinámica + rendimiento)
 
-**Estado:** **implementado (P0 + wizard UI)** · **2026-05-21**  
-**Plan:** [`PLAN_TICKETERA_V2.md`](./PLAN_TICKETERA_V2.md) § Fase 2 · **Visión:** [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md)
+**Estado:** **implementado (P0 + wizard 3 pasos + paso 2 entorno)** · **2026-05-21**  
+**Handoff:** [`HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md`](./HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md) · **Plan:** [`PLAN_TICKETERA_V2.md`](./PLAN_TICKETERA_V2.md) § Fase 2 · **Visión:** [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md)
 
 ---
 
@@ -86,8 +86,8 @@ Contrato del callable **`validarEntornoOperativoSolicitud`** (HLg, grupo ancla, 
 | Paso UI | Callable |
 |---------|----------|
 | 1 Artículo | `listarArticulosIngresoAgente` |
-| 2 Fecha + HLg | `validarEntornoOperativoSolicitud` *(propuesto)* |
-| 3 Preview | `previsualizarSolicitudPatronB` |
+| 2 Fecha + HLg | `validarEntornoOperativoSolicitud` **(implementado + UI)** |
+| 3 Preview | `previsualizarSolicitudPatronB` (requiere `entornoOk` del paso 2) |
 
 ---
 
