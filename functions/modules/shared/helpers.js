@@ -83,6 +83,17 @@ function assertAgenteConPersonaId(request) {
   return pid;
 }
 
+/**
+ * Ticketera / solicitudes agente: persona explícita en payload o la del token (RRHH en flujo propio).
+ * @param {import("firebase-functions/v2/https").CallableRequest} request
+ * @param {Record<string, unknown>} [data]
+ */
+function resolvePersonaIdSolicitudFlujoAgente(request, data = {}) {
+  const pid = typeof data.persona_id === "string" ? data.persona_id.trim() : "";
+  if (pid && /^per_/i.test(pid)) return pid;
+  return assertAgenteConPersonaId(request);
+}
+
 function assertColeccionOnboardingLectura(collectionName) {
   if (
     typeof collectionName !== "string" ||
@@ -227,6 +238,7 @@ module.exports = {
   assertRrhh,
   assertEscrituraLaboral,
   assertAgenteConPersonaId,
+  resolvePersonaIdSolicitudFlujoAgente,
   assertColeccionOnboardingLectura,
   assertColeccionRrhh,
   assertPersonaMvpPendienteOnboarding,

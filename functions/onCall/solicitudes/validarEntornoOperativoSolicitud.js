@@ -2,19 +2,10 @@
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db } = require("../../modules/shared/context");
-const { assertAgenteConPersonaId, tokenHasRrhhAccess } = require("../../modules/shared/helpers");
+const { resolvePersonaIdSolicitudFlujoAgente } = require("../../modules/shared/helpers");
 const { parseYmd } = require("../../modules/shared/laoPreviewMotor");
 const { isPortalRoleUsuario } = require("../../modules/shared/solicitudElegibilidadLaboral");
 const { validarEntornoOperativoSolicitud } = require("../../modules/ticketera/validarEntornoOperativoCore");
-
-function resolvePersonaId(request, data) {
-  if (request.auth && tokenHasRrhhAccess(request.auth.token)) {
-    const pid = typeof data.persona_id === "string" ? data.persona_id.trim() : "";
-    if (pid && /^per_/i.test(pid)) return pid;
-    throw new HttpsError("invalid-argument", "RRHH debe enviar persona_id.");
-  }
-  return assertAgenteConPersonaId(request);
-}
 
 const validarEntornoOperativoSolicitudCallable = onCall(async (request) => {
   if (!request.auth) {
@@ -29,7 +20,7 @@ const validarEntornoOperativoSolicitudCallable = onCall(async (request) => {
   }
 
   const d = request.data && typeof request.data === "object" ? request.data : {};
-  const personaId = resolvePersonaId(request, d);
+  const personaId = resolvePersonaIdSolicitudFlujoAgente(request, d);
   const articuloId = typeof d.articulo_id === "string" ? d.articulo_id.trim() : "";
   const versionId =
     typeof d.version_id === "string"

@@ -2,7 +2,7 @@
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db } = require("../../modules/shared/context");
-const { assertAgenteConPersonaId, tokenHasRrhhAccess } = require("../../modules/shared/helpers");
+const { resolvePersonaIdSolicitudFlujoAgente } = require("../../modules/shared/helpers");
 const { parseYmd } = require("../../modules/shared/laoPreviewMotor");
 const {
   mapHlcRow,
@@ -12,18 +12,9 @@ const {
 const { loadHlcArray } = require("../../modules/shared/solicitudPatronBAltaMotor");
 const { listarGruposTrabajoVigentesEnFecha } = require("../../modules/shared/solicitudGrupoTrabajoAncla");
 
-function resolvePersonaId(request, data) {
-  if (request.auth && tokenHasRrhhAccess(request.auth.token)) {
-    const pid = typeof data.persona_id === "string" ? data.persona_id.trim() : "";
-    if (pid && /^per_/i.test(pid)) return pid;
-    throw new HttpsError("invalid-argument", "RRHH debe enviar persona_id.");
-  }
-  return assertAgenteConPersonaId(request);
-}
-
 const resolverContextoLaboralSolicitud = onCall(async (request) => {
   const d = request.data && typeof request.data === "object" ? request.data : {};
-  const personaId = resolvePersonaId(request, d);
+  const personaId = resolvePersonaIdSolicitudFlujoAgente(request, d);
   const fechaDesde = typeof d.fecha_desde === "string" ? d.fecha_desde.trim().slice(0, 10) : "";
   if (!parseYmd(fechaDesde)) {
     throw new HttpsError("invalid-argument", "fecha_desde debe ser YYYY-MM-DD.");

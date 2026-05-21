@@ -154,6 +154,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
 
     try {
       const body = {
+        persona_id: personaId,
         articulo_id: String(articuloSel.articulo_id || "").trim(),
         version_id: String(articuloSel.version_id || "").trim(),
         fecha_desde: fechaDesde,
@@ -215,6 +216,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     setPreview(null);
     try {
       const body = {
+        persona_id: personaId,
         articulo_id: articuloSel.articulo_id,
         version_id: articuloSel.version_id,
         fecha_desde: fechaDesde,
