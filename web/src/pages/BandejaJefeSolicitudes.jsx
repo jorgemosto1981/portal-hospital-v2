@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import Card from "../components/ui/Card.jsx";
@@ -40,9 +41,16 @@ export default function BandejaJefeSolicitudes() {
     }
   }, []);
 
+  const [searchParams] = useSearchParams();
+
   useEffect(() => {
     recargar();
   }, [recargar]);
+
+  useEffect(() => {
+    const fromUrl = String(searchParams.get("sol_id") || "").trim();
+    if (/^sol_/i.test(fromUrl)) setSelId(fromUrl);
+  }, [searchParams, lista]);
 
   const sel = lista.find((s) => s.solicitud_id === selId) || null;
 

@@ -250,3 +250,8 @@ export function callRegistrarTomaConocimientoRrhhSolicitud(data) {
 export function callObtenerVistaGrillaMesAgente(data) {
   return httpsCallable(getFunctionsV2(), "obtenerVistaGrillaMesAgente")(data);
 }
+
+/** Resumen lectura solicitud desde grilla GSO (Oleada C3). */
+export function callObtenerResumenSolicitudArticuloGrilla(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerResumenSolicitudArticuloGrilla")(data);
+}

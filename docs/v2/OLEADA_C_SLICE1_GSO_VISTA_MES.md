@@ -21,13 +21,20 @@ Consumir en UI la vista mensual **`vis_<YYYY>_<MM>_per_<ULID>`** sin recalcular 
 | Web | Pestaña «Calendario licencias» en `GrillaOperativa.jsx` |
 | Prueba | Titular `per_01KR3HD…` · mes **2026-03** · día **21** con `64-A` y `#3B82F6` |
 
+## Slice 1b — C3 (UX detalle día) ✅
+
+| Capa | Entregable |
+|------|------------|
+| Callable | `obtenerResumenSolicitudArticuloGrilla` |
+| UI | Clic día → modal resumen + **Ver solicitud en bandeja** (`?sol_id=`) |
+| Bandejas | Deep link `sol_id` en jefe y RRHH |
+
 ## Próximos slices C
 
 | Slice | Contenido |
 |-------|-----------|
 | C2 | Grilla equipo (varias personas / grupo + mes) |
-| C3 | Tooltip portal + clic → detalle solicitud |
-| C4 | Tokens sombra (`#F59E0B`) vs sólido (`#3B82F6`) + leyenda |
+| C4 | Tooltip hover portal (opcional) + pulir tokens sombra/sólido |
 
 ---
 

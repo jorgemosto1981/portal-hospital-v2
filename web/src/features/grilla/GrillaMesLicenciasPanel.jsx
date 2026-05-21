@@ -2,7 +2,9 @@ import { useCallback, useState } from "react";
 
 import { useAuthClaims } from "../auth/useAuthClaims.js";
 import { useAuthSession } from "../auth/useAuthSession.js";
+import { claimsIncludeRrhh } from "../routing/portalRole.js";
 import { callObtenerVistaGrillaMesAgente } from "../../services/callables.js";
+import DiaGrillaDetalleModal from "./DiaGrillaDetalleModal.jsx";
 
 function diasEnMes(anio, mes) {
   return new Date(anio, mes, 0).getDate();
@@ -22,7 +24,11 @@ function colorDia(eventos) {
 export default function GrillaMesLicenciasPanel() {
   const { user } = useAuthSession();
   const { claims } = useAuthClaims(user);
+  const esRrhh = claimsIncludeRrhh(claims);
+  const bandejaPath = esRrhh ? "/portal/rrhh/solicitudes-articulo" : "/portal/jefe/solicitudes";
   const personaDefault = String(claims?.persona_id || "").trim();
+
+  const [diaModal, setDiaModal] = useState(null);
 
   const hoy = new Date();
   const [periodo, setPeriodo] = useState(
@@ -112,28 +118,42 @@ export default function GrillaMesLicenciasPanel() {
           const pendiente =
             Array.isArray(eventos) &&
             eventos.some((e) => String(e.estado_solicitud_id || "").includes("revision"));
+          const tieneEventos = Array.isArray(eventos) && eventos.length > 0;
           return (
-            <div
+            <button
+              type="button"
               key={dia}
+              disabled={!tieneEventos}
+              onClick={() => tieneEventos && setDiaModal({ dia, eventos })}
               title={
-                Array.isArray(eventos) && eventos[0]
-                  ? `${eventos[0].codigo_grilla || ""} · ${eventos[0].estado_solicitud_id || ""}`
+                tieneEventos && eventos[0]
+                  ? `${eventos[0].codigo_grilla || ""} · ${eventos[0].estado_solicitud_id || ""} — clic para detalle`
                   : `Día ${dia}`
               }
               className={[
                 "flex min-h-[3rem] flex-col items-center justify-center rounded border text-center text-[10px] font-semibold text-slate-800",
                 pendiente ? "border-dashed border-amber-400" : "border-slate-200",
+                tieneEventos ? "cursor-pointer hover:ring-2 hover:ring-violet-300" : "cursor-default opacity-90",
               ].join(" ")}
               style={{ backgroundColor: label ? bg : undefined }}
             >
               <span className="text-[9px] text-slate-500">{Number(dia)}</span>
               <span className="truncate px-0.5">{label}</span>
-            </div>
+            </button>
           );
         })}
       </div>
 
+      <DiaGrillaDetalleModal
+        open={diaModal != null}
+        onClose={() => setDiaModal(null)}
+        dia={diaModal?.dia ?? ""}
+        eventos={diaModal?.eventos ?? []}
+        bandejaPath={bandejaPath}
+      />
+
       <p className="mt-3 text-xs text-slate-500">
+        Clic en un día con licencia abre detalle y enlace a bandeja.{" "}
         <span className="inline-block h-3 w-3 rounded border border-dashed border-amber-400 align-middle" />{" "}
         borde punteado = solicitud aún en revisión · color desde MDC (#3B82F6 aprobado, #F59E0B pendiente).
       </p>
