@@ -1,4 +1,5 @@
-import { celdaPendiente, colorCelda, diasEnMes, etiquetaCelda } from "./grillaMesCellUtils.js";
+import { diasEnMes, etiquetaCelda } from "./grillaMesCellUtils.js";
+import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 
 /**
  * @param {{
@@ -19,30 +20,19 @@ export default function GrillaMesTitularCalendario({ anio, mes, diasMap, onDiaCl
         const cell = map[dia] || {};
         const eventos = cell.eventos;
         const label = etiquetaCelda(eventos);
-        const bg = colorCelda(eventos) || "#f1f5f9";
-        const pendiente = celdaPendiente(eventos);
         const tieneEventos = Array.isArray(eventos) && eventos.length > 0;
         return (
-          <button
-            type="button"
+          <GrillaMesCeldaLicencia
             key={dia}
+            eventos={Array.isArray(eventos) ? eventos : []}
+            dia={dia}
             disabled={!tieneEventos}
             onClick={() => tieneEventos && onDiaClick({ dia, eventos })}
-            title={
-              tieneEventos && eventos[0]
-                ? `${eventos[0].codigo_grilla || ""} · ${eventos[0].estado_solicitud_id || ""} — clic para detalle`
-                : `Día ${dia}`
-            }
-            className={[
-              "flex min-h-[3rem] flex-col items-center justify-center rounded border text-center text-[10px] font-semibold text-slate-800",
-              pendiente ? "border-dashed border-amber-400" : "border-slate-200",
-              tieneEventos ? "cursor-pointer hover:ring-2 hover:ring-violet-300" : "cursor-default opacity-90",
-            ].join(" ")}
-            style={{ backgroundColor: label ? bg : undefined }}
+            className="flex min-h-[3rem] flex-col items-center justify-center rounded text-center text-[10px] font-semibold"
           >
-            <span className="text-[9px] text-slate-500">{Number(dia)}</span>
+            <span className="text-[9px] opacity-80">{Number(dia)}</span>
             <span className="truncate px-0.5">{label}</span>
-          </button>
+          </GrillaMesCeldaLicencia>
         );
       })}
     </div>

@@ -1,4 +1,5 @@
-import { celdaPendiente, colorCelda, diasEnMes, etiquetaCelda } from "./grillaMesCellUtils.js";
+import { diasEnMes, etiquetaCelda } from "./grillaMesCellUtils.js";
+import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 
 /**
  * @param {{
@@ -37,47 +38,45 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, onCeldaClick })
               </td>
             </tr>
           ) : (
-            filas.map((fila) => (
-              <tr key={String(fila.persona_id)}>
-                <td className="sticky left-0 z-10 max-w-[12rem] truncate border border-slate-200 bg-white px-2 py-1 text-left text-xs font-medium text-slate-800">
-                  {String(fila.persona_label || fila.persona_id)}
-                </td>
-                {Array.from({ length: totalDias }, (_, i) => {
-                  const dia = String(i + 1).padStart(2, "0");
-                  const dias = fila.dias && typeof fila.dias === "object" ? fila.dias : {};
-                  const cell = dias[dia] || {};
-                  const eventos = cell.eventos;
-                  const label = etiquetaCelda(eventos);
-                  const bg = colorCelda(eventos);
-                  const tiene = Array.isArray(eventos) && eventos.length > 0;
-                  return (
-                    <td key={dia} className="border border-slate-100 p-0">
-                      <button
-                        type="button"
-                        disabled={!tiene}
-                        onClick={() =>
-                          tiene &&
-                          onCeldaClick({
-                            dia,
-                            eventos,
-                            personaLabel: String(fila.persona_label || ""),
-                          })
-                        }
-                        className={[
-                          "flex h-8 w-full min-w-[1.75rem] items-center justify-center font-semibold",
-                          tiene ? "hover:ring-1 hover:ring-violet-400" : "",
-                          celdaPendiente(eventos) ? "border border-dashed border-amber-400" : "",
-                        ].join(" ")}
-                        style={{ backgroundColor: label && bg ? bg : "#f8fafc" }}
-                        title={label || ""}
-                      >
-                        {label ? label.slice(0, 4) : ""}
-                      </button>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))
+            filas.map((fila) => {
+              const personaLabel = String(fila.persona_label || fila.persona_id || "");
+              return (
+                <tr key={String(fila.persona_id)}>
+                  <td className="sticky left-0 z-10 max-w-[12rem] truncate border border-slate-200 bg-white px-2 py-1 text-left text-xs font-medium text-slate-800">
+                    {personaLabel}
+                  </td>
+                  {Array.from({ length: totalDias }, (_, i) => {
+                    const dia = String(i + 1).padStart(2, "0");
+                    const dias = fila.dias && typeof fila.dias === "object" ? fila.dias : {};
+                    const cell = dias[dia] || {};
+                    const eventos = cell.eventos;
+                    const label = etiquetaCelda(eventos);
+                    const tiene = Array.isArray(eventos) && eventos.length > 0;
+                    return (
+                      <td key={dia} className="h-8 border border-slate-100 p-0">
+                        <GrillaMesCeldaLicencia
+                          eventos={Array.isArray(eventos) ? eventos : []}
+                          personaLabel={personaLabel}
+                          dia={dia}
+                          disabled={!tiene}
+                          onClick={() =>
+                            tiene &&
+                            onCeldaClick({
+                              dia,
+                              eventos,
+                              personaLabel,
+                            })
+                          }
+                          className="flex min-h-8 min-w-[1.75rem] items-center justify-center font-semibold"
+                        >
+                          {label ? label.slice(0, 4) : ""}
+                        </GrillaMesCeldaLicencia>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>

@@ -55,6 +55,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`TICKETERA_EVIDENCIA_2026-05-21_OLEADA_B_MDC_SOL_01KS57Y.md`](./TICKETERA_EVIDENCIA_2026-05-21_OLEADA_B_MDC_SOL_01KS57Y.md) | MDC `asi_*` / `vis_*` con flujo Oleada A limpio (misma `sol_01KS57Y…`) |
 | [`OLEADA_C_SLICE1_GSO_VISTA_MES.md`](./OLEADA_C_SLICE1_GSO_VISTA_MES.md) | Oleada C slice 1 — UI calendario + callable `obtenerVistaGrillaMesAgente` |
 | [`OLEADA_C2_HOJA_RUTA_GSO_EQUIPO.md`](./OLEADA_C2_HOJA_RUTA_GSO_EQUIPO.md) | **C2 hoja de ruta** — `obtenerVistaGrillaEquipo`, bandeja selección, grilla multipersona |
+| [`OLEADA_C4_GSO_PULIDO_UX.md`](./OLEADA_C4_GSO_PULIDO_UX.md) | **C4** — tooltip celdas, contraste pendiente/aprobado, leyenda (épica grilla licencias cerrada) |
 | [`HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md) | **Oleada A cerrada** — retomar §5 (Oleada B MDC vs hardening UI RRHH) |
 | [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) | RFC contrato — autorización, TC RRHH, MDC, oleadas A/B/C |
 | [`SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md`](./SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md) | Campos `sol_*` Oleada A + estados TO-BE |

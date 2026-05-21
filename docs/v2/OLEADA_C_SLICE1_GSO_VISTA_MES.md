@@ -37,7 +37,7 @@ Backend + tabla multipersona ✅ · selector «Mi equipo» 🔲 — ver [`OLEADA
 
 | Slice | Contenido |
 |-------|-----------|
-| C4 | Tooltip hover portal (opcional) + pulir tokens sombra/sólido |
+| C4 | ✅ [`OLEADA_C4_GSO_PULIDO_UX.md`](./OLEADA_C4_GSO_PULIDO_UX.md) — tooltip + contraste + leyenda |
 
 ---
 

@@ -97,11 +97,24 @@ export default function GrillaMesLicenciasPanel() {
         subtitulo={diaModal?.personaLabel}
       />
 
-      <p className="mt-3 text-xs text-slate-500">
-        Clic en un día con licencia abre detalle y enlace a bandeja.{" "}
-        <span className="inline-block h-3 w-3 rounded border border-dashed border-amber-400 align-middle" />{" "}
-        borde punteado = solicitud aún en revisión · color desde MDC (#3B82F6 aprobado, #F59E0B pendiente).
-      </p>
+      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+        <p className="font-medium text-slate-700">Leyenda (MDC → celda)</p>
+        <ul className="mt-1 list-inside list-disc space-y-0.5">
+          <li>
+            <span
+              className="mr-1 inline-block h-3 w-5 align-middle rounded border border-blue-900/25"
+              style={{ backgroundColor: "#3B82F6" }}
+            />{" "}
+            Consolidado / aprobado — fondo <span className="font-mono">#3B82F6</span>, texto claro.
+          </li>
+          <li>
+            <span className="mr-1 inline-block h-3 w-5 align-middle rounded border-2 border-dashed border-amber-900 bg-[#F59E0B]" />{" "}
+            En revisión — fondo <span className="font-mono">#F59E0B</span> + borde punteado ámbar oscuro.
+          </li>
+          <li>Pasar el mouse: artículo, estado legible, <span className="font-mono">sol_id</span> abreviado (en equipo, nombre de la fila).</li>
+          <li>Clic: detalle C3 y enlace a bandeja.</li>
+        </ul>
+      </div>
     </div>
   );
 }
