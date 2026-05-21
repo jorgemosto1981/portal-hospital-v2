@@ -75,6 +75,9 @@ export default function SolicitudPatronBForm({
   gruposCargando = false,
   requiereSeleccionGrupo = false,
   grupoAnclaOk = true,
+  onValidarEntornoPaso2,
+  validandoEntorno = false,
+  entornoMensajes = [],
   titulo = "Asuntos particulares y similares",
   descripcion = "Elegí el artículo, confirmá fechas y previsualizá antes de enviar.",
   wizardSeed = 0,
@@ -105,17 +108,21 @@ export default function SolicitudPatronBForm({
   const pasoMeta = PASOS.find((p) => p.n === paso) || PASOS[0];
 
   const puedeContinuarPaso1 = Boolean(articuloSel) && !cargando && /^per_/i.test(personaId);
-  const puedeContinuarPaso2 =
-    puedeContinuarPaso1 && !gruposCargando && grupoAnclaOk && gruposVigentes.length > 0;
+  const puedeIntentarContinuarPaso2 =
+    puedeContinuarPaso1 &&
+    !gruposCargando &&
+    !validandoEntorno &&
+    gruposVigentes.length > 0 &&
+    (!requiereSeleccionGrupo || grupoAnclaOk);
 
   const puedePrevisualizar =
-    puedeContinuarPaso2 && !enviando && !previewCargando && typeof onPrevisualizar === "function";
-
-  const puedeEnviar =
-    puedeContinuarPaso2 &&
+    puedeContinuarPaso1 &&
     !enviando &&
     !previewCargando &&
-    puedeEnviarTrasPreview;
+    typeof onPrevisualizar === "function";
+
+  const puedeEnviar =
+    puedeContinuarPaso1 && !enviando && !previewCargando && puedeEnviarTrasPreview;
 
   function irAtras() {
     setPaso((p) => Math.max(1, p - 1));
@@ -126,9 +133,10 @@ export default function SolicitudPatronBForm({
     setPaso(2);
   }
 
-  function irPaso3() {
-    if (!puedeContinuarPaso2) return;
-    setPaso(3);
+  async function handleContinuarPaso2() {
+    if (!puedeIntentarContinuarPaso2 || typeof onValidarEntornoPaso2 !== "function") return;
+    const result = await onValidarEntornoPaso2();
+    if (result?.success) setPaso(3);
   }
 
   return (
@@ -277,6 +285,19 @@ export default function SolicitudPatronBForm({
               </p>
             ) : null}
 
+            {entornoMensajes.length > 0 ? (
+              <div
+                className="rounded-xl border border-red-200 bg-red-50/90 px-3 py-3 text-sm text-red-950"
+                role="alert"
+              >
+                {entornoMensajes.map((msg) => (
+                  <p key={msg} className={entornoMensajes.length > 1 ? "mt-1 first:mt-0" : ""}>
+                    {msg}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+
             <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
@@ -287,11 +308,11 @@ export default function SolicitudPatronBForm({
               </button>
               <button
                 type="button"
-                disabled={!puedeContinuarPaso2}
-                onClick={irPaso3}
-                className="min-h-[44px] flex-1 touch-manipulation rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!puedeIntentarContinuarPaso2}
+                onClick={() => void handleContinuarPaso2()}
+                className="min-h-[44px] flex-1 touch-manipulation rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
               >
-                Continuar
+                {validandoEntorno ? "Validando entorno…" : "Continuar"}
               </button>
             </div>
           </>

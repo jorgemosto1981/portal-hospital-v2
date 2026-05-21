@@ -4,6 +4,7 @@ import {
   callListarArticulosIngresoAgente,
   callPrevisualizarSolicitudPatronB,
   callResolverContextoLaboralSolicitud,
+  callValidarEntornoOperativoSolicitud,
 } from "../../services/callables.js";
 import {
   crearSolicitudArticuloPatronBBorrador,
@@ -41,6 +42,10 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
   const [gruposVigentes, setGruposVigentes] = useState(/** @type {Array<Record<string, unknown>>} */ ([]));
   const [grupoAnclaId, setGrupoAnclaId] = useState("");
   const [gruposCargando, setGruposCargando] = useState(false);
+  const [validandoEntorno, setValidandoEntorno] = useState(false);
+  const [entornoOk, setEntornoOk] = useState(false);
+  const [entornoMensajes, setEntornoMensajes] = useState(/** @type {string[]} */ ([]));
+  const [fechaHastaCalc, setFechaHastaCalc] = useState("");
 
   const recargarGrupos = useCallback(async () => {
     if (!/^per_/i.test(personaId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaDesde)) {
@@ -113,12 +118,16 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
   useEffect(() => {
     setPreview(null);
     setPreviewError("");
-  }, [fechaDesde, articuloSel?.articulo_id, grupoAnclaId]);
+    setEntornoOk(false);
+    setEntornoMensajes([]);
+    setFechaHastaCalc("");
+  }, [fechaDesde, articuloSel?.articulo_id, articuloSel?.version_id, grupoAnclaId]);
 
   const fechaHasta =
-    articuloSel?.fecha_hasta && /^\d{4}-\d{2}-\d{2}$/.test(String(articuloSel.fecha_hasta))
+    (fechaHastaCalc && /^\d{4}-\d{2}-\d{2}$/.test(fechaHastaCalc) ? fechaHastaCalc : null) ||
+    (articuloSel?.fecha_hasta && /^\d{4}-\d{2}-\d{2}$/.test(String(articuloSel.fecha_hasta))
       ? String(articuloSel.fecha_hasta)
-      : fechaDesde;
+      : fechaDesde);
 
   const diasSolicitados =
     Number.isFinite(Number(articuloSel?.dias_solicitados)) && Number(articuloSel.dias_solicitados) > 0
@@ -129,8 +138,78 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
   /** Con al menos un HLg vigente, siempre debe existir ancla (autoselección o select). */
   const grupoAnclaOk = gruposVigentes.length > 0 && /^gdt_/i.test(grupoAnclaId);
 
+  const validarEntornoPaso2 = useCallback(async () => {
+    if (!articuloSel || validandoEntorno || !/^per_/i.test(personaId)) {
+      return { success: false };
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaDesde)) {
+      setEntornoMensajes(["La fecha del permiso no es válida."]);
+      setEntornoOk(false);
+      return { success: false };
+    }
+
+    setValidandoEntorno(true);
+    setEntornoMensajes([]);
+    setEntornoOk(false);
+
+    try {
+      const body = {
+        articulo_id: String(articuloSel.articulo_id || "").trim(),
+        version_id: String(articuloSel.version_id || "").trim(),
+        fecha_desde: fechaDesde,
+        dias_solicitados: diasSolicitados,
+      };
+      if (/^gdt_/i.test(grupoAnclaId)) {
+        body.grupo_trabajo_id_ancla = grupoAnclaId;
+      }
+
+      const res = await callValidarEntornoOperativoSolicitud(body);
+      const data = res?.data && typeof res.data === "object" ? res.data : null;
+
+      if (data?.ok === true && data?.puede_previsualizar === true) {
+        const fh = String(data.fecha_hasta || "").slice(0, 10);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(fh)) setFechaHastaCalc(fh);
+        if (data.grupo_trabajo_id_ancla && /^gdt_/i.test(String(data.grupo_trabajo_id_ancla))) {
+          setGrupoAnclaId(String(data.grupo_trabajo_id_ancla));
+        }
+        if (Array.isArray(data.grupos_trabajo_vigentes) && data.grupos_trabajo_vigentes.length) {
+          setGruposVigentes(data.grupos_trabajo_vigentes);
+        }
+        setEntornoOk(true);
+        setEntornoMensajes([]);
+        return { success: true, data };
+      }
+
+      const mensajes = Array.isArray(data?.mensajes)
+        ? data.mensajes.map((m) => String(m || "").trim()).filter(Boolean)
+        : [];
+      setEntornoMensajes(
+        mensajes.length ? mensajes : ["No podés continuar: revisá fecha, grupo o turno en grilla."],
+      );
+      setEntornoOk(false);
+      return { success: false, data };
+    } catch (e) {
+      setEntornoMensajes([
+        e?.message || "Error de conexión con el servidor. Intentá de nuevo en unos segundos.",
+      ]);
+      setEntornoOk(false);
+      return { success: false };
+    } finally {
+      setValidandoEntorno(false);
+    }
+  }, [
+    articuloSel,
+    diasSolicitados,
+    fechaDesde,
+    grupoAnclaId,
+    personaId,
+    validandoEntorno,
+  ]);
+
   const previsualizar = useCallback(async () => {
-    if (!articuloSel || previewCargando || !/^per_/i.test(personaId) || !grupoAnclaOk) return;
+    if (!articuloSel || previewCargando || !/^per_/i.test(personaId) || !entornoOk || !grupoAnclaOk) {
+      return;
+    }
     setPreviewCargando(true);
     setPreviewError("");
     setPreview(null);
@@ -164,9 +243,11 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     grupoAnclaOk,
     personaId,
     previewCargando,
+    entornoOk,
   ]);
 
   const previewVigente =
+    entornoOk &&
     preview &&
     articuloSel &&
     String(preview.articulo_id) === String(articuloSel.articulo_id) &&
@@ -180,11 +261,14 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     setPreview(null);
     setPreviewError("");
     setError("");
+    setEntornoOk(false);
+    setEntornoMensajes([]);
+    setFechaHastaCalc("");
     setArticuloSel(articulos.length === 1 ? articulos[0] : null);
   }, [articulos]);
 
   const enviar = useCallback(async () => {
-    if (!articuloSel || enviando || !puedeEnviarTrasPreview) return null;
+    if (!articuloSel || enviando || !puedeEnviarTrasPreview || !entornoOk) return null;
     setEnviando(true);
     setError("");
     try {
@@ -218,6 +302,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     personaId,
     puedeEnviarTrasPreview,
     resetTrasEnvio,
+    entornoOk,
   ]);
 
   return {
@@ -246,5 +331,9 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     requiereSeleccionGrupo,
     grupoAnclaOk,
     resetTrasEnvio,
+    validarEntornoPaso2,
+    validandoEntorno,
+    entornoOk,
+    entornoMensajes,
   };
 }

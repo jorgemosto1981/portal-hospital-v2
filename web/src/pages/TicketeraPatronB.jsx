@@ -70,6 +70,9 @@ export default function TicketeraPatronB() {
         gruposCargando={form.gruposCargando}
         requiereSeleccionGrupo={form.requiereSeleccionGrupo}
         grupoAnclaOk={form.grupoAnclaOk}
+        onValidarEntornoPaso2={form.validarEntornoPaso2}
+        validandoEntorno={form.validandoEntorno}
+        entornoMensajes={form.entornoMensajes}
       />
     </div>
   );

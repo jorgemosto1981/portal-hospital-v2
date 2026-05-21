@@ -221,6 +221,11 @@ export function callPrevisualizarSolicitudPatronB(data) {
   return httpsCallable(getFunctionsV2(), "previsualizarSolicitudPatronB")(data);
 }
 
+/** Paso 2 wizard Patrón B: entorno operativo (HLg, turno, grilla RDA) sin motor de saldos. */
+export function callValidarEntornoOperativoSolicitud(data) {
+  return httpsCallable(getFunctionsV2(), "validarEntornoOperativoSolicitud")(data);
+}
+
 /** Bandeja jefe: solicitudes en revisión jerárquica. */
 export function callListarSolicitudesBandejaJefe(data) {
   return httpsCallable(getFunctionsV2(), "listarSolicitudesBandejaJefe")(data || {});
