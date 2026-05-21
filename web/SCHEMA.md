@@ -59,7 +59,19 @@ Cualquier cambio de forma o permisos: actualizar **primero** la documentación a
 
 Campos obligatorios en create: `version_id_aplicada`, `grupo_trabajo_id_ancla`, fechas, `schema_version` = 2, `patron_saldo` = `B`.
 
-## 6. Configurador de artículos — ayuda saldos (D2)
+## 6. Autorización jerárquica — Oleada A (backend)
+
+| Tema | Ubicación |
+|------|-----------|
+| Campos `sol_*` y estados TO-BE | [`docs/v2/SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md`](../docs/v2/SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md) |
+| RFC / taller | [`docs/v2/RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](../docs/v2/RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) |
+| Núcleo resolver | `functions/modules/shared/solicitudAutorizacionJerarquicaCore.js` |
+| Códigos error | `functions/modules/shared/solicitudAutorizacionCodigos.js` |
+| Transiciones documentadas | `functions/modules/shared/solicitudAutorizacionEstados.js` |
+
+**Cierre jefe (TO-BE):** aprobar → `cfg_esa_aprobada` + MDC `CONSOLIDAR_APROBADO`; RRHH solo **toma de conocimiento** (A4).
+
+## 7. Configurador de artículos — ayuda saldos (D2)
 
 | Tema | Documento / código |
 |------|-------------------|

@@ -53,6 +53,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) | Evidencia Bloque A create + `sol_01KS4ZG2…` / `sol_01KS50G2…` |
 | [`HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md) | **Retomar aquí** — prioridades post 21-may (Oleada A, grilla trigger, …) |
 | [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) | RFC contrato — autorización, TC RRHH, MDC, oleadas A/B/C |
+| [`SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md`](./SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md) | Campos `sol_*` Oleada A + estados TO-BE |
 | [`PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md`](./PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md) | Plan código Oleada A → B → C |
 | [`ANEXO_ALINEACION_RDA_GEMINI_V6_A_V2.md`](./ANEXO_ALINEACION_RDA_GEMINI_V6_A_V2.md) | Mandato RDA diario `asi_*` + vista `vis_*` (vs Gemini V6) |
 | [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md) | Visión producto (incorporada en plan maestro §2) |

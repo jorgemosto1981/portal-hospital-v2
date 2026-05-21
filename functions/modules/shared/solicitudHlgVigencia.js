@@ -1,0 +1,72 @@
+"use strict";
+
+const { hldHlgFechaInicioYmd, hldHlgFechaFinYmd, vigenteEnFechaInclusivaYmd } = require("./fechaLaboralYmd");
+
+const COL_HLG = "historial_laboral_grupos";
+
+/**
+ * @param {Record<string, unknown>} hlg
+ * @param {string} fechaRefYmd
+ */
+function hlgVigenteEnFecha(hlg, fechaRefYmd) {
+  if (!hlg || hlg.activo === false) return false;
+  return vigenteEnFechaInclusivaYmd(hldHlgFechaInicioYmd(hlg), hldHlgFechaFinYmd(hlg) || null, fechaRefYmd);
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {string} personaId
+ */
+async function loadHlgRowsPorPersona(db, personaId) {
+  const pid = String(personaId || "").trim();
+  if (!/^per_/i.test(pid)) return [];
+  const snap = await db.collection(COL_HLG).where("persona_id", "==", pid).get();
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {string} grupoTrabajoId
+ */
+async function loadHlgRowsPorGrupo(db, grupoTrabajoId) {
+  const gdt = String(grupoTrabajoId || "").trim();
+  if (!/^gdt_/i.test(gdt)) return [];
+  const snap = await db.collection(COL_HLG).where("grupo_de_trabajo_id", "==", gdt).get();
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+}
+
+/**
+ * @param {Array<Record<string, unknown>>} rows
+ * @param {string} fechaRefYmd
+ */
+function filterHlgVigentesEnFecha(rows, fechaRefYmd) {
+  return rows.filter((h) => hlgVigenteEnFecha(h, fechaRefYmd));
+}
+
+/**
+ * Nivel jerárquico del titular en un grupo (menor número = mayor rango). null si no hay fila vigente.
+ * @param {Array<Record<string, unknown>>} titularHlgVigentes
+ * @param {string} grupoTrabajoId
+ */
+function nivelTitularEnGrupo(titularHlgVigentes, grupoTrabajoId) {
+  const gdt = String(grupoTrabajoId || "").trim();
+  const niveles = [];
+  for (const h of titularHlgVigentes) {
+    if (String(h.grupo_de_trabajo_id || "").trim() !== gdt) continue;
+    const rawNivel = h.nivel_jerarquico;
+    if (rawNivel === null || rawNivel === undefined || rawNivel === "") continue;
+    const n = Number(rawNivel);
+    if (Number.isFinite(n)) niveles.push(n);
+  }
+  if (niveles.length === 0) return null;
+  return Math.min(...niveles);
+}
+
+module.exports = {
+  COL_HLG,
+  hlgVigenteEnFecha,
+  loadHlgRowsPorPersona,
+  loadHlgRowsPorGrupo,
+  filterHlgVigentesEnFecha,
+  nivelTitularEnGrupo,
+};
