@@ -38,6 +38,7 @@ const registrarTomaConocimientoRrhhSolicitud = require("./onCall/solicitudes/reg
 const reprocesarMdcSolicitudPatronB = require("./onCall/solicitudes/reprocesarMdcSolicitudPatronB");
 const obtenerVistaGrillaMesAgente = require("./onCall/grilla/obtenerVistaGrillaMesAgente");
 const obtenerResumenSolicitudArticuloGrilla = require("./onCall/grilla/obtenerResumenSolicitudArticuloGrilla");
+const listarVistaGrillaMesPorGrupo = require("./onCall/grilla/listarVistaGrillaMesPorGrupo");
 
 module.exports = {
   ...login,
@@ -68,4 +69,5 @@ module.exports = {
   ...reprocesarMdcSolicitudPatronB,
   ...obtenerVistaGrillaMesAgente,
   ...obtenerResumenSolicitudArticuloGrilla,
+  ...listarVistaGrillaMesPorGrupo,
 };

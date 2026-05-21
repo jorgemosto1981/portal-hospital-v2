@@ -255,3 +255,8 @@ export function callObtenerVistaGrillaMesAgente(data) {
 export function callObtenerResumenSolicitudArticuloGrilla(data) {
   return httpsCallable(getFunctionsV2(), "obtenerResumenSolicitudArticuloGrilla")(data);
 }
+
+/** Oleada C2 — matriz mes × personas de un grupo (HLg vigente a fin de mes). */
+export function callListarVistaGrillaMesPorGrupo(data) {
+  return httpsCallable(getFunctionsV2(), "listarVistaGrillaMesPorGrupo")(data);
+}

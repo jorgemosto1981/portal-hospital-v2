@@ -29,11 +29,14 @@ Consumir en UI la vista mensual **`vis_<YYYY>_<MM>_per_<ULID>`** sin recalcular 
 | UI | Clic día → modal resumen + **Ver solicitud en bandeja** (`?sol_id=`) |
 | Bandejas | Deep link `sol_id` en jefe y RRHH |
 
+## Slice 2 — C2 (grupo + mes)
+
+Backend + tabla multipersona ✅ · selector «Mi equipo» 🔲 — ver [`OLEADA_C2_HOJA_RUTA_GSO_EQUIPO.md`](./OLEADA_C2_HOJA_RUTA_GSO_EQUIPO.md) y [`OLEADA_C_SLICE2_GSO_VISTA_GRUPO.md`](./OLEADA_C_SLICE2_GSO_VISTA_GRUPO.md).
+
 ## Próximos slices C
 
 | Slice | Contenido |
 |-------|-----------|
-| C2 | Grilla equipo (varias personas / grupo + mes) |
 | C4 | Tooltip hover portal (opcional) + pulir tokens sombra/sólido |
 
 ---

@@ -20,9 +20,10 @@ function labelEstado(id) {
  *   dia: string;
  *   eventos: Array<Record<string, unknown>>;
  *   bandejaPath: string;
+ *   subtitulo?: string;
  * }} props
  */
-export default function DiaGrillaDetalleModal({ open, onClose, dia, eventos, bandejaPath }) {
+export default function DiaGrillaDetalleModal({ open, onClose, dia, eventos, bandejaPath, subtitulo }) {
   const [solFocus, setSolFocus] = useState("");
   const [resumen, setResumen] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -75,6 +76,9 @@ export default function DiaGrillaDetalleModal({ open, onClose, dia, eventos, ban
         <div className="flex items-start justify-between gap-2">
           <h3 id="dia-grilla-titulo" className="text-lg font-semibold text-slate-900">
             Día {Number(dia)} — licencias
+            {subtitulo ? (
+              <span className="mt-0.5 block text-sm font-normal text-slate-600">{subtitulo}</span>
+            ) : null}
           </h3>
           <button
             type="button"
@@ -138,13 +142,17 @@ export default function DiaGrillaDetalleModal({ open, onClose, dia, eventos, ban
             {resumen.jefe_revision_persona_id ? (
               <div>
                 <dt className="text-xs font-medium text-slate-500">Cierre jefatura</dt>
-                <dd className="font-mono text-xs">{resumen.jefe_revision_persona_id}</dd>
+                <dd>
+                  {resumen.jefe_revision_label || resumen.jefe_revision_persona_id}
+                </dd>
               </div>
             ) : null}
             {resumen.rrhh_toma_conocimiento_persona_id ? (
               <div>
                 <dt className="text-xs font-medium text-slate-500">Toma conocimiento RRHH</dt>
-                <dd className="font-mono text-xs">{resumen.rrhh_toma_conocimiento_persona_id}</dd>
+                <dd>
+                  {resumen.rrhh_toma_conocimiento_label || resumen.rrhh_toma_conocimiento_persona_id}
+                </dd>
               </div>
             ) : null}
           </dl>
