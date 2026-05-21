@@ -2,10 +2,45 @@
 
 const { FieldValue } = require("./context");
 const {
+  ESTADO_SOLICITUD_EN_REVISION_JEFE,
   ESTADO_SOLICITUD_EN_REVISION_RRHH,
   ESTADO_SOLICITUD_RECHAZADA,
   ESTADO_SOLICITUD_APROBADA,
 } = require("./solicitudesArticuloEstados");
+/** Oleada A — visibilidad RRHH (RFC §2 ítem 17). */
+const ESTADOS_BANDEJA_RRHH_VISIBLES = [
+  ESTADO_SOLICITUD_EN_REVISION_JEFE,
+  ESTADO_SOLICITUD_EN_REVISION_RRHH,
+  ESTADO_SOLICITUD_APROBADA,
+];
+
+/**
+ * @param {Record<string, unknown>} sol
+ */
+function bandejaRrhhModoItem(sol) {
+  const est = String(sol.estado_solicitud_id || "").trim();
+  if (est === ESTADO_SOLICITUD_EN_REVISION_RRHH) {
+    return { modo: "legacy_rrhh", puede_aprobar_rechazar: true, etiqueta_estado: "Pendiente RRHH (legacy)" };
+  }
+  if (est === ESTADO_SOLICITUD_EN_REVISION_JEFE && sol.autorizacion_rrhh_sustituta === true) {
+    return { modo: "cierre_sustituta", puede_aprobar_rechazar: true, etiqueta_estado: "Huérfana — cierre RRHH" };
+  }
+  if (est === ESTADO_SOLICITUD_EN_REVISION_JEFE) {
+    return {
+      modo: "visibilidad_jefe",
+      puede_aprobar_rechazar: false,
+      etiqueta_estado: "En revisión por jefatura",
+    };
+  }
+  if (est === ESTADO_SOLICITUD_APROBADA) {
+    return {
+      modo: "toma_conocimiento",
+      puede_aprobar_rechazar: false,
+      etiqueta_estado: "Aprobada — toma de conocimiento (próx.)",
+    };
+  }
+  return { modo: "otro", puede_aprobar_rechazar: false, etiqueta_estado: est };
+}
 const { loadArticuloDisplay } = require("./solicitudBandejaJefeCore");
 const { revertirMotorBolsaPatronBEnTx } = require("./solicitudPatronBReversoSaldo");
 const {
@@ -24,7 +59,7 @@ const LIST_LIMIT = 80;
 async function listarSolicitudesBandejaRrhh(db) {
   const snap = await db
     .collection(COL_SOL)
-    .where("estado_solicitud_id", "==", ESTADO_SOLICITUD_EN_REVISION_RRHH)
+    .where("estado_solicitud_id", "in", ESTADOS_BANDEJA_RRHH_VISIBLES)
     .limit(LIST_LIMIT)
     .get();
 
@@ -49,6 +84,7 @@ async function listarSolicitudesBandejaRrhh(db) {
 
     const artId = String(sol.articulo_id || "").trim();
     const artDisplay = await loadArticuloDisplay(db, artId, articuloCache);
+    const modo = bandejaRrhhModoItem(sol);
 
     out.push({
       solicitud_id: sol.id,
@@ -64,6 +100,13 @@ async function listarSolicitudesBandejaRrhh(db) {
       patron_saldo: String(sol.patron_saldo || ""),
       estado_solicitud_id: sol.estado_solicitud_id,
       jefe_revision_en: sol.jefe_revision_en || null,
+      autorizadores_elegibles_ids: Array.isArray(sol.autorizadores_elegibles_ids)
+        ? sol.autorizadores_elegibles_ids
+        : [],
+      autorizacion_rrhh_sustituta: sol.autorizacion_rrhh_sustituta === true,
+      bandeja_rrhh_modo: modo.modo,
+      puede_aprobar_rechazar: modo.puede_aprobar_rechazar,
+      etiqueta_estado: modo.etiqueta_estado,
     });
   }
 

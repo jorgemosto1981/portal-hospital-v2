@@ -68,14 +68,15 @@ export default function BandejaRrhhSolicitudes() {
       <header className="space-y-2">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900">Bandeja — revisión RRHH</h1>
         <p className="text-sm leading-relaxed text-slate-600">
-          Solicitudes que el jefe derivó a RRHH. Aprobación definitiva o rechazo con devolución de saldo Patrón B.
+          Visibilidad de trámites (pendientes en jefatura, aprobados y legacy en RRHH). Solo podés aprobar/rechazar
+          sustantivamente cuando el ítem lo indique.
         </p>
       </header>
 
       <Card className="mt-5 overflow-hidden p-0">
         <div className="flex items-center justify-between gap-2 border-b border-violet-100 bg-violet-50/60 px-4 py-3">
           <span className="text-sm font-semibold text-slate-800">
-            Pendientes RRHH
+            Trámites visibles
             {!cargando && !error ? (
               <span className="ml-2 inline-flex min-w-[1.25rem] justify-center rounded-full bg-violet-200 px-1.5 text-xs font-bold text-violet-900">
                 {lista.length}
@@ -96,7 +97,7 @@ export default function BandejaRrhhSolicitudes() {
           {cargando ? <p className="text-sm text-slate-500">Cargando…</p> : null}
           {error ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
           {!cargando && !error && lista.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-500">No hay solicitudes pendientes de RRHH.</p>
+            <p className="py-6 text-center text-sm text-slate-500">No hay solicitudes visibles en esta bandeja.</p>
           ) : null}
 
           <ul className="max-h-[min(24rem,50vh)] space-y-2 overflow-y-auto">
@@ -118,6 +119,9 @@ export default function BandejaRrhhSolicitudes() {
                       {tituloSolicitudBandeja(s)}
                     </p>
                     <p className="mt-1.5 text-sm italic text-slate-500">({metaComplementariaBandeja(s)})</p>
+                    {s.etiqueta_estado ? (
+                      <p className="mt-1 text-xs font-medium text-violet-800">{s.etiqueta_estado}</p>
+                    ) : null}
                   </button>
                 </li>
               );
@@ -144,29 +148,45 @@ export default function BandejaRrhhSolicitudes() {
             />
           </label>
 
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              disabled={procesando}
-              onClick={() => decidir("aprobar")}
-              className="min-h-11 flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
-            >
-              Aprobar (definitivo)
-            </button>
-            <button
-              type="button"
-              disabled={procesando}
-              onClick={() => decidir("rechazar")}
-              className="min-h-11 flex-1 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-800 hover:bg-red-100 disabled:opacity-50"
-            >
-              Rechazar
-            </button>
-          </div>
-
-          <p className="text-xs leading-relaxed text-slate-500">
-            Aprobar deja la solicitud en estado aprobado; el saldo descontado al ingreso se mantiene. Rechazar anula y
-            devuelve el saldo Patrón B si correspondía.
-          </p>
+          {sel.puede_aprobar_rechazar === true ? (
+            <>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  disabled={procesando}
+                  onClick={() => decidir("aprobar")}
+                  className="min-h-11 flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  Aprobar (definitivo)
+                </button>
+                <button
+                  type="button"
+                  disabled={procesando}
+                  onClick={() => decidir("rechazar")}
+                  className="min-h-11 flex-1 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-800 hover:bg-red-100 disabled:opacity-50"
+                >
+                  Rechazar
+                </button>
+              </div>
+              <p className="text-xs leading-relaxed text-slate-500">
+                Aprobar deja la solicitud en estado aprobado; el saldo descontado al ingreso se mantiene. Rechazar anula
+                y devuelve el saldo Patrón B si correspondía.
+              </p>
+            </>
+          ) : (
+            <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              {sel.bandeja_rrhh_modo === "visibilidad_jefe"
+                ? "Esta solicitud está a la espera de un autorizador jerárquico (bandeja jefe). RRHH no cierra este trámite salvo huérfana sustituta."
+                : sel.bandeja_rrhh_modo === "toma_conocimiento"
+                  ? "Cierre jerárquico ya realizado. La toma de conocimiento formal se habilitará en la próxima entrega (Oleada A4)."
+                  : "Solo consulta en este estado; no hay acción RRHH disponible aquí."}
+              {Array.isArray(sel.autorizadores_elegibles_ids) && sel.autorizadores_elegibles_ids.length > 0 ? (
+                <span className="mt-2 block text-xs text-slate-500">
+                  Autorizador(es) elegibles: {sel.autorizadores_elegibles_ids.join(", ")}
+                </span>
+              ) : null}
+            </p>
+          )}
         </Card>
       ) : lista.length > 0 && !cargando ? (
         <p className="mt-4 text-center text-sm text-slate-500">Seleccioná una solicitud para aprobar o rechazar.</p>
