@@ -110,19 +110,9 @@ Dos frentes **independientes** (misma rama posible, distinto tipo de esfuerzo):
 
 Evidencia MDC/RDA sin regresión con Oleada A: [`TICKETERA_EVIDENCIA_2026-05-21_OLEADA_B_MDC_SOL_01KS57Y.md`](./TICKETERA_EVIDENCIA_2026-05-21_OLEADA_B_MDC_SOL_01KS57Y.md). Worker/fan-out **no requiere cambio** para el flujo limpio; siguiente foco backend = B3 cola (opcional) u Oleada C.
 
-### 5.2 Hardening UI RRHH (aseguramiento operativo) — en curso
+### 5.2 Hardening UI RRHH (aseguramiento operativo) — ✅ (21-may)
 
-**Objetivo:** que el operador **no** vea acciones sustantivas obsoletas cuando el backend ya está en TO-BE.
-
-| Tarea | Código / notas |
-|-------|----------------|
-| Solo **Registrar toma de conocimiento** en `cfg_esa_aprobada` sin TC | `bandejaRrhhModoItem` en `solicitudBandejaRrhhCore.js` + `BandejaRrhhSolicitudes.jsx` |
-| Aprobar/Rechazar RRHH solo en `legacy_rrhh` o `cierre_sustituta` | Ya modelado en backend; verificar deploy hosting y filtros lista |
-| Mensajes alineados a modos (`toma_conocimiento`, `legacy_rrhh`) | Copy UI |
-
-**Foco mental:** bajo riesgo si backend no se toca — **paz mental** del operador.
-
-**Paralelizable** con 5.1 si hay dos personas; si una sola, recomendación doc: **5.2 rápido primero** (1 sesión) y luego **5.1**.
+Deploy hosting: copy bandeja RRHH + toast alta Patrón B (`b928606`). Smoke pendiente en https://portal-hospital-v2.web.app .
 
 ---
 
@@ -134,6 +124,20 @@ Evidencia MDC/RDA sin regresión con Oleada A: [`TICKETERA_EVIDENCIA_2026-05-21_
 | Deuda create § C (días mínimos, género) | Menor |
 | Ticketera F3a / F5 / delegación | [`PLAN_TICKETERA_V2.md`](./PLAN_TICKETERA_V2.md) |
 
+### 5.4 Deuda eventos × bandeja RRHH — **próxima sesión (prioridad)**
+
+**Problema:** `persistEventoV21` proyecta **todos** los eventos a `eventos_bandeja_rrhh` con default `cfg_ebr_pend_rev` si el contexto no trae `estado_bandeja_rrhh_id`. Los de `modulo_origen: articulos` (p. ej. `rrhh_toma_conocimiento`, `jefe_aprobar`) **no** son toma de conocimiento de ficha personal, pero ensucian el read model y el doc canónico en consola.
+
+**UI hoy:** `/portal/rrhh/notificaciones-datos-personales` filtra cliente con `isEventoDatosPersonales` (`cfg_tev_datos_*`, auth, ddjj) — **no** lista `cfg_tev_art_*`. El riesgo es auditoría/consultas RRHH sin filtro y datos “fantasma” en colección bandeja.
+
+**Fix propuesto (quirúrgico):**
+
+1. `eventosV2.js` · `persistEventoV21`: **no escribir** `eventos_bandeja_rrhh` cuando `modulo_origen === "articulos"` (mantener `eventos_ticket` raíz + subcol + `eventos_por_persona` / `eventos_por_modulo`).
+2. Opcional: script one-off para borrar o archivar proyecciones bandeja existentes con `modulo_origen: articulos`.
+3. Evidencia: tras TC, **no** debe existir fila bandeja `pend_rev` para `evt_*` de artículos; timeline sigue en `solicitudes_articulo/.../eventos_ticket`.
+
+**Prueba:** repetir lectura de `evt_01KS57ZY…` en raíz `eventos_ticket` (sin `estado_bandeja` engañoso en bandeja) + listar bandeja con filtro pendientes sin artículos.
+
 ---
 
 ## 6. Histórico — grilla RDA en trigger ✅ (2026-05-21)
@@ -144,19 +148,26 @@ Evidencia MDC/RDA sin regresión con Oleada A: [`TICKETERA_EVIDENCIA_2026-05-21_
 
 ---
 
-## 7. Decisión rápida (próxima sesión)
+## 7. Plan acordado — próxima sesión
+
+Orden recomendado (**casa limpia** antes de Oleada C):
+
+| Paso | Acción | Done |
+|------|--------|------|
+| 1 | **Smoke prod:** hosting + bandeja solicitudes RRHH + toast alta 64-A | ☐ |
+| 2 | **Repo:** `git checkout -- functions/modules/shared/solicitudElegibilidadLaboral.js` (solo CRLF) | ✅ |
+| 3 | **Deuda §5.4:** eventos `articulos` sin proyección bandeja RRHH + deploy functions | ☐ |
+| 4 | **Oleada C:** asistencia / GSO / grilla operativa (épica) | ☐ |
 
 ```text
-Oleada A → CERRADA. No reabrir salvo bug de regresión con evidencia nueva.
+Oleada A + B (MDC validado) → CERRADAS en prod.
+No reabrir salvo regresión documentada.
 
-¿Qué abro?
-  → Oleada B (MDC worker / fan-out): PLAN § oleada B — foco profundo backend.
-  → Hardening UI RRHH: BandejaRrhh — ocultar “aprobar definitivo” salvo legacy/sustituta.
-  → Ambos en paralelo si hay dos personas; si uno solo: hardening UI primero (corto), luego B.
+Siguiente: smoke → deuda eventos (5.4) → Oleada C sobre base sólida.
 ```
 
-**Repo:** evidencia Oleada A en `3c48899` (docs) — rama `feature/ticketera-puente-campos-config` alineada con `origin`.
+**Repo:** rama `feature/ticketera-puente-campos-config` · hosting `b928606` desplegado.
 
 ---
 
-*Handoff cerrado 2026-05-21 — Oleada A terminada. Retomar desde § 5.*
+*Handoff 2026-05-21 — Oleada A/B cerradas. Retomar § 7 paso 1.*
