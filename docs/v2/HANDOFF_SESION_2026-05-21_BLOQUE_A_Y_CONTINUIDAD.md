@@ -149,26 +149,32 @@ Deploy hosting: copy bandeja RRHH + toast alta Patrón B (`b928606`). Smoke pend
 
 ---
 
-## 7. Plan acordado — próxima sesión
+## 7. Oleada C — Grilla licencias MDC ✅ CERRADA (21-may tarde)
 
-Orden recomendado (**casa limpia** antes de Oleada C):
+**Handoff dedicado:** [`HANDOFF_SESION_2026-05-21_GRILLA_OLEADA_C_CIERRE.md`](./HANDOFF_SESION_2026-05-21_GRILLA_OLEADA_C_CIERRE.md)
 
 | Paso | Acción | Done |
 |------|--------|------|
-| 1 | **Smoke prod:** hosting + bandeja solicitudes RRHH + toast alta 64-A | ☐ |
-| 2 | **Repo:** `git checkout -- functions/modules/shared/solicitudElegibilidadLaboral.js` (solo CRLF) | ✅ |
-| 3 | **Deuda §5.4:** eventos `articulos` sin proyección bandeja RRHH + deploy functions | ✅ (21-may prod) |
-| 4 | **Oleada C:** Slice 1 GSO `vis_*` — [`OLEADA_C_SLICE1_GSO_VISTA_MES.md`](./OLEADA_C_SLICE1_GSO_VISTA_MES.md) | en curso |
+| C1–C3 | `vis_*`, modal día, bandeja `sol_id` | ✅ |
+| C2c/d | Selector TITULAR/EQUIPO/SECTOR · vista unificada | ✅ prod |
+| C4 | Tooltip + contraste MDC + leyenda | ✅ prod · `f782ce2` |
+| Deploy | Hosting + `listarVistaGrillaMesPorGrupo` (fix `getAll`×10) | ✅ |
 
-```text
-Oleada A + B (MDC validado) → CERRADAS en prod.
-No reabrir salvo regresión documentada.
-
-Siguiente: smoke → deuda eventos (5.4) → Oleada C sobre base sólida.
-```
-
-**Repo:** rama `feature/ticketera-puente-campos-config` · hosting `b928606` desplegado.
+**Git (otra PC):** `git pull origin feature/ticketera-puente-campos-config` → `de176d8`, `f782ce2`.
 
 ---
 
-*Handoff 2026-05-21 — Oleada A/B cerradas. Retomar § 7 paso 1.*
+## 8. Próxima sesión (después de pausa)
+
+1. Pull rama · smoke opcional C4 hover en prod.
+2. **No reabrir épica C** salvo bug — seguir ticketera / LAO / vista laboral grilla o delegación jefe.
+3. Deuda opcional: SECTOR RRHH smoke · limpieza bandeja eventos históricos (§5.4).
+
+```text
+Oleada A + B + C (calendario licencias GSO) → CERRADAS en prod.
+PAUSA 2026-05-21 — retomar HANDOFF_GRILLA_OLEADA_C_CIERRE §6.
+```
+
+---
+
+*Handoff 2026-05-21 — A/B/C cerradas. Retomar [`HANDOFF_SESION_2026-05-21_GRILLA_OLEADA_C_CIERRE.md`](./HANDOFF_SESION_2026-05-21_GRILLA_OLEADA_C_CIERRE.md).*
