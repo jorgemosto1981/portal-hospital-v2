@@ -25,6 +25,8 @@
 
 Criterio TO-BE cumplido: **un solo acto sustantivo** (jefe) + **acuse RRHH** (no segunda aprobación en bandeja RRHH).
 
+**MDC / RDA (Oleada B):** validado en el mismo trámite — [`TICKETERA_EVIDENCIA_2026-05-21_OLEADA_B_MDC_SOL_01KS57Y.md`](./TICKETERA_EVIDENCIA_2026-05-21_OLEADA_B_MDC_SOL_01KS57Y.md).
+
 ### 1.2 Eventos (`eventos_ticket` global + subcolección `solicitudes_articulo/{solId}/eventos_ticket`)
 
 | `evt_*` | `accion` | `tipo_evento_id` (catálogo) | Resumen |

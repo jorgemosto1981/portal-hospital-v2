@@ -26,7 +26,9 @@ export default function TicketeraPatronB() {
   async function onEnviar() {
     const solId = await form.enviar();
     if (solId) {
-      toast.success(`Solicitud aceptada (${solId}). Estado: en revisión por jefe.`);
+      toast.success(
+        `Solicitud enviada (${solId}). Quedó pendiente de jefatura; el cierre del trámite lo hace el autorizador jerárquico.`,
+      );
       await form.recargar();
     }
   }

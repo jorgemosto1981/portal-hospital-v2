@@ -106,7 +106,11 @@ Dos frentes **independientes** (misma rama posible, distinto tipo de esfuerzo):
 
 ---
 
-### 5.2 Hardening UI RRHH (aseguramiento operativo)
+### 5.1bis Oleada B — validación prod ✅ (misma `sol_01KS57Y…`)
+
+Evidencia MDC/RDA sin regresión con Oleada A: [`TICKETERA_EVIDENCIA_2026-05-21_OLEADA_B_MDC_SOL_01KS57Y.md`](./TICKETERA_EVIDENCIA_2026-05-21_OLEADA_B_MDC_SOL_01KS57Y.md). Worker/fan-out **no requiere cambio** para el flujo limpio; siguiente foco backend = B3 cola (opcional) u Oleada C.
+
+### 5.2 Hardening UI RRHH (aseguramiento operativo) — en curso
 
 **Objetivo:** que el operador **no** vea acciones sustantivas obsoletas cuando el backend ya está en TO-BE.
 

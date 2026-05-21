@@ -89,8 +89,9 @@ export default function BandejaRrhhSolicitudes() {
       <header className="space-y-2">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900">Bandeja — revisión RRHH</h1>
         <p className="text-sm leading-relaxed text-slate-600">
-          Visibilidad de trámites (pendientes en jefatura, aprobados y legacy en RRHH). Solo podés aprobar/rechazar
-          sustantivamente cuando el ítem lo indique.
+          En trámites ya cerrados por jefatura, la acción habitual es{" "}
+          <strong className="font-medium text-slate-800">registrar toma de conocimiento</strong>. Aprobar o rechazar en
+          RRHH solo aparece en trámites legacy o huérfana sustituta.
         </p>
       </header>
 
@@ -171,6 +172,16 @@ export default function BandejaRrhhSolicitudes() {
 
           {sel.puede_aprobar_rechazar === true ? (
             <>
+              {sel.bandeja_rrhh_modo === "legacy_rrhh" ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  Trámite en flujo <strong>legacy</strong> (pendiente RRHH sustantivo). En solicitudes nuevas el jefe ya
+                  cierra el trámite; RRHH solo registra toma de conocimiento.
+                </p>
+              ) : sel.bandeja_rrhh_modo === "cierre_sustituta" ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  Huérfana: RRHH actúa como <strong>cierre sustituto</strong> (sin autorizador jerárquico en organigrama).
+                </p>
+              ) : null}
               <div className="flex flex-col gap-2 sm:flex-row">
                 <button
                   type="button"
@@ -178,7 +189,9 @@ export default function BandejaRrhhSolicitudes() {
                   onClick={() => decidir("aprobar")}
                   className="min-h-11 flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
                 >
-                  Aprobar (definitivo)
+                  {sel.bandeja_rrhh_modo === "legacy_rrhh"
+                    ? "Aprobar (legacy RRHH)"
+                    : "Aprobar (cierre sustituto)"}
                 </button>
                 <button
                   type="button"
@@ -220,7 +233,10 @@ export default function BandejaRrhhSolicitudes() {
           )}
         </Card>
       ) : lista.length > 0 && !cargando ? (
-        <p className="mt-4 text-center text-sm text-slate-500">Seleccioná una solicitud para aprobar o rechazar.</p>
+        <p className="mt-4 text-center text-sm text-slate-500">
+          Seleccioná un trámite para ver la acción disponible (toma de conocimiento, cierre legacy/sustituto o solo
+          consulta).
+        </p>
       ) : null}
     </div>
   );
