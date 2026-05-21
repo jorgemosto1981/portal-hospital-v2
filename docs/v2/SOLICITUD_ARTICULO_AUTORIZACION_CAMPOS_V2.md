@@ -27,7 +27,25 @@ Implementado en `solicitudArticuloPatronBOnCreate.js` tras motor OK.
 | Jefe **rechaza** | `cfg_esa_rechazada` | `REVERTIR_PROYECCION` |
 | RRHH post-cierre | *(sin cambio)* | TC → campos `rrhh_toma_conocimiento_*` (A4) ✅ |
 
-## Piloto E2E Oleada A — `sol_01KS52ZRQHF0MQBDM58XP9Y27Z` (2026-05-21)
+## E2E Oleada A — referencia TO-BE (2026-05-21)
+
+**Caso limpio (documentación completa + `evt_*`):** [`TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md`](./TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md)
+
+### `sol_01KS57Y01GDWCZFAS2EFF4JKP7` — flujo normal sin doble aprobación RRHH
+
+| Paso | Estado / evidencia |
+|------|-------------------|
+| Alta (27667499) | `cfg_esa_en_revision_jefe` · snapshot A2 (`version_id_aplicada`, ancla, autorizadores) |
+| Jefe (28914247) 9:25:50 | `cfg_esa_aprobada` · MDC `CONSOLIDAR_APROBADO` · evento `evt_01KS57ZKCX6778J70A6TQ08HJA` (`jefe_aprobar`, grilla 64-A) |
+| TC RRHH (28914247) 9:26:01 | `rrhh_toma_conocimiento_*` · **sin** `rrhh_revision_*` · evento `evt_01KS57ZYHK00E8M5XYMY997QG6` |
+
+Licencia: `fecha_desde` `2026-03-21` · 1 día Patrón B.
+
+### `sol_01KS0896610NA49M9G6VABMMEK` — híbrido (solo contraste)
+
+19-may: jefe + **RRHH legacy** (`rrhh_revision_*`). 21-may: TC formal. No usar como plantilla TO-BE (ver evidencia §2).
+
+### `sol_01KS52ZRQHF0MQBDM58XP9Y27Z` — piloto anterior
 
 | Paso | Estado / evidencia |
 |------|-------------------|

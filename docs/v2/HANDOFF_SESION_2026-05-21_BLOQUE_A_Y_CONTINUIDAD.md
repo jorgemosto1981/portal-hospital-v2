@@ -51,6 +51,7 @@ Docs legacy en Firestore pueden seguir con `version_aplicada` en raíz; **docume
 | Archivo | Cambio |
 |---------|--------|
 | [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) | Evidencia incidente + pilotos + checklist |
+| [`TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md`](./TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md) | E2E Oleada A limpio `sol_01KS57Y…` (jefe + TC, eventos) |
 | [`RFC_TICKETERA_SLICE_64A_MVP_V2.md`](./RFC_TICKETERA_SLICE_64A_MVP_V2.md) §7.1 | `version_id_aplicada`, `grupo_trabajo_id_ancla`, Rules Bloque A |
 | [`PLAN_TICKETERA_V2.md`](./PLAN_TICKETERA_V2.md) | Fila F1-create / revisión 21-may |
 | [`README.md`](./README.md) | Enlace evidencia 21-may |
@@ -78,7 +79,7 @@ Docs legacy en Firestore pueden seguir con `version_aplicada` en raíz; **docume
 4. Quitar bypass RRHH en bandeja jefe (según plan).
 5. Campos `sol_*` TO-BE: `autorizadores_elegibles_ids`, `grupo_autorizacion_id`, etc. (plan § A).
 
-**Prueba de aceptación:** misma persona 27667499 / 28914247 — un solo “aprobar” sustantivo + RRHH solo TC + `asi`/`vis` coherentes.
+**Prueba de aceptación:** misma persona 27667499 / 28914247 — un solo “aprobar” sustantivo + RRHH solo TC + `asi`/`vis` coherentes. **Evidencia cerrada (21-may):** [`TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md`](./TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md) · `sol_01KS57Y01GDWCZFAS2EFF4JKP7`.
 
 ---
 
