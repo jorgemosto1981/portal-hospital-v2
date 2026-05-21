@@ -12,6 +12,8 @@ const {
   ESTADO_SOLICITUD_RECHAZADA,
   ESTADO_SOLICITUD_APROBADA,
 } = require("./solicitudesArticuloEstados");
+const { TIPO_EVENTO_TICKET, ORIGEN_EVENTO } = require("./solicitudEventosTicketConstants");
+const { registrarEventoTicket } = require("./registrarEventoTicket");
 const {
   CODIGO_PERMISOS_JERARQUICOS_CAMBIADOS,
   mensajeParaCodigoAutorizacion,
@@ -214,6 +216,23 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
       },
       MDC_COMANDO_CONSOLIDAR_APROBADO,
     );
+    void registrarEventoTicket(db, solId, {
+      tipo_evento: TIPO_EVENTO_TICKET.ESTADO_CAMBIADO,
+      actor_persona_id: revisorPersonaId,
+      titular_persona_id: titularId,
+      estado_anterior_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
+      estado_nuevo_id: ESTADO_SOLICITUD_APROBADA,
+      origen: ORIGEN_EVENTO.CALLABLE,
+      accion: "jefe_aprobar",
+      metadata: {
+        decision: "aprobar",
+        codigo_grilla: artDisplay.codigo_grilla || null,
+        grupo_autorizacion_id: postSol.grupo_autorizacion_id || null,
+        articulo_id: String(sol.articulo_id || "") || null,
+        fecha_desde: String(sol.fecha_desde || "").slice(0, 10),
+        motivo: motivo || null,
+      },
+    });
     return {
       ok: true,
       solicitud_id: solId,
@@ -245,6 +264,23 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
       ...sol,
       codigo_grilla: artDisplay.codigo_grilla,
     }, MDC_COMANDO_REVERTIR_PROYECCION);
+
+    void registrarEventoTicket(db, solId, {
+      tipo_evento: TIPO_EVENTO_TICKET.ESTADO_CAMBIADO,
+      actor_persona_id: revisorPersonaId,
+      titular_persona_id: titularId,
+      estado_anterior_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
+      estado_nuevo_id: ESTADO_SOLICITUD_RECHAZADA,
+      origen: ORIGEN_EVENTO.CALLABLE,
+      accion: "jefe_rechazar",
+      metadata: {
+        decision: "rechazar",
+        codigo_grilla: artDisplay.codigo_grilla || null,
+        articulo_id: String(sol.articulo_id || "") || null,
+        fecha_desde: String(sol.fecha_desde || "").slice(0, 10),
+        motivo: motivo || null,
+      },
+    });
 
     return {
       ok: true,

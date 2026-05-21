@@ -283,6 +283,8 @@ En `listarArticulosIngresoAgente` / `previsualizarSolicitudPatronB`: si titular 
 
 **AS-IS:** no emitidos por ticketera.
 
+**TO-BE (Oleada A6):** dual-write — timeline operativa en `solicitudes_articulo/{solId}/eventos_ticket/{evtId}` (`ticket_eventos_v1`) + log canónico en colección raíz `eventos_ticket` vía `registrarEventoTicket` → `persistEventoV21` (async post-commit o post-callable; mismo `evtId` idempotente). Actor alta motor: `titular_persona_id`, `origen: TRIGGER`.
+
 **TO-BE:** `schema_version: eventos_v2_1`, `modulo_origen: articulos`, `payload.ui` obligatorio ([`PLAN_UNIFICACION_EVENTOS_RRHH_2026-05-06.md`](./PLAN_UNIFICACION_EVENTOS_RRHH_2026-05-06.md)).
 
 | `codigo_interno` (propuesto) | Cuándo |

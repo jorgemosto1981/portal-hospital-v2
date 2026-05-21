@@ -131,6 +131,7 @@ Prefijo documento: **`cfg_tev_art_<ULID>`**. `modulo_origen`: **`articulos`**.
 |----------------|----------------|
 | 1 | `ART_SOLICITUD_CREADA` |
 | 2 | `ART_SOLICITUD_ESTADO_CAMBIADO` |
+| 2b | `ART_TOMA_CONOCIMIENTO_REGISTRADA` |
 | 3 | `ART_SLA_VENCIDO` |
 | 4 | `ART_SUPERPOSICION_DETECTADA` |
 | 5 | `ART_DOCUMENTACION_VENCIDA` |

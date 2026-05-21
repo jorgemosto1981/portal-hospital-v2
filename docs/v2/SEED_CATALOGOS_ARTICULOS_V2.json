@@ -1047,6 +1047,17 @@
         "activo": true,
         "vigente_desde": null,
         "vigente_hasta": null
+      },
+      {
+        "id": "cfg_tev_art_01ARZ3NDEKTSV4RRFFQ69G5FB8",
+        "codigo_interno": "ART_TOMA_CONOCIMIENTO_REGISTRADA",
+        "titulo_ui": "Toma de conocimiento registrada",
+        "descripcion_ui": "RRHH o superior registra toma de conocimiento post-cierre.",
+        "modulo_origen": "articulos",
+        "orden": 10,
+        "activo": true,
+        "vigente_desde": null,
+        "vigente_hasta": null
       }
     ]
   },

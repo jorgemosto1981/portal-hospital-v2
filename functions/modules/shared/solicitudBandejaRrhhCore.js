@@ -7,6 +7,8 @@ const {
   ESTADO_SOLICITUD_RECHAZADA,
   ESTADO_SOLICITUD_APROBADA,
 } = require("./solicitudesArticuloEstados");
+const { TIPO_EVENTO_TICKET, ORIGEN_EVENTO } = require("./solicitudEventosTicketConstants");
+const { registrarEventoTicket } = require("./registrarEventoTicket");
 /** Oleada A — visibilidad RRHH (RFC §2 ítem 17). */
 const ESTADOS_BANDEJA_RRHH_VISIBLES = [
   ESTADO_SOLICITUD_EN_REVISION_JEFE,
@@ -261,6 +263,23 @@ async function registrarTomaConocimientoRrhhSolicitud(db, solId, revisorPersonaI
     rrhh_toma_conocimiento_en: FieldValue.serverTimestamp(),
     rrhh_toma_conocimiento_motivo: motivo || null,
     actualizado_en: FieldValue.serverTimestamp(),
+  });
+
+  const titularId = String(sol.titular_persona_id || "").trim();
+  void registrarEventoTicket(db, solId, {
+    tipo_evento: TIPO_EVENTO_TICKET.TOMA_CONOCIMIENTO_RRHH,
+    actor_persona_id: revisorPersonaId,
+    titular_persona_id: titularId,
+    estado_anterior_id: ESTADO_SOLICITUD_APROBADA,
+    estado_nuevo_id: ESTADO_SOLICITUD_APROBADA,
+    origen: ORIGEN_EVENTO.CALLABLE,
+    accion: "rrhh_toma_conocimiento",
+    metadata: {
+      rrhh_toma_conocimiento_motivo: motivo || null,
+      articulo_id: String(sol.articulo_id || "") || null,
+      fecha_desde: String(sol.fecha_desde || "").slice(0, 10),
+      codigo_grilla: sol.codigo_grilla || null,
+    },
   });
 
   return {
