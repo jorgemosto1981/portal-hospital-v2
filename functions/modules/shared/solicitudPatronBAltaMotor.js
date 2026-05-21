@@ -22,6 +22,7 @@ const {
 } = require("./solicitudElegibilidadLaboral");
 const { validarSuperposicionFechasPatronB } = require("./patronBSuperposicionValidacion");
 const { resolverGrupoTrabajoIdAnclaParaSolicitud } = require("./solicitudGrupoTrabajoAncla");
+const { validarGrillaHorariaParaSolicitud } = require("./mdcGrillaHorariaGate");
 
 const ESTADOS_CUENTAN_FRECUENCIA_MES = new Set([
   "cfg_esa_borrador",
@@ -225,6 +226,23 @@ async function runPatronBAltaMotor(params) {
   const disp = Number(match.bolsa.disponible);
   if (!Number.isFinite(disp) || disp < diasPedidos) {
     return { ok: false, codigos: [CODIGO_SALDO_CICLO], mensajes: [mensajeParaCodigo(CODIGO_SALDO_CICLO)] };
+  }
+
+  const gateGrilla = await validarGrillaHorariaParaSolicitud(db, {
+    depende_rda: topes.depende_rda === true,
+    persona_id: personaId,
+    fecha_desde: fechaDesde,
+    fecha_hasta: fechaHasta,
+    grupo_trabajo_id: grupoAncla.grupo_trabajo_id_ancla || undefined,
+  });
+  if (!gateGrilla.ok) {
+    return {
+      ok: false,
+      codigos: [gateGrilla.codigo || "GRILLA_NO_AUTORIZADA"],
+      mensajes: [gateGrilla.mensaje || "Grilla horaria no autorizada."],
+      hlc_id: eleg.hlc_id,
+      grupo_trabajo_id_ancla: grupoAncla.grupo_trabajo_id_ancla,
+    };
   }
 
   return {

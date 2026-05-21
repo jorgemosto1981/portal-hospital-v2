@@ -82,11 +82,11 @@ Docs legacy en Firestore pueden seguir con `version_aplicada` en raíz; **docume
 
 ---
 
-### B — Integridad motor: **grilla RDA en trigger** (técnico, mediano)
+### B — Integridad motor: **grilla RDA en trigger** ✅ (2026-05-21)
 
-Hoy `validarGrillaHorariaParaSolicitud` corre en `previsualizarSolicitudPatronB` pero **no** en `onSolicitudArticuloPatronBOnCreate`. Riesgo: bypass del preview.
+`validarGrillaHorariaParaSolicitud` integrado en `runPatronBAltaMotor` (`solicitudPatronBAltaMotor.js`) cuando `depende_rda === true`, antes del OK de saldo. El trigger `onSolicitudArticuloPatronBOnCreate` rechaza con `GRILLA_NO_AUTORIZADA` sin descontar. Preview usa el mismo motor (sin segunda pasada duplicada).
 
-**Entregable:** misma validación en motor/trigger antes de descontar saldo; código `GRILLA_NO_AUTORIZADA` en rechazo.
+**Deploy pendiente en prod:** `onSolicitudArticuloPatronBOnCreate`, `previsualizarSolicitudPatronB`.
 
 ---
 
