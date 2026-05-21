@@ -2,10 +2,11 @@
 
 **Rama:** `feature/ticketera-puente-campos-config`  
 **Firebase:** `portal-hospital-v2` · `southamerica-east1`  
-**Estado:** Bloque A **cerrado en prod** · MDC + bandejas MVP **operativos**
+**Estado:** **Oleada A = CERRADA** (prod, documentada, evidencia E2E) · Bloque A create Patrón B **cerrado**
 
-> **Entrada evidencia:** [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md)  
-> **Siguiente trabajo recomendado:** § 4 de este documento.
+> **Evidencia Oleada A (referencia):** [`TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md`](./TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md) · `sol_01KS57Y01GDWCZFAS2EFF4JKP7`  
+> **Create Patrón B:** [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md)  
+> **Siguiente sprint:** § 4 — bifurcación **Oleada B (MDC/fan-out)** vs **Hardening UI RRHH** (paralelizable).
 
 ---
 
@@ -33,16 +34,19 @@ Docs legacy en Firestore pueden seguir con `version_aplicada` en raíz; **docume
 
 ---
 
-## 2. Estado runtime (AS-IS en prod)
+## 2. Estado runtime (prod tras Oleada A — 21-may)
 
 | Capa | Estado |
 |------|--------|
-| Ticketera + preview + alta Patrón B | OK (regresión 21-may) |
-| MDC emisor (`PROYECTAR_PENDIENTE`, `AUTORIZAR_JEFE`, `CONSOLIDAR_APROBADO`) | OK |
-| Bandeja jefe → `en_revision_rrhh` | MVP (no cierra trámite) |
-| Bandeja RRHH → `cfg_esa_aprobada` | MVP (“aprobar definitivo”) — **no** TO-BE |
-| Superposición `cfg_ps_bloqueante` | OK (Oleada B 20-may) |
-| Gate grilla `depende_rda` | **Hecho** en `runPatronBAltaMotor` — evidencia [`TICKETERA_EVIDENCIA_2026-05-21_GRILLA_RDA_REJECT.md`](./TICKETERA_EVIDENCIA_2026-05-21_GRILLA_RDA_REJECT.md) |
+| Ticketera + preview + alta Patrón B | OK · snapshot A2 en alta |
+| Autorización jefe (flujo nuevo) | **TO-BE:** aprueba → `cfg_esa_aprobada` + `CONSOLIDAR_APROBADO` |
+| RRHH (flujo nuevo) | **TO-BE:** solo **toma de conocimiento** en `aprobada` (sin `rrhh_revision_*` en caso limpio) |
+| Eventos `eventos_ticket` | Dual-write: `jefe_aprobar` + `rrhh_toma_conocimiento` (evidencia `evt_*` en doc dedicado) |
+| MDC emisor | OK en bandejas; **worker / fan-out** = Oleada B (pendiente) |
+| Superposición `cfg_ps_bloqueante` | OK |
+| Gate grilla `depende_rda` | OK en motor — [`TICKETERA_EVIDENCIA_2026-05-21_GRILLA_RDA_REJECT.md`](./TICKETERA_EVIDENCIA_2026-05-21_GRILLA_RDA_REJECT.md) |
+
+**Legacy en Firestore:** solicitudes con `cfg_esa_en_revision_rrhh` o `rrhh_revision_*` siguen existiendo; no son plantilla del flujo nuevo. Ver contraste `sol_01KS0896…` en evidencia Oleada A §2.
 
 ---
 
@@ -60,77 +64,95 @@ Docs legacy en Firestore pueden seguir con `version_aplicada` en raíz; **docume
 
 ---
 
-## 4. Por dónde continuar (prioridad sugerida)
+## 4. Oleada A — cerrada ✅
 
-### A — Producto + código: **Oleada A autorización** (recomendado)
+Implementación y validación en prod completas. Contrato: [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) · plan: [`PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md`](./PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md) oleada A.
 
-**Por qué primero:** el piloto `sol_01KS50G2…` demostró de nuevo el problema de **dos aprobaciones** (jefe + RRHH). El contrato TO-BE ya está redactado; falta implementación.
+| Entregable Oleada A | Estado |
+|---------------------|--------|
+| Jefe cierra → `cfg_esa_aprobada` + MDC `CONSOLIDAR_APROBADO` | ✅ |
+| Snapshot alta (`autorizadores_elegibles_ids`, ancla, versión) | ✅ |
+| RRHH TC (`rrhh_toma_conocimiento_*`, callable A4) | ✅ |
+| Eventos `jefe_aprobar` / `rrhh_toma_conocimiento` (A6 dual-write) | ✅ |
+| Evidencia E2E sin doble aprobación RRHH | ✅ `sol_01KS57Y…` |
 
-| Fuente | Contenido |
-|--------|-----------|
-| [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) | Jefe cierra → `cfg_esa_aprobada`; RRHH **toma de conocimiento** |
-| [`PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md`](./PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md) | Oleadas A / B / C |
-
-**Primeros pasos Oleada A (resumen):**
-
-1. `resolverDecisionJefeSolicitud` → estado final **`cfg_esa_aprobada`** (no `en_revision_rrhh` en flujo nuevo).
-2. Bandeja RRHH: acción **“Registrar toma de conocimiento”** (sin segunda aprobación sustantiva).
-3. MDC: `CONSOLIDAR_APROBADO` al cierre jefe; RRHH dispara evento/registro distinto.
-4. Quitar bypass RRHH en bandeja jefe (según plan).
-5. Campos `sol_*` TO-BE: `autorizadores_elegibles_ids`, `grupo_autorizacion_id`, etc. (plan § A).
-
-**Prueba de aceptación:** misma persona 27667499 / 28914247 — un solo “aprobar” sustantivo + RRHH solo TC + `asi`/`vis` coherentes. **Evidencia cerrada (21-may):** [`TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md`](./TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md) · `sol_01KS57Y01GDWCZFAS2EFF4JKP7`.
-
----
-
-### B — Integridad motor: **grilla RDA en trigger** ✅ (2026-05-21)
-
-`validarGrillaHorariaParaSolicitud` integrado en `runPatronBAltaMotor` (`solicitudPatronBAltaMotor.js`) cuando `depende_rda === true`, antes del OK de saldo. El trigger `onSolicitudArticuloPatronBOnCreate` rechaza con `GRILLA_NO_AUTORIZADA` sin descontar. Preview usa el mismo motor (sin segunda pasada duplicada).
-
-**Deploy pendiente en prod:** `onSolicitudArticuloPatronBOnCreate`, `previsualizarSolicitudPatronB`.
-
----
-
-### C — Deuda menor create / validaciones
+**Deuda Oleada A (no bloqueante — no reabrir la oleada):**
 
 | Ítem | Notas |
 |------|--------|
-| `dias_minimos_por_evento` | No validado explícitamente en motor |
-| `genero_ids` en versión | No evaluado en elegibilidad |
-| `eventos_ticket` toma de conocimiento RRHH | Oleada A / plan eventos RRHH |
-| Migración lectura `version_aplicada` → solo `version_id_aplicada` en UI de detalle | Opcional; motor ya acepta ambos |
+| Copy toast alta | «en revisión por jefe» correcto al crear; confunde si se lee tras cierre — `TicketeraPatronB.jsx` |
+| Proyección `estado_bandeja_rrhh_id` en eventos `articulos` | Default `cfg_ebr_pend_rev` en capa global; no implica pendiente de licencia |
+| TC superiores (burbujeo) | RFC §2 ítem 9 · `niveles_burbujeo` — módulo posterior |
+| Filas legacy / híbridas en BD | Operación histórica; UI puede seguir mostrando modos `legacy_rrhh` |
 
 ---
 
-### D — Ticketera producto (después de A)
+## 5. Siguiente sprint — bifurcación de trabajo
 
-| Ítem | Doc |
-|------|-----|
-| Shell LAO unificado | F3a parcial en [`PLAN_TICKETERA_V2.md`](./PLAN_TICKETERA_V2.md) |
-| Licencias médicas + bandeja médico | F5 pendiente |
-| Delegación jefe → subordinado | [`CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md`](./CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md) |
-| Matriz R3 rechazo RRHH | [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS_FASE4_RRHH.md`](./TICKETERA_SLICE_64A_MATRIZ_PRUEBAS_FASE4_RRHH.md) (sigue válida en MVP hasta Oleada A) |
+Dos frentes **independientes** (misma rama posible, distinto tipo de esfuerzo):
+
+### 5.1 Oleada B — MDC / fan-out (núcleo duro)
+
+**Objetivo:** consistencia asistencial a escala — proyección `asi_*` → `vis_*`, worker MDC, idempotencia y concurrencia.
+
+| Fuente | Contenido |
+|--------|-----------|
+| [`PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md`](./PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md) | Oleada B |
+| [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) | §7 MDC, §10 oleada B |
+
+**Foco mental:** workers, reintentos, gates grilla ya validados en alta — **no** mezclar con tweaks de copy.
+
+**Prerrequisito:** Oleada A cerrada (este handoff).
 
 ---
 
-### E — Operación repo
+### 5.2 Hardening UI RRHH (aseguramiento operativo)
 
-- **Commit** en rama: Bloque A + docs 21-may (si aún no commiteado en la PC que editó).
-- **Push** para alinear otra máquina.
-- No mezclar con refactor configurador artículos salvo PR aparte.
+**Objetivo:** que el operador **no** vea acciones sustantivas obsoletas cuando el backend ya está en TO-BE.
+
+| Tarea | Código / notas |
+|-------|----------------|
+| Solo **Registrar toma de conocimiento** en `cfg_esa_aprobada` sin TC | `bandejaRrhhModoItem` en `solicitudBandejaRrhhCore.js` + `BandejaRrhhSolicitudes.jsx` |
+| Aprobar/Rechazar RRHH solo en `legacy_rrhh` o `cierre_sustituta` | Ya modelado en backend; verificar deploy hosting y filtros lista |
+| Mensajes alineados a modos (`toma_conocimiento`, `legacy_rrhh`) | Copy UI |
+
+**Foco mental:** bajo riesgo si backend no se toca — **paz mental** del operador.
+
+**Paralelizable** con 5.1 si hay dos personas; si una sola, recomendación doc: **5.2 rápido primero** (1 sesión) y luego **5.1**.
 
 ---
 
-## 5. Decisión rápida para la próxima sesión
+### 5.3 Otros (encadenados, no bloquean A)
+
+| Ítem | Doc / notas |
+|------|-------------|
+| Grilla RDA deploy functions | Verificar `onSolicitudArticuloPatronBOnCreate` en prod si hubo cambio pendiente |
+| Deuda create § C (días mínimos, género) | Menor |
+| Ticketera F3a / F5 / delegación | [`PLAN_TICKETERA_V2.md`](./PLAN_TICKETERA_V2.md) |
+
+---
+
+## 6. Histórico — grilla RDA en trigger ✅ (2026-05-21)
+
+`validarGrillaHorariaParaSolicitud` integrado en `runPatronBAltaMotor` (`solicitudPatronBAltaMotor.js`) cuando `depende_rda === true`, antes del OK de saldo. El trigger `onSolicitudArticuloPatronBOnCreate` rechaza con `GRILLA_NO_AUTORIZADA` sin descontar. Preview usa el mismo motor (sin segunda pasada duplicada).
+
+**Deploy pendiente (verificar en prod):** `onSolicitudArticuloPatronBOnCreate`, `previsualizarSolicitudPatronB` si hubo release posterior al 21-may.
+
+---
+
+## 7. Decisión rápida (próxima sesión)
 
 ```text
-¿Cerramos el modelo de autorizaciones (Oleada A)?
-  → Sí: abrir PLAN_IMPLEMENTACION oleada A, tarea 1 = callable jefe + estados.
-  → No, solo hardening: ítem B (grilla en trigger) + matriz superposición.
+Oleada A → CERRADA. No reabrir salvo bug de regresión con evidencia nueva.
+
+¿Qué abro?
+  → Oleada B (MDC worker / fan-out): PLAN § oleada B — foco profundo backend.
+  → Hardening UI RRHH: BandejaRrhh — ocultar “aprobar definitivo” salvo legacy/sustituta.
+  → Ambos en paralelo si hay dos personas; si uno solo: hardening UI primero (corto), luego B.
 ```
 
-**Recomendación del equipo técnico (doc):** **A** primero; B en paralelo si hay dos personas; C y D encadenados tras A.
+**Repo:** evidencia Oleada A en `3c48899` (docs) — rama `feature/ticketera-puente-campos-config` alineada con `origin`.
 
 ---
 
-*Fin handoff 2026-05-21.*
+*Handoff cerrado 2026-05-21 — Oleada A terminada. Retomar desde § 5.*
