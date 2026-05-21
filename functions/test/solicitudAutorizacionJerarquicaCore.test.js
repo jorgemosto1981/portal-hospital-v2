@@ -36,19 +36,24 @@ describe("autorizadoresCandidatosEnGrupo", () => {
 });
 
 describe("reducirAutorizadoresPorMejorRango", () => {
-  it("escalón inmediato = min nivel entre superiores (empate OR)", () => {
+  it("autoriza el nivel más alto entre superiores (empate OR)", () => {
+    const r = reducirAutorizadoresPorMejorRango([
+      { persona_id: "per_25", nivel: 25 },
+      { persona_id: "per_60", nivel: 60 },
+      { persona_id: "per_77", nivel: 77 },
+      { persona_id: "per_77b", nivel: 77 },
+    ]);
+    assert.deepEqual(r.autorizadores_elegibles_ids, ["per_77", "per_77b"]);
+    assert.equal(r.nivel_autorizacion, 77);
+  });
+
+  it("titular 20 con 25 y 90 → gana 90", () => {
     const r = reducirAutorizadoresPorMejorRango([
       { persona_id: "per_A", nivel: 90 },
       { persona_id: "per_B", nivel: 90 },
       { persona_id: "per_C", nivel: 25 },
     ]);
-    assert.deepEqual(r.autorizadores_elegibles_ids, ["per_C"]);
-    assert.equal(r.nivel_autorizacion, 25);
-  });
-
-  it("un solo superior alto", () => {
-    const r = reducirAutorizadoresPorMejorRango([{ persona_id: "per_A", nivel: 90 }]);
-    assert.deepEqual(r.autorizadores_elegibles_ids, ["per_A"]);
+    assert.deepEqual(r.autorizadores_elegibles_ids, ["per_A", "per_B"]);
     assert.equal(r.nivel_autorizacion, 90);
   });
 });

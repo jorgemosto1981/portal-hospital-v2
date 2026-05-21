@@ -83,14 +83,15 @@ function autorizadoresCandidatosEnGrupo(integrantesVigentes, titularPersonaId, n
 }
 
 /**
- * Un escalón jerárquico: el menor nivel entre superiores (el inmediato más cercano al titular).
+ * Autorizador(es) con el **mayor** nivel jerárquico entre superiores (hasta 99).
+ * Ej.: titular 20 y niveles 25, 60, 77 → autoriza quien tenga 77 (empate OR si varios en 77).
  * @param {Array<{ persona_id: string, nivel: number }>} candidatos
  */
 function reducirAutorizadoresPorMejorRango(candidatos) {
   if (candidatos.length === 0) {
     return { autorizadores_elegibles_ids: [], nivel_autorizacion: null };
   }
-  const nivelAuth = Math.min(...candidatos.map((c) => c.nivel));
+  const nivelAuth = Math.max(...candidatos.map((c) => c.nivel));
   const ids = [
     ...new Set(
       candidatos.filter((c) => c.nivel === nivelAuth).map((c) => c.persona_id),
