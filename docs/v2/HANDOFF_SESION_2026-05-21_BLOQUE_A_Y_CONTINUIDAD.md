@@ -130,13 +130,14 @@ Deploy hosting: copy bandeja RRHH + toast alta Patrón B (`b928606`). Smoke pend
 
 **UI hoy:** `/portal/rrhh/notificaciones-datos-personales` filtra cliente con `isEventoDatosPersonales` (`cfg_tev_datos_*`, auth, ddjj) — **no** lista `cfg_tev_art_*`. El riesgo es auditoría/consultas RRHH sin filtro y datos “fantasma” en colección bandeja.
 
-**Fix propuesto (quirúrgico):**
+**Fix (implementado en código):**
 
-1. `eventosV2.js` · `persistEventoV21`: **no escribir** `eventos_bandeja_rrhh` cuando `modulo_origen === "articulos"` (mantener `eventos_ticket` raíz + subcol + `eventos_por_persona` / `eventos_por_modulo`).
-2. Opcional: script one-off para borrar o archivar proyecciones bandeja existentes con `modulo_origen: articulos`.
-3. Evidencia: tras TC, **no** debe existir fila bandeja `pend_rev` para `evt_*` de artículos; timeline sigue en `solicitudes_articulo/.../eventos_ticket`.
+1. ✅ `eventosV2.js` · `debeProyectarBandejaRrhh` + `persistEventoV21`: **no escribe** `eventos_bandeja_rrhh` si `modulo_origen === "articulos"`.
+2. Test: `node --test functions/test/eventosV2.bandejaRrhh.test.js`
+3. Pendiente prod: `npm run firebase:deploy:functions` (callables que usan `registrarEventoTicket` / `persistEventoV21`).
+4. Opcional: script one-off para borrar proyecciones bandeja **históricas** con `modulo_origen: articulos`.
 
-**Prueba:** repetir lectura de `evt_01KS57ZY…` en raíz `eventos_ticket` (sin `estado_bandeja` engañoso en bandeja) + listar bandeja con filtro pendientes sin artículos.
+**Prueba post-deploy:** nuevo TC o `jefe_aprobar` → doc en `eventos_ticket` raíz + subcol; **no** crear doc en `eventos_bandeja_rrhh` con el mismo `evt_id`.
 
 ---
 
@@ -156,7 +157,7 @@ Orden recomendado (**casa limpia** antes de Oleada C):
 |------|--------|------|
 | 1 | **Smoke prod:** hosting + bandeja solicitudes RRHH + toast alta 64-A | ☐ |
 | 2 | **Repo:** `git checkout -- functions/modules/shared/solicitudElegibilidadLaboral.js` (solo CRLF) | ✅ |
-| 3 | **Deuda §5.4:** eventos `articulos` sin proyección bandeja RRHH + deploy functions | ☐ |
+| 3 | **Deuda §5.4:** eventos `articulos` sin proyección bandeja RRHH + deploy functions | ✅ (21-may prod) |
 | 4 | **Oleada C:** asistencia / GSO / grilla operativa (épica) | ☐ |
 
 ```text

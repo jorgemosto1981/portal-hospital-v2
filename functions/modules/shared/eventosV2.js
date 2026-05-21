@@ -10,6 +10,17 @@ const {
 
 const EVENT_SCHEMA_VERSION = "eventos_v2_1";
 
+/** Bandeja `eventos_bandeja_rrhh` = acuse ficha personal / DDJJ / auth, no ticketera artículos. */
+const MODULOS_SIN_PROYECCION_BANDEJA_RRHH = new Set(["articulos"]);
+
+/**
+ * @param {string | null | undefined} moduloOrigen
+ */
+function debeProyectarBandejaRrhh(moduloOrigen) {
+  const mod = String(moduloOrigen || "").trim().toLowerCase();
+  return mod.length > 0 && !MODULOS_SIN_PROYECCION_BANDEJA_RRHH.has(mod);
+}
+
 function formatPeriodoYyyymm(date = new Date()) {
   const yyyy = date.getUTCFullYear();
   const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -150,32 +161,39 @@ function buildEventoPorModuloProjection(evento) {
 
 async function persistEventoV21({ db, evento, writer }) {
   const eventoRef = db.collection(COL_EVENTOS).doc(evento.id);
-  const bandeja = buildBandejaRrhhProjection(evento);
-  const bandejaRef = db.collection(COL_EVENTOS_BANDEJA_RRHH).doc(bandeja.id);
+  const proyectarBandeja = debeProyectarBandejaRrhh(evento.modulo_origen);
+  const bandeja = proyectarBandeja ? buildBandejaRrhhProjection(evento) : null;
+  const bandejaRef =
+    proyectarBandeja && bandeja
+      ? db.collection(COL_EVENTOS_BANDEJA_RRHH).doc(bandeja.id)
+      : null;
   const porPersona = buildEventoPorPersonaProjection(evento);
   const porPersonaRef = db.collection(COL_EVENTOS_POR_PERSONA).doc(porPersona.id);
   const porModulo = buildEventoPorModuloProjection(evento);
   const porModuloRef = db.collection(COL_EVENTOS_POR_MODULO).doc(porModulo.id);
   if (writer && typeof writer.set === "function") {
     writer.set(eventoRef, evento, { merge: true });
-    writer.set(bandejaRef, bandeja, { merge: true });
+    if (bandejaRef && bandeja) writer.set(bandejaRef, bandeja, { merge: true });
     writer.set(porPersonaRef, porPersona, { merge: true });
     writer.set(porModuloRef, porModulo, { merge: true });
     return;
   }
-  await Promise.all([
+  const ops = [
     eventoRef.set(evento, { merge: true }),
-    bandejaRef.set(bandeja, { merge: true }),
     porPersonaRef.set(porPersona, { merge: true }),
     porModuloRef.set(porModulo, { merge: true }),
-  ]);
+  ];
+  if (bandejaRef && bandeja) ops.push(bandejaRef.set(bandeja, { merge: true }));
+  await Promise.all(ops);
 }
 
 module.exports = {
   EVENT_SCHEMA_VERSION,
+  MODULOS_SIN_PROYECCION_BANDEJA_RRHH,
   formatPeriodoYyyymm,
   buildPersonaLabel,
   buildEventoV21,
+  debeProyectarBandejaRrhh,
   buildBandejaRrhhProjection,
   buildEventoPorPersonaProjection,
   buildEventoPorModuloProjection,
