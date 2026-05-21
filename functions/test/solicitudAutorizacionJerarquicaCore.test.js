@@ -2,6 +2,7 @@
 
 /**
  * Pruebas unitarias (sin Firestore) — lógica pura §5.2.
+ * Escala: 01 menor … 99 mayor jerarquía.
  * Ejecutar: node --test functions/test/solicitudAutorizacionJerarquicaCore.test.js
  */
 const { describe, it } = require("node:test");
@@ -14,17 +15,18 @@ const {
 
 describe("autorizadoresCandidatosEnGrupo", () => {
   const integrantes = [
-    { persona_id: "per_TITULAR", grupo_de_trabajo_id: "gdt_A", nivel_jerarquico: 40 },
-    { persona_id: "per_JEFE_A", grupo_de_trabajo_id: "gdt_A", nivel_jerarquico: 10 },
-    { persona_id: "per_JEFE_B", grupo_de_trabajo_id: "gdt_A", nivel_jerarquico: 10 },
-    { persona_id: "per_OTRO", grupo_de_trabajo_id: "gdt_A", nivel_jerarquico: 25 },
+    { persona_id: "per_TITULAR", grupo_de_trabajo_id: "gdt_A", nivel_jerarquico: 20 },
+    { persona_id: "per_BAJO", grupo_de_trabajo_id: "gdt_A", nivel_jerarquico: 1 },
+    { persona_id: "per_JEFE_A", grupo_de_trabajo_id: "gdt_A", nivel_jerarquico: 90 },
+    { persona_id: "per_JEFE_B", grupo_de_trabajo_id: "gdt_A", nivel_jerarquico: 90 },
+    { persona_id: "per_MEDIO", grupo_de_trabajo_id: "gdt_A", nivel_jerarquico: 25 },
     { persona_id: "per_SIN_NIVEL", grupo_de_trabajo_id: "gdt_A", nivel_jerarquico: null },
   ];
 
-  it("excluye titular y niveles >= titular", () => {
-    const c = autorizadoresCandidatosEnGrupo(integrantes, "per_TITULAR", 40);
+  it("solo niveles estrictamente mayores que el titular", () => {
+    const c = autorizadoresCandidatosEnGrupo(integrantes, "per_TITULAR", 20);
     const ids = c.map((x) => x.persona_id).sort();
-    assert.deepEqual(ids, ["per_JEFE_A", "per_JEFE_B", "per_OTRO"]);
+    assert.deepEqual(ids, ["per_JEFE_A", "per_JEFE_B", "per_MEDIO"]);
   });
 
   it("sin nivel titular → sin candidatos", () => {
@@ -34,14 +36,20 @@ describe("autorizadoresCandidatosEnGrupo", () => {
 });
 
 describe("reducirAutorizadoresPorMejorRango", () => {
-  it("empate OR — solo nivel mínimo", () => {
+  it("escalón inmediato = min nivel entre superiores (empate OR)", () => {
     const r = reducirAutorizadoresPorMejorRango([
-      { persona_id: "per_A", nivel: 10 },
-      { persona_id: "per_B", nivel: 10 },
-      { persona_id: "per_C", nivel: 15 },
+      { persona_id: "per_A", nivel: 90 },
+      { persona_id: "per_B", nivel: 90 },
+      { persona_id: "per_C", nivel: 25 },
     ]);
-    assert.deepEqual(r.autorizadores_elegibles_ids, ["per_A", "per_B"]);
-    assert.equal(r.nivel_autorizacion, 10);
+    assert.deepEqual(r.autorizadores_elegibles_ids, ["per_C"]);
+    assert.equal(r.nivel_autorizacion, 25);
+  });
+
+  it("un solo superior alto", () => {
+    const r = reducirAutorizadoresPorMejorRango([{ persona_id: "per_A", nivel: 90 }]);
+    assert.deepEqual(r.autorizadores_elegibles_ids, ["per_A"]);
+    assert.equal(r.nivel_autorizacion, 90);
   });
 });
 

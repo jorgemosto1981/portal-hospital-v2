@@ -62,11 +62,6 @@ async function loadArticuloDisplay(db, articuloId, cache) {
 async function revisorVeSolicitudEnBandejaJefe(db, sol, revisorPersonaId) {
   if (sol.autorizacion_rrhh_sustituta === true) return false;
 
-  const ids = Array.isArray(sol.autorizadores_elegibles_ids) ? sol.autorizadores_elegibles_ids : [];
-  if (ids.length > 0) {
-    return revisorPuedeAutorizarJerarquico(sol, revisorPersonaId);
-  }
-
   const titularId = String(sol.titular_persona_id || "").trim();
   const ancla = String(sol.grupo_trabajo_id_ancla || "").trim();
   const fechaRef = String(sol.fecha_desde || "").slice(0, 10);

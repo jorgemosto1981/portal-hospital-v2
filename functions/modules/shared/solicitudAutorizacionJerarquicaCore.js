@@ -59,7 +59,8 @@ async function escalarGrupoPadre(db, gdtId, visited) {
 }
 
 /**
- * Candidatos con nivel estrictamente menor que el titular (mejor rango = número menor).
+ * Superiores jerárquicos: `nivel_jerarquico` 01–99 donde **01 = menor** y **99 = mayor**.
+ * Candidatos con nivel **estrictamente mayor** que el titular en la burbuja.
  * @param {Array<Record<string, unknown>>} integrantesVigentes
  * @param {string} titularPersonaId
  * @param {number|null} nivelTitular
@@ -76,12 +77,13 @@ function autorizadoresCandidatosEnGrupo(integrantesVigentes, titularPersonaId, n
     if (rawNivel === null || rawNivel === undefined || rawNivel === "") continue;
     const n = Number(rawNivel);
     if (!Number.isFinite(n)) continue;
-    if (n < nivelTitular) out.push({ persona_id: pid, nivel: n });
+    if (n > nivelTitular) out.push({ persona_id: pid, nivel: n });
   }
   return out;
 }
 
 /**
+ * Un escalón jerárquico: el menor nivel entre superiores (el inmediato más cercano al titular).
  * @param {Array<{ persona_id: string, nivel: number }>} candidatos
  */
 function reducirAutorizadoresPorMejorRango(candidatos) {
@@ -268,19 +270,6 @@ function revisorPuedeAutorizarJerarquico(sol, revisorPersonaId, opts = {}) {
  * @param {string} revisorPersonaId
  */
 async function revalidarRevisorEnAutorizadores(db, sol, revisorPersonaId) {
-  const snapIds = Array.isArray(sol.autorizadores_elegibles_ids)
-    ? sol.autorizadores_elegibles_ids
-    : null;
-
-  if (snapIds && snapIds.length > 0) {
-    return revisorPuedeAutorizarJerarquico(sol, revisorPersonaId)
-      ? { ok: true }
-      : {
-          ok: false,
-          codigo: CODIGO_PERMISOS_JERARQUICOS_CAMBIADOS,
-        };
-  }
-
   const cadena = await resolverCadenaAutorizacion(db, {
     titularPersonaId: String(sol.titular_persona_id || ""),
     grupoTrabajoIdAncla: String(sol.grupo_trabajo_id_ancla || ""),

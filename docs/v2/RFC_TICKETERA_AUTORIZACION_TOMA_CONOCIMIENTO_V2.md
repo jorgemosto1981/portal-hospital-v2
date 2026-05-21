@@ -37,7 +37,7 @@
 | # | Tema | Decisión |
 |---|------|----------|
 | 1 | Rol RRHH | **Opción B:** RRHH **no** cierra sustantivamente en flujo normal. **Toma de conocimiento** (acuse). **Cierre** (`cfg_esa_aprobada`) = autorizador jerárquico en bandeja jefe. |
-| 2 | Quién autoriza | En el `grupo_trabajo_id` ancla: integrantes con `nivel_jerarquico` **estrictamente menor** que el titular. Entre ellos, los de **mejor rango** (menor número 1–99). **Un solo paso** de autorización. |
+| 2 | Quién autoriza | En el `grupo_trabajo_id` ancla: integrantes con `nivel_jerarquico` **estrictamente mayor** que el titular (escala **01 = menor**, **99 = mayor**). Entre superiores, el **escalón inmediato** = **menor** nivel &gt; titular; empate OR en ese escalón. **Un solo paso** de autorización. |
 | 3 | Empate mismo nivel | **OR:** cualquiera de los empatados puede aprobar/rechazar; todos ven bandeja; el primero cierra. |
 | 4 | Sin superior en burbuja | Escalar por `grupos_de_trabajo.parent_group_id` hasta encontrar autorizador (`MAX_DEPTH = 10`). |
 | 5 | Solicitud huérfana | Sin padre útil → **RRHH sustituta** con **cierre sustantivo** (excepción a opción B). |
@@ -145,10 +145,10 @@ stateDiagram-v2
 ```
 1. Cargar HLg vigentes (activo !== false) de titular y de todos los integrantes del gdt en fecha_desde.
 2. nivel_titular = nivel del titular en gdt ancla (si null → tratar como sin nivel en burbuja).
-3. candidatos = { persona_id | nivel < nivel_titular y nivel no null }
+3. candidatos = { persona_id | nivel > nivel_titular y nivel no null }
 4. Si candidatos vacío → ESCALAR: gdt_padre = parent_group_id, depth++, repetir desde 2 (MAX_DEPTH=10).
 5. Si depth > MAX_DEPTH o sin padre → autorizacion_rrhh_sustituta = true; bandeja RRHH sustituta.
-6. nivel_auth = MIN(nivel) sobre candidatos
+6. nivel_auth = MIN(nivel) sobre candidatos (escalón inmediato superior)
 7. autorizadores_elegibles = { persona_id | nivel == nivel_auth }
 8. revisor puede gestionar ⟺ revisor ∈ autorizadores_elegibles (sin bypass CFG_RRHH en bandeja jefe).
 ```
