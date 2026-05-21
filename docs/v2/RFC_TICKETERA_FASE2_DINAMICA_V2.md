@@ -79,6 +79,18 @@ Referencia LAO: `simularLaoPreview`.
 
 ---
 
+## 3bis. Flujo progresivo — Paso 2 entorno
+
+Contrato del callable **`validarEntornoOperativoSolicitud`** (HLg, grupo ancla, grilla RDA, turno futuro): [`RFC_TICKETERA_FLUJO_PROGRESIVO_PASO2_ENTORNO_V2.md`](./RFC_TICKETERA_FLUJO_PROGRESIVO_PASO2_ENTORNO_V2.md).
+
+| Paso UI | Callable |
+|---------|----------|
+| 1 Artículo | `listarArticulosIngresoAgente` |
+| 2 Fecha + HLg | `validarEntornoOperativoSolicitud` *(propuesto)* |
+| 3 Preview | `previsualizarSolicitudPatronB` |
+
+---
+
 ## 4. UI agente (oleadas)
 
 | Oleada | Entrega |
