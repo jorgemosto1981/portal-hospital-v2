@@ -20,26 +20,51 @@ const ESTADOS_BANDEJA_RRHH_VISIBLES = [
 function bandejaRrhhModoItem(sol) {
   const est = String(sol.estado_solicitud_id || "").trim();
   if (est === ESTADO_SOLICITUD_EN_REVISION_RRHH) {
-    return { modo: "legacy_rrhh", puede_aprobar_rechazar: true, etiqueta_estado: "Pendiente RRHH (legacy)" };
+    return {
+      modo: "legacy_rrhh",
+      puede_aprobar_rechazar: true,
+      puede_registrar_toma_conocimiento: false,
+      etiqueta_estado: "Pendiente RRHH (legacy)",
+    };
   }
   if (est === ESTADO_SOLICITUD_EN_REVISION_JEFE && sol.autorizacion_rrhh_sustituta === true) {
-    return { modo: "cierre_sustituta", puede_aprobar_rechazar: true, etiqueta_estado: "Huérfana — cierre RRHH" };
+    return {
+      modo: "cierre_sustituta",
+      puede_aprobar_rechazar: true,
+      puede_registrar_toma_conocimiento: false,
+      etiqueta_estado: "Huérfana — cierre RRHH",
+    };
   }
   if (est === ESTADO_SOLICITUD_EN_REVISION_JEFE) {
     return {
       modo: "visibilidad_jefe",
       puede_aprobar_rechazar: false,
+      puede_registrar_toma_conocimiento: false,
       etiqueta_estado: "En revisión por jefatura",
     };
   }
   if (est === ESTADO_SOLICITUD_APROBADA) {
+    if (sol.rrhh_toma_conocimiento_en) {
+      return {
+        modo: "toma_conocimiento_ok",
+        puede_aprobar_rechazar: false,
+        puede_registrar_toma_conocimiento: false,
+        etiqueta_estado: "Toma de conocimiento registrada",
+      };
+    }
     return {
       modo: "toma_conocimiento",
       puede_aprobar_rechazar: false,
-      etiqueta_estado: "Aprobada — toma de conocimiento (próx.)",
+      puede_registrar_toma_conocimiento: true,
+      etiqueta_estado: "Aprobada — pendiente toma de conocimiento RRHH",
     };
   }
-  return { modo: "otro", puede_aprobar_rechazar: false, etiqueta_estado: est };
+  return {
+    modo: "otro",
+    puede_aprobar_rechazar: false,
+    puede_registrar_toma_conocimiento: false,
+    etiqueta_estado: est,
+  };
 }
 const { loadArticuloDisplay } = require("./solicitudBandejaJefeCore");
 const { revertirMotorBolsaPatronBEnTx } = require("./solicitudPatronBReversoSaldo");
@@ -106,7 +131,9 @@ async function listarSolicitudesBandejaRrhh(db) {
       autorizacion_rrhh_sustituta: sol.autorizacion_rrhh_sustituta === true,
       bandeja_rrhh_modo: modo.modo,
       puede_aprobar_rechazar: modo.puede_aprobar_rechazar,
+      puede_registrar_toma_conocimiento: modo.puede_registrar_toma_conocimiento === true,
       etiqueta_estado: modo.etiqueta_estado,
+      rrhh_toma_conocimiento_en: sol.rrhh_toma_conocimiento_en || null,
     });
   }
 
@@ -200,7 +227,51 @@ async function resolverDecisionRrhhSolicitud(db, solId, revisorPersonaId, decisi
   return { ok: false, codigo: "DECISION_INVALIDA", mensaje: "Decisión inválida." };
 }
 
+/**
+ * Toma de conocimiento RRHH (Oleada A4): no cambia estado sustantivo.
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {string} solId
+ * @param {string} revisorPersonaId
+ * @param {string} motivo
+ */
+async function registrarTomaConocimientoRrhhSolicitud(db, solId, revisorPersonaId, motivo) {
+  const solRef = db.collection(COL_SOL).doc(solId);
+  const solSnap = await solRef.get();
+  if (!solSnap.exists) {
+    return { ok: false, codigo: "NOT_FOUND", mensaje: "La solicitud no existe." };
+  }
+  const sol = solSnap.data() || {};
+  if (String(sol.estado_solicitud_id) !== ESTADO_SOLICITUD_APROBADA) {
+    return {
+      ok: false,
+      codigo: "ESTADO_INVALIDO",
+      mensaje: "Solo se registra toma de conocimiento en solicitudes ya aprobadas por jefatura.",
+    };
+  }
+  if (sol.rrhh_toma_conocimiento_en) {
+    return {
+      ok: false,
+      codigo: "TC_YA_REGISTRADA",
+      mensaje: "La toma de conocimiento ya fue registrada.",
+    };
+  }
+
+  await solRef.update({
+    rrhh_toma_conocimiento_persona_id: revisorPersonaId,
+    rrhh_toma_conocimiento_en: FieldValue.serverTimestamp(),
+    rrhh_toma_conocimiento_motivo: motivo || null,
+    actualizado_en: FieldValue.serverTimestamp(),
+  });
+
+  return {
+    ok: true,
+    solicitud_id: solId,
+    estado_solicitud_id: ESTADO_SOLICITUD_APROBADA,
+  };
+}
+
 module.exports = {
   listarSolicitudesBandejaRrhh,
   resolverDecisionRrhhSolicitud,
+  registrarTomaConocimientoRrhhSolicitud,
 };

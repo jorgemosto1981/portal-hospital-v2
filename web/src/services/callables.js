@@ -240,3 +240,8 @@ export function callListarSolicitudesBandejaRrhh(data) {
 export function callResolverDecisionRrhhSolicitud(data) {
   return httpsCallable(getFunctionsV2(), "resolverDecisionRrhhSolicitud")(data);
 }
+
+/** Registrar toma de conocimiento RRHH (solicitud ya cfg_esa_aprobada). */
+export function callRegistrarTomaConocimientoRrhhSolicitud(data) {
+  return httpsCallable(getFunctionsV2(), "registrarTomaConocimientoRrhhSolicitud")(data);
+}

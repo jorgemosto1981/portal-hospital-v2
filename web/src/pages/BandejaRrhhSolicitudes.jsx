@@ -8,6 +8,7 @@ import {
 } from "../features/solicitudes/bandejaSolicitudesFormat.js";
 import {
   callListarSolicitudesBandejaRrhh,
+  callRegistrarTomaConocimientoRrhhSolicitud,
   callResolverDecisionRrhhSolicitud,
 } from "../services/callables.js";
 
@@ -38,6 +39,26 @@ export default function BandejaRrhhSolicitudes() {
   }, [recargar]);
 
   const sel = lista.find((s) => s.solicitud_id === selId) || null;
+
+  async function registrarTomaConocimiento() {
+    if (!selId || procesando) return;
+    setProcesando(true);
+    const t = toast.loading("Registrando toma de conocimiento…");
+    try {
+      await callRegistrarTomaConocimientoRrhhSolicitud({
+        solicitud_id: selId,
+        motivo: motivo.trim() || undefined,
+      });
+      toast.success("Toma de conocimiento registrada.", { id: t });
+      setSelId("");
+      setMotivo("");
+      await recargar();
+    } catch (e) {
+      toast.error(e?.message || "No se pudo registrar.", { id: t });
+    } finally {
+      setProcesando(false);
+    }
+  }
 
   async function decidir(decision) {
     if (!selId || procesando) return;
@@ -173,18 +194,28 @@ export default function BandejaRrhhSolicitudes() {
                 y devuelve el saldo Patrón B si correspondía.
               </p>
             </>
+          ) : sel.puede_registrar_toma_conocimiento === true ? (
+            <>
+              <p className="rounded-lg bg-violet-50 px-3 py-2 text-sm text-violet-900">
+                El jefe ya cerró la solicitud. RRHH registra acuse de conocimiento sin segunda aprobación
+                sustantiva.
+              </p>
+              <button
+                type="button"
+                disabled={procesando}
+                onClick={registrarTomaConocimiento}
+                className="min-h-11 w-full rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-800 disabled:opacity-50"
+              >
+                Registrar toma de conocimiento
+              </button>
+            </>
           ) : (
             <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
               {sel.bandeja_rrhh_modo === "visibilidad_jefe"
                 ? "Esta solicitud está a la espera de un autorizador jerárquico (bandeja jefe). RRHH no cierra este trámite salvo huérfana sustituta."
-                : sel.bandeja_rrhh_modo === "toma_conocimiento"
-                  ? "Cierre jerárquico ya realizado. La toma de conocimiento formal se habilitará en la próxima entrega (Oleada A4)."
+                : sel.bandeja_rrhh_modo === "toma_conocimiento_ok"
+                  ? "La toma de conocimiento ya fue registrada para esta solicitud."
                   : "Solo consulta en este estado; no hay acción RRHH disponible aquí."}
-              {Array.isArray(sel.autorizadores_elegibles_ids) && sel.autorizadores_elegibles_ids.length > 0 ? (
-                <span className="mt-2 block text-xs text-slate-500">
-                  Autorizador(es) elegibles: {sel.autorizadores_elegibles_ids.join(", ")}
-                </span>
-              ) : null}
             </p>
           )}
         </Card>
