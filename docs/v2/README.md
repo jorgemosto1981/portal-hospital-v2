@@ -49,6 +49,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [**`HANDOFF_SESION_2026-05-20_MDC_OLEADA_B_PAUSA.md`**](./HANDOFF_SESION_2026-05-20_MDC_OLEADA_B_PAUSA.md) | **RETOMAR AQUÍ** — Oleada B MDC desplegada; validaciones; grupo ancla; §8 próximo paso |
 | [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md) | RFC autorización + plan (doc); superseded por handoff 20-may para código |
 | [`HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md`](./HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md) | PAUSA Fase 2–4 MVP bandejas (AS-IS desplegado) |
+| [`TICKETERA_EVIDENCIA_2026-05-21_GRILLA_RDA_REJECT.md`](./TICKETERA_EVIDENCIA_2026-05-21_GRILLA_RDA_REJECT.md) | Prueba rechazo **GRILLA_NO_AUTORIZADA** (motor/trigger, sin descuento) |
 | [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) | Evidencia Bloque A create + `sol_01KS4ZG2…` / `sol_01KS50G2…` |
 | [`HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md) | **Retomar aquí** — prioridades post 21-may (Oleada A, grilla trigger, …) |
 | [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) | RFC contrato — autorización, TC RRHH, MDC, oleadas A/B/C |

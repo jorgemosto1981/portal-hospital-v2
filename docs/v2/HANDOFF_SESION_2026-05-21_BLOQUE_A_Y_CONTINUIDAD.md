@@ -42,7 +42,7 @@ Docs legacy en Firestore pueden seguir con `version_aplicada` en raíz; **docume
 | Bandeja jefe → `en_revision_rrhh` | MVP (no cierra trámite) |
 | Bandeja RRHH → `cfg_esa_aprobada` | MVP (“aprobar definitivo”) — **no** TO-BE |
 | Superposición `cfg_ps_bloqueante` | OK (Oleada B 20-may) |
-| Gate grilla `depende_rda` | Solo en **preview** callable — **pendiente** replicar en trigger si producto exige |
+| Gate grilla `depende_rda` | **Hecho** en `runPatronBAltaMotor` — evidencia [`TICKETERA_EVIDENCIA_2026-05-21_GRILLA_RDA_REJECT.md`](./TICKETERA_EVIDENCIA_2026-05-21_GRILLA_RDA_REJECT.md) |
 
 ---
 
