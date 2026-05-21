@@ -174,6 +174,37 @@ service cloud.firestore {
         && id.matches('(?i)^sol_[0-9A-HJKMNP-TV-Z]{26}$');
     }
 
+    function grupoTrabajoIdValid(id) {
+      return id is string
+        && id.matches('(?i)^gdt_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    function solicitudArticuloPatronBFieldsValid(d) {
+      return d.articulo_id is string
+        && cfgArticuloIdValidAgente(d.articulo_id)
+        && d.titular_persona_id is string
+        && cfgPersonaIdValid(d.titular_persona_id)
+        && d.actor_alta_persona_id is string
+        && cfgPersonaIdValid(d.actor_alta_persona_id)
+        && d.version_id_aplicada is string
+        && cfgArticuloVersionIdValidAgente(d.version_id_aplicada)
+        && d.grupo_trabajo_id_ancla is string
+        && grupoTrabajoIdValid(d.grupo_trabajo_id_ancla)
+        && d.fecha_desde is string
+        && d.fecha_desde.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && d.fecha_hasta is string
+        && d.fecha_hasta == d.fecha_desde
+        && d.anio_ciclo_consumo is int
+        && d.anio_ciclo_consumo >= 1900
+        && d.anio_ciclo_consumo <= 2200
+        && d.dias_solicitados is int
+        && d.dias_solicitados >= 1
+        && d.dias_solicitados <= 31
+        && d.patron_saldo == 'B'
+        && d.estado_solicitud_id == 'cfg_esa_borrador'
+        && d.schema_version == 2;
+    }
+
     function solicitudArticuloCreateShapeLao() {
       let d = request.resource.data;
       return d.keys().hasOnly([
@@ -207,11 +238,13 @@ service cloud.firestore {
 
     function solicitudArticuloCreateShapePatronB() {
       let d = request.resource.data;
-      return d.keys().hasOnly([
+      return solicitudArticuloPatronBFieldsValid(d)
+        && d.keys().hasOnly([
           'articulo_id',
           'titular_persona_id',
           'actor_alta_persona_id',
-          'version_aplicada',
+          'version_id_aplicada',
+          'grupo_trabajo_id_ancla',
           'fecha_desde',
           'fecha_hasta',
           'anio_ciclo_consumo',
@@ -221,28 +254,7 @@ service cloud.firestore {
           'schema_version',
           'creado_en',
           'actualizado_en',
-        ])
-        && d.articulo_id is string
-        && cfgArticuloIdValidAgente(d.articulo_id)
-        && d.titular_persona_id is string
-        && cfgPersonaIdValid(d.titular_persona_id)
-        && d.actor_alta_persona_id is string
-        && cfgPersonaIdValid(d.actor_alta_persona_id)
-        && d.version_aplicada is string
-        && cfgArticuloVersionIdValidAgente(d.version_aplicada)
-        && d.fecha_desde is string
-        && d.fecha_desde.matches('^\\d{4}-\\d{2}-\\d{2}$')
-        && d.fecha_hasta is string
-        && d.fecha_hasta == d.fecha_desde
-        && d.anio_ciclo_consumo is int
-        && d.anio_ciclo_consumo >= 1900
-        && d.anio_ciclo_consumo <= 2200
-        && d.dias_solicitados is int
-        && d.dias_solicitados >= 1
-        && d.dias_solicitados <= 31
-        && d.patron_saldo == 'B'
-        && d.estado_solicitud_id == 'cfg_esa_borrador'
-        && d.schema_version == 2;
+        ]);
     }
 
     function solicitudArticuloCreateShape() {

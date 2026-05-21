@@ -123,8 +123,8 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
       : 1;
 
   const requiereSeleccionGrupo = gruposVigentes.length > 1;
-  const grupoAnclaOk =
-    !requiereSeleccionGrupo || (requiereSeleccionGrupo && /^gdt_/i.test(grupoAnclaId));
+  /** Con al menos un HLg vigente, siempre debe existir ancla (autoselección o select). */
+  const grupoAnclaOk = gruposVigentes.length > 0 && /^gdt_/i.test(grupoAnclaId);
 
   const previsualizar = useCallback(async () => {
     if (!articuloSel || previewCargando || !/^per_/i.test(personaId) || !grupoAnclaOk) return;
@@ -178,13 +178,16 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     setEnviando(true);
     setError("");
     try {
+      if (!grupoAnclaOk) {
+        throw new Error("Elegí el grupo de trabajo sobre el que pedís la licencia.");
+      }
       const { solicitud_id } = await crearSolicitudArticuloPatronBBorrador({
         personaId,
         articuloId: articuloSel.articulo_id,
-        versionAplicadaId: articuloSel.version_id,
+        versionIdAplicada: articuloSel.version_id,
         fechaDesde,
         diasSolicitados,
-        grupoTrabajoIdAncla: grupoAnclaOk ? grupoAnclaId : undefined,
+        grupoTrabajoIdAncla: grupoAnclaId,
       });
       await esperarValidacionMotorPatronB(solicitud_id);
       return solicitud_id;

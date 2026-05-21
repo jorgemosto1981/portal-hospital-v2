@@ -1,6 +1,6 @@
 # Plan maestro — Ticketera / solicitudes V2
 
-**Estado del documento:** plan vivo · **última revisión:** 2026-05-19 · **PAUSA implementación:** [`HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md`](./HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md) · **Siguiente bloque:** [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md) (RFC autorización + Oleada A)  
+**Estado del documento:** plan vivo · **última revisión:** 2026-05-21 · **Create Patrón B (Bloque A):** [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) · **Continuidad:** [`HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md) · **PAUSA bandejas MVP:** [`HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md`](./HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md) · **Siguiente bloque código:** Oleada A — [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md)  
 **Ámbito:** ingreso agente, motores por patrón de saldo, bandejas (jefe / médico futuro), relación con `cfg_articulos`.
 
 **Visión de producto (incorporada):** [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md) — herramienta **dinámica**, fechas impuestas, preview, subflujos LAO y licencias médicas.
@@ -15,6 +15,7 @@ Leyenda: **Hecho** · **Parcial** · **Pendiente**
 |----------------|--------|-----------|
 | **F0 — Contrato artículos + saldos** | **Hecho** | `cfg_articulos`, patrones A/B/C, check-in, [`RFC_SALDOS_PATRONES_ABC_V2.md`](./RFC_SALDOS_PATRONES_ABC_V2.md) |
 | **F1 — Slice 64-A MVP (Patrón B)** | **Hecho** | Matriz cerrada [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md`](./TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md), `sol_01KRYPR…` |
+| **F1-create — Contrato alta Patrón B (Bloque A)** | **Hecho (21-may)** | `version_id_aplicada` + `grupo_trabajo_id_ancla` · [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) |
 | **F1b — Roles HLC + claims + rules** | **Hecho** | [`RFC_ACCESO_ROLES_HLC_MENUS_V2.md`](./RFC_ACCESO_ROLES_HLC_MENUS_V2.md), deploy rules 2026-05-19 |
 | **F1c — Slice 64-B (mismo carril B)** | **Hecho** | [`PLAN_TICKETERA_SLICE_64B_V2.md`](./PLAN_TICKETERA_SLICE_64B_V2.md), `sol_01KS015…` |
 | **F2 — Ticketera dinámica (UX completa)** | **Hecho (piloto)** | [`TICKETERA_FASE2_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE2_EVIDENCIA_PILOTO.md) — 64-A/64-B sept + preview |

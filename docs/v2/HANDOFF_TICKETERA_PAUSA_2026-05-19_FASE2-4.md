@@ -5,9 +5,14 @@
 **Firebase:** `portal-hospital-v2` · Functions `southamerica-east1` · Firestore `southamerica-east1`  
 **Piloto habitual:** DNI **28914247** · `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ`
 
-> **Retomar desde** [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md) (RFC + plan Oleada A). La pregunta de producto §4 quedó **cerrada** en RFC; implementación **pendiente**.
+> **Retomar desde** [`HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md) (prioridades) → Oleada A [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md).
 
-## 0. Continuidad post-taller (2026-05-19 tarde)
+## 0. Continuidad post-taller (2026-05-19 tarde) y Bloque A (2026-05-21)
+
+| Fecha | Documento |
+|-------|-----------|
+| 2026-05-21 | [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) — fix Rules/Zod create; `sol_01KS4ZG2…`, `sol_01KS50G2…` |
+| 2026-05-21 | [`HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md) |
 
 | Documento | Rol |
 |-----------|-----|

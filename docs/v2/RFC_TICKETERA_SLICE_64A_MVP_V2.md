@@ -203,7 +203,8 @@ Extiende el shape LAO vigente en Rules:
 |-------|-------------|--------|
 | `solicitud_id` / doc id | sí | `sol_<ULID>` |
 | `articulo_id` | sí | `art_…` |
-| `version_aplicada` | sí | `ver_…` publicada |
+| `version_id_aplicada` | sí | `ver_…` publicada (canónico Bloque A; motor acepta alias legacy `version_aplicada`) |
+| `grupo_trabajo_id_ancla` | sí | `gdt_…` — enrutamiento jefe / MDC |
 | `titular_persona_id` | sí | = token en MVP agente |
 | `actor_alta_persona_id` | sí | = token en MVP agente |
 | `fecha_desde` | sí | ISO date |
@@ -216,7 +217,7 @@ Extiende el shape LAO vigente en Rules:
 | `hlc_id_elegibilidad` | recomendado | HLC que satisfizo filtros (auditoría) |
 | `creado_en` / `actualizado_en` | sí | serverTimestamp |
 
-**Ampliación Rules:** actualizar `solicitudArticuloCreateShape()` para incluir `fecha_hasta`, `anio_ciclo_consumo`, `dias_solicitados`, `patron_saldo`, `hlc_id_elegibilidad` y validar `estado_solicitud_id == cfg_esa_borrador`.
+**Rules (Bloque A 2026-05-21):** `hasOnly` en create Patrón B = campos §7.1 de create + `grupo_trabajo_id_ancla` + `version_id_aplicada` (sin `version_aplicada` en documento nuevo). `hlc_id_elegibilidad` solo post-trigger.
 
 ### 7.2 Estados post-trigger (MVP)
 

@@ -5,7 +5,7 @@
 **Commit de esta pausa:** `0dcdb53` — `feat(ticketera): Oleada B MDC/RDA, validaciones Patron B y handoff pausa`  
 **Firebase:** `portal-hospital-v2` · Functions `southamerica-east1` · Firestore `southamerica-east1`
 
-> **Retomar en la próxima sesión desde § 8** (primer paso concreto). Leer § 5 (qué ya corre en prod) antes de tocar código.
+> **Retomar en la próxima sesión desde** [`HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md) § 4 (Oleada A recomendada). Bloque A create (21-may) cerrado — [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md).
 
 ---
 

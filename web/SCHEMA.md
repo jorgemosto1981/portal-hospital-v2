@@ -48,7 +48,18 @@ Plantilla: `../.env.v2.example`.
 
 Cualquier cambio de forma o permisos: actualizar **primero** la documentación acordada y las **Rules** en `firebase-v2/`, luego el código.
 
-## 5. Configurador de artículos — ayuda saldos (D2)
+## 5. Alta `solicitudes_articulo` — Patrón B (Bloque A)
+
+| Tema | Ubicación |
+|------|-----------|
+| Zod create + builder | `web/src/schemas/solicitudArticuloCreate.schema.js` |
+| Escritura Firestore | `web/src/services/solicitudesArticuloV2Service.js` → `crearSolicitudArticuloPatronBBorrador` |
+| Rules `hasOnly` | `firebase-v2/firestore.rules` — `solicitudArticuloCreateShapePatronB` |
+| Doc evidencia | [`docs/v2/TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](../docs/v2/TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) |
+
+Campos obligatorios en create: `version_id_aplicada`, `grupo_trabajo_id_ancla`, fechas, `schema_version` = 2, `patron_saldo` = `B`.
+
+## 6. Configurador de artículos — ayuda saldos (D2)
 
 | Tema | Documento / código |
 |------|-------------------|

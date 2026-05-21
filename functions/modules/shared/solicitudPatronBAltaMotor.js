@@ -89,7 +89,12 @@ async function runPatronBAltaMotor(params) {
   const { db, solicitud, excludeSolId, authToken } = params;
   const personaId = String(solicitud.titular_persona_id || "").trim();
   const articuloId = String(solicitud.articulo_id || "").trim();
-  const versionId = String(solicitud.version_aplicada || solicitud.version_aplicada_id || "").trim();
+  const versionId = String(
+    solicitud.version_id_aplicada ||
+      solicitud.version_aplicada_id ||
+      solicitud.version_aplicada ||
+      "",
+  ).trim();
   const fechaDesde = String(solicitud.fecha_desde || "").slice(0, 10);
   const fechaHasta = String(solicitud.fecha_hasta || "").slice(0, 10);
   const diasSolicitados = Number(solicitud.dias_solicitados);

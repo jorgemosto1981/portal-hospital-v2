@@ -27,3 +27,9 @@
 |----|--------|
 | R1 | Implícito OK (lista + selección previa a R2) |
 | R3 | Pendiente (rechazo RRHH + reverso en otra `sol_*`) |
+
+---
+
+## Regresión 2026-05-21 (MVP hasta Oleada A)
+
+Cadena jefe + RRHH repetida con contrato Bloque A: **`sol_01KS50G2FHQJ6HXZ73JTABMM27`** (jul-21, titular `per_01KR3HD24…`) — ver [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) §2b. Misma observación de producto: RRHH actuó como segunda aprobación.

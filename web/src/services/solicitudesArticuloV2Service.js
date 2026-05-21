@@ -6,11 +6,10 @@ import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { ulid } from "ulid";
 
 import {
-  ESTADO_SOLICITUD_ARTICULO_BORRADOR,
   ESTADO_SOLICITUD_ARTICULO_EN_REVISION_JEFE,
   ESTADO_SOLICITUD_ARTICULO_RECHAZADA,
-  SCHEMA_SOLICITUD_PATRON_B,
 } from "../constants/solicitudesArticuloV2.js";
+import { buildSolicitudPatronBBorradorDocument } from "../schemas/solicitudArticuloCreate.schema.js";
 import { dbV2 } from "./firebase.js";
 
 const SOL_ULID_RE = /^sol_[0-9A-HJKMNP-TV-Z]{26}$/i;
@@ -62,7 +61,7 @@ export async function crearSolicitudArticuloLaoBorrador(params) {
     version_aplicada: versionAplicadaId,
     fecha_desde: fechaDesde,
     anio_origen_bolsa: anioOrigenBolsa,
-    estado_solicitud_id: ESTADO_SOLICITUD_ARTICULO_BORRADOR,
+    estado_solicitud_id: "cfg_esa_borrador",
     schema_version: 1,
     creado_en: serverTimestamp(),
     actualizado_en: serverTimestamp(),
@@ -76,54 +75,31 @@ export async function crearSolicitudArticuloLaoBorrador(params) {
  * @param {{
  *   personaId: string,
  *   articuloId: string,
- *   versionAplicadaId: string,
+ *   versionIdAplicada: string,
  *   fechaDesde: string,
  *   diasSolicitados?: number,
- *   grupoTrabajoIdAncla?: string,
+ *   grupoTrabajoIdAncla: string,
  * }} params
  */
 export async function crearSolicitudArticuloPatronBBorrador(params) {
-  const personaId = String(params.personaId || "").trim();
-  const articuloId = String(params.articuloId || "").trim();
-  const versionAplicadaId = String(params.versionAplicadaId || "").trim();
-  const fechaDesde = String(params.fechaDesde || "").trim().slice(0, 10);
-  const diasSolicitados = Number(params.diasSolicitados ?? 1);
-  const grupoTrabajoIdAncla = String(params.grupoTrabajoIdAncla || "").trim();
-
-  if (!/^per_/i.test(personaId)) throw new Error("persona_id inválido.");
-  if (!/^art_/i.test(articuloId)) throw new Error("articulo_id inválido.");
-  if (!/^ver_/i.test(versionAplicadaId)) throw new Error("version_aplicada inválida.");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaDesde)) throw new Error("fecha_desde inválida.");
-  if (!Number.isInteger(diasSolicitados) || diasSolicitados < 1) {
-    throw new Error("dias_solicitados inválido.");
-  }
-
-  const m = fechaDesde.match(/^(\d{4})-/);
-  const anioCiclo = m ? Number(m[1]) : 0;
-  if (!anioCiclo) throw new Error("anio_ciclo_consumo inválido.");
+  const payload = buildSolicitudPatronBBorradorDocument(
+    {
+      personaId: params.personaId,
+      articuloId: params.articuloId,
+      versionIdAplicada: params.versionIdAplicada,
+      fechaDesde: params.fechaDesde,
+      diasSolicitados: Number(params.diasSolicitados ?? 1),
+      grupoTrabajoIdAncla: params.grupoTrabajoIdAncla,
+    },
+    { creado_en: serverTimestamp(), actualizado_en: serverTimestamp() },
+  );
 
   const solicitud_id = `sol_${ulid()}`;
-  if (!SOL_ULID_RE.test(solicitud_id)) throw new Error("No se pudo generar solicitud_id.");
+  if (!SOL_ULID_RE.test(solicitud_id)) {
+    throw new Error("No se pudo generar solicitud_id.");
+  }
 
   const ref = doc(dbV2, "solicitudes_articulo", solicitud_id);
-  const payload = {
-    articulo_id: articuloId,
-    titular_persona_id: personaId,
-    actor_alta_persona_id: personaId,
-    version_aplicada: versionAplicadaId,
-    fecha_desde: fechaDesde,
-    fecha_hasta: fechaDesde,
-    anio_ciclo_consumo: anioCiclo,
-    dias_solicitados: diasSolicitados,
-    patron_saldo: "B",
-    estado_solicitud_id: ESTADO_SOLICITUD_ARTICULO_BORRADOR,
-    schema_version: SCHEMA_SOLICITUD_PATRON_B,
-    creado_en: serverTimestamp(),
-    actualizado_en: serverTimestamp(),
-  };
-  if (/^gdt_/i.test(grupoTrabajoIdAncla)) {
-    payload.grupo_trabajo_id_ancla = grupoTrabajoIdAncla;
-  }
   await setDoc(ref, payload);
 
   return { solicitud_id };
