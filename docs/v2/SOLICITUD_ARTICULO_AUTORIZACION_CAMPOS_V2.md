@@ -25,7 +25,18 @@ Implementado en `solicitudArticuloPatronBOnCreate.js` tras motor OK.
 | Alta OK | `cfg_esa_en_revision_jefe` | `PROYECTAR_PENDIENTE` |
 | Jefe/autorizador **aprueba** | **`cfg_esa_aprobada`** | `CONSOLIDAR_APROBADO` ✅ (`solicitudBandejaJefeCore` A3) |
 | Jefe **rechaza** | `cfg_esa_rechazada` | `REVERTIR_PROYECCION` |
-| RRHH post-cierre | *(sin cambio)* | TC → campos `rrhh_toma_conocimiento_*` (A4) |
+| RRHH post-cierre | *(sin cambio)* | TC → campos `rrhh_toma_conocimiento_*` (A4) ✅ |
+
+## Piloto E2E Oleada A — `sol_01KS52ZRQHF0MQBDM58XP9Y27Z` (2026-05-21)
+
+| Paso | Estado / evidencia |
+|------|-------------------|
+| Alta agente (27667499) | `cfg_esa_en_revision_jefe` · MDC `PROYECTAR_PENDIENTE` · `asi` PENDIENTE |
+| Autorización jefe (28914247) | `cfg_esa_aprobada` · MDC `CONSOLIDAR_APROBADO` · `asi` APROBADO / `64-A` |
+| Toma conocimiento RRHH (28914247) | `rrhh_toma_conocimiento_en` registrado · estado sigue `cfg_esa_aprobada` |
+| `vis_*` día 21/04/2026 | `#3B82F6` · `cfg_esa_aprobada` |
+
+Jerarquía validada: escala 01 menor / 99 mayor · autorizador = mayor nivel &gt; titular en `gdt` ancla.
 
 **No** usar `cfg_esa_en_revision_rrhh` en solicitudes nuevas del flujo 64-A/B TO-BE.
 
