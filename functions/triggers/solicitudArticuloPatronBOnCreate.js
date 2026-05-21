@@ -14,6 +14,10 @@ const {
   ESTADO_SOLICITUD_EN_REVISION_JEFE,
 } = require("../modules/shared/solicitudesArticuloEstados");
 const { runPatronBAltaMotor } = require("../modules/shared/solicitudPatronBAltaMotor");
+const {
+  resolverCadenaAutorizacion,
+  buildAutorizacionSnapshotFields,
+} = require("../modules/shared/solicitudAutorizacionJerarquicaCore");
 const { loadArticuloDisplay } = require("../modules/shared/solicitudBandejaJefeCore");
 const {
   dispararMdcDesdeSolicitudAsync,
@@ -71,6 +75,43 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
       });
       return;
     }
+
+    let cadenaAutorizacion;
+    try {
+      cadenaAutorizacion = await resolverCadenaAutorizacion(db, {
+        titularPersonaId: String(d.titular_persona_id || "").trim(),
+        grupoTrabajoIdAncla: motor.grupo_trabajo_id_ancla || String(d.grupo_trabajo_id_ancla || "").trim(),
+        fechaRefYmd: String(d.fecha_desde || "").slice(0, 10),
+      });
+    } catch (err) {
+      logger.error("solicitud_patron_b_autorizacion_error", {
+        solId,
+        message: err instanceof Error ? err.message : String(err),
+      });
+      await solRef.update({
+        estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+        motor_codigos: ["AUTORIZACION_ERROR"],
+        motor_mensajes: ["Error al resolver autorizadores."],
+        motor_validado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    if (!cadenaAutorizacion.ok) {
+      await solRef.update({
+        estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+        motor_codigos: cadenaAutorizacion.codigo ? [cadenaAutorizacion.codigo] : ["AUTORIZACION_INVALIDA"],
+        motor_mensajes: cadenaAutorizacion.mensaje
+          ? [cadenaAutorizacion.mensaje]
+          : ["No se pudo resolver la autorización jerárquica."],
+        motor_validado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    const snapshotAutorizacion = buildAutorizacionSnapshotFields(cadenaAutorizacion);
 
     const diasConsumo = motor.dias_consumo;
     const salRef = db.collection(COL_SALDOS).doc(motor.saldo_doc_id);
@@ -139,6 +180,7 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
 
         tx.update(solRef, {
           ...motorOkPayload,
+          ...snapshotAutorizacion,
           motor_descuento_aplicado: true,
           motor_bolsa_id: match.bolsaId,
           motor_dias_descontados: diasConsumo,

@@ -3,7 +3,11 @@
 **Contrato:** [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) §8  
 **Código:** `functions/modules/shared/solicitudAutorizacionJerarquicaCore.js`
 
-## Snapshot en alta (A2 — trigger onCreate)
+## Snapshot en alta (A2 — trigger onCreate) ✅
+
+Implementado en `solicitudArticuloPatronBOnCreate.js` tras motor OK.
+
+## Snapshot en alta (detalle)
 
 | Campo | Tipo | Cuándo |
 |-------|------|--------|
@@ -19,7 +23,7 @@
 | Transición | `estado_solicitud_id` | MDC |
 |------------|------------------------|-----|
 | Alta OK | `cfg_esa_en_revision_jefe` | `PROYECTAR_PENDIENTE` |
-| Jefe/autorizador **aprueba** | **`cfg_esa_aprobada`** | `CONSOLIDAR_APROBADO` |
+| Jefe/autorizador **aprueba** | **`cfg_esa_aprobada`** | `CONSOLIDAR_APROBADO` ✅ (`solicitudBandejaJefeCore` A3) |
 | Jefe **rechaza** | `cfg_esa_rechazada` | `REVERTIR_PROYECCION` |
 | RRHH post-cierre | *(sin cambio)* | TC → campos `rrhh_toma_conocimiento_*` (A4) |
 

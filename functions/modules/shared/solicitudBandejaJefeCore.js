@@ -4,18 +4,26 @@ const { FieldValue } = require("./context");
 const { revertirMotorBolsaPatronBEnTx } = require("./solicitudPatronBReversoSaldo");
 const {
   dispararMdcDesdeSolicitudAsync,
-  MDC_COMANDO_AUTORIZAR_JEFE,
+  MDC_COMANDO_CONSOLIDAR_APROBADO,
   MDC_COMANDO_REVERTIR_PROYECCION,
 } = require("./mdcTicketeraEmisor");
 const {
   ESTADO_SOLICITUD_EN_REVISION_JEFE,
   ESTADO_SOLICITUD_RECHAZADA,
-  ESTADO_SOLICITUD_EN_REVISION_RRHH,
+  ESTADO_SOLICITUD_APROBADA,
 } = require("./solicitudesArticuloEstados");
-const { hldHlgFechaInicioYmd, hldHlgFechaFinYmd, vigenteEnFechaInclusivaYmd } = require("./fechaLaboralYmd");
+const {
+  CODIGO_PERMISOS_JERARQUICOS_CAMBIADOS,
+  mensajeParaCodigoAutorizacion,
+} = require("./solicitudAutorizacionCodigos");
+const {
+  resolverCadenaAutorizacion,
+  buildAutorizacionSnapshotFields,
+  revisorPuedeAutorizarJerarquico,
+  revalidarRevisorEnAutorizadores,
+} = require("./solicitudAutorizacionJerarquicaCore");
 
 const COL_SOL = "solicitudes_articulo";
-const COL_HLG = "historial_laboral_grupos";
 const COL_PERSONAS = "personas";
 const COL_CFG_ART = "cfg_articulos";
 const LIST_LIMIT = 80;
@@ -46,68 +54,36 @@ async function loadArticuloDisplay(db, articuloId, cache) {
 }
 
 /**
- * @param {Record<string, unknown>} hlg
- * @param {string} fechaRefYmd
- */
-function hlgVigenteEnFecha(hlg, fechaRefYmd) {
-  if (!hlg || hlg.activo === false) return false;
-  return vigenteEnFechaInclusivaYmd(hldHlgFechaInicioYmd(hlg), hldHlgFechaFinYmd(hlg) || null, fechaRefYmd);
-}
-
-/**
+ * Oleada A: visibilidad bandeja jefe (sin bypass RRHH; huérfanas solo RRHH).
  * @param {import("firebase-admin/firestore").Firestore} db
- * @param {string} personaId
+ * @param {Record<string, unknown>} sol
+ * @param {string} revisorPersonaId
  */
-async function loadHlgRows(db, personaId) {
-  const pid = String(personaId || "").trim();
-  if (!/^per_/i.test(pid)) return [];
-  const snap = await db.collection(COL_HLG).where("persona_id", "==", pid).get();
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
-}
+async function revisorVeSolicitudEnBandejaJefe(db, sol, revisorPersonaId) {
+  if (sol.autorizacion_rrhh_sustituta === true) return false;
 
-/**
- * Nivel menor = mayor jerarquía (1 más alto que 99).
- * @param {Array<Record<string, unknown>>} jefeHlg
- * @param {Array<Record<string, unknown>>} titularHlg
- * @param {string} fechaRefYmd
- */
-function esSubordinadoPorHlg(jefeHlg, titularHlg, fechaRefYmd) {
-  const jefeV = jefeHlg.filter((h) => hlgVigenteEnFecha(h, fechaRefYmd));
-  const titV = titularHlg.filter((h) => hlgVigenteEnFecha(h, fechaRefYmd));
-  for (const t of titV) {
-    const gid = String(t.grupo_de_trabajo_id || "").trim();
-    const tNivel = Number(t.nivel_jerarquico);
-    if (!gid || !Number.isFinite(tNivel)) continue;
-    for (const j of jefeV) {
-      if (String(j.grupo_de_trabajo_id || "").trim() !== gid) continue;
-      const jNivel = Number(j.nivel_jerarquico);
-      if (!Number.isFinite(jNivel)) continue;
-      if (jNivel < tNivel) return true;
-    }
+  const ids = Array.isArray(sol.autorizadores_elegibles_ids) ? sol.autorizadores_elegibles_ids : [];
+  if (ids.length > 0) {
+    return revisorPuedeAutorizarJerarquico(sol, revisorPersonaId);
   }
-  return false;
+
+  const titularId = String(sol.titular_persona_id || "").trim();
+  const ancla = String(sol.grupo_trabajo_id_ancla || "").trim();
+  const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
+  if (!/^per_/i.test(titularId) || !/^gdt_/i.test(ancla)) return false;
+
+  const cadena = await resolverCadenaAutorizacion(db, {
+    titularPersonaId: titularId,
+    grupoTrabajoIdAncla: ancla,
+    fechaRefYmd: fechaRef,
+  });
+  if (!cadena.ok || cadena.autorizacion_rrhh_sustituta) return false;
+  return revisorPuedeAutorizarJerarquico(buildAutorizacionSnapshotFields(cadena), revisorPersonaId);
 }
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
- * @param {string} jefePersonaId
- * @param {string} titularPersonaId
- * @param {string} fechaRefYmd
- * @param {boolean} rrhhBypass
- */
-async function puedeGestionarSolicitud(db, jefePersonaId, titularPersonaId, fechaRefYmd, rrhhBypass) {
-  if (rrhhBypass) return true;
-  if (jefePersonaId === titularPersonaId) return false;
-  const [jefeHlg, titHlg] = await Promise.all([
-    loadHlgRows(db, jefePersonaId),
-    loadHlgRows(db, titularPersonaId),
-  ]);
-  return esSubordinadoPorHlg(jefeHlg, titHlg, fechaRefYmd);
-}
-
-/**
- * @param {import("firebase-admin/firestore").Firestore} db
- * @param {{ revisorPersonaId: string, rrhhBypass: boolean }} opts
+ * @param {{ revisorPersonaId: string, rrhhBypass?: boolean }} opts — rrhhBypass ignorado (Oleada A)
  */
 async function listarSolicitudesBandejaJefe(db, opts) {
   const snap = await db
@@ -126,13 +102,7 @@ async function listarSolicitudesBandejaJefe(db, opts) {
     const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
     if (!/^per_/i.test(titularId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) continue;
 
-    const ok = await puedeGestionarSolicitud(
-      db,
-      opts.revisorPersonaId,
-      titularId,
-      fechaRef,
-      opts.rrhhBypass,
-    );
+    const ok = await revisorVeSolicitudEnBandejaJefe(db, sol, opts.revisorPersonaId);
     if (!ok) continue;
 
     let titularLabel = personaCache.get(titularId);
@@ -174,9 +144,9 @@ async function listarSolicitudesBandejaJefe(db, opts) {
  * @param {string} revisorPersonaId
  * @param {"aprobar"|"rechazar"} decision
  * @param {string} motivo
- * @param {boolean} rrhhBypass
+ * @param {boolean} [_rrhhBypass] — deprecado Oleada A (ignorado)
  */
-async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decision, motivo, rrhhBypass) {
+async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decision, motivo, _rrhhBypass) {
   const solRef = db.collection(COL_SOL).doc(solId);
   const solSnap = await solRef.get();
   if (!solSnap.exists) {
@@ -188,31 +158,71 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
   }
 
   const titularId = String(sol.titular_persona_id || "").trim();
-  const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
-  const puede = await puedeGestionarSolicitud(db, revisorPersonaId, titularId, fechaRef, rrhhBypass);
-  if (!puede) {
-    return { ok: false, codigo: "PERMISSION_DENIED", mensaje: "No podés gestionar esta solicitud." };
+
+  if (sol.autorizacion_rrhh_sustituta === true) {
+    return {
+      ok: false,
+      codigo: "PERMISSION_DENIED",
+      mensaje: "Esta solicitud debe gestionarse desde la bandeja RRHH (autorización sustituta).",
+    };
+  }
+
+  const permiso = await revalidarRevisorEnAutorizadores(db, sol, revisorPersonaId);
+  if (!permiso.ok) {
+    const codigo = permiso.codigo || "PERMISSION_DENIED";
+    return {
+      ok: false,
+      codigo,
+      mensaje:
+        codigo === CODIGO_PERMISOS_JERARQUICOS_CAMBIADOS
+          ? mensajeParaCodigoAutorizacion(CODIGO_PERMISOS_JERARQUICOS_CAMBIADOS)
+          : permiso.mensaje || "No podés gestionar esta solicitud.",
+    };
   }
 
   if (decision === "aprobar") {
-    await solRef.update({
-      estado_solicitud_id: ESTADO_SOLICITUD_EN_REVISION_RRHH,
-      jefe_revision_persona_id: revisorPersonaId,
-      jefe_revision_en: FieldValue.serverTimestamp(),
-      jefe_motivo: motivo || null,
-      actualizado_en: FieldValue.serverTimestamp(),
+    await db.runTransaction(async (tx) => {
+      const sSnap = await tx.get(solRef);
+      if (!sSnap.exists) return;
+      const cur = sSnap.data() || {};
+      if (String(cur.estado_solicitud_id) !== ESTADO_SOLICITUD_EN_REVISION_JEFE) return;
+
+      tx.update(solRef, {
+        estado_solicitud_id: ESTADO_SOLICITUD_APROBADA,
+        jefe_revision_persona_id: revisorPersonaId,
+        jefe_revision_en: FieldValue.serverTimestamp(),
+        jefe_motivo: motivo || null,
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
     });
+
+    const postSnap = await solRef.get();
+    const postSol = postSnap.exists ? postSnap.data() || {} : sol;
+    if (String(postSol.estado_solicitud_id) !== ESTADO_SOLICITUD_APROBADA) {
+      return {
+        ok: false,
+        codigo: "ESTADO_INVALIDO",
+        mensaje: "La solicitud ya no está en revisión por jefe.",
+      };
+    }
+
     const artCache = new Map();
     const artDisplay = await loadArticuloDisplay(db, String(sol.articulo_id || ""), artCache);
-    dispararMdcDesdeSolicitudAsync(db, solId, {
-      ...sol,
-      estado_solicitud_id: ESTADO_SOLICITUD_EN_REVISION_RRHH,
-      codigo_grilla: artDisplay.codigo_grilla,
-    }, MDC_COMANDO_AUTORIZAR_JEFE);
+    dispararMdcDesdeSolicitudAsync(
+      db,
+      solId,
+      {
+        ...postSol,
+        estado_solicitud_id: ESTADO_SOLICITUD_APROBADA,
+        codigo_grilla: artDisplay.codigo_grilla,
+        grupo_autorizacion_id: postSol.grupo_autorizacion_id || null,
+      },
+      MDC_COMANDO_CONSOLIDAR_APROBADO,
+    );
     return {
       ok: true,
       solicitud_id: solId,
-      estado_solicitud_id: ESTADO_SOLICITUD_EN_REVISION_RRHH,
+      estado_solicitud_id: ESTADO_SOLICITUD_APROBADA,
     };
   }
 
@@ -254,7 +264,6 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
 module.exports = {
   listarSolicitudesBandejaJefe,
   resolverDecisionJefeSolicitud,
-  puedeGestionarSolicitud,
-  esSubordinadoPorHlg,
+  revisorVeSolicitudEnBandejaJefe,
   loadArticuloDisplay,
 };

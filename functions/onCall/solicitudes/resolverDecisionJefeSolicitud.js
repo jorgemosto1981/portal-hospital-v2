@@ -41,7 +41,11 @@ const resolverDecisionJefeSolicitudCallable = onCall(async (request) => {
   );
 
   if (!result.ok) {
-    const code = result.codigo === "PERMISSION_DENIED" ? "permission-denied" : "failed-precondition";
+    const codigo = result.codigo || "";
+    const code =
+      codigo === "PERMISSION_DENIED" || codigo === "PERMISOS_JERARQUICOS_CAMBIADOS"
+        ? "permission-denied"
+        : "failed-precondition";
     throw new HttpsError(code, result.mensaje || "No se pudo resolver la decisión.");
   }
 

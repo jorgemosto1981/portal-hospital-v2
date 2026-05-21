@@ -56,7 +56,10 @@ export default function BandejaJefeSolicitudes() {
         decision,
         motivo: motivo.trim() || undefined,
       });
-      toast.success(decision === "aprobar" ? "Derivada a revisión RRHH." : "Solicitud rechazada.", { id: t });
+      toast.success(
+        decision === "aprobar" ? "Solicitud aprobada (cierre jerárquico)." : "Solicitud rechazada.",
+        { id: t },
+      );
       setSelId("");
       setMotivo("");
       await recargar();
@@ -75,7 +78,7 @@ export default function BandejaJefeSolicitudes() {
           Solicitudes pendientes de tu decisión.
           {esRrhh ? (
             <span className="ml-1.5 inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800">
-              Modo RRHH
+              Sesión RRHH
             </span>
           ) : (
             <span className="block text-slate-500">Solo subordinados de tu mismo grupo (HLg).</span>
