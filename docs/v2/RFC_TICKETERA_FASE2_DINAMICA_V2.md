@@ -100,6 +100,7 @@ Referencia LAO: `simularLaoPreview`.
 - Piloto DNI 28914247: listado 64-A + 64-B, tiempos < 2 s en red normal.
 - T2 escalafón: listado vacío + `elegibilidad_vacia` si aplica.
 - Tras deploy Functions: `node scripts/diagnostico-listar-64a.mjs --dni=…`
+- **E2E Fase 2 + grilla:** [`TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md`](./TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md) · `sol_01KS65KJW3Q163YEJ32GHDW12E` visible en calendario MDC.
 
 ---
 

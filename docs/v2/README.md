@@ -53,6 +53,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) | Evidencia Bloque A create + `sol_01KS4ZG2…` / `sol_01KS50G2…` |
 | [`TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md`](./TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md) | E2E TO-BE jefe cierra + TC RRHH · `sol_01KS57Y…` + eventos `evt_*` |
 | [`TICKETERA_EVIDENCIA_2026-05-21_OLEADA_B_MDC_SOL_01KS57Y.md`](./TICKETERA_EVIDENCIA_2026-05-21_OLEADA_B_MDC_SOL_01KS57Y.md) | MDC `asi_*` / `vis_*` con flujo Oleada A limpio (misma `sol_01KS57Y…`) |
+| [`TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md`](./TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md) | **Fase 2** wizard Patrón B + visible en grilla · `sol_01KS65K…` |
 | [`OLEADA_C_SLICE1_GSO_VISTA_MES.md`](./OLEADA_C_SLICE1_GSO_VISTA_MES.md) | Oleada C slice 1 — UI calendario + callable `obtenerVistaGrillaMesAgente` |
 | [`OLEADA_C2_HOJA_RUTA_GSO_EQUIPO.md`](./OLEADA_C2_HOJA_RUTA_GSO_EQUIPO.md) | **C2 hoja de ruta** — `obtenerVistaGrillaEquipo`, bandeja selección, grilla multipersona |
 | [`OLEADA_C4_GSO_PULIDO_UX.md`](./OLEADA_C4_GSO_PULIDO_UX.md) | **C4** — tooltip celdas, contraste pendiente/aprobado, leyenda (épica grilla licencias cerrada) |

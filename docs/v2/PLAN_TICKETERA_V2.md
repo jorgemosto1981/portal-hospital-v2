@@ -1,6 +1,6 @@
 # Plan maestro — Ticketera / solicitudes V2
 
-**Estado del documento:** plan vivo · **última revisión:** 2026-05-21 · **Create Patrón B (Bloque A):** [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) · **Continuidad:** [`HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md) · **PAUSA bandejas MVP:** [`HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md`](./HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md) · **Siguiente bloque código:** Oleada A — [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md)  
+**Estado del documento:** plan vivo · **última revisión:** 2026-05-21 · **Fase 2:** [`TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md`](./TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md) · **Create Patrón B (Bloque A):** [`TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](./TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) · **Continuidad:** [`HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md) · **PAUSA bandejas MVP:** [`HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md`](./HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md) · **Siguiente bloque código:** Oleada A — [`HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md`](./HANDOFF_SESION_2026-05-19_AUTORIZACION_TICKETERA.md)  
 **Ámbito:** ingreso agente, motores por patrón de saldo, bandejas (jefe / médico futuro), relación con `cfg_articulos`.
 
 **Visión de producto (incorporada):** [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md) — herramienta **dinámica**, fechas impuestas, preview, subflujos LAO y licencias médicas.
@@ -21,7 +21,7 @@ Leyenda: **Hecho** · **Parcial** · **Pendiente**
 | **F2 — Ticketera dinámica (UX completa)** | **Hecho (21-may)** | Wizard 3 pasos Patrón B · [`RFC_TICKETERA_FASE2_DINAMICA_V2.md`](./RFC_TICKETERA_FASE2_DINAMICA_V2.md) |
 | **F2a — Listado performante (P0)** | **Hecho (21-may)** | `listarArticulosIngresoCore` MVP/catalogo · deploy Functions 21-may |
 | **F2b — Preview + fechas impuestas** | **Hecho** | Paso 3 wizard + `fecha_hasta` RO en paso 2 |
-| **F3a — LAO dentro del concepto ticketera** | **Parcial** | Motor y ruta `/portal/solicitudes/lao`; no shell unificado |
+| **F3a — LAO dentro del concepto ticketera** | **Parcial (21-may)** | Hub pasa `fecha` · enlace vuelta al hub · wizard LAO pendiente |
 | **F3b — Bandeja jefe** | **Hecho (piloto J2–J3)** | [`TICKETERA_FASE3_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE3_EVIDENCIA_PILOTO.md) |
 | **F4 — Bandeja RRHH solicitudes** | **Parcial (MVP)** — **TO-BE en RFC** | [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) · implementar Oleada A |
 | **F5 — Lic. médicas + bandeja médico** | **Pendiente** | Concepto §4.3 del documento visión |

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 
 import LaoPreviewInfo from "../features/articulos/LaoPreviewInfo.jsx";
 import { useLaoAltaPreview } from "../features/articulos/useLaoAltaPreview.js";
@@ -10,6 +10,12 @@ import { useAuthSession } from "../features/auth/useAuthSession.js";
 import Card from "../components/ui/Card.jsx";
 import { LAO_ARTICULO_ID } from "../constants/laoArticulo.js";
 import { crearSolicitudArticuloLaoBorrador } from "../services/solicitudesArticuloV2Service.js";
+import { ymdHoyBa } from "../features/solicitudes/ticketeraUtils.js";
+
+function fechaDesdeQuery(searchParams) {
+  const f = String(searchParams.get("fecha") || "").trim().slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(f) ? f : "";
+}
 
 /**
  * Alta de solicitud LAO (MVP): formulario mínimo + preview en vivo y bloqueo de envío según `eligible`.
@@ -21,10 +27,11 @@ export default function SolicitudLaoAlta() {
   const { claims, claimsLoading } = useAuthClaims(user);
   const personaId = String((claims && claims.persona_id) || "").trim();
   const [searchParams] = useSearchParams();
+  const fechaInicial = useMemo(() => fechaDesdeQuery(searchParams) || ymdHoyBa(), [searchParams]);
 
   const [articuloId, setArticuloId] = useState(() => searchParams.get("articulo_id") || LAO_ARTICULO_ID);
   const [versionId, setVersionId] = useState("");
-  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaDesde, setFechaDesde] = useState(fechaInicial);
   const [anioOrigenBolsa, setAnioOrigenBolsa] = useState("");
   const [enviando, setEnviando] = useState(false);
 
@@ -41,6 +48,11 @@ export default function SolicitudLaoAlta() {
   useEffect(() => {
     const qArt = searchParams.get("articulo_id");
     if (qArt && /^art_/i.test(qArt)) setArticuloId(qArt);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const qFecha = fechaDesdeQuery(searchParams);
+    if (qFecha) setFechaDesde(qFecha);
   }, [searchParams]);
 
   const { simulacion, error, cargando, puedeLlamar } = useLaoAltaPreview({
@@ -78,7 +90,14 @@ export default function SolicitudLaoAlta() {
 
   return (
     <div className={enTicketera ? "" : "mx-auto w-full max-w-lg px-4 py-6"}>
-      {enTicketera ? <p className="mb-2 text-xs text-slate-500">Paso 2 · Patrón A (LAO)</p> : null}
+      {enTicketera ? (
+        <p className="mb-3 text-xs text-slate-500">
+          Carril LAO (Patrón A) ·{" "}
+          <Link to="/portal/solicitudes" className="font-medium text-blue-700 hover:underline">
+            cambiar fecha o carril
+          </Link>
+        </p>
+      ) : null}
       <h2 className="text-lg font-semibold text-slate-900">Nueva solicitud (LAO)</h2>
       <p className="mt-2 text-sm leading-relaxed text-slate-600">
         Completá los datos y el sistema simula Stock vs proporcional, guardas 01/07 y TSE. El envío queda bloqueado si la

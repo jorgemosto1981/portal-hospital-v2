@@ -95,7 +95,7 @@ export default function TicketeraHub() {
       </button>
 
       <Link
-        to="/portal/solicitudes/lao"
+        to={`/portal/solicitudes/lao?fecha=${encodeURIComponent(fechaDesde)}`}
         className="flex w-full flex-col rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-left shadow-sm transition-colors hover:bg-emerald-100"
       >
         <span className="text-sm font-semibold text-emerald-950">Licencia anual ordinaria (LAO)</span>
