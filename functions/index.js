@@ -16,6 +16,7 @@ const catalogos = require("./modules/catalogos");
 const onboarding = require("./modules/onboarding");
 const articulosCfg = require("./modules/articulosCfg");
 const solicitudesLao = require("./onCall/solicitudes/simularLaoPreview");
+const obtenerContextoBolsaLaoAgente = require("./onCall/solicitudes/obtenerContextoBolsaLaoAgente");
 const persistirCheckinLaoBolsas = require("./onCall/solicitudes/persistirCheckinLaoBolsas");
 const persistirCheckinSaldoEstandar = require("./onCall/solicitudes/persistirCheckinSaldoEstandar");
 const cerrarCheckinSaldosPortal = require("./onCall/solicitudes/cerrarCheckinSaldosPortal");
@@ -48,6 +49,7 @@ module.exports = {
   ...onboarding,
   ...articulosCfg,
   ...solicitudesLao,
+  ...obtenerContextoBolsaLaoAgente,
   ...persistirCheckinLaoBolsas,
   ...persistirCheckinSaldoEstandar,
   ...cerrarCheckinSaldosPortal,

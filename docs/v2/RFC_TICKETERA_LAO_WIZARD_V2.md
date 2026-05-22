@@ -43,22 +43,45 @@ Objetivo: evitar solicitudes infructuosas y orientar al agente **antes** del ran
 | **Días disponibles** | `disponible` de la bolsa elegida en `saldos_articulo_agente`. |
 | **Detalle** (opcional) | Otras bolsas con saldo, vencimientos próximos, mensaje si check-in pendiente. |
 
-### 3.2 DTO `resumen_disponibilidad_lao` (plan)
+### 3.2 Callable `obtenerContextoBolsaLaoAgente` (F3a.1)
 
-Callable dedicado **`obtenerContextoBolsaLaoAgente`** (nombre provisional F3a.1) — **no** mezclar con check-in RRHH (`persistirCheckinLaoBolsas`).
+**Entrada**
+
+| Campo | Requerido | Descripción |
+|-------|-----------|-------------|
+| `articulo_id` | sí | `art_*` LAO |
+| `anio_origen_bolsa` | no | Si se omite, se usa FIFO (`anio_origen_bolsa_sugerido`) |
+| `persona_id` | RRHH / OPEN_ACCESS | Agente: token `persona_id` |
+
+**Salida — `resumen_disponibilidad_lao`**
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
-| `ok` | boolean | |
+| `ok` | boolean | `false` solo ante error duro (artículo sin versión publicada para el año activo) |
+| `persona_id` | string | |
 | `articulo_id` | string | |
-| `version_aplicada_id` | string | Versión publicada del ejercicio. |
-| `correspondencia_anio` | int | Año fiscal / ejercicio LAO. |
-| `anio_origen_bolsa_sugerido` | int | FIFO / reglas bolsa. |
-| `bolsa_seleccionada` | object | `{ anio_origen, disponible, consumido?, arrastre? }` |
-| `bolsas_resumen` | array | Lista corta para UI (otros años con saldo). |
-| `mensajes` | string[] | Check-in, sin bolsa, etc. |
+| `articulo_nombre` | string? | Núcleo `cfg_articulos` |
+| `articulo_codigo` | string? | |
+| `version_aplicada_id` | string | `ver_*` publicada (`correspondencia_anio` = año activo de bolsa) |
+| `correspondencia_anio` | int | Ejercicio LAO de la versión |
+| `ejercicio_label` | string | UI paso 1 (nombre + año) |
+| `anio_origen_bolsa_sugerido` | int \| null | Menor `anio_origen` con `disponible` > 0 (FIFO) |
+| `anio_origen_bolsa_activo` | int \| null | Entrada o sugerido |
+| `bolsa_seleccionada` | object \| null | Bolsa del año activo |
+| `bolsa_seleccionada.bolsa_id` | string | |
+| `bolsa_seleccionada.anio_origen` | int | |
+| `bolsa_seleccionada.disponible` | number | Stock para el wizard |
+| `bolsa_seleccionada.consumido` | number | |
+| `bolsa_seleccionada.cantidad_inicial` | number | |
+| `bolsa_seleccionada.es_arrastre` | boolean | |
+| `bolsa_seleccionada.fecha_vencimiento` | string \| null | |
+| `bolsa_seleccionada.codigo_grilla` | string? | |
+| `bolsas_resumen` | array | Todas las bolsas del artículo, orden `anio_origen` asc |
+| `bolsas_resumen[].requiere_fifo_antes` | boolean | Hay saldo en un año anterior |
+| `fifo` | object | `{ anio_mas_antiguo_con_saldo, debe_respetar_fifo }` |
+| `mensajes` | string[] | Sin bolsa, FIFO, sin versión, etc. |
 
-El wizard **no** llama a `simularLaoPreview` en paso 1 (evita acoplar derecho proporcional a solo ver stock).
+El wizard **no** llama a `simularLaoPreview` en paso 1.
 
 ---
 
