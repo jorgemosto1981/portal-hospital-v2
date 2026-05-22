@@ -25,6 +25,17 @@ const {
   revalidarRevisorEnAutorizadores,
 } = require("./solicitudAutorizacionJerarquicaCore");
 
+/**
+ * @param {Record<string, unknown>} sol
+ * @returns {boolean}
+ */
+function esHuerfanaEnRevisionJefe(sol) {
+  return (
+    String(sol.estado_solicitud_id || "").trim() === ESTADO_SOLICITUD_EN_REVISION_JEFE &&
+    sol.autorizacion_rrhh_sustituta === true
+  );
+}
+
 const COL_SOL = "solicitudes_articulo";
 const COL_PERSONAS = "personas";
 const COL_CFG_ART = "cfg_articulos";
@@ -142,8 +153,10 @@ async function listarSolicitudesBandejaJefe(db, opts) {
  * @param {"aprobar"|"rechazar"} decision
  * @param {string} motivo
  * @param {boolean} [_rrhhBypass] — deprecado Oleada A (ignorado)
+ * @param {{ rrhhSustituto?: boolean }} [opts] — cierre sustituto huérfana desde bandeja RRHH (A4)
  */
-async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decision, motivo, _rrhhBypass) {
+async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decision, motivo, _rrhhBypass, opts = {}) {
+  const rrhhSustituto = opts.rrhhSustituto === true;
   const solRef = db.collection(COL_SOL).doc(solId);
   const solSnap = await solRef.get();
   if (!solSnap.exists) {
@@ -156,7 +169,7 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
 
   const titularId = String(sol.titular_persona_id || "").trim();
 
-  if (sol.autorizacion_rrhh_sustituta === true) {
+  if (sol.autorizacion_rrhh_sustituta === true && !rrhhSustituto) {
     return {
       ok: false,
       codigo: "PERMISSION_DENIED",
@@ -164,6 +177,22 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
     };
   }
 
+  if (rrhhSustituto) {
+    if (!esHuerfanaEnRevisionJefe(sol)) {
+      return {
+        ok: false,
+        codigo: "ESTADO_INVALIDO",
+        mensaje: "Solo solicitudes huérfanas en revisión admiten cierre sustituto RRHH.",
+      };
+    }
+    if (!revisorPuedeAutorizarJerarquico(sol, revisorPersonaId, { rrhhSustituto: true })) {
+      return {
+        ok: false,
+        codigo: "PERMISSION_DENIED",
+        mensaje: "No tenés permiso de cierre sustituto RRHH para esta solicitud.",
+      };
+    }
+  } else {
   const permiso = await revalidarRevisorEnAutorizadores(db, sol, revisorPersonaId);
   if (!permiso.ok) {
     const codigo = permiso.codigo || "PERMISSION_DENIED";
@@ -176,6 +205,10 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
           : permiso.mensaje || "No podés gestionar esta solicitud.",
     };
   }
+  }
+
+  const accionAprobar = rrhhSustituto ? "rrhh_sustituta_aprobar" : "jefe_aprobar";
+  const accionRechazar = rrhhSustituto ? "rrhh_sustituta_rechazar" : "jefe_rechazar";
 
   if (decision === "aprobar") {
     await db.runTransaction(async (tx) => {
@@ -184,13 +217,17 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
       const cur = sSnap.data() || {};
       if (String(cur.estado_solicitud_id) !== ESTADO_SOLICITUD_EN_REVISION_JEFE) return;
 
-      tx.update(solRef, {
+      const patch = {
         estado_solicitud_id: ESTADO_SOLICITUD_APROBADA,
         jefe_revision_persona_id: revisorPersonaId,
         jefe_revision_en: FieldValue.serverTimestamp(),
         jefe_motivo: motivo || null,
         actualizado_en: FieldValue.serverTimestamp(),
-      });
+      };
+      if (rrhhSustituto) {
+        patch.cierre_rrhh_sustituta = true;
+      }
+      tx.update(solRef, patch);
     });
 
     const postSnap = await solRef.get();
@@ -223,7 +260,7 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
       estado_anterior_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
       estado_nuevo_id: ESTADO_SOLICITUD_APROBADA,
       origen: ORIGEN_EVENTO.CALLABLE,
-      accion: "jefe_aprobar",
+      accion: accionAprobar,
       metadata: {
         decision: "aprobar",
         codigo_grilla: artDisplay.codigo_grilla || null,
@@ -231,6 +268,8 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
         articulo_id: String(sol.articulo_id || "") || null,
         fecha_desde: String(sol.fecha_desde || "").slice(0, 10),
         motivo: motivo || null,
+        autorizacion_rrhh_sustituta: rrhhSustituto,
+        cierre_rrhh_sustituta: rrhhSustituto,
       },
     });
     return {
@@ -272,13 +311,15 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
       estado_anterior_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
       estado_nuevo_id: ESTADO_SOLICITUD_RECHAZADA,
       origen: ORIGEN_EVENTO.CALLABLE,
-      accion: "jefe_rechazar",
+      accion: accionRechazar,
       metadata: {
         decision: "rechazar",
         codigo_grilla: artDisplay.codigo_grilla || null,
         articulo_id: String(sol.articulo_id || "") || null,
         fecha_desde: String(sol.fecha_desde || "").slice(0, 10),
         motivo: motivo || null,
+        autorizacion_rrhh_sustituta: rrhhSustituto,
+        cierre_rrhh_sustituta: rrhhSustituto,
       },
     });
 
@@ -297,4 +338,5 @@ module.exports = {
   resolverDecisionJefeSolicitud,
   revisorVeSolicitudEnBandejaJefe,
   loadArticuloDisplay,
+  esHuerfanaEnRevisionJefe,
 };

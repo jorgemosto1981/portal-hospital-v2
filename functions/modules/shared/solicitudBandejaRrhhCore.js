@@ -68,7 +68,9 @@ function bandejaRrhhModoItem(sol) {
     etiqueta_estado: est,
   };
 }
-const { loadArticuloDisplay } = require("./solicitudBandejaJefeCore");
+const { loadArticuloDisplay, resolverDecisionJefeSolicitud, esHuerfanaEnRevisionJefe } =
+  require("./solicitudBandejaJefeCore");
+const { revisorPuedeAutorizarJerarquico } = require("./solicitudAutorizacionJerarquicaCore");
 const { revertirMotorBolsaPatronBEnTx } = require("./solicitudPatronBReversoSaldo");
 const {
   dispararMdcDesdeSolicitudAsync,
@@ -78,16 +80,128 @@ const {
 
 const COL_SOL = "solicitudes_articulo";
 const COL_PERSONAS = "personas";
-const LIST_LIMIT = 80;
+const SCAN_LIMIT = 400;
+const DEFAULT_PAGE_SIZE = 10;
+const MAX_PAGE_SIZE = 50;
+
+const ESTADOS_QUERY_TODOS = [
+  ...ESTADOS_BANDEJA_RRHH_VISIBLES,
+  ESTADO_SOLICITUD_RECHAZADA,
+];
+
+const FILTRO_VISTA_PENDIENTES = "pendientes";
+const FILTRO_VISTA_TODOS = "todos";
+
+/**
+ * @param {unknown} raw
+ */
+function parseBandejaRrhhListOpts(raw) {
+  const o = raw && typeof raw === "object" ? raw : {};
+  const filtroVista = String(o.filtro_vista || FILTRO_VISTA_PENDIENTES).trim() || FILTRO_VISTA_PENDIENTES;
+  const dni = String(o.dni || "")
+    .replace(/\D/g, "")
+    .trim();
+  const usuario = String(o.usuario || "")
+    .trim()
+    .toLowerCase();
+  const cursor = String(o.cursor || "").trim();
+  const requested = Number(o.page_size);
+  const pageSize = Number.isFinite(requested)
+    ? Math.max(1, Math.min(MAX_PAGE_SIZE, Math.floor(requested)))
+    : DEFAULT_PAGE_SIZE;
+  return { filtroVista, dni, usuario, cursor, pageSize };
+}
+
+/**
+ * @param {Record<string, unknown>} item
+ * @param {string} filtroVista
+ */
+function itemPasaFiltroVista(item, filtroVista) {
+  const v = String(filtroVista || FILTRO_VISTA_PENDIENTES);
+  if (v === FILTRO_VISTA_TODOS) return true;
+  if (v === FILTRO_VISTA_PENDIENTES) {
+    return item.puede_aprobar_rechazar === true || item.puede_registrar_toma_conocimiento === true;
+  }
+  if (v === "aprobados") {
+    return String(item.estado_solicitud_id) === ESTADO_SOLICITUD_APROBADA;
+  }
+  if (v === "rechazados") {
+    return String(item.estado_solicitud_id) === ESTADO_SOLICITUD_RECHAZADA;
+  }
+  if (v === "en_revision_jefe") {
+    return String(item.estado_solicitud_id) === ESTADO_SOLICITUD_EN_REVISION_JEFE;
+  }
+  if (v === "en_revision_rrhh") {
+    return String(item.estado_solicitud_id) === ESTADO_SOLICITUD_EN_REVISION_RRHH;
+  }
+  if (v === "toma_conocimiento_pendiente") {
+    return item.bandeja_rrhh_modo === "toma_conocimiento";
+  }
+  return true;
+}
+
+/**
+ * @param {Array<Record<string, unknown>>} sorted
+ * @param {{ cursor: string, pageSize: number }} page
+ */
+function paginarBandejaOrdenada(sorted, page) {
+  let start = 0;
+  if (page.cursor) {
+    const idx = sorted.findIndex((s) => String(s.solicitud_id) === page.cursor);
+    start = idx >= 0 ? idx + 1 : 0;
+  }
+  const slice = sorted.slice(start, start + page.pageSize);
+  const hasMore = start + page.pageSize < sorted.length;
+  const nextCursor =
+    hasMore && slice.length > 0 ? String(slice[slice.length - 1].solicitud_id || "") : null;
+  return { solicitudes: slice, has_more: hasMore, next_cursor: nextCursor, total_filtrado: sorted.length };
+}
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {string} dniDigits
  */
-async function listarSolicitudesBandejaRrhh(db) {
+async function resolverPersonaIdsPorDni(db, dniDigits) {
+  if (!dniDigits) return null;
+  const snap = await db.collection(COL_PERSONAS).where("dni", "==", dniDigits).limit(5).get();
+  const ids = snap.docs.map((d) => d.id).filter((id) => /^per_/i.test(id));
+  return ids.length ? new Set(ids) : new Set();
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {import("./solicitudBandejaRrhhCore").parseBandejaRrhhListOpts} optsParsed — ver parseBandejaRrhhListOpts
+ */
+async function listarSolicitudesBandejaRrhh(db, opts = {}) {
+  const { filtroVista, dni, usuario, cursor, pageSize } = parseBandejaRrhhListOpts(opts);
+  const estadosQuery =
+    filtroVista === "rechazados"
+      ? [ESTADO_SOLICITUD_RECHAZADA]
+      : filtroVista === FILTRO_VISTA_TODOS || filtroVista === "aprobados"
+        ? ESTADOS_QUERY_TODOS
+        : ESTADOS_BANDEJA_RRHH_VISIBLES;
+
+  let titularIdsDni = null;
+  if (dni) {
+    titularIdsDni = await resolverPersonaIdsPorDni(db, dni);
+    if (titularIdsDni && titularIdsDni.size === 0) {
+      return {
+        solicitudes: [],
+        page_info: {
+          page_size: pageSize,
+          has_more: false,
+          next_cursor: null,
+          total_filtrado: 0,
+        },
+        filtros: { filtro_vista: filtroVista, dni, usuario: usuario || null },
+      };
+    }
+  }
+
   const snap = await db
     .collection(COL_SOL)
-    .where("estado_solicitud_id", "in", ESTADOS_BANDEJA_RRHH_VISIBLES)
-    .limit(LIST_LIMIT)
+    .where("estado_solicitud_id", "in", estadosQuery)
+    .limit(SCAN_LIMIT)
     .get();
 
   const out = [];
@@ -99,28 +213,42 @@ async function listarSolicitudesBandejaRrhh(db) {
     const titularId = String(sol.titular_persona_id || "").trim();
     const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
     if (!/^per_/i.test(titularId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) continue;
+    if (titularIdsDni && !titularIdsDni.has(titularId)) continue;
 
-    let titularLabel = personaCache.get(titularId);
-    if (titularLabel === undefined) {
+    let personaRow = personaCache.get(titularId);
+    if (personaRow === undefined) {
       const pSnap = await db.collection(COL_PERSONAS).doc(titularId).get();
       const p = pSnap.exists ? pSnap.data() || {} : {};
       const nom = [p.apellido, p.nombre].filter(Boolean).join(", ").trim();
-      titularLabel = nom || titularId;
-      personaCache.set(titularId, titularLabel);
+      personaRow = {
+        label: nom || titularId,
+        dni: String(p.dni || "").replace(/\D/g, "").trim(),
+      };
+      personaCache.set(titularId, personaRow);
+    }
+
+    if (usuario) {
+      const hayUsuario =
+        String(personaRow.label || "")
+          .toLowerCase()
+          .includes(usuario) ||
+        String(personaRow.dni || "").includes(usuario.replace(/\D/g, ""));
+      if (!hayUsuario) continue;
     }
 
     const artId = String(sol.articulo_id || "").trim();
     const artDisplay = await loadArticuloDisplay(db, artId, articuloCache);
     const modo = bandejaRrhhModoItem(sol);
 
-    out.push({
+    const item = {
       solicitud_id: sol.id,
       articulo_id: artId,
       articulo_label: artDisplay.articulo_label,
       codigo_grilla: artDisplay.codigo_grilla,
       articulo_nombre: artDisplay.nombre,
       titular_persona_id: titularId,
-      titular_label: titularLabel,
+      titular_label: personaRow.label,
+      titular_dni: personaRow.dni || null,
       fecha_desde: fechaRef,
       fecha_hasta: String(sol.fecha_hasta || fechaRef).slice(0, 10),
       dias_solicitados: Number(sol.dias_solicitados) || 1,
@@ -136,11 +264,30 @@ async function listarSolicitudesBandejaRrhh(db) {
       puede_registrar_toma_conocimiento: modo.puede_registrar_toma_conocimiento === true,
       etiqueta_estado: modo.etiqueta_estado,
       rrhh_toma_conocimiento_en: sol.rrhh_toma_conocimiento_en || null,
-    });
+    };
+
+    if (!itemPasaFiltroVista(item, filtroVista)) continue;
+    out.push(item);
   }
 
-  out.sort((a, b) => String(b.fecha_desde).localeCompare(String(a.fecha_desde)));
-  return { solicitudes: out, limite: LIST_LIMIT };
+  out.sort((a, b) => String(a.fecha_desde).localeCompare(String(b.fecha_desde)));
+  const page = paginarBandejaOrdenada(out, { cursor, pageSize });
+
+  return {
+    solicitudes: page.solicitudes,
+    page_info: {
+      page_size: pageSize,
+      has_more: page.has_more,
+      next_cursor: page.next_cursor,
+      total_filtrado: page.total_filtrado,
+      scan_limit: SCAN_LIMIT,
+    },
+    filtros: {
+      filtro_vista: filtroVista,
+      dni: dni || null,
+      usuario: usuario || null,
+    },
+  };
 }
 
 /**
@@ -150,6 +297,18 @@ async function listarSolicitudesBandejaRrhh(db) {
  * @param {"aprobar"|"rechazar"} decision
  * @param {string} motivo
  */
+/**
+ * @param {Record<string, unknown>} sol
+ * @returns {"cierre_sustituta"|"legacy_rrhh"|"invalido"}
+ */
+function tipoFlujoResolverDecisionRrhh(sol) {
+  if (esHuerfanaEnRevisionJefe(sol)) return "cierre_sustituta";
+  if (String(sol.estado_solicitud_id || "").trim() === ESTADO_SOLICITUD_EN_REVISION_RRHH) {
+    return "legacy_rrhh";
+  }
+  return "invalido";
+}
+
 async function resolverDecisionRrhhSolicitud(db, solId, revisorPersonaId, decision, motivo) {
   const solRef = db.collection(COL_SOL).doc(solId);
   const solSnap = await solRef.get();
@@ -157,8 +316,28 @@ async function resolverDecisionRrhhSolicitud(db, solId, revisorPersonaId, decisi
     return { ok: false, codigo: "NOT_FOUND", mensaje: "La solicitud no existe." };
   }
   const sol = solSnap.data() || {};
-  if (String(sol.estado_solicitud_id) !== ESTADO_SOLICITUD_EN_REVISION_RRHH) {
-    return { ok: false, codigo: "ESTADO_INVALIDO", mensaje: "La solicitud ya no está en revisión RRHH." };
+  const flujo = tipoFlujoResolverDecisionRrhh(sol);
+
+  if (flujo === "cierre_sustituta") {
+    if (!revisorPuedeAutorizarJerarquico(sol, revisorPersonaId, { rrhhSustituto: true })) {
+      return {
+        ok: false,
+        codigo: "PERMISSION_DENIED",
+        mensaje: "No tenés permiso de cierre sustituto RRHH para esta solicitud.",
+      };
+    }
+    return resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decision, motivo, false, {
+      rrhhSustituto: true,
+    });
+  }
+
+  if (flujo !== "legacy_rrhh") {
+    return {
+      ok: false,
+      codigo: "ESTADO_INVALIDO",
+      mensaje:
+        "La solicitud no está en revisión RRHH (legacy) ni es huérfana pendiente de cierre sustituto.",
+    };
   }
 
   const titularId = String(sol.titular_persona_id || "").trim();
@@ -293,4 +472,11 @@ module.exports = {
   listarSolicitudesBandejaRrhh,
   resolverDecisionRrhhSolicitud,
   registrarTomaConocimientoRrhhSolicitud,
+  tipoFlujoResolverDecisionRrhh,
+  bandejaRrhhModoItem,
+  parseBandejaRrhhListOpts,
+  itemPasaFiltroVista,
+  paginarBandejaOrdenada,
+  FILTRO_VISTA_PENDIENTES,
+  FILTRO_VISTA_TODOS,
 };

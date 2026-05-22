@@ -12,3 +12,15 @@ export function etiquetaArticulo(a) {
 
 export const PATRON_SALDO_A = "A";
 export const PATRON_SALDO_B = "B";
+
+/** Primer mensaje de bloqueo del motor (preview / elegibilidad). */
+export function mensajeBloqueoPreview(preview) {
+  if (!preview || typeof preview !== "object") return "";
+  const mensajes = Array.isArray(preview.mensajes)
+    ? preview.mensajes.map((m) => String(m || "").trim()).filter(Boolean)
+    : [];
+  if (mensajes.length) return mensajes[0];
+  const eligible = preview.eligible === true || preview.ok === true;
+  if (eligible) return "";
+  return "No podés solicitar esta licencia con los datos ingresados.";
+}

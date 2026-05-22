@@ -8,6 +8,7 @@ import { useLaoVersionAutoResolve } from "../features/articulos/useLaoVersionAut
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
 import Card from "../components/ui/Card.jsx";
+import { TICKETERA } from "../features/solicitudes/ticketeraUi.js";
 import { LAO_ARTICULO_ID } from "../constants/laoArticulo.js";
 import { crearSolicitudArticuloLaoBorrador } from "../services/solicitudesArticuloV2Service.js";
 import { ymdHoyBa } from "../features/solicitudes/ticketeraUtils.js";
@@ -89,24 +90,30 @@ export default function SolicitudLaoAlta() {
   }, [anioOrigenBolsa, articuloId, enviarHabilitado, enviando, fechaDesde, personaId, versionId]);
 
   return (
-    <div className={enTicketera ? "" : "mx-auto w-full max-w-lg px-4 py-6"}>
+    <div className={enTicketera ? "space-y-4" : "mx-auto w-full max-w-lg px-4 py-6"}>
       {enTicketera ? (
-        <p className="mb-3 text-xs text-slate-500">
-          Carril LAO (Patrón A) ·{" "}
-          <Link to="/portal/solicitudes" className="font-medium text-blue-700 hover:underline">
-            cambiar fecha o carril
-          </Link>
-        </p>
+        <div className={`${TICKETERA.chipArticulo} border-emerald-100 bg-emerald-50/60`}>
+          <span className="text-xs font-medium uppercase tracking-wide text-emerald-800">Trámite</span>
+          <p className={TICKETERA.codigoLao}>LAO</p>
+          <p className="text-xs text-emerald-900">Licencia anual ordinaria</p>
+        </div>
       ) : null}
-      <h2 className="text-lg font-semibold text-slate-900">Nueva solicitud (LAO)</h2>
-      <p className="mt-2 text-sm leading-relaxed text-slate-600">
-        Completá los datos y el sistema simula Stock vs proporcional, guardas 01/07 y TSE. El envío queda bloqueado si la
-        simulación no habilita el trámite.
-      </p>
+      {!enTicketera ? (
+        <>
+          <h2 className="text-lg font-semibold text-slate-900">Nueva solicitud (LAO)</h2>
+          <p className={`mt-2 ${TICKETERA.hubIntro}`}>
+            Completá los datos y el sistema simula Stock vs proporcional, guardas 01/07 y TSE.
+          </p>
+        </>
+      ) : (
+        <p className={TICKETERA.hubIntro}>
+          Completá los datos. El envío queda bloqueado si la simulación no habilita el trámite.
+        </p>
+      )}
 
-      <Card className="mt-6 space-y-4 p-4 md:p-5">
+      <div className={`${enTicketera ? "" : "mt-6"} ${TICKETERA.card} ${TICKETERA.cardPad}`}>
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-slate-600">articulo_id</span>
+          <span className={TICKETERA.label}>articulo_id</span>
           <input
             type="text"
             autoComplete="off"
@@ -114,11 +121,11 @@ export default function SolicitudLaoAlta() {
             value={articuloId}
             onChange={(e) => setArticuloId(e.target.value)}
             placeholder="art_…"
-            className="min-h-[44px] w-full touch-manipulation rounded-lg border border-slate-200 px-3 py-2 text-base text-slate-900 outline-none ring-blue-100 focus-visible:ring-2"
+            className={TICKETERA.input}
           />
         </label>
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-slate-600">version_aplicada_id</span>
+          <span className={TICKETERA.label}>version_aplicada_id</span>
           <input
             type="text"
             autoComplete="off"
@@ -126,7 +133,7 @@ export default function SolicitudLaoAlta() {
             value={versionId}
             onChange={(e) => setVersionId(e.target.value)}
             placeholder="ver_… (auto por año bolsa)"
-            className="min-h-[44px] w-full touch-manipulation rounded-lg border border-slate-200 px-3 py-2 text-base text-slate-900 outline-none ring-blue-100 focus-visible:ring-2"
+            className={TICKETERA.input}
           />
           {resolviendo ? (
             <p className="text-xs text-slate-500">Resolviendo versión LAO del ejercicio…</p>
@@ -134,7 +141,7 @@ export default function SolicitudLaoAlta() {
           {errorVersion ? <p className="text-xs text-amber-700">{errorVersion}</p> : null}
         </label>
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-slate-600">anio_origen_bolsa</span>
+          <span className={TICKETERA.label}>anio_origen_bolsa</span>
           <input
             type="number"
             inputMode="numeric"
@@ -143,16 +150,16 @@ export default function SolicitudLaoAlta() {
             value={anioOrigenBolsa}
             onChange={(e) => setAnioOrigenBolsa(e.target.value)}
             placeholder="2026"
-            className="min-h-[44px] w-full touch-manipulation rounded-lg border border-slate-200 px-3 py-2 text-base text-slate-900 outline-none ring-blue-100 focus-visible:ring-2"
+            className={TICKETERA.input}
           />
         </label>
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-slate-600">fecha_desde</span>
+          <span className={TICKETERA.label}>fecha_desde</span>
           <input
             type="date"
             value={fechaDesde}
             onChange={(e) => setFechaDesde(e.target.value)}
-            className="min-h-[44px] w-full touch-manipulation rounded-lg border border-slate-200 px-3 py-2 text-base text-slate-900 outline-none ring-blue-100 focus-visible:ring-2"
+            className={TICKETERA.input}
           />
         </label>
 
@@ -172,11 +179,11 @@ export default function SolicitudLaoAlta() {
           type="button"
           disabled={!enviarHabilitado || cargando || enviando}
           onClick={onEnviar}
-          className="min-h-[44px] w-full touch-manipulation rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm outline-none ring-emerald-200 focus-visible:ring-2 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+          className={TICKETERA.btnSuccess}
         >
-          Enviar solicitud
+          {enviando ? "Enviando…" : "Solicitar licencia"}
         </button>
-      </Card>
+      </div>
     </div>
   );
 }

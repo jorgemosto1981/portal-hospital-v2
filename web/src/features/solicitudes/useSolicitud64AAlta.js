@@ -18,7 +18,7 @@ function ymdHoyBa() {
 /**
  * @param {{ personaId: string, fechaDesdeInicial?: string }} params
  */
-export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
+export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdInicial = "" }) {
   const inicial =
     typeof fechaDesdeInicial === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fechaDesdeInicial)
       ? fechaDesdeInicial
@@ -95,7 +95,9 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
       const res = await callListarArticulosIngresoAgente({ fecha_desde: fechaDesde });
       const list = res?.data?.articulos || [];
       setArticulos(list);
-      setArticuloSel(list.length === 1 ? list[0] : null);
+      const fijado = String(articuloIdInicial || "").trim();
+      const match = fijado ? list.find((x) => String(x.articulo_id || "") === fijado) : null;
+      setArticuloSel(match || (list.length === 1 ? list[0] : null));
       if (list.length === 0) {
         const ev = res?.data?.elegibilidad_vacia;
         const msg = Array.isArray(ev?.mensajes) ? String(ev.mensajes[0] || "").trim() : "";
@@ -109,7 +111,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     } finally {
       setCargando(false);
     }
-  }, [fechaDesde, personaId]);
+  }, [fechaDesde, personaId, articuloIdInicial]);
 
   useEffect(() => {
     recargar();
@@ -207,9 +209,13 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     validandoEntorno,
   ]);
 
-  const previsualizar = useCallback(async () => {
-    if (!articuloSel || previewCargando || !/^per_/i.test(personaId) || !entornoOk || !grupoAnclaOk) {
-      return;
+  const previsualizar = useCallback(async (opts = {}) => {
+    const forzarTrasEntorno = opts?.forzarTrasEntorno === true;
+    if (!articuloSel || previewCargando || !/^per_/i.test(personaId) || !grupoAnclaOk) {
+      return { ok: false };
+    }
+    if (!forzarTrasEntorno && !entornoOk) {
+      return { ok: false };
     }
     setPreviewCargando(true);
     setPreviewError("");
@@ -234,9 +240,11 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     } catch (e) {
       setPreview(null);
       setPreviewError(e?.message || "No se pudo previsualizar la solicitud.");
+      return { ok: false };
     } finally {
       setPreviewCargando(false);
     }
+    return { ok: true };
   }, [
     articuloSel,
     diasSolicitados,
@@ -259,6 +267,13 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
   const puedeEnviarTrasPreview =
     previewVigente && (preview.eligible === true || preview.ok === true);
 
+  const reiniciarValidacionYPreview = useCallback(() => {
+    setPreview(null);
+    setPreviewError("");
+    setEntornoOk(false);
+    setEntornoMensajes([]);
+  }, []);
+
   const resetTrasEnvio = useCallback(() => {
     setPreview(null);
     setPreviewError("");
@@ -266,8 +281,10 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     setEntornoOk(false);
     setEntornoMensajes([]);
     setFechaHastaCalc("");
-    setArticuloSel(articulos.length === 1 ? articulos[0] : null);
-  }, [articulos]);
+    const fijado = String(articuloIdInicial || "").trim();
+    const match = fijado ? articulos.find((x) => String(x.articulo_id || "") === fijado) : null;
+    setArticuloSel(match || (articulos.length === 1 ? articulos[0] : null));
+  }, [articulos, articuloIdInicial]);
 
   const enviar = useCallback(async () => {
     if (!articuloSel || enviando || !puedeEnviarTrasPreview || !entornoOk) return null;
@@ -285,9 +302,12 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
         diasSolicitados,
         grupoTrabajoIdAncla: grupoAnclaId,
       });
-      await esperarValidacionMotorPatronB(solicitud_id);
+      const motor = await esperarValidacionMotorPatronB(solicitud_id);
       resetTrasEnvio();
-      return solicitud_id;
+      return {
+        solicitud_id,
+        autorizacion_rrhh_sustituta: motor.solicitud?.autorizacion_rrhh_sustituta === true,
+      };
     } catch (e) {
       setError(e?.message || "No se pudo enviar la solicitud.");
       return null;
@@ -337,5 +357,6 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial }) {
     validandoEntorno,
     entornoOk,
     entornoMensajes,
+    reiniciarValidacionYPreview,
   };
 }

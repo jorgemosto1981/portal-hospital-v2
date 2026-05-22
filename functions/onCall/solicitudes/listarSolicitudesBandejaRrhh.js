@@ -14,7 +14,8 @@ const listarSolicitudesBandejaRrhhCallable = onCall(async (request) => {
     throw new HttpsError("permission-denied", "Solo RRHH puede acceder a esta bandeja.");
   }
 
-  return listarSolicitudesBandejaRrhh(db);
+  const data = request.data && typeof request.data === "object" ? request.data : {};
+  return listarSolicitudesBandejaRrhh(db, data);
 });
 
 module.exports = { listarSolicitudesBandejaRrhh: listarSolicitudesBandejaRrhhCallable };
