@@ -11,7 +11,7 @@
 > git checkout feature/ticketera-puente-campos-config
 > git pull origin feature/ticketera-puente-campos-config
 > ```
-> **HEAD al cerrar sesión:** `dde2043` (tip remoto). LAO: `d1dc641` UX+docs, `f1a9305` wizard, `7e0b148` callable, `07f3ed3` calendario.
+> **HEAD al cerrar sesión:** `b5ba2e3` (tip remoto). LAO: `d1dc641` UX+docs, `f1a9305` wizard, `7e0b148` callable, `07f3ed3` calendario.
 
 ---
 
