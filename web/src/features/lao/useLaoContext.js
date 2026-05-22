@@ -12,14 +12,15 @@ function formatCallableError(err) {
 
 /**
  * Contexto paso 1 wizard LAO (`obtenerContextoBolsaLaoAgente`).
- * @param {{ articuloId: string, anioOrigenBolsa?: number | string | null, enabled?: boolean }} params
+ * @param {{ articuloId: string, personaId?: string, anioOrigenBolsa?: number | string | null, enabled?: boolean }} params
  */
-export function useLaoContext({ articuloId, anioOrigenBolsa = null, enabled = true }) {
+export function useLaoContext({ articuloId, personaId = "", anioOrigenBolsa = null, enabled = true }) {
   const [raw, setRaw] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const artOk = useMemo(() => ART_RE.test(String(articuloId || "").trim()), [articuloId]);
+  const perOk = useMemo(() => /^per_/i.test(String(personaId || "").trim()), [personaId]);
   const anioNum = useMemo(() => {
     if (anioOrigenBolsa == null || anioOrigenBolsa === "") return null;
     const y = Number(anioOrigenBolsa);
@@ -27,7 +28,7 @@ export function useLaoContext({ articuloId, anioOrigenBolsa = null, enabled = tr
   }, [anioOrigenBolsa]);
 
   const refetch = useCallback(async () => {
-    if (!artOk) {
+    if (!artOk || !perOk) {
       setRaw(null);
       setError(null);
       setLoading(false);
@@ -36,7 +37,10 @@ export function useLaoContext({ articuloId, anioOrigenBolsa = null, enabled = tr
     setLoading(true);
     setError(null);
     try {
-      const payload = { articulo_id: articuloId.trim() };
+      const payload = {
+        articulo_id: articuloId.trim(),
+        persona_id: String(personaId).trim(),
+      };
       if (anioNum != null) payload.anio_origen_bolsa = anioNum;
       const res = await callObtenerContextoBolsaLaoAgente(payload);
       setRaw(res?.data ?? null);
@@ -46,17 +50,17 @@ export function useLaoContext({ articuloId, anioOrigenBolsa = null, enabled = tr
     } finally {
       setLoading(false);
     }
-  }, [artOk, articuloId, anioNum]);
+  }, [artOk, perOk, articuloId, personaId, anioNum]);
 
   useEffect(() => {
-    if (!enabled || !artOk) {
+    if (!enabled || !artOk || !perOk) {
       setRaw(null);
       setError(null);
       setLoading(false);
       return;
     }
     void refetch();
-  }, [enabled, artOk, refetch]);
+  }, [enabled, artOk, perOk, refetch]);
 
   const resumen = raw?.resumen_disponibilidad_lao ?? null;
   const okCallable = raw?.ok === true && resumen?.ok === true;
@@ -68,6 +72,6 @@ export function useLaoContext({ articuloId, anioOrigenBolsa = null, enabled = tr
     error,
     loading,
     refetch,
-    puedeConsultar: enabled && artOk,
+    puedeConsultar: enabled && artOk && perOk,
   };
 }

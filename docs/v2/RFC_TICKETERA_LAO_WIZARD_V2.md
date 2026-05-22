@@ -34,14 +34,15 @@ No hay input editable de “cantidad de días”. Manipular el payload en consol
 
 Objetivo: evitar solicitudes infructuosas y orientar al agente **antes** del rango de fechas.
 
-### 3.1 UI (copy orientativo)
+### 3.1 UI implementada (F3a.1 — 2026-05-22)
 
-| Elemento | Fuente de datos |
-|----------|-----------------|
-| **Año LAO / ejercicio** | `correspondencia_anio` + nombre artículo (versión publicada). Ej.: “Licencia anual 2026”. |
-| **Año origen de bolsa** | Selección agente (`anio_origen_bolsa`) o bolsa FIFO sugerida. |
-| **Días disponibles** | `disponible` de la bolsa elegida en `saldos_articulo_agente`. |
-| **Detalle** (opcional) | Otras bolsas con saldo, vencimientos próximos, mensaje si check-in pendiente. |
+- Botón primario **«Iniciar solicitud»** arriba del bloque informativo.
+- Título **«Disponibles:»** — listado por bolsa (`bolsas_resumen`), **sin selector** de bolsa (consumo = FIFO en backend).
+- Por cada bolsa:
+  - `Año LAO = {anio_origen}`
+  - `- Total = {cantidad_inicial} Días`
+  - `- Disponibles = {disponible}` numérico, **excepto** si `anio_origen` = año calendario de la `fecha` del trámite (ej. 2026) → `- Disponibles = proporcional` (sin cálculo en paso 1).
+- Aviso FIFO si `debe_respetar_fifo`.
 
 ### 3.2 Callable `obtenerContextoBolsaLaoAgente` (F3a.1)
 

@@ -8,7 +8,7 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db } = require("../../modules/shared/context");
 const runtimeFlags = require("../../modules/shared/runtimeFlags.json");
-const { assertAgenteConPersonaId, tokenHasRrhhAccess } = require("../../modules/shared/helpers");
+const { tokenHasRrhhAccess, resolvePersonaIdSolicitudFlujoAgente } = require("../../modules/shared/helpers");
 const { resolvePublishedLaoVersion } = require("../../modules/shared/laoVersionResolverDb");
 const { buildResumenDisponibilidadLao } = require("../../modules/shared/obtenerContextoBolsaLaoCore");
 
@@ -23,9 +23,14 @@ function resolvePersonaId(request, data) {
   if (request.auth && tokenHasRrhhAccess(request.auth.token)) {
     const pid = typeof data.persona_id === "string" ? data.persona_id.trim() : "";
     if (pid && /^per_/i.test(pid)) return pid;
+    const tokenPid =
+      request.auth.token && typeof request.auth.token.persona_id === "string"
+        ? request.auth.token.persona_id.trim()
+        : "";
+    if (tokenPid && /^per_/i.test(tokenPid)) return tokenPid;
     throw new HttpsError("invalid-argument", "RRHH debe enviar persona_id del agente.");
   }
-  return assertAgenteConPersonaId(request);
+  return resolvePersonaIdSolicitudFlujoAgente(request, data);
 }
 
 const obtenerContextoBolsaLaoAgente = onCall(async (request) => {

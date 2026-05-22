@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import LaoDisponibilidadPaso from "../features/lao/LaoDisponibilidadPaso.jsx";
 import { useLaoContext } from "../features/lao/useLaoContext.js";
+import { useAuthClaims } from "../features/auth/useAuthClaims.js";
+import { useAuthSession } from "../features/auth/useAuthSession.js";
 import { TICKETERA } from "../features/solicitudes/ticketeraUi.js";
 import { LAO_ARTICULO_ID } from "../constants/laoArticulo.js";
 import { ymdHoyBa } from "../features/solicitudes/ticketeraUtils.js";
@@ -79,31 +81,31 @@ function LaoWizardStepper({ paso }) {
  */
 export default function LaoWizardTicketera() {
   const [searchParams] = useSearchParams();
+  const { user } = useAuthSession();
+  const { claims, claimsLoading } = useAuthClaims(user);
+  const personaId = String(claims?.persona_id || "").trim();
   const articuloId = useMemo(() => articuloIdQuery(searchParams), [searchParams]);
   const fechaReferencia = useMemo(() => fechaDesdeQuery(searchParams), [searchParams]);
 
   const [paso, setPaso] = useState(1);
-  const [anioOrigenBolsa, setAnioOrigenBolsa] = useState("");
+  const anioCalendarioCivil = useMemo(() => Number(fechaReferencia.slice(0, 4)), [fechaReferencia]);
 
   const { resumen, okCallable, error, loading, puedeConsultar } = useLaoContext({
     articuloId,
-    anioOrigenBolsa: anioOrigenBolsa === "" ? null : anioOrigenBolsa,
+    personaId,
+    anioOrigenBolsa: null,
     enabled: paso === 1,
   });
 
-  useEffect(() => {
-    if (!resumen) return;
-    const activo = resumen.anio_origen_bolsa_activo;
-    if (activo != null && anioOrigenBolsa === "") {
-      setAnioOrigenBolsa(String(activo));
-    }
-  }, [resumen, anioOrigenBolsa]);
-
-  const puedeAvanzarPaso1 =
-    okCallable &&
-    resumen?.bolsa_seleccionada &&
-    Number(resumen.bolsa_seleccionada.disponible) > 0 &&
-    !resumen.fifo?.debe_respetar_fifo;
+  const puedeAvanzarPaso1 = (() => {
+    if (!okCallable || resumen?.fifo?.debe_respetar_fifo) return false;
+    const bolsa = resumen?.bolsa_seleccionada;
+    if (!bolsa) return false;
+    const esLaoAnioEnCurso =
+      Number.isInteger(anioCalendarioCivil) && Number(bolsa.anio_origen) === anioCalendarioCivil;
+    if (esLaoAnioEnCurso) return true;
+    return Number(bolsa.disponible) > 0;
+  })();
 
   return (
     <div className="space-y-4">
@@ -117,7 +119,25 @@ export default function LaoWizardTicketera() {
         Fecha de referencia del trámite: <span className="font-mono font-medium">{fechaReferencia}</span>
       </p>
 
+      {!claimsLoading && !/^per_/i.test(personaId) ? (
+        <p className="text-sm text-amber-800">
+          Tu sesión no tiene persona vinculada (o RRHH debe indicar el agente). Volvé a iniciar sesión o usá el flujo
+          desde check-in.
+        </p>
+      ) : null}
+
       <LaoWizardStepper paso={paso} />
+
+      {paso === 1 ? (
+        <button
+          type="button"
+          className={TICKETERA.btnPrimary}
+          disabled={!puedeAvanzarPaso1 || loading || !puedeConsultar}
+          onClick={() => setPaso(2)}
+        >
+          Iniciar solicitud
+        </button>
+      ) : null}
 
       <div className={`${TICKETERA.card} ${TICKETERA.cardPad}`}>
         {paso === 1 ? (
@@ -125,31 +145,18 @@ export default function LaoWizardTicketera() {
             resumen={resumen}
             loading={loading}
             error={error}
-            anioOrigenBolsa={anioOrigenBolsa}
-            onAnioOrigenBolsaChange={setAnioOrigenBolsa}
+            anioCalendarioCivil={anioCalendarioCivil}
           />
         ) : (
           <p className={TICKETERA.muted}>Paso {paso} en construcción (F3a.2). Volvé al paso 1 para revisar tu bolsa.</p>
         )}
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        {paso > 1 ? (
-          <button type="button" className={TICKETERA.btnSecondary} onClick={() => setPaso((p) => Math.max(1, p - 1))}>
-            Anterior
-          </button>
-        ) : null}
-        {paso === 1 ? (
-          <button
-            type="button"
-            className={TICKETERA.btnPrimary}
-            disabled={!puedeAvanzarPaso1 || loading || !puedeConsultar}
-            onClick={() => setPaso(2)}
-          >
-            Continuar a fechas
-          </button>
-        ) : null}
-      </div>
+      {paso > 1 ? (
+        <button type="button" className={TICKETERA.btnSecondary} onClick={() => setPaso((p) => Math.max(1, p - 1))}>
+          Anterior
+        </button>
+      ) : null}
     </div>
   );
 }
