@@ -22,6 +22,27 @@ export function tituloSolicitudBandeja(s) {
 }
 
 /** @param {Record<string, unknown> | null | undefined} s */
+/** Timestamp Firestore / ISO → texto legible (BA). */
+export function formatInstanteBandeja(raw) {
+  if (raw == null || raw === "") return "";
+  let ms = NaN;
+  if (typeof raw === "string") ms = Date.parse(raw);
+  else if (typeof raw === "number") ms = raw < 1e12 ? raw * 1000 : raw;
+  else if (typeof raw === "object") {
+    const sec = Number(raw.seconds ?? raw._seconds);
+    if (Number.isFinite(sec)) ms = sec * 1000;
+  }
+  if (!Number.isFinite(ms)) return "";
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
+
+/** @param {Record<string, unknown> | null | undefined} s */
 export function metaComplementariaBandeja(s) {
   const nombre = String(s?.titular_label || "—").trim();
   const fechas = formatRangoFechasBandeja(s?.fecha_desde, s?.fecha_hasta);

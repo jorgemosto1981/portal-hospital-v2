@@ -157,6 +157,7 @@ async function itemListaBandejaJefe(db, sol, personaCache, articuloCache, meta) 
     patron_saldo: String(sol.patron_saldo || ""),
     estado_solicitud_id: sol.estado_solicitud_id,
     creado_en: sol.creado_en || null,
+    jefe_revision_en: sol.jefe_revision_en || null,
     puede_decidir: meta.puede_decidir === true,
     etiqueta_estado: meta.etiqueta_estado,
   };
