@@ -217,7 +217,16 @@ async function listarSolicitudesBandejaRrhh(db, opts = {}) {
       dias_solicitados: Number(sol.dias_solicitados) || 1,
       patron_saldo: String(sol.patron_saldo || ""),
       estado_solicitud_id: sol.estado_solicitud_id,
+      creado_en: sol.creado_en || null,
+      grupo_trabajo_id_ancla: String(sol.grupo_trabajo_id_ancla || "").trim() || null,
       jefe_revision_en: sol.jefe_revision_en || null,
+      jefe_revision_persona_id: String(sol.jefe_revision_persona_id || "").trim() || null,
+      jefe_motivo: sol.jefe_motivo != null ? String(sol.jefe_motivo) : null,
+      rrhh_revision_en: sol.rrhh_revision_en || null,
+      rrhh_revision_persona_id: String(sol.rrhh_revision_persona_id || "").trim() || null,
+      rrhh_motivo: sol.rrhh_motivo != null ? String(sol.rrhh_motivo) : null,
+      rrhh_toma_conocimiento_motivo:
+        sol.rrhh_toma_conocimiento_motivo != null ? String(sol.rrhh_toma_conocimiento_motivo) : null,
       autorizadores_elegibles_ids: Array.isArray(sol.autorizadores_elegibles_ids)
         ? sol.autorizadores_elegibles_ids
         : [],

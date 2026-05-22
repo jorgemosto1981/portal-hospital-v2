@@ -1,7 +1,4 @@
-import {
-  metaComplementariaBandeja,
-  tituloSolicitudBandeja,
-} from "./bandejaSolicitudesFormat.js";
+import BandejaSolicitudExpandDatos from "./BandejaSolicitudExpandDatos.jsx";
 
 /**
  * Panel de acción / detalle dentro del ítem expandido (bandeja RRHH).
@@ -10,27 +7,26 @@ export default function BandejaRrhhSolicitudDetalle({ sel, motivo, setMotivo, pr
   if (!sel) return null;
 
   return (
-    <div className="border-t border-violet-100 bg-violet-50/30 px-4 py-4 space-y-4">
+    <div className="space-y-4 border-t border-violet-100 bg-violet-50/30 px-4 py-4">
       <div>
-        <p className="text-sm font-medium text-slate-800">{tituloSolicitudBandeja(sel)}</p>
-        <p className="mt-1 text-sm italic text-slate-500">({metaComplementariaBandeja(sel)})</p>
-        {sel.titular_dni ? (
-          <p className="mt-1 text-xs text-slate-600">
-            DNI {sel.titular_dni} · {sel.titular_label}
-          </p>
-        ) : null}
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Detalle del trámite</p>
+        <div className="mt-2">
+          <BandejaSolicitudExpandDatos sel={sel} variant="rrhh" />
+        </div>
       </div>
 
-      <label className="block space-y-1.5">
-        <span className="text-sm font-medium text-slate-700">Motivo (opcional)</span>
-        <textarea
-          value={motivo}
-          onChange={(e) => setMotivo(e.target.value)}
-          rows={2}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-          placeholder="Observación para auditoría"
-        />
-      </label>
+      {sel.puede_aprobar_rechazar === true || sel.puede_registrar_toma_conocimiento === true ? (
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">Motivo (opcional)</span>
+          <textarea
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            rows={2}
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+            placeholder="Observación para auditoría"
+          />
+        </label>
+      ) : null}
 
       {sel.puede_aprobar_rechazar === true ? (
         <>
@@ -77,13 +73,7 @@ export default function BandejaRrhhSolicitudDetalle({ sel, motivo, setMotivo, pr
           </button>
         </>
       ) : (
-        <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
-          {sel.bandeja_rrhh_modo === "visibilidad_jefe"
-            ? "En espera de jefatura; RRHH no cierra este trámite salvo huérfana sustituta."
-            : sel.bandeja_rrhh_modo === "toma_conocimiento_ok"
-              ? "La toma de conocimiento ya fue registrada."
-              : "Solo consulta en este estado."}
-        </p>
+        <p className="text-xs text-slate-500">Sin acciones disponibles en esta bandeja para este estado.</p>
       )}
     </div>
   );
