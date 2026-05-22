@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
+import { LAO_ARTICULO_ID } from "../constants/laoArticulo.js";
 import { TICKETERA } from "../features/solicitudes/ticketeraUi.js";
 import { callListarArticulosIngresoAgente } from "../services/callables.js";
 import { ymdHoyBa } from "../features/solicitudes/ticketeraUtils.js";
@@ -58,9 +59,24 @@ export default function TicketeraHub() {
     recargar();
   }, [recargar]);
 
+  function irLaoWizard(articuloId = LAO_ARTICULO_ID) {
+    const id = String(articuloId || LAO_ARTICULO_ID).trim();
+    if (!/^art_/i.test(id)) return;
+    const fechaRef = ymdHoyBa();
+    const q = new URLSearchParams({
+      fecha: fechaRef,
+      articulo_id: id,
+    });
+    nav(`/portal/solicitudes/lao?${q.toString()}`);
+  }
+
   function irArticulo(articuloId) {
     const id = String(articuloId || "").trim();
     if (!/^art_/i.test(id)) return;
+    if (id === LAO_ARTICULO_ID) {
+      irLaoWizard(id);
+      return;
+    }
     nav(`/portal/solicitudes/patron-b?articulo=${encodeURIComponent(id)}`);
   }
 
@@ -102,15 +118,16 @@ export default function TicketeraHub() {
           })
         : null}
 
-      <Link
-        to="/portal/solicitudes/lao"
+      <button
+        type="button"
+        onClick={() => irLaoWizard(LAO_ARTICULO_ID)}
         className={`${TICKETERA.btnTileBase} ${TICKETERA.btnTileLao}`}
       >
         <span className={TICKETERA.codigoLao}>LAO</span>
         <span className={`${TICKETERA.nombreTile} text-emerald-900/80`}>
-          Licencia anual ordinaria · validación y envío
+          Licencia anual ordinaria · bolsa y trámite guiado
         </span>
-      </Link>
+      </button>
     </div>
   );
 }

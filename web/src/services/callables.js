@@ -161,6 +161,11 @@ export function callSimularLaoPreview(data) {
   return httpsCallable(getFunctionsV2(), "simularLaoPreview")(data);
 }
 
+/** Paso 1 wizard LAO — bolsas y versión publicada (`obtenerContextoBolsaLaoAgente`). */
+export function callObtenerContextoBolsaLaoAgente(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerContextoBolsaLaoAgente")(data);
+}
+
 /** Check-in LAO histórico → bolsas (callable `persistirCheckinLaoBolsas`). */
 export function callPersistirCheckinLaoBolsas(data) {
   return httpsCallable(getFunctionsV2(), "persistirCheckinLaoBolsas")(data);

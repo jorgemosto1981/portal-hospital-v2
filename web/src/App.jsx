@@ -21,6 +21,7 @@ import Configuracion from "./pages/Configuracion.jsx";
 import ArticuloConfiguracion from "./pages/ArticuloConfiguracion.jsx";
 import ArticuloListadoGrilla from "./pages/ArticuloListadoGrilla.jsx";
 import ArticuloVersionesListado from "./pages/ArticuloVersionesListado.jsx";
+import LaoWizardTicketera from "./pages/LaoWizardTicketera.jsx";
 import SolicitudLaoAlta from "./pages/SolicitudLaoAlta.jsx";
 import Solicitud64AAlta from "./pages/Solicitud64AAlta.jsx";
 import TicketeraShell from "./features/solicitudes/TicketeraShell.jsx";
@@ -108,7 +109,8 @@ export default function App() {
                   </GuardArticuloIngreso>
                 }
               />
-              <Route path="lao" element={<SolicitudLaoAlta />} />
+              <Route path="lao" element={<LaoWizardTicketera />} />
+              <Route path="lao-formulario" element={<SolicitudLaoAlta />} />
             </Route>
             <Route path="solicitudes/asuntos-particulares" element={<Solicitud64AAlta />} />
             <Route path="perfil" element={<DatosPersonales />} />
