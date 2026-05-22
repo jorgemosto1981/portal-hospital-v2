@@ -77,33 +77,28 @@
 
 ---
 
-## 6. Dónde seguimos **mañana** (orden sugerido)
+## 6. Dónde seguimos (actualizado 2026-05-22)
 
-### P0 — Validar en prod/local (15–30 min)
+### Cerrado ✅
 
-1. `git pull` + `npm run dev:web` (o prod).
-2. Ruta ticketera Patrón B (`/portal/solicitudes/patron-b` o carril equivalente).
-3. Paso 2 → **Continuar**:
-   - **OK:** avanza a paso 3 sin 400.
-   - **Bloqueo negocio:** alerta roja con `mensajes[]` (ej. turno, grilla) — **200**, no 400.
-4. Paso 3 → Previsualizar → Confirmar envío (flujo completo).
-5. Anotar en evidencia Fase 2: `sol_*` nuevo si se crea, y si aparece en grilla MDC.
+- **P0** smoke wizard + paso 2 + envío (`sol_01KS7N68…` — evidencia Oleada A + Fase 2).
+- **Oleada A** + bandejas RRHH/jefe (filtros, paginación, expand).
+- **D** autorización TC (ya no es P1 pendiente).
 
 ### P1 — Producto ticketera (elegir uno)
 
 | Opción | Entrega | Doc |
 |--------|---------|-----|
-| **A** | Smoke matriz paso 2: sin grupo, sin turno RDA, OK piloto | RFC paso 2 §6 |
-| **B** | F3a LAO: wizard o deep-link `fecha` desde hub (parcial en `c3b58de`) | `PLAN_TICKETERA_V2.md` F3a |
+| **B** | F3a LAO: wizard o deep-link `fecha` desde hub | `PLAN_TICKETERA_V2.md` F3a |
 | **C** | F2.5 listado todos Patrón B (`TICKETERA_LISTAR_TODOS_PATRON_B=1`) | `RFC_TICKETERA_FASE2_DINAMICA_V2.md` |
-| **D** | Oleada A autorización + TC RRHH | `PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md` |
+| **E** | Merge / PR → `main` | Cuando operador apruebe la rama |
 
-**No hacer salvo bug:** redeploy masivo Functions por refactor `mdcGrillaHorariaGate` (ya en git; motor preview en prod puede no tener último delegado hasta deploy amplio).
+| **A** | Smoke matriz paso 2 (casos borde) | RFC paso 2 §6 — opcional |
 
-### P2 — Documentación / deuda menor
+### P2 — Deuda menor
 
-- Completar checklist auditoría `sol_01KS65K` en evidencia Fase 2.
-- PR o merge `feature/ticketera-puente-campos-config` → `main` cuando operador cierre smoke.
+- Checklist visual grilla `vis_*` por solicitud nueva.
+- Índice Firestore si historial bandeja jefe falla en prod.
 
 ---
 

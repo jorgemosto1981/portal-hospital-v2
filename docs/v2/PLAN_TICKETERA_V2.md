@@ -1,6 +1,6 @@
 # Plan maestro — Ticketera / solicitudes V2
 
-**Estado del documento:** plan vivo · **última revisión:** 2026-05-21 (cierre tarde) · **Handoff sesión:** [`HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md`](./HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md) · **Fase 2:** [`TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md`](./TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md) · **Paso 2 entorno:** [`RFC_TICKETERA_FLUJO_PROGRESIVO_PASO2_ENTORNO_V2.md`](./RFC_TICKETERA_FLUJO_PROGRESIVO_PASO2_ENTORNO_V2.md) · **PAUSA bandejas MVP:** [`HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md`](./HANDOFF_TICKETERA_PAUSA_2026-05-19_FASE2-4.md)  
+**Estado del documento:** plan vivo · **última revisión:** 2026-05-22 · **Handoff sesión:** [`HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md`](./HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md) · **Fase 2:** [`TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md`](./TICKETERA_EVIDENCIA_2026-05-21_FASE2_WIZARD.md) · **Oleada A:** [`TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md`](./TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md) · **Paso 2 entorno:** [`RFC_TICKETERA_FLUJO_PROGRESIVO_PASO2_ENTORNO_V2.md`](./RFC_TICKETERA_FLUJO_PROGRESIVO_PASO2_ENTORNO_V2.md)  
 **Ámbito:** ingreso agente, motores por patrón de saldo, bandejas (jefe / médico futuro), relación con `cfg_articulos`.
 
 **Visión de producto (incorporada):** [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md) — herramienta **dinámica**, fechas impuestas, preview, subflujos LAO y licencias médicas.
@@ -23,14 +23,14 @@ Leyenda: **Hecho** · **Parcial** · **Pendiente**
 | **F2b — Preview + fechas impuestas** | **Hecho** | Paso 3 wizard + `fecha_hasta` RO en paso 2 |
 | **F2c — Paso 2 entorno (HLg / grilla / turno)** | **Hecho (21-may)** | `validarEntornoOperativoSolicitud` + UI gate · commits `9319bf7`–`72c8ae6` |
 | **F3a — LAO dentro del concepto ticketera** | **Parcial (21-may)** | Hub pasa `fecha` · enlace vuelta al hub · wizard LAO pendiente |
-| **F3b — Bandeja jefe** | **Hecho (piloto J2–J3)** | [`TICKETERA_FASE3_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE3_EVIDENCIA_PILOTO.md) |
-| **F4 — Bandeja RRHH solicitudes** | **Parcial (MVP)** — **TO-BE en RFC** | [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) · implementar Oleada A |
+| **F3b — Bandeja jefe** | **Hecho (22-may)** | Filtros, paginación, expand · piloto J2–J3 · [`TICKETERA_FASE3_EVIDENCIA_PILOTO.md`](./TICKETERA_FASE3_EVIDENCIA_PILOTO.md) |
+| **F4 — Bandeja RRHH + Oleada A** | **Hecho (22-may)** | TC + cierre jefe; bandeja filtrable · [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) · [`TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md`](./TICKETERA_EVIDENCIA_2026-05-21_OLEADA_A_AUTORIZACION_TC.md) |
 | **F5 — Lic. médicas + bandeja médico** | **Pendiente** | Concepto §4.3 del documento visión |
 | **F6 — Delegación jefe → subordinado** | **Pendiente** | [`CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md`](./CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md) |
 
-**Resumen en una frase:** ticketera Patrón B con **wizard 3 pasos**, listado P0, **gate paso 2** y preview en prod; **pendiente smoke E2E** post-cableado paso 2 y elección de siguiente P1 (LAO / catálogo completo / Oleada A).
+**Resumen en una frase:** ticketera Patrón B en prod (wizard + paso 2 + preview); **Oleada A** y **bandejas jefe/RRHH** operativas con filtros y paginación; **siguiente P1:** F3a LAO en hub, F2.5 catálogo, o merge a `main`.
 
-**Rama remota:** `feature/ticketera-puente-campos-config` @ `72c8ae6` — sincronizada para otra PC.
+**Rama remota:** `feature/ticketera-puente-campos-config` (ver último commit en GitHub).
 
 ---
 
@@ -143,11 +143,13 @@ Leyenda: **Hecho** · **Parcial** · **Pendiente**
 
 ## 5. Criterio de “siguiente sesión” (2026-05-22)
 
-**P0:** Smoke E2E wizard con paso 2 callable — ver [`HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md`](./HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md) §6.
+**Cerrado en esta rama:** smoke E2E wizard + Oleada A (`sol_01KS7N68…`) · bandejas jefe/RRHH (filtros, lazy load, expand) · deploy Hosting + callables bandeja.
 
-**P1 (elegir uno):** matriz bloqueos paso 2 · F3a LAO en hub · F2.5 catálogo Patrón B · Oleada A autorización TC.
+**P1 (elegir uno):** **F3a LAO** wizard en hub · **F2.5** catálogo todos Patrón B · **merge** `feature/ticketera-puente-campos-config` → `main`.
 
-**Cerrado:** Fase 2 listado + wizard + paso 2 entorno · Grilla Oleada C (no reabrir).
+**P2:** índice Firestore historial jefe (`jefe_revision_persona_id` + estado) si falla en prod · TC superiores (RFC §2 ítem 9) · matriz bloqueos paso 2 (opcional).
+
+**No reabrir salvo bug:** Grilla Oleada C · motor MDC base.
 
 ---
 
@@ -157,3 +159,4 @@ Leyenda: **Hecho** · **Parcial** · **Pendiente**
 |-------|--------|
 | 2026-05-19 | Plan maestro creado; visión dinámica incorporada; tabla “dónde estamos” vs fases. |
 | 2026-05-21 | F2c paso 2 entorno; handoff [`HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md`](./HANDOFF_SESION_2026-05-21_TICKETERA_PASO2_CIERRE.md); rama @ `72c8ae6`. |
+| 2026-05-22 | Oleada A E2E; bandejas RRHH/jefe; UX listado 3 renglones; plan §1 actualizado. |

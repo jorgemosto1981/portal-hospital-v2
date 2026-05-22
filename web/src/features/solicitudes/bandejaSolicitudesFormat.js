@@ -13,12 +13,47 @@ export function diasLabelBandeja(n) {
   return d === 1 ? "1 día" : `${d} días`;
 }
 
-/** @param {Record<string, unknown> | null | undefined} s */
-export function tituloSolicitudBandeja(s) {
-  const art = String(s?.articulo_label || "").trim();
+/** Código artículo para renglón principal (ej. 64-B). */
+function codigoArticuloBandeja(s) {
+  const cod = String(s?.codigo_grilla || "").trim();
+  if (cod) return cod;
+  const label = String(s?.articulo_label || "").trim();
+  if (label.includes("—")) return label.split("—")[0].trim();
+  if (label) return label;
   const patron = String(s?.patron_saldo || "").trim();
-  const base = art || (patron ? `Patrón ${patron}` : "Solicitud");
-  return `${base} · ${diasLabelBandeja(s?.dias_solicitados)}`;
+  return patron ? `Patrón ${patron}` : "Artículo";
+}
+
+function nombreArticuloBandeja(s) {
+  const nom = String(s?.articulo_nombre || "").trim();
+  if (nom) return nom;
+  const label = String(s?.articulo_label || "").trim();
+  if (label.includes("—")) return label.split("—").slice(1).join("—").trim();
+  return label;
+}
+
+/** Renglón 1: código artículo · nombre artículo · fecha · días */
+export function renglonPrincipalBandeja(s) {
+  const articulo = codigoArticuloBandeja(s);
+  const nombreArt = nombreArticuloBandeja(s);
+  const fecha = formatRangoFechasBandeja(s?.fecha_desde, s?.fecha_hasta);
+  const dias = diasLabelBandeja(s?.dias_solicitados);
+  return [articulo, nombreArt, fecha, dias].filter(Boolean).join(" · ");
+}
+
+/** Renglón 3 (sin id): titular · DNI */
+export function renglonTitularDniBandeja(s) {
+  const nombre = String(s?.titular_label || "").trim();
+  const dni = String(s?.titular_dni || "").replace(/\D/g, "").trim();
+  const parts = [];
+  if (nombre) parts.push(nombre);
+  if (dni) parts.push(`DNI ${dni}`);
+  return parts.join(" · ");
+}
+
+/** @deprecated Usar renglonPrincipalBandeja en listas */
+export function tituloSolicitudBandeja(s) {
+  return renglonPrincipalBandeja(s);
 }
 
 /** @param {Record<string, unknown> | null | undefined} s */

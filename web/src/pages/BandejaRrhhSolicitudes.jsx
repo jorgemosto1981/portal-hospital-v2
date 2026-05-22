@@ -4,10 +4,7 @@ import toast from "react-hot-toast";
 
 import Card from "../components/ui/Card.jsx";
 import BandejaRrhhSolicitudDetalle from "../features/solicitudes/BandejaRrhhSolicitudDetalle.jsx";
-import {
-  metaComplementariaBandeja,
-  tituloSolicitudBandeja,
-} from "../features/solicitudes/bandejaSolicitudesFormat.js";
+import BandejaSolicitudResumenFilas from "../features/solicitudes/BandejaSolicitudResumenFilas.jsx";
 import {
   FILTROS_VISTA_RRHH,
   useBandejaRrhhSolicitudes,
@@ -205,18 +202,10 @@ export default function BandejaRrhhSolicitudes() {
                     ].join(" ")}
                     aria-expanded={expanded}
                   >
-                    <p className="text-[15px] font-semibold leading-snug text-slate-900">
-                      {tituloSolicitudBandeja(s)}
-                    </p>
-                    <p className="mt-1.5 text-sm italic text-slate-500">({metaComplementariaBandeja(s)})</p>
-                    {s.titular_dni ? (
-                      <p className="mt-1 text-xs text-slate-600">
-                        {s.titular_label} · DNI {s.titular_dni}
-                      </p>
-                    ) : null}
-                    {s.etiqueta_estado ? (
-                      <p className="mt-1 text-xs font-medium text-violet-800">{s.etiqueta_estado}</p>
-                    ) : null}
+                    <BandejaSolicitudResumenFilas
+                      s={s}
+                      etiquetaClassName="mt-1 text-xs font-medium text-violet-800"
+                    />
                   </button>
                   {expanded ? (
                     <BandejaRrhhSolicitudDetalle

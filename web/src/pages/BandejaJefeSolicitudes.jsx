@@ -7,10 +7,7 @@ import BandejaJefeSolicitudDetalle from "../features/solicitudes/BandejaJefeSoli
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
 import { claimsIncludeRrhh } from "../features/routing/portalRole.js";
-import {
-  metaComplementariaBandeja,
-  tituloSolicitudBandeja,
-} from "../features/solicitudes/bandejaSolicitudesFormat.js";
+import BandejaSolicitudResumenFilas from "../features/solicitudes/BandejaSolicitudResumenFilas.jsx";
 import {
   FILTROS_VISTA_JEFE,
   useBandejaJefeSolicitudes,
@@ -194,18 +191,10 @@ export default function BandejaJefeSolicitudes() {
                     ].join(" ")}
                     aria-expanded={expanded}
                   >
-                    <p className="text-[15px] font-semibold leading-snug text-slate-900">
-                      {tituloSolicitudBandeja(s)}
-                    </p>
-                    <p className="mt-1.5 text-sm italic text-slate-500">({metaComplementariaBandeja(s)})</p>
-                    {s.titular_dni ? (
-                      <p className="mt-1 text-xs text-slate-600">
-                        {s.titular_label} · DNI {s.titular_dni}
-                      </p>
-                    ) : null}
-                    {s.etiqueta_estado ? (
-                      <p className="mt-1 text-xs font-medium text-blue-800">{s.etiqueta_estado}</p>
-                    ) : null}
+                    <BandejaSolicitudResumenFilas
+                      s={s}
+                      etiquetaClassName="mt-1 text-xs font-medium text-blue-800"
+                    />
                   </button>
                   {expanded ? (
                     <BandejaJefeSolicitudDetalle

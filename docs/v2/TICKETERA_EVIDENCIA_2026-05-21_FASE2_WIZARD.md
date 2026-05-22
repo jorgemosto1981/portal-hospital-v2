@@ -3,7 +3,7 @@
 **Fecha:** 2026-05-21  
 **Proyecto:** `portal-hospital-v2`  
 **Rama:** `feature/ticketera-puente-campos-config`  
-**Commits referencia:** `6f1fdbf` (wizard inicial) · `469d7d9` (paso 2 UI + callable) · `72c8ae6` (fix RRHH persona_id) · **HEAD:** `72c8ae6`
+**Commits referencia:** wizard Fase 2 · paso 2 entorno · bandejas 22-may · ver rama `feature/ticketera-puente-campos-config`
 
 **RFC:** [`RFC_TICKETERA_FASE2_DINAMICA_V2.md`](./RFC_TICKETERA_FASE2_DINAMICA_V2.md)
 
@@ -29,17 +29,18 @@
 | Alta vía ticketera Fase 2 (wizard → preview → envío) | ✅ (operador) |
 | Alta post-rediseño UX (confirmación huérfana/jefatura) | ✅ `sol_01KS7N68PW8T3BXAH1GN8SVN54` (22-may) |
 | Documento `sol_*` persistido | ✅ `sol_01KS65KJW3Q163YEJ32GHDW12E` |
-| Proyección MDC `vis_*` / calendario licencias | ✅ **visible en grilla** (`/portal/grilla` → pestaña Calendario licencias MDC) |
+| Proyección MDC `vis_*` / calendario licencias | ✅ `sol_01KS65K…` en grilla; `sol_01KS7N68…` con `CONSOLIDAR_APROBADO` post-jefe (consola) |
 | Enlace detalle día / bandeja (C3) | Pendiente anotar si se probó clic en celda |
 
 **Notas operador:** solicitud creada tras cierre Fase 2; confirma cadena **ticketera → trigger Patrón B → MDC → GSO** sin regresión respecto a pilotos `sol_01KS57Y…` / `sol_01KS50G2…`.
 
 ### Campos a contrastar en consola (checklist auditoría)
 
-- [ ] `version_id_aplicada`, `grupo_trabajo_id_ancla` en raíz `sol_*`
-- [ ] `estado_solicitud_id` coherente con flujo Oleada A (p. ej. `cfg_esa_en_revision_jefe` post-alta)
-- [ ] `mdc_ultimo_comando` = `PROYECTAR_PENDIENTE` (o siguiente si ya hubo jefe)
-- [ ] Doc `vis_YYYY_MM_per_*` con día del permiso coloreado según MDC
+Piloto **`sol_01KS7N68…`** (22-may, ver Oleada A §4): [x] `version_id_aplicada`, ancla, estados, `CONSOLIDAR_APROBADO` tras jefe.
+
+- [x] `sol_01KS7N68…` — contrato alta + cierre jefe + TC (detalle en evidencia Oleada A)
+- [ ] `sol_01KS65K…` — checklist explícito en consola si se audita aparte
+- [ ] Doc `vis_YYYY_MM_per_*` con día coloreado (verificación visual grilla para cada `sol_*` nuevo)
 
 ---
 
