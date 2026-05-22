@@ -19,7 +19,8 @@ const listarSolicitudesBandejaJefeCallable = onCall(async (request) => {
   const revisorPersonaId = assertAgenteConPersonaId(request);
   const rrhhBypass = tokenHasRrhhLaborAccess(token);
 
-  return listarSolicitudesBandejaJefe(db, { revisorPersonaId, rrhhBypass });
+  const data = request.data && typeof request.data === "object" ? request.data : {};
+  return listarSolicitudesBandejaJefe(db, { ...data, revisorPersonaId, rrhhBypass });
 });
 
 module.exports = { listarSolicitudesBandejaJefe: listarSolicitudesBandejaJefeCallable };

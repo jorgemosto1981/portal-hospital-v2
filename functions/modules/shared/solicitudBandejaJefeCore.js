@@ -36,10 +36,17 @@ function esHuerfanaEnRevisionJefe(sol) {
   );
 }
 
+const {
+  parseBandejaListPageOpts,
+  paginarBandejaOrdenada,
+  resolverPersonaIdsPorDni,
+} = require("./solicitudBandejaListUtils");
+
 const COL_SOL = "solicitudes_articulo";
 const COL_PERSONAS = "personas";
 const COL_CFG_ART = "cfg_articulos";
-const LIST_LIMIT = 80;
+const SCAN_LIMIT = 400;
+const FILTRO_JEFE_PENDIENTES = "pendientes";
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
@@ -91,59 +98,173 @@ async function revisorVeSolicitudEnBandejaJefe(db, sol, revisorPersonaId) {
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
- * @param {{ revisorPersonaId: string, rrhhBypass?: boolean }} opts — rrhhBypass ignorado (Oleada A)
+ * @param {string} titularId
+ * @param {Map<string, { label: string, dni: string }>} personaCache
+ */
+async function loadPersonaBandeja(db, titularId, personaCache) {
+  let row = personaCache.get(titularId);
+  if (row !== undefined) return row;
+  const pSnap = await db.collection(COL_PERSONAS).doc(titularId).get();
+  const p = pSnap.exists ? pSnap.data() || {} : {};
+  const nom = [p.apellido, p.nombre].filter(Boolean).join(", ").trim();
+  row = {
+    label: nom || titularId,
+    dni: String(p.dni || "").replace(/\D/g, "").trim(),
+  };
+  personaCache.set(titularId, row);
+  return row;
+}
+
+/**
+ * @param {string} usuario
+ * @param {{ label: string, dni: string }} personaRow
+ */
+function personaCoincideUsuario(usuario, personaRow) {
+  if (!usuario) return true;
+  return (
+    String(personaRow.label || "")
+      .toLowerCase()
+      .includes(usuario) ||
+    String(personaRow.dni || "").includes(usuario.replace(/\D/g, ""))
+  );
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {Record<string, unknown>} sol
+ * @param {Map} personaCache
+ * @param {Map} articuloCache
+ * @param {{ puede_decidir: boolean, etiqueta_estado: string }} meta
+ */
+async function itemListaBandejaJefe(db, sol, personaCache, articuloCache, meta) {
+  const titularId = String(sol.titular_persona_id || "").trim();
+  const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
+  const personaRow = await loadPersonaBandeja(db, titularId, personaCache);
+  const artId = String(sol.articulo_id || "").trim();
+  const artDisplay = await loadArticuloDisplay(db, artId, articuloCache);
+  return {
+    solicitud_id: String(sol.id || ""),
+    articulo_id: artId,
+    articulo_label: artDisplay.articulo_label,
+    codigo_grilla: artDisplay.codigo_grilla,
+    articulo_nombre: artDisplay.nombre,
+    titular_persona_id: titularId,
+    titular_label: personaRow.label,
+    titular_dni: personaRow.dni || null,
+    fecha_desde: fechaRef,
+    fecha_hasta: String(sol.fecha_hasta || fechaRef).slice(0, 10),
+    dias_solicitados: Number(sol.dias_solicitados) || 1,
+    patron_saldo: String(sol.patron_saldo || ""),
+    estado_solicitud_id: sol.estado_solicitud_id,
+    creado_en: sol.creado_en || null,
+    puede_decidir: meta.puede_decidir === true,
+    etiqueta_estado: meta.etiqueta_estado,
+  };
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {{ revisorPersonaId: string, rrhhBypass?: boolean } & Record<string, unknown>} opts
  */
 async function listarSolicitudesBandejaJefe(db, opts) {
-  const snap = await db
-    .collection(COL_SOL)
-    .where("estado_solicitud_id", "==", ESTADO_SOLICITUD_EN_REVISION_JEFE)
-    .limit(LIST_LIMIT)
-    .get();
+  const revisorPersonaId = String(opts.revisorPersonaId || "").trim();
+  const { filtroVista, dni, usuario, cursor, pageSize } = parseBandejaListPageOpts(opts, {
+    filtroDefault: FILTRO_JEFE_PENDIENTES,
+  });
 
-  const candidatas = snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
-  const out = [];
-  const personaCache = new Map();
-  const articuloCache = new Map();
-
-  for (const sol of candidatas) {
-    const titularId = String(sol.titular_persona_id || "").trim();
-    const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
-    if (!/^per_/i.test(titularId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) continue;
-
-    const ok = await revisorVeSolicitudEnBandejaJefe(db, sol, opts.revisorPersonaId);
-    if (!ok) continue;
-
-    let titularLabel = personaCache.get(titularId);
-    if (titularLabel === undefined) {
-      const pSnap = await db.collection(COL_PERSONAS).doc(titularId).get();
-      const p = pSnap.exists ? pSnap.data() || {} : {};
-      const nom = [p.apellido, p.nombre].filter(Boolean).join(", ").trim();
-      titularLabel = nom || titularId;
-      personaCache.set(titularId, titularLabel);
+  let titularIdsDni = null;
+  if (dni) {
+    titularIdsDni = await resolverPersonaIdsPorDni(db, dni);
+    if (titularIdsDni && titularIdsDni.size === 0) {
+      return {
+        solicitudes: [],
+        page_info: { page_size: pageSize, has_more: false, next_cursor: null, total_filtrado: 0 },
+        filtros: { filtro_vista: filtroVista, dni, usuario: usuario || null },
+      };
     }
-
-    const artId = String(sol.articulo_id || "").trim();
-    const artDisplay = await loadArticuloDisplay(db, artId, articuloCache);
-
-    out.push({
-      solicitud_id: sol.id,
-      articulo_id: artId,
-      articulo_label: artDisplay.articulo_label,
-      codigo_grilla: artDisplay.codigo_grilla,
-      articulo_nombre: artDisplay.nombre,
-      titular_persona_id: titularId,
-      titular_label: titularLabel,
-      fecha_desde: fechaRef,
-      fecha_hasta: String(sol.fecha_hasta || fechaRef).slice(0, 10),
-      dias_solicitados: Number(sol.dias_solicitados) || 1,
-      patron_saldo: String(sol.patron_saldo || ""),
-      estado_solicitud_id: sol.estado_solicitud_id,
-      creado_en: sol.creado_en || null,
-    });
   }
 
-  out.sort((a, b) => String(b.fecha_desde).localeCompare(String(a.fecha_desde)));
-  return { solicitudes: out, limite: LIST_LIMIT };
+  const personaCache = new Map();
+  const articuloCache = new Map();
+  const byId = new Map();
+
+  const incluirPendientes =
+    filtroVista === FILTRO_JEFE_PENDIENTES || filtroVista === "todos";
+  const incluirAprobados = filtroVista === "aprobados_por_mi" || filtroVista === "todos";
+  const incluirRechazados = filtroVista === "rechazados_por_mi" || filtroVista === "todos";
+
+  if (incluirPendientes) {
+    const snap = await db
+      .collection(COL_SOL)
+      .where("estado_solicitud_id", "==", ESTADO_SOLICITUD_EN_REVISION_JEFE)
+      .limit(SCAN_LIMIT)
+      .get();
+    for (const doc of snap.docs) {
+      const sol = { id: doc.id, ...(doc.data() || {}) };
+      const titularId = String(sol.titular_persona_id || "").trim();
+      const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
+      if (!/^per_/i.test(titularId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) continue;
+      if (titularIdsDni && !titularIdsDni.has(titularId)) continue;
+      if (!(await revisorVeSolicitudEnBandejaJefe(db, sol, revisorPersonaId))) continue;
+      const personaRow = await loadPersonaBandeja(db, titularId, personaCache);
+      if (!personaCoincideUsuario(usuario, personaRow)) continue;
+      const item = await itemListaBandejaJefe(db, sol, personaCache, articuloCache, {
+        puede_decidir: true,
+        etiqueta_estado: "Pendiente tu decisión",
+      });
+      byId.set(item.solicitud_id, item);
+    }
+  }
+
+  async function agregarHistorialJefe(estadoId, etiqueta) {
+    const snap = await db
+      .collection(COL_SOL)
+      .where("jefe_revision_persona_id", "==", revisorPersonaId)
+      .where("estado_solicitud_id", "==", estadoId)
+      .limit(SCAN_LIMIT)
+      .get();
+    for (const doc of snap.docs) {
+      const sol = { id: doc.id, ...(doc.data() || {}) };
+      const titularId = String(sol.titular_persona_id || "").trim();
+      const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
+      if (!/^per_/i.test(titularId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) continue;
+      if (titularIdsDni && !titularIdsDni.has(titularId)) continue;
+      const personaRow = await loadPersonaBandeja(db, titularId, personaCache);
+      if (!personaCoincideUsuario(usuario, personaRow)) continue;
+      const item = await itemListaBandejaJefe(db, sol, personaCache, articuloCache, {
+        puede_decidir: false,
+        etiqueta_estado: etiqueta,
+      });
+      byId.set(item.solicitud_id, item);
+    }
+  }
+
+  if (incluirAprobados) {
+    await agregarHistorialJefe(ESTADO_SOLICITUD_APROBADA, "Aprobada por vos (cierre jerárquico)");
+  }
+  if (incluirRechazados) {
+    await agregarHistorialJefe(ESTADO_SOLICITUD_RECHAZADA, "Rechazada por vos");
+  }
+
+  const out = Array.from(byId.values());
+  out.sort((a, b) => String(a.fecha_desde).localeCompare(String(b.fecha_desde)));
+  const page = paginarBandejaOrdenada(out, { cursor, pageSize });
+
+  return {
+    solicitudes: page.solicitudes,
+    page_info: {
+      page_size: pageSize,
+      has_more: page.has_more,
+      next_cursor: page.next_cursor,
+      total_filtrado: page.total_filtrado,
+      scan_limit: SCAN_LIMIT,
+    },
+    filtros: {
+      filtro_vista: filtroVista,
+      dni: dni || null,
+      usuario: usuario || null,
+    },
+  };
 }
 
 /**

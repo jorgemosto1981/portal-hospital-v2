@@ -27,6 +27,15 @@ describe("parseBandejaRrhhListOpts", () => {
   });
 });
 
+describe("parseBandejaListPageOpts (jefe)", () => {
+  const { parseBandejaListPageOpts } = require("../modules/shared/solicitudBandejaListUtils");
+  it("default pendientes", () => {
+    const o = parseBandejaListPageOpts({}, { filtroDefault: "pendientes" });
+    assert.equal(o.filtroVista, "pendientes");
+    assert.equal(o.pageSize, 10);
+  });
+});
+
 describe("itemPasaFiltroVista", () => {
   it("pendientes solo accionables RRHH", () => {
     assert.equal(
