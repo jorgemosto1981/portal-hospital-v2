@@ -11,7 +11,7 @@
 > git checkout feature/ticketera-puente-campos-config
 > git pull origin feature/ticketera-puente-campos-config
 > ```
-> **HEAD al cerrar sesión:** ver `git log -1 --oneline` tras pull (commit de cierre F3a.1 UI + docs).
+> **HEAD al cerrar sesión:** `d1dc641` (UX Disponibles + docs). Anteriores LAO: `f1a9305`, `7e0b148`, `07f3ed3`.
 
 ---
 
