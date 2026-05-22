@@ -59,7 +59,46 @@ Criterio TO-BE cumplido: **un solo acto sustantivo** (jefe) + **acuse RRHH** (no
 
 ---
 
-## 4. Prueba de aceptación (checklist)
+## 4. Piloto E2E post-UX ticketera + bandeja RRHH (22-may-2026)
+
+**Solicitud:** `sol_01KS7N68PW8T3BXAH1GN8SVN54`  
+**Artículo:** `art_01KRYEX0JZY4Y8J1GY3Q9F8BJQ` · **64-B** (`evt` jefe) · Patrón B  
+**Titular:** `per_01KR3HD24AMJ6YX3N7B3GPAZJ4` · **Autorizador jefe + TC RRHH:** `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ` (28914247)  
+**Fecha licencia:** `2026-12-22` (1 día) · Ancla `gdt_01KR3H81ENQK84ZK21EQWEQQXG`
+
+| Paso | Mensaje UI (operador) | Semántica |
+|------|------------------------|-----------|
+| Alta ticketera | Solicitud registrada · pendiente jefatura | `cfg_esa_en_revision_jefe` |
+| Bandeja jefe | Solicitud aprobada (cierre jerárquico) | `cfg_esa_aprobada` |
+| Bandeja RRHH | Toma de conocimiento registrada | TC sin cambio de estado |
+
+### 4.1 Documento `solicitudes_articulo` (consola 22-may)
+
+| Campo | Valor | OK TO-BE |
+|-------|--------|----------|
+| `estado_solicitud_id` | `cfg_esa_aprobada` | ✓ |
+| `autorizacion_rrhh_sustituta` | `false` | ✓ flujo normal |
+| `version_id_aplicada` | `ver_01KRYEX13QN7VBPMFQFES1QHB4` | ✓ |
+| `grupo_trabajo_id_ancla` / `grupo_autorizacion_id` | `gdt_01KR3H81ENQK84ZK21EQWEQQXG` | ✓ |
+| `autorizadores_elegibles_ids` | `[per_01KQN9WXFXF69Z9DCT5YNJ3TFZ]` | ✓ |
+| Motor | `motor_descuento_aplicado: true`, 1 día bolsa 2026 | ✓ |
+| Jefe | `jefe_revision_persona_id` + `jefe_revision_en` 7:55:42 | ✓ cierre sustantivo |
+| RRHH | `rrhh_toma_conocimiento_*` 7:56:22 · **sin** `rrhh_revision_en` | ✓ solo acuse |
+| MDC | `mdc_ultimo_comando: CONSOLIDAR_APROBADO`, `mdc_ultimo_resultado_ok: true` | ✓ |
+
+### 4.2 Eventos (`eventos_ticket`)
+
+| `evt_*` | `accion` | Estados | Notas |
+|---------|----------|---------|--------|
+| `evt_01KS7N66XJ6393MCBVYBN4QE12` | `patron_b_on_create_ok` | borrador → `en_revision_jefe` | TRIGGER 7:55:07 · `SOLICITUD_CREADA_REVISION_JEFE` |
+| `evt_01KS7N79T0335B9AY71HX07CSS` | `jefe_aprobar` | `en_revision_jefe` → `aprobada` | CALLABLE 7:55:42 · `codigo_grilla: 64-B` |
+| `evt_01KS7N8GFJYM0E16Z2T60SR2WZ` | `rrhh_toma_conocimiento` | `aprobada` → `aprobada` | CALLABLE 7:56:22 · `TOMA_CONOCIMIENTO_RRHH` |
+
+**Criterio:** misma cadena TO-BE que §1 (`sol_01KS57Y…`). Observación menor: en metadata TC, `codigo_grilla` viene `null` (no bloqueante).
+
+---
+
+## 5. Prueba de aceptación (checklist)
 
 - [x] Alta con `version_id_aplicada` y `grupo_trabajo_id_ancla`
 - [x] Snapshot `autorizadores_elegibles_ids` / `grupo_autorizacion_id`
@@ -69,7 +108,8 @@ Criterio TO-BE cumplido: **un solo acto sustantivo** (jefe) + **acuse RRHH** (no
 - [x] Evento `jefe_aprobar` con cambio de estado en `payload.cambios`
 - [x] Evento `rrhh_toma_conocimiento` con `tipo_evento_id` TC
 - [ ] TC superiores (burbujeo por artículo) — **pendiente** RFC §2 ítem 9
+- [x] E2E UI + consola 22-may `sol_01KS7N68…` (alta → jefe → TC RRHH) — §4 completo
 
 ---
 
-*Registrado 2026-05-21 tras validación en consola Firestore (prod V2).*
+*Registrado 2026-05-21 tras validación en consola Firestore (prod V2). Actualizado 2026-05-22 con piloto `sol_01KS7N68…`.*

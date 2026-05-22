@@ -27,6 +27,7 @@
 | Verificación | Resultado |
 |--------------|-----------|
 | Alta vía ticketera Fase 2 (wizard → preview → envío) | ✅ (operador) |
+| Alta post-rediseño UX (confirmación huérfana/jefatura) | ✅ `sol_01KS7N68PW8T3BXAH1GN8SVN54` (22-may) |
 | Documento `sol_*` persistido | ✅ `sol_01KS65KJW3Q163YEJ32GHDW12E` |
 | Proyección MDC `vis_*` / calendario licencias | ✅ **visible en grilla** (`/portal/grilla` → pestaña Calendario licencias MDC) |
 | Enlace detalle día / bandeja (C3) | Pendiente anotar si se probó clic en celda |
