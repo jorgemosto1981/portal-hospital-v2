@@ -123,6 +123,8 @@ const CFG_UMA_HORAS = "cfg_uma_horas";
 export const bloqueTopesPlazosComputoSchema = z
   .object({
     regla_computo_dias_id: cfgRowIdSchema.nullable().optional(),
+    /** Espejo persistido; SSoT de ejecución = `regla_computo_dias_id` (ver `readModoCalculo`). */
+    usa_calendario_institucional: z.boolean().optional(),
     ambito_consumo_id: cfgRowIdSchema,
     unidad_medida_id: cfgRowIdSchema,
     unidad_minima_consumo_id: cfgRowIdSchema.nullable().optional(),

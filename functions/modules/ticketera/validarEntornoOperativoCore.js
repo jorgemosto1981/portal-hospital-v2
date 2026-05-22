@@ -20,6 +20,8 @@ const {
   fechaHastaDesdeVersionPatronB,
 } = require("../shared/patronBFechasSolicitud");
 const { evaluarGrillaTurnoEntorno } = require("./grillaTurnoEntornoGate");
+const { tokenHasRrhhLaborAccess } = require("../shared/laborProfile");
+const { validarFechasArticuloEnMotor } = require("../shared/validarFechasArticuloRuntime");
 
 const CFG_EST_VER_PUBLICADA = "cfg_est_ver_publicada";
 
@@ -76,6 +78,8 @@ function buildResponse(p) {
     checks: p.checks,
     codigos,
     mensajes,
+    calendario_resumen: p.calendarioResumen ?? null,
+    usa_calendario_institucional: p.usaCalendarioInstitucional === true,
   };
 }
 
@@ -168,6 +172,21 @@ async function validarEntornoOperativoSolicitud(params) {
   ctx.diasSolicitados =
     Number.isFinite(Number(diasIn)) && Number(diasIn) > 0 ? Math.floor(Number(diasIn)) : diasVersion;
   ctx.fechaHasta = fechaHastaDesdeVersionPatronB(ctx.fechaDesde, ctx.diasSolicitados);
+
+  const fechasVal = await validarFechasArticuloEnMotor(db, {
+    versionData,
+    fechaDesde: ctx.fechaDesde,
+    fechaHasta: ctx.fechaHasta,
+    diasSolicitados: ctx.diasSolicitados,
+    omitirHorizonte: tokenHasRrhhLaborAccess(authToken),
+  });
+  if (!fechasVal.ok) {
+    return failBase(ctx, fechasVal.codigos, fechasVal.mensajes, {
+      checks: buildChecks({ hlc_vigente: true }),
+    });
+  }
+  ctx.fechaHasta = fechasVal.fecha_hasta || ctx.fechaHasta;
+  const calendarioResumen = fechasVal.calendario_resumen || null;
 
   const hlcArray = await loadHlcArray(db, ctx.personaId);
   const hlcVigentes = filterHlcVigentesEnFecha(hlcArray, ctx.fechaDesde);
@@ -265,6 +284,8 @@ async function validarEntornoOperativoSolicitud(params) {
     fechaDesde: ctx.fechaDesde,
     fechaHasta: ctx.fechaHasta,
     diasSolicitados: ctx.diasSolicitados,
+    calendarioResumen,
+    usaCalendarioInstitucional: fechasVal.usa_calendario_institucional === true,
     checks: buildChecks({
       hlc_vigente: true,
       elegibilidad_articulo: true,

@@ -128,6 +128,11 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
             bolsa_id: motor.bolsa_id || null,
           },
           frecuencia_mes: motor.frecuencia_mes || null,
+          calendario_resumen: motor.calendario_resumen || null,
+          modo_computo: motor.modo_computo || null,
+          usa_calendario_institucional: motor.usa_calendario_institucional === true,
+          incluye_feriados_institucionales: motor.incluye_feriados_institucionales === true,
+          fecha_hasta: motor.fecha_hasta || fechaHasta,
         }
       : {}),
   };

@@ -1,4 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  CFG_RCD_CORRIDOS,
+  CFG_RCD_HABILES_COMPUESTO,
+  CFG_RCD_HABILES_SIMPLE,
+  MODO_COMPUTO_CORRIDOS,
+  readModoCalculo,
+} from "../../../../../shared/utils/modoComputoCalendario.js";
 import Card from "../../../components/ui/Card.jsx";
 import { CFG_UMA_DIAS, CFG_UMA_HORAS, filterUnidadMedidaOptions, filterUnidadMinimaPorMedida } from "./articuloComputoConstants.js";
 import { EXPLICACIONES_OPCIONES, LABELS } from "./articuloLabels.js";
@@ -30,6 +37,28 @@ export default function ImpactoSaldoTabSections({
   const hasUm = !!umId;
   const isDias = umId === CFG_UMA_DIAS;
   const isHoras = umId === CFG_UMA_HORAS;
+
+  const modoComputo = useMemo(
+    () => readModoCalculo({ bloque_topes_plazos_computo: topes }),
+    [topes.regla_computo_dias_id, topes.usa_calendario_institucional],
+  );
+
+  const reglaComputoAyuda = useMemo(() => {
+    const id = String(topes.regla_computo_dias_id || "").trim();
+    if (id === CFG_RCD_CORRIDOS) {
+      return "Motor de solicitudes: días corridos (calendario civil). No aplica validación C4 contra feriados del calendario RRHH.";
+    }
+    if (id === CFG_RCD_HABILES_SIMPLE) {
+      return "Motor: días hábiles simples (lun–vie). Valida C4 por fin de semana; feriados institucionales no restan salvo que cambies a hábiles compuesto.";
+    }
+    if (id === CFG_RCD_HABILES_COMPUESTO) {
+      return "Motor: hábiles + feriados/asuetos del calendario institucional (config/calendario_institucional). Validación C4 estricta.";
+    }
+    if (modoComputo.modo === MODO_COMPUTO_CORRIDOS) {
+      return "Elegí un criterio de descuento. Sin regla, el motor asume días corridos.";
+    }
+    return "Elegí un criterio de descuento para definir cómo el portal valida fechas y saldos.";
+  }, [topes.regla_computo_dias_id, modoComputo.modo]);
 
   return (
     <div className="space-y-6">
@@ -74,15 +103,20 @@ export default function ImpactoSaldoTabSections({
               <div className="space-y-3 rounded-lg border border-slate-100 bg-slate-50/80 p-4">
                 <p className="text-xs font-semibold text-slate-700">Configuración en días</p>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <FieldSelect
-                    label={LABELS.regla_computo_dias_id}
-                    value={topes.regla_computo_dias_id}
-                    onChange={(v) => setBlock("bloque_topes_plazos_computo", "regla_computo_dias_id", v)}
-                    options={getOptions("cfg_regla_computo_dias")}
-                    disabled={formBloqueadoPorCatalogos}
-                    required
-                    explicaciones={EXPLICACIONES_OPCIONES}
-                  />
+                  <div className="md:col-span-2 space-y-2">
+                    <FieldSelect
+                      label={LABELS.regla_computo_dias_id}
+                      value={topes.regla_computo_dias_id}
+                      onChange={(v) => setBlock("bloque_topes_plazos_computo", "regla_computo_dias_id", v)}
+                      options={getOptions("cfg_regla_computo_dias")}
+                      disabled={formBloqueadoPorCatalogos}
+                      required
+                      explicaciones={EXPLICACIONES_OPCIONES}
+                    />
+                    <p className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                      {reglaComputoAyuda}
+                    </p>
+                  </div>
                   <FieldSelect
                     label={LABELS.unidad_minima_consumo_id}
                     value={topes.unidad_minima_consumo_id}

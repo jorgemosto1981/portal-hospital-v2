@@ -17,6 +17,7 @@ import {
   saveArticuloVersionAndPunteroCore,
 } from "../../../services/cfgArticuloVersionService.js";
 import { CFG_UMA_DIAS, CFG_UMA_HORAS } from "./articuloComputoConstants.js";
+import { syncUsaCalendarioInstitucionalEnTopes } from "../../../../../shared/utils/modoComputoCalendario.js";
 import ImpactoSaldoTabSections from "./ImpactoSaldoTabSections.jsx";
 import { EXPLICACIONES_OPCIONES, HELP_TEXTS, LABELS } from "./articuloLabels.js";
 import { normalizeFechaCorteAntiguedadIso } from "./fecCorteAntiguedadHelpers.js";
@@ -311,6 +312,7 @@ export function buildVersionPayloadForZod(raw) {
       umId === CFG_UMA_DIAS ? numOrUndef(out.bloque_topes_plazos_computo.tope_dias_por_evento) : null,
     dias_minimos_por_evento: umId === CFG_UMA_DIAS ? diasMin : null,
   };
+  out.bloque_topes_plazos_computo = syncUsaCalendarioInstitucionalEnTopes(out.bloque_topes_plazos_computo);
 
   const esLao = out.bloque_identidad_naturaleza?.es_lao_anual === true;
   if (!esLao) {

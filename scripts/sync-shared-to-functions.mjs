@@ -28,6 +28,9 @@ const FILES_TO_SYNC = [
   "hlcVigenciaFecha.js",
   "resolvePatronSaldo.js",
   "solicitudElegibilidadLaboral.js",
+  "calendarInstitucionalCore.js",
+  "validarFechasArticulo.js",
+  "modoComputoCalendario.js",
 ];
 
 function esmToCjs(source, filename) {
@@ -44,8 +47,15 @@ function esmToCjs(source, filename) {
     },
   );
 
-  // Quitar re-exports tipo: export { FOO };
+  // Quitar re-exports: export { FOO } from "..."; y export { FOO };
   const reExports = [];
+  code = code.replace(
+    /^export\s*\{([^}]+)\}\s*from\s*["'][^"']+["'];\s*$/gm,
+    (_match, bindings) => {
+      reExports.push(...bindings.split(",").map((b) => b.trim()));
+      return "";
+    },
+  );
   code = code.replace(
     /^export\s*\{([^}]+)\};\s*$/gm,
     (_match, bindings) => {

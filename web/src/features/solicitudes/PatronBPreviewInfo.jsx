@@ -38,6 +38,24 @@ export default function PatronBPreviewInfo({ preview, error, cargando }) {
           {" · "}
           {Number(preview.dias_solicitados) || 1} día(s)
         </p>
+        {preview.calendario_resumen ? (
+          <p className="text-slate-600">
+            {preview.modo_computo === "CORRIDOS" ? (
+              <>
+                Modo <strong>días corridos</strong>: en el rango hay{" "}
+                <strong>{preview.calendario_resumen.dias_corridos}</strong> día(s) de calendario.
+              </>
+            ) : (
+              <>
+                Días corridos: <strong>{preview.calendario_resumen.dias_corridos}</strong>
+                {" · "}
+                Días hábiles
+                {preview.incluye_feriados_institucionales ? " (con calendario RRHH)" : " (lun–vie)"}:{" "}
+                <strong>{preview.calendario_resumen.dias_habiles}</strong>
+              </>
+            )}
+          </p>
+        ) : null}
         {saldo ? (
           <p>
             Saldo ciclo {saldo.anio_ciclo_consumo}: disponible{" "}

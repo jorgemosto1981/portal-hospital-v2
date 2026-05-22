@@ -23,6 +23,11 @@ const {
 const { validarSuperposicionFechasPatronB } = require("./patronBSuperposicionValidacion");
 const { resolverGrupoTrabajoIdAnclaParaSolicitud } = require("./solicitudGrupoTrabajoAncla");
 const { validarGrillaHorariaParaSolicitud } = require("./mdcGrillaHorariaGate");
+const { tokenHasRrhhLaborAccess } = require("./laborProfile");
+const {
+  validarFechasArticuloEnMotor,
+  readModoCalculo,
+} = require("./validarFechasArticuloRuntime");
 
 const ESTADOS_CUENTAN_FRECUENCIA_MES = new Set([
   "cfg_esa_borrador",
@@ -105,9 +110,6 @@ async function runPatronBAltaMotor(params) {
   if (!pDesde) {
     return { ok: false, codigos: [CODIGO_FECHA_RANGO], mensajes: [mensajeParaCodigo(CODIGO_FECHA_RANGO)] };
   }
-  if (!fechaHasta || fechaHasta !== fechaDesde) {
-    return { ok: false, codigos: [CODIGO_FECHA_RANGO], mensajes: [mensajeParaCodigo(CODIGO_FECHA_RANGO)] };
-  }
   if (anioCiclo !== pDesde.y) {
     return { ok: false, codigos: [CODIGO_FECHA_RANGO], mensajes: [mensajeParaCodigo(CODIGO_FECHA_RANGO)] };
   }
@@ -137,6 +139,27 @@ async function runPatronBAltaMotor(params) {
 
   if (Number.isFinite(topeEvento) && topeEvento > 0 && diasPedidos !== topeEvento) {
     return { ok: false, codigos: [CODIGO_SALDO_EVENTO], mensajes: [mensajeParaCodigo(CODIGO_SALDO_EVENTO)] };
+  }
+
+  let fechaHastaEff = fechaHasta || fechaDesde;
+  const fechasVal = await validarFechasArticuloEnMotor(db, {
+    versionData,
+    fechaDesde,
+    fechaHasta: fechaHastaEff,
+    diasSolicitados: diasPedidos,
+    omitirHorizonte: tokenHasRrhhLaborAccess(authToken),
+  });
+  if (!fechasVal.ok) {
+    return {
+      ok: false,
+      codigos: fechasVal.codigos,
+      mensajes: fechasVal.mensajes,
+      calendario_resumen: fechasVal.calendario_resumen || null,
+    };
+  }
+  fechaHastaEff = fechasVal.fecha_hasta || fechaDesde;
+  if (readModoCalculo(versionData).modo === "CORRIDOS" && fechaHastaEff !== fechaDesde) {
+    return { ok: false, codigos: [CODIGO_FECHA_RANGO], mensajes: [mensajeParaCodigo(CODIGO_FECHA_RANGO)] };
   }
 
   const hlcArray = await loadHlcArray(db, personaId);
@@ -177,7 +200,7 @@ async function runPatronBAltaMotor(params) {
   const superpos = await validarSuperposicionFechasPatronB(db, {
     persona_id: personaId,
     fecha_desde: fechaDesde,
-    fecha_hasta: fechaHasta,
+    fecha_hasta: fechaHastaEff,
     exclude_sol_id: excludeSolId || "",
     version_data: versionData,
   });
@@ -232,7 +255,7 @@ async function runPatronBAltaMotor(params) {
     depende_rda: topes.depende_rda === true,
     persona_id: personaId,
     fecha_desde: fechaDesde,
-    fecha_hasta: fechaHasta,
+    fecha_hasta: fechaHastaEff,
     grupo_trabajo_id: grupoAncla.grupo_trabajo_id_ancla || undefined,
   });
   if (!gateGrilla.ok) {
@@ -260,6 +283,11 @@ async function runPatronBAltaMotor(params) {
     saldo_disponible: disp,
     saldo_restante_preview: disp - diasPedidos,
     frecuencia_mes: frecuenciaMes,
+    fecha_hasta: fechaHastaEff,
+    calendario_resumen: fechasVal.calendario_resumen || null,
+    modo_computo: fechasVal.modo_computo || readModoCalculo(versionData).modo,
+    usa_calendario_institucional: fechasVal.usa_calendario_institucional === true,
+    incluye_feriados_institucionales: fechasVal.incluye_feriados_institucionales === true,
   };
 }
 

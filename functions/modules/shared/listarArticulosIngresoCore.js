@@ -16,6 +16,7 @@ const {
   diasSolicitadosDesdeVersion,
   fechaHastaDesdeVersionPatronB,
 } = require("./patronBFechasSolicitud");
+const { readModoCalculo } = require("./validarFechasArticuloRuntime");
 const { getAllDocsChunked } = require("./firestoreGetAllChunked");
 
 const CFG_EST_VER_PUBLICADA = "cfg_est_ver_publicada";
@@ -191,6 +192,15 @@ async function listarArticulosIngresoPatronB(params) {
       patron_saldo: PATRON_SALDO_B,
       dias_solicitados: diasSolicitados,
       fecha_hasta: fechaHasta,
+      regla_computo_dias_id: String(versionData?.bloque_topes_plazos_computo?.regla_computo_dias_id || "").trim() || null,
+      ...(() => {
+        const m = readModoCalculo(versionData);
+        return {
+          modo_computo: m.modo,
+          usa_calendario_institucional: m.usaCalendario,
+          incluye_feriados_institucionales: m.incluyeFeriadosInstitucionales,
+        };
+      })(),
     });
   }
 

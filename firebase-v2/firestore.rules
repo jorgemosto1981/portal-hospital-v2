@@ -91,6 +91,34 @@ service cloud.firestore {
       );
     }
 
+    function calendarioEventoIdValid(id) {
+      return id is string && id.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+
+    function calendarioEventoFieldsValid(d) {
+      return d.tipo in ['feriado', 'asueto', 'institucional']
+        && d.descripcion is string
+        && d.descripcion.size() <= 500
+        && d.multiplicador is number
+        && d.multiplicador >= 0.5
+        && d.multiplicador <= 10
+        && d.anual is bool;
+    }
+
+    /** Calendario institucional (SSoT feriados / asuetos / multiplicadores). */
+    match /config/calendario_institucional {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /config/calendario_institucional/eventos/{eventoId} {
+      allow read: if signedIn();
+      allow create, update: if portalRrhhOrAdmin()
+        && calendarioEventoIdValid(eventoId)
+        && calendarioEventoFieldsValid(request.resource.data);
+      allow delete: if portalRrhhOrAdmin() && calendarioEventoIdValid(eventoId);
+    }
+
     /** RRHH / admin: versiones parametrizadas de artículos (MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST §2.2). */
     function portalArticulosMgmt() {
       return portalRrhhOrAdmin();
