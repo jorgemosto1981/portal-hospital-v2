@@ -17,6 +17,7 @@ const {
   pickBolsaParaConsumo,
   assertFifoAnioOrigen,
   mergeBolsasFromSaldoDocs,
+  evaluarSaldoBolsaParaPreview,
 } = require("../modules/shared/laoSaldosBolsa");
 const {
   ESTADO_SOLICITUD_BORRADOR,
@@ -26,11 +27,47 @@ const {
 
 const COL_SALDOS = "saldos_articulo_agente";
 
-function resolveDiasConsumo(resultado) {
+/** Legado: cupo teórico del motor (matriz / proporcional), no el rango del wizard. */
+function resolveDiasConsumoMotor(resultado) {
   if (!resultado || !resultado.eligible) return 0;
   if (resultado.camino === "stock") return Number(resultado.matriz?.dias_base) || 0;
   if (resultado.camino === "proporcional") return Number(resultado.proporcional?.dias_proporcionales_piso) || 0;
   return 0;
+}
+
+/**
+ * Días a descontar: prioriza `dias_solicitados` / snapshot del wizard; si no, motor legado.
+ * @param {Record<string, unknown>} solicitudData
+ * @param {ReturnType<typeof runLaoPreviewSimulacion>} resultado
+ */
+function resolveDiasConsumoOperativo(solicitudData, resultado) {
+  const fromDoc = Number(solicitudData.dias_solicitados);
+  const snap =
+    solicitudData.resumen_computo_snapshot && typeof solicitudData.resumen_computo_snapshot === "object"
+      ? solicitudData.resumen_computo_snapshot
+      : null;
+  const snapDias = snap ? Number(snap.dias_consumo) : NaN;
+
+  if (Number.isInteger(fromDoc) && fromDoc >= 1 && fromDoc <= 366) {
+    if (Number.isInteger(snapDias) && snapDias >= 1 && fromDoc !== snapDias) {
+      return {
+        dias: 0,
+        error: `dias_solicitados (${fromDoc}) no coincide con resumen_computo_snapshot (${snapDias}).`,
+        usaRangoWizard: true,
+      };
+    }
+    return { dias: fromDoc, error: null, usaRangoWizard: true };
+  }
+
+  if (Number.isInteger(snapDias) && snapDias >= 1) {
+    return { dias: snapDias, error: null, usaRangoWizard: true };
+  }
+
+  return {
+    dias: resolveDiasConsumoMotor(resultado),
+    error: null,
+    usaRangoWizard: false,
+  };
 }
 
 const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
@@ -102,10 +139,11 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
       return;
     }
 
+    let saldosMerged;
     try {
       const salPersonaSnap = await db.collection(COL_SALDOS).where("persona_id", "==", personaId).get();
-      const mergedFifo = mergeBolsasFromSaldoDocs(salPersonaSnap.docs.map((doc) => doc.data() || {}));
-      assertFifoAnioOrigen(mergedFifo, articuloId, anioOrigenBolsa);
+      saldosMerged = mergeBolsasFromSaldoDocs(salPersonaSnap.docs.map((doc) => doc.data() || {}));
+      assertFifoAnioOrigen(saldosMerged, articuloId, anioOrigenBolsa);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       await solRef.update({
@@ -150,7 +188,43 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
       return;
     }
 
-    const diasConsumo = resolveDiasConsumo(resultado);
+    const consumoRes = resolveDiasConsumoOperativo(d, resultado);
+    if (consumoRes.error) {
+      await solRef.update({
+        estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+        motor_motivos_ineligibilidad: [consumoRes.error],
+        motor_validado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    const diasConsumo = consumoRes.dias;
+
+    if (consumoRes.usaRangoWizard && diasConsumo > 0) {
+      const saldoVal = evaluarSaldoBolsaParaPreview({
+        saldosMerged,
+        articuloId,
+        anioOrigenBolsa,
+        diasSolicitados: diasConsumo,
+        fechaDesdeYmd: fechaDesde,
+        diasProporcionalesPiso: resultado.proporcional?.dias_proporcionales_piso ?? null,
+      });
+      if (!saldoVal.ok) {
+        await solRef.update({
+          estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+          motor_motivos_ineligibilidad: saldoVal.motivos,
+          motor_snapshot: {
+            motor_version: resultado.motor_version,
+            camino: saldoVal.camino || resultado.camino,
+            dias_consumo: diasConsumo,
+          },
+          motor_validado_en: FieldValue.serverTimestamp(),
+          actualizado_en: FieldValue.serverTimestamp(),
+        });
+        return;
+      }
+    }
     const anioSolicitud = resultado.anio_solicitud;
     const salId = saldoAnualDocId(personaId, anioOrigenBolsa);
     const salRef = salId ? db.collection(COL_SALDOS).doc(salId) : null;
@@ -247,4 +321,8 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
   },
 );
 
-module.exports = { onSolicitudArticuloLaoMotorValidate };
+module.exports = {
+  onSolicitudArticuloLaoMotorValidate,
+  resolveDiasConsumoMotor,
+  resolveDiasConsumoOperativo,
+};
