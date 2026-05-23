@@ -11,7 +11,7 @@
 > git checkout feature/ticketera-puente-campos-config
 > git pull origin feature/ticketera-puente-campos-config
 > ```
-> **HEAD al cerrar sesión:** ver `git log -1` tras el commit de cierre de esta sesión.
+> **HEAD al cerrar sesión:** `3ec35f2` (`feat(lao): motor v2 completo, superposicion, config y eliminacion v1`).
 
 ---
 
