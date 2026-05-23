@@ -5,6 +5,7 @@ import {
   contarDiasCorridosInclusive,
   contarDiasHabilesDesdeIndice,
   contarDiasHabilesSimpleInclusive,
+  listarDiasDescontadosComputo,
   normalizarYmdCalendario,
 } from "../../../../shared/utils/calendarInstitucionalCore.js";
 import {
@@ -28,7 +29,7 @@ function toVersionData(versionComputo) {
 
 /**
  * @param {ReturnType<typeof validarFechasArticulo>} validacion
- * @param {{ dias_corridos: number, dias_habiles: number, dias_consumo: number }} preDias
+ * @param {{ dias_corridos: number, dias_habiles: number, dias_consumo: number, dias_descontados: Array<{ fecha: string, fecha_formateada: string, motivo: string }> }} preDias
  * @param {ReturnType<typeof readModoCalculo>} modoCalc
  */
 function mapResumenComputo(validacion, preDias, modoCalc) {
@@ -42,6 +43,7 @@ function mapResumenComputo(validacion, preDias, modoCalc) {
     dias_corridos: preDias.dias_corridos,
     dias_habiles: preDias.dias_habiles,
     dias_consumo: preDias.dias_consumo,
+    dias_descontados: preDias.dias_descontados,
     ok: validacion.ok === true,
     codigos: validacion.codigos || [],
     mensajes: validacion.mensajes || [],
@@ -111,10 +113,16 @@ export function useLaoWizardComputo({
       diasConsumo = diasHabiles;
     }
 
+    const diasDescontados = listarDiasDescontadosComputo(d, h, indice, {
+      esModoCorridos: modoCalc.modo === MODO_COMPUTO_CORRIDOS,
+      incluyeFeriadosInstitucionales: modoCalc.incluyeFeriadosInstitucionales,
+    });
+
     const preDias = {
       dias_corridos: diasCorridos,
       dias_habiles: diasHabiles,
       dias_consumo: diasConsumo,
+      dias_descontados: diasDescontados,
     };
 
     const validacion = validarFechasArticulo({

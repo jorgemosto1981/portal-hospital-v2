@@ -231,3 +231,54 @@ export function fechaHastaPorDiasHabilesDesdeIndice(fechaDesde, cantidadDiasHabi
 export function contarDiasCorridosInclusive(desdeYmd, hastaYmd) {
   return iterarYmdInclusive(desdeYmd, hastaYmd).length;
 }
+
+/**
+ * @param {string} ymd
+ * @returns {string}
+ */
+export function formatearYmdDdMmYyyy(ymd) {
+  const n = normalizarYmdCalendario(ymd);
+  if (!n) return "";
+  const [y, m, d] = n.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+/**
+ * Días del rango que no suman al cómputo de consumo (fines de semana y/o eventos institucionales).
+ * Vacío en modo corridos (todos los días del rango consumen).
+ * @param {string} desdeYmd
+ * @param {string} hastaYmd
+ * @param {{ porYmd: Map<string, unknown>, porMesDia: Map<string, unknown> }} indice
+ * @param {{ esModoCorridos?: boolean, incluyeFeriadosInstitucionales?: boolean }} [opts]
+ * @returns {Array<{ fecha: string, fecha_formateada: string, motivo: string }>}
+ */
+export function listarDiasDescontadosComputo(desdeYmd, hastaYmd, indice, opts = {}) {
+  if (opts.esModoCorridos === true) return [];
+  const dias = iterarYmdInclusive(desdeYmd, hastaYmd);
+  const compuesto = opts.incluyeFeriadosInstitucionales !== false;
+  /** @type {Array<{ fecha: string, fecha_formateada: string, motivo: string }>} */
+  const out = [];
+  for (const ymd of dias) {
+    const finde = esFinDeSemanaYmd(ymd);
+    const evento = compuesto ? resolverEventoEnIndice(ymd, indice) : null;
+    const esHabil = compuesto ? !finde && !evento : !finde;
+    if (esHabil) continue;
+    let motivo = "No laborable";
+    if (finde) motivo = "Fin de semana";
+    else if (evento && typeof evento === "object") {
+      const tipo = String(evento.tipo || "").trim();
+      const desc = String(evento.descripcion || "").trim();
+      if (desc) motivo = desc;
+      else if (tipo === "feriado") motivo = "Feriado";
+      else if (tipo === "asueto") motivo = "Asueto";
+      else if (tipo === "institucional") motivo = "Día institucional";
+      else motivo = "Evento de calendario";
+    }
+    out.push({
+      fecha: ymd,
+      fecha_formateada: formatearYmdDdMmYyyy(ymd),
+      motivo,
+    });
+  }
+  return out;
+}

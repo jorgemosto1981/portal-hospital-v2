@@ -91,6 +91,18 @@ export default function LaoFechasPaso({
             <span className="tabular-nums">{resumen.dias_consumo}</span>{" "}
             {resumen.dias_consumo === 1 ? "día" : "días"}
           </p>
+          {resumen.dias_descontados?.length > 0 ? (
+            <div className="mt-3 rounded-lg border border-slate-200 bg-white/80 p-2 text-sm text-slate-600">
+              <p className="font-semibold text-slate-700">Días descontados del cómputo</p>
+              <ul className="mt-1 list-inside list-disc space-y-0.5 pl-1">
+                {resumen.dias_descontados.map((dia) => (
+                  <li key={dia.fecha}>
+                    {dia.fecha_formateada} ({dia.motivo})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       ) : !isLoading && fechaDesde && fechaHasta ? (
         <p className={TICKETERA.muted}>Completá un rango de fechas válido para ver el resumen.</p>
