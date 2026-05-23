@@ -12,6 +12,7 @@ Implementado en `solicitudArticuloPatronBOnCreate.js` tras motor OK.
 | Campo | Tipo | Cuándo |
 |-------|------|--------|
 | `grupo_trabajo_id_ancla` | `gdt_*` | Cliente (obligatorio Patrón B) |
+| `grupos_trabajo_involucrados_ids` | `gdt_*[]` | **Trigger** (snapshot HLg a `fecha_desde`) — ✅ [`RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md`](./RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md) · evidencia [`TICKETERA_EVIDENCIA_2026-05-23_GRUPOS_INVOLUCRADOS_SNAPSHOT.md`](./TICKETERA_EVIDENCIA_2026-05-23_GRUPOS_INVOLUCRADOS_SNAPSHOT.md) |
 | `version_id_aplicada` | `ver_*` | Cliente / motor |
 | `autorizadores_elegibles_ids` | `per_*[]` | Motor §5.2; OR mismo nivel |
 | `grupo_autorizacion_id` | `gdt_*` \| null | Grupo donde se encontró autorizador |

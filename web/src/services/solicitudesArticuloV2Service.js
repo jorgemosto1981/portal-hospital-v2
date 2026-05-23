@@ -25,6 +25,7 @@ const SOL_ULID_RE = /^sol_[0-9A-HJKMNP-TV-Z]{26}$/i;
  *   fechaHasta?: string,
  *   diasSolicitados?: number,
  *   anioOrigenBolsa: number,
+ *   grupoTrabajoIdAncla?: string,
  *   resumenComputo?: Record<string, unknown> | null,
  * }} params
  * @returns {Promise<{ solicitud_id: string }>}
@@ -66,6 +67,11 @@ export async function crearSolicitudArticuloLaoBorrador(params) {
     throw new Error("anio_origen_bolsa inválido.");
   }
 
+  const grupoTrabajoIdAncla = String(params.grupoTrabajoIdAncla || "").trim();
+  if (grupoTrabajoIdAncla && !/^gdt_/i.test(grupoTrabajoIdAncla)) {
+    throw new Error("grupo_trabajo_id_ancla inválido.");
+  }
+
   const solicitud_id = `sol_${ulid()}`;
   if (!SOL_ULID_RE.test(solicitud_id)) {
     throw new Error("No se pudo generar solicitud_id.");
@@ -96,6 +102,10 @@ export async function crearSolicitudArticuloLaoBorrador(params) {
 
   if (resumenComputo) {
     payload.resumen_computo_snapshot = resumenComputo;
+  }
+
+  if (grupoTrabajoIdAncla) {
+    payload.grupo_trabajo_id_ancla = grupoTrabajoIdAncla;
   }
 
   const ref = doc(dbV2, "solicitudes_articulo", solicitud_id);

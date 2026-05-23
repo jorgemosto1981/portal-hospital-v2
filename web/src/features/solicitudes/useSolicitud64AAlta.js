@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   callListarArticulosIngresoAgente,
@@ -10,6 +10,13 @@ import {
   crearSolicitudArticuloPatronBBorrador,
   esperarValidacionMotorPatronB,
 } from "../../services/solicitudesArticuloV2Service.js";
+import {
+  articuloTieneDiasPreestablecidos,
+  fechasSolicitudCompletas,
+  resolverDiasSolicitadosPatronB,
+} from "./patronBFechasUi.js";
+
+const RX_YMD = /^\d{4}-\d{2}-\d{2}$/;
 
 function ymdHoyBa() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
@@ -46,9 +53,41 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
   const [entornoOk, setEntornoOk] = useState(false);
   const [entornoMensajes, setEntornoMensajes] = useState(/** @type {string[]} */ ([]));
   const [fechaHastaCalc, setFechaHastaCalc] = useState("");
+  const [fechaHastaManual, setFechaHastaManual] = useState("");
+
+  const diasPreestablecidos = useMemo(
+    () => articuloTieneDiasPreestablecidos(articuloSel),
+    [articuloSel],
+  );
+
+  const fechaHastaPreest =
+    (fechaHastaCalc && RX_YMD.test(fechaHastaCalc) ? fechaHastaCalc : null) ||
+    (articuloSel?.fecha_hasta && RX_YMD.test(String(articuloSel.fecha_hasta))
+      ? String(articuloSel.fecha_hasta)
+      : fechaDesde);
+
+  const fechaHasta = diasPreestablecidos
+    ? fechaHastaPreest
+    : fechaHastaManual && RX_YMD.test(fechaHastaManual)
+      ? fechaHastaManual
+      : fechaHastaPreest;
+
+  const fechasCompletas = fechasSolicitudCompletas(fechaDesde, fechaHasta);
+
+  const diasDesdeArticulo =
+    Number.isFinite(Number(articuloSel?.dias_solicitados)) && Number(articuloSel.dias_solicitados) > 0
+      ? Math.floor(Number(articuloSel.dias_solicitados))
+      : 1;
+
+  const diasSolicitados = resolverDiasSolicitadosPatronB(
+    fechaDesde,
+    fechaHasta,
+    diasPreestablecidos,
+    diasDesdeArticulo,
+  );
 
   const recargarGrupos = useCallback(async () => {
-    if (!/^per_/i.test(personaId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaDesde)) {
+    if (!/^per_/i.test(personaId) || !fechasCompletas) {
       setGruposVigentes([]);
       setGrupoAnclaId("");
       return;
@@ -75,7 +114,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     } finally {
       setGruposCargando(false);
     }
-  }, [fechaDesde, personaId]);
+  }, [fechaDesde, fechasCompletas, personaId]);
 
   useEffect(() => {
     recargarGrupos();
@@ -123,18 +162,22 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     setEntornoOk(false);
     setEntornoMensajes([]);
     setFechaHastaCalc("");
-  }, [fechaDesde, articuloSel?.articulo_id, articuloSel?.version_id, grupoAnclaId]);
+    setFechaHastaManual("");
+    setGrupoAnclaId("");
+  }, [fechaDesde, articuloSel?.articulo_id, articuloSel?.version_id]);
 
-  const fechaHasta =
-    (fechaHastaCalc && /^\d{4}-\d{2}-\d{2}$/.test(fechaHastaCalc) ? fechaHastaCalc : null) ||
-    (articuloSel?.fecha_hasta && /^\d{4}-\d{2}-\d{2}$/.test(String(articuloSel.fecha_hasta))
-      ? String(articuloSel.fecha_hasta)
-      : fechaDesde);
+  useEffect(() => {
+    if (!diasPreestablecidos && RX_YMD.test(fechaDesde) && fechaHastaManual && fechaHastaManual < fechaDesde) {
+      setFechaHastaManual(fechaDesde);
+    }
+  }, [diasPreestablecidos, fechaDesde, fechaHastaManual]);
 
-  const diasSolicitados =
-    Number.isFinite(Number(articuloSel?.dias_solicitados)) && Number(articuloSel.dias_solicitados) > 0
-      ? Math.floor(Number(articuloSel.dias_solicitados))
-      : 1;
+  useEffect(() => {
+    setPreview(null);
+    setPreviewError("");
+    setEntornoOk(false);
+    setEntornoMensajes([]);
+  }, [grupoAnclaId]);
 
   const requiereSeleccionGrupo = gruposVigentes.length > 1;
   /** Con al menos un HLg vigente, siempre debe existir ancla (autoselección o select). */
@@ -144,8 +187,8 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     if (!articuloSel || validandoEntorno || !/^per_/i.test(personaId)) {
       return { success: false };
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaDesde)) {
-      setEntornoMensajes(["La fecha del permiso no es válida."]);
+    if (!fechasCompletas) {
+      setEntornoMensajes(["Completá las fechas del permiso."]);
       setEntornoOk(false);
       return { success: false };
     }
@@ -204,6 +247,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     articuloSel,
     diasSolicitados,
     fechaDesde,
+    fechasCompletas,
     grupoAnclaId,
     personaId,
     validandoEntorno,
@@ -327,11 +371,23 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     entornoOk,
   ]);
 
+  const setFechaHasta = useCallback(
+    (v) => {
+      if (diasPreestablecidos) return;
+      setFechaHastaManual(String(v || "").slice(0, 10));
+      reiniciarValidacionYPreview();
+    },
+    [diasPreestablecidos, reiniciarValidacionYPreview],
+  );
+
   return {
     fechaDesde,
     fechaHasta,
     diasSolicitados,
+    diasPreestablecidos,
+    fechasCompletas,
     setFechaDesde,
+    setFechaHasta,
     articulos,
     articuloSel,
     setArticuloSel,

@@ -144,9 +144,56 @@ async function resolverGrupoTrabajoIdAnclaParaSolicitud(db, input) {
   };
 }
 
+/**
+ * Snapshot inmutable de `gdt_*` vigentes (sin duplicados, orden estable).
+ * @param {Array<{ grupo_de_trabajo_id?: string }>} gruposVigentes
+ * @returns {string[]}
+ */
+function buildGruposTrabajoInvolucradosIdsFromVigentes(gruposVigentes) {
+  const ids = new Set();
+  for (const g of gruposVigentes || []) {
+    const id = String(g?.grupo_de_trabajo_id || "").trim();
+    if (/^gdt_/i.test(id)) ids.add(id);
+  }
+  return [...ids].sort((a, b) => a.localeCompare(b, "es"));
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {string} personaId
+ * @param {string} fechaYmd
+ */
+async function buildGruposTrabajoInvolucradosSnapshot(db, personaId, fechaYmd) {
+  const vigentes = await listarGruposTrabajoVigentesEnFecha(db, personaId, fechaYmd);
+  return {
+    grupos_trabajo_involucrados_ids: buildGruposTrabajoInvolucradosIdsFromVigentes(vigentes),
+    grupos_vigentes: vigentes,
+  };
+}
+
+/**
+ * @param {string} grupoTrabajoIdAncla
+ * @param {string[]} gruposInvolucradosIds
+ */
+function assertGrupoAnclaEnGruposInvolucrados(grupoTrabajoIdAncla, gruposInvolucradosIds) {
+  const ancla = String(grupoTrabajoIdAncla || "").trim();
+  const ids = Array.isArray(gruposInvolucradosIds) ? gruposInvolucradosIds : [];
+  if (!ancla) return { ok: false, mensaje: "grupo_trabajo_id_ancla requerido." };
+  if (!ids.includes(ancla)) {
+    return {
+      ok: false,
+      mensaje: "grupo_trabajo_id_ancla no está entre los grupos vigentes del titular en fecha_desde.",
+    };
+  }
+  return { ok: true };
+}
+
 module.exports = {
   listarGruposTrabajoVigentesEnFecha,
   resolverGrupoTrabajoIdAnclaParaSolicitud,
+  buildGruposTrabajoInvolucradosIdsFromVigentes,
+  buildGruposTrabajoInvolucradosSnapshot,
+  assertGrupoAnclaEnGruposInvolucrados,
   loadHlgRows,
   hlgVigenteEnFecha,
 };

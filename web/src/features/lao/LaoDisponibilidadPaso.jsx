@@ -1,4 +1,5 @@
 import { TICKETERA } from "../solicitudes/ticketeraUi.js";
+import { bolsaTieneSaldoPositivoVisible } from "./laoDisplayUtils.js";
 
 /**
  * @param {object} b
@@ -47,16 +48,19 @@ export default function LaoDisponibilidadPaso({ resumen, loading, error, anioCal
     return <p className={`${TICKETERA.muted} text-xs`}>Sin datos de bolsa.</p>;
   }
 
-  const bolsas = Array.isArray(resumen.bolsas_resumen) ? resumen.bolsas_resumen : [];
+  const bolsasTodas = Array.isArray(resumen.bolsas_resumen) ? resumen.bolsas_resumen : [];
+  const bolsas = bolsasTodas.filter((b) => bolsaTieneSaldoPositivoVisible(b, anioCalendarioCivil));
   const fifo = resumen.fifo?.debe_respetar_fifo === true;
 
   return (
     <div className="space-y-3 text-sm leading-relaxed text-slate-600">
-      <p className="font-medium text-slate-800">Disponibles:</p>
+      <p className="text-base font-semibold text-slate-900">
+        Detalle de tu saldo disponible de Licencia Anual Ordinaria:
+      </p>
       {bolsas.length === 0 ? (
-        <p className="pl-4 text-slate-600">Sin bolsas LAO cargadas.</p>
+        <p className="text-slate-600">No tenés bolsas LAO con saldo disponible en este momento.</p>
       ) : (
-        <ul className="list-none space-y-3 pl-4">
+        <ul className="list-none space-y-3">
           {bolsas.map((b) => (
             <BolsaDisponibleBlock key={b.bolsa_id} b={b} anioCalendarioCivil={anioCalendarioCivil} />
           ))}
@@ -64,7 +68,7 @@ export default function LaoDisponibilidadPaso({ resumen, loading, error, anioCal
       )}
 
       {fifo ? (
-        <p className="pl-4 text-sm text-amber-900">
+        <p className="text-sm text-amber-900">
           Primero consumí la bolsa del año {resumen.fifo.anio_mas_antiguo_con_saldo} (FIFO).
         </p>
       ) : null}

@@ -44,6 +44,12 @@ export function useLaoWizardSubmit({
       return null;
     }
 
+    const grupoTrabajoIdAncla = String(wizardCtx.grupo_trabajo_id_ancla || "").trim();
+    if (!/^gdt_/i.test(grupoTrabajoIdAncla)) {
+      toast.error("Elegí el grupo de trabajo para esta solicitud.");
+      return null;
+    }
+
     setEnviando(true);
     try {
       const { solicitud_id } = await crearSolicitudArticuloLaoBorrador({
@@ -55,6 +61,7 @@ export function useLaoWizardSubmit({
         fechaHasta: rangoSnapshot.fechaHasta,
         diasSolicitados: dias,
         anioOrigenBolsa: wizardCtx.anio_origen_bolsa_activo,
+        grupoTrabajoIdAncla,
         resumenComputo: rangoSnapshot.resumenComputo,
       });
 

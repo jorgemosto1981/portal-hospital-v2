@@ -4,9 +4,9 @@
  */
 
 /**
- * @param {{ simulacion: object | null, error: string | null, cargando?: boolean }} props
+ * @param {{ simulacion: object | null, error: string | null, cargando?: boolean, modoWizard?: boolean }} props
  */
-export default function LaoPreviewInfo({ simulacion, error, cargando }) {
+export default function LaoPreviewInfo({ simulacion, error, cargando, modoWizard = false }) {
   if (cargando) {
     return (
       <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600" role="status">
@@ -39,7 +39,9 @@ export default function LaoPreviewInfo({ simulacion, error, cargando }) {
   return (
     <section className={`space-y-3 rounded-xl border p-4 text-base text-slate-800 ${shellClass}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-xl font-semibold text-slate-900">Análisis de tu derecho (preview LAO)</h3>
+        <h3 className="text-xl font-semibold text-slate-900">
+          {modoWizard ? "Resultado" : "Análisis de tu derecho (preview LAO)"}
+        </h3>
         <span
           className={`rounded-full px-3 py-1 text-xs font-semibold ${
             eligible ? "bg-emerald-600 text-white" : "bg-red-600 text-white"
@@ -58,27 +60,34 @@ export default function LaoPreviewInfo({ simulacion, error, cargando }) {
           </ul>
         </div>
       ) : null}
-      <p className="text-sm text-slate-700">
-        Camino: <span className="font-mono font-medium">{simulacion.camino}</span> · Año solicitud{" "}
-        <span className="font-mono">{simulacion.anio_solicitud}</span> vs bolsa{" "}
-        <span className="font-mono">{simulacion.anio_origen_bolsa}</span>
-      </p>
-      {mx?.escalon_elegido ? (
-        <p className="text-sm">
-          Escalón de antigüedad: <strong>{mx.escalon_elegido.dias_otorgados} días</strong> (umbral {mx.escalon_elegido.valor_anos}{" "}
-          años, operador <span className="font-mono text-xs">{mx.escalon_elegido.operador_id}</span>).
-        </p>
-      ) : (
-        <p className="text-sm text-amber-900">Sin escalón de matriz aplicable (revisar configuración o antigüedad).</p>
-      )}
-      {gTse?.aplica ? (
+      {!modoWizard ? (
+        <>
+          <p className="text-sm text-slate-700">
+            Camino: <span className="font-mono font-medium">{simulacion.camino}</span> · Año solicitud{" "}
+            <span className="font-mono">{simulacion.anio_solicitud}</span> vs bolsa{" "}
+            <span className="font-mono">{simulacion.anio_origen_bolsa}</span>
+          </p>
+          {mx?.escalon_elegido ? (
+            <p className="text-sm">
+              Escalón de antigüedad: <strong>{mx.escalon_elegido.dias_otorgados} días</strong> (umbral{" "}
+              {mx.escalon_elegido.valor_anos} años, operador{" "}
+              <span className="font-mono text-xs">{mx.escalon_elegido.operador_id}</span>).
+            </p>
+          ) : (
+            <p className="text-sm text-amber-900">
+              Sin escalón de matriz aplicable (revisar configuración o antigüedad).
+            </p>
+          )}
+        </>
+      ) : null}
+      {!modoWizard && gTse?.aplica ? (
         <p className="text-sm">
           Servicio efectivo {simulacion.anio_solicitud}: <strong>{gTse.dias_tse} días</strong> en ventana 01/01 —{" "}
           {simulacion.fecha_desde}
           {gTse.ok ? " (habilitado ≥ 180 días)." : " (insuficiente para proporcional)." }
         </p>
       ) : null}
-      {pr?.aplica && pr.dias_proporcionales_piso != null ? (
+      {!modoWizard && pr?.aplica && pr.dias_proporcionales_piso != null ? (
         <p className="text-sm">
           Cálculo proporcional (piso):{" "}
           <strong>
@@ -86,7 +95,7 @@ export default function LaoPreviewInfo({ simulacion, error, cargando }) {
           </strong>
         </p>
       ) : null}
-      {gJul?.aplica ? (
+      {!modoWizard && gJul?.aplica ? (
         <p className={`text-sm ${gJul.ok ? "text-emerald-900" : "text-red-800"}`}>
           Guarda 01/07: {gJul.ok ? "Cumplida." : "No cumplida."} {gJul.detalle}
         </p>

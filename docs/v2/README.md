@@ -35,6 +35,8 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`RFC_LAO_CHECKIN_SALDOS_V2.md`](./RFC_LAO_CHECKIN_SALDOS_V2.md) | RFC check-in → bolsas + `version_id_origen` |
 | [`RFC_LAO_SOLICITUD_VERSION_FIFO_V2.md`](./RFC_LAO_SOLICITUD_VERSION_FIFO_V2.md) | RFC solicitud: versión por bolsa + FIFO |
 | [`RFC_LAO_ACREDITACION_ANUAL_V2.md`](./RFC_LAO_ACREDITACION_ANUAL_V2.md) | RFC acreditación motor (años ≥ A) |
+| [`RFC_LAO_MOTOR_CONFIG_WIRING_V2.md`](./RFC_LAO_MOTOR_CONFIG_WIRING_V2.md) | **RFC motor LAO v2:** mapa integridad config↔motor, snapshot SSoT, orquestador, R5–R7 |
+| [**`HANDOFF_SESION_2026-05-23_LAO_MOTOR_WIRING_PAUSA.md`**](./HANDOFF_SESION_2026-05-23_LAO_MOTOR_WIRING_PAUSA.md) | **RETOMAR AQUÍ** — Motor LAO v2 Fases 3/1/2 cerradas; próximo: CI R5 §12 |
 | [`HANDOFF_SESION_2026-05-15.md`](./HANDOFF_SESION_2026-05-15.md) | Sesión **producto/doc** 2026-05-15: guía LAO 2024, política saldos/check-in, plan persistente |
 | [`HANDOFF_SESION_2026-05-16.md`](./HANDOFF_SESION_2026-05-16.md) | Sesión 2026-05-16: versiones RRHH, smoke LAO Fase 3, fix check-in merge; **§9** cierre fase documental saldos A/B/C |
 | [`HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md`](./HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md) | UI check-in saldos A/B/C, rectificación, `cerrarCheckinGlobal`, callables y rutas web |
@@ -61,6 +63,8 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md) | Oleada A/B + puntero **Oleada C cerrada** |
 | [`HANDOFF_SESION_2026-05-21_GRILLA_OLEADA_C_CIERRE.md`](./HANDOFF_SESION_2026-05-21_GRILLA_OLEADA_C_CIERRE.md) | **RETOMAR AQUÍ** — épica grilla licencias MDC cerrada · git `f782ce2` · smoke |
 | [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) | RFC contrato — autorización, TC RRHH, MDC, oleadas A/B/C |
+| [`RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md`](./RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md) | Snapshot `grupos_trabajo_involucrados_ids[]` en alta `sol_*` (implementado) |
+| [`TICKETERA_EVIDENCIA_2026-05-23_GRUPOS_INVOLUCRADOS_SNAPSHOT.md`](./TICKETERA_EVIDENCIA_2026-05-23_GRUPOS_INVOLUCRADOS_SNAPSHOT.md) | Piloto manual multigrupo + query `array-contains` |
 | [`SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md`](./SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md) | Campos `sol_*` Oleada A + estados TO-BE |
 | [`PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md`](./PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md) | Plan código Oleada A → B → C |
 | [`ANEXO_ALINEACION_RDA_GEMINI_V6_A_V2.md`](./ANEXO_ALINEACION_RDA_GEMINI_V6_A_V2.md) | Mandato RDA diario `asi_*` + vista `vis_*` (vs Gemini V6) |

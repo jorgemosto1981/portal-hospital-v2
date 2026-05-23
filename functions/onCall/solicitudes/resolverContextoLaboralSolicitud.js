@@ -3,7 +3,7 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db } = require("../../modules/shared/context");
 const { resolvePersonaIdSolicitudFlujoAgente } = require("../../modules/shared/helpers");
-const { parseYmd } = require("../../modules/shared/laoPreviewMotor");
+const { parseYmd } = require("../../modules/shared/laoPreviewDateUtils");
 const {
   mapHlcRow,
   filterHlcVigentesEnFecha,

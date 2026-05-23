@@ -8,7 +8,7 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db, FieldValue } = require("../../modules/shared/context");
 const { tokenHasRrhhAccess } = require("../../modules/shared/helpers");
-const { runLaoPreviewSimulacion } = require("../../modules/shared/laoPreviewMotor");
+const { runLaoAsignacionDiasCore } = require("../../modules/shared/laoAsignacionDiasCore");
 const { gatherLaoAltaMotorContext } = require("../../modules/shared/solicitudLaoAltaMotorContext");
 const { versionMatchesAnioOrigen } = require("../../modules/shared/laoVersionResolver");
 const { resolvePublishedLaoVersion } = require("../../modules/shared/laoVersionResolverDb");
@@ -27,13 +27,10 @@ function assertRrhh(request) {
   }
 }
 
-function resolveDiasAcreditacion(resultado) {
-  if (!resultado || !resultado.eligible) return 0;
-  if (resultado.camino === "stock") return Number(resultado.matriz?.dias_base) || 0;
-  if (resultado.camino === "proporcional") {
-    return Number(resultado.proporcional?.dias_proporcionales_piso) || 0;
-  }
-  return 0;
+function resolveDiasAcreditacion(asignacionResult) {
+  if (!asignacionResult?.eligible) return 0;
+  const cupo = Number(asignacionResult.asignacion?.cupo);
+  return Number.isFinite(cupo) && cupo >= 0 ? cupo : 0;
 }
 
 const acreditarLaoBolsaAgente = onCall(async (request) => {
@@ -119,22 +116,24 @@ const acreditarLaoBolsaAgente = onCall(async (request) => {
       versionId,
       fechaDesde,
     });
-    const resultado = runLaoPreviewSimulacion({
+    const asignacionResult = runLaoAsignacionDiasCore({
+      versionData: ctx.versionData,
       fechaDesdeYmd: fechaDesde,
+      fechaHastaYmd: fechaDesde,
       anioOrigenBolsa: anioOrigen,
+      anioCalendarioActual: anioOrigen,
       hlcArray: ctx.hlcArray,
       diasExternos: ctx.diasExternos,
       exclusionIntervals: ctx.exclusionIntervals,
-      versionData: ctx.versionData,
       operadorCodigoPorId: ctx.operadorMap,
     });
-    if (!resultado.eligible) {
+    if (!asignacionResult.eligible) {
       throw new HttpsError(
         "failed-precondition",
-        (resultado.motivos_ineligibilidad || []).join(" ") || "Motor no habilita acreditación.",
+        (asignacionResult.motivos_ineligibilidad || []).join(" ") || "Motor no habilita acreditación.",
       );
     }
-    cantidadInicial = resolveDiasAcreditacion(resultado);
+    cantidadInicial = resolveDiasAcreditacion(asignacionResult);
   }
 
   if (!Number.isFinite(cantidadInicial) || cantidadInicial < 0) {

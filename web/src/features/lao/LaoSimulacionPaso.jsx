@@ -1,4 +1,6 @@
 import LaoPreviewInfo from "../articulos/LaoPreviewInfo.jsx";
+import LaoAuditoriaDisplay from "./LaoAuditoriaDisplay.jsx";
+import { formatDateDdMmAaaa } from "../../pages/datos-laborales/utils.js";
 import { TICKETERA } from "../solicitudes/ticketeraUi.js";
 
 function LaoSimulacionLoading() {
@@ -34,7 +36,6 @@ export default function LaoSimulacionPaso({
   fechaDesde = "",
   fechaHasta = "",
   diasConsumo = null,
-  anioOrigenBolsa = null,
   simulacion = null,
   ok = false,
   mensajes = [],
@@ -42,16 +43,21 @@ export default function LaoSimulacionPaso({
   onVolverPaso2,
 }) {
   const dias = diasConsumo ?? simulacion?.resumen_computo?.dias_consumo ?? simulacion?.dias_solicitados;
-  const anio = anioOrigenBolsa ?? simulacion?.anio_origen_bolsa;
+  const desdeLabel = formatDateDdMmAaaa(fechaDesde, "—");
+  const hastaLabel = formatDateDdMmAaaa(fechaHasta, "—");
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-700">
-        Rango:{" "}
-        <span className="font-mono font-medium">
-          {fechaDesde} → {fechaHasta}
-        </span>
-      </p>
+      <div className="text-sm text-slate-700">
+        <p className="font-medium text-slate-800">Período seleccionado</p>
+        <p className="mt-1 tabular-nums">
+          {desdeLabel}
+          <span className="mx-2 text-slate-400" aria-hidden>
+            →
+          </span>
+          {hastaLabel}
+        </p>
+      </div>
 
       {loading ? <LaoSimulacionLoading /> : null}
 
@@ -84,11 +90,11 @@ export default function LaoSimulacionPaso({
             <p className="mt-1 text-sm text-emerald-900">
               Se descontarán{" "}
               <span className="font-semibold tabular-nums">{dias}</span>{" "}
-              {dias === 1 ? "día" : "días"} de tu bolsa{" "}
-              <span className="font-semibold tabular-nums">{anio}</span>.
+              {dias === 1 ? "día" : "días"} de tu licencia.
             </p>
           </div>
-          <LaoPreviewInfo simulacion={simulacion} error={null} cargando={false} />
+          <LaoPreviewInfo simulacion={simulacion} error={null} cargando={false} modoWizard />
+          <LaoAuditoriaDisplay snapshot={simulacion?.motor_snapshot ?? null} />
         </div>
       ) : null}
     </div>

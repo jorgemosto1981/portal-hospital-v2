@@ -6,8 +6,8 @@ import { etiquetaArticulo, mensajeBloqueoPreview } from "./ticketeraUtils.js";
 
 const PASOS = [
   { n: 1, titulo: "Artículo", etiquetaPaso: "1", hint: "Elegí el tipo de licencia" },
-  { n: 2, titulo: "Fecha", etiquetaPaso: "Fecha", hint: "Completar Fecha de inicio y Grupo de Trabajo" },
-  { n: 3, titulo: "Confirmar", etiquetaPaso: "Confirmar", hint: "" },
+  { n: 2, titulo: "Fecha", etiquetaPaso: "Fecha", hint: "Fechas y grupo de trabajo" },
+  { n: 3, titulo: "Enviar", etiquetaPaso: "Enviar", hint: "" },
 ];
 
 /** @param {Record<string, unknown>} a */
@@ -40,9 +40,9 @@ function WizardStepper({ paso, pasosVisibles, confirmarFallido = false, confirma
     const n = step.n;
     const activo = paso === n;
     const completado = paso > n;
-    const esConfirmar = n === 3;
-    const confirmarError = esConfirmar && activo && confirmarFallido;
-    const confirmarOk = esConfirmar && activo && confirmarExitoso;
+    const esEnviar = n === 3;
+    const confirmarError = esEnviar && activo && confirmarFallido;
+    const confirmarOk = esEnviar && activo && confirmarExitoso;
     const etiqueta = String(step.titulo || step.etiquetaPaso || n);
 
     let dotClass =
@@ -114,7 +114,10 @@ export default function SolicitudPatronBForm({
   fechaDesde,
   setFechaDesde,
   fechaHasta,
+  setFechaHasta,
   diasSolicitados,
+  diasPreestablecidos = true,
+  fechasCompletas = false,
   articulos,
   articuloSel,
   setArticuloSel,
@@ -146,8 +149,8 @@ export default function SolicitudPatronBForm({
 }) {
   const pasosVisibles = omitirPasoArticulo
     ? [
-        { n: 2, titulo: "Fecha", etiquetaPaso: "Fecha", hint: "Completar Fecha de inicio y Grupo de Trabajo" },
-        { n: 3, titulo: "Confirmar", etiquetaPaso: "Confirmar", hint: "" },
+        { n: 2, titulo: "Fecha", etiquetaPaso: "Fecha", hint: "Fechas y grupo de trabajo" },
+        { n: 3, titulo: "Enviar", etiquetaPaso: "Enviar", hint: "" },
       ]
     : PASOS;
 
@@ -167,14 +170,18 @@ export default function SolicitudPatronBForm({
 
   const puedeContinuarPaso1 = Boolean(articuloSel) && !cargando && /^per_/i.test(personaId);
 
+  const tieneFechaDesde = /^\d{4}-\d{2}-\d{2}$/.test(fechaDesde);
+  const mostrarFechaHasta = tieneFechaDesde;
+  const mostrarGrupo = fechasCompletas;
   const puedeValidarPaso2 =
     puedeContinuarPaso1 &&
+    fechasCompletas &&
     !gruposCargando &&
     !validandoEntorno &&
     !previewCargando &&
     !enviando &&
     gruposVigentes.length > 0 &&
-    (!requiereSeleccionGrupo || grupoAnclaOk);
+    grupoAnclaOk;
 
   const puedeEnviar =
     puedeContinuarPaso1 && !enviando && !previewCargando && puedeEnviarTrasPreview && entornoOk;
@@ -288,62 +295,81 @@ export default function SolicitudPatronBForm({
             ) : null}
 
             <label className="block space-y-1">
-              <span className={TICKETERA.label}>Fecha de inicio (desde)</span>
+              <span className={TICKETERA.label}>Fecha de inicio</span>
               <input
                 type="date"
+                inputMode="numeric"
                 value={fechaDesde}
-                onChange={(e) => setFechaDesde(e.target.value)}
+                onChange={(e) => {
+                  reiniciarValidacionYPreview?.();
+                  setFechaDesde(e.target.value);
+                }}
                 className={TICKETERA.input}
               />
             </label>
 
-            <label className="block space-y-1">
-              <span className={TICKETERA.label}>Fecha hasta (automática)</span>
-              <input
-                type="date"
-                readOnly
-                value={fechaHasta}
-                className={TICKETERA.inputReadonly}
-                aria-readonly="true"
-              />
-              <span className="text-xs text-slate-500">
-                Calculada por el artículo · {diasSolicitados} {diasSolicitados === 1 ? "día" : "días"}
-              </span>
-            </label>
-
-            {gruposCargando ? <p className={TICKETERA.muted}>Cargando grupos de trabajo vigentes…</p> : null}
-
-            {!gruposCargando && gruposVigentes.length === 0 && !error ? (
-              <p className="text-sm text-amber-800">
-                No hay grupo de trabajo vigente para la fecha elegida.
-              </p>
-            ) : null}
-
-            {requiereSeleccionGrupo && setGrupoAnclaId ? (
+            {mostrarFechaHasta ? (
               <label className="block space-y-1">
-                <span className={TICKETERA.label}>Grupo de trabajo (ancla)</span>
-                <select
-                  value={grupoAnclaId}
-                  onChange={(e) => setGrupoAnclaId(e.target.value)}
-                  className={TICKETERA.select}
-                >
-                  <option value="">Elegí el grupo sobre el que pedís la licencia</option>
-                  {gruposVigentes.map((g) => (
-                    <option key={String(g.grupo_de_trabajo_id)} value={String(g.grupo_de_trabajo_id)}>
-                      {String(g.etiqueta_ui || g.grupo_de_trabajo_id)}
-                    </option>
-                  ))}
-                </select>
+                <span className={TICKETERA.label}>
+                  {diasPreestablecidos ? "Fecha de fin (automática)" : "Fecha de fin"}
+                </span>
+                <input
+                  type="date"
+                  inputMode="numeric"
+                  readOnly={diasPreestablecidos}
+                  value={fechaHasta}
+                  min={fechaDesde || undefined}
+                  onChange={(e) => setFechaHasta?.(e.target.value)}
+                  className={diasPreestablecidos ? TICKETERA.inputReadonly : TICKETERA.input}
+                  aria-readonly={diasPreestablecidos ? "true" : undefined}
+                />
+                <span className="text-xs text-slate-500">
+                  {diasPreestablecidos
+                    ? `Definida por el artículo · ${diasSolicitados} ${diasSolicitados === 1 ? "día" : "días"}`
+                    : `Seleccioná el último día del permiso (${diasSolicitados} ${diasSolicitados === 1 ? "día" : "días"})`}
+                </span>
               </label>
             ) : null}
 
-            {!requiereSeleccionGrupo && gruposVigentes.length === 1 ? (
-              <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                Grupo:{" "}
-                <span className="font-medium">
-                  {String(gruposVigentes[0]?.etiqueta_ui || gruposVigentes[0]?.grupo_de_trabajo_id || "—")}
-                </span>
-              </p>
+            {mostrarGrupo ? (
+              <>
+                {gruposCargando ? (
+                  <p className={TICKETERA.muted}>Cargando grupos de trabajo vigentes…</p>
+                ) : null}
+
+                {!gruposCargando && gruposVigentes.length === 0 && !error ? (
+                  <p className="text-sm text-amber-800">
+                    No hay grupo de trabajo vigente para la fecha elegida.
+                  </p>
+                ) : null}
+
+                {requiereSeleccionGrupo && setGrupoAnclaId ? (
+                  <label className="block space-y-1">
+                    <span className={TICKETERA.label}>Grupo de trabajo</span>
+                    <select
+                      value={grupoAnclaId}
+                      onChange={(e) => setGrupoAnclaId(e.target.value)}
+                      className={TICKETERA.select}
+                    >
+                      <option value="">Elegí el grupo sobre el que pedís la licencia</option>
+                      {gruposVigentes.map((g) => (
+                        <option key={String(g.grupo_de_trabajo_id)} value={String(g.grupo_de_trabajo_id)}>
+                          {String(g.etiqueta_ui || g.grupo_de_trabajo_id)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+
+                {!requiereSeleccionGrupo && gruposVigentes.length === 1 ? (
+                  <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                    Grupo:{" "}
+                    <span className="font-medium">
+                      {String(gruposVigentes[0]?.etiqueta_ui || gruposVigentes[0]?.grupo_de_trabajo_id || "—")}
+                    </span>
+                  </p>
+                ) : null}
+              </>
             ) : null}
 
             {entornoMensajes[0] ? (

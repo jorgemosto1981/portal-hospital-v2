@@ -10,8 +10,12 @@ const { logger } = require("firebase-functions");
 const { ulid } = require("ulid");
 
 const { db, FieldValue } = require("../modules/shared/context");
-const { runLaoPreviewSimulacion } = require("../modules/shared/laoPreviewMotor");
+const {
+  runLaoAltaMotorCompleto,
+  resolveCupoOperativoDesdeMotor,
+} = require("../modules/shared/laoAltaMotorCompleto");
 const { gatherLaoAltaMotorContext } = require("../modules/shared/solicitudLaoAltaMotorContext");
+const { validarSuperposicionLaoEnMotor } = require("../modules/shared/laoSuperposicionMotor");
 const { assertVersionInvariantForBolsa } = require("../modules/shared/laoVersionResolver");
 const {
   saldoAnualDocId,
@@ -29,7 +33,11 @@ const {
   resolverCadenaAutorizacion,
   buildAutorizacionSnapshotFields,
 } = require("../modules/shared/solicitudAutorizacionJerarquicaCore");
-const { resolverGrupoTrabajoIdAnclaParaSolicitud } = require("../modules/shared/solicitudGrupoTrabajoAncla");
+const {
+  resolverGrupoTrabajoIdAnclaParaSolicitud,
+  buildGruposTrabajoInvolucradosIdsFromVigentes,
+  assertGrupoAnclaEnGruposInvolucrados,
+} = require("../modules/shared/solicitudGrupoTrabajoAncla");
 const { loadArticuloDisplay } = require("../modules/shared/solicitudBandejaJefeCore");
 const {
   dispararMdcDesdeSolicitudAsync,
@@ -48,16 +56,13 @@ const COL_SALDOS = "saldos_articulo_agente";
 
 /** Legado: cupo teórico del motor (matriz / proporcional), no el rango del wizard. */
 function resolveDiasConsumoMotor(resultado) {
-  if (!resultado || !resultado.eligible) return 0;
-  if (resultado.camino === "stock") return Number(resultado.matriz?.dias_base) || 0;
-  if (resultado.camino === "proporcional") return Number(resultado.proporcional?.dias_proporcionales_piso) || 0;
-  return 0;
+  return resolveCupoOperativoDesdeMotor(resultado);
 }
 
 /**
  * Días a descontar: prioriza `dias_solicitados` / snapshot del wizard; si no, motor legado.
  * @param {Record<string, unknown>} solicitudData
- * @param {ReturnType<typeof runLaoPreviewSimulacion>} resultado
+ * @param {ReturnType<typeof runLaoAltaMotorCompleto>} resultado
  */
 function resolveDiasConsumoOperativo(solicitudData, resultado) {
   const fromDoc = Number(solicitudData.dias_solicitados);
@@ -122,6 +127,24 @@ async function resolverAutorizacionAltaLao(db, solicitudData, personaId, fechaDe
   }
 
   const grupoTrabajoIdAncla = String(grupoAncla.grupo_trabajo_id_ancla || "").trim();
+  const gruposTrabajoInvolucradosIds = buildGruposTrabajoInvolucradosIdsFromVigentes(
+    grupoAncla.grupos_vigentes || [],
+  );
+
+  const anclaEnSnapshot = assertGrupoAnclaEnGruposInvolucrados(
+    grupoTrabajoIdAncla,
+    gruposTrabajoInvolucradosIds,
+  );
+  if (!anclaEnSnapshot.ok) {
+    return { ok: false, mensajes: [anclaEnSnapshot.mensaje || "Grupo ancla inválido."] };
+  }
+
+  if (gruposTrabajoInvolucradosIds.length === 0) {
+    return {
+      ok: false,
+      mensajes: ["No hay grupos de trabajo vigentes para registrar en la solicitud."],
+    };
+  }
 
   let cadenaAutorizacion;
   try {
@@ -149,6 +172,7 @@ async function resolverAutorizacionAltaLao(db, solicitudData, personaId, fechaDe
   return {
     ok: true,
     grupo_trabajo_id_ancla: grupoTrabajoIdAncla,
+    grupos_trabajo_involucrados_ids: gruposTrabajoInvolucradosIds,
     snapshot: buildAutorizacionSnapshotFields(cadenaAutorizacion),
   };
 }
@@ -176,6 +200,9 @@ async function emitirEventoYMdcLaoAltaOk(db, solId, solicitudData, articuloId, g
       version_aplicada:
         solicitudData.version_aplicada || solicitudData.version_aplicada_id || null,
       grupo_trabajo_id_ancla: grupoTrabajoIdAncla || null,
+      grupos_trabajo_involucrados_ids: Array.isArray(solicitudData.grupos_trabajo_involucrados_ids)
+        ? solicitudData.grupos_trabajo_involucrados_ids
+        : [],
       fecha_desde: String(solicitudData.fecha_desde || "").slice(0, 10),
     },
   };
@@ -219,6 +246,9 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
           ? d.version_aplicada_id.trim()
           : "";
     const fechaDesde = typeof d.fecha_desde === "string" ? d.fecha_desde.trim().slice(0, 10) : "";
+    const fechaHastaRaw = typeof d.fecha_hasta === "string" ? d.fecha_hasta.trim().slice(0, 10) : "";
+    const fechaHasta = fechaHastaRaw || fechaDesde;
+    const diasSolicitadosDoc = Number(d.dias_solicitados);
     const anioOrigenBolsa = Number(d.anio_origen_bolsa);
 
     if (!/^per_/i.test(personaId) || !/^art_/i.test(articuloId) || !/^ver_/i.test(versionId) || !fechaDesde) {
@@ -281,16 +311,74 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
       return;
     }
 
+    const motorBase = {
+      versionData: ctx.versionData,
+      versionId,
+      fechaDesdeYmd: fechaDesde,
+      fechaHastaYmd: fechaHasta,
+      anioOrigenBolsa,
+      hlcArray: ctx.hlcArray,
+      diasExternos: ctx.diasExternos,
+      exclusionIntervals: ctx.exclusionIntervals,
+      operadorCodigoPorId: ctx.operadorMap,
+      persona: ctx.persona,
+      personaId,
+    };
+
+    let superposicionVal;
+    try {
+      superposicionVal = await validarSuperposicionLaoEnMotor(db, {
+        personaId,
+        fechaDesdeYmd: fechaDesde,
+        fechaHastaYmd: fechaHasta,
+        versionData: ctx.versionData,
+        excludeSolId: solId,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await solRef.update({
+        estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+        motor_motivos_ineligibilidad: [msg],
+        motor_validado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    motorBase.superposicionVal = superposicionVal;
+
     let resultado;
     try {
-      resultado = runLaoPreviewSimulacion({
-        fechaDesdeYmd: fechaDesde,
-        anioOrigenBolsa,
-        hlcArray: ctx.hlcArray,
-        diasExternos: ctx.diasExternos,
-        exclusionIntervals: ctx.exclusionIntervals,
-        versionData: ctx.versionData,
-        operadorCodigoPorId: ctx.operadorMap,
+      resultado = runLaoAltaMotorCompleto(motorBase);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await solRef.update({
+        estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+        motor_motivos_ineligibilidad: [msg],
+        motor_validado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    const diasParaSaldo =
+      Number.isInteger(diasSolicitadosDoc) && diasSolicitadosDoc >= 1 ? diasSolicitadosDoc : null;
+
+    const saldoValPre = evaluarSaldoBolsaParaPreview({
+      saldosMerged,
+      articuloId,
+      anioOrigenBolsa,
+      diasSolicitados: diasParaSaldo ?? 1,
+      fechaDesdeYmd: fechaDesde,
+      diasProporcionalesPiso: resultado.proporcional?.dias_proporcionales_piso ?? null,
+    });
+
+    try {
+      resultado = runLaoAltaMotorCompleto({
+        ...motorBase,
+        diasSolicitados: diasParaSaldo ?? undefined,
+        disponibleBolsa: Number.isFinite(Number(saldoValPre.disponible)) ? Number(saldoValPre.disponible) : 0,
+        saldoEval: diasParaSaldo != null ? saldoValPre : undefined,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -307,7 +395,7 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
       await solRef.update({
         estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
         motor_motivos_ineligibilidad: resultado.motivos_ineligibilidad || [],
-        motor_snapshot: { motor_version: resultado.motor_version, camino: resultado.camino },
+        motor_snapshot: resultado.motor_snapshot,
         motor_validado_en: FieldValue.serverTimestamp(),
         actualizado_en: FieldValue.serverTimestamp(),
       });
@@ -341,9 +429,9 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
           estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
           motor_motivos_ineligibilidad: saldoVal.motivos,
           motor_snapshot: {
-            motor_version: resultado.motor_version,
-            camino: saldoVal.camino || resultado.camino,
+            ...resultado.motor_snapshot,
             dias_consumo: diasConsumo,
+            saldo_camino: saldoVal.camino || resultado.camino,
           },
           motor_validado_en: FieldValue.serverTimestamp(),
           actualizado_en: FieldValue.serverTimestamp(),
@@ -371,9 +459,9 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
       estado_solicitud_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
       ...autorizacion.snapshot,
       grupo_trabajo_id_ancla: autorizacion.grupo_trabajo_id_ancla,
+      grupos_trabajo_involucrados_ids: autorizacion.grupos_trabajo_involucrados_ids,
       motor_snapshot: {
-        motor_version: resultado.motor_version,
-        camino: resultado.camino,
+        ...resultado.motor_snapshot,
         dias_consumo: diasConsumo,
         anio_solicitud: anioSolicitud,
       },
@@ -471,7 +559,7 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
           await emitirEventoYMdcLaoAltaOk(
             db,
             solId,
-            d,
+            { ...d, ...motorOkPayload },
             articuloId,
             autorizacion.grupo_trabajo_id_ancla,
           );

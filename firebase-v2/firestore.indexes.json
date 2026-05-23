@@ -83,6 +83,14 @@
         { "fieldPath": "tipo_evento_id", "order": "ASCENDING" },
         { "fieldPath": "ocurrido_en", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "solicitudes_articulo",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "grupos_trabajo_involucrados_ids", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "estado_solicitud_id", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

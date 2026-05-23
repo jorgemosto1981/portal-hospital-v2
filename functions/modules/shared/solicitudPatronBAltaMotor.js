@@ -3,7 +3,7 @@
 /**
  * Motor alta solicitud Patrón B (64-A MVP).
  */
-const { parseYmd } = require("./laoPreviewMotor");
+const { parseYmd } = require("./laoPreviewDateUtils");
 const { saldoAnualDocId, pickBolsaParaConsumo } = require("./laoSaldosBolsa");
 const { resolvePatronSaldo, PATRON_SALDO_B } = require("./resolvePatronSaldo");
 const {

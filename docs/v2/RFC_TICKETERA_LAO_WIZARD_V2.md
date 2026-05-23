@@ -28,6 +28,8 @@ No hay input editable de “cantidad de días”. Manipular el payload en consol
 | **3** | Preview derecho | Motor LAO (`eligible`, proporcional/stock, guardas) (§7). |
 | **4** | Confirmar | `crearSolicitudArticuloLaoBorrador` + trigger (§6). |
 
+**Multigrupo (ancla + snapshot):** paso selector de grupo cuando N>1; copy y checklist backend en [`RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md`](./RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md).
+
 ---
 
 ## 3. Paso 1 — Pantalla “Disponibilidad”

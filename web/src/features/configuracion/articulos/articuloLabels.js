@@ -75,6 +75,9 @@ export const LABELS = Object.freeze({
   correspondencia_anio: "Año fiscal del derecho",
   fecha_corte_antiguedad: "Fecha de corte de antigüedad",
   matriz_antiguedad_reglas: "Escala de antigüedad",
+  mes_dia_apertura_solicitudes: "Apertura de temporada (MM-DD)",
+  tse_minimo_dias_base: "Umbral TSE (días)",
+  permite_calculo_proporcional_tse: "Permite cupo proporcional por TSE",
 
   // --- Acumulación (Bloque 5) ---
   caducidad_tipo_id: "Tipo de vencimiento",

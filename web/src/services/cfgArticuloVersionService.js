@@ -152,6 +152,9 @@ export function applyLaoBloque4Guardian(parsed) {
       correspondencia_anio: null,
       fecha_corte_antiguedad: null,
       matriz_antiguedad_reglas: null,
+      mes_dia_apertura_solicitudes: null,
+      tse_minimo_dias_base: null,
+      permite_calculo_proporcional_tse: null,
     };
   }
   return /** @type {import("../schemas/articulo.schema.js").ArticuloVersion} */ (v);

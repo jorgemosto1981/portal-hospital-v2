@@ -20,6 +20,7 @@ const {
   buildAutorizacionSnapshotFields,
 } = require("../modules/shared/solicitudAutorizacionJerarquicaCore");
 const { loadArticuloDisplay } = require("../modules/shared/solicitudBandejaJefeCore");
+const { buildGruposTrabajoInvolucradosIdsFromVigentes } = require("../modules/shared/solicitudGrupoTrabajoAncla");
 const {
   dispararMdcDesdeSolicitudAsync,
   MDC_COMANDO_PROYECTAR_PENDIENTE,
@@ -120,7 +121,24 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
       return;
     }
 
+    const gruposTrabajoInvolucradosIds = buildGruposTrabajoInvolucradosIdsFromVigentes(
+      motor.grupos_trabajo_vigentes || [],
+    );
+    if (gruposTrabajoInvolucradosIds.length === 0) {
+      await solRef.update({
+        estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+        motor_codigos: ["SIN_GRUPO_VIGENTE"],
+        motor_mensajes: ["No hay grupos de trabajo vigentes para registrar en la solicitud."],
+        motor_validado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
     const snapshotAutorizacion = buildAutorizacionSnapshotFields(cadenaAutorizacion);
+    const grupoTrabajoIdAncla = String(
+      motor.grupo_trabajo_id_ancla || d.grupo_trabajo_id_ancla || "",
+    ).trim();
 
     const diasConsumo = motor.dias_consumo;
     const salRef = db.collection(COL_SALDOS).doc(motor.saldo_doc_id);
@@ -203,7 +221,8 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
           metadata: {
             articulo_id: motor.articulo_id || cur.articulo_id || null,
             version_id_aplicada: cur.version_id_aplicada || d.version_id_aplicada || null,
-            grupo_trabajo_id_ancla: motor.grupo_trabajo_id_ancla || null,
+            grupo_trabajo_id_ancla: grupoTrabajoIdAncla || null,
+            grupos_trabajo_involucrados_ids: gruposTrabajoInvolucradosIds,
             fecha_desde: String(cur.fecha_desde || d.fecha_desde || "").slice(0, 10),
           },
         };
@@ -218,7 +237,8 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
           motor_descuento_aplicado: true,
           motor_bolsa_id: match.bolsaId,
           motor_dias_descontados: diasConsumo,
-          grupo_trabajo_id_ancla: motor.grupo_trabajo_id_ancla || null,
+          grupo_trabajo_id_ancla: grupoTrabajoIdAncla || null,
+          grupos_trabajo_involucrados_ids: gruposTrabajoInvolucradosIds,
           _debito_origen: [debito],
         });
       });

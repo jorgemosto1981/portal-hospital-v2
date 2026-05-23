@@ -1,4 +1,5 @@
 import FechaCorteAntiguedadDiaMesField from "./FechaCorteAntiguedadDiaMesField.jsx";
+import LaoMotorParamsEditor from "./LaoMotorParamsEditor.jsx";
 import { FieldNumber, FieldSelect } from "./fieldWidgets.jsx";
 import { LABELS } from "./articuloLabels.js";
 import { sortMatrizAntiguedadReglas } from "./ArticuloConfigTabs.jsx";
@@ -38,6 +39,8 @@ export default function MatrizAntiguedadEditor({
           />
         </div>
       </div>
+
+      <LaoMotorParamsEditor form={form} setBlock={setBlock} disabled={disabled} />
 
       <div className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">

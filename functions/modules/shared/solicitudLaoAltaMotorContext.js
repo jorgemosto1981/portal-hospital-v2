@@ -7,7 +7,7 @@
 
 const { COL_PERSONAS } = require("./constants");
 const { civilDateInZonaToUtcAnchorMs, ymdEnZonaDesdeInstante } = require("./fechaInstitucionalBa");
-const { parseYmd, anchorFromYmd } = require("./laoPreviewMotor");
+const { parseYmd, anchorFromYmd } = require("./laoPreviewDateUtils");
 
 const COL_SOLICITUDES = "solicitudes_articulo";
 const COL_CFG_OPERADOR = "cfg_operador_comparacion";

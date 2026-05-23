@@ -9,8 +9,10 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db } = require("../../modules/shared/context");
 const runtimeFlags = require("../../modules/shared/runtimeFlags.json");
 const { resolvePersonaIdSolicitudFlujoAgente } = require("../../modules/shared/helpers");
-const { runLaoPreviewSimulacion, parseYmd } = require("../../modules/shared/laoPreviewMotor");
+const { parseYmd } = require("../../modules/shared/laoPreviewDateUtils");
+const { runLaoAltaMotorCompleto } = require("../../modules/shared/laoAltaMotorCompleto");
 const { gatherLaoAltaMotorContext } = require("../../modules/shared/solicitudLaoAltaMotorContext");
+const { validarSuperposicionLaoEnMotor } = require("../../modules/shared/laoSuperposicionMotor");
 const { assertVersionInvariantForBolsa } = require("../../modules/shared/laoVersionResolver");
 const { validarFechasArticuloEnMotor } = require("../../modules/shared/validarFechasArticuloRuntime");
 const {
@@ -147,17 +149,32 @@ const simularLaoPreview = onCall(async (request) => {
   const salSnap = await db.collection(COL_SALDOS).where("persona_id", "==", personaId).get();
   const saldosMerged = mergeBolsasFromSaldoDocs(salSnap.docs.map((doc) => doc.data() || {}));
 
+  const superposicionVal = await validarSuperposicionLaoEnMotor(db, {
+    personaId,
+    fechaDesdeYmd: fechaDesde,
+    fechaHastaYmd: fechaHasta,
+    versionData: ctx.versionData,
+  });
+
+  const motorBase = {
+    versionData: ctx.versionData,
+    versionId,
+    fechaDesdeYmd: fechaDesde,
+    fechaHastaYmd: fechaHasta,
+    anioOrigenBolsa,
+    hlcArray: ctx.hlcArray,
+    diasExternos: ctx.diasExternos,
+    exclusionIntervals: ctx.exclusionIntervals,
+    operadorCodigoPorId: ctx.operadorMap,
+    fechasVal,
+    superposicionVal,
+    persona: ctx.persona,
+    personaId,
+  };
+
   let resultado;
   try {
-    resultado = runLaoPreviewSimulacion({
-      fechaDesdeYmd: fechaDesde,
-      anioOrigenBolsa,
-      hlcArray: ctx.hlcArray,
-      diasExternos: ctx.diasExternos,
-      exclusionIntervals: ctx.exclusionIntervals,
-      versionData: ctx.versionData,
-      operadorCodigoPorId: ctx.operadorMap,
-    });
+    resultado = runLaoAltaMotorCompleto(motorBase);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new HttpsError("failed-precondition", msg);
@@ -172,15 +189,16 @@ const simularLaoPreview = onCall(async (request) => {
     diasProporcionalesPiso: resultado.proporcional?.dias_proporcionales_piso ?? null,
   });
 
-  if (!saldoVal.ok) {
-    const prevMotivos = Array.isArray(resultado.motivos_ineligibilidad)
-      ? resultado.motivos_ineligibilidad
-      : [];
-    resultado = {
-      ...resultado,
-      eligible: false,
-      motivos_ineligibilidad: [...prevMotivos, ...saldoVal.motivos],
-    };
+  try {
+    resultado = runLaoAltaMotorCompleto({
+      ...motorBase,
+      diasSolicitados,
+      disponibleBolsa: Number.isFinite(Number(saldoVal.disponible)) ? Number(saldoVal.disponible) : 0,
+      saldoEval: saldoVal,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new HttpsError("failed-precondition", msg);
   }
 
   return {

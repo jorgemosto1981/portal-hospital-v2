@@ -90,7 +90,10 @@ export default function TicketeraPatronB() {
         fechaDesde={form.fechaDesde}
         setFechaDesde={form.setFechaDesde}
         fechaHasta={form.fechaHasta}
+        setFechaHasta={form.setFechaHasta}
         diasSolicitados={form.diasSolicitados}
+        diasPreestablecidos={form.diasPreestablecidos}
+        fechasCompletas={form.fechasCompletas}
         articulos={form.articulos}
         articuloSel={form.articuloSel}
         setArticuloSel={form.setArticuloSel}

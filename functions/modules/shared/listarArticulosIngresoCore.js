@@ -1,6 +1,6 @@
 "use strict";
 
-const { parseYmd } = require("./laoPreviewMotor");
+const { parseYmd } = require("./laoPreviewDateUtils");
 const { PATRON_SALDO_B } = require("./resolvePatronSaldo");
 const {
   filterHlcVigentesEnFecha,

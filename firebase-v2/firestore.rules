@@ -244,6 +244,7 @@ service cloud.firestore {
           'fecha_hasta',
           'dias_solicitados',
           'anio_origen_bolsa',
+          'grupo_trabajo_id_ancla',
           'resumen_computo_snapshot',
           'estado_solicitud_id',
           'schema_version',
@@ -267,6 +268,9 @@ service cloud.firestore {
           d.dias_solicitados is int && d.dias_solicitados >= 1 && d.dias_solicitados <= 366
         ))
         && (!('resumen_computo_snapshot' in d) || d.resumen_computo_snapshot is map)
+        && (!('grupo_trabajo_id_ancla' in d) || (
+          d.grupo_trabajo_id_ancla is string && grupoTrabajoIdValid(d.grupo_trabajo_id_ancla)
+        ))
         && d.anio_origen_bolsa is int
         && d.anio_origen_bolsa >= 1900
         && d.anio_origen_bolsa <= 2200
@@ -299,7 +303,8 @@ service cloud.firestore {
       return solicitudArticuloCreateShapeLao() || solicitudArticuloCreateShapePatronB();
     }
 
-    /** Alta operativa: el agente crea solo su solicitud en BORRADOR; transiciones las aplica el backend. */
+    /** Alta operativa: el agente crea solo su solicitud en BORRADOR; transiciones las aplica el backend.
+     *  `grupos_trabajo_involucrados_ids` solo lo escribe el trigger (no está en hasOnly del create). */
     match /solicitudes_articulo/{solId} {
       allow read: if signedIn()
         && resource.data.titular_persona_id is string

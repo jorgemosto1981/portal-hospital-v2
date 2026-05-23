@@ -21,6 +21,11 @@ import { syncUsaCalendarioInstitucionalEnTopes } from "../../../../../shared/uti
 import ImpactoSaldoTabSections from "./ImpactoSaldoTabSections.jsx";
 import { EXPLICACIONES_OPCIONES, HELP_TEXTS, LABELS } from "./articuloLabels.js";
 import { normalizeFechaCorteAntiguedadIso } from "./fecCorteAntiguedadHelpers.js";
+import {
+  DEFAULT_MES_DIA_APERTURA_LAO,
+  DEFAULT_TSE_MINIMO_DIAS_LAO,
+  normalizeMesDiaAperturaLao,
+} from "./laoMotorConfigFields.js";
 import { FieldCheck, FieldColor, FieldMultiSelect, FieldNumber, FieldPersonaSearch, FieldSelect, FieldText } from "./fieldWidgets.jsx";
 import MatrizAntiguedadEditor from "./MatrizAntiguedadEditor.jsx";
 
@@ -90,6 +95,9 @@ export function createEmptyArticuloVersionForm() {
       correspondencia_anio: "",
       fecha_corte_antiguedad: "",
       matriz_antiguedad_reglas: [],
+      mes_dia_apertura_solicitudes: "",
+      tse_minimo_dias_base: "",
+      permite_calculo_proporcional_tse: true,
       nivel_ocupacion_dia_id: "",
       politica_superposicion_id: "",
     },
@@ -319,6 +327,9 @@ export function buildVersionPayloadForZod(raw) {
     out.bloque_topes_plazos_computo.correspondencia_anio = null;
     out.bloque_topes_plazos_computo.fecha_corte_antiguedad = null;
     out.bloque_topes_plazos_computo.matriz_antiguedad_reglas = null;
+    out.bloque_topes_plazos_computo.mes_dia_apertura_solicitudes = null;
+    out.bloque_topes_plazos_computo.tse_minimo_dias_base = null;
+    out.bloque_topes_plazos_computo.permite_calculo_proporcional_tse = null;
   } else {
     const corr = numOrUndef(out.bloque_topes_plazos_computo.correspondencia_anio);
     out.bloque_topes_plazos_computo.correspondencia_anio = corr === undefined ? null : corr;
@@ -347,6 +358,17 @@ export function buildVersionPayloadForZod(raw) {
       );
     const sortedClean = sortMatrizAntiguedadReglas(cleaned);
     out.bloque_topes_plazos_computo.matriz_antiguedad_reglas = sortedClean.length ? sortedClean : null;
+
+    const mesDiaNorm = normalizeMesDiaAperturaLao(trimOrUndef(out.bloque_topes_plazos_computo.mes_dia_apertura_solicitudes));
+    out.bloque_topes_plazos_computo.mes_dia_apertura_solicitudes =
+      mesDiaNorm ?? DEFAULT_MES_DIA_APERTURA_LAO;
+
+    const tseRaw = numOrUndef(out.bloque_topes_plazos_computo.tse_minimo_dias_base);
+    out.bloque_topes_plazos_computo.tse_minimo_dias_base =
+      tseRaw === undefined ? DEFAULT_TSE_MINIMO_DIAS_LAO : tseRaw;
+
+    out.bloque_topes_plazos_computo.permite_calculo_proporcional_tse =
+      out.bloque_topes_plazos_computo.permite_calculo_proporcional_tse !== false;
   }
 
   const pr = trimOrUndef(out.bloque_acumulacion_sucesion.prorroga_articulo_relacion_id);
@@ -723,12 +745,26 @@ export default function ArticuloConfigTabs() {
                       ...prev,
                       bloque_identidad_naturaleza: { ...prev.bloque_identidad_naturaleza, es_lao_anual: v },
                       bloque_topes_plazos_computo: v
-                        ? prev.bloque_topes_plazos_computo
+                        ? {
+                            ...prev.bloque_topes_plazos_computo,
+                            mes_dia_apertura_solicitudes:
+                              prev.bloque_topes_plazos_computo.mes_dia_apertura_solicitudes || "",
+                            tse_minimo_dias_base:
+                              prev.bloque_topes_plazos_computo.tse_minimo_dias_base === "" ||
+                              prev.bloque_topes_plazos_computo.tse_minimo_dias_base == null
+                                ? ""
+                                : prev.bloque_topes_plazos_computo.tse_minimo_dias_base,
+                            permite_calculo_proporcional_tse:
+                              prev.bloque_topes_plazos_computo.permite_calculo_proporcional_tse !== false,
+                          }
                         : {
                             ...prev.bloque_topes_plazos_computo,
                             correspondencia_anio: "",
                             fecha_corte_antiguedad: "",
                             matriz_antiguedad_reglas: [],
+                            mes_dia_apertura_solicitudes: "",
+                            tse_minimo_dias_base: "",
+                            permite_calculo_proporcional_tse: true,
                           },
                     }));
                   }}

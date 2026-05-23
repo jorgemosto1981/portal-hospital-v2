@@ -115,10 +115,11 @@ export const matrizAntiguedadReglaRowSchema = z
 /**
  * Bloque 4 — Topes, plazos y cómputo (motor saldos / RDA para Cloud Functions).
  * `topes[]` excluido del documento principal (§1.7).
- * Campos LAO (`correspondencia_anio`, `fecha_corte_antiguedad`, `matriz_antiguedad_reglas`): solo si `bloque_identidad_naturaleza.es_lao_anual`; el servicio fuerza `null` si no es LAO.
+ * Campos LAO (`correspondencia_anio`, `fecha_corte_antiguedad`, `matriz_antiguedad_reglas`, motor §11): solo si `bloque_identidad_naturaleza.es_lao_anual`; el servicio fuerza `null` si no es LAO.
  */
 const CFG_UMA_DIAS = "cfg_uma_dias";
 const CFG_UMA_HORAS = "cfg_uma_horas";
+const RX_MES_DIA_APERTURA = /^(\d{2})-(\d{2})$/;
 
 export const bloqueTopesPlazosComputoSchema = z
   .object({
@@ -159,6 +160,12 @@ export const bloqueTopesPlazosComputoSchema = z
     fecha_corte_antiguedad: z.string().min(1).nullable().optional(),
     /** Escala tipo 1919/89 (pocas filas); excepción §1.7 por tamaño acotado. */
     matriz_antiguedad_reglas: z.array(matrizAntiguedadReglaRowSchema).max(64).nullable().optional(),
+    /** Motor LAO §11 — apertura temporada (MM-DD, ej. 07-01). */
+    mes_dia_apertura_solicitudes: z.string().min(1).nullable().optional(),
+    /** Motor LAO §11 — umbral TSE en días (default resolver 180). */
+    tse_minimo_dias_base: z.number().int().min(1).max(366).nullable().optional(),
+    /** Motor LAO §11 — permite cupo proporcional si TSE insuficiente (mismo ejercicio). */
+    permite_calculo_proporcional_tse: z.boolean().nullable().optional(),
     nivel_ocupacion_dia_id: cfgRowIdSchema,
     politica_superposicion_id: cfgRowIdSchema.nullable().optional(),
   })
@@ -205,6 +212,27 @@ export const bloqueTopesPlazosComputoSchema = z
         message: "El mínimo de días por solicitud no puede ser mayor que el máximo.",
         path: ["dias_minimos_por_evento"],
       });
+    }
+    const mesDia = data.mes_dia_apertura_solicitudes;
+    if (mesDia != null && String(mesDia).trim() !== "") {
+      const m = RX_MES_DIA_APERTURA.exec(String(mesDia).trim());
+      if (!m) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Apertura temporada debe ser MM-DD (ej. 07-01).",
+          path: ["mes_dia_apertura_solicitudes"],
+        });
+      } else {
+        const mo = Number(m[1]);
+        const d = Number(m[2]);
+        if (mo < 1 || mo > 12 || d < 1 || d > 31) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Apertura temporada: mes o día inválido.",
+            path: ["mes_dia_apertura_solicitudes"],
+          });
+        }
+      }
     }
   });
 

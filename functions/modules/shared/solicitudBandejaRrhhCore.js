@@ -236,6 +236,9 @@ async function listarSolicitudesBandejaRrhh(db, opts = {}) {
       puede_registrar_toma_conocimiento: modo.puede_registrar_toma_conocimiento === true,
       etiqueta_estado: modo.etiqueta_estado,
       rrhh_toma_conocimiento_en: sol.rrhh_toma_conocimiento_en || null,
+      motor_snapshot:
+        sol.motor_snapshot && typeof sol.motor_snapshot === "object" ? sol.motor_snapshot : null,
+      motor_validado_en: sol.motor_validado_en || null,
     };
 
     if (!itemPasaFiltroVista(item, filtroVista)) continue;

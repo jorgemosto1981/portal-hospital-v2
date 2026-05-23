@@ -42,6 +42,7 @@ export const EXPAND_FILAS_JEFE = [
   { key: "titular_label", label: "Titular" },
   { key: "titular_dni", label: "DNI titular" },
   { key: "grupo_trabajo_id_ancla", label: "Grupo ancla (id)" },
+  { key: "grupos_trabajo_involucrados_ids", label: "Grupos involucrados (snapshot)" },
   { key: "creado_en", label: "Alta del trámite" },
   { key: "jefe_revision_en", label: "Decisión jefatura" },
   { key: "jefe_revision_persona_id", label: "Jefe que decidió (id)" },

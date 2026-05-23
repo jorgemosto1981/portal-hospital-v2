@@ -1,10 +1,31 @@
+import { useCallback, useRef } from "react";
+
 import BandejaSolicitudExpandDatos from "./BandejaSolicitudExpandDatos.jsx";
+import BandejaRrhhMotorAuditoria from "./BandejaRrhhMotorAuditoria.jsx";
+import { snapshotTieneAdvertencias } from "../lao/laoAuditoriaDisplayUtils.js";
 
 /**
  * Panel de acción / detalle dentro del ítem expandido (bandeja RRHH).
  */
 export default function BandejaRrhhSolicitudDetalle({ sel, motivo, setMotivo, procesando, onDecidir, onTomaConocimiento }) {
+  const notasRef = useRef(null);
+
+  const irANotas = useCallback(() => {
+    notasRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    notasRef.current?.focus();
+  }, []);
+
   if (!sel) return null;
+
+  const snapshot = sel.motor_snapshot && typeof sel.motor_snapshot === "object" ? sel.motor_snapshot : null;
+  const conAdvertenciasMotor = snapshotTieneAdvertencias(snapshot);
+  const puedeActuar = sel.puede_aprobar_rechazar === true || sel.puede_registrar_toma_conocimiento === true;
+  const labelMotivo = conAdvertenciasMotor && sel.puede_aprobar_rechazar === true
+    ? "Notas de RRHH"
+    : "Motivo (opcional)";
+  const placeholderMotivo = conAdvertenciasMotor
+    ? "Documentá la excepción o el criterio RRHH frente a las advertencias del motor."
+    : "Observación para auditoría";
 
   return (
     <div className="space-y-4 border-t border-violet-100 bg-violet-50/30 px-4 py-4">
@@ -15,15 +36,28 @@ export default function BandejaRrhhSolicitudDetalle({ sel, motivo, setMotivo, pr
         </div>
       </div>
 
-      {sel.puede_aprobar_rechazar === true || sel.puede_registrar_toma_conocimiento === true ? (
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium text-slate-700">Motivo (opcional)</span>
+      <BandejaRrhhMotorAuditoria
+        snapshot={snapshot}
+        motorValidadoEn={sel.motor_validado_en}
+        onIrANotas={puedeActuar ? irANotas : undefined}
+      />
+
+      {puedeActuar ? (
+        <label className="block space-y-1.5" htmlFor="rrhh-notas-motivo">
+          <span className="text-sm font-medium text-slate-700">{labelMotivo}</span>
+          {conAdvertenciasMotor ? (
+            <p className="text-xs text-amber-800">
+              Recomendado cuando el motor registró advertencias normativas o institucionales.
+            </p>
+          ) : null}
           <textarea
+            id="rrhh-notas-motivo"
+            ref={notasRef}
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
             rows={2}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-            placeholder="Observación para auditoría"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-800 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+            placeholder={placeholderMotivo}
           />
         </label>
       ) : null}
@@ -44,7 +78,7 @@ export default function BandejaRrhhSolicitudDetalle({ sel, motivo, setMotivo, pr
               type="button"
               disabled={procesando}
               onClick={() => onDecidir("aprobar")}
-              className="min-h-11 flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+              className="min-h-11 flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 disabled:opacity-50"
             >
               {sel.bandeja_rrhh_modo === "legacy_rrhh" ? "Aprobar (legacy RRHH)" : "Aprobar (cierre sustituto)"}
             </button>
@@ -52,7 +86,7 @@ export default function BandejaRrhhSolicitudDetalle({ sel, motivo, setMotivo, pr
               type="button"
               disabled={procesando}
               onClick={() => onDecidir("rechazar")}
-              className="min-h-11 flex-1 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-800 hover:bg-red-100 disabled:opacity-50"
+              className="min-h-11 flex-1 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-800 active:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200 disabled:opacity-50"
             >
               Rechazar
             </button>
@@ -67,7 +101,7 @@ export default function BandejaRrhhSolicitudDetalle({ sel, motivo, setMotivo, pr
             type="button"
             disabled={procesando}
             onClick={onTomaConocimiento}
-            className="min-h-11 w-full rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-800 disabled:opacity-50"
+            className="min-h-11 w-full rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:bg-violet-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 disabled:opacity-50"
           >
             Registrar toma de conocimiento
           </button>
