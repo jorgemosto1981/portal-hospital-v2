@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import LaoDisponibilidadPaso from "../features/lao/LaoDisponibilidadPaso.jsx";
 import LaoFechasPaso from "../features/lao/LaoFechasPaso.jsx";
@@ -9,6 +9,7 @@ import { buildLaoWizardCtxFromResumen } from "../features/lao/laoWizardCtx.js";
 import { useLaoContext } from "../features/lao/useLaoContext.js";
 import { useLaoWizardComputo } from "../features/lao/useLaoWizardComputo.js";
 import { useLaoWizardPreview } from "../features/lao/useLaoWizardPreview.js";
+import { useLaoWizardSubmit } from "../features/lao/useLaoWizardSubmit.js";
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
 import { TICKETERA } from "../features/solicitudes/ticketeraUi.js";
@@ -83,9 +84,10 @@ function LaoWizardStepper({ paso }) {
 }
 
 /**
- * Wizard LAO en ticketera (F3a — pasos 1–3).
+ * Wizard LAO en ticketera (F3a — flujo completo agente).
  */
 export default function LaoWizardTicketera() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuthSession();
   const { claims, claimsLoading } = useAuthClaims(user);
@@ -125,6 +127,22 @@ export default function LaoWizardTicketera() {
     fechaHasta: rangoSnapshot?.fechaHasta ?? fechaHasta,
     diasSolicitados: rangoSnapshot?.resumenComputo?.dias_consumo ?? 0,
     enabled: paso === 3 && wizardCtx != null && rangoSnapshot != null,
+  });
+
+  const onSubmitSuccess = useCallback(
+    () => {
+      navigate("/portal/solicitudes");
+    },
+    [navigate],
+  );
+
+  const { submit, enviando } = useLaoWizardSubmit({
+    wizardCtx,
+    rangoSnapshot,
+    articuloId,
+    personaId,
+    actorAltaId: personaId,
+    onSuccess: onSubmitSuccess,
   });
 
   const puedeAvanzarPaso1 = (() => {
@@ -256,21 +274,16 @@ export default function LaoWizardTicketera() {
             Completá el paso de fechas y tocá <strong>Continuar</strong> para simular tu derecho.
           </p>
         ) : null}
-        {paso === 4 ? (
-          <p className={TICKETERA.muted}>
-            Paso 4 en construcción: confirmación y <span className="font-mono text-xs">crearSolicitudArticuloLaoBorrador</span>.
-          </p>
-        ) : null}
       </div>
 
       {paso === 3 ? (
         <button
           type="button"
           className={`${TICKETERA.btnSuccess} disabled:cursor-not-allowed disabled:opacity-50`}
-          disabled={!preview.ok || preview.loading}
-          onClick={() => setPaso(4)}
+          disabled={!preview.ok || preview.loading || enviando || claimsLoading}
+          onClick={() => void submit()}
         >
-          Confirmar y enviar solicitud
+          {enviando ? "Enviando solicitud…" : "Confirmar y enviar solicitud"}
         </button>
       ) : null}
 

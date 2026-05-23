@@ -18,22 +18,34 @@ const SOL_ULID_RE = /^sol_[0-9A-HJKMNP-TV-Z]{26}$/i;
  * Crea solicitud LAO en estado BORRADOR (el trigger del backend valida y cambia estado).
  * @param {{
  *   personaId: string,
+ *   actorAltaId?: string,
  *   articuloId: string,
  *   versionAplicadaId: string,
  *   fechaDesde: string,
+ *   fechaHasta?: string,
+ *   diasSolicitados?: number,
  *   anioOrigenBolsa: number,
+ *   resumenComputo?: Record<string, unknown> | null,
  * }} params
  * @returns {Promise<{ solicitud_id: string }>}
  */
 export async function crearSolicitudArticuloLaoBorrador(params) {
   const personaId = String(params.personaId || "").trim();
+  const actorAltaId = String(params.actorAltaId || params.personaId || "").trim();
   const articuloId = String(params.articuloId || "").trim();
   const versionAplicadaId = String(params.versionAplicadaId || "").trim();
   const fechaDesde = String(params.fechaDesde || "").trim().slice(0, 10);
+  const fechaHasta = String(params.fechaHasta || params.fechaDesde || "").trim().slice(0, 10);
+  const diasSolicitadosRaw = params.diasSolicitados;
   const anioOrigenBolsa = Number(params.anioOrigenBolsa);
+  const resumenComputo =
+    params.resumenComputo && typeof params.resumenComputo === "object" ? params.resumenComputo : null;
 
   if (!/^per_/i.test(personaId)) {
     throw new Error("persona_id inválido.");
+  }
+  if (!/^per_/i.test(actorAltaId)) {
+    throw new Error("actor_alta_persona_id inválido.");
   }
   if (!/^art_/i.test(articuloId)) {
     throw new Error("articulo_id inválido.");
@@ -44,6 +56,12 @@ export async function crearSolicitudArticuloLaoBorrador(params) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaDesde)) {
     throw new Error("fecha_desde inválida.");
   }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaHasta)) {
+    throw new Error("fecha_hasta inválida.");
+  }
+  if (fechaHasta < fechaDesde) {
+    throw new Error("fecha_hasta no puede ser anterior a fecha_desde.");
+  }
   if (!Number.isInteger(anioOrigenBolsa) || anioOrigenBolsa < 1900) {
     throw new Error("anio_origen_bolsa inválido.");
   }
@@ -53,11 +71,11 @@ export async function crearSolicitudArticuloLaoBorrador(params) {
     throw new Error("No se pudo generar solicitud_id.");
   }
 
-  const ref = doc(dbV2, "solicitudes_articulo", solicitud_id);
-  await setDoc(ref, {
+  /** @type {Record<string, unknown>} */
+  const payload = {
     articulo_id: articuloId,
     titular_persona_id: personaId,
-    actor_alta_persona_id: personaId,
+    actor_alta_persona_id: actorAltaId,
     version_aplicada: versionAplicadaId,
     fecha_desde: fechaDesde,
     anio_origen_bolsa: anioOrigenBolsa,
@@ -65,7 +83,23 @@ export async function crearSolicitudArticuloLaoBorrador(params) {
     schema_version: 1,
     creado_en: serverTimestamp(),
     actualizado_en: serverTimestamp(),
-  });
+  };
+
+  if (fechaHasta !== fechaDesde || params.fechaHasta != null) {
+    payload.fecha_hasta = fechaHasta;
+  }
+
+  const dias = Number(diasSolicitadosRaw);
+  if (Number.isInteger(dias) && dias >= 1) {
+    payload.dias_solicitados = dias;
+  }
+
+  if (resumenComputo) {
+    payload.resumen_computo_snapshot = resumenComputo;
+  }
+
+  const ref = doc(dbV2, "solicitudes_articulo", solicitud_id);
+  await setDoc(ref, payload);
 
   return { solicitud_id };
 }

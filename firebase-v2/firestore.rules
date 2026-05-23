@@ -241,7 +241,10 @@ service cloud.firestore {
           'actor_alta_persona_id',
           'version_aplicada',
           'fecha_desde',
+          'fecha_hasta',
+          'dias_solicitados',
           'anio_origen_bolsa',
+          'resumen_computo_snapshot',
           'estado_solicitud_id',
           'schema_version',
           'creado_en',
@@ -257,6 +260,13 @@ service cloud.firestore {
         && cfgArticuloVersionIdValidAgente(d.version_aplicada)
         && d.fecha_desde is string
         && d.fecha_desde.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && (!('fecha_hasta' in d) || (
+          d.fecha_hasta is string && d.fecha_hasta.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        ))
+        && (!('dias_solicitados' in d) || (
+          d.dias_solicitados is int && d.dias_solicitados >= 1 && d.dias_solicitados <= 366
+        ))
+        && (!('resumen_computo_snapshot' in d) || d.resumen_computo_snapshot is map)
         && d.anio_origen_bolsa is int
         && d.anio_origen_bolsa >= 1900
         && d.anio_origen_bolsa <= 2200
