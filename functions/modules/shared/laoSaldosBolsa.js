@@ -264,4 +264,94 @@ function pickBolsaParaConsumo(saldosData, articuloId, anioOrigenBolsa) {
   return null;
 }
 
-module.exports = { CFG_OS_EXTERNO_INFORMADO, CFG_OS_INTERNO, saldoAnualDocId, buildBolsaKey, saldoGlobalDocId, buildBolsaKeyGlobal, buildBolsaCheckinPatronB, buildBolsaCheckinPatronC, resolveCodigoGrillaForBolsa, buildBolsaPayload, mergeBolsasFromSaldoDocs, findOldestAnioOrigenWithDisponible, assertFifoAnioOrigen, pickBolsaParaConsumo };
+/**
+ * Camino LAO según año civil de `fecha_desde` vs `anio_origen_bolsa` (misma regla que preview motor).
+ * @param {string} fechaDesdeYmd
+ * @param {number} anioOrigenBolsa
+ */
+function resolveCaminoLaoPreview(fechaDesdeYmd, anioOrigenBolsa) {
+  const y = Number(String(fechaDesdeYmd || "").slice(0, 4));
+  const anioNum = Number(anioOrigenBolsa);
+  if (!Number.isInteger(y) || y < 1900 || !Number.isInteger(anioNum) || anioNum < 1900) {
+    return "error_ano";
+  }
+  if (y > anioNum) return "stock";
+  if (y < anioNum) return "error_ano";
+  return "proporcional";
+}
+
+/**
+ * Barrera contable para `simularLaoPreview` (saldos en `saldos_articulo_agente`).
+ * @param {{
+ *   saldosMerged: { bolsas?: Record<string, object> },
+ *   articuloId: string,
+ *   anioOrigenBolsa: number,
+ *   diasSolicitados: number,
+ *   fechaDesdeYmd: string,
+ *   diasProporcionalesPiso?: number | null,
+ * }} params
+ */
+function evaluarSaldoBolsaParaPreview(params) {
+  const {
+    saldosMerged,
+    articuloId,
+    anioOrigenBolsa,
+    diasSolicitados,
+    fechaDesdeYmd,
+    diasProporcionalesPiso = null,
+  } = params;
+
+  const anioNum = Number(anioOrigenBolsa);
+  const dias = Number(diasSolicitados);
+  const camino = resolveCaminoLaoPreview(fechaDesdeYmd, anioNum);
+
+  /** @type {string[]} */
+  const motivos = [];
+
+  if (camino === "error_ano") {
+    motivos.push("El año de la fecha de inicio no puede ser menor que el año de origen de la bolsa.");
+    return { ok: false, motivos, disponible: null, camino };
+  }
+
+  try {
+    assertFifoAnioOrigen(saldosMerged, articuloId, anioNum);
+  } catch (err) {
+    motivos.push(err instanceof Error ? err.message : String(err));
+    return { ok: false, motivos, disponible: null, camino };
+  }
+
+  const picked = pickBolsaParaConsumo(saldosMerged, articuloId, anioNum);
+  if (!picked) {
+    motivos.push(`No se encontró bolsa LAO para el año origen ${anioNum}.`);
+    return { ok: false, motivos, disponible: null, camino };
+  }
+
+  const disponible = Number(picked.bolsa.disponible);
+  const dispOk = Number.isFinite(disponible) ? disponible : 0;
+
+  if (camino === "stock" && dias > dispOk) {
+    motivos.push(
+      `Saldo insuficiente. Solicitás ${dias} día(s), pero solo tenés ${dispOk} disponible(s) en la bolsa ${anioNum}.`,
+    );
+    return { ok: false, motivos, disponible: dispOk, camino, bolsa_id: picked.bolsaId };
+  }
+
+  if (camino === "proporcional" && dispOk > 0 && dias > dispOk) {
+    motivos.push(
+      `Saldo insuficiente. Solicitás ${dias} día(s), pero solo tenés ${dispOk} disponible(s) en la bolsa ${anioNum}.`,
+    );
+    return { ok: false, motivos, disponible: dispOk, camino, bolsa_id: picked.bolsaId };
+  }
+
+  const piso = Number(diasProporcionalesPiso);
+  if (camino === "proporcional" && Number.isFinite(piso) && piso >= 0 && dias > piso) {
+    motivos.push(
+      `El pedido (${dias} día(s)) supera el piso proporcional calculado (${piso} día(s)) para el ejercicio ${anioNum}.`,
+    );
+    return { ok: false, motivos, disponible: dispOk, camino, bolsa_id: picked.bolsaId };
+  }
+
+  return { ok: true, motivos: [], disponible: dispOk, camino, bolsa_id: picked.bolsaId };
+}
+
+module.exports = { CFG_OS_EXTERNO_INFORMADO, CFG_OS_INTERNO, saldoAnualDocId, buildBolsaKey, saldoGlobalDocId, buildBolsaKeyGlobal, buildBolsaCheckinPatronB, buildBolsaCheckinPatronC, resolveCodigoGrillaForBolsa, buildBolsaPayload, mergeBolsasFromSaldoDocs, findOldestAnioOrigenWithDisponible, assertFifoAnioOrigen, pickBolsaParaConsumo, resolveCaminoLaoPreview, evaluarSaldoBolsaParaPreview };

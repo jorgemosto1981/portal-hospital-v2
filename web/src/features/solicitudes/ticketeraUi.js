@@ -3,7 +3,7 @@
  * Solo presentación; sin lógica de negocio.
  */
 export const TICKETERA = {
-  pageWrap: "mx-auto w-full max-w-lg px-4 py-6",
+  pageWrap: "mx-auto box-border min-w-0 w-full max-w-full px-4 py-6 sm:max-w-lg",
   hubIntro: "mt-1 text-sm leading-relaxed text-slate-600",
   card: "rounded-2xl border border-slate-200/90 bg-white shadow-sm",
   cardPad: "space-y-4 p-4",

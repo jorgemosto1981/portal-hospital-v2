@@ -61,6 +61,19 @@ function listBolsasResumenForArticulo(saldosMerged, articuloId) {
 }
 
 /**
+ * Slice mínimo de versión para cómputo en wizard (paso 2) sin lectura Firestore en cliente.
+ * @param {object | null | undefined} versionData
+ * @returns {{ bloque_topes_plazos_computo: object } | null}
+ */
+function pickVersionComputoForWizard(versionData) {
+  const topes = versionData?.bloque_topes_plazos_computo;
+  if (!topes || typeof topes !== "object") return null;
+  return {
+    bloque_topes_plazos_computo: JSON.parse(JSON.stringify(topes)),
+  };
+}
+
+/**
  * @param {object | null} picked
  */
 function mapBolsaSeleccionada(picked) {
@@ -139,6 +152,7 @@ function buildResumenDisponibilidadLao(params) {
     articulo_nombre: articuloMeta.nombre || null,
     articulo_codigo: articuloMeta.codigo || null,
     version_aplicada_id: versionPick.versionId,
+    version_computo: pickVersionComputoForWizard(versionPick.versionData),
     correspondencia_anio: correspondenciaAnio,
     ejercicio_label: ejercicioLabel,
     anio_origen_bolsa_sugerido: sugerido,
@@ -157,4 +171,5 @@ module.exports = {
   buildResumenDisponibilidadLao,
   buildEjercicioLabel,
   listBolsasResumenForArticulo,
+  pickVersionComputoForWizard,
 };

@@ -221,8 +221,8 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
       className={[
         "print:hidden",
         "shrink-0 border-slate-100 bg-white shadow-sm",
-        "w-full border-t",
-        "max-h-[min(52vh,28rem)] overflow-y-auto md:max-h-none md:overflow-visible",
+        "w-full min-w-0 max-w-full border-t",
+        "max-h-[min(52vh,28rem)] overflow-x-hidden overflow-y-auto md:max-h-none md:overflow-visible",
         "md:order-1 md:flex md:h-full md:min-h-0 md:w-72 md:max-w-[18rem] md:flex-col md:justify-start md:border-t-0 md:border-r md:py-4 md:shadow-md",
         className,
       ]
@@ -261,7 +261,7 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
               ) : (
                 <ul
                   className={[
-                    "mt-1.5 flex flex-row flex-wrap justify-center gap-1",
+                    "mt-1.5 flex max-w-full flex-row flex-wrap justify-center gap-1 overflow-x-hidden",
                     "md:mt-2 md:flex-col md:items-stretch md:justify-start md:gap-0.5",
                   ].join(" ")}
                 >

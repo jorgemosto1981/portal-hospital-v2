@@ -5,7 +5,10 @@
  */
 const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
-const { buildResumenDisponibilidadLao } = require("../modules/shared/obtenerContextoBolsaLaoCore");
+const {
+  buildResumenDisponibilidadLao,
+  pickVersionComputoForWizard,
+} = require("../modules/shared/obtenerContextoBolsaLaoCore");
 
 const ART = "art_01JTEST00000000000000001";
 
@@ -95,5 +98,44 @@ describe("obtenerContextoBolsaLaoCore", () => {
     });
     assert.equal(r.anio_origen_bolsa_activo, 2025);
     assert.equal(r.bolsa_seleccionada.anio_origen, 2025);
+  });
+
+  it("expone version_computo con bloque_topes_plazos_computo para el wizard", () => {
+    const topes = {
+      correspondencia_anio: 2026,
+      regla_computo_dias_id: "cfg_rcd_habiles_simple",
+      tope_dias_por_evento: 30,
+    };
+    const versionPick = {
+      versionId: "ver_01JTEST00000000000000002",
+      versionData: {
+        bloque_topes_plazos_computo: topes,
+      },
+      correspondencia_anio: 2026,
+    };
+    const slice = pickVersionComputoForWizard(versionPick.versionData);
+    assert.deepEqual(slice, { bloque_topes_plazos_computo: topes });
+
+    const r = buildResumenDisponibilidadLao({
+      personaId: "per_x",
+      articuloId: ART,
+      saldoDocsData: [
+        {
+          bolsas: {
+            bol_2026: {
+              bolsa_id: `bol_${ART}_2026`,
+              articulo_id: ART,
+              anio_origen: 2026,
+              disponible: 5,
+              consumido: 0,
+              cantidad_inicial: 5,
+            },
+          },
+        },
+      ],
+      versionPick,
+    });
+    assert.equal(r.version_aplicada_id, versionPick.versionId);
+    assert.deepEqual(r.version_computo, slice);
   });
 });

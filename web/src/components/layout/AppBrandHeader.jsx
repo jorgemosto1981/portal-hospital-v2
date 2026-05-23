@@ -34,7 +34,7 @@ export default function AppBrandHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-20 shrink-0 border-b border-slate-100 bg-white/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/90 md:px-5">
+    <header className="sticky top-0 z-20 w-full min-w-0 max-w-full shrink-0 overflow-x-hidden border-b border-slate-100 bg-white/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/90 md:px-5">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 lg:max-w-6xl">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <img

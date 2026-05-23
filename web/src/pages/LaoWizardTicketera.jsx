@@ -1,8 +1,14 @@
 import { useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { useSearchParams } from "react-router-dom";
 
 import LaoDisponibilidadPaso from "../features/lao/LaoDisponibilidadPaso.jsx";
+import LaoFechasPaso from "../features/lao/LaoFechasPaso.jsx";
+import LaoSimulacionPaso from "../features/lao/LaoSimulacionPaso.jsx";
+import { buildLaoWizardCtxFromResumen } from "../features/lao/laoWizardCtx.js";
 import { useLaoContext } from "../features/lao/useLaoContext.js";
+import { useLaoWizardComputo } from "../features/lao/useLaoWizardComputo.js";
+import { useLaoWizardPreview } from "../features/lao/useLaoWizardPreview.js";
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
 import { TICKETERA } from "../features/solicitudes/ticketeraUi.js";
@@ -77,7 +83,7 @@ function LaoWizardStepper({ paso }) {
 }
 
 /**
- * Wizard LAO en ticketera (F3a.1 — paso 1 disponibilidad).
+ * Wizard LAO en ticketera (F3a — pasos 1–3).
  */
 export default function LaoWizardTicketera() {
   const [searchParams] = useSearchParams();
@@ -88,6 +94,11 @@ export default function LaoWizardTicketera() {
   const fechaReferencia = useMemo(() => fechaDesdeQuery(searchParams), [searchParams]);
 
   const [paso, setPaso] = useState(1);
+  const [wizardCtx, setWizardCtx] = useState(null);
+  const [rangoSnapshot, setRangoSnapshot] = useState(null);
+  const [fechaDesde, setFechaDesde] = useState(fechaReferencia);
+  const [fechaHasta, setFechaHasta] = useState(fechaReferencia);
+
   const anioCalendarioCivil = useMemo(() => Number(fechaReferencia.slice(0, 4)), [fechaReferencia]);
 
   const { resumen, okCallable, error, loading, puedeConsultar } = useLaoContext({
@@ -95,6 +106,25 @@ export default function LaoWizardTicketera() {
     personaId,
     anioOrigenBolsa: null,
     enabled: paso === 1,
+  });
+
+  const computo = useLaoWizardComputo({
+    versionComputo: wizardCtx?.version_computo ?? null,
+    fechaDesde,
+    fechaHasta,
+    refYmd: fechaReferencia,
+    enabled: paso === 2 && wizardCtx != null,
+  });
+
+  const preview = useLaoWizardPreview({
+    articuloId,
+    personaId,
+    versionAplicadaId: wizardCtx?.version_aplicada_id ?? "",
+    anioOrigenBolsa: wizardCtx?.anio_origen_bolsa_activo ?? 0,
+    fechaDesde: rangoSnapshot?.fechaDesde ?? fechaDesde,
+    fechaHasta: rangoSnapshot?.fechaHasta ?? fechaHasta,
+    diasSolicitados: rangoSnapshot?.resumenComputo?.dias_consumo ?? 0,
+    enabled: paso === 3 && wizardCtx != null && rangoSnapshot != null,
   });
 
   const puedeAvanzarPaso1 = (() => {
@@ -106,6 +136,35 @@ export default function LaoWizardTicketera() {
     if (esLaoAnioEnCurso) return true;
     return Number(bolsa.disponible) > 0;
   })();
+
+  function handleIniciarSolicitud() {
+    const ctx = buildLaoWizardCtxFromResumen(resumen);
+    if (!ctx) {
+      toast.error(
+        "No se recibió la configuración de cómputo del servidor. Actualizá la app o contactá soporte.",
+      );
+      return;
+    }
+    setWizardCtx(ctx);
+    setRangoSnapshot(null);
+    setFechaDesde(fechaReferencia);
+    setFechaHasta(fechaReferencia);
+    setPaso(2);
+  }
+
+  function handleContinuarPaso2() {
+    if (!computo.ok || !computo.resumenComputo) return;
+    setRangoSnapshot({
+      fechaDesde,
+      fechaHasta,
+      resumenComputo: computo.resumenComputo,
+    });
+    setPaso(3);
+  }
+
+  function handleAnterior() {
+    setPaso((p) => Math.max(1, p - 1));
+  }
 
   return (
     <div className="space-y-4">
@@ -133,9 +192,20 @@ export default function LaoWizardTicketera() {
           type="button"
           className={TICKETERA.btnPrimary}
           disabled={!puedeAvanzarPaso1 || loading || !puedeConsultar}
-          onClick={() => setPaso(2)}
+          onClick={handleIniciarSolicitud}
         >
           Iniciar solicitud
+        </button>
+      ) : null}
+
+      {paso === 2 ? (
+        <button
+          type="button"
+          className={TICKETERA.btnPrimary}
+          disabled={!computo.ok || computo.isLoading}
+          onClick={handleContinuarPaso2}
+        >
+          Continuar
         </button>
       ) : null}
 
@@ -147,13 +217,65 @@ export default function LaoWizardTicketera() {
             error={error}
             anioCalendarioCivil={anioCalendarioCivil}
           />
-        ) : (
-          <p className={TICKETERA.muted}>Paso {paso} en construcción (F3a.2). Volvé al paso 1 para revisar tu bolsa.</p>
-        )}
+        ) : null}
+        {paso === 2 && wizardCtx ? (
+          <LaoFechasPaso
+            ejercicioLabel={wizardCtx.ejercicio_label}
+            anioOrigenBolsa={wizardCtx.anio_origen_bolsa_activo}
+            fechaDesde={fechaDesde}
+            setFechaDesde={setFechaDesde}
+            fechaHasta={fechaHasta}
+            setFechaHasta={setFechaHasta}
+            isLoading={computo.isLoading}
+            modoComputo={computo.modoComputo}
+            resumenComputo={computo.resumenComputo}
+            mensajes={computo.mensajes}
+            ok={computo.ok}
+          />
+        ) : null}
+        {paso === 2 && !wizardCtx ? (
+          <p className={TICKETERA.muted}>
+            Volvé al paso 1 y tocá <strong>Iniciar solicitud</strong> para cargar el contexto del ejercicio.
+          </p>
+        ) : null}
+        {paso === 3 && rangoSnapshot && wizardCtx ? (
+          <LaoSimulacionPaso
+            fechaDesde={rangoSnapshot.fechaDesde}
+            fechaHasta={rangoSnapshot.fechaHasta}
+            diasConsumo={rangoSnapshot.resumenComputo?.dias_consumo}
+            anioOrigenBolsa={wizardCtx.anio_origen_bolsa_activo}
+            simulacion={preview.simulacion}
+            ok={preview.ok}
+            mensajes={preview.mensajes}
+            loading={preview.loading}
+            onVolverPaso2={() => setPaso(2)}
+          />
+        ) : null}
+        {paso === 3 && !rangoSnapshot ? (
+          <p className={TICKETERA.muted}>
+            Completá el paso de fechas y tocá <strong>Continuar</strong> para simular tu derecho.
+          </p>
+        ) : null}
+        {paso === 4 ? (
+          <p className={TICKETERA.muted}>
+            Paso 4 en construcción: confirmación y <span className="font-mono text-xs">crearSolicitudArticuloLaoBorrador</span>.
+          </p>
+        ) : null}
       </div>
 
+      {paso === 3 ? (
+        <button
+          type="button"
+          className={`${TICKETERA.btnSuccess} disabled:cursor-not-allowed disabled:opacity-50`}
+          disabled={!preview.ok || preview.loading}
+          onClick={() => setPaso(4)}
+        >
+          Confirmar y enviar solicitud
+        </button>
+      ) : null}
+
       {paso > 1 ? (
-        <button type="button" className={TICKETERA.btnSecondary} onClick={() => setPaso((p) => Math.max(1, p - 1))}>
+        <button type="button" className={TICKETERA.btnSecondary} onClick={handleAnterior}>
           Anterior
         </button>
       ) : null}
