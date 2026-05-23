@@ -7,6 +7,7 @@
 
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { logger } = require("firebase-functions");
+const { ulid } = require("ulid");
 
 const { db, FieldValue } = require("../modules/shared/context");
 const { runLaoPreviewSimulacion } = require("../modules/shared/laoPreviewMotor");
@@ -24,6 +25,24 @@ const {
   ESTADO_SOLICITUD_RECHAZADA,
   ESTADO_SOLICITUD_EN_REVISION_JEFE,
 } = require("../modules/shared/solicitudesArticuloEstados");
+const {
+  resolverCadenaAutorizacion,
+  buildAutorizacionSnapshotFields,
+} = require("../modules/shared/solicitudAutorizacionJerarquicaCore");
+const { resolverGrupoTrabajoIdAnclaParaSolicitud } = require("../modules/shared/solicitudGrupoTrabajoAncla");
+const { loadArticuloDisplay } = require("../modules/shared/solicitudBandejaJefeCore");
+const {
+  dispararMdcDesdeSolicitudAsync,
+  MDC_COMANDO_PROYECTAR_PENDIENTE,
+} = require("../modules/shared/mdcTicketeraEmisor");
+const {
+  TIPO_EVENTO_TICKET,
+  ORIGEN_EVENTO,
+} = require("../modules/shared/solicitudEventosTicketConstants");
+const {
+  registrarEventoTicket,
+  scheduleEventoTicketGlobal,
+} = require("../modules/shared/registrarEventoTicket");
 
 const COL_SALDOS = "saldos_articulo_agente";
 
@@ -68,6 +87,113 @@ function resolveDiasConsumoOperativo(solicitudData, resultado) {
     error: null,
     usaRangoWizard: false,
   };
+}
+
+/**
+ * Oleada A — ancla HLC + cadena jerárquica (paridad Patrón B).
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {Record<string, unknown>} solicitudData
+ * @param {string} personaId
+ * @param {string} fechaDesde
+ */
+async function resolverAutorizacionAltaLao(db, solicitudData, personaId, fechaDesde) {
+  let grupoAncla;
+  try {
+    grupoAncla = await resolverGrupoTrabajoIdAnclaParaSolicitud(db, {
+      persona_id: personaId,
+      fecha_desde: fechaDesde,
+      grupo_trabajo_id_ancla:
+        typeof solicitudData.grupo_trabajo_id_ancla === "string"
+          ? solicitudData.grupo_trabajo_id_ancla.trim() || null
+          : null,
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      mensajes: [err instanceof Error ? err.message : "Error al resolver grupo de trabajo ancla."],
+    };
+  }
+
+  if (!grupoAncla.ok) {
+    return {
+      ok: false,
+      mensajes: [grupoAncla.mensaje || "No se pudo resolver el grupo de trabajo ancla."],
+    };
+  }
+
+  const grupoTrabajoIdAncla = String(grupoAncla.grupo_trabajo_id_ancla || "").trim();
+
+  let cadenaAutorizacion;
+  try {
+    cadenaAutorizacion = await resolverCadenaAutorizacion(db, {
+      titularPersonaId: personaId,
+      grupoTrabajoIdAncla,
+      fechaRefYmd: fechaDesde,
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      mensajes: [err instanceof Error ? err.message : "Error al resolver autorizadores."],
+    };
+  }
+
+  if (!cadenaAutorizacion.ok) {
+    return {
+      ok: false,
+      mensajes: [
+        cadenaAutorizacion.mensaje || "No se pudo resolver la autorización jerárquica.",
+      ],
+    };
+  }
+
+  return {
+    ok: true,
+    grupo_trabajo_id_ancla: grupoTrabajoIdAncla,
+    snapshot: buildAutorizacionSnapshotFields(cadenaAutorizacion),
+  };
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {string} solId
+ * @param {Record<string, unknown>} solicitudData
+ * @param {string} articuloId
+ * @param {string} grupoTrabajoIdAncla
+ */
+async function emitirEventoYMdcLaoAltaOk(db, solId, solicitudData, articuloId, grupoTrabajoIdAncla) {
+  const titularId = String(solicitudData.titular_persona_id || "").trim();
+  const evtId = `evt_${ulid()}`;
+  const ticketEvent = {
+    tipo_evento: TIPO_EVENTO_TICKET.SOLICITUD_CREADA_REVISION_JEFE,
+    actor_persona_id: titularId || null,
+    titular_persona_id: titularId || null,
+    estado_anterior_id: ESTADO_SOLICITUD_BORRADOR,
+    estado_nuevo_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
+    origen: ORIGEN_EVENTO.TRIGGER,
+    accion: "lao_on_create_ok",
+    metadata: {
+      articulo_id: articuloId,
+      version_aplicada:
+        solicitudData.version_aplicada || solicitudData.version_aplicada_id || null,
+      grupo_trabajo_id_ancla: grupoTrabajoIdAncla || null,
+      fecha_desde: String(solicitudData.fecha_desde || "").slice(0, 10),
+    },
+  };
+
+  const artCache = new Map();
+  const artDisplay = await loadArticuloDisplay(db, articuloId, artCache);
+  ticketEvent.metadata.codigo_grilla = artDisplay.codigo_grilla || null;
+
+  await registrarEventoTicket(db, solId, ticketEvent, { evento_id: evtId });
+  scheduleEventoTicketGlobal(db, solId, evtId, ticketEvent);
+
+  const postSnap = await db.collection("solicitudes_articulo").doc(solId).get();
+  const postData = postSnap.exists ? postSnap.data() || {} : solicitudData;
+  dispararMdcDesdeSolicitudAsync(db, solId, {
+    ...postData,
+    codigo_grilla: artDisplay.codigo_grilla,
+    articulo_id: articuloId,
+  }, MDC_COMANDO_PROYECTAR_PENDIENTE);
 }
 
 const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
@@ -225,12 +351,26 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
         return;
       }
     }
+
+    const autorizacion = await resolverAutorizacionAltaLao(db, d, personaId, fechaDesde);
+    if (!autorizacion.ok) {
+      await solRef.update({
+        estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+        motor_motivos_ineligibilidad: autorizacion.mensajes,
+        motor_validado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
     const anioSolicitud = resultado.anio_solicitud;
     const salId = saldoAnualDocId(personaId, anioOrigenBolsa);
     const salRef = salId ? db.collection(COL_SALDOS).doc(salId) : null;
 
     const motorOkPayload = {
       estado_solicitud_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
+      ...autorizacion.snapshot,
+      grupo_trabajo_id_ancla: autorizacion.grupo_trabajo_id_ancla,
       motor_snapshot: {
         motor_version: resultado.motor_version,
         camino: resultado.camino,
@@ -247,9 +387,24 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
         motor_descuento_aplicado: false,
         motor_descuento_motivo: diasConsumo <= 0 ? "dias_consumo_cero" : "saldo_doc_id_invalido",
       });
+      try {
+        await emitirEventoYMdcLaoAltaOk(
+          db,
+          solId,
+          { ...d, ...motorOkPayload },
+          articuloId,
+          autorizacion.grupo_trabajo_id_ancla,
+        );
+      } catch (postErr) {
+        logger.warn("solicitud_lao_post_ok_emit", {
+          solId,
+          message: postErr instanceof Error ? postErr.message : String(postErr),
+        });
+      }
       return;
     }
 
+    let txCompletoRevisionJefe = false;
     try {
       await db.runTransaction(async (tx) => {
         const sSnap = await tx.get(solRef);
@@ -308,7 +463,25 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
           motor_bolsa_id: match.bolsaId,
           motor_dias_descontados: diasConsumo,
         });
+        txCompletoRevisionJefe = true;
       });
+
+      if (txCompletoRevisionJefe) {
+        try {
+          await emitirEventoYMdcLaoAltaOk(
+            db,
+            solId,
+            d,
+            articuloId,
+            autorizacion.grupo_trabajo_id_ancla,
+          );
+        } catch (postErr) {
+          logger.warn("solicitud_lao_post_ok_emit", {
+            solId,
+            message: postErr instanceof Error ? postErr.message : String(postErr),
+          });
+        }
+      }
     } catch (err) {
       logger.error("solicitud_lao_motor_tx_error", { solId, message: err instanceof Error ? err.message : String(err) });
       await solRef.update({
@@ -325,4 +498,5 @@ module.exports = {
   onSolicitudArticuloLaoMotorValidate,
   resolveDiasConsumoMotor,
   resolveDiasConsumoOperativo,
+  resolverAutorizacionAltaLao,
 };
