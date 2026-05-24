@@ -92,12 +92,16 @@ if (isDni) {
 
 const user = await auth.getUser(uid);
 const prev = user.customClaims && typeof user.customClaims === "object" ? { ...user.customClaims } : {};
+const prevRoles = Array.isArray(prev.roles_hlc_vigentes)
+  ? prev.roles_hlc_vigentes.map((x) => String(x).trim()).filter(Boolean)
+  : [];
+const merged = [...new Set([...prevRoles, "CFG_RRHH"])];
 await auth.setCustomUserClaims(uid, {
   ...prev,
-  roles_hlc_vigentes: ["CFG_RRHH"],
+  roles_hlc_vigentes: merged,
   cargo_activo: prev.cargo_activo === true,
   portal_role: null,
   perfil_rol_id: null,
 });
-console.log(`[OK] roles_hlc_vigentes=[CFG_RRHH] para uid=${uid} (${isDni ? "DNI " + String(arg).replace(/\D/g, "") : user.email || arg})`);
+console.log(`[OK] roles_hlc_vigentes=${JSON.stringify(merged)} para uid=${uid} (${isDni ? "DNI " + String(arg).replace(/\D/g, "") : user.email || arg})`);
 console.log("Cerrá sesión en el navegador o pedí un token nuevo (F5 luego de login) para ver el claim.");

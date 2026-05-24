@@ -1,140 +1,196 @@
-# Handoff — Motor LAO v2 (RFC cableado) · PAUSA 2026-05-23
+# Handoff — Motor LAO v2 + piloto greenfield · PAUSA 2026-05-24
 
 **Rama:** `feature/ticketera-puente-campos-config`  
 **Firebase:** `portal-hospital-v2` · región `southamerica-east1`  
 **Hosting prod:** https://portal-hospital-v2.web.app  
 **Artículo LAO piloto:** `art_01KRNYDN5WR7RER7MWXRZ817E7`
 
-> **Retomar en otra PC (obligatorio):**
+> **Retomar en otra PC:**
 > ```bash
 > git fetch origin
 > git checkout feature/ticketera-puente-campos-config
 > git pull origin feature/ticketera-puente-campos-config
 > ```
-> **HEAD al cerrar sesión:** `3ec35f2` (`feat(lao): motor v2 completo, superposicion, config y eliminacion v1`).
+> **HEAD al cerrar sesión:** ver `git log -1` tras push de este handoff.
 
 ---
 
 ## 1. Punto exacto — RETOMAR AQUÍ
 
-**Siguiente tarea: Fase 4 — CI semántica muerta (R5)**
+**Implementación RFC LAO motor wiring: CERRADA en código, prod y piloto E2E.**
 
-1. Crear `scripts/auditar-campos-version-consumidos-lao.mjs` (RFC §12).
-2. Añadir npm script (p. ej. `npm run audit:lao-campos-version`).
-3. Ejecutar localmente; corregir huérfanos si los hay.
-4. Después: **Fase 6** (actualizar RFC §16, criterios §15, MODULO §4.1) y **Fase 5** checklist BD greenfield (operativa RRHH).
+| Estado | Detalle |
+|--------|---------|
+| RFC Fases 1–6 + greenfield §13 | ✅ |
+| Piloto DNI `28914247` | ✅ LAO v2 + RRHH sustituta + grilla MDC |
+| **Pausa** | Sin tareas obligatorias del RFC; retomar solo si producto pide nuevos artículos, más agentes o smoke acreditación |
 
-**Smoke test pendiente (opcional al retomar):** acreditación RRHH vía `acreditarLaoBolsaAgente` sin `cantidad_inicial` manual — verificar cupo v2 en `saldos_articulo_agente`.
+**Opcional al retomar:**
 
----
-
-## 2. Qué se hizo en esta sesión (RFC LAO motor wiring)
-
-| Fase | Estado | Entregable |
-|------|--------|------------|
-| **Eje 1** — Core motor | ✅ | `laoMotorConfigResolver`, `laoHlcIntervals`, `laoAsignacionDiasCore`, tests `laoMotorCore.test.js` (15/15) |
-| **Eje 2** — Orquestador | ✅ | `laoAltaMotorCompleto`, `laoMotorAuditoriaSnapshot`, `simularLaoPreview`, trigger `onSolicitudArticuloLaoMotorValidate` |
-| **Eje 3** — UI auditoría | ✅ | `LaoAuditoriaDisplay`, bandeja RRHH `BandejaRrhhMotorAuditoria`, fase C `FECHAS_OK` |
-| **Fase 3** — Schema + config | ✅ | 3 campos motor en Zod + `LaoMotorParamsEditor` + guardián Firestore |
-| **Fase 1** — Superposición | ✅ | `laoSuperposicionMotor` → `superposicionVal` en orquestador fase E; **validado prod** |
-| **Fase 2** — Erradicar v1 | ✅ | `laoPreviewDateUtils.js`; eliminado `laoPreviewMotor.js`; `acreditarLaoBolsaAgente` → `runLaoAsignacionDiasCore` |
-
-**Orden de ejecución acordado:** 3 → 1 → 2 → 4 → 6 → 5 (BD).
+- Smoke `acreditarLaoBolsaAgente` sin `cantidad_inicial` manual.
+- Segundo agente / otro ejercicio LAO en configurador.
+- Commit/PR merge de rama a `main` según acuerdo equipo.
 
 ---
 
-## 3. Deploy Functions (prod, sesión)
+## 2. Resumen sesión 2026-05-24 (esta continuación)
 
-Desplegar **una function por comando** en PowerShell (coma en `--only` falla):
+### Fase 4 — CI semántica muerta (R5) ✅
+
+| Pieza | Ruta / comando |
+|-------|----------------|
+| Script | `scripts/auditar-campos-version-consumidos-lao.mjs` |
+| Mapa SSoT | `scripts/lib/laoCamposVersionMapaRfc.mjs` |
+| Walker Zod | `scripts/lib/zodVersionLeafPaths.mjs` |
+| npm | `npm run audit:lao-campos-version` |
+| Resultado | **80 hojas** schema · **0 huérfanos** |
+
+### Fase 6 — Documentación ✅
+
+- `MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md` §4.1 — motor v2, `motor_snapshot`, sin hardcodes 180/01-07.
+- `RFC_LAO_MOTOR_CONFIG_WIRING_V2.md` §15 — **11/11** criterios aceptación marcados.
+- Estado RFC: **arquitectura cerrada**.
+
+### Fase 5 — Greenfield prod ✅
+
+```powershell
+npm run db:greenfield-reset-lao-v2:apply -- --rda=all --saldos=all
+```
+
+| Recurso borrado/parcheado | Cantidad |
+|---------------------------|----------|
+| `solicitudes_articulo` | 41 |
+| `asistencia_diaria` | 23 |
+| `vistas_grilla_mes_agente` | 11 |
+| `saldos_articulo_agente` | 9 |
+| `mdc_comandos_aplicados` (sol_*) | 39 |
+| Versiones LAO parcheadas (motor §11) | 6 |
+
+### UI menú móvil compacto + fixes ✅
+
+| Archivo | Cambio |
+|---------|--------|
+| `BottomNavigationBar.jsx` | Acordeón por rol, densidad compacta |
+| `menuGrupoAcceso.js` | Visibilidad grupo por `CFG_*` HLC |
+| `AppBrandHeader.jsx` | Header `h-12` móvil |
+| `bandejaSolicitudExpandDatos.js` | Fix keys duplicadas React (`jefe_revision_*`) |
+| `modulosEstado.js` | Grilla → **MVP** en menú jefe |
+| `portalRole.js` | `claimsIncludeJefe` / `CFG_JEFE` en `hasAnyPortalRole` |
+
+**Deploy hosting (24-may):** ✅ `firebase deploy --only hosting`
+
+### Piloto E2E — DNI 28914247 (MOSTO) ✅
+
+| Paso | Evidencia |
+|------|-----------|
+| Check-in + saldos | Bolsa 2023, descuento 5 días |
+| Solicitud LAO | `sol_01KSCZGP8K1T52M3JJQTNQYWZZ` |
+| Motor | `lao-preview-v2`, TSE 152/180, camino **stock**, preaviso advertencia |
+| RRHH sustituta | `cfg_esa_aprobada`, eventos `rrhh_sustituta_aprobar` + `rrhh_toma_conocimiento` |
+| Grilla MDC | Mayo 24–31 + junio día 1 **LAO-** consolidado; modal día 1 OK |
+
+**Solicitud referencia piloto:** `sol_01KSCZGP8K1T52M3JJQTNQYWZZ`  
+**Versión motor snapshot:** `ver_01KRPPTZ86XK1GR4MNCJA804TE` (display LAO-2023 / grilla LAO-2026 — coherente stock bolsa 2023).
+
+### Menú Rol jefe — lección operativa ✅
+
+`syncSessionClaims` **sobrescribe** `roles_hlc_vigentes` desde HLc→HLd→HLg. Claims manuales (`dev-set-roles-hlc`) no persisten tras login.
+
+**Solución aplicada:**
+
+```powershell
+node scripts/dev-grant-jefe-hlc-chain.mjs 28914247 --apply
+```
+
+- Alta `hlc_01KSDC4DQPEC3WHN4TX7ZKFJWN` + HLd + HLg con `CFG_JEFE`.
+- Claims estables: `["CFG_JEFE", "CFG_RRHH"]`.
+
+Scripts dev relacionados:
+
+| Script | Uso |
+|--------|-----|
+| `npm run dev:set-roles-hlc -- <DNI> CFG_JEFE` | Merge claims (no reemplaza; login puede pisar) |
+| `npm run dev:grant-jefe-hlc -- <DNI> --apply` | **Canónico** para menú jefe persistente |
+| `npm run db:greenfield-reset-lao-v2` | Dry-run greenfield |
+| `npm run db:greenfield-reset-lao-v2:apply` | Apply nuclear (+ flags `--rda` `--saldos`) |
+
+---
+
+## 3. Historial RFC motor (sesiones previas en rama)
+
+| Fase | Estado |
+|------|--------|
+| Ejes 1–3 + Fases 3, 1, 2 | ✅ commit `3ec35f2` |
+| Fase 4 CI | ✅ esta sesión |
+| Fase 6 docs | ✅ esta sesión |
+| Fase 5 greenfield | ✅ esta sesión |
+
+**Orden ejecutado:** 3 → 1 → 2 → 4 → 6 → 5 (BD).
+
+---
+
+## 4. Deploy prod (acumulado)
+
+### Functions (`southamerica-east1`) — una por comando
 
 ```powershell
 firebase deploy --only functions:simularLaoPreview
 firebase deploy --only functions:onSolicitudArticuloLaoMotorValidate
-firebase deploy --only functions:listarSolicitudesBandejaRrhh
 firebase deploy --only functions:acreditarLaoBolsaAgente
+firebase deploy --only functions:listarSolicitudesBandejaRrhh
 ```
 
-| Callable / trigger | Estado deploy sesión |
-|--------------------|----------------------|
-| `simularLaoPreview` | ✅ (v2 + date utils + superposición) |
-| `onSolicitudArticuloLaoMotorValidate` | ✅ (superposición + snapshot v2) |
-| `acreditarLaoBolsaAgente` | ✅ (motor v2 asignación) |
-| `listarSolicitudesBandejaRrhh` | ✅ (sesión anterior — `motor_snapshot`) |
+### Hosting
+
+```powershell
+npm run build:web
+firebase deploy --only hosting
+```
+
+Último deploy hosting sesión 24-may: **OK** (menú compacto + grilla MVP + fix bandeja).
 
 ---
 
-## 4. Validaciones manuales OK
-
-| Prueba | Resultado |
-|--------|-----------|
-| Configurador: guardar versión LAO + 3 campos motor | ✅ `ver_01KRPQDTM7BHZKYGKR91BEXHTR` |
-| Preview wizard: motor `lao-preview-v2`, TSE 152/180, camino stock | ✅ |
-| Preaviso R4: advertencias sin bloquear | ✅ |
-| Superposición: rango 23/05→01/06 vs trámite existente | ✅ bloqueo + copy Patrón B |
-| Bandeja RRHH: snapshot inmutable visible | ✅ (sesión previa) |
-
-**Evidencia snapshot v2:** solicitud `sol_01KSBCCZQRA6JDCZ3VPPYW5JQC` (pre-deploy referencia).
-
----
-
-## 5. Archivos clave (mapa rápido)
+## 5. Archivos clave
 
 | Pieza | Ruta |
 |-------|------|
 | RFC SSoT | [`RFC_LAO_MOTOR_CONFIG_WIRING_V2.md`](./RFC_LAO_MOTOR_CONFIG_WIRING_V2.md) |
+| MODULO §4.1 | [`MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md`](./MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md) |
 | Orquestador | `functions/modules/shared/laoAltaMotorCompleto.js` |
-| Asignación L | `functions/modules/shared/laoAsignacionDiasCore.js` |
-| Superposición E | `functions/modules/shared/laoSuperposicionMotor.js` |
-| Date utils (ex-v1) | `functions/modules/shared/laoPreviewDateUtils.js` |
-| Preview callable | `functions/onCall/solicitudes/simularLaoPreview.js` |
-| Trigger alta | `functions/triggers/solicitudArticuloLaoOnCreate.js` |
-| Acreditación RRHH | `functions/onCall/solicitudes/acreditarLaoBolsaAgente.js` |
-| Config UI motor | `web/src/features/configuracion/articulos/LaoMotorParamsEditor.jsx` |
-| Auditoría wizard | `web/src/features/lao/LaoAuditoriaDisplay.jsx` |
-| Wizard | `web/src/pages/LaoWizardTicketera.jsx` |
-
-**Eliminado:** `functions/modules/shared/laoPreviewMotor.js`, `tests/lao-preview-motor.test.mjs`
+| Greenfield | `scripts/greenfield-reset-lao-v2.mjs` |
+| CI campos | `scripts/auditar-campos-version-consumidos-lao.mjs` |
+| Jefe HL | `scripts/dev-grant-jefe-hlc-chain.mjs` |
+| Grilla UI | `web/src/pages/GrillaOperativa.jsx` (ruta `/portal/grilla`) |
 
 ---
 
-## 6. Tests backend (correr al retomar)
+## 6. Tests
 
 ```powershell
+npm run audit:lao-campos-version
 node --test functions/test/laoMotorCore.test.js functions/test/laoAltaMotorCompleto.test.js functions/test/laoPreviewDateUtils.test.js
-node --test web/src/features/lao/laoAuditoriaDisplayUtils.test.js
 ```
 
-Última corrida sesión: **26/26** tests motor + date utils OK.
-
 ---
 
-## 7. Pendiente RFC (no hecho)
-
-| Ítem | Fase |
-|------|------|
-| `scripts/auditar-campos-version-consumidos-lao.mjs` + npm script | **4 — próximo** |
-| Actualizar §15 criterios + §16 checklist + MODULO §4.1 | 6 |
-| BD greenfield: borrar sol v1, corregir `fecha_corte_antiguedad: 2000-12-31` | 5 (RRHH) |
-| Smoke acreditación `acreditarLaoBolsaAgente` post-deploy | opcional |
-
----
-
-## 8. Comandos útiles
+## 7. Comandos útiles
 
 ```powershell
 npm run dev:web
 npm run build:web
 firebase deploy --only hosting
-firebase functions:list
+npm run audit:lao-campos-version
 ```
 
 ---
 
-## 9. Continuidad desde handoff anterior
+## 8. Continuidad documental
 
-- Wizard F3a completo (pasos 1–4): ver [`HANDOFF_SESION_2026-05-22_LAO_WIZARD_F3A1.md`](./HANDOFF_SESION_2026-05-22_LAO_WIZARD_F3A1.md) (supersedido en motor por este doc para cableado RFC).
-- Grupos involucrados: [`RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md`](./RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md).
+- Wizard F3a: [`HANDOFF_SESION_2026-05-22_LAO_WIZARD_F3A1.md`](./HANDOFF_SESION_2026-05-22_LAO_WIZARD_F3A1.md)
+- Grilla MDC épica: [`HANDOFF_SESION_2026-05-21_GRILLA_OLEADA_C_CIERRE.md`](./HANDOFF_SESION_2026-05-21_GRILLA_OLEADA_C_CIERRE.md)
+- Roles HLC claims: [`HANDOFF_SESION_2026-05-19_ROLES_HLC_CLAIMS.md`](./HANDOFF_SESION_2026-05-19_ROLES_HLC_CLAIMS.md)
 
 ---
 
-*Sesión pausada a pedido del responsable — 2026-05-23.*
+*Sesión pausada — implementación LAO motor wiring considerada cerrada · 2026-05-24.*

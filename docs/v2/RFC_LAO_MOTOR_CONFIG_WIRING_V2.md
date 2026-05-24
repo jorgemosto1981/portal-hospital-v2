@@ -1,6 +1,6 @@
 # RFC — Cableado configuración LAO ↔ motor de solicitudes (V2)
 
-**Estado:** Implementación avanzada (Fases 3, 1, 2 cerradas en código y prod). Pendiente: CI R5 (§12), cierre doc §15–§16, checklist BD §13.  
+**Estado:** RFC LAO motor wiring cerrado (Fases 1–6 + greenfield §13 prod 24-may-2026). Siguiente: validación piloto E2E.  
 **Plan:** [`HANDOFF_SESION_2026-05-23_LAO_MOTOR_WIRING_PAUSA.md`](./HANDOFF_SESION_2026-05-23_LAO_MOTOR_WIRING_PAUSA.md) · Contrato producto: [`MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md`](./MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md) §4.1  
 **Relacionados:** [`RFC_LAO_SOLICITUD_VERSION_FIFO_V2.md`](./RFC_LAO_SOLICITUD_VERSION_FIFO_V2.md), [`RFC_TICKETERA_LAO_WIZARD_V2.md`](./RFC_TICKETERA_LAO_WIZARD_V2.md), [`PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md`](./PLAN_LAO_BOLSAS_CHECKIN_SOLICITUD_V2.md)
 
@@ -340,13 +340,23 @@ Schema: [`web/src/schemas/articulo.schema.js`](../../web/src/schemas/articulo.sc
 
 ---
 
-## 13. Migración datos RRHH
+## 13. Migración datos RRHH (Fase 5 — greenfield)
 
-| Dato | Acción |
-|------|--------|
-| `fecha_corte_antiguedad: 2000-12-31` | Corregir a `null` o `YYYY-12-31` del ejercicio |
-| `codigo_grilla: null` | Publicar ej. `LAO` |
-| Campos motor nuevos ausentes | Resolver defaults en código hasta re-guardado |
+**Script:** `npm run db:greenfield-reset-lao-v2` (dry-run) · `npm run db:greenfield-reset-lao-v2:apply` (destructivo).
+
+| Misión | Acción |
+|--------|--------|
+| **1 — Transaccional** | Borrar **todas** `solicitudes_articulo` (`sol_*` + subcolección `eventos_ticket`); limpiar RDA (`asistencia_diaria` / `vistas_grilla_mes_agente` según `--rda`); resetear `saldos_articulo_agente` (`--saldos`); eventos `eventos_ticket` y `mdc_comandos_aplicados` ligados a solicitudes. |
+| **2 — Configuración** | En cada `versiones/*` con `es_lao_anual === true`: inyectar `mes_dia_apertura_solicitudes`, `tse_minimo_dias_base`, `permite_calculo_proporcional_tse`; `visualizacion.codigo_grilla = "LAO"`; `fecha_corte_antiguedad: 2000-12-31` → `null`. |
+
+**Flags útiles:** `--only-config` (solo misión 2) · `--rda=linked|personas|all` · `--saldos=none|personas|all` · `--dni=28914247` · `--apply --confirm-nuclear` obligatorio para escribir.
+
+| Dato | Acción script / RRHH |
+|------|----------------------|
+| `fecha_corte_antiguedad: 2000-12-31` | Misión 2 → `null` |
+| `codigo_grilla: null` | Misión 2 → `"LAO"` |
+| Campos motor ausentes | Misión 2 → defaults §11 |
+| Solicitudes / grilla / saldos piloto | Misión 1 — sin compatibilidad atrás |
 
 ---
 
@@ -365,16 +375,21 @@ Schema: [`web/src/schemas/articulo.schema.js`](../../web/src/schemas/articulo.sc
 
 ---
 
-## 15. Criterios de aceptación (extracto)
+## 15. Criterios de aceptación
 
-1. Cambiar `tse_minimo_dias_base` en versión altera preview **sin redeploy**.
-2. R3: disp=4, min=5 → exactamente 4 días OK.
-3. Superposición bloquea como 64-A.
-4. Preaviso &lt; 15 d → advertencia, trámite permitido.
-5. Snapshot embebido en `sol_*`; paridad preview/trigger.
-6. Rechazo por elegibilidad incluye `contexto_auditoria`.
-7. CI campos: 0 huérfanos no documentados.
-8. Editar versión post-alta no cambia snapshot de solicitudes existentes.
+| # | Criterio | Estado | Evidencia / nota |
+|---|----------|--------|------------------|
+| 1 | Cambiar `tse_minimo_dias_base` (u otros campos motor §11) en versión altera preview **sin redeploy** de Functions | ✅ | Resolver lee versión publicada; validado prod (`ver_01KRPQDTM7BHZKYGKR91BEXHTR`, TSE 152/180) |
+| 2 | R3: si `disponible >= min_config` → `dias >= min_config`; si `disponible < min_config` → `dias === disponible` | ✅ | `laoAsignacionDiasCore` + orquestador fase C/S; tests motor |
+| 3 | Superposición de fechas **bloquea** como Patrón B / 64-A | ✅ | `laoSuperposicionMotor` fase E; prod rango 23/05→01/06 |
+| 4 | Preaviso normativo por debajo del umbral → **advertencia** (gate A), trámite permitido | ✅ | R4 en orquestador; wizard muestra warnings sin bloquear envío |
+| 5 | `motor_snapshot` embebido en `sol_*`; **paridad** shape preview (`simularLaoPreview`) ↔ trigger | ✅ | Mismo `runLaoAltaMotorCompleto`; bandeja RRHH lee snapshot |
+| 6 | Rechazo por elegibilidad (u otro early return) incluye `contexto_auditoria` | ✅ | `ensamblarContextoDeAuditoria` en todos los caminos |
+| 7 | CI campos versión: **0 huérfanos** no documentados en mapa §4 | ✅ | `npm run audit:lao-campos-version` — 80 hojas, exit 0 (24-may-2026) |
+| 8 | Editar versión en configurador **no** altera `motor_snapshot` de solicitudes ya originadas | ✅ | R7: `version_aplicada_id` + snapshot congelados en `sol_*` |
+| 9 | Apertura temporada y TSE leen config (`mes_dia_apertura_solicitudes`, `tse_minimo_dias_base`), no hardcodes 01/07 ni 180 | ✅ | `laoMotorConfigResolver`; v1 `laoPreviewMotor` eliminado |
+| 10 | UI agente/RRHH no infiere reglas desde `bloque_*` crudo en flujo LAO | ✅ | `LaoAuditoriaDisplay`, `BandejaRrhhMotorAuditoria` |
+| 11 | MODULO §4.1 alineado al motor v2 y al mapa semántico | ✅ | Fase 6 — 24-may-2026 |
 
 ---
 
@@ -386,11 +401,11 @@ Schema: [`web/src/schemas/articulo.schema.js`](../../web/src/schemas/articulo.sc
 - [x] Superposición bloqueante fase E (`laoSuperposicionMotor`) — prod OK
 - [x] Eliminar `laoPreviewMotor.js` v1; `acreditarLaoBolsaAgente` → motor v2
 - [x] Tests R1–R4 + orquestador + date utils (26 tests motor)
-- [ ] Script CI auditoría (`scripts/auditar-campos-version-consumidos-lao.mjs`) — **Fase 4**
-- [ ] Checklist BD greenfield §13 (operativa RRHH)
-- [ ] Actualizar MODULO §4.1 y criterios §15 al cierre — **Fase 6**
+- [x] Script CI auditoría (`npm run audit:lao-campos-version`) — Fase 4 · 80 hojas OK
+- [x] Greenfield §13 prod (`--rda=all --saldos=all`) — 24-may-2026: 41 sol, 23 asi, 11 vis, 9 saldos, 6 ver patch
+- [x] Actualizar MODULO §4.1 y criterios §15 al cierre — Fase 6
 
-**Retomar:** [`HANDOFF_SESION_2026-05-23_LAO_MOTOR_WIRING_PAUSA.md`](./HANDOFF_SESION_2026-05-23_LAO_MOTOR_WIRING_PAUSA.md)
+**Handoff / pausa implementación:** [`HANDOFF_SESION_2026-05-23_LAO_MOTOR_WIRING_PAUSA.md`](./HANDOFF_SESION_2026-05-23_LAO_MOTOR_WIRING_PAUSA.md) (cerrado 2026-05-24, piloto E2E OK).
 
 ---
 
@@ -400,3 +415,6 @@ Schema: [`web/src/schemas/articulo.schema.js`](../../web/src/schemas/articulo.sc
 |-------|------|
 | 2026-05-23 | Borrador base: mapa integridad, R5–R7, snapshot SSoT, flujo RRHH |
 | 2026-05-23 | Fases 3+1+2 implementadas; v1 eliminado; deploy prod; pausa antes Fase 4 CI |
+| 2026-05-24 | Fase 4: `audit:lao-campos-version` — 80 hojas Zod, 0 huérfanos |
+| 2026-05-24 | Fase 6: MODULO §4.1 + §15 criterios cerrados (11/11) |
+| 2026-05-24 | Fase 5 greenfield prod; piloto `sol_01KSCZGP8K1T52M3JJQTNQYWZZ`; menú jefe HL; hosting deploy |

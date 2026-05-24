@@ -111,7 +111,7 @@ export const MODULOS_PORTAL = [
     id: "grilla",
     label: "Grilla",
     path: "/portal/grilla",
-    estado: ESTADOS_MODULO.BORRADOR,
+    estado: ESTADOS_MODULO.MVP,
     grupo: "jefe",
   },
   {
@@ -178,7 +178,7 @@ export const MODULOS_V2_ESTADO = [
   { modulo: "Datos laborales", estado: ESTADOS_MODULO.MVP, detalle: "Vista conectada a colecciones V2." },
   { modulo: "Configuración", estado: ESTADOS_MODULO.ACTIVO, detalle: "Catálogos RRHH vía callables." },
   { modulo: "Perfil", estado: ESTADOS_MODULO.MVP, detalle: "Legajo por persona_id y cargos activos." },
-  { modulo: "Grilla operativa", estado: ESTADOS_MODULO.BORRADOR, detalle: "Pendiente de integración con datos en vivo." },
+  { modulo: "Grilla operativa", estado: ESTADOS_MODULO.MVP, detalle: "Vista mensual equipo (vis_* / asi_*)." },
   { modulo: "Rutas portal", estado: ESTADOS_MODULO.ACTIVO, detalle: "Prefijo /portal/* con guards de rol en RRHH." },
 ];
 

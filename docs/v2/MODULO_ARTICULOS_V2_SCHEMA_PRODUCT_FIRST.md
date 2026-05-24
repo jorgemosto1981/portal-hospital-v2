@@ -2,8 +2,8 @@
 
 **Propósito:** contrato canónico de datos para artículos (licencias y franquicias), enfocado en operación del hospital y con Decreto 1919/89 como referencia de validación normativa.
 
-**Fecha:** 11 de mayo de 2026.  
-**Estado:** borrador activo para implementación por fases.
+**Fecha:** 11 de mayo de 2026 (LAO motor §4.1 actualizado 24-may-2026).  
+**Estado:** borrador activo; **motor LAO v2 cableado** (ver §4.1 y [`RFC_LAO_MOTOR_CONFIG_WIRING_V2.md`](./RFC_LAO_MOTOR_CONFIG_WIRING_V2.md)).
 
 **Documentos base relacionados:**
 - [`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md)
@@ -278,6 +278,10 @@ Estructura de regla recomendada:
 | `correspondencia_anio` | number (entero) | no | `null` | RRHH (LAO: año fiscal del derecho; invariante con `anio_origen` de bolsas) |
 | `fecha_corte_antiguedad` | string (ISO fecha) | no | `null` | RRHH (LAO: corte antigüedad; `null` → default `obtenerFechaCorteLao`) |
 | `matriz_antiguedad_reglas[]` | array filas | no | `null` | RRHH (LAO: escala acotada; excepción §1.7; `operador_id` → `cfg_operador_comparacion`, `valor_anos`, `dias_otorgados`; motor = último escalón que cumple) |
+| `mes_dia_apertura_solicitudes` | string `MM-DD` | no | `null` → resolver `07-01` | RRHH (LAO motor: gate apertura temporada; solo camino proporcional / año en curso) |
+| `tse_minimo_dias_base` | number (entero 1–366) | no | `null` → resolver `180` | RRHH (LAO motor: umbral TSE en días; ventana hasta `fecha_hasta` solicitud) |
+| `permite_calculo_proporcional_tse` | boolean | no | `null` → resolver `true` | RRHH (LAO motor: cupo proporcional si TSE insuficiente en mismo ejercicio) |
+| `dias_minimos_por_evento` | number (entero ≥ 0) | no | `null` | RRHH (mínimo días por solicitud; R3 condicional vs saldo disponible — motor LAO) |
 
 ### 4.0 Semántica: Ámbito de consumo, cupos y frecuencia
 
@@ -297,19 +301,48 @@ Estructura de regla recomendada:
 
 **Ejemplo Art. 64a**: `ambito_consumo_id` = año calendario, `cupo_dias_por_ciclo` = 6, `tope_frecuencia_mensual` = 1, `tope_dias_por_evento` = 1.
 
-### 4.1 LAO (Art. 40) — bifurcación Stock / Proporcional, bolsa y zona horaria
+### 4.1 LAO (Art. 40) — motor v2, snapshot y bifurcación Stock / Proporcional
+
+**Contrato técnico:** [`RFC_LAO_MOTOR_CONFIG_WIRING_V2.md`](./RFC_LAO_MOTOR_CONFIG_WIRING_V2.md) (mapa §4, R5–R7, `motor_snapshot`).  
+**Implementación:** `runLaoAltaMotorCompleto` (preview `simularLaoPreview` + trigger `onSolicitudArticuloLaoMotorValidate`).
+
+#### Sin hardcodes de negocio (v2)
+
+El motor **ya no** infiere reglas desde constantes en código (`180` días TSE, `01/07` apertura). Lee de la **versión publicada** vigente para la solicitud:
+
+| Campo versión (Bloque 4) | Rol en motor |
+|--------------------------|--------------|
+| `mes_dia_apertura_solicitudes` | Gate apertura: comparar **MM-DD de `fecha_desde`**; aplica en camino proporcional / año en curso |
+| `tse_minimo_dias_base` | Umbral TSE (días); ventana de cómputo hasta **`fecha_hasta`** de la solicitud |
+| `permite_calculo_proporcional_tse` | Si `false`, no ofrece cupo proporcional cuando TSE &lt; umbral en el mismo ejercicio |
+
+Si el campo viene `null` en Firestore (versión antigua sin re-guardar), el **resolver** aplica defaults documentados (`07-01`, `180`, `true`) hasta que RRHH persista la versión desde el configurador.
+
+#### `motor_snapshot` — SSoT UI y auditoría
+
+- Al simular (wizard paso 3) o al alta (trigger), el backend persiste **`motor_snapshot`** en `solicitudes_articulo/{sol_id}` junto con `version_aplicada_id` congelada (R7).
+- La UI del agente (`LaoAuditoriaDisplay`, paso Derecho) y la bandeja RRHH **solo renderizan** `motor_snapshot` + checks/warnings; **no** re-leen `bloque_*` crudo ni reconstruyen reglas en cliente.
+- Subset de decisión en `motor_snapshot.config_usada`: los tres campos motor anteriores + metadatos de asignación (`camino`, TSE, matriz, etc.) — ver RFC §5.
+
+#### Mapa semántico y CI (R5)
+
+Todo escalar de `cfgArticuloVersionSchema` tiene fila en el mapa RFC §4 (consumido · N/A LAO · fuera motor).  
+**CI:** `npm run audit:lao-campos-version` — exit ≠ 0 si aparece un campo huérfano en schema. Última corrida: **80 hojas Zod, 0 huérfanos** (24-may-2026).
+
+#### Invariantes operativos (sin cambio de producto)
 
 - **Invariante bolsa ↔ versión:** al generar una bolsa en `saldos_articulo_agente`, `anio_origen` debe ser **igual** a `correspondencia_anio` de la **versión** que originó el saldo (auditoría).
-- **Año de solicitud:** extraído de `fecha_desde` de la solicitud en zona **`America/Argentina/Buenos_Aires`** (no depender de UTC silencioso del servidor).
+- **Año de solicitud:** extraído de `fecha_desde` en zona **`America/Argentina/Buenos_Aires`**.
 - **Regla (misma bolsa):** comparar año de solicitud con `anio_origen` de la bolsa consumida:
 
 | Relación | Camino | Lógica |
 |----------|--------|--------|
-| Año solicitud **>** `anio_origen` | **Stock** | Consumo de saldo cerrado; sin guardas 01/07 ni proporcional. |
-| Año solicitud **==** `anio_origen` | **Proporcional** | Guardas 01/07 + TSE ≥ 6 meses; cupo con `floor` según matriz y meses trabajados. |
+| Año solicitud **>** `anio_origen` | **Stock** | Consumo de saldo cerrado; sin gate apertura ni proporcional TSE. |
+| Año solicitud **==** `anio_origen` | **Proporcional / pleno** | Gate `mes_dia_apertura_solicitudes` + TSE vs `tse_minimo_dias_base` + matriz; proporcional solo si `permite_calculo_proporcional_tse`. |
 | Año solicitud **<** `anio_origen` | **Error** | No consumir “vacaciones del futuro” contra esa bolsa. |
 
-- **Gating configuración:** si `bloque_identidad_naturaleza.es_lao_anual !== true`, los tres campos LAO del Bloque 4 se persisten en **`null`** (servicio guardián).
+- **Gating configuración:** si `bloque_identidad_naturaleza.es_lao_anual !== true`, los campos LAO del Bloque 4 (matriz, correspondencia, corte, motor §11) se persisten en **`null`** (servicio guardián en `cfgArticuloVersionService`).
+- **Otros consumidores LAO en la misma versión:** `matriz_antiguedad_reglas`, `fecha_corte_antiguedad`, `correspondencia_anio`, elegibilidad (`circuito_ingreso_ids`), superposición (`politica_superposicion_id`), preaviso (advertencia R4), mínimos R3 — ver mapa RFC §4 (no duplicar aquí).
 
 ## Bloque 5: Acumulación y Sucesión
 
@@ -405,6 +438,7 @@ Estructura de regla recomendada:
 - La convivencia **intradía** en grilla se gobierna con `nivel_ocupacion_dia_id`; las incompatibilidades **normativas** siguen en `articulos_incompatibles_ids[]` / grafo `cfg_articulo_relaciones`.
 - Listas de §4 marcadas con `[]` en Bloques 3 y 6 cumplen **§1.7** al persistirse (subcolecciones, no arrays monolíticos en el documento `versiones`).
 - La grilla operativa y la validación de topes cumplen **§2.5** (triple capa) y **§8** (presupuesto de lecturas, saldos sin barrido histórico, servidor para cómputo).
+- Artículos LAO: preview y alta comparten orquestador; `motor_snapshot` auditable; CI `audit:lao-campos-version` sin huérfanos (**§4.1**).
 
 ---
 

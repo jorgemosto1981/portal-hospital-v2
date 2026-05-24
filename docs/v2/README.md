@@ -36,7 +36,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`RFC_LAO_SOLICITUD_VERSION_FIFO_V2.md`](./RFC_LAO_SOLICITUD_VERSION_FIFO_V2.md) | RFC solicitud: versión por bolsa + FIFO |
 | [`RFC_LAO_ACREDITACION_ANUAL_V2.md`](./RFC_LAO_ACREDITACION_ANUAL_V2.md) | RFC acreditación motor (años ≥ A) |
 | [`RFC_LAO_MOTOR_CONFIG_WIRING_V2.md`](./RFC_LAO_MOTOR_CONFIG_WIRING_V2.md) | **RFC motor LAO v2:** mapa integridad config↔motor, snapshot SSoT, orquestador, R5–R7 |
-| [**`HANDOFF_SESION_2026-05-23_LAO_MOTOR_WIRING_PAUSA.md`**](./HANDOFF_SESION_2026-05-23_LAO_MOTOR_WIRING_PAUSA.md) | **RETOMAR AQUÍ** — Motor LAO v2 Fases 3/1/2 cerradas; próximo: CI R5 §12 |
+| [**`HANDOFF_SESION_2026-05-23_LAO_MOTOR_WIRING_PAUSA.md`**](./HANDOFF_SESION_2026-05-23_LAO_MOTOR_WIRING_PAUSA.md) | **RETOMAR AQUÍ** — RFC LAO motor wiring **cerrado** (Fases 1–6 + greenfield + piloto `sol_01KSCZGP8K1T52M3JJQTNQYWZZ`) · pausa 2026-05-24 |
 | [`HANDOFF_SESION_2026-05-15.md`](./HANDOFF_SESION_2026-05-15.md) | Sesión **producto/doc** 2026-05-15: guía LAO 2024, política saldos/check-in, plan persistente |
 | [`HANDOFF_SESION_2026-05-16.md`](./HANDOFF_SESION_2026-05-16.md) | Sesión 2026-05-16: versiones RRHH, smoke LAO Fase 3, fix check-in merge; **§9** cierre fase documental saldos A/B/C |
 | [`HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md`](./HANDOFF_SESION_2026-05-18_CHECKIN_SALDOS.md) | UI check-in saldos A/B/C, rectificación, `cerrarCheckinGlobal`, callables y rutas web |

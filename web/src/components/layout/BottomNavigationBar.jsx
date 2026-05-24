@@ -1,3 +1,5 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+
 import { GRUPOS_MENU_RAIZ, MODULOS_PORTAL } from "../../constants/modulosEstado.js";
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
@@ -6,6 +8,7 @@ import {
   filtrarModulosPorArticulosIngreso,
   useArticulosIngresoMenu,
 } from "../../features/solicitudes/ArticulosIngresoProvider.jsx";
+import { grupoAccesiblePorClaims } from "./menuGrupoAcceso.js";
 
 const ICONS_BY_ID = {
   inicio: () => (
@@ -199,22 +202,63 @@ const tabs = MODULOS_PORTAL.map((m) => ({
   icon: ICONS_BY_ID[m.id],
 }));
 
-/**
- * Navegación agrupada por paquete de rol ({@link GRUPOS_MENU_RAIZ}) para ver el encadenamiento de cada ítem.
- * — Móvil: bloques apilados (scroll si hace falta); md+: sidebar con descripción por grupo.
- */
+function ChevronIcon({ open }) {
+  return (
+    <svg
+      className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path
+        fillRule="evenodd"
+        d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+/** Navegación compacta móvil (acordeón por rol) + sidebar en md+. */
 export default function BottomNavigationBar({ activeTab, onTabChange, className = "" }) {
   const { user } = useAuthSession();
-  const { hasPortalRoles } = useAuthClaims(user);
+  const { hasPortalRoles, claims } = useAuthClaims(user);
   const { puedeSolicitarArticulo } = useArticulosIngresoMenu();
   const canManagement = hasPortalRoles(MANAGEMENT_PORTAL_ROLES);
   const requiresManagementTab = (id) => id === "rrhh" || id === "articulos-cfg" || id === "checkin-saldos";
-  const modulosVisibles = filtrarModulosPorArticulosIngreso(MODULOS_PORTAL, puedeSolicitarArticulo);
-  const visibleIds = new Set(modulosVisibles.map((m) => m.id));
-  const visibleTabs = tabs.filter((tab) => {
-    if (!visibleIds.has(tab.id)) return false;
-    return requiresManagementTab(tab.id) ? canManagement : true;
-  });
+
+  const visibleTabs = useMemo(() => {
+    const modulosVisibles = filtrarModulosPorArticulosIngreso(MODULOS_PORTAL, puedeSolicitarArticulo);
+    const visibleIds = new Set(modulosVisibles.map((m) => m.id));
+    return tabs.filter((tab) => {
+      if (!visibleIds.has(tab.id)) return false;
+      return requiresManagementTab(tab.id) ? canManagement : true;
+    });
+  }, [puedeSolicitarArticulo, canManagement]);
+
+  const bloquesConItems = useMemo(
+    () =>
+      GRUPOS_MENU_RAIZ.map((bloque) => ({
+        bloque,
+        items: visibleTabs.filter((t) => t.grupo === bloque.id),
+      })).filter(
+        ({ bloque, items }) =>
+          items.length > 0 && grupoAccesiblePorClaims(bloque.id, claims, hasPortalRoles),
+      ),
+    [visibleTabs, claims, hasPortalRoles],
+  );
+
+  const grupoActivo = visibleTabs.find((t) => t.id === activeTab)?.grupo ?? bloquesConItems[0]?.bloque.id ?? null;
+
+  const [expandedMobile, setExpandedMobile] = useState(() => grupoActivo);
+
+  useEffect(() => {
+    if (grupoActivo) setExpandedMobile(grupoActivo);
+  }, [grupoActivo]);
+
+  const toggleGrupo = useCallback((id) => {
+    setExpandedMobile((prev) => (prev === id ? null : id));
+  }, []);
 
   return (
     <nav
@@ -222,92 +266,110 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
         "print:hidden",
         "shrink-0 border-slate-100 bg-white shadow-sm",
         "w-full min-w-0 max-w-full border-t",
-        "max-h-[min(52vh,28rem)] overflow-x-hidden overflow-y-auto md:max-h-none md:overflow-visible",
-        "md:order-1 md:flex md:h-full md:min-h-0 md:w-72 md:max-w-[18rem] md:flex-col md:justify-start md:border-t-0 md:border-r md:py-4 md:shadow-md",
+        "max-h-[min(40vh,15rem)] overflow-x-hidden overflow-y-auto md:max-h-none md:overflow-visible",
+        "md:order-1 md:flex md:h-full md:min-h-0 md:w-72 md:max-w-[18rem] md:flex-col md:justify-start md:border-t-0 md:border-r md:py-3 md:shadow-md",
         className,
       ]
         .filter(Boolean)
         .join(" ")}
       aria-label="Navegación principal por rol"
     >
-      <div className="hidden border-b border-slate-100 px-4 pb-3 md:block">
+      <div className="hidden border-b border-slate-100 px-3 pb-2 md:block">
         <p className="text-sm font-semibold text-slate-700">Menú raíz</p>
-        <p className="mt-0.5 text-xs text-slate-500">Agrupado por paquete de rol (referencia de producto).</p>
+        <p className="mt-0.5 text-xs text-slate-500">Agrupado por paquete de rol.</p>
       </div>
 
-      <div
-        className={[
-          "flex flex-col gap-3 px-2 py-2",
-          "md:min-h-0 md:flex-1 md:gap-4 md:overflow-y-auto md:px-3 md:py-2",
-        ].join(" ")}
-      >
-        {GRUPOS_MENU_RAIZ.map((bloque) => {
-          const items = visibleTabs.filter((t) => t.grupo === bloque.id);
+      <div className="flex flex-col gap-1 px-1 py-1 md:min-h-0 md:flex-1 md:gap-2 md:overflow-y-auto md:px-3">
+        <div className="flex flex-row gap-1 md:hidden" role="presentation">
+          {bloquesConItems.map(({ bloque, items }) => {
+            const openMobile = expandedMobile === bloque.id;
+            return (
+              <div
+                key={`${bloque.id}-cabecera`}
+                className="min-w-0 flex-1 overflow-hidden rounded-lg border border-slate-100 bg-slate-50/70"
+              >
+                <button
+                  type="button"
+                  id={`menu-grupo-${bloque.id}`}
+                  className="flex min-h-11 w-full items-center justify-between gap-1 px-2 py-2 text-left text-sm font-medium text-slate-700 touch-manipulation"
+                  aria-expanded={openMobile}
+                  aria-controls={`menu-panel-${bloque.id}`}
+                  onClick={() => toggleGrupo(bloque.id)}
+                >
+                  <span className="truncate">{bloque.titulo}</span>
+                  <span className="flex shrink-0 items-center gap-0.5">
+                    <span className="text-[10px] font-normal text-slate-400">{items.length}</span>
+                    <ChevronIcon open={openMobile} />
+                  </span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {bloquesConItems.map(({ bloque, items }) => {
+          const openMobile = expandedMobile === bloque.id;
           return (
             <section
               key={bloque.id}
-              className="rounded-xl border border-slate-100 bg-slate-50/80 px-2 py-2 md:border-0 md:bg-transparent md:px-0 md:py-0"
-              aria-labelledby={`menu-grupo-${bloque.id}`}
+              className={[
+                "overflow-hidden rounded-lg border border-slate-100 bg-slate-50/70 md:border-0 md:bg-transparent",
+                openMobile ? "" : "hidden md:block",
+              ].join(" ")}
             >
-              <h2
-                id={`menu-grupo-${bloque.id}`}
-                className="px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:text-xs"
+              <button
+                type="button"
+                id={`menu-grupo-${bloque.id}-md`}
+                className="hidden w-full items-center justify-between gap-2 px-1 py-1 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 touch-manipulation md:flex md:cursor-default"
+                aria-expanded={openMobile}
+                aria-controls={`menu-panel-${bloque.id}`}
+                onClick={() => toggleGrupo(bloque.id)}
               >
-                {bloque.titulo}
-              </h2>
-              <p className="mt-0.5 hidden px-1 text-[11px] leading-snug text-slate-500 md:block">{bloque.descripcion}</p>
-              {items.length === 0 ? (
-                <p className="mt-1 px-1 text-[11px] italic text-slate-400 md:text-xs">Sin entradas en menú por ahora.</p>
-              ) : (
-                <ul
-                  className={[
-                    "mt-1.5 flex max-w-full flex-row flex-wrap justify-center gap-1 overflow-x-hidden",
-                    "md:mt-2 md:flex-col md:items-stretch md:justify-start md:gap-0.5",
-                  ].join(" ")}
-                >
-                  {items.map((tab) => {
-                    const active = activeTab === tab.id;
-                    return (
-                      <li key={tab.id} className="min-w-[4.25rem] flex-1 md:min-w-0 md:w-full md:flex-none">
-                        <button
-                          type="button"
-                          onClick={() => onTabChange?.(tab.id)}
+                <span className="truncate">{bloque.titulo}</span>
+              </button>
+              <p className="hidden px-1 text-[11px] leading-snug text-slate-500 md:mb-1 md:block">{bloque.descripcion}</p>
+              <ul
+                id={`menu-panel-${bloque.id}`}
+                className={[
+                  "grid grid-cols-4 gap-1 px-1.5 pb-1.5 md:grid md:grid-cols-1 md:gap-0.5 md:px-0 md:pb-0",
+                  openMobile ? "grid" : "hidden md:grid",
+                ].join(" ")}
+                aria-labelledby={`menu-grupo-${bloque.id}`}
+              >
+                {items.map((tab) => {
+                  const active = activeTab === tab.id;
+                  return (
+                    <li key={tab.id} className="min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => onTabChange?.(tab.id)}
+                        className={[
+                          "flex w-full min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-md py-1 touch-manipulation",
+                          "transition-transform active:scale-95",
+                          "md:min-h-10 md:flex-row md:justify-start md:gap-2.5 md:rounded-lg md:px-2.5 md:py-2",
+                          active
+                            ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-100 md:bg-blue-50 md:shadow-none md:ring-0"
+                            : "text-slate-500 md:hover:bg-slate-100",
+                        ].join(" ")}
+                        aria-current={active ? "page" : undefined}
+                      >
+                        <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden>
+                          {typeof tab.icon === "function" ? tab.icon() : null}
+                        </svg>
+                        <span
                           className={[
-                            "flex w-full min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-lg py-1.5",
-                            "transition-transform active:scale-95",
-                            "md:min-h-12 md:w-full md:flex-row md:justify-start md:gap-3 md:rounded-xl md:px-3 md:py-2.5",
-                            "md:transition-transform md:duration-150",
-                            active
-                              ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-100 md:bg-blue-50 md:shadow-none md:ring-0"
-                              : "text-slate-400 md:text-slate-500 md:hover:bg-slate-100",
+                            "max-w-full truncate text-center text-[10px] font-medium leading-none",
+                            "md:text-left md:text-sm",
+                            active ? "text-blue-600 md:font-semibold" : "",
                           ].join(" ")}
-                          aria-current={active ? "page" : undefined}
                         >
-                          <svg
-                            className="h-6 w-6 shrink-0"
-                            viewBox="0 0 24 24"
-                            width={24}
-                            height={24}
-                            fill="none"
-                            aria-hidden
-                          >
-                            {typeof tab.icon === "function" ? tab.icon() : null}
-                          </svg>
-                          <span
-                            className={[
-                              "max-w-[4.5rem] truncate text-center text-[10px] font-medium leading-tight",
-                              "md:max-w-none md:text-left md:text-sm",
-                              active ? "text-blue-600 md:font-semibold" : "text-slate-500",
-                            ].join(" ")}
-                          >
-                            {tab.label}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+                          {tab.label}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             </section>
           );
         })}

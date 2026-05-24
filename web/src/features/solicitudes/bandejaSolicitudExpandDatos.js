@@ -49,9 +49,15 @@ export const EXPAND_FILAS_JEFE = [
   { key: "jefe_motivo", label: "Motivo jefatura" },
 ];
 
+const JEFE_KEYS_RRHH_RELABEL = new Set([
+  "jefe_revision_en",
+  "jefe_revision_persona_id",
+  "jefe_motivo",
+]);
+
 /** @type {{ key: string, label: string }[]} */
 export const EXPAND_FILAS_RRHH = [
-  ...EXPAND_FILAS_JEFE,
+  ...EXPAND_FILAS_JEFE.filter((f) => !JEFE_KEYS_RRHH_RELABEL.has(f.key)),
   { key: "bandeja_rrhh_modo", label: "Modo bandeja RRHH" },
   { key: "autorizacion_rrhh_sustituta", label: "Huérfana (RRHH sustituta)" },
   { key: "autorizadores_elegibles_ids", label: "Autorizadores elegibles" },

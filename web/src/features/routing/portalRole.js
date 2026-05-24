@@ -64,11 +64,17 @@ function hasAnyPortalRoleLegacy(claims, allowed) {
  * @param {Record<string, unknown> | null | undefined} claims
  * @param {readonly string[]} allowed lowercase role ids
  */
+export function claimsIncludeJefe(claims) {
+  if (rolesHlcFromClaims(claims).includes("CFG_JEFE")) return true;
+  return hasAnyPortalRoleLegacy(claims, ["jefe"]);
+}
+
 export function hasAnyPortalRole(claims, allowed) {
   const set = new Set(allowed.map((a) => String(a).trim().toLowerCase()).filter(Boolean));
   if (set.has("rrhh") || set.has("admin")) {
     if (claimsIncludeRrhh(claims)) return true;
   }
+  if (set.has("jefe") && claimsIncludeJefe(claims)) return true;
   const n = normalizePortalRole(claims);
   if (!n) return false;
   return set.has(n);
