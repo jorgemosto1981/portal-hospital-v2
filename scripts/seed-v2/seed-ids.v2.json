@@ -1,6 +1,6 @@
 {
   "projectId": "portal-hospital-v2",
-  "generado": "2026-04-24T13:53:01.114Z",
+  "generado": "2026-05-05T21:18:14.016Z",
   "cfg_estado_cuenta_acceso": [
     "cfg_eca_pend_reg",
     "cfg_eca_onb",
@@ -15,8 +15,38 @@
     "cfg_epd_rec"
   ],
   "cfg_tipo_evento": [
-    "cfg_tev_dp_actualizado",
     "cfg_tev_login",
-    "cfg_tev_consent"
-  ]
+    "cfg_tev_datos_notif_cambio_ddjj",
+    "cfg_tev_datos_notif_cambio_generico",
+    "cfg_tev_datos_actualiza_personas",
+    "cfg_tev_datos_alta_personas",
+    "cfg_tev_datos_actualiza_formacion",
+    "cfg_tev_datos_alta_formacion",
+    "cfg_tev_datos_actualiza_ddjj",
+    "cfg_tev_datos_alta_ddjj",
+    "cfg_tev_datos_actualiza_consentimiento",
+    "cfg_tev_datos_alta_consentimiento",
+    "cfg_tev_consent",
+    "cfg_tev_auth_email_cambio_solicitado",
+    "cfg_tev_auth_email_cambio_confirmado",
+    "cfg_tev_auth_password_cambio"
+  ],
+  "cfg_estado_bandeja_rrhh": [
+    "cfg_ebr_pend_rev",
+    "cfg_ebr_visto",
+    "cfg_ebr_arch"
+  ],
+  "cfg_estado_declaracion_ddjj": [
+    "CFG_DDJJ_01_NO_INICIADA",
+    "CFG_DDJJ_02_OMITIDA_ONBOARDING",
+    "CFG_DDJJ_03_PRESENTADA",
+    "CFG_DDJJ_04_SUPERADA_POR_ACTUALIZACION"
+  ],
+  "cfg_rol": [
+    "CFG_RRHH",
+    "CFG_USUARIO",
+    "CFG_MEDICO",
+    "CFG_VISUALIZADOR"
+  ],
+  "cfg_estado_civil": []
 }

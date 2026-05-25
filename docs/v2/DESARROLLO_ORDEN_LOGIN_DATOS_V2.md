@@ -10,7 +10,7 @@
 
 ## 1. Principios de ejecución
 
-1. **Nada en producción** hasta pasar **Fase 2** (emulador de reglas + tests mínimos).
+1. **Nada en producción** hasta pasar **Fase 2** (reglas revisadas + criterios de acceso validados; tests de reglas según acuerdo del equipo, p. ej. `@firebase/rules-unit-testing` o revisión manual contra proyecto de staging en la nube).
 2. **Transiciones de estado** (`estado_acceso`, `estado_perfil_datos_id` a valores “finales”) **solo** Admin SDK / Callable, nunca `updateDoc` desde cliente para esos campos.
 3. **Checklist COMPLETO** = misma función de validación en **Callable `completarOnboardingDatos`** y en tests; la UI solo refleja errores devueltos.
 4. **Catálogos:** cargar opciones desde Firestore `cfg_*`; ids en seed alineados a [`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md) §5–§6 (sustituir placeholders por ULID en el script real).
@@ -41,15 +41,15 @@
 
 ---
 
-## 4. Fase 2 — Security Rules + emulador
+## 4. Fase 2 — Security Rules + validación
 
 | # | Tarea | Referencia |
 |---|-------|------------|
 | 2.1 | Rules **deny by default**; abrir lecturas/escrituras según [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./ACCESO_Y_RULES_FIRESTORE_V2.md) §3–§7 | |
 | 2.2 | **No** replicar `allow read: if request.auth == null` sobre colecciones con PII | `V1_VS_V2_LOGIN_DATOS` |
-| 2.3 | Suite emulador: usuario no lee `personas` ajeno; no actualiza `estado_acceso` a activo portal; RRHH puede crear paso A si así se definió | `ACCESO` §8 |
+| 2.3 | Casos mínimos verificados: usuario no lee `personas` ajeno; no actualiza `estado_acceso` a activo portal; RRHH puede crear paso A si así se definió | `ACCESO` §8 |
 
-**Hecho Fase 2:** `npm test` o script CI que levante emulador y ejecute tests de reglas.
+**Hecho Fase 2:** reglas desplegadas en **Firestore remoto** (`npm run firebase:deploy:firestore`) y matriz de prueba acordada (manual o automatizada con `@firebase/rules-unit-testing`; el repo no impone Firebase Local Emulator Suite).
 
 ---
 

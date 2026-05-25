@@ -3,11 +3,11 @@
   "private": true,
   "description": "Cloud Functions V2 — Portal Hospital (callables login + health)",
   "engines": {
-    "node": "24"
+    "node": "22"
   },
   "main": "index.js",
   "scripts": {
-    "serve": "firebase emulators:start --only functions",
+    "serve": "node -e \"console.log('Las funciones se prueban contra Cloud Functions desplegadas (sin emulador local). Usá: npm run firebase:deploy:functions desde la raíz del repo.'); process.exit(0)\"",
     "lint": "echo \"Sin ESLint configurado aún\""
   },
   "dependencies": {

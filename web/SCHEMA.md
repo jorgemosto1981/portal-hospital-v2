@@ -29,7 +29,7 @@ Plantilla: `../.env.v2.example`.
 
 `web/vite.config.js`: `envDir` raíz, alias `@portalV2`, `dedupe`/`alias` de `firebase/*` para un solo SDK.
 
-**Callables:** `web/src/services/functionsV2.js` + `callables.js` (`healthV2`, `syncSessionClaims`). Emulador: variables en `.env.v2.example` (`VITE_V2_USE_FUNCTIONS_EMULATOR`).
+**Callables:** `web/src/services/functionsV2.js` + `callables.js` (`healthV2`, `syncSessionClaims`) contra **Cloud Functions** desplegadas en `southamerica-east1`.
 
 ## 3. Esquema Firestore (canónico en docs)
 
@@ -47,3 +47,38 @@ Plantilla: `../.env.v2.example`.
 `personas`, `usuarios_cuenta`, `formacion_agente`, `consentimientos`, `declaraciones_grupo_familiar`, `eventos_ticket`, `cfg_*`, y el resto según [`PLAN_MODULOS_V2.md`](../docs/v2/PLAN_MODULOS_V2.md) / [`RULEBOOK_V2.md`](../docs/v2/RULEBOOK_V2.md).
 
 Cualquier cambio de forma o permisos: actualizar **primero** la documentación acordada y las **Rules** en `firebase-v2/`, luego el código.
+
+## 5. Alta `solicitudes_articulo` — Patrón B (Bloque A)
+
+| Tema | Ubicación |
+|------|-----------|
+| Zod create + builder | `web/src/schemas/solicitudArticuloCreate.schema.js` |
+| Escritura Firestore | `web/src/services/solicitudesArticuloV2Service.js` → `crearSolicitudArticuloPatronBBorrador` |
+| Rules `hasOnly` | `firebase-v2/firestore.rules` — `solicitudArticuloCreateShapePatronB` |
+| Doc evidencia | [`docs/v2/TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](../docs/v2/TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) |
+
+Campos obligatorios en create: `version_id_aplicada`, `grupo_trabajo_id_ancla`, fechas, `schema_version` = 2, `patron_saldo` = `B`.
+
+## 6. Autorización jerárquica — Oleada A (backend)
+
+| Tema | Ubicación |
+|------|-----------|
+| Campos `sol_*` y estados TO-BE | [`docs/v2/SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md`](../docs/v2/SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md) |
+| RFC / taller | [`docs/v2/RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](../docs/v2/RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) |
+| Núcleo resolver | `functions/modules/shared/solicitudAutorizacionJerarquicaCore.js` |
+| Códigos error | `functions/modules/shared/solicitudAutorizacionCodigos.js` |
+| Transiciones documentadas | `functions/modules/shared/solicitudAutorizacionEstados.js` |
+
+**Cierre jefe (TO-BE):** aprobar → `cfg_esa_aprobada` + MDC `CONSOLIDAR_APROBADO`; RRHH solo **toma de conocimiento** (A4).
+
+## 7. Configurador de artículos — ayuda saldos (D2)
+
+| Tema | Documento / código |
+|------|-------------------|
+| Contrato patrones A/B/C, consumo, Callable futuro | [`docs/v2/RFC_SALDOS_PATRONES_ABC_V2.md`](../docs/v2/RFC_SALDOS_PATRONES_ABC_V2.md) |
+| Registro de cierre doc + D2 | [`docs/v2/REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md`](../docs/v2/REGISTRO_FASE_DOCUMENTAL_SALDOS_ABC_V2.md) §8 |
+| Copy UI (SSoT en repo) | `src/features/configuracion/articulos/ayudaPatronesBolsaSaldo.js` |
+| Modal + botón ℹ️ | `AyudaPatronesBolsaModal.jsx`, `ImpactoSaldoTabSections.jsx` (pestaña Impacto y Saldo) |
+| Impresión / PDF | `ayudaPatronesBolsaPrint.css` · `window.print()` |
+
+Al cambiar textos de ayuda: editar `ayudaPatronesBolsaSaldo.js` y, si aplica, reflejar en RFC §7 / `GUIA_RRHH_SALDOS_V2.md`.

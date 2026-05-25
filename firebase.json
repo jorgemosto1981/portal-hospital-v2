@@ -1,0 +1,18 @@
+{
+  "hosting": {
+    "public": "web/dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+  },
+  "firestore": {
+    "rules": "firebase-v2/firestore.rules",
+    "indexes": "firebase-v2/firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "firebase-v2/storage.rules"
+  },
+  "functions": {
+    "source": "functions",
+    "predeploy": ["node scripts/sync-shared-to-functions.mjs"]
+  }
+}

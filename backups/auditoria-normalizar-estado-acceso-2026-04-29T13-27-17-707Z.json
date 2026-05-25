@@ -1,0 +1,16 @@
+{
+  "generado_en": "2026-04-29T13:27:17.705Z",
+  "modo": "DRY_RUN",
+  "resumen": {
+    "total_usuarios_cuenta": 1,
+    "con_campo_legacy_estado_acceso_id": 0,
+    "para_migrar_copiando_a_estado_acceso": 0,
+    "conflictivos_estado_acceso_vs_legacy": 0,
+    "solo_eliminar_legacy": 0,
+    "actualizados": 0
+  },
+  "conflictivos": [],
+  "para_migrar": [],
+  "solo_eliminar_legacy": [],
+  "updates_aplicados": []
+}

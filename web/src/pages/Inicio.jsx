@@ -5,15 +5,20 @@ export default function Inicio() {
     <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm md:p-8">
       <h1 className="text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">Inicio</h1>
       <p className="mt-3 max-w-prose text-sm leading-relaxed text-slate-500">
-        Pantalla dummy de la Fase A. Aquí vivirá el resumen del portal cuando conectemos datos reales. Por
-        ahora sirve para validar navegación, scroll y el layout responsivo sin Firebase.
+        Punto de entrada del usuario base. Desde aquí podés ir a tu perfil y mantener tus datos personales básicos.
       </p>
-      <div className="mt-6">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Link
-          to="/onboarding"
+          to="/portal/mi-perfil"
           className="inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 sm:w-auto"
         >
-          Alta de legajo (Fase B)
+          Ir a Perfil
+        </Link>
+        <Link
+          to="/portal/solicitudes"
+          className="inline-flex w-full items-center justify-center rounded-xl border border-sky-200 bg-sky-50 px-4 py-3.5 text-sm font-semibold text-sky-900 shadow-sm transition-colors hover:bg-sky-100 sm:w-auto"
+        >
+          Nueva solicitud
         </Link>
       </div>
     </section>

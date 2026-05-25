@@ -1,7 +1,10 @@
 rules_version = '2';
 
-// V2 — Fase 2: cfg_* (lectura autenticada) + usuarios_cuenta (lectura propia por auth_uid) + personas (lectura propia por claim persona_id).
-// Matriz: docs/v2/ACCESO_Y_RULES_FIRESTORE_V2.md · claims: MODULO_LOGIN_V2 §3.3 (`syncSessionClaims`).
+// V2 — Colecciones no públicas; acceso mínimo autenticado por ruta.
+// Agentes: lectura/escritura solo en personas/{su persona_id} (claim syncSessionClaims).
+// Catálogos cfg_* y grupos: lectura si hay sesión; escritura solo Admin/Callables.
+// historial_laboral_cargos: lectura de filas donde persona_id == claim (p. ej. legajo en portal).
+// Matriz: docs/v2/ACCESO_Y_RULES_FIRESTORE_V2.md · MODULO_LOGIN_V2 §3.3
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -9,7 +12,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Catálogos volcados por seed:cfg (MODULO_CONFIGURACION_V2) — escritura solo Admin/seed.
+    function ownsPersona(personaId) {
+      return signedIn() && request.auth.token.persona_id == personaId;
+    }
+
+    // Catálogos volcados por seed (MODULO_CONFIGURACION_V2) — escritura solo Admin/seed.
     match /cfg_estado_cuenta_acceso/{docId} {
       allow read: if signedIn();
       allow write: if false;
@@ -25,16 +32,291 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /cfg_rol/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Catálogos usados en onboarding (listarCatalogoOnboarding) — mismo criterio: solo lectura autenticada.
+    match /cfg_provincia/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /cfg_localidad/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /cfg_parentesco/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /grupos_de_trabajo/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // Cuenta operativa: el agente solo lee su fila (auth_uid == sesión). Escrituras vía Callables/Admin.
     match /usuarios_cuenta/{cuentaId} {
       allow read: if signedIn() && resource.data.auth_uid == request.auth.uid;
       allow write: if false;
     }
 
-    // Ficha persona: id de documento = `per_<ULID>` = claim `persona_id` (tras syncSessionClaims + getIdToken(true)).
+    // Ficha persona: agente lee la propia; RRHH lee cualquier per_* (check-in, alta, bandejas).
     match /personas/{personaId} {
-      allow read: if signedIn() && request.auth.token.persona_id == personaId;
+      allow read: if ownsPersona(personaId) || portalRrhhOrAdmin();
+      allow create: if ownsPersona(personaId);
+      allow update: if ownsPersona(personaId);
+      allow delete: if false;
+    }
+
+    // Cargos del legajo visibles solo si pertenecen a la persona de la sesión.
+    match /historial_laboral_cargos/{cargoId} {
+      allow read: if signedIn()
+        && resource.data.persona_id is string
+        && resource.data.persona_id == request.auth.token.persona_id;
       allow write: if false;
+    }
+
+    /** RRHH / admin — roles HLC en token (+ legacy dev). */
+    function portalRrhhOrAdmin() {
+      return signedIn() && (
+        (request.auth.token.roles_hlc_vigentes is list
+          && request.auth.token.roles_hlc_vigentes.hasAny(['CFG_RRHH']))
+        || request.auth.token.portal_role == 'rrhh'
+        || request.auth.token.portal_role == 'admin'
+        || request.auth.token.perfil_rol_id == 'CFG_RRHH'
+      );
+    }
+
+    function calendarioEventoIdValid(id) {
+      return id is string && id.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+
+    function calendarioEventoFieldsValid(d) {
+      return d.tipo in ['feriado', 'asueto', 'institucional']
+        && d.descripcion is string
+        && d.descripcion.size() <= 500
+        && d.multiplicador is number
+        && d.multiplicador >= 0.5
+        && d.multiplicador <= 10
+        && d.anual is bool;
+    }
+
+    /** Calendario institucional (SSoT feriados / asuetos / multiplicadores). */
+    match /config/calendario_institucional {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /config/calendario_institucional/eventos/{eventoId} {
+      allow read: if signedIn();
+      allow create, update: if portalRrhhOrAdmin()
+        && calendarioEventoIdValid(eventoId)
+        && calendarioEventoFieldsValid(request.resource.data);
+      allow delete: if portalRrhhOrAdmin() && calendarioEventoIdValid(eventoId);
+    }
+
+    /** RRHH / admin: versiones parametrizadas de artículos (MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST §2.2). */
+    function portalArticulosMgmt() {
+      return portalRrhhOrAdmin();
+    }
+
+    function cfgArticuloIdValid(id) {
+      return id is string
+        && id.matches('^art_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    function cfgArticuloVersionIdValid(id) {
+      return id is string
+        && id.matches('^ver_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    /** Núcleo `cfg_articulos/{art_*}` — puntero `version_actual_id` actualizado en lote con la versión (panel RRHH). */
+    match /cfg_articulos/{articuloId} {
+      allow read: if portalArticulosMgmt() && cfgArticuloIdValid(articuloId);
+      allow create, update: if portalArticulosMgmt() && cfgArticuloIdValid(articuloId);
+      allow delete: if false;
+    }
+
+    match /cfg_articulos/{articuloId}/versiones/{versionId} {
+      allow read: if portalArticulosMgmt()
+        && cfgArticuloIdValid(articuloId)
+        && cfgArticuloVersionIdValid(versionId);
+      allow create, update: if portalArticulosMgmt()
+        && cfgArticuloIdValid(articuloId)
+        && cfgArticuloVersionIdValid(versionId);
+      allow delete: if false;
+    }
+
+    // Catálogos artículos V2 (seed SEED_CATALOGOS_ARTICULOS_V2) — lectura autenticada; escritura solo seed/Admin.
+    match /cfg_reinicio_ciclo_cuota/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /cfg_accion_saldo/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /cfg_origen_saldo/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /cfg_nivel_ocupacion_dia/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Eventos y rate limits: solo backend (Admin SDK).
+    match /eventos_ticket/{docId} {
+      allow read, write: if false;
+    }
+
+    match /_system_reg_primer_dni/{docId} {
+      allow read, write: if false;
+    }
+
+    match /_system_rate_login_dni/{docId} {
+      allow read, write: if false;
+    }
+
+    function cfgPersonaIdValid(id) {
+      return id is string
+        && id.matches('(?i)^per_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    function cfgArticuloIdValidAgente(id) {
+      return id is string
+        && id.matches('(?i)^art_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    function cfgArticuloVersionIdValidAgente(id) {
+      return id is string
+        && id.matches('(?i)^ver_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    function solicitudArticuloIdValid(id) {
+      return id is string
+        && id.matches('(?i)^sol_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    function grupoTrabajoIdValid(id) {
+      return id is string
+        && id.matches('(?i)^gdt_[0-9A-HJKMNP-TV-Z]{26}$');
+    }
+
+    function solicitudArticuloPatronBFieldsValid(d) {
+      return d.articulo_id is string
+        && cfgArticuloIdValidAgente(d.articulo_id)
+        && d.titular_persona_id is string
+        && cfgPersonaIdValid(d.titular_persona_id)
+        && d.actor_alta_persona_id is string
+        && cfgPersonaIdValid(d.actor_alta_persona_id)
+        && d.version_id_aplicada is string
+        && cfgArticuloVersionIdValidAgente(d.version_id_aplicada)
+        && d.grupo_trabajo_id_ancla is string
+        && grupoTrabajoIdValid(d.grupo_trabajo_id_ancla)
+        && d.fecha_desde is string
+        && d.fecha_desde.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && d.fecha_hasta is string
+        && d.fecha_hasta == d.fecha_desde
+        && d.anio_ciclo_consumo is int
+        && d.anio_ciclo_consumo >= 1900
+        && d.anio_ciclo_consumo <= 2200
+        && d.dias_solicitados is int
+        && d.dias_solicitados >= 1
+        && d.dias_solicitados <= 31
+        && d.patron_saldo == 'B'
+        && d.estado_solicitud_id == 'cfg_esa_borrador'
+        && d.schema_version == 2;
+    }
+
+    function solicitudArticuloCreateShapeLao() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'articulo_id',
+          'titular_persona_id',
+          'actor_alta_persona_id',
+          'version_aplicada',
+          'fecha_desde',
+          'fecha_hasta',
+          'dias_solicitados',
+          'anio_origen_bolsa',
+          'grupo_trabajo_id_ancla',
+          'resumen_computo_snapshot',
+          'estado_solicitud_id',
+          'schema_version',
+          'creado_en',
+          'actualizado_en',
+        ])
+        && d.articulo_id is string
+        && cfgArticuloIdValidAgente(d.articulo_id)
+        && d.titular_persona_id is string
+        && cfgPersonaIdValid(d.titular_persona_id)
+        && d.actor_alta_persona_id is string
+        && cfgPersonaIdValid(d.actor_alta_persona_id)
+        && d.version_aplicada is string
+        && cfgArticuloVersionIdValidAgente(d.version_aplicada)
+        && d.fecha_desde is string
+        && d.fecha_desde.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && (!('fecha_hasta' in d) || (
+          d.fecha_hasta is string && d.fecha_hasta.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        ))
+        && (!('dias_solicitados' in d) || (
+          d.dias_solicitados is int && d.dias_solicitados >= 1 && d.dias_solicitados <= 366
+        ))
+        && (!('resumen_computo_snapshot' in d) || d.resumen_computo_snapshot is map)
+        && (!('grupo_trabajo_id_ancla' in d) || (
+          d.grupo_trabajo_id_ancla is string && grupoTrabajoIdValid(d.grupo_trabajo_id_ancla)
+        ))
+        && d.anio_origen_bolsa is int
+        && d.anio_origen_bolsa >= 1900
+        && d.anio_origen_bolsa <= 2200
+        && d.estado_solicitud_id == 'cfg_esa_borrador'
+        && d.schema_version == 1;
+    }
+
+    function solicitudArticuloCreateShapePatronB() {
+      let d = request.resource.data;
+      return solicitudArticuloPatronBFieldsValid(d)
+        && d.keys().hasOnly([
+          'articulo_id',
+          'titular_persona_id',
+          'actor_alta_persona_id',
+          'version_id_aplicada',
+          'grupo_trabajo_id_ancla',
+          'fecha_desde',
+          'fecha_hasta',
+          'anio_ciclo_consumo',
+          'dias_solicitados',
+          'patron_saldo',
+          'estado_solicitud_id',
+          'schema_version',
+          'creado_en',
+          'actualizado_en',
+        ]);
+    }
+
+    function solicitudArticuloCreateShape() {
+      return solicitudArticuloCreateShapeLao() || solicitudArticuloCreateShapePatronB();
+    }
+
+    /** Alta operativa: el agente crea solo su solicitud en BORRADOR; transiciones las aplica el backend.
+     *  `grupos_trabajo_involucrados_ids` solo lo escribe el trigger (no está en hasOnly del create). */
+    match /solicitudes_articulo/{solId} {
+      allow read: if signedIn()
+        && resource.data.titular_persona_id is string
+        && resource.data.titular_persona_id == request.auth.token.persona_id;
+      allow create: if signedIn()
+        && solicitudArticuloIdValid(solId)
+        && request.auth.token.persona_id is string
+        && cfgPersonaIdValid(request.auth.token.persona_id)
+        && solicitudArticuloCreateShape()
+        && request.resource.data.titular_persona_id == request.auth.token.persona_id
+        && request.resource.data.actor_alta_persona_id == request.auth.token.persona_id;
+      allow update, delete: if false;
     }
 
     match /{document=**} {

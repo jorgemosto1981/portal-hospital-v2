@@ -1,0 +1,21 @@
+{
+  "generado_en": "2026-04-29T13:14:58.701Z",
+  "modo": "DRY_RUN",
+  "filtros": {
+    "solo_abiertos": true,
+    "modo_puntual": false,
+    "hlc_id": null,
+    "grupo_de_trabajo_id": null
+  },
+  "resumen": {
+    "total_hlc_sin_grupo": 0,
+    "candidato_unico": 0,
+    "ambiguo_multiples_grupos": 0,
+    "sin_candidato": 0,
+    "actualizados": 0
+  },
+  "candidato_unico": [],
+  "ambiguos": [],
+  "sin_candidato": [],
+  "updates_aplicados": []
+}

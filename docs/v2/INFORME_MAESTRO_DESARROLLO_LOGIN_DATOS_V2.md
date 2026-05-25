@@ -61,7 +61,7 @@ Este documento **no duplica** el contrato campo a campo; **evalúa** el plan act
 |------|---------|-------------------|
 | **Firestore / índices** | Nuevas colecciones, índices compuestos para `usuarios_cuenta` por `auth_uid` y `persona_id`, sparse unique. | Medio |
 | **Cloud Functions** | Mínimo 3–4 Callables + cron reconciliación; Admin SDK; transacciones. | Alto |
-| **Security Rules** | Reescritura fuerte vs V1 (`allow read if auth==null` en usuarios); pruebas en emulador obligatorias. | Alto |
+| **Security Rules** | Reescritura fuerte vs V1 (`allow read if auth==null` en usuarios); validación obligatoria antes de producción (matriz de casos / suite de reglas según política del equipo, contra proyecto remoto o herramienta de testing acordada). | Alto |
 | **Frontend** | Router post-login, wizard sin menú, formularios desde `cfg_*`, sin tocar `username` en pantalla datos. | Alto |
 | **QA / automatización** | Matriz §5.3 + casos P1.1 (mensaje genérico) + emailVerified. | Medio |
 | **Legal / PDP** | `ip_origen` en consentimientos (lista P 14); revisión con abogacía antes de “obligatorio”. | Variable |

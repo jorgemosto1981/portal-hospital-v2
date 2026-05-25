@@ -5,8 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   callHealthV2,
-  callRegistroPrimerAcceso,
-  callRrhhAltaAgente,
   callSyncSessionClaims,
 } from "../../../services/callables.js";
 import { authV2, dbV2 } from "../../../services/firebase.js";
@@ -24,12 +22,6 @@ export function usePortalHome() {
   const [callableMsg, setCallableMsg] = useState(null);
   const [callableOp, setCallableOp] = useState(idleCall);
   const [callableBusy, setCallableBusy] = useState(false);
-  const [rrhhDni, setRrhhDni] = useState("");
-  const [rrhhNom, setRrhhNom] = useState("");
-  const [rrhhApe, setRrhhApe] = useState("");
-  const [regDni, setRegDni] = useState("");
-  const [regEmail, setRegEmail] = useState("");
-  const [regPin, setRegPin] = useState("");
 
   useEffect(
     () => onAuthStateChanged(authV2, (u) => {
@@ -95,57 +87,6 @@ export function usePortalHome() {
     }
   }, []);
 
-  const runRrhhAlta = useCallback(async () => {
-    if (!authV2.currentUser) {
-      setCallableOp({
-        status: "error",
-        message:
-          "Hace falta sesión con un usuario con claim `portal_role: \"rrhh\"` para probar `rrhhAltaAgente`.",
-      });
-      toast.error("Sin sesión o permisos para esta operación");
-      return;
-    }
-    setCallableOp({ status: "loading", message: "Llamando a rrhhAltaAgente…" });
-    setCallableMsg(null);
-    setCallableBusy(true);
-    const id = toast.loading("Escribiendo datos (rrhhAltaAgente)…");
-    try {
-      const res = await callRrhhAltaAgente({ dni: rrhhDni, nombre: rrhhNom, apellido: rrhhApe });
-      const text = formatCallableData(res.data);
-      setCallableMsg(text);
-      setCallableOp({ status: "success", message: "Operación completada correctamente" });
-      toast.success("rrhhAltaAgente: datos procesados", { id });
-    } catch (e) {
-      const err = formatCallableError(e);
-      setCallableMsg(err);
-      setCallableOp({ status: "error", message: err });
-      toast.error("Error en rrhhAltaAgente", { id });
-    } finally {
-      setCallableBusy(false);
-    }
-  }, [rrhhDni, rrhhNom, rrhhApe]);
-
-  const runPasoB = useCallback(async () => {
-    setCallableOp({ status: "loading", message: "Llamando a registrarPrimerAcceso…" });
-    setCallableMsg(null);
-    setCallableBusy(true);
-    const id = toast.loading("Registrando primer acceso (base)…");
-    try {
-      const res = await callRegistroPrimerAcceso({ dni: regDni, email: regEmail, pin: regPin });
-      const text = formatCallableData(res.data);
-      setCallableMsg(text);
-      setCallableOp({ status: "success", message: "Operación completada correctamente" });
-      toast.success("registrarPrimerAcceso completado", { id });
-    } catch (e) {
-      const err = formatCallableError(e);
-      setCallableMsg(err);
-      setCallableOp({ status: "error", message: err });
-      toast.error("Error en registrarPrimerAcceso", { id });
-    } finally {
-      setCallableBusy(false);
-    }
-  }, [regDni, regEmail, regPin]);
-
   const runSyncClaims = useCallback(async () => {
     if (!authV2.currentUser) {
       setCallableOp({ status: "error", message: "Iniciá sesión (email/contraseña) para probar syncSessionClaims." });
@@ -182,11 +123,7 @@ export function usePortalHome() {
     callableOp,
     callableMsg,
     callableBusy,
-    rrhh: { dni: rrhhDni, setDni: setRrhhDni, nom: rrhhNom, setNom: setRrhhNom, ape: rrhhApe, setApe: setRrhhApe },
-    reg: { dni: regDni, setDni: setRegDni, email: regEmail, setEmail: setRegEmail, pin: regPin, setPin: setRegPin },
     runHealth,
-    runRrhhAlta,
-    runPasoB,
     runSyncClaims,
   };
 }

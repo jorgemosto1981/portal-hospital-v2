@@ -4,6 +4,22 @@
 
 **Fecha:** 22 de abril de 2026.
 
+> **Actualización 2026-05-19:** decisiones de **roles HLC, menú RRHH y claims JWT** cerradas e implementadas en backend — ver **[`RFC_ACCESO_ROLES_HLC_MENUS_V2.md`](./RFC_ACCESO_ROLES_HLC_MENUS_V2.md)**. Este documento sigue siendo útil para pendientes de **cfg_item_menu**, claim `tiene_subordinados` y oleada menú web.
+
+---
+
+## 0. Decisiones cerradas (2026-05-19) — resumen
+
+| Tema | Decisión |
+|------|----------|
+| Rol canónico | `historial_laboral_cargos.rol_id` (`cfg_rol`), no `usuarios_cuenta.role_ids` como driver principal |
+| JWT | `roles_hlc_vigentes[]`; deprecar escritura `portal_role` |
+| Menú RRHH | `CFG_RRHH` en array → todos los bloques de menú (sin bypass artículos) |
+| Menú jefe | `tiene_subordinados` (sin `CFG_JEFE` por ahora); RRHH ve jefe sin subordinados |
+| Multi-HLC | Unión de roles en cadenas vigentes simultáneas |
+
+Detalle: [`RFC_ACCESO_ROLES_HLC_MENUS_V2.md`](./RFC_ACCESO_ROLES_HLC_MENUS_V2.md) · handoff [`HANDOFF_SESION_2026-05-19_ROLES_HLC_CLAIMS.md`](./HANDOFF_SESION_2026-05-19_ROLES_HLC_CLAIMS.md).
+
 ---
 
 ## 1. Roles (RRHH, AUDITOR MÉDICO, USUARIO, VISUALIZADOR, …)
@@ -12,7 +28,7 @@
 
 **No** en datos laborales. Los roles de **aplicación** (quién puede administrar fichas, auditar, solo leer, etc.) son atributos de **identidad / acceso**, no del vínculo laboral al organigrama.
 
-- **Persistencia canónica:** `usuarios_cuenta.role_ids` — array de FK a **`cfg_rol`** (catálogo en **módulo configuración**). Ya previsto en [`MODULO_LOGIN_V2.md`](./MODULO_LOGIN_V2.md) §3.1 y [`MODULO_DATOS_PERSONALES_V2.md`](./MODULO_DATOS_PERSONALES_V2.md) §3.7 / inventario `cfg_*`.
+- **Persistencia canónica (acceso agente / circuitos):** **`rol_id` en HLC** + claim **`roles_hlc_vigentes`** en sesión ([`RFC_ACCESO_ROLES_HLC_MENUS_V2.md`](./RFC_ACCESO_ROLES_HLC_MENUS_V2.md)). **`usuarios_cuenta.role_ids`** queda como legado / administración futura; no sustituye HLc en ticketera ni menú objetivo.
 - **Datos laborales** (`hlc_*`, `gdt_*`, `efe_*`, …) describen **cargo, grupo de trabajo, efector**; pueden condicionar **reglas de negocio** (p. ej. qué solicitudes ve un agente), pero **no** sustituyen la lista de roles de cuenta.
 
 ### Alta “pre login” (paso A RRHH) y modificación posterior
@@ -100,6 +116,7 @@ Esto complementa la independencia de datos por módulo en [`PLAN_MODULOS_V2.md`]
 |------|-----|
 | Flujo alta RRHH y menú | [`MODULO_LOGIN_V2.md`](./MODULO_LOGIN_V2.md) §4, [`FLUJO_V2_LOGIN_Y_DATOS_PERSONALES.md`](./FLUJO_V2_LOGIN_Y_DATOS_PERSONALES.md) |
 | Acceso Firestore / Callables | [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./ACCESO_Y_RULES_FIRESTORE_V2.md) |
+| **Roles HLC, menú, claims (implementado)** | [`RFC_ACCESO_ROLES_HLC_MENUS_V2.md`](./RFC_ACCESO_ROLES_HLC_MENUS_V2.md) |
 | Fusión con Ticket / otra PC | [`UNIFICACION_OTRA_PC_Y_TICKET.md`](./UNIFICACION_OTRA_PC_Y_TICKET.md) |
 | Alta delegada jefe → subordinado (licencias) | [`CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md`](./CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md) |
 | Estados laboral / baja / deshabilitado (menú RRHH) | [`CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md`](./CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md) |
@@ -113,3 +130,4 @@ Esto complementa la independencia de datos por módulo en [`PLAN_MODULOS_V2.md`]
 | 2026-04-22 | Creación: roles en `usuarios_cuenta` + `cfg_rol`; menús configurables y “Jefe”; módulos; código breve; no master en código; UX/BD por rutas. |
 | 2026-04-22 | §7: enlace a doc **Ticket** alta delegada por jefe ([`CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md`](./CUESTIONES_TICKET_SOLICITUD_POR_DELEGACION_JEFE_V2.md)). |
 | 2026-04-22 | §7: enlace estados laborales / RRHH ([`CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md`](./CUESTIONES_ESTADOS_LABORAL_PERSONA_RRHH_V2.md)). |
+| 2026-05-19 | §0 + §1: alineación con RFC roles HLC; `role_ids` no driver principal de acceso agente. |

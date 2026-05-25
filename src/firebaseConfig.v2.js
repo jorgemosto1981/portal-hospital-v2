@@ -21,6 +21,7 @@ const V2_ENV_NAMES = [
 
 /**
  * Configuración del proyecto **portal-hospital-v2** (Web SDK).
+ * Siempre contra Firebase en la nube (Firestore, Storage, Auth).
  * Variables: `VITE_V2_FIREBASE_*` (ver `.env.v2.example`).
  */
 function buildFirebaseConfigV2() {

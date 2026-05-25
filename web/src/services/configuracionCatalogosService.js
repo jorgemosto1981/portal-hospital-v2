@@ -10,7 +10,14 @@ export async function listarColeccion(collectionName) {
   const data = res.data;
   if (!data || typeof data !== "object") return [];
   const items = data.items;
-  return Array.isArray(items) ? items : [];
+  if (!Array.isArray(items)) return [];
+  return items.map((item) => {
+    if (!item || typeof item !== "object") return item;
+    if (item.nombre) return item;
+    // Compatibilidad de catálogos V2 que usan etiqueta/titulo_ui en lugar de nombre.
+    const nombre = item.titulo_ui || item.etiqueta || item.codigo_interno || item.id || null;
+    return { ...item, nombre };
+  });
 }
 
 /**

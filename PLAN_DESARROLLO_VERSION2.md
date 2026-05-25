@@ -26,7 +26,7 @@
 | **Transversal** | IDs, prefijos, reglas de negocio global | [`RULEBOOK_V2.md`](./docs/v2/RULEBOOK_V2.md), [`PLAN_MODULOS_V2.md`](./docs/v2/PLAN_MODULOS_V2.md) |
 | **Login y cuenta** | `usuarios_cuenta`, acceso | [`MODULO_LOGIN_V2.md`](./docs/v2/MODULO_LOGIN_V2.md) |
 | **Datos personales** | `personas`, DDJJ, formación | [`MODULO_DATOS_PERSONALES_V2.md`](./docs/v2/MODULO_DATOS_PERSONALES_V2.md) |
-| **Datos laborales** | `grupos_de_trabajo` (`gdt_*`), `efectores` (`efe_*`), `historial_laboral_*` | [`MODULO_DATOS_LABORALES_V2.md`](./docs/v2/MODULO_DATOS_LABORALES_V2.md), [`DECISIONES_REVISION_PERSONALES_LABORALES_V2.md`](./docs/v2/DECISIONES_REVISION_PERSONALES_LABORALES_V2.md) |
+| **Datos laborales** | `grupos_de_trabajo` (`gdt_*`), catálogo de efectores en **`cfg_efectores`**, `historial_laboral_*` | [`MODULO_DATOS_LABORALES_V2.md`](./docs/v2/MODULO_DATOS_LABORALES_V2.md), [`DECISIONES_REVISION_PERSONALES_LABORALES_V2.md`](./docs/v2/DECISIONES_REVISION_PERSONALES_LABORALES_V2.md) |
 | **Configuración** | `cfg_*`, semillas | [`MODULO_CONFIGURACION_V2.md`](./docs/v2/MODULO_CONFIGURACION_V2.md) |
 | **Ticket / solicitudes** | Máquina de estados, *V2-CIERRE*, *V2-REAP* | [`UNIFICACION_OTRA_PC_Y_TICKET.md`](./docs/v2/UNIFICACION_OTRA_PC_Y_TICKET.md), cuestiones Ticket / RRHH / roles |
 | **Reglas y acceso Firestore** | (orientación) | [`ACCESO_Y_RULES_FIRESTORE_V2.md`](./docs/v2/ACCESO_Y_RULES_FIRESTORE_V2.md) |
@@ -84,7 +84,7 @@ Iniciar planificación de **V2 desde cero** (nueva base de datos + nueva estruct
 - `art_` artículo normativa
 - `avi_` aviso/solicitud
 - `gdt_` grupo de trabajo (unidad / organigrama / asignación operativa; colección `grupos_de_trabajo`)
-- `efe_` efector (catálogo configurable; colección `efectores`)
+- Efector institucional: documentos en colección **`cfg_efectores`** (ids de documento estables, p. ej. `CFG_EFE_*` en semillas, o `efe_<ULID>` en altas gobernadas por Rulebook). *La colección homónima legacy `efectores` queda deprecada para V2; ver módulo laboral §4.2.*
 - `rol_` rol
 - `cfg_` configuración/catálogo
 - `evt_` evento auditoría
@@ -222,7 +222,7 @@ Campos:
 
 ### B. Estructura organizacional, efectores y laboral
 
-> **Abril 2026 — acuerdo de dominio:** **grupo de trabajo** y **efector** son entidades distintas. `grupos_de_trabajo` (`gdt_*`) = unidades de dependencia / organigrama / base para asignación, burbujeo y ticket. `efectores` (`efe_*`) = catálogo **seleccionable y configurable** (sin hardcode de lista en código). En `historial_laboral_cargos` hay **dos** FK a `efectores` (designación y cumplimiento) y **una** FK a `grupos_de_trabajo`. Detalle y nombres de atributo: [`docs/v2/MODULO_DATOS_LABORALES_V2.md`](./docs/v2/MODULO_DATOS_LABORALES_V2.md), [`docs/v2/DECISIONES_REVISION_PERSONALES_LABORALES_V2.md`](./docs/v2/DECISIONES_REVISION_PERSONALES_LABORALES_V2.md). La redacción anterior con una sola colección `grupos` queda **reemplazada** por este modelo.
+> **Abril 2026 — acuerdo de dominio:** **grupo de trabajo** y **efector** son entidades distintas. `grupos_de_trabajo` (`gdt_*`) = unidades de dependencia / organigrama / base para asignación, burbujeo y ticket. El **catálogo** de efectores (lugares de designación / cumplimiento) vive en **`cfg_efectores`** (Database-First, panel de configuración; **sin** listas fijas en código). En `historial_laboral_cargos` hay **dos** FK al **id de documento** en `cfg_efectores` (designación y cumplimiento) y **una** FK a `grupos_de_trabajo`. *Actualización 27/04/2026:* la colección suelta `efectores` queda **obsoleta** frente a `cfg_efectores` — [`docs/v2/MODULO_DATOS_LABORALES_V2.md`](./docs/v2/MODULO_DATOS_LABORALES_V2.md) §4.2. Detalle y nombres de atributo: módulo laboral y [`docs/v2/DECISIONES_REVISION_PERSONALES_LABORALES_V2.md`](./docs/v2/DECISIONES_REVISION_PERSONALES_LABORALES_V2.md). La redacción anterior con una sola colección `grupos` queda **reemplazada** por este modelo.
 
 #### `grupos_de_trabajo` (`gdt_`)
 Colección de **unidades de trabajo y organigrama** (servicio, sector, nodo de jerarquía operativa).
@@ -237,15 +237,16 @@ Campos (base):
 - `created_at`, `updated_at`, `created_by`, `updated_by`
 - *(Tipificación opcional: `tipo_grupo_id` → `cfg_*` según módulo de configuración.)*
 
-#### `efectores` (`efe_`)
-Colección de **efectores institucionales**; valores **cargables desde configuración** (alta/edición vía módulo correspondiente, ids estables en datos laborales y ticket).
+#### `cfg_efectores` (catálogo de efectores; prefijos de id según Rulebook, p. ej. `CFG_EFE_*` o `efe_<ULID>`)
+Colección `cfg_*` de **efectores institucionales**; **una sola fuente de verdad** para el panel/ABM y para los desplegables de asignación laboral. **Deprecada** para nuevos despliegues la colección homónima suelta `efectores` (ver [`docs/v2/MODULO_DATOS_LABORALES_V2.md`](./docs/v2/MODULO_DATOS_LABORALES_V2.md) §4.2).
 Campos (base):
-- `id` (efe_..., PK)
+- `id` (PK: id de documento; convención estable)
 - `codigo` (opcional)
 - `nombre`
+- `es_efector_institucional` (según producto)
 - `activo` (bool)
 - `vigente_desde`, `vigente_hasta` (nullable)
-- *(Según producto: marca de efector “institucional propio” del portal, u otros metadatos en `cfg_*` / flags en el documento.)*
+- *Norma transversal `cfg_*` alineada a* [`docs/v2/MODULO_CONFIGURACION_V2.md`](./docs/v2/MODULO_CONFIGURACION_V2.md) §1–§2*.*
 - `created_at`, `updated_at`, `created_by`, `updated_by`
 
 #### `historial_laboral_cargos` (`hlc_`)
@@ -254,8 +255,8 @@ Campos (resumen alineado al acuerdo; el listado canónico está en el módulo):
 - `id` (hlc_..., PK)
 - `persona_id` (FK -> personas)
 - `grupo_de_trabajo_id` (FK -> `grupos_de_trabajo.id`) — dependencia / unidad de encuadre del cargo
-- `efector_designacion_id` (FK -> `efectores.id`) — marco **normativo** de designación
-- `efector_cumplimiento_id` (FK -> `efectores.id`) — lugar de **cumplimiento** de funciones (puede coincidir o no con `efector_designacion_id`)
+- `efector_designacion_id` (FK -> documento en `cfg_efectores`) — marco **normativo** de designación
+- `efector_cumplimiento_id` (FK -> documento en `cfg_efectores`) — lugar de **cumplimiento** de funciones (puede coincidir o no con `efector_designacion_id`)
 - Resto: categorías y catálogos vía `*_id` → `cfg_*` (cargo funcional, vínculo, escalafón, fechas, `carga_horaria_total` en **horas**, causales, etc.); ver módulo laboral.
 - `activo` (bool)
 - `created_at`, `updated_at`, `created_by`, `updated_by`
@@ -266,7 +267,7 @@ Campos:
 - `cargo_id` (FK -> historial_laboral_cargos.id)
 - `persona_id` (FK)
 - `rol_id`, `escalafon_id`, `agrupamiento_id`, `funcion_real_id`, `muro_id` (FK cfg)
-- `nivel_jerarquico` (number, **opcional** / legado; el **nivel de jerarquía en organigrama por burbuja** vive en **`hlg_*` → `nivel_jerarquia_id` → `cfg_nivel_jerarquia`**, decisión **C10** en [`docs/v2/MODULO_DATOS_LABORALES_V2.md`](./docs/v2/MODULO_DATOS_LABORALES_V2.md) §4.4)
+- `nivel_jerarquico` (number **1–99**, **opcional**; si el flujo usa `hld_*`, puede duplicar hint; el valor que gobierna **burbuja/organigrama** respecto de un `grupo_de_trabajo` es **`hlg_*.nivel_jerarquico` (1–99)**, **sin** colección `cfg_nivel_jerarquia` — **C10** en [`docs/v2/MODULO_DATOS_LABORALES_V2.md`](./docs/v2/MODULO_DATOS_LABORALES_V2.md) §4.4)
 - `carga_horaria_diaria` (nullable; desglose preferente en `hlg_*.carga_por_dia_semana`)
 - `fecha_inicio`, `fecha_fin` (nullable)
 - `activo` (bool)
@@ -281,7 +282,7 @@ Campos:
 - `persona_id` (FK)
 - `grupo_de_trabajo_id` (FK -> `grupos_de_trabajo.id`)
 - `fecha_inicio`, `fecha_fin` (nullable)
-- `nivel_jerarquia_id` (FK -> **`cfg_nivel_jerarquia`**: nivel del `persona_id` **en este** `grupo_de_trabajo_id`)
+- `nivel_jerarquico` (number **1–99**): jerarquía del `persona_id` **en este** `grupo_de_trabajo_id` (burbuja). **No** es FK a `cfg_*`.
 - `carga_por_dia_semana` (array: cada ítem `dia_semana_id` -> **`cfg_dia_semana`**, `horas` number)
 - `activo` (bool)
 - `created_at`, `updated_at`, `created_by`, `updated_by`
@@ -818,6 +819,8 @@ Si encuentras problemas:
 
 ## 📝 Notas Importantes
 
+- **V2 (abril 2026, actual. 27/04/2026):** el catálogo de **efectores** para datos laborales y el panel de configuración es la colección **`cfg_efectores`**; `hlc_*.efector_*_id` resuelven documentos allí. La colección `efectores` quedó **deprecada** en documentación; ver §B y [`docs/v2/MODULO_DATOS_LABORALES_V2.md`](./docs/v2/MODULO_DATOS_LABORALES_V2.md) §4.2.
+- **Nivel de jerarquía (misma actualización):** **no** se usa `cfg_nivel_jerarquia`. El nivel en burbuja es **`hlg_*.nivel_jerarquico`** (entero **1–99**). Catálogos laborales avanzados sembrados/ABM: `cfg_modalidad_jornada`, `cfg_estado_asignacion_laboral`, `cfg_causal_fin_asignacion_laboral`, `cfg_tipo_acto_designacion`, `cfg_tipo_grupo` (ver módulo laboral §6).
 - **Regla establecida:** TODOS los IDs de documentos en Firestore DEBEN estar en MAYÚSCULAS
 - **Compatibilidad:** Las búsquedas funcionan con IDs en mayúsculas y minúsculas (fallback)
 - **UID:** El campo `uid` en documentos de usuarios también debe estar normalizado a MAYÚSCULAS

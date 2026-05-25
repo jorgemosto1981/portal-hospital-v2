@@ -30,3 +30,6 @@ backups/*.zip
 # OS
 .DS_Store
 Thumbs.db
+
+# Reporte local del seed de catálogos artículos (rutas absolutas / timestamp)
+scripts/seed-v2/seed-catalogos-articulos-v2-report.json

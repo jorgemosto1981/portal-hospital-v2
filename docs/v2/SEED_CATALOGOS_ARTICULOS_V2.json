@@ -1,0 +1,1374 @@
+{
+  "_meta": {
+    "fuente_norma": [
+      "docs/v2/DICCIONARIO_CFG_ARTICULOS_V2.md §2 y §5–6",
+      "docs/v2/MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md §1.6, §3 y §4 (FKs)"
+    ],
+    "estado_documento": "borrador de semilla — revisión RRHH/normativa antes de seed en Firestore",
+    "convencion_fila_cfg": "Campos comunes sugeridos alineados a MODULO_CONFIGURACION_V2: id (id de documento Firestore), codigo_interno (clave estable de producto), titulo_ui, descripcion_ui (opcional), orden, activo, vigente_desde (ISO-8601 o null), vigente_hasta (ISO-8601 o null). Colecciones con shape distinto van documentadas en _meta.shape_por_coleccion.",
+    "shape_por_coleccion": {
+      "cfg_calendario_feriados_institucional": "Diccionario §6: fecha (YYYY-MM-DD), tipo, alcance_efector_id (nullable), activo + metadatos cfg comunes donde aplique.",
+      "cfg_paso_workflow_articulo": "Prefijo cfg_pwa_; puede extenderse con horas_max_resolucion, cfg_accion_vencimiento_id, etc. (MODULO_CONFIGURACION_ARTICULOS_V2 / matriz SLA).",
+      "cfg_tipo_evento_filas_articulos": "Prefijo cfg_tev_art_; modulo_origen = articulos; codigo_interno según diccionario §5."
+    },
+    "equivalencias_pendientes_rfc": [
+      "cfg_unidad_plazo (PF §3.2) vs cfg_tipo_computo_plazo cfg_tcp_* (plazo documental modular) — no mezclar filas hasta RFC (diccionario §2 nota).",
+      "Matriz Bloque 4 ambito_consumo_id: no figura colección dedicada en diccionario §2; incluido aquí como cfg_ambito_consumo propuesto para cierre de FK."
+    ],
+    "coleccion_implicita_diccionario": "cfg_justifica_sueldo (prefijo cfg_js_* sugerido en diccionario §2 nota Bloque 2) — incluida como propuesta explícita.",
+    "prefijos_id_documento": {
+      "cfg_tipo_articulo": "cfg_ta_* (diccionario §1)",
+      "cfg_tipo_acumulacion": "cfg_tac_* (propuesta seed; no colisionar con cfg_ta_*)",
+      "cfg_tipo_caducidad": "cfg_cad_* — FK `bloque_acumulacion_sucesion.caducidad_tipo_id` (RFC caducidad dedicada; separado de acumulación).",
+      "cfg_tipo_evento_articulos": "cfg_tev_art_* + ULID real en despliegue (ejemplos con sufijos FAV, FB0… son ilustrativos; regenerar con ulid())"
+    }
+  },
+  "cfg_accion_incumplimiento_documental": [
+    {
+      "id": "cfg_aid_bloqueo_aprobacion",
+      "codigo_interno": "BLOQUEO_APROBACION",
+      "titulo_ui": "Bloquear aprobación hasta regularizar",
+      "descripcion_ui": "La solicitud no avanza de paso hasta cumplir documentación.",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_aid_sancion_disciplinaria",
+      "codigo_interno": "DERIVA_SANCION",
+      "titulo_ui": "Derivar a sanción / disciplina",
+      "descripcion_ui": "Incumplimiento grave; fuera del circuito estándar de licencias.",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_aid_solo_notificacion",
+      "codigo_interno": "NOTIFICACION_RRHH",
+      "titulo_ui": "Solo notificación a RRHH",
+      "descripcion_ui": "Registro del incumplimiento sin bloqueo automático del flujo.",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_accion_saldo": [
+    {
+      "id": "cfg_as_suma",
+      "codigo_interno": "SUMA",
+      "titulo_ui": "Suma al saldo",
+      "descripcion_ui": "Incrementa la bolsa (ej. horas extra acreditadas).",
+      "factor_signo": 1,
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_as_resta",
+      "codigo_interno": "RESTA",
+      "titulo_ui": "Resta del saldo",
+      "descripcion_ui": "Descuenta de la bolsa (ej. uso de licencia o permiso).",
+      "factor_signo": -1,
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_as_neutro",
+      "codigo_interno": "NEUTRO",
+      "titulo_ui": "Registro neutro",
+      "descripcion_ui": "Solo registro informativo; no modifica disponible ni consumido.",
+      "factor_signo": 0,
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_as_descuenta_disponible",
+      "codigo_interno": "DESCUENTA_DISPONIBLE",
+      "titulo_ui": "Descuenta saldo disponible",
+      "descripcion_ui": "Legacy — reemplazado por RESTA.",
+      "orden": 110,
+      "activo": false,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_as_acumula_uso_sin_descuento",
+      "codigo_interno": "ACUMULA_USO",
+      "titulo_ui": "Acumula uso sin descontar",
+      "descripcion_ui": "Legacy — reemplazado por NEUTRO.",
+      "orden": 120,
+      "activo": false,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_as_reserva_provisoria",
+      "codigo_interno": "RESERVA_PROVISORIA",
+      "titulo_ui": "Reserva provisoria",
+      "descripcion_ui": "Legacy — reservado para workflow ticketera.",
+      "orden": 130,
+      "activo": false,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_accion_vencimiento": [
+    {
+      "id": "cfg_av_escalar_rrhh",
+      "codigo_interno": "ESCALAR_RRHH",
+      "titulo_ui": "Escalar a RRHH",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_av_escalar_jefe",
+      "codigo_interno": "ESCALAR_JEFE",
+      "titulo_ui": "Escalar a jefe de grupo",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_av_rechazo_automatico",
+      "codigo_interno": "RECHAZO_AUTOMATICO",
+      "titulo_ui": "Rechazo automático por vencimiento",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_calendario_feriados_institucional": [
+    {
+      "id": "cfg_cfi_01ARZ3NDEKTSV4RRFFQ69G5FAV",
+      "codigo_interno": "CFI_2026_05_25",
+      "titulo_ui": "Ejemplo — 25 de Mayo",
+      "fecha": "2026-05-25",
+      "tipo": "FERIADO_NACIONAL",
+      "alcance_efector_id": null,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_circuito_ingreso": [
+    {
+      "id": "cfg_ci_agente_directo",
+      "codigo_interno": "AGENTE_DIRECTO",
+      "titulo_ui": "Ingreso por agente",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_ci_jefe_delegado",
+      "codigo_interno": "JEFE_DELEGADO",
+      "titulo_ui": "Ingreso delegado por jefe",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_ci_rrhh_operativo",
+      "codigo_interno": "RRHH_OPERATIVO",
+      "titulo_ui": "Ingreso operativo RRHH",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_estado_articulo": [
+    {
+      "id": "cfg_est_art_vigente",
+      "codigo_interno": "VIGENTE",
+      "titulo_ui": "Vigente en portal",
+      "descripcion_ui": "Disponible para nuevas solicitudes según políticas de portal.",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_est_art_obsoleto",
+      "codigo_interno": "OBSOLETO",
+      "titulo_ui": "Obsoleto en portal",
+      "descripcion_ui": "No se ofrece para nuevas solicitudes; histórico conserva version_id_aplicada.",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_estado_solicitud_articulo": [
+    {
+      "id": "cfg_esa_borrador",
+      "codigo_interno": "BORRADOR",
+      "titulo_ui": "Borrador",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_esa_en_revision_jefe",
+      "codigo_interno": "EN_REVISION_JEFE",
+      "titulo_ui": "En revisión jefe",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_esa_en_revision_rrhh",
+      "codigo_interno": "EN_REVISION_RRHH",
+      "titulo_ui": "En revisión RRHH",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_esa_aprobada",
+      "codigo_interno": "APROBADA",
+      "titulo_ui": "Aprobada",
+      "orden": 40,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_esa_rechazada",
+      "codigo_interno": "RECHAZADA",
+      "titulo_ui": "Rechazada",
+      "orden": 50,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_esa_cancelada",
+      "codigo_interno": "CANCELADA",
+      "titulo_ui": "Cancelada por titular o sistema",
+      "orden": 60,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_estado_version_articulo": [
+    {
+      "id": "cfg_est_ver_borrador",
+      "codigo_interno": "BORRADOR",
+      "titulo_ui": "Borrador",
+      "descripcion_ui": "Ciclo de edición; no inmutable.",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_est_ver_publicada",
+      "codigo_interno": "PUBLICADA",
+      "titulo_ui": "Publicada",
+      "descripcion_ui": "Inmutable; cambios normativos → nueva versión.",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_fuente_decision_solicitud": [
+    {
+      "id": "cfg_fds_jefe",
+      "codigo_interno": "JEFE",
+      "titulo_ui": "Jefe de grupo",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_fds_rrhh",
+      "codigo_interno": "RRHH",
+      "titulo_ui": "RRHH",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_fds_comision_medica",
+      "codigo_interno": "COMISION_MEDICA",
+      "titulo_ui": "Comisión médica",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_momento_entrega_documentacion": [
+    {
+      "id": "cfg_med_previa",
+      "codigo_interno": "PREVIA",
+      "titulo_ui": "Documentación previa",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_med_posterior",
+      "codigo_interno": "POSTERIOR",
+      "titulo_ui": "Documentación posterior",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_med_mixta",
+      "codigo_interno": "MIXTA",
+      "titulo_ui": "Mixta (previa y posterior)",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_motivo_rechazo_solicitud": [
+    {
+      "id": "cfg_mrs_sin_cupo",
+      "codigo_interno": "SIN_CUPO",
+      "titulo_ui": "Sin cupo / saldo insuficiente",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_mrs_no_elegible",
+      "codigo_interno": "NO_ELEGIBLE",
+      "titulo_ui": "No cumple elegibilidad",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_mrs_superposicion",
+      "codigo_interno": "SUPERPOSICION",
+      "titulo_ui": "Superposición no resuelta",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_mrs_doc_incompleta",
+      "codigo_interno": "DOCUMENTACION_INCOMPLETA",
+      "titulo_ui": "Documentación incompleta o vencida",
+      "orden": 40,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_nivel_ocupacion_dia": [
+    {
+      "id": "cfg_nod_exclusivo",
+      "codigo_interno": "EXCLUSIVO_24H",
+      "titulo_ui": "Exclusivo (día completo)",
+      "descripcion_ui": "Convivencia intradía a nivel celda; no reemplaza incompatibilidades normativas.",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_nod_parcial",
+      "codigo_interno": "PARCIAL_FRANJA",
+      "titulo_ui": "Parcial por franja",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_nod_informativo",
+      "codigo_interno": "INFORMATIVO",
+      "titulo_ui": "Informativo (sin reserva dura)",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_operador_comparacion": [
+    {
+      "id": "cfg_oc_eq",
+      "codigo_interno": "EQ",
+      "titulo_ui": "Igual a",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_oc_ne",
+      "codigo_interno": "NE",
+      "titulo_ui": "Distinto de",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_oc_gte",
+      "codigo_interno": "GTE",
+      "titulo_ui": "Mayor o igual",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_oc_lte",
+      "codigo_interno": "LTE",
+      "titulo_ui": "Menor o igual",
+      "orden": 40,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_oc_in",
+      "codigo_interno": "IN",
+      "titulo_ui": "Pertenece al conjunto",
+      "orden": 50,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_origen_alta_solicitud": [
+    {
+      "id": "cfg_oas_portal_agente",
+      "codigo_interno": "PORTAL_AGENTE",
+      "titulo_ui": "Portal — agente",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_oas_portal_jefe",
+      "codigo_interno": "PORTAL_JEFE",
+      "titulo_ui": "Portal — jefe delegado",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_oas_rrhh",
+      "codigo_interno": "RRHH",
+      "titulo_ui": "RRHH",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_origen_normativo_articulo": [
+    {
+      "id": "cfg_ona_decree_1919",
+      "codigo_interno": "DECRETO_1919_89",
+      "titulo_ui": "Decreto 1919/89 y normativa afín",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_ona_resolucion_institucional",
+      "codigo_interno": "RESOLUCION_INSTITUCIONAL",
+      "titulo_ui": "Resolución / acto institucional",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_ona_convenio",
+      "codigo_interno": "CONVENIO_COLECTIVO",
+      "titulo_ui": "Convenio / acuerdo sectorial",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_origen_saldo": [
+    {
+      "id": "cfg_os_interno",
+      "codigo_interno": "INTERNO",
+      "titulo_ui": "Bolsa interna (portal)",
+      "descripcion_ui": "Saldos mantenidos por motor en capa contable.",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_os_externo_informado",
+      "codigo_interno": "EXTERNO_INFORMADO",
+      "titulo_ui": "Externo informado",
+      "descripcion_ui": "Dato cargado o importado; no recalculado por historial local.",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_os_externo_calculado",
+      "codigo_interno": "EXTERNO_CALCULADO",
+      "titulo_ui": "Externo calculado",
+      "descripcion_ui": "Derivado de reglas externas (p. ej. compensatorios / LAO según política).",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_paso_workflow_articulo": [
+    {
+      "id": "cfg_pwa_revision_jefe",
+      "codigo_interno": "REVISION_JEFE",
+      "titulo_ui": "Revisión jefe de grupo",
+      "orden": 10,
+      "activo": true,
+      "horas_max_resolucion": 72,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_pwa_revision_rrhh",
+      "codigo_interno": "REVISION_RRHH",
+      "titulo_ui": "Revisión RRHH",
+      "orden": 20,
+      "activo": true,
+      "horas_max_resolucion": 120,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_pwa_comision_medica",
+      "codigo_interno": "COMISION_MEDICA",
+      "titulo_ui": "Comisión médica",
+      "orden": 30,
+      "activo": true,
+      "horas_max_resolucion": null,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_politica_superposicion": [
+    {
+      "id": "cfg_ps_prioridad_normativa",
+      "codigo_interno": "PRIORIDAD_NORMATIVA",
+      "titulo_ui": "Gana la de mayor prioridad normativa",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_ps_bloqueante",
+      "codigo_interno": "BLOQUEANTE",
+      "titulo_ui": "Bloquea hasta resolución manual",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_ps_convive_con_tope",
+      "codigo_interno": "CONVIVE_CON_TOPE",
+      "titulo_ui": "Convive con tope compartido",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_prioridad_normativa": [
+    {
+      "id": "cfg_pn_baja",
+      "codigo_interno": "BAJA",
+      "titulo_ui": "Prioridad baja",
+      "valor_ordinal": 10,
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_pn_media",
+      "codigo_interno": "MEDIA",
+      "titulo_ui": "Prioridad media",
+      "valor_ordinal": 50,
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_pn_alta",
+      "codigo_interno": "ALTA",
+      "titulo_ui": "Prioridad alta",
+      "valor_ordinal": 90,
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_reinicio_ciclo_cuota": [
+    {
+      "id": "cfg_rcc_anual",
+      "codigo_interno": "ANUAL",
+      "titulo_ui": "Reinicio anual",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_rcc_mensual",
+      "codigo_interno": "MENSUAL",
+      "titulo_ui": "Reinicio mensual",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_rcc_diario",
+      "codigo_interno": "DIARIO",
+      "titulo_ui": "Reinicio diario",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_rcc_nunca",
+      "codigo_interno": "NUNCA",
+      "titulo_ui": "Sin reinicio automático",
+      "orden": 40,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_regla_computo_dias": [
+    {
+      "id": "cfg_rcd_corridos",
+      "codigo_interno": "DIAS_CORRIDOS",
+      "titulo_ui": "Días corridos",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_rcd_habiles_simple",
+      "codigo_interno": "DIAS_HABILES_SIMPLE",
+      "titulo_ui": "Días hábiles (calendario laboral simple)",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_rcd_habiles_compuesto",
+      "codigo_interno": "DIAS_HABILES_COMPUESTO",
+      "titulo_ui": "Días hábiles (compuesto + feriados institucionales)",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_regla_computo_horas": [
+    {
+      "id": "cfg_rch_jornada",
+      "codigo_interno": "HORAS_JORNADA",
+      "titulo_ui": "Horas según jornada teórica",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_rch_reloj",
+      "codigo_interno": "HORAS_RELOJ",
+      "titulo_ui": "Horas reloj",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_regla_split_remanente": [
+    {
+      "id": "cfg_rsr_descartar",
+      "codigo_interno": "DESCARTAR_REMANENTE",
+      "titulo_ui": "Descartar remanente",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_rsr_nueva_solicitud",
+      "codigo_interno": "NUEVA_SOLICITUD_REM",
+      "titulo_ui": "Generar nueva solicitud de remanente",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_rsr_acumular_saldo",
+      "codigo_interno": "ACUMULAR_SALDO",
+      "titulo_ui": "Acumular a saldo futuro",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_rol_aprobador": [
+    {
+      "id": "cfg_ra_jefe_grupo",
+      "codigo_interno": "JEFE_GRUPO",
+      "titulo_ui": "Jefe de grupo",
+      "referencia_cfg_rol_id": "CFG_JEFE_GRUPO",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_ra_rrhh",
+      "codigo_interno": "RRHH",
+      "titulo_ui": "RRHH",
+      "referencia_cfg_rol_id": "CFG_RRHH",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_tipo_acumulacion": [
+    {
+      "id": "cfg_tac_anual",
+      "codigo_interno": "ANUAL_CERRADA",
+      "titulo_ui": "Acumulación anual cerrada",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tac_rolling",
+      "codigo_interno": "ROLLING_VENTANA",
+      "titulo_ui": "Ventana móvil (rolling)",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tac_sin_acumulacion",
+      "codigo_interno": "SIN_ACUMULACION",
+      "titulo_ui": "Sin acumulación",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_tipo_articulo": [
+    {
+      "id": "cfg_ta_licencia",
+      "codigo_interno": "LICENCIA",
+      "titulo_ui": "Licencia",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_ta_franquicia",
+      "codigo_interno": "FRANQUICIA",
+      "titulo_ui": "Franquicia",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_ta_permiso",
+      "codigo_interno": "PERMISO",
+      "titulo_ui": "Permiso",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_tipo_caducidad": [
+    {
+      "id": "cfg_cad_nunca",
+      "codigo_interno": "NUNCA",
+      "titulo_ui": "Sin caducidad (Permanente)",
+      "descripcion_ui": "El saldo persiste hasta ser agotado o por cese del agente.",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cad_fin_ciclo",
+      "codigo_interno": "FIN_CICLO",
+      "titulo_ui": "Al finalizar el ciclo de reinicio",
+      "descripcion_ui": "El saldo vence el mismo día que se acredita el nuevo (ej: 31 de Dic).",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cad_fecha_fija",
+      "codigo_interno": "FECHA_FIJA",
+      "titulo_ui": "En una fecha fija anual",
+      "descripcion_ui": "Vence un día específico (ej: 31 de Marzo para LAO). Requiere mes/día.",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cad_ventana_movil",
+      "codigo_interno": "VENTANA_MOVIL",
+      "titulo_ui": "Ventana móvil (Rolling)",
+      "descripcion_ui": "Cada crédito vence N meses después de su generación.",
+      "orden": 40,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_tipo_computo_plazo": [
+    {
+      "id": "cfg_tcp_corrido",
+      "codigo_interno": "PLAZO_CORRIDO",
+      "titulo_ui": "Plazo corrido",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tcp_habil_compuesto",
+      "codigo_interno": "PLAZO_HABIL_COMPUESTO",
+      "titulo_ui": "Plazo hábil compuesto",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_tipo_convivencia_articulo": [
+    {
+      "id": "cfg_tca_excluyente",
+      "codigo_interno": "EXCLUYENTE",
+      "titulo_ui": "Excluyente",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tca_compatible_con_condicion",
+      "codigo_interno": "COMPATIBLE_CONDICIONADA",
+      "titulo_ui": "Compatible condicionada",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_tipo_documentacion": [
+    {
+      "id": "cfg_td_certificado_medico",
+      "codigo_interno": "CERTIFICADO_MEDICO",
+      "titulo_ui": "Certificado médico",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_td_notificacion_judicial",
+      "codigo_interno": "NOTIFICACION_JUDICIAL",
+      "titulo_ui": "Notificación judicial",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_td_otra",
+      "codigo_interno": "OTRA",
+      "titulo_ui": "Otra documentación",
+      "orden": 90,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_tipo_evento_articulos": {
+    "_nota": "Misma colección global cfg_tipo_evento; ids reservados cfg_tev_art_* y modulo_origen = articulos (diccionario §5).",
+    "filas": [
+      {
+        "id": "cfg_tev_art_01ARZ3NDEKTSV4RRFFQ69G5FAV",
+        "codigo_interno": "ART_SOLICITUD_CREADA",
+        "titulo_ui": "Solicitud de artículo creada",
+        "descripcion_ui": "Alta de solicitud_articulo.",
+        "modulo_origen": "articulos",
+        "orden": 1,
+        "activo": true,
+        "vigente_desde": null,
+        "vigente_hasta": null
+      },
+      {
+        "id": "cfg_tev_art_01ARZ3NDEKTSV4RRFFQ69G5FB0",
+        "codigo_interno": "ART_SOLICITUD_ESTADO_CAMBIADO",
+        "titulo_ui": "Cambio de estado de solicitud",
+        "modulo_origen": "articulos",
+        "orden": 2,
+        "activo": true,
+        "vigente_desde": null,
+        "vigente_hasta": null
+      },
+      {
+        "id": "cfg_tev_art_01ARZ3NDEKTSV4RRFFQ69G5FB1",
+        "codigo_interno": "ART_SLA_VENCIDO",
+        "titulo_ui": "SLA de paso vencido",
+        "modulo_origen": "articulos",
+        "orden": 3,
+        "activo": true,
+        "vigente_desde": null,
+        "vigente_hasta": null
+      },
+      {
+        "id": "cfg_tev_art_01ARZ3NDEKTSV4RRFFQ69G5FB2",
+        "codigo_interno": "ART_SUPERPOSICION_DETECTADA",
+        "titulo_ui": "Superposición detectada",
+        "modulo_origen": "articulos",
+        "orden": 4,
+        "activo": true,
+        "vigente_desde": null,
+        "vigente_hasta": null
+      },
+      {
+        "id": "cfg_tev_art_01ARZ3NDEKTSV4RRFFQ69G5FB3",
+        "codigo_interno": "ART_DOCUMENTACION_VENCIDA",
+        "titulo_ui": "Documentación vencida",
+        "modulo_origen": "articulos",
+        "orden": 5,
+        "activo": true,
+        "vigente_desde": null,
+        "vigente_hasta": null
+      },
+      {
+        "id": "cfg_tev_art_01ARZ3NDEKTSV4RRFFQ69G5FB4",
+        "codigo_interno": "ART_DOCUMENTACION_RECIBIDA",
+        "titulo_ui": "Documentación recibida",
+        "modulo_origen": "articulos",
+        "orden": 6,
+        "activo": true,
+        "vigente_desde": null,
+        "vigente_hasta": null
+      },
+      {
+        "id": "cfg_tev_art_01ARZ3NDEKTSV4RRFFQ69G5FB5",
+        "codigo_interno": "ART_ESCALAMIENTO_APLICADO",
+        "titulo_ui": "Escalamiento aplicado",
+        "modulo_origen": "articulos",
+        "orden": 7,
+        "activo": true,
+        "vigente_desde": null,
+        "vigente_hasta": null
+      },
+      {
+        "id": "cfg_tev_art_01ARZ3NDEKTSV4RRFFQ69G5FB6",
+        "codigo_interno": "ART_SPLIT_APROBACION_PARCIAL_APLICADO",
+        "titulo_ui": "Split por aprobación parcial aplicado",
+        "modulo_origen": "articulos",
+        "orden": 8,
+        "activo": true,
+        "vigente_desde": null,
+        "vigente_hasta": null
+      },
+      {
+        "id": "cfg_tev_art_01ARZ3NDEKTSV4RRFFQ69G5FB7",
+        "codigo_interno": "ART_SUPERPOSICION_RESUELTA",
+        "titulo_ui": "Superposición resuelta",
+        "modulo_origen": "articulos",
+        "orden": 9,
+        "activo": true,
+        "vigente_desde": null,
+        "vigente_hasta": null
+      },
+      {
+        "id": "cfg_tev_art_01ARZ3NDEKTSV4RRFFQ69G5FB8",
+        "codigo_interno": "ART_TOMA_CONOCIMIENTO_REGISTRADA",
+        "titulo_ui": "Toma de conocimiento registrada",
+        "descripcion_ui": "RRHH o superior registra toma de conocimiento post-cierre.",
+        "modulo_origen": "articulos",
+        "orden": 10,
+        "activo": true,
+        "vigente_desde": null,
+        "vigente_hasta": null
+      }
+    ]
+  },
+  "cfg_tipo_filtro_elegibilidad": [
+    {
+      "id": "cfg_tfe_persona",
+      "codigo_interno": "PERSONA",
+      "titulo_ui": "Datos personales",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tfe_antiguedad",
+      "codigo_interno": "ANTIGUEDAD",
+      "titulo_ui": "Antigüedad reconocida",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tfe_hlc",
+      "codigo_interno": "HISTORIAL_LABORAL_CARGOS",
+      "titulo_ui": "Historial laboral — cargos",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tfe_hlg",
+      "codigo_interno": "HISTORIAL_LABORAL_GRUPO",
+      "titulo_ui": "Historial laboral — grupo",
+      "orden": 40,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_tipo_fraccionamiento": [
+    {
+      "id": "cfg_tf_no_fracciona",
+      "codigo_interno": "NO_FRACCIONA",
+      "titulo_ui": "No fracciona",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tf_medias_jornadas",
+      "codigo_interno": "MEDIAS_JORNADAS",
+      "titulo_ui": "Medias jornadas",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tf_franjas_horarias",
+      "codigo_interno": "FRANJAS_HORARIAS",
+      "titulo_ui": "Franjas horarias",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_tipo_incompatibilidad_articulo": [
+    {
+      "id": "cfg_tia_normativa_excluyente",
+      "codigo_interno": "NORMATIVA_EXCLUYENTE",
+      "titulo_ui": "Incompatibilidad normativa excluyente",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tia_operativa_superposicion",
+      "codigo_interno": "OPERATIVA_SUPERPOSICION",
+      "titulo_ui": "Superposición operativa",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_tipo_relacion_articulo": [
+    {
+      "id": "cfg_tra_prorroga_de",
+      "codigo_interno": "PRORROGA_DE",
+      "titulo_ui": "Prórroga de",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tra_incompatible_con",
+      "codigo_interno": "INCOMPATIBLE_CON",
+      "titulo_ui": "Incompatible con",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tra_compatible_con",
+      "codigo_interno": "COMPATIBLE_CON",
+      "titulo_ui": "Compatible con",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tra_consume_de",
+      "codigo_interno": "CONSUME_DE",
+      "titulo_ui": "Consume saldo de",
+      "orden": 40,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_tipo_tope": [
+    {
+      "id": "cfg_tt_dias_calendario",
+      "codigo_interno": "DIAS_CALENDARIO",
+      "titulo_ui": "Tope en días calendario",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tt_ocurrencias_anio",
+      "codigo_interno": "OCURRENCIAS_ANIO",
+      "titulo_ui": "Tope por ocurrencias en el año",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tt_horas_periodo",
+      "codigo_interno": "HORAS_PERIODO",
+      "titulo_ui": "Tope en horas por periodo",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_unidad_medida_articulo": [
+    {
+      "id": "cfg_uma_dias",
+      "codigo_interno": "DIAS",
+      "titulo_ui": "Días",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_uma_horas",
+      "codigo_interno": "HORAS",
+      "titulo_ui": "Horas",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_uma_jornadas",
+      "codigo_interno": "JORNADAS",
+      "titulo_ui": "Jornadas",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_unidad_minima_consumo": [
+    {
+      "id": "cfg_umc_dia_completo",
+      "codigo_interno": "DIA_COMPLETO",
+      "titulo_ui": "Día completo",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_umc_medio_dia",
+      "codigo_interno": "MEDIO_DIA",
+      "titulo_ui": "Medio día",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_umc_horas",
+      "codigo_interno": "HORAS",
+      "titulo_ui": "Horas",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_umc_minutos",
+      "codigo_interno": "MINUTOS",
+      "titulo_ui": "Minutos",
+      "orden": 40,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_unidad_plazo": [
+    {
+      "id": "cfg_up_dias",
+      "codigo_interno": "DIAS",
+      "titulo_ui": "Días (matriz PF)",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_up_meses",
+      "codigo_interno": "MESES",
+      "titulo_ui": "Meses (matriz PF)",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_up_anios",
+      "codigo_interno": "ANIOS",
+      "titulo_ui": "Años (matriz PF)",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_ambito_consumo": [
+    {
+      "id": "cfg_ac_anio_calendario",
+      "codigo_interno": "ANIO_CALENDARIO",
+      "titulo_ui": "Año calendario",
+      "descripcion_ui": "Propuesta para ambito_consumo_id (matriz Bloque 4); pendiente homologación en diccionario.",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_ac_anio_laboral",
+      "codigo_interno": "ANIO_LABORAL",
+      "titulo_ui": "Año laboral / ciclo institucional",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_ac_mes_corriente",
+      "codigo_interno": "MES_CORRIENTE",
+      "titulo_ui": "Mes corriente",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_justifica_sueldo": [
+    {
+      "id": "cfg_js_no",
+      "codigo_interno": "NO_JUSTIFICA",
+      "titulo_ui": "No justifica sueldo",
+      "descripcion_ui": "Default sugerido en matriz Bloque 2 (schema PF).",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_js_si_completo",
+      "codigo_interno": "JUSTIFICA_COMPLETO",
+      "titulo_ui": "Justifica licencia con goce íntegro",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_js_parcial",
+      "codigo_interno": "JUSTIFICA_PARCIAL",
+      "titulo_ui": "Justifica proporción parcial",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ]
+}

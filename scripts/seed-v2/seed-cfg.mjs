@@ -3,11 +3,13 @@
  * @see docs/v2/MODULO_CONFIGURACION_V2.md §6
  * @see docs/v2/DESARROLLO_ORDEN_LOGIN_DATOS_V2.md Fase 1
  *
- * Uso (Windows PowerShell, desde la raíz `portal-hospital-v2/`):
- *   $env:GOOGLE_APPLICATION_CREDENTIALS="C:\ruta\service-account-v2.json"
- *   $env:FIREBASE_V2_PROJECT_ID="portal-hospital-v2"   # opcional; por defecto el `project_id` del JSON
- *   $env:FIREBASE_V2_FIRESTORE_DATABASE_ID="mibase"    # SOLO si tenés otra base además de la default; NO pongas "default" ni "(default)"
- *   npm run seed:cfg
+ * Política del repo: **no se ejecuta salvo** `ALLOW_FIRESTORE_SEED_V2=true` en el entorno (bloqueo por defecto).
+ *
+ * Uso (desde la raíz `portal-hospital-v2/`):
+ *   Colocá `GOOGLE_APPLICATION_CREDENTIALS` en `.env.v2.local` (carga automática vía `../load-env-v2.mjs`) o en el shell.
+ *   ALLOW_FIRESTORE_SEED_V2=true npm run seed:cfg
+ *
+ * Opcionales: FIREBASE_V2_PROJECT_ID, FIREBASE_V2_FIRESTORE_DATABASE_ID (solo base con nombre propio, no "default")
  *
  * La base predefinida se usa con `getFirestore()` sin segundo parámetro (no forzar id "(default)" en el SDK).
  * NOT_FOUND: suele faltar la base en GCP. **Crearla una vez:** `npm run firestore:create` (gcloud) o consola; luego este seed.
@@ -15,6 +17,8 @@
  * La cuenta de servicio debe ser de GCP del proyecto V2, rol adecuado p.ej. Cloud Datastore User o Owner.
  */
 
+import "../load-env-v2.mjs";
+import { assertFirestoreSeedAllowed } from "./guard-no-seed.mjs";
 import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -23,6 +27,8 @@ import { fileURLToPath } from "node:url";
 import { getApp } from "firebase-admin/app";
 import admin from "firebase-admin";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
+
+assertFirestoreSeedAllowed("seed-cfg");
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -154,6 +160,57 @@ const cfgEstadoCuentaAcceso = () => [
   },
 ];
 
+/**
+ * Roles de aplicación — `usuarios_cuenta.role_ids[]` (FK a documento).
+ * @see MODULO_CONFIGURACION_V2.md §5 (cfg_rol), MODULO_DATOS_PERSONALES_V2.md §3.7 (role_ids)
+ * @see docs/v2/CUESTIONES_ROLES_MENUS_ARQUITECTURA_V2.md
+ */
+/** Catálogo operativo: cargar desde proceso de negocio / consola (sin filas demo en repo). */
+const cfgEstadoCivil = () => [];
+
+const cfgRol = () => [
+  {
+    id: "CFG_RRHH",
+    data: {
+      ...base(),
+      codigo_interno: "RRHH",
+      titulo_ui: "Recursos Humanos",
+      nombre: "Recursos Humanos",
+      orden: 10,
+    },
+  },
+  {
+    id: "CFG_USUARIO",
+    data: {
+      ...base(),
+      codigo_interno: "USUARIO",
+      titulo_ui: "Usuario (agente estándar)",
+      nombre: "Usuario (agente estándar)",
+      orden: 20,
+    },
+  },
+  {
+    id: "CFG_MEDICO",
+    data: {
+      ...base(),
+      codigo_interno: "MEDICO",
+      titulo_ui: "Médico / auditoría clínica (según política)",
+      nombre: "Médico / auditoría clínica (según política)",
+      orden: 30,
+    },
+  },
+  {
+    id: "CFG_VISUALIZADOR",
+    data: {
+      ...base(),
+      codigo_interno: "VISUALIZADOR",
+      titulo_ui: "Visualizador (solo lectura)",
+      nombre: "Visualizador (solo lectura)",
+      orden: 40,
+    },
+  },
+];
+
 const cfgEstadoPerfilDatos = () => [
   {
     id: "cfg_epd_borr",
@@ -199,21 +256,124 @@ const cfgEstadoPerfilDatos = () => [
 
 const cfgTipoEvento = () => [
   {
-    id: "cfg_tev_dp_actualizado",
-    data: {
-      ...base(),
-      codigo_interno: "PERSONA_DATOS_ACTUALIZADOS",
-      titulo_ui: "Datos de persona actualizados",
-      orden: 20,
-    },
-  },
-  {
     id: "cfg_tev_login",
     data: {
       ...base(),
       codigo_interno: "SESION_INICIO",
       titulo_ui: "Inicio de sesión (auditoría)",
+      nombre: "Inicio de sesión",
       orden: 10,
+      evento_id: "EVT_LOGIN",
+    },
+  },
+  {
+    id: "cfg_tev_datos_notif_cambio_ddjj",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_NOTIF_CAMBIO_DDJJ",
+      titulo_ui: "Notificación de cambio en DDJJ",
+      nombre: "Notificación cambio DDJJ",
+      orden: 40,
+      evento_id: "EVT_DATOS_NOTIF_CAMBIO_DDJJ",
+    },
+  },
+  {
+    id: "cfg_tev_datos_notif_cambio_generico",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_NOTIF_CAMBIO_GENERICO",
+      titulo_ui: "Notificación de cambio genérico de datos",
+      nombre: "Notificación cambio genérico",
+      orden: 50,
+      evento_id: "EVT_DATOS_NOTIF_CAMBIO",
+    },
+  },
+  {
+    id: "cfg_tev_datos_actualiza_personas",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ACTUALIZA_PERSONAS",
+      titulo_ui: "Actualización de datos personales",
+      nombre: "Actualización personas",
+      orden: 80,
+      evento_id: "EVT_DATOS_ACTUALIZA_PERSONAS",
+    },
+  },
+  {
+    id: "cfg_tev_datos_alta_personas",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ALTA_PERSONAS",
+      titulo_ui: "Alta de persona",
+      nombre: "Alta personas",
+      orden: 90,
+      evento_id: "EVT_DATOS_ALTA_PERSONAS",
+    },
+  },
+  {
+    id: "cfg_tev_datos_actualiza_formacion",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ACTUALIZA_FORMACION",
+      titulo_ui: "Actualización de formación del agente",
+      nombre: "Actualización formación",
+      orden: 100,
+      evento_id: "EVT_DATOS_ACTUALIZA_FORMACION",
+    },
+  },
+  {
+    id: "cfg_tev_datos_alta_formacion",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ALTA_FORMACION",
+      titulo_ui: "Alta de formación del agente",
+      nombre: "Alta formación",
+      orden: 110,
+      evento_id: "EVT_DATOS_ALTA_FORMACION",
+    },
+  },
+  {
+    id: "cfg_tev_datos_actualiza_ddjj",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ACTUALIZA_DDJJ",
+      titulo_ui: "Actualización de DDJJ grupo familiar",
+      nombre: "Actualización DDJJ",
+      orden: 120,
+      evento_id: "EVT_DATOS_ACTUALIZA_DDJJ",
+    },
+  },
+  {
+    id: "cfg_tev_datos_alta_ddjj",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ALTA_DDJJ",
+      titulo_ui: "Alta de DDJJ grupo familiar",
+      nombre: "Alta DDJJ",
+      orden: 130,
+      evento_id: "EVT_DATOS_ALTA_DDJJ",
+    },
+  },
+  {
+    id: "cfg_tev_datos_actualiza_consentimiento",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ACTUALIZA_CONSENTIMIENTO",
+      titulo_ui: "Actualización de consentimiento",
+      nombre: "Actualización consentimiento",
+      orden: 140,
+      evento_id: "EVT_DATOS_ACTUALIZA_CONSENTIMIENTO",
+    },
+  },
+  {
+    id: "cfg_tev_datos_alta_consentimiento",
+    data: {
+      ...base(),
+      codigo_interno: "DATOS_ALTA_CONSENTIMIENTO",
+      titulo_ui: "Alta de consentimiento",
+      nombre: "Alta consentimiento",
+      orden: 150,
+      evento_id: "EVT_DATOS_ALTA_CONSENTIMIENTO",
     },
   },
   {
@@ -222,12 +382,149 @@ const cfgTipoEvento = () => [
       ...base(),
       codigo_interno: "CONSENTIMIENTO_ACEPTADO",
       titulo_ui: "Consentimiento aceptado o actualizado",
-      orden: 30,
+      nombre: "Consentimiento aceptado",
+      orden: 160,
+      evento_id: "EVT_CONSENTIMIENTO_ACEPTADO",
+    },
+  },
+  {
+    id: "cfg_tev_auth_email_cambio_solicitado",
+    data: {
+      ...base(),
+      codigo_interno: "AUTH_EMAIL_CAMBIO_SOLICITADO",
+      titulo_ui: "Cambio de correo solicitado",
+      nombre: "Cambio correo solicitado",
+      orden: 170,
+      evento_id: "EVT_AUTH_EMAIL_CAMBIO_SOLICITADO",
+    },
+  },
+  {
+    id: "cfg_tev_auth_email_cambio_confirmado",
+    data: {
+      ...base(),
+      codigo_interno: "AUTH_EMAIL_CAMBIO_CONFIRMADO",
+      titulo_ui: "Cambio de correo confirmado",
+      nombre: "Cambio correo confirmado",
+      orden: 180,
+      evento_id: "EVT_AUTH_EMAIL_CAMBIO_CONFIRMADO",
+    },
+  },
+  {
+    id: "cfg_tev_auth_password_cambio",
+    data: {
+      ...base(),
+      codigo_interno: "AUTH_PASSWORD_CAMBIO",
+      titulo_ui: "Cambio de contraseña",
+      nombre: "Cambio contraseña",
+      orden: 190,
+      evento_id: "EVT_AUTH_PASSWORD_CAMBIO",
     },
   },
 ];
 
+const cfgEstadoBandejaRrhh = () => [
+  cfgRow("cfg_ebr_pend_rev", "PENDIENTE_REVISION", "Pendiente de revisión RRHH", 10),
+  cfgRow("cfg_ebr_visto", "VISTO", "Visto por RRHH", 20),
+  cfgRow("cfg_ebr_arch", "ARCHIVADO", "Archivado", 30),
+];
+
+const cfgEstadoDeclaracionDdjj = () => [
+  cfgRow("CFG_DDJJ_01_NO_INICIADA", "NO_INICIADA", "No iniciada", 10),
+  cfgRow("CFG_DDJJ_02_OMITIDA_ONBOARDING", "OMITIDA_ONBOARDING", "Omitida en onboarding", 20),
+  cfgRow("CFG_DDJJ_03_PRESENTADA", "PRESENTADA", "Presentada", 30),
+  cfgRow(
+    "CFG_DDJJ_04_SUPERADA_POR_ACTUALIZACION",
+    "SUPERADA_POR_ACTUALIZACION",
+    "Superada por actualización",
+    40,
+  ),
+];
+
+const cfgEstadoAuditoriaFamiliar = () => [
+  cfgRow("CFG_EAF_01_PENDIENTE", "PENDIENTE", "Pendiente", 10),
+  cfgRow("CFG_EAF_02_APROBADO", "APROBADO", "Aprobado", 20),
+  cfgRow("CFG_EAF_03_OBSERVADO", "OBSERVADO", "Observado", 30),
+  cfgRow("CFG_EAF_04_RECHAZADO", "RECHAZADO", "Rechazado", 40),
+];
+
+const cfgMotivoRechazoFamiliar = () => [
+  cfgRow("CFG_MRF_01_DOC_INVALIDA", "DOC_INVALIDA", "Documentación inválida", 10),
+  cfgRow("CFG_MRF_02_PARENTESCO_NO_ACREDITA", "PARENTESCO_NO_ACREDITA", "Parentesco no acredita", 20),
+  cfgRow("CFG_MRF_03_DATOS_INCONSISTENTES", "DATOS_INCONSISTENTES", "Datos inconsistentes", 30),
+  cfgRow("CFG_MRF_04_FUERA_NORMATIVA", "FUERA_NORMATIVA", "Fuera de normativa", 40),
+  cfgRow("CFG_MRF_99_OTROS", "OTROS", "Otros", 99),
+];
+
+/** Una fila de catálogo cfg_* con nombre/código (demostración local). */
+function cfgRow(id, codigo_interno, nombre, orden = 10, extra = {}) {
+  return {
+    id,
+    data: {
+      ...base(),
+      codigo_interno,
+      nombre,
+      titulo_ui: nombre,
+      orden,
+      ...extra,
+    },
+  };
+}
+
+/** Catálogos operativos (sin demos en repo). */
+const cfgSexoGenero = () => [];
+
+const cfgNacionalidad = () => [];
+
+const cfgPais = () => [cfgRow("CFG_PAIS_ARG", "ARG", "Argentina", 10)];
+
+const cfgProvincia = () => [];
+
+const cfgLocalidad = () => [];
+
+const cfgNivelEstudios = () => [
+  cfgRow("CFG_EST_UNI", "UNIVERSITARIO", "Universitario", 20),
+];
+
+const cfgEspecialidad = () => [cfgRow("CFG_ESP_CLIN", "CLINICA_MEDICA", "Clínica médica", 10)];
+
+const cfgColegio = () => [cfgRow("CFG_COL_CMP", "CMP", "Colegio de Médicos — demo", 10)];
+
+const cfgJurisdiccionMatricula = () => [
+  cfgRow("CFG_JUR_PBA", "PBA", "Provincia de Buenos Aires", 10),
+];
+
+const cfgParentesco = () => [];
+
+const cfgMotivoBajaPersona = () => [
+  cfgRow("CFG_MOT_BAJA_FIN", "FIN_CONTRATO", "Fin de contrato", 10),
+];
+
+const cfgEscalafon = () => [];
+
+const cfgAgrupamiento = () => [];
+
+const cfgTipoVinculoLaboral = () => [];
+
+const cfgCargoFuncional = () => [];
+
+const cfgModalidadJornada = () => [];
+
+const cfgEstadoAsignacionLaboral = () => [];
+
+const cfgCausalFinAsignacionLaboral = () => [];
+
+const cfgTipoActoDesignacion = () => [];
+
+const cfgRegimenHorario = () => [];
+
+const cfgCentroCosto = () => [];
+
+const cfgEfectores = () => [];
+
+const gruposDeTrabajoSeed = () => [];
+
 function applyBatch(items, col) {
+  if (!items || items.length === 0) return Promise.resolve();
   const b = db.batch();
   for (const { id, data } of items) {
     b.set(db.collection(col).doc(id), data, { merge: true });
@@ -263,6 +560,36 @@ async function main() {
   await applyBatch(cfgEstadoCuentaAcceso(), "cfg_estado_cuenta_acceso");
   await applyBatch(cfgEstadoPerfilDatos(), "cfg_estado_perfil_datos");
   await applyBatch(cfgTipoEvento(), "cfg_tipo_evento");
+  await applyBatch(cfgEstadoBandejaRrhh(), "cfg_estado_bandeja_rrhh");
+  await applyBatch(cfgEstadoDeclaracionDdjj(), "cfg_estado_declaracion_ddjj");
+  await applyBatch(cfgEstadoAuditoriaFamiliar(), "cfg_estado_auditoria_familiar");
+  await applyBatch(cfgMotivoRechazoFamiliar(), "cfg_motivo_rechazo_familiar");
+  await applyBatch(cfgRol(), "cfg_rol");
+  await applyBatch(cfgEstadoCivil(), "cfg_estado_civil");
+
+  await applyBatch(cfgSexoGenero(), "cfg_sexo_genero");
+  await applyBatch(cfgNacionalidad(), "cfg_nacionalidad");
+  await applyBatch(cfgPais(), "cfg_pais");
+  await applyBatch(cfgProvincia(), "cfg_provincia");
+  await applyBatch(cfgLocalidad(), "cfg_localidad");
+  await applyBatch(cfgNivelEstudios(), "cfg_nivel_estudios");
+  await applyBatch(cfgEspecialidad(), "cfg_especialidad");
+  await applyBatch(cfgColegio(), "cfg_colegio");
+  await applyBatch(cfgJurisdiccionMatricula(), "cfg_jurisdiccion_matricula");
+  await applyBatch(cfgParentesco(), "cfg_parentesco");
+  await applyBatch(cfgMotivoBajaPersona(), "cfg_motivo_baja_persona");
+  await applyBatch(cfgEscalafon(), "cfg_escalafon");
+  await applyBatch(cfgAgrupamiento(), "cfg_agrupamiento");
+  await applyBatch(cfgTipoVinculoLaboral(), "cfg_tipo_vinculo_laboral");
+  await applyBatch(cfgCargoFuncional(), "cfg_cargo_funcional");
+  await applyBatch(cfgModalidadJornada(), "cfg_modalidad_jornada");
+  await applyBatch(cfgEstadoAsignacionLaboral(), "cfg_estado_asignacion_laboral");
+  await applyBatch(cfgCausalFinAsignacionLaboral(), "cfg_causal_fin_asignacion_laboral");
+  await applyBatch(cfgTipoActoDesignacion(), "cfg_tipo_acto_designacion");
+  await applyBatch(cfgRegimenHorario(), "cfg_regimen_horario");
+  await applyBatch(cfgCentroCosto(), "cfg_centro_costo");
+  await applyBatch(cfgEfectores(), "cfg_efectores");
+  await applyBatch(gruposDeTrabajoSeed(), "grupos_de_trabajo");
 
   const out = {
     projectId,
@@ -270,6 +597,10 @@ async function main() {
     cfg_estado_cuenta_acceso: cfgEstadoCuentaAcceso().map((x) => x.id),
     cfg_estado_perfil_datos: cfgEstadoPerfilDatos().map((x) => x.id),
     cfg_tipo_evento: cfgTipoEvento().map((x) => x.id),
+    cfg_estado_bandeja_rrhh: cfgEstadoBandejaRrhh().map((x) => x.id),
+    cfg_estado_declaracion_ddjj: cfgEstadoDeclaracionDdjj().map((x) => x.id),
+    cfg_rol: cfgRol().map((x) => x.id),
+    cfg_estado_civil: cfgEstadoCivil().map((x) => x.id),
   };
 
   const outPath = join(__dirname, "seed-ids.v2.json");

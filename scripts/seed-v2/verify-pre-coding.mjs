@@ -63,7 +63,7 @@ function mustExist(rel, label) {
 console.log("\n=== Portal Hospital V2 — verificación previa al código ===\n");
 
 console.log("--- 1) Estructura del repo ---\n");
-mustExist("firebase-v2/firebase.json", "Config Firebase");
+mustExist("firebase.json", "Config Firebase (raíz; functions + rutas a firebase-v2/)");
 mustExist("firebase-v2/firestore.rules", "Reglas Firestore");
 mustExist("firebase-v2/firestore.indexes.json", "Índices Firestore");
 mustExist("src/firebaseConfig.v2.js", "Cliente web V2");
@@ -137,30 +137,10 @@ try {
   }
 }
 
-console.log("\n--- 5) Seed Admin (GOOGLE_APPLICATION_CREDENTIALS) ---\n");
-const gac = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim();
-if (!gac) {
-  warn(
-    "GOOGLE_APPLICATION_CREDENTIALS no definido en este shell — no se ejecutó npm run seed:cfg (normal hasta que configures el JSON de servicio V2).",
-  );
-} else if (!existsSync(gac)) {
-  warn(`GOOGLE_APPLICATION_CREDENTIALS apunta a un archivo que no existe: ${gac}`);
-} else {
-  try {
-    execSync("npm run seed:cfg", {
-      cwd: repoRoot,
-      stdio: "pipe",
-      encoding: "utf8",
-      env: process.env,
-      timeout: 120_000,
-    });
-    ok("npm run seed:cfg terminó sin error");
-  } catch (e) {
-    const out = (e.stdout || "") + (e.stderr || "");
-    fail("npm run seed:cfg falló. Revisá permisos del JSON y que la BD exista.");
-    console.log(out.slice(0, 4000));
-  }
-}
+console.log("\n--- 5) Seed Firestore (política del proyecto) ---\n");
+ok(
+  "No se ejecuta ningún script de semilla en esta verificación. Los volcados `seed:*` están bloqueados salvo ALLOW_FIRESTORE_SEED_V2=true (mantenimiento explícito). Catálogos: datos reales / consola / proceso operativo acordado.",
+);
 
 console.log("\n--- 6) Comprobaciones solo en consola Firebase / GCP ---\n");
 manual("Authentication → método «Correo/contraseña» activado en proyecto portal-hospital-v2.");

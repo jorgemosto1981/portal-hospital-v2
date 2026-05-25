@@ -109,9 +109,11 @@ Este módulo define **qué campos** existen y cuándo son obligatorios al perfil
 
 Criterio **E1** en [`DECISIONES_REVISION_PERSONALES_LABORALES_V2.md`](./DECISIONES_REVISION_PERSONALES_LABORALES_V2.md) (sección **E**).
 
-- Tras el paso **E** (y en general con ficha activa), el **agente** **no** modifica por sí mismo **`dni`**, **`nombre`** ni **`apellido`**; la corrección de identidad pasa por **RRHH** / proceso administrativo.
-- El agente **sí** puede actualizar, entre otros, **domicilio**, **teléfono**, **estado civil**, **formación** (`formacion_agente`) y **foto de rostro** (`foto_rostro`), según reglas de negocio y permisos en Rules/Callables.
-- Cada cambio relevante debe generar **toma de conocimiento** de **RRHH**: típicamente fila en **`eventos_ticket`** con **`tipo_evento_id`** → `cfg_tipo_evento` (p. ej. “datos personales actualizados” o equivalente) y **`payload`** con **referencias** a campos/ids afectados (**B6**), no copia de documento completo. La **visualización** en bandeja o reporte = implementación.
+- Tras el paso **E** (y en general con ficha activa), el **agente** **no** modifica por sí mismo **`dni`**, **`nombre`**, **`apellido`**, **`activo`** ni **`motivo_baja_id`**; la corrección de identidad/estado administrativo pasa por **RRHH** / proceso administrativo.
+- En `personas`, para rol usuario se habilita edición por **acción explícita**: `informar_cambio_domicilio` (solo campos de domicilio) o `informar_cambio_telefonos` (solo teléfonos). Sin acción activa, la ficha queda en solo lectura.
+- `foto_rostro` se carga en onboarding inicial y luego queda en solo visualización para rol usuario. `formacion_agente` y `declaraciones_grupo_familiar` también quedan en solo visualización para rol usuario fuera de onboarding; se canalizan por notificación a RRHH.
+- `consentimientos` es solo visualización para rol usuario (sin edición/revocación desde esta pantalla).
+- Cada cambio relevante o notificación genera **toma de conocimiento** de **RRHH** en **`eventos_ticket`** con **`tipo_evento_id`** → `cfg_tipo_evento`, `estado_bandeja_rrhh` (inicial `pendiente_revision`) y `payload` con **`anterior`/`nuevo`** por campo cuando aplica. Se evita copiar documentos completos (**B6**).
 - El **cambio de contraseña o del correo de acceso** no es parte de la edición de ficha: módulo de **cuenta / seguridad** (p. ej. *usuario y contraseña*), decisión **E2**.
 
 ---
@@ -140,11 +142,11 @@ Criterio **E1** en [`DECISIONES_REVISION_PERSONALES_LABORALES_V2.md`](./DECISION
 | **`consentimientos`** | Datos personales | `persona_id` | Aceptaciones legales / TyC (`doc_<ULID>`). |
 | **`eventos_ticket`** | Cruzado (varios módulos) | según `tipo_evento_id` | Trazabilidad (`evt_<ULID>`). |
 | **`usuarios_cuenta`** | **Login** (especificación en [`MODULO_LOGIN_V2.md`](./MODULO_LOGIN_V2.md) §1.1–§2) | `persona_id` | Acceso **DNI + PIN 6** en UI; `username`, `auth_uid`, **`estado_acceso`** (FK `cfg_estado_cuenta_acceso`), **`role_ids`**, etc. |
-| **`efectores`** | **Configuración** ([`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md) §5.1) | — (id `efe_<ULID>`) | Catálogo de efectores; **`es_efector_institucional`**; consumido por **`historial_laboral_cargos`** (designación y cumplimiento). |
+| **`cfg_efectores`** | **Configuración** ([`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md) §5.1) | id de documento (p. ej. `CFG_EFE_*` o `efe_<ULID>`) | Catálogo de efectores; **`es_efector_institucional`**; consumido por **`historial_laboral_cargos`** (designación y cumplimiento). Sustituye a la fila bajo el nombre `efectores` en versiones anteriores del inventario. |
 | **`grupos_de_trabajo`** | **Configuración / operativo laboral** ([`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md)) | — (id `gdt_<ULID>`, `parent_group_id`) | Organigrama / unidad de encuadre; `hlc_*.grupo_de_trabajo_id`. |
-| **`historial_laboral_cargos`** | **Datos laborales** ([`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md)) | `persona_id` | Cargos: varios vigentes; FK a **`gdt_*`**, **dos** `efe_*` (designación y cumplimiento); causal; **`carga_horaria_total`** en horas (`hlc_*`). |
+| **`historial_laboral_cargos`** | **Datos laborales** ([`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md)) | `persona_id` | Cargos: varios vigentes; FK a **`gdt_*`**, **dos** documentos de **`cfg_efectores`** (designación y cumplimiento); causal; **`carga_horaria_total`** en horas (`hlc_*`). |
 
-**Qué define cada plan:** el **módulo Datos personales** (este documento) define **`personas`**, **`formacion_agente`**, **`declaraciones_grupo_familiar`**, **`consentimientos`** y el uso de **`eventos_ticket`**. El **módulo Login** define **`usuarios_cuenta`**, proveedor Auth y reglas de sesión (incl. §2 email único y §4–§5 onboarding). **Configuración** mantiene catálogos; **datos laborales** define **`grupos_de_trabajo`**, **`efectores`**, **`historial_laboral_cargos`** (y el subnivel de reparto cuando cierre **§4.5** del plan laboral). Detalle: [`PLAN_DESARROLLO_VERSION2.md`](../../PLAN_DESARROLLO_VERSION2.md) §B.
+**Qué define cada plan:** el **módulo Datos personales** (este documento) define **`personas`**, **`formacion_agente`**, **`declaraciones_grupo_familiar`**, **`consentimientos`** y el uso de **`eventos_ticket`**. El **módulo Login** define **`usuarios_cuenta`**, proveedor Auth y reglas de sesión (incl. §2 email único y §4–§5 onboarding). **Configuración** mantiene catálogos; **datos laborales** define **`grupos_de_trabajo`**, el catálogo de efectores en **`cfg_efectores`**, **`historial_laboral_cargos`** (y el subnivel de reparto cuando cierre **§4.5** del plan laboral). Detalle: [`PLAN_DESARROLLO_VERSION2.md`](../../PLAN_DESARROLLO_VERSION2.md) §B.
 
 **Tipos de dato (texto vs no texto):**
 
@@ -505,7 +507,7 @@ Los ítems 39–42 viven en el documento **`formacion_agente/{for_*}`** con FK `
 
 92. **[P]** **`discapacidad_declarada`** — Tipo `boolean` o `null`. *Política / sensible.* Solo si el reglamento lo exige; si no aplica, `null`.
 
-93. **[X]** **`notas_titular`** — Tipo `string` o `null`. Opcional. Aclaraciones del titular.
+93. **[X]** **`notas_titular`** — Tipo `string` o `null`. Opcional. Aclaraciones del titular (edición por titular restringida fuera de onboarding según §1.3).
 
 94. **[X]** **`adjuntos`** — Tipo `array` de objetos. Opcional. Evidencia documental (`storage_path`, `doc_id`, `subido_en`, etc.).
 
@@ -535,7 +537,7 @@ Los ítems 39–42 viven en el documento **`formacion_agente/{for_*}`** con FK `
    - **`content_type`** (string, **[X]**) — MIME, p. ej. `image/jpeg`, `image/png`.
    - **`origen_captura`** (string, **[X]**) — P. ej. `camara` \| `adjunto` (o, si se formaliza, `origen_captura_id` → `cfg_*`).
 
-Obligatoriedad al perfil `COMPLETO` y reglas (tamaño, recorte, DPI) = **checklist de hospital**; ver **lista P 18** abajo. **Cada sustitución** de imagen con relevancia para legajo puede disparar el mismo criterio de **toma de conocimiento RRHH** que otras ediciones de ficha (**§1.3**).
+Obligatoriedad al perfil `COMPLETO` y reglas (tamaño, recorte, DPI) = **checklist de hospital**; ver **lista P 18** abajo. En operación regular, para rol usuario la imagen queda solo visualización y el cambio posterior se tramita como notificación a RRHH (**§1.3**).
 
 ### Resumen de marcas (ítems 1–103)
 
@@ -892,7 +894,7 @@ cfg_*  ←  todas las opciones seleccionables de listas de negocio (sin hardcode
 
 ## 11. Permisos (planificación, no implementación)
 
-- **Titular (`persona_id` de la sesión`):** lectura/escritura de su `personas` en **campos permitidos** (identidad DNI/nombre/apellido: no editables por agente, **§1.3**); creación de `consentimientos` y de `declaraciones_grupo_familiar` propias.
+- **Titular (`persona_id` de la sesión`):** lectura de su ficha completa y escritura acotada en `personas` solo por acción habilitada (domicilio/teléfonos). Identidad/estado administrativo no editable por agente (**§1.3**). En `formacion_agente`, `declaraciones_grupo_familiar`, `foto_rostro` (post-onboarding) y `consentimientos`: solo lectura + notificación RRHH cuando corresponda.
 - **RRHH / auditoría:** lectura y transiciones de estado en `familiares` (`estado_auditoria_familiar_id`) y documento DDJJ (`estado_declaracion_id`) según rol (detalle en Rulebook global).
 - **Sistema:** creación de `evt_` en cada mutación crítica.
 
@@ -945,5 +947,7 @@ La versión 1 mezclaba datos en `usuarios`, objeto `datos_personales` duplicado 
 | 2026-04-22 | §2.1 tabla `usuarios_cuenta`: alineación a **DNI + PIN 6** (`MODULO_LOGIN_V2` §1.1). |
 | 2026-04-22 | §2.1: filas laborales iniciales (`grupos` + `hlc_*`); párrafo “Qué define cada plan”. |
 | 2026-04-23 | §2.1: **`efectores`**, **`grupos_de_trabajo`**, `hlc_*` (tres FK) alineado a plan maestro §B y **A2** en [`DECISIONES_REVISION_PERSONALES_LABORALES_V2.md`](./DECISIONES_REVISION_PERSONALES_LABORALES_V2.md). |
+| 2026-04-27 | §2.1: referencias a catálogo de efectores unificadas a **`cfg_efectores`**; legacy `efectores` deprecada. |
 | 2026-04-22 | §2 tipos de dato: referencias `cfg_*` con id única y remisión a vigencia / sin borrado en [`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md) §1–§2. |
 | 2026-04-23 | Cabecera **Alineación:** regla de precedencia `RULEBOOK` + módulo sobre nombres del plan maestro; enlace a [`REVISION_ALINEACION_PLAN_V2.md`](./REVISION_ALINEACION_PLAN_V2.md). |
+| 2026-04-30 | §1.3 y §11: ajuste operativo de V2 implementado. Usuario no-RRHH con edición por acción solo en domicilio/teléfonos, `foto_rostro`/`formacion_agente`/`declaraciones_grupo_familiar` en solo visualización post-onboarding, `consentimientos` solo lectura y trazabilidad en `eventos_ticket` con `estado_bandeja_rrhh` para toma de conocimiento. |

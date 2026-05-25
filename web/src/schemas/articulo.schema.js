@@ -1,0 +1,365 @@
+/**
+ * Schema Zod — Artículos V2 (triple capa, product-first).
+ * Contrato: docs/v2/MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md
+ *
+ * - Núcleo `cfg_articulos` (identidad estable, §2.1).
+ * - `versiones/{ver_id}`: parámetros embebidos acotados; **excluye** arrays que viven en subcolecciones (§1.7).
+ * - `cfg_articulo_relaciones` (grafo, §2.3).
+ *
+ * Tipos inferidos: `ArticuloCore`, `ArticuloVersion`, `ArticuloRelacion` (JSDoc al final).
+ */
+
+import { z } from "zod";
+
+/** Crockford base32 ULID (26 chars). */
+const ULID_RE = "[0-9A-HJKMNP-TV-Z]{26}";
+
+export const artDocumentIdSchema = z.string().regex(new RegExp(`^art_${ULID_RE}$`));
+export const verDocumentIdSchema = z.string().regex(new RegExp(`^ver_${ULID_RE}$`));
+export const carDocumentIdSchema = z.string().regex(new RegExp(`^car_${ULID_RE}$`));
+export const perDocumentIdSchema = z.string().regex(new RegExp(`^per_${ULID_RE}$`));
+
+/** Documento `solicitudes_articulo` / `sol_<ULID>` (capa operativa, §2.5). */
+export const solDocumentIdSchema = z.string().regex(new RegExp(`^sol_${ULID_RE}$`));
+
+/** Referencia a fila de catálogo cfg_* (id de documento). */
+export const cfgRowIdSchema = z.string().min(1);
+
+/** Timestamp Firestore, ISO o Date según capa cliente/Functions. */
+export const firestoreDateLikeSchema = z.union([z.string(), z.date(), z.any()]);
+
+// --- Bloques embebidos en la versión (§4) — sin arrays §1.7 ---
+
+const normativaHabilitanteSchema = z
+  .object({
+    decreto: z.string().nullable().optional(),
+    resolucion: z.string().nullable().optional(),
+    interno_efector: z.string().nullable().optional(),
+  })
+  .strict();
+
+const visualizacionSchema = z
+  .object({
+    /** Texto en celda mensual (capa Vista). */
+    codigo_grilla: z.string().max(48).nullable().optional(),
+    /** Color de fondo de celda (capa Vista). */
+    color_ui: z
+      .string()
+      .regex(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/)
+      .nullable()
+      .optional(),
+  })
+  .strict();
+
+/** Bloque 1 — Identidad y naturaleza (incl. visualización de grilla). */
+export const bloqueIdentidadNaturalezaSchema = z
+  .object({
+    codigo: z.string().min(1),
+    inciso_normativo: z.string().min(1),
+    nombre: z.string().min(1),
+    normativa_habilitante: normativaHabilitanteSchema.optional(),
+    es_lao_anual: z.boolean().default(false),
+    es_sancion: z.boolean().default(false),
+    es_inasistencia: z.boolean().default(false),
+    es_sin_goce: z.boolean().default(false),
+    requiere_dictamen: z.boolean().default(false),
+    es_licencia_medica: z.boolean().default(false),
+    visualizacion: visualizacionSchema.optional(),
+    /** Ventana de aplicación de esta versión (motor de resolución §RFC vigencia doble nivel). */
+    fecha_desde: firestoreDateLikeSchema,
+    fecha_hasta: firestoreDateLikeSchema.nullable().optional(),
+  })
+  .strict();
+
+/** Bloque 2 — Impacto económico y carrera. */
+export const bloqueImpactoEconomicoSchema = z
+  .object({
+    justifica_sueldo_id: cfgRowIdSchema,
+    suma_para_sac: z.boolean().default(false),
+    afecta_presentismo: z.boolean().default(false),
+    acumula_reparto_obra_social: z.boolean().default(false),
+    invalida_reparto_obra_social: z.boolean().default(false),
+    suma_antiguedad_lao: z.boolean().default(false),
+  })
+  .strict();
+
+/**
+ * Bloque 3 — Elegibilidad (solo escalares en el doc de versión).
+ * filtros_personales[], filtros_antiguedad[], filtros_hlc[], filtros_hlg[] → subcolecciones (§1.7).
+ */
+export const bloqueElegibilidadFiltrosSchema = z
+  .object({
+    requiere_declaracion_familiar: z.boolean().default(false),
+    edad_limite_familiar: z.number().int().nonnegative().nullable().optional(),
+    escalafon_ids: z.array(cfgRowIdSchema).default([]),
+    agrupamiento_ids: z.array(cfgRowIdSchema).default([]),
+    tipo_vinculo_ids: z.array(cfgRowIdSchema).default([]),
+    cargo_funcional_ids: z.array(cfgRowIdSchema).default([]),
+    grupo_trabajo_ids: z.array(cfgRowIdSchema).default([]),
+    persona_ids: z.array(cfgRowIdSchema).default([]),
+    genero_ids: z.array(cfgRowIdSchema).default([]),
+    antiguedad_minima_meses: z.number().int().nonnegative().default(0),
+  })
+  .strict();
+
+/** Una fila de la matriz de antigüedad LAO (Bloque 4); `operador_id` → `cfg_operador_comparacion`. */
+export const matrizAntiguedadReglaRowSchema = z
+  .object({
+    operador_id: cfgRowIdSchema,
+    /** Umbral en años de servicio (según operador). */
+    valor_anos: z.number().int().nonnegative(),
+    dias_otorgados: z.number().int().nonnegative(),
+  })
+  .strict();
+
+/**
+ * Bloque 4 — Topes, plazos y cómputo (motor saldos / RDA para Cloud Functions).
+ * `topes[]` excluido del documento principal (§1.7).
+ * Campos LAO (`correspondencia_anio`, `fecha_corte_antiguedad`, `matriz_antiguedad_reglas`, motor §11): solo si `bloque_identidad_naturaleza.es_lao_anual`; el servicio fuerza `null` si no es LAO.
+ */
+const CFG_UMA_DIAS = "cfg_uma_dias";
+const CFG_UMA_HORAS = "cfg_uma_horas";
+const RX_MES_DIA_APERTURA = /^(\d{2})-(\d{2})$/;
+
+export const bloqueTopesPlazosComputoSchema = z
+  .object({
+    regla_computo_dias_id: cfgRowIdSchema.nullable().optional(),
+    /** Espejo persistido; SSoT de ejecución = `regla_computo_dias_id` (ver `readModoCalculo`). */
+    usa_calendario_institucional: z.boolean().optional(),
+    ambito_consumo_id: cfgRowIdSchema,
+    unidad_medida_id: cfgRowIdSchema,
+    unidad_minima_consumo_id: cfgRowIdSchema.nullable().optional(),
+    modulo_fraccionamiento_minutos: z.number().int().nonnegative().default(15),
+    fraccionamiento_habilitado: z.boolean().default(false),
+    intervalo_gracia_dias: z.number().int().nonnegative().default(0),
+    regla_computo_horas_id: cfgRowIdSchema.nullable().optional(),
+    reinicio_ciclo_id: cfgRowIdSchema,
+    depende_rda: z.boolean().default(false),
+    accion_saldo_id: cfgRowIdSchema,
+    /** Factor aplicado a la cantidad antes del signo (horas extra, etc.). Forzado a 1 si unidad ≠ horas o acción neutra. */
+    multiplicador_valor: z
+      .number()
+      .min(0.1)
+      .max(10)
+      .default(1)
+      .refine((n) => Math.abs(n * 10 - Math.round(n * 10)) < 1e-6, {
+        message: "Máximo un decimal",
+      }),
+    origen_saldo_id: cfgRowIdSchema,
+    /** Cupo fijo de días por ciclo (no-LAO); en LAO el cupo sale de `matriz_antiguedad_reglas`. */
+    cupo_dias_por_ciclo: z.number().int().nonnegative().nullable().optional(),
+    /** Máximo de solicitudes aprobables en un mes calendario. */
+    tope_frecuencia_mensual: z.number().int().nonnegative().nullable().optional(),
+    /** Máximo de días que se pueden pedir en una sola solicitud. */
+    tope_dias_por_evento: z.number().int().nonnegative().nullable().optional(),
+    /** Mínimo de días por solicitud (flujo días; ej. LAO 5 días por pedido). */
+    dias_minimos_por_evento: z.number().int().nonnegative().nullable().optional(),
+    /** Año fiscal/presupuestario del derecho (LAO); alinear con `anio_origen` de bolsas generadas. */
+    correspondencia_anio: z.number().int().min(1900).max(2100).nullable().optional(),
+    /** Corte antigüedad (ISO fecha, p. ej. `2025-12-31`); `null` → default vía `obtenerFechaCorteLao`. */
+    fecha_corte_antiguedad: z.string().min(1).nullable().optional(),
+    /** Escala tipo 1919/89 (pocas filas); excepción §1.7 por tamaño acotado. */
+    matriz_antiguedad_reglas: z.array(matrizAntiguedadReglaRowSchema).max(64).nullable().optional(),
+    /** Motor LAO §11 — apertura temporada (MM-DD, ej. 07-01). */
+    mes_dia_apertura_solicitudes: z.string().min(1).nullable().optional(),
+    /** Motor LAO §11 — umbral TSE en días (default resolver 180). */
+    tse_minimo_dias_base: z.number().int().min(1).max(366).nullable().optional(),
+    /** Motor LAO §11 — permite cupo proporcional si TSE insuficiente (mismo ejercicio). */
+    permite_calculo_proporcional_tse: z.boolean().nullable().optional(),
+    nivel_ocupacion_dia_id: cfgRowIdSchema,
+    politica_superposicion_id: cfgRowIdSchema.nullable().optional(),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    const um = data.unidad_medida_id;
+    if (um === CFG_UMA_DIAS) {
+      if (!data.regla_computo_dias_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Con unidad Días, el criterio de descuento (corridos/hábiles) es obligatorio.",
+          path: ["regla_computo_dias_id"],
+        });
+      }
+      if (data.regla_computo_horas_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Con unidad Días, la regla de cómputo en horas debe quedar vacía.",
+          path: ["regla_computo_horas_id"],
+        });
+      }
+    }
+    if (um === CFG_UMA_HORAS) {
+      if (!data.regla_computo_horas_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Con unidad Horas, la regla de cómputo en horas es obligatoria.",
+          path: ["regla_computo_horas_id"],
+        });
+      }
+      if (data.regla_computo_dias_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Con unidad Horas, el criterio de días corridos/hábiles debe quedar vacío.",
+          path: ["regla_computo_dias_id"],
+        });
+      }
+    }
+    const minD = data.dias_minimos_por_evento;
+    const maxD = data.tope_dias_por_evento;
+    if (minD != null && maxD != null && minD > maxD) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "El mínimo de días por solicitud no puede ser mayor que el máximo.",
+        path: ["dias_minimos_por_evento"],
+      });
+    }
+    const mesDia = data.mes_dia_apertura_solicitudes;
+    if (mesDia != null && String(mesDia).trim() !== "") {
+      const m = RX_MES_DIA_APERTURA.exec(String(mesDia).trim());
+      if (!m) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Apertura temporada debe ser MM-DD (ej. 07-01).",
+          path: ["mes_dia_apertura_solicitudes"],
+        });
+      } else {
+        const mo = Number(m[1]);
+        const d = Number(m[2]);
+        if (mo < 1 || mo > 12 || d < 1 || d > 31) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Apertura temporada: mes o día inválido.",
+            path: ["mes_dia_apertura_solicitudes"],
+          });
+        }
+      }
+    }
+  });
+
+/**
+ * Bloque 5 — Acumulación y sucesión.
+ * `meses_arrastre` alimenta lógica de saldo/vista mensual (Art. 70 bis, etc.).
+ */
+export const bloqueAcumulacionSucesionSchema = z
+  .object({
+    /** FK a `cfg_tipo_caducidad` (vencimiento de bolsa; independiente de `cfg_tipo_acumulacion`). */
+    caducidad_tipo_id: cfgRowIdSchema.describe("FK a cfg_tipo_caducidad"),
+    caducidad_limite_meses: z.number().int().nonnegative().nullable().optional(),
+    permite_prorroga: z.boolean().default(false),
+    prorroga_articulo_relacion_id: carDocumentIdSchema.nullable().optional(),
+    meses_arrastre: z.number().int().nonnegative().default(0),
+  })
+  .strict();
+
+/**
+ * Bloque 6 — Workflow / SLA (solo escalares en el doc).
+ * ingreso_permitido_por_rol_ids[], pasos_aprobacion[], sla_por_paso[] → subcolecciones (§1.7).
+ */
+export const bloqueWorkflowSlaCoberturaSchema = z
+  .object({
+    circuito_ingreso_ids: z.array(cfgRowIdSchema).min(1),
+    plazo_preaviso_normativa_dias: z.number().int().nonnegative().nullable().optional(),
+    plazo_preaviso_interno_dias: z.number().int().nonnegative().nullable().optional(),
+    logistica_aviso_habilitada: z.boolean().default(false),
+    toma_conocimiento_limitada: z.boolean().default(false),
+    permite_retroactividad: z.boolean().default(false),
+    requiere_toma_conocimiento_superior: z.boolean().default(false),
+  })
+  .strict();
+
+/**
+ * Bloque 7 — Documentación y convivencia intradía.
+ * articulos_incompatibles_ids[] / articulos_compatibles_ids[] → grafo cfg_articulo_relaciones (§1.7).
+ */
+export const bloqueDocumentacionConvivenciaSchema = z
+  .object({
+    requiere_adjunto_obligatorio: z.boolean().default(false),
+    requiere_doc_previa: z.boolean().default(false),
+    plazo_doc_previa_dias: z.number().int().nonnegative().nullable().optional(),
+    requiere_doc_posterior: z.boolean().default(false),
+    plazo_doc_posterior_dias: z.number().int().nonnegative().nullable().optional(),
+    accion_incumplimiento_doc_id: cfgRowIdSchema,
+  })
+  .strict();
+
+// --- Núcleo cfg_articulos (§2.1) ---
+
+export const cfgArticuloCoreSchema = z
+  .object({
+    codigo: z.string().min(1),
+    inciso_normativo: z.string().min(1),
+    nombre: z.string().min(1),
+    descripcion: z.string().optional(),
+    origen_normativo_id: cfgRowIdSchema,
+    es_sancion: z.boolean().default(false),
+    es_inasistencia: z.boolean().default(false),
+    es_sin_goce: z.boolean().default(false),
+    requiere_dictamen: z.boolean().default(false),
+    activo: z.boolean(),
+    motivo_deshabilitado: z.string().nullable().optional(),
+    fecha_deshabilitado: firestoreDateLikeSchema.nullable().optional(),
+    estado_articulo_id: cfgRowIdSchema,
+    vigente_desde: firestoreDateLikeSchema.nullable().optional(),
+    vigente_hasta: firestoreDateLikeSchema.nullable().optional(),
+    version_actual_id: verDocumentIdSchema,
+  })
+  .strict();
+
+// --- Documento de versión (§2.2 + §4 vía bloques) ---
+
+export const cfgArticuloVersionSchema = z
+  .object({
+    version_semantica: z.string().min(1),
+    estado_version_id: cfgRowIdSchema,
+    publicada_en: firestoreDateLikeSchema.nullable().optional(),
+    publicada_por_persona_id: perDocumentIdSchema.nullable().optional(),
+    bloque_identidad_naturaleza: bloqueIdentidadNaturalezaSchema,
+    bloque_impacto_economico: bloqueImpactoEconomicoSchema,
+    bloque_elegibilidad_filtros: bloqueElegibilidadFiltrosSchema,
+    bloque_topes_plazos_computo: bloqueTopesPlazosComputoSchema,
+    bloque_acumulacion_sucesion: bloqueAcumulacionSucesionSchema,
+    bloque_workflow_sla_cobertura: bloqueWorkflowSlaCoberturaSchema,
+    bloque_documentacion_convivencia: bloqueDocumentacionConvivenciaSchema,
+  })
+  .strict();
+
+// --- Grafo cfg_articulo_relaciones (§2.3) ---
+
+export const cfgArticuloRelacionesSchema = z
+  .object({
+    articulo_origen_id: artDocumentIdSchema,
+    articulo_destino_id: artDocumentIdSchema,
+    tipo_relacion_id: cfgRowIdSchema,
+    condicion_relacion: z.union([z.string(), z.record(z.unknown())]).nullable().optional(),
+    prioridad: z.number().int().default(0),
+    activo: z.boolean(),
+    vigente_desde: firestoreDateLikeSchema.nullable().optional(),
+    vigente_hasta: firestoreDateLikeSchema.nullable().optional(),
+  })
+  .strict();
+
+export const articuloIdSchemas = {
+  artDocumentIdSchema,
+  verDocumentIdSchema,
+  carDocumentIdSchema,
+  perDocumentIdSchema,
+  solDocumentIdSchema,
+};
+
+export const cfgArticuloCoreWithIdSchema = cfgArticuloCoreSchema.extend({
+  id: artDocumentIdSchema.optional(),
+});
+
+export const cfgArticuloVersionWithIdSchema = cfgArticuloVersionSchema.extend({
+  id: verDocumentIdSchema.optional(),
+});
+
+export const cfgArticuloRelacionWithIdSchema = cfgArticuloRelacionesSchema.extend({
+  id: carDocumentIdSchema.optional(),
+});
+
+/** @typedef {import("zod").infer<typeof cfgArticuloCoreSchema>} ArticuloCore */
+/** @typedef {import("zod").infer<typeof cfgArticuloVersionSchema>} ArticuloVersion */
+/** @typedef {import("zod").infer<typeof cfgArticuloRelacionesSchema>} ArticuloRelacion */
+
+export const ARTICULO_SCHEMA_VERSION = "v2-triple-layer-2026-05-paso0-lao";

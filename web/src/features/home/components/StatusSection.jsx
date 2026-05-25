@@ -41,6 +41,11 @@ export function StatusSection({ projectId, authAppName, user, userPending, fires
             message={firestoreOp.message}
           />
         </dd>
+        <dt className="font-semibold text-slate-600 sm:pt-0.5">Callables</dt>
+        <dd className="text-slate-800">
+          Cloud Functions en <strong>southamerica-east1</strong> (proyecto en Firebase/GCP). Si un listado falla,
+          comprobá que las functions estén desplegadas y el usuario tenga permisos según la callable.
+        </dd>
       </dl>
     </section>
   );

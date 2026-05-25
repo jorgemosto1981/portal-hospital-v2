@@ -1,208 +1,60 @@
-import { onAuthStateChanged } from "firebase/auth";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import toast from "react-hot-toast";
-
 import {
-  ITEM_CATALOGO_DEFAULT,
-  ITEM_CATALOGO_POR_KEY,
   SECCIONES_CATALOGO_RRHH,
 } from "../constants/configuracionCatalogos.js";
-import { authV2 } from "../services/firebase.js";
-import { guardarOpcion, listarColeccion } from "../services/configuracionCatalogosService.js";
+import {
+  formatVigenciaCell,
+  labelProvinciaEnTabla,
+} from "../features/configuracion/configuracionFormatters.js";
+import { useConfiguracionCatalogos } from "../features/configuracion/hooks/useConfiguracionCatalogos.js";
 import { sugerirIdCatalogo } from "../utils/catalogoId.js";
 
-function formatIsoDateLabel(iso) {
-  if (!iso || typeof iso !== "string") return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-function formatVigenciaCell(row) {
-  const desde = row.vigente_desde;
-  const hasta = row.vigente_hasta;
-  if (!desde && !hasta) return "Abierta (sin fechas)";
-  return `${formatIsoDateLabel(desde)} → ${formatIsoDateLabel(hasta)}`;
-}
-
-function isoToDateInputValue(iso) {
-  if (!iso || typeof iso !== "string") return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function dateInputToIsoEnd(dateStr) {
-  if (!dateStr) return null;
-  const d = new Date(`${dateStr}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString();
-}
-
-function callableErrorMessage(err) {
-  const raw = err && typeof err.message === "string" ? err.message : "";
-  if (raw.includes("permission-denied") || raw.toLowerCase().includes("solo personal autorizado")) {
-    return "No tenés permisos de RRHH para esta acción.";
-  }
-  if (raw.includes("unauthenticated")) {
-    return "Iniciá sesión con una cuenta autorizada.";
-  }
-  return raw || "No se pudo completar la operación.";
+function mapEstadoDdjjToUiLabel(idRaw) {
+  const id = String(idRaw || "").trim().toUpperCase();
+  if (id === "CFG_DDJJ_03_PRESENTADA") return "Presentada";
+  return "Pendiente de presentación";
 }
 
 export default function Configuracion() {
-  const [user, setUser] = useState(null);
-  const [tokenReady, setTokenReady] = useState(false);
-  const [isRrhh, setIsRrhh] = useState(false);
-
-  const [selectedKey, setSelectedKey] = useState(ITEM_CATALOGO_DEFAULT.key);
-  const itemActual = ITEM_CATALOGO_POR_KEY[selectedKey] || ITEM_CATALOGO_DEFAULT;
-
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(null);
-
-  const [modal, setModal] = useState("cerrado");
-  const [addNombre, setAddNombre] = useState("");
-  const [addId, setAddId] = useState("");
-  const idManualRef = useRef(false);
-
-  const [editNombre, setEditNombre] = useState("");
-  const [editActivo, setEditActivo] = useState(true);
-  const [editVigDesde, setEditVigDesde] = useState("");
-  const [editVigHasta, setEditVigHasta] = useState("");
-  const [editDocId, setEditDocId] = useState("");
-
-  const recargar = useCallback(async () => {
-    if (!user || !isRrhh) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const list = await listarColeccion(itemActual.collectionName);
-      const sorted = [...list].sort((a, b) => {
-        const na = String(a.nombre || a.id || "");
-        const nb = String(b.nombre || b.id || "");
-        return na.localeCompare(nb, "es", { sensitivity: "base" });
-      });
-      setRows(sorted);
-    } catch (e) {
-      setLoadError(callableErrorMessage(e));
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user, isRrhh, itemActual.collectionName]);
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(authV2, async (u) => {
-      setUser(u);
-      setTokenReady(false);
-      if (!u) {
-        setIsRrhh(false);
-        setTokenReady(true);
-        return;
-      }
-      try {
-        const t = await u.getIdTokenResult(true);
-        setIsRrhh(t.claims && t.claims.portal_role === "rrhh");
-      } catch {
-        setIsRrhh(false);
-      } finally {
-        setTokenReady(true);
-      }
-    });
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
-    recargar();
-  }, [recargar]);
-
-  const abrirAgregar = () => {
-    idManualRef.current = false;
-    setAddNombre("");
-    setAddId(itemActual.idPrefix.toUpperCase());
-    setModal("agregar");
-  };
-
-  const abrirEditar = (row) => {
-    setEditDocId(row.id);
-    setEditNombre(String(row.nombre ?? ""));
-    setEditActivo(row.activo !== false);
-    setEditVigDesde(isoToDateInputValue(row.vigente_desde));
-    setEditVigHasta(isoToDateInputValue(row.vigente_hasta));
-    setModal("editar");
-  };
-
-  const onAddNombreChange = (v) => {
-    setAddNombre(v);
-    if (!idManualRef.current) {
-      if (!v.trim()) {
-        setAddId(itemActual.idPrefix.toUpperCase());
-      } else {
-        setAddId(sugerirIdCatalogo(itemActual.idPrefix, v));
-      }
-    }
-  };
-
-  const onAddIdChange = (v) => {
-    idManualRef.current = true;
-    setAddId(v.toUpperCase());
-  };
-
-  const guardarNuevo = async (e) => {
-    e.preventDefault();
-    const id = addId.trim().toUpperCase();
-    const nombre = addNombre.trim();
-    if (!id || !nombre) {
-      toast.error("Completá id y nombre.");
-      return;
-    }
-    try {
-      await guardarOpcion(itemActual.collectionName, {
-        id,
-        nombre,
-        activo: true,
-        vigente_desde: null,
-        vigente_hasta: null,
-      });
-      toast.success("Opción creada.");
-      setModal("cerrado");
-      await recargar();
-    } catch (err) {
-      toast.error(callableErrorMessage(err));
-    }
-  };
-
-  const guardarEdicion = async (e) => {
-    e.preventDefault();
-    const nombre = editNombre.trim();
-    if (!nombre) {
-      toast.error("El nombre es obligatorio.");
-      return;
-    }
-    try {
-      await guardarOpcion(itemActual.collectionName, {
-        id: editDocId,
-        nombre,
-        activo: editActivo,
-        vigente_desde: dateInputToIsoEnd(editVigDesde),
-        vigente_hasta: dateInputToIsoEnd(editVigHasta),
-      });
-      toast.success("Cambios guardados.");
-      setModal("cerrado");
-      await recargar();
-    } catch (err) {
-      toast.error(callableErrorMessage(err));
-    }
-  };
-
-  const tituloPanel = useMemo(() => itemActual.etiqueta, [itemActual.etiqueta]);
-
-  const accesoBloqueado = tokenReady && (!user || !isRrhh);
+  const {
+    user,
+    openAccessTemp,
+    canReadCatalogos,
+    canWriteCatalogos,
+    selectedKey,
+    setSelectedKey,
+    itemActual,
+    rows,
+    loading,
+    loadError,
+    modal,
+    setModal,
+    addNombre,
+    addId,
+    editNombre,
+    editActivo,
+    editVigDesde,
+    editVigHasta,
+    editDocId,
+    provincias,
+    addProvinciaId,
+    editProvinciaId,
+    setEditNombre,
+    setEditActivo,
+    setEditVigDesde,
+    setEditVigHasta,
+    setAddProvinciaId,
+    setEditProvinciaId,
+    isLocalidad,
+    tituloPanel,
+    soloLectura,
+    accesoBloqueado,
+    abrirAgregar,
+    abrirEditar,
+    onAddNombreChange,
+    onAddIdChange,
+    guardarNuevo,
+    guardarEdicion,
+  } = useConfiguracionCatalogos();
 
   return (
     <div className="min-h-[calc(100dvh-6rem)] space-y-4 bg-slate-50 pb-6 md:pb-8">
@@ -213,8 +65,20 @@ export default function Configuracion() {
         <p className="mt-2 max-w-prose text-sm leading-relaxed text-slate-500">
           Catálogos institucionales en vivo. Solo cuentas con rol{" "}
           <span className="font-mono text-slate-700">portal_role: &quot;rrhh&quot;</span> pueden listar y
-          guardar.
+          guardar. La sección <strong>Artículos (licencias V2)</strong> es solo lectura: los datos vienen del
+          seed <span className="font-mono text-slate-600">SEED_CATALOGOS_ARTICULOS_V2</span>; no editar desde aquí
+          (evita pisar <span className="font-mono">titulo_ui</span> / campos del contrato).
         </p>
+        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
+          <p><strong>Objetivo:</strong> administrar catálogos institucionales cfg_* en una sola pantalla.</p>
+          <p><strong>Resultado:</strong> opciones vigentes para formularios RRHH, personales y laborales.</p>
+          <p><strong>Cuándo usar:</strong> altas, bajas lógicas o ajustes de catálogos maestros.</p>
+        </div>
+        {openAccessTemp && (
+          <p className="mt-2 text-xs text-amber-700">
+            Modo temporal activo: lectura de catálogos habilitada sin login RRHH.
+          </p>
+        )}
       </header>
 
       {accesoBloqueado && (
@@ -290,10 +154,13 @@ export default function Configuracion() {
             <div>
               <h2 className="text-base font-semibold text-slate-900">{tituloPanel}</h2>
               <p className="mt-0.5 font-mono text-xs text-slate-400">{itemActual.collectionName}</p>
+              {soloLectura && (
+                <p className="mt-1 text-xs font-medium text-amber-800">Solo lectura — verificación de seed / contrato V2.</p>
+              )}
             </div>
             <button
               type="button"
-              disabled={!user || !isRrhh}
+              disabled={!canWriteCatalogos || soloLectura}
               onClick={abrirAgregar}
               className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -313,6 +180,9 @@ export default function Configuracion() {
                 <tr className="border-b border-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-400">
                   <th className="px-4 py-3 md:px-5">ID</th>
                   <th className="px-4 py-3 md:px-5">Nombre</th>
+                  {isLocalidad && (
+                    <th className="px-4 py-3 md:px-5">Provincia</th>
+                  )}
                   <th className="px-4 py-3 md:px-5">Estado</th>
                   <th className="hidden px-4 py-3 sm:table-cell md:px-5">Vigencia</th>
                   <th className="px-4 py-3 text-right md:px-5"> </th>
@@ -321,14 +191,30 @@ export default function Configuracion() {
               <tbody className="divide-y divide-slate-100">
                 {loading && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-slate-500 md:px-5">
+                    <td
+                      colSpan={isLocalidad ? 6 : 5}
+                      className="px-4 py-10 text-center text-slate-500 md:px-5"
+                    >
                       Cargando…
                     </td>
                   </tr>
                 )}
-                {!loading && rows.length === 0 && (
+                {!loading && !canReadCatalogos && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-slate-500 md:px-5">
+                    <td
+                      colSpan={isLocalidad ? 6 : 5}
+                      className="px-4 py-10 text-center text-slate-500 md:px-5"
+                    >
+                      Iniciá sesión con RRHH para ver esta colección.
+                    </td>
+                  </tr>
+                )}
+                {!loading && canReadCatalogos && rows.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={isLocalidad ? 6 : 5}
+                      className="px-4 py-10 text-center text-slate-500 md:px-5"
+                    >
                       No hay documentos en esta colección.
                     </td>
                   </tr>
@@ -339,7 +225,33 @@ export default function Configuracion() {
                       <td className="max-w-[140px] truncate px-4 py-3 font-mono text-xs text-slate-700 md:max-w-xs md:px-5">
                         {row.id}
                       </td>
-                      <td className="px-4 py-3 text-slate-800 md:px-5">{row.nombre ?? "—"}</td>
+                      <td className="px-4 py-3 text-slate-800 md:px-5">
+                        {itemActual.collectionName === "cfg_estado_declaracion_ddjj" ? (
+                          <div>
+                            <p>{mapEstadoDdjjToUiLabel(row.id)}</p>
+                            <p className="text-[11px] text-slate-500">
+                              Catálogo: {row.nombre ?? row.id}
+                            </p>
+                          </div>
+                        ) : (
+                          <div>
+                            <p>{row.nombre ?? "—"}</p>
+                            {soloLectura && row.codigo_interno && (
+                              <p className="mt-0.5 font-mono text-[10px] text-slate-400">{row.codigo_interno}</p>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      {isLocalidad && (
+                        <td className="max-w-[160px] px-4 py-3 text-sm text-slate-700 md:px-5">
+                          {labelProvinciaEnTabla(provincias, row.provincia_id)}
+                          {row.provincia_id && (
+                            <span className="mt-0.5 block font-mono text-[10px] text-slate-400">
+                              {row.provincia_id}
+                            </span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-3 md:px-5">
                         {row.activo !== false ? (
                           <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
@@ -357,7 +269,7 @@ export default function Configuracion() {
                       <td className="px-4 py-3 text-right md:px-5">
                         <button
                           type="button"
-                          disabled={!user || !isRrhh}
+                          disabled={!canWriteCatalogos || soloLectura}
                           onClick={() => abrirEditar(row)}
                           className="rounded-lg px-2 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
@@ -422,6 +334,34 @@ export default function Configuracion() {
                   Sugerido desde el nombre. Podés ajustarlo antes de guardar.
                 </p>
               </div>
+              {isLocalidad && (
+                <div>
+                  <label
+                    className="block text-xs font-medium text-slate-600"
+                    htmlFor="add-provincia"
+                  >
+                    Provincia
+                  </label>
+                  <select
+                    id="add-provincia"
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none ring-blue-600 focus:ring-2"
+                    value={addProvinciaId}
+                    onChange={(e) => setAddProvinciaId(e.target.value)}
+                  >
+                    <option value="">Elegir provincia…</option>
+                    {provincias.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre ?? p.id}
+                      </option>
+                    ))}
+                  </select>
+                  {provincias.length === 0 && (
+                    <p className="mt-1 text-xs text-amber-800">
+                      Cargá provincias en el catálogo «Provincias» y volvé a intentar.
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -474,6 +414,29 @@ export default function Configuracion() {
                   onChange={(e) => setEditNombre(e.target.value)}
                 />
               </div>
+              {isLocalidad && (
+                <div>
+                  <label
+                    className="block text-xs font-medium text-slate-600"
+                    htmlFor="edit-provincia"
+                  >
+                    Provincia
+                  </label>
+                  <select
+                    id="edit-provincia"
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none ring-blue-600 focus:ring-2"
+                    value={editProvinciaId}
+                    onChange={(e) => setEditProvinciaId(e.target.value)}
+                  >
+                    <option value="">Elegir provincia…</option>
+                    {provincias.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre ?? p.id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
                 <input
                   type="checkbox"
