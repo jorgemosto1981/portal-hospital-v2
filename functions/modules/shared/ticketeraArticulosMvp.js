@@ -1,14 +1,12 @@
 "use strict";
 
 /**
- * Catálogo acotado ticketera Patrón B (ingreso agente).
+ * Catálogo ticketera — discovery dinámico por collectionGroup.
+ * Lista vacía → modo "catalogo": levanta todos los artículos con versión publicada,
+ * filtrados por patrón válido (B/C), activo, y elegibilidad del agente.
  * @see docs/v2/ARTICULOS_BASICOS_OPERATIVOS_V2.md
- * Fase 2.5: `TICKETERA_LISTAR_TODOS_PATRON_B=1` o lista vacía → discovery por collectionGroup.
  */
-const ARTICULO_IDS_MVP = [
-  "art_01KRNK10V10CH7W5M2W6V558GS", // 64-A con goce
-  "art_01KRYEX0JZY4Y8J1GY3Q9F8BJQ", // 64-B sin goce
-];
+const ARTICULO_IDS_MVP = [];
 
 const ARTICULO_IDS_MVP_SET = new Set(ARTICULO_IDS_MVP);
 

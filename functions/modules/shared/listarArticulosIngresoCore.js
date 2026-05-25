@@ -97,7 +97,7 @@ async function discoverArticulosPatronBPublicados(db) {
     if (!PATRONES_TICKETERA.has(patron)) continue;
     const prev = porArticulo.get(articuloId);
     if (prev && !versionPublicadaEsMasReciente(versionData, prev.versionData)) continue;
-    porArticulo.set(articuloId, { versionData, versionId: verDoc.id });
+    porArticulo.set(articuloId, { versionData, versionId: verDoc.id, patron });
   }
 
   const ids = [...porArticulo.keys()];

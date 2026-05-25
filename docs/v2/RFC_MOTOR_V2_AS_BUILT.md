@@ -1,8 +1,8 @@
 # RFC — Motor V2 As-Built: Especificación Técnica Final
 
 > **Estado:** As-Built (refleja el código en producción)
-> **Commit de referencia:** `74a2763` + implementación Patrón C
-> **Fecha:** 2026-05-25
+> **Commit de referencia:** `74a2763` + implementación Patrón C + smoke test E2E prod
+> **Fecha:** 2026-05-25 (actualizado)
 > **Alcance:** LAO (Patrón A) + Patrón B + Patrón C sobre orquestador unificado
 > **Motor universal:** 3 patrones, 1 pipeline, 76 campos, 0 huérfanos
 
@@ -362,13 +362,34 @@ Matriz de validación para habilitar un nuevo artículo sobre Motor V2:
 | 3 | Verificar `config_usada` en Firestore | `version_aplicada_id`, campos decisionales |
 | 4 | Verificar snapshot inmutable | Re-leer después de 5 min, mismo contenido |
 
-### 5.3 Scripts de Soporte
+### 5.3 Smoke Test Patrón C — Resultado Producción (2026-05-25)
+
+| Dato | Valor |
+|---|---|
+| Solicitud | `sol_01KSG4MA559JESFB9Z1PK2M42A` |
+| Artículo | 68-B Compensatorio (`art_01KRYEF39ZM0KB0F0Y4GPBH38F`) |
+| Versión | `ver_01KRYEFZRQF0RKHJ5JTK6244G8` |
+| Persona | DNI 28914247 (`per_01KQN9WXFXF69Z9DCT5YNJ3TFZ`) |
+| `patron_saldo` | `C` / `schema_version: 3` |
+| `horas_solicitadas` | 6 |
+| `motor_version` | `patron-c-v2` |
+| Estado | `cfg_esa_en_revision_jefe` (huérfana → RRHH sustituto) |
+| Checks | 7/7 OK (P/C/E/E/F/S/G) |
+| Saldo pre | 100 hs |
+| Saldo post | 94 hs (disponible) / 6 hs (consumido) |
+| `config_usada.motor_tipo` | `patron-c-v2` |
+| `config_usada.unidad_medida_id` | `cfg_uma_horas` |
+| `config_usada.reinicio_ciclo_id` | `cfg_rcc_nunca` |
+
+### 5.4 Scripts de Soporte
 
 | Script | Propósito |
 |---|---|
 | `scripts/auditar-campos-patron-b-resolver.mjs` | CI: 0 huérfanos en resolvers B+C (76 campos) |
 | `scripts/smoke-patron-b-motor-v2.mjs` | E2E: solicitud Patrón B en prod |
 | `scripts/smoke-acreditar-lao-bolsa-motor.mjs` | E2E: acreditación LAO en prod |
+| `scripts/smoke-patron-c-motor-v2.mjs` | E2E: solicitud Patrón C en prod (horas + saldo global) |
+| `scripts/analizar-solicitud-patron-c.mjs` | Diagnóstico: leer solicitud + saldo post-débito |
 
 ---
 
@@ -388,6 +409,8 @@ Matriz de validación para habilitar un nuevo artículo sobre Motor V2:
 | `validarFechasArticuloRuntime.js` | Validación fechas compartida |
 | `resolvePatronSaldo.js` | Clasificador A/B/C |
 | `laoSaldosBolsa.js` | Operaciones de bolsa/saldo (cíclico + global) |
+| `ticketeraArticulosMvp.js` | Modo catálogo: discovery dinámico por collectionGroup |
+| `validarEntornoOperativoCore.js` | Validación entorno pre-preview (Patrón B + C) |
 
 ### 6.2 Triggers y Callables
 
@@ -423,3 +446,16 @@ Matriz de validación para habilitar un nuevo artículo sobre Motor V2:
 | `a69ea35` | ci(audit): script auditar campos | 0 huérfanos, 7 bloques |
 | `74a2763` | merge: paridad arquitectónica V2 | Hito consolidado en master |
 | — (pendiente) | feat(patron-c): motor V2 completo full-stack | Motor + trigger + preview + wizard + CI audit |
+
+---
+
+## §8 — Fixes Aplicados en Producción (Smoke Test 2026-05-25)
+
+| Fix | Archivo | Descripción |
+|---|---|---|
+| Fase C horas vs días | `patronCAltaMotorV2.js` | Para unidad=horas, `diasSolicitados` del validador de fechas usa días del rango, no horas |
+| Discovery patron field | `listarArticulosIngresoCore.js` | El Map del discovery no propagaba `patron` → `patron_saldo` siempre caía a "B" |
+| Entorno acepta Patrón C | `validarEntornoOperativoCore.js` | Validación de patrón expandida de `=== B` a `Set([B, C])` |
+| Grupo etiqueta_ui | `SolicitudPatronCForm.jsx` | Muestra `etiqueta_ui` del grupo en vez del ID crudo |
+| Catálogo abierto | `ticketeraArticulosMvp.js` | Lista MVP vacía → modo discovery por collectionGroup |
+| Índice Firestore | `firestore.indexes.json` | Field override `COLLECTION_GROUP_ASC` para `versiones.estado_version_id` |

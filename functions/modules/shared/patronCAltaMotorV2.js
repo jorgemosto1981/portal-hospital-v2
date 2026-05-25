@@ -107,15 +107,19 @@ function faseP(versionData) {
   };
 }
 
-function faseC(db, versionData, fechaDesde, fechaHasta, cantidadConsumo, authToken) {
+function faseC(db, versionData, fechaDesde, fechaHasta, cantidadConsumo, unidadConsumo, authToken) {
   return {
     id: "C",
     async run() {
+      const hastaEff = fechaHasta || fechaDesde;
+      const diasRango = unidadConsumo === "horas"
+        ? require("./calendarInstitucionalCore").contarDiasCorridosInclusive(fechaDesde, hastaEff)
+        : cantidadConsumo;
       const fechasVal = await validarFechasArticuloEnMotor(db, {
         versionData,
         fechaDesde,
-        fechaHasta: fechaHasta || fechaDesde,
-        diasSolicitados: cantidadConsumo,
+        fechaHasta: hastaEff,
+        diasSolicitados: diasRango,
         omitirHorizonte: tokenHasRrhhLaborAccess(authToken),
       });
       if (!fechasVal.ok) {
@@ -371,7 +375,7 @@ async function runPatronCAltaMotorV2(params) {
 
   const fases = [
     faseP(versionData),
-    faseC(db, versionData, fechaDesde, fechaHasta, cantidadConsumo, authToken),
+    faseC(db, versionData, fechaDesde, fechaHasta, cantidadConsumo, unidadLabel, authToken),
     faseE(db, versionData, personaId, fechaDesde, hlcArray, diasExternos, authToken, excludeSolId),
     faseW(versionData, fechaDesde),
     faseF(db, personaId, articuloId, fechaDesde, topeMes, excludeSolId),

@@ -143,11 +143,19 @@ export default function SolicitudPatronCForm(props) {
                 <option value="">Seleccioná grupo</option>
                 {gruposVigentes.map((g) => (
                   <option key={g.grupo_de_trabajo_id} value={g.grupo_de_trabajo_id}>
-                    {g.nombre || g.grupo_de_trabajo_id}
+                    {g.etiqueta_ui || g.nombre || g.grupo_de_trabajo_id}
                   </option>
                 ))}
               </select>
             </label>
+          ) : null}
+          {!gruposCargando && !requiereSeleccionGrupo && gruposVigentes.length === 1 ? (
+            <p className="text-sm text-slate-600">
+              Grupo:{" "}
+              <span className="font-medium">
+                {String(gruposVigentes[0]?.etiqueta_ui || gruposVigentes[0]?.grupo_de_trabajo_id || "—")}
+              </span>
+            </p>
           ) : null}
 
           {entornoMensajes.length > 0 ? (

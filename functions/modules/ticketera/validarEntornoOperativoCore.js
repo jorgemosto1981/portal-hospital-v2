@@ -1,7 +1,7 @@
 "use strict";
 
 const { parseYmd } = require("../shared/laoPreviewDateUtils");
-const { PATRON_SALDO_B } = require("../shared/resolvePatronSaldo");
+const { PATRON_SALDO_B, PATRON_SALDO_C } = require("../shared/resolvePatronSaldo");
 const {
   filterHlcVigentesEnFecha,
   resolverElegibilidadSolicitud,
@@ -164,8 +164,10 @@ async function validarEntornoOperativoSolicitud(params) {
     });
   }
 
-  if (patronFromVersion(versionData) !== PATRON_SALDO_B) {
-    return failBase(ctx, ["PATRON_INVALIDO"], ["El artículo no es Patrón B."], { checks: buildChecks() });
+  const patronResuelto = patronFromVersion(versionData);
+  const PATRONES_VALIDOS = new Set([PATRON_SALDO_B, PATRON_SALDO_C]);
+  if (!PATRONES_VALIDOS.has(patronResuelto)) {
+    return failBase(ctx, ["PATRON_INVALIDO"], ["El artículo no tiene un patrón de saldo válido (B o C)."], { checks: buildChecks() });
   }
 
   const diasVersion = diasSolicitadosDesdeVersion(versionData);
