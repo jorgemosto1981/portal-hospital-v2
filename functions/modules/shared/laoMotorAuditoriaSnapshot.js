@@ -1,7 +1,10 @@
 "use strict";
 
 /**
- * Snapshot de auditoría LAO — campos informativos de la versión aplicada.
+ * Snapshot de auditoria motor — campos informativos de la version aplicada.
+ * Generico: tanto LAO (Patron A) como Patron B usan buildMotorSnapshot
+ * y ensamblarContextoDeAuditoria. Solo buildLaoConfigUsada es LAO-especifico.
+ *
  * @see docs/v2/RFC_LAO_MOTOR_CONFIG_WIRING_V2.md §5
  */
 
@@ -56,11 +59,12 @@ function ensamblarContextoDeAuditoria(versionData) {
 }
 
 /**
- * Subset de versión usado en la decisión (no el doc completo).
+ * Subset LAO de version usado en la decision (no el doc completo).
+ * Para Patron B usar buildPatronBConfigUsada de patronBMotorConfigResolver.
  * @param {object} versionData
  * @param {string} versionId
  */
-function buildConfigUsada(versionData, versionId) {
+function buildLaoConfigUsada(versionData, versionId) {
   let motorConfig;
   try {
     motorConfig = resolveLaoMotorConfig(versionData);
@@ -109,6 +113,7 @@ function buildMotorSnapshot(params) {
 
 module.exports = {
   ensamblarContextoDeAuditoria,
-  buildConfigUsada,
+  buildLaoConfigUsada,
+  buildConfigUsada: buildLaoConfigUsada,
   buildMotorSnapshot,
 };

@@ -40,8 +40,8 @@ function versionLaoMock(overrides = {}) {
 }
 
 describe("runLaoAltaMotorCompleto — snapshot en rechazo", () => {
-  it("incluye motor_snapshot RFC en ERROR_APERTURA_TEMPORADA", () => {
-    const r = runLaoAltaMotorCompleto({
+  it("incluye motor_snapshot RFC en ERROR_APERTURA_TEMPORADA", async () => {
+    const r = await runLaoAltaMotorCompleto({
       versionData: versionLaoMock(),
       versionId: "ver_test",
       fechaDesdeYmd: "2025-06-15",
@@ -64,8 +64,8 @@ describe("runLaoAltaMotorCompleto — snapshot en rechazo", () => {
 });
 
 describe("runLaoAltaMotorCompleto — preaviso R4", () => {
-  it("advertencia PREAVISO_FUERA_NORMA sin bloquear", () => {
-    const r = runLaoAltaMotorCompleto({
+  it("advertencia PREAVISO_FUERA_NORMA sin bloquear", async () => {
+    const r = await runLaoAltaMotorCompleto({
       versionData: versionLaoMock(),
       versionId: "ver_test",
       fechaDesdeYmd: "2026-07-20",
@@ -88,8 +88,8 @@ describe("runLaoAltaMotorCompleto — preaviso R4", () => {
 });
 
 describe("runLaoAltaMotorCompleto — éxito stock + legacy", () => {
-  it("camino stock con snapshot completo", () => {
-    const r = runLaoAltaMotorCompleto({
+  it("camino stock con snapshot completo", async () => {
+    const r = await runLaoAltaMotorCompleto({
       versionData: versionLaoMock(),
       versionId: "ver_test",
       fechaDesdeYmd: "2026-05-10",
@@ -110,8 +110,8 @@ describe("runLaoAltaMotorCompleto — éxito stock + legacy", () => {
 });
 
 describe("runLaoAltaMotorCompleto — R3 saldo", () => {
-  it("rechaza si dias < minimo con saldo suficiente", () => {
-    const r = runLaoAltaMotorCompleto({
+  it("rechaza si dias < minimo con saldo suficiente", async () => {
+    const r = await runLaoAltaMotorCompleto({
       versionData: versionLaoMock(),
       versionId: "ver_test",
       fechaDesdeYmd: "2026-05-10",
@@ -128,8 +128,8 @@ describe("runLaoAltaMotorCompleto — R3 saldo", () => {
 });
 
 describe("runLaoAltaMotorCompleto — superposición fase E", () => {
-  it("bloquea con SUPERPOSICION_FECHAS y snapshot parcial", () => {
-    const r = runLaoAltaMotorCompleto({
+  it("bloquea con SUPERPOSICION_FECHAS y snapshot parcial", async () => {
+    const r = await runLaoAltaMotorCompleto({
       versionData: versionLaoMock({
         topes: { politica_superposicion_id: "cfg_ps_bloqueante" },
       }),
@@ -153,8 +153,8 @@ describe("runLaoAltaMotorCompleto — superposición fase E", () => {
     assert.ok(!r.motor_snapshot.asignacion);
   });
 
-  it("continúa con SUPERPOSICION_OK", () => {
-    const r = runLaoAltaMotorCompleto({
+  it("continúa con SUPERPOSICION_OK", async () => {
+    const r = await runLaoAltaMotorCompleto({
       versionData: versionLaoMock({
         topes: { politica_superposicion_id: "cfg_ps_bloqueante" },
       }),
@@ -172,8 +172,8 @@ describe("runLaoAltaMotorCompleto — superposición fase E", () => {
 });
 
 describe("resolveCupoOperativoDesdeMotor", () => {
-  it("lee cupo de asignacion", () => {
-    const r = runLaoAltaMotorCompleto({
+  it("lee cupo de asignacion", async () => {
+    const r = await runLaoAltaMotorCompleto({
       versionData: versionLaoMock(),
       versionId: "ver_test",
       fechaDesdeYmd: "2026-05-10",

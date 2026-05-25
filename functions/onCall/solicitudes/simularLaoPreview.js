@@ -174,7 +174,7 @@ const simularLaoPreview = onCall(async (request) => {
 
   let resultado;
   try {
-    resultado = runLaoAltaMotorCompleto(motorBase);
+    resultado = await runLaoAltaMotorCompleto(motorBase);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new HttpsError("failed-precondition", msg);
@@ -190,7 +190,7 @@ const simularLaoPreview = onCall(async (request) => {
   });
 
   try {
-    resultado = runLaoAltaMotorCompleto({
+    resultado = await runLaoAltaMotorCompleto({
       ...motorBase,
       diasSolicitados,
       disponibleBolsa: Number.isFinite(Number(saldoVal.disponible)) ? Number(saldoVal.disponible) : 0,
