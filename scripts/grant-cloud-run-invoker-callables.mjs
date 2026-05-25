@@ -43,6 +43,13 @@ const CALLABLE_EXPORT_IDS = [
   "onboardingMvpCompletar",
   "guardarRegimenHorario",
   "listarRegimenesHorarios",
+  "guardarPlanTurnoServicio",
+  "enviarPlanTurnoServicio",
+  "aprobarPlanTurnoServicio",
+  "rechazarPlanTurnoServicio",
+  "habilitarPlanTurnoServicio",
+  "cerrarPlanPerpetuo",
+  "listarPlanesTurnoServicio",
 ];
 
 function gcloudInstalled() {

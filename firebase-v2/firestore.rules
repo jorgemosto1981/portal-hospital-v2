@@ -58,6 +58,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /planes_turno_servicio/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     match /grupos_de_trabajo/{docId} {
       allow read: if signedIn();
       allow write: if false;

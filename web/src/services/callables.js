@@ -285,3 +285,38 @@ export function callGuardarRegimenHorario(data) {
 export function callListarRegimenesHorarios(data) {
   return httpsCallable(getFunctionsV2(), "listarRegimenesHorarios")(data || {});
 }
+
+/** Jefe/RRHH: crear o actualizar plan de turno (BORRADOR). */
+export function callGuardarPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "guardarPlanTurnoServicio")(data);
+}
+
+/** Jefe: enviar plan para aprobación (BORRADOR → ENVIADO). */
+export function callEnviarPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "enviarPlanTurnoServicio")(data);
+}
+
+/** Superior: aprobar plan (ENVIADO → AUTORIZADO_SUPERIOR). */
+export function callAprobarPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "aprobarPlanTurnoServicio")(data);
+}
+
+/** Superior/RRHH: rechazar plan → BORRADOR con observaciones. */
+export function callRechazarPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "rechazarPlanTurnoServicio")(data);
+}
+
+/** RRHH: habilitar plan (AUTORIZADO_SUPERIOR → HABILITADO). */
+export function callHabilitarPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "habilitarPlanTurnoServicio")(data);
+}
+
+/** RRHH: cerrar plan perpetuo (HABILITADO → CERRADO). */
+export function callCerrarPlanPerpetuo(data) {
+  return httpsCallable(getFunctionsV2(), "cerrarPlanPerpetuo")(data);
+}
+
+/** Listar planes de un grupo (filtro opcional por estado/periodo). */
+export function callListarPlanesTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "listarPlanesTurnoServicio")(data);
+}
