@@ -122,6 +122,13 @@ export const MODULOS_PORTAL = [
     grupo: "jefe",
   },
   {
+    id: "planes-turno-jefe",
+    label: "Planes turno",
+    path: "/portal/jefe/planes-turno",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "jefe",
+  },
+  {
     id: "bandeja-solicitudes-jefe",
     label: "Bandeja solic.",
     path: "/portal/jefe/solicitudes",
@@ -203,6 +210,7 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla";
+  if (pathname.startsWith("/portal/jefe/planes-turno")) return "planes-turno-jefe";
   if (pathname.startsWith("/portal/jefe/solicitudes")) return "bandeja-solicitudes-jefe";
   if (pathname.startsWith("/portal/solicitudes")) return "ticketera";
   if (pathname.startsWith("/portal/laboral") || pathname.startsWith("/laboral")) return "laboral";

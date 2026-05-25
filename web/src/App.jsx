@@ -38,6 +38,7 @@ import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
 import SeguimientoEnrolamientoUsuariosRRHH from "./pages/SeguimientoEnrolamientoUsuariosRRHH.jsx";
 import CalendarioConfig from "./pages/rrhh/CalendarioConfig.jsx";
 import RegimenesHorariosPage from "./pages/rrhh/RegimenesHorariosPage.jsx";
+import PlanTurnoServicioPage from "./pages/jefe/PlanTurnoServicioPage.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import SistemasWeb from "./pages/SistemasWeb.jsx";
 import PerfilUsuario from "./pages/PerfilUsuario.jsx";
@@ -127,6 +128,7 @@ export default function App() {
             <Route path="perfil/:personaId" element={<Perfil />} />
             <Route path="grilla" element={<GrillaOperativa />} />
             <Route path="jefe/solicitudes" element={<BandejaJefeSolicitudes />} />
+            <Route path="jefe/planes-turno" element={<PlanTurnoServicioPage />} />
             <Route path="modulos" element={<EstadoModulos />} />
             <Route path="pantallas" element={<PantallasCatalogo />} />
             <Route path="configuracion" element={<Configuracion />} />
