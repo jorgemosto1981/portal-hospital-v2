@@ -2,17 +2,19 @@
 
 /**
  * Orquestador LAO v2 — preview y alta (motor_snapshot SSoT).
+ * Refactorizado sobre runMotorPipeline generico (paridad Patron B).
+ * Fases: A -> C -> E -> W -> L -> S
  * @see docs/v2/RFC_LAO_MOTOR_CONFIG_WIRING_V2.md §6
  */
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const { formatYmdEnZona, obtenerYmdHoyInstitucional } = require("./fechaInstitucionalBa");
-const { anchorFromYmd, parseYmd } = require("./laoPreviewDateUtils");
+const { parseYmd } = require("./laoPreviewDateUtils");
+const { anchorFromYmd } = require("./laoPreviewDateUtils");
 const {
   assertPatronSaldoLAO,
   validarDiasMinimosR3,
-  laoMotorError,
 } = require("./laoMotorConfigResolver");
 const { runLaoAsignacionDiasCore, MOTOR_VERSION } = require("./laoAsignacionDiasCore");
 const {
@@ -26,6 +28,7 @@ const {
   CODIGO_SUPERPOSICION,
   mensajeParaCodigo,
 } = require("./solicitudElegibilidadLaboral");
+const { runMotorPipeline, motorCheck, mergeMotivosFromChecks } = require("./motorSolicitudOrquestador");
 
 function addDaysToYmd(ymd, days) {
   const anchor = anchorFromYmd(ymd);
@@ -35,9 +38,6 @@ function addDaysToYmd(ymd, days) {
 
 /**
  * R4 — preaviso normativo / retroactividad (advertencias, no bloquean).
- * @param {object} versionData
- * @param {string} fechaDesdeYmd
- * @param {string} [hoyYmd]
  */
 function evaluatePreavisoWarnings(versionData, fechaDesdeYmd, hoyYmd = obtenerYmdHoyInstitucional()) {
   const workflow = versionData?.bloque_workflow_sla_cobertura || {};
@@ -53,12 +53,8 @@ function evaluatePreavisoWarnings(versionData, fechaDesdeYmd, hoyYmd = obtenerYm
         copy: `Presentación con menos de ${plazoNorm} días de preaviso normativo. El hospital permite el trámite bajo aviso institucional.`,
         campos_origen: ["plazo_preaviso_normativa_dias", "fecha_desde"],
       });
-      checks.push({
-        fase: "W",
-        codigo: "PREAVISO_FUERA_NORMA",
-        nivel: "advertencia",
-        detalle: `fecha_desde ${fechaDesdeYmd} anterior a ${limiteNorm}.`,
-      });
+      checks.push(motorCheck("W", "PREAVISO_FUERA_NORMA", "advertencia",
+        `fecha_desde ${fechaDesdeYmd} anterior a ${limiteNorm}.`));
     }
   }
 
@@ -66,12 +62,8 @@ function evaluatePreavisoWarnings(versionData, fechaDesdeYmd, hoyYmd = obtenerYm
   if (Number.isFinite(plazoInst) && plazoInst > 0) {
     const limiteInst = addDaysToYmd(hoyYmd, plazoInst);
     if (fechaDesdeYmd < limiteInst) {
-      checks.push({
-        fase: "W",
-        codigo: "PREAVISO_INSTITUCIONAL",
-        nivel: "advertencia",
-        detalle: `fecha_desde anterior al plazo institucional (${plazoInst} días).`,
-      });
+      checks.push(motorCheck("W", "PREAVISO_INSTITUCIONAL", "advertencia",
+        `fecha_desde anterior al plazo institucional (${plazoInst} días).`));
     }
   }
 
@@ -82,31 +74,16 @@ function evaluatePreavisoWarnings(versionData, fechaDesdeYmd, hoyYmd = obtenerYm
         copy: "La fecha de inicio es anterior a hoy; trámite permitido con trazabilidad institucional.",
         campos_origen: ["permite_retroactividad", "fecha_desde"],
       });
-      checks.push({
-        fase: "W",
-        codigo: "PREAVISO_RETROACTIVIDAD",
-        nivel: "advertencia",
-        detalle: `fecha_desde ${fechaDesdeYmd} en el pasado (hoy ${hoyYmd}).`,
-      });
+      checks.push(motorCheck("W", "PREAVISO_RETROACTIVIDAD", "advertencia",
+        `fecha_desde ${fechaDesdeYmd} en el pasado (hoy ${hoyYmd}).`));
     }
   }
 
   return { warnings, checks };
 }
 
-function pushCheck(checks, fase, codigo, nivel, detalle) {
-  checks.push({ fase, codigo, nivel, detalle });
-}
-
-function mergeMotivos(checks, extra = []) {
-  const bloqueantes = checks.filter((c) => c.nivel === "bloqueante");
-  const msgs = bloqueantes.map((c) => c.detalle).filter(Boolean);
-  return [...msgs, ...extra];
-}
-
 /**
  * Campos legacy para UI que aún consume shape v1 parcial.
- * @param {object} asignacionResult
  */
 function buildLegacyPreviewCompat(asignacionResult) {
   if (!asignacionResult || !asignacionResult.ok) {
@@ -150,6 +127,145 @@ function buildLegacyPreviewCompat(asignacionResult) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Fases del pipeline LAO
+// ---------------------------------------------------------------------------
+
+function faseA(versionData) {
+  return {
+    id: "A",
+    run() {
+      try {
+        assertPatronSaldoLAO(versionData);
+        return { checks: [motorCheck("A", "PATRON_SALDO_A", "ok", "Patrón de saldo A verificado.")] };
+      } catch (err) {
+        const code = err?.code || "ERROR_PATRON_SALDO_NO_A";
+        return { checks: [motorCheck("A", code, "bloqueante", err instanceof Error ? err.message : String(err))] };
+      }
+    },
+  };
+}
+
+function faseC(fechasVal) {
+  return {
+    id: "C",
+    run() {
+      if (!fechasVal) return { checks: [] };
+      if (fechasVal.ok) {
+        return { checks: [motorCheck("C", "FECHAS_OK", "ok", "Rango y cómputo de fechas válidos.")] };
+      }
+      return {
+        checks: [motorCheck("C", "ERROR_FECHAS", "bloqueante", (fechasVal.mensajes || []).join(" "))],
+      };
+    },
+  };
+}
+
+function faseE(persona, personaId, versionData, hlcArray, fechaDesdeYmd, diasExternos, superposicionVal) {
+  return {
+    id: "E",
+    run() {
+      const checks = [];
+      if (persona && personaId) {
+        const hlcVigentes = filterHlcVigentesEnFecha(hlcArray, fechaDesdeYmd);
+        const eleg = resolverElegibilidadSolicitud({
+          versionData,
+          hlcVigentes,
+          personaId,
+          fechaDesde: fechaDesdeYmd,
+          diasExternos,
+          skipPortalRoleCheck: true,
+        });
+        if (!eleg.ok) {
+          checks.push(motorCheck("E", "ERROR_ELEGIBILIDAD", "bloqueante", (eleg.mensajes || []).join(" ")));
+          return { checks };
+        }
+        checks.push(motorCheck("E", "ELEGIBILIDAD_OK", "ok", "Elegibilidad laboral verificada."));
+      }
+
+      if (superposicionVal != null) {
+        if (superposicionVal.ok) {
+          checks.push(motorCheck("E", "SUPERPOSICION_OK", "ok", "Sin superposición bloqueante en el rango."));
+        } else {
+          const codigo = superposicionVal.codigo || CODIGO_SUPERPOSICION;
+          const detalle = superposicionVal.mensaje || mensajeParaCodigo(codigo) || "Superposición de fechas detectada.";
+          checks.push(motorCheck("E", codigo, "bloqueante", detalle));
+        }
+      }
+      return { checks };
+    },
+  };
+}
+
+function faseW(versionData, fechaDesdeYmd, hoyYmd) {
+  return {
+    id: "W",
+    run() {
+      return evaluatePreavisoWarnings(versionData, fechaDesdeYmd, hoyYmd);
+    },
+  };
+}
+
+function faseL(versionData, fechaDesdeYmd, fechaHastaYmd, anioOrigenBolsa, anioCalendarioActual, hlcArray, diasExternos, exclusionIntervals, operadorCodigoPorId) {
+  return {
+    id: "L",
+    run() {
+      const result = runLaoAsignacionDiasCore({
+        versionData,
+        fechaDesdeYmd,
+        fechaHastaYmd,
+        anioOrigenBolsa,
+        anioCalendarioActual: anioCalendarioActual ?? parseYmd(fechaDesdeYmd)?.y,
+        hlcArray,
+        diasExternos,
+        exclusionIntervals,
+        operadorCodigoPorId,
+      });
+
+      const checks = [];
+      for (const c of result.codigos || []) {
+        checks.push(motorCheck(c.fase || "L", c.codigo, c.nivel || "bloqueante",
+          result.motivos_ineligibilidad?.find((m) => m.includes(c.codigo)) || c.codigo));
+      }
+      if (result.eligible) {
+        checks.push(motorCheck("L", "ASIGNACION_OK", "ok", `Camino ${result.camino_asignacion}.`));
+      }
+      return { checks, data: { asignacionResult: result } };
+    },
+  };
+}
+
+function faseS(diasSolicitados, disponibleBolsa, configUsada, saldoEval) {
+  return {
+    id: "S",
+    run() {
+      const checks = [];
+      if (diasSolicitados != null && Number.isFinite(Number(disponibleBolsa))) {
+        const minRes = validarDiasMinimosR3(diasSolicitados, {
+          minConfig: configUsada.dias_minimos_por_evento,
+          disponibleBolsa,
+        });
+        if (!minRes.ok) {
+          checks.push(motorCheck("S", minRes.code || "ERROR_DIAS_MINIMOS", "bloqueante", minRes.detalle || ""));
+          return { checks };
+        }
+        checks.push(motorCheck("S", "MINIMO_DIAS_OK", "ok", "Mínimo de días (R3) verificado."));
+      }
+
+      if (saldoEval && saldoEval.ok === false) {
+        checks.push(motorCheck("S", "ERROR_SALDO_INSUFICIENTE", "bloqueante", (saldoEval.motivos || []).join(" ")));
+      } else if (saldoEval?.ok === true) {
+        checks.push(motorCheck("S", "SALDO_OK", "ok", `Saldo disponible ${saldoEval.disponible ?? "n/d"}.`));
+      }
+      return { checks };
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Orquestador principal — sobre runMotorPipeline genérico
+// ---------------------------------------------------------------------------
+
 /**
  * @param {object} params
  * @param {object} params.versionData
@@ -166,12 +282,12 @@ function buildLegacyPreviewCompat(asignacionResult) {
  * @param {number} [params.disponibleBolsa]
  * @param {object} [params.persona]
  * @param {string} [params.personaId]
- * @param {object} [params.fechasVal] — resultado previo validarFechasArticulo
- * @param {object} [params.superposicionVal] — resultado previo validarSuperposicionLaoEnMotor
- * @param {object} [params.saldoEval] — resultado evaluarSaldoBolsaParaPreview
+ * @param {object} [params.fechasVal]
+ * @param {object} [params.superposicionVal]
+ * @param {object} [params.saldoEval]
  * @param {string} [params.hoyYmd]
  */
-function runLaoAltaMotorCompleto(params) {
+async function runLaoAltaMotorCompleto(params) {
   const {
     versionData,
     versionId = "",
@@ -193,162 +309,22 @@ function runLaoAltaMotorCompleto(params) {
     hoyYmd = obtenerYmdHoyInstitucional(),
   } = params;
 
-  const checks = [];
-  const warnings = [];
-  const motivosExtra = [];
-  let asignacionResult = null;
-
   const contextoAuditoria = ensamblarContextoDeAuditoria(versionData);
   const configUsada = buildConfigUsada(versionData, versionId);
 
-  try {
-    assertPatronSaldoLAO(versionData);
-    pushCheck(checks, "A", "PATRON_SALDO_A", "ok", "Patrón de saldo A verificado.");
-  } catch (err) {
-    const code = err?.code || "ERROR_PATRON_SALDO_NO_A";
-    pushCheck(checks, "A", code, "bloqueante", err instanceof Error ? err.message : String(err));
-    const motor_snapshot = buildMotorSnapshot({
-      versionId,
-      checks,
-      warnings,
-      asignacionBlock: null,
-      contextoAuditoria,
-      configUsada,
-      eligible: false,
-    });
-    return finalize(false, motor_snapshot, checks, warnings, null, motivosExtra);
-  }
+  const fases = [
+    faseA(versionData),
+    faseC(fechasVal),
+    faseE(persona, personaId, versionData, hlcArray, fechaDesdeYmd, diasExternos, superposicionVal),
+    faseW(versionData, fechaDesdeYmd, hoyYmd),
+    faseL(versionData, fechaDesdeYmd, fechaHastaYmd, anioOrigenBolsa, anioCalendarioActual, hlcArray, diasExternos, exclusionIntervals, operadorCodigoPorId),
+    faseS(diasSolicitados, disponibleBolsa, configUsada, saldoEval),
+  ];
 
-  if (fechasVal) {
-    pushCheck(
-      checks,
-      "C",
-      fechasVal.ok ? "FECHAS_OK" : "ERROR_FECHAS",
-      fechasVal.ok ? "ok" : "bloqueante",
-      fechasVal.ok ? "Rango y cómputo de fechas válidos." : (fechasVal.mensajes || []).join(" "),
-    );
-    if (!fechasVal.ok) {
-      const motor_snapshot = buildMotorSnapshot({
-        versionId,
-        checks,
-        warnings,
-        asignacionBlock: null,
-        contextoAuditoria,
-        configUsada,
-        eligible: false,
-      });
-      return finalize(false, motor_snapshot, checks, warnings, null, fechasVal.mensajes || []);
-    }
-  }
+  const pipeline = await runMotorPipeline(fases);
 
-  if (persona && personaId) {
-    const hlcVigentes = filterHlcVigentesEnFecha(hlcArray, fechaDesdeYmd);
-    const eleg = resolverElegibilidadSolicitud({
-      versionData,
-      hlcVigentes,
-      personaId,
-      fechaDesde: fechaDesdeYmd,
-      diasExternos,
-      skipPortalRoleCheck: true,
-    });
-    pushCheck(
-      checks,
-      "E",
-      eleg.ok ? "ELEGIBILIDAD_OK" : "ERROR_ELEGIBILIDAD",
-      eleg.ok ? "ok" : "bloqueante",
-      eleg.ok ? "Elegibilidad laboral verificada." : (eleg.mensajes || []).join(" "),
-    );
-    if (!eleg.ok) {
-      const motor_snapshot = buildMotorSnapshot({
-        versionId,
-        checks,
-        warnings,
-        asignacionBlock: null,
-        contextoAuditoria,
-        configUsada,
-        eligible: false,
-      });
-      return finalize(false, motor_snapshot, checks, warnings, null, eleg.mensajes || []);
-    }
-  }
-
-  if (superposicionVal != null) {
-    if (superposicionVal.ok) {
-      pushCheck(checks, "E", "SUPERPOSICION_OK", "ok", "Sin superposición bloqueante en el rango.");
-    } else {
-      const codigo = superposicionVal.codigo || CODIGO_SUPERPOSICION;
-      const detalle =
-        superposicionVal.mensaje ||
-        mensajeParaCodigo(codigo) ||
-        "Superposición de fechas detectada.";
-      pushCheck(checks, "E", codigo, "bloqueante", detalle);
-      const motor_snapshot = buildMotorSnapshot({
-        versionId,
-        checks,
-        warnings,
-        asignacionBlock: null,
-        contextoAuditoria,
-        configUsada,
-        eligible: false,
-      });
-      return finalize(false, motor_snapshot, checks, warnings, null, [detalle]);
-    }
-  }
-
-  const preaviso = evaluatePreavisoWarnings(versionData, fechaDesdeYmd, hoyYmd);
-  warnings.push(...preaviso.warnings);
-  checks.push(...preaviso.checks);
-
-  asignacionResult = runLaoAsignacionDiasCore({
-    versionData,
-    fechaDesdeYmd,
-    fechaHastaYmd,
-    anioOrigenBolsa,
-    anioCalendarioActual: anioCalendarioActual ?? parseYmd(fechaDesdeYmd)?.y,
-    hlcArray,
-    diasExternos,
-    exclusionIntervals,
-    operadorCodigoPorId,
-  });
-
-  for (const c of asignacionResult.codigos || []) {
-    checks.push({
-      fase: c.fase || "L",
-      codigo: c.codigo,
-      nivel: c.nivel || "bloqueante",
-      detalle: asignacionResult.motivos_ineligibilidad?.find((m) => m.includes(c.codigo)) || c.codigo,
-    });
-  }
-  if (asignacionResult.eligible) {
-    pushCheck(checks, "L", "ASIGNACION_OK", "ok", `Camino ${asignacionResult.camino_asignacion}.`);
-  }
-
-  let eligible = asignacionResult.eligible === true;
-
-  if (eligible && diasSolicitados != null && Number.isFinite(Number(disponibleBolsa))) {
-    const config = asignacionResult.config_usada || {};
-    const minRes = validarDiasMinimosR3(diasSolicitados, {
-      minConfig: configUsada.dias_minimos_por_evento,
-      disponibleBolsa: disponibleBolsa,
-    });
-    if (!minRes.ok) {
-      pushCheck(checks, "S", minRes.code || "ERROR_DIAS_MINIMOS", "bloqueante", minRes.detalle || "");
-      eligible = false;
-      motivosExtra.push(minRes.detalle || "");
-    } else {
-      pushCheck(checks, "S", "MINIMO_DIAS_OK", "ok", "Mínimo de días (R3) verificado.");
-    }
-  }
-
-  if (eligible && saldoEval && saldoEval.ok === false) {
-    pushCheck(checks, "S", "ERROR_SALDO_INSUFICIENTE", "bloqueante", (saldoEval.motivos || []).join(" "));
-    eligible = false;
-    motivosExtra.push(...(saldoEval.motivos || []));
-  } else if (eligible && saldoEval?.ok === true) {
-    pushCheck(checks, "S", "SALDO_OK", "ok", `Saldo disponible ${saldoEval.disponible ?? "n/d"}.`);
-  }
-
-  const asignacionBlock = asignacionResult.asignacion
+  const asignacionResult = pipeline.ctx.asignacionResult || null;
+  const asignacionBlock = asignacionResult?.asignacion
     ? {
         ...asignacionResult.asignacion,
         camino_bolsa: asignacionResult.camino_bolsa,
@@ -358,37 +334,32 @@ function runLaoAltaMotorCompleto(params) {
 
   const motor_snapshot = buildMotorSnapshot({
     versionId,
-    checks,
-    warnings,
+    checks: pipeline.checks,
+    warnings: pipeline.warnings,
     asignacionBlock,
     contextoAuditoria,
     configUsada,
-    eligible,
+    eligible: pipeline.eligible,
   });
 
-  return finalize(eligible, motor_snapshot, checks, warnings, asignacionResult, motivosExtra);
-}
-
-function finalize(eligible, motor_snapshot, checks, warnings, asignacionResult, motivosExtra) {
   const legacy = buildLegacyPreviewCompat(asignacionResult);
-  const motivos_ineligibilidad = eligible
+  const motivos = pipeline.eligible
     ? [...(asignacionResult?.motivos_ineligibilidad || [])].filter(Boolean)
-    : mergeMotivos(checks, [
+    : mergeMotivosFromChecks(pipeline.checks, [
         ...(asignacionResult?.motivos_ineligibilidad || []),
-        ...motivosExtra,
       ]);
 
   return {
     ok: true,
-    eligible: Boolean(eligible),
+    eligible: pipeline.eligible,
     motor_snapshot,
-    checks,
-    warnings,
-    motivos_ineligibilidad: [...new Set(motivos_ineligibilidad.filter(Boolean))],
+    checks: pipeline.checks,
+    warnings: pipeline.warnings,
+    motivos_ineligibilidad: [...new Set(motivos.filter(Boolean))],
     config_usada: motor_snapshot.config_usada,
     ...legacy,
     asignacion: asignacionResult?.asignacion,
-    codigos: checks.filter((c) => c.nivel === "bloqueante").map((c) => c.codigo),
+    codigos: pipeline.checks.filter((c) => c.nivel === "bloqueante").map((c) => c.codigo),
   };
 }
 
