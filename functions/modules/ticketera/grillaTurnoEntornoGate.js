@@ -4,7 +4,9 @@ const { buildAsiDocumentId, iterarYmdInclusive } = require("../shared/mdcRdaDocu
 const { COL_ASISTENCIA_DIARIA } = require("../shared/mdcComandosConstants");
 
 const COL_PLAN_ROTATIVA = "planificacion_mensual_rotativa";
+const COL_PLANES_TURNO = "planes_turno_servicio";
 const PLAN_ESTADO_AUTORIZADO = "AUTORIZADO";
+const PLAN_ESTADO_HABILITADO = "HABILITADO";
 
 const CODIGO_GRILLA_NO_AUTORIZADA = "GRILLA_NO_AUTORIZADA";
 const CODIGO_TURNO_NO_PLANIFICADO = "TURNO_NO_PLANIFICADO";
@@ -53,6 +55,25 @@ async function evaluarGrillaTurnoEntorno(db, input) {
   const gdtId = String(input.grupo_trabajo_id || "").trim();
 
   if (gdtId) {
+    const periodo = desde.slice(0, 7);
+    const v2Snap = await db.collection(COL_PLANES_TURNO)
+      .where("grupo_id", "==", gdtId)
+      .where("estado", "==", PLAN_ESTADO_HABILITADO)
+      .get();
+    const v2Match = v2Snap.docs.find((d) => {
+      const data = d.data();
+      if (data.tipo_plan === "mensual") return data.periodo === periodo;
+      if (data.tipo_plan === "perpetuo") {
+        const vDesde = data.vigente_desde || "";
+        const vHasta = data.vigente_hasta || "9999-12-31";
+        return desde >= vDesde && desde <= vHasta;
+      }
+      return false;
+    });
+    if (v2Match) {
+      return { ok: true, codigo: null, mensaje: null, checks: { grilla_rda: true, turno: true } };
+    }
+
     const periodoKey = desde.slice(0, 7).replace("-", "_");
     const planId = `${gdtId}_${periodoKey}`;
     const planSnap = await db.collection(COL_PLAN_ROTATIVA).doc(planId).get();

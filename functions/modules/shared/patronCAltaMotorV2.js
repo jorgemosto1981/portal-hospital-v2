@@ -36,6 +36,7 @@ const {
 const { validarSuperposicionFechasPatronB } = require("./patronBSuperposicionValidacion");
 const { resolverGrupoTrabajoIdAnclaParaSolicitud } = require("./solicitudGrupoTrabajoAncla");
 const { validarGrillaHorariaParaSolicitud } = require("./mdcGrillaHorariaGate");
+const { validarTurnoRegimenParaSolicitud, CODIGO_SIN_REGIMEN, CODIGO_SIN_TURNO, CODIGO_HORARIO_FUERA } = require("./turnoRegimenGate");
 const { validarFechasArticuloEnMotor, readModoCalculo } = require("./validarFechasArticuloRuntime");
 const { tokenHasRrhhLaborAccess } = require("./laborProfile");
 
@@ -320,6 +321,50 @@ function faseG(db, personaId, fechaDesde, cfg, grupoTrabajoId) {
   };
 }
 
+function faseH(db, personaId, fechaDesde, solicitud, grupoTrabajoId) {
+  return {
+    id: "H",
+    async run(ctx) {
+      const fechaHastaEff = ctx.fechaHastaEff || fechaDesde;
+      const esJornadaCompleta = solicitud.es_jornada_completa !== false;
+      const turnoResult = await validarTurnoRegimenParaSolicitud(db, {
+        persona_id: personaId,
+        fecha_desde: fechaDesde,
+        fecha_hasta: fechaHastaEff,
+        grupo_trabajo_id: grupoTrabajoId || undefined,
+        es_jornada_completa: esJornadaCompleta,
+        hora_inicio: solicitud.hora_inicio || null,
+        hora_fin: solicitud.hora_fin || null,
+        horas_solicitadas: Number(solicitud.horas_solicitadas) || 0,
+      });
+
+      const checks = [];
+
+      if (!turnoResult.ok) {
+        checks.push(motorCheck("H", turnoResult.codigo || CODIGO_SIN_REGIMEN, "bloqueante",
+          turnoResult.mensaje || "Sin régimen horario asignado."));
+        return { checks, data: { turno_regimen: turnoResult } };
+      }
+
+      checks.push(motorCheck("H", "TURNO_REGIMEN_OK", "ok",
+        `Turno resuelto: ${turnoResult.horas_efectivas_total}hs en ${turnoResult.turnos_dia.length} día(s).`));
+
+      for (const w of turnoResult.warnings || []) {
+        checks.push(motorCheck("H", w.codigo, "advertencia", w.mensaje));
+      }
+
+      return {
+        checks,
+        data: {
+          turno_regimen: turnoResult,
+          snapshot_turno: turnoResult.snapshot_turno,
+          horas_jornada_total: turnoResult.horas_efectivas_total,
+        },
+      };
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Orquestador principal
 // ---------------------------------------------------------------------------
@@ -373,6 +418,8 @@ async function runPatronCAltaMotorV2(params) {
       String(solicitud.grupo_trabajo_id_ancla || solicitud.grupo_de_trabajo_id || "").trim() || null,
   });
 
+  const grupoTrabajoIdAncla = grupoAncla.ok ? grupoAncla.grupo_trabajo_id_ancla : null;
+
   const fases = [
     faseP(versionData),
     faseC(db, versionData, fechaDesde, fechaHasta, cantidadConsumo, unidadLabel, authToken),
@@ -381,7 +428,8 @@ async function runPatronCAltaMotorV2(params) {
     faseF(db, personaId, articuloId, fechaDesde, topeMes, excludeSolId),
     faseT(cantidadConsumo, unidadLabel, cfg),
     faseS(db, personaId, articuloId, cantidadConsumo, unidadLabel),
-    faseG(db, personaId, fechaDesde, cfg, grupoAncla.ok ? grupoAncla.grupo_trabajo_id_ancla : null),
+    faseG(db, personaId, fechaDesde, cfg, grupoTrabajoIdAncla),
+    faseH(db, personaId, fechaDesde, solicitud, grupoTrabajoIdAncla),
   ];
 
   const pipeline = await runMotorPipeline(fases);
@@ -402,6 +450,13 @@ async function runPatronCAltaMotorV2(params) {
     eligible: pipeline.eligible,
   });
   motor_snapshot.motor_version = MOTOR_VERSION_C;
+
+  if (pipeline.ctx.snapshot_turno) {
+    motor_snapshot.turno_regimen = pipeline.ctx.snapshot_turno;
+  }
+  if (pipeline.ctx.horas_jornada_total != null) {
+    motor_snapshot.horas_jornada_total = pipeline.ctx.horas_jornada_total;
+  }
 
   const motivos = pipeline.eligible
     ? []
@@ -434,6 +489,8 @@ async function runPatronCAltaMotorV2(params) {
     usa_calendario_institucional: pipeline.ctx.fechasVal?.usa_calendario_institucional === true,
     incluye_feriados_institucionales: pipeline.ctx.fechasVal?.incluye_feriados_institucionales === true,
     grilla: pipeline.ctx.grilla || null,
+    turno_regimen: pipeline.ctx.turno_regimen || null,
+    horas_jornada_total: pipeline.ctx.horas_jornada_total ?? null,
     articulo_id: articuloId,
     fase_corte: pipeline.fase_corte,
   };
