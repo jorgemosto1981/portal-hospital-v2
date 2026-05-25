@@ -25,6 +25,16 @@ export default function LaboralFormHlgFields({
         technicalName="regimen_horario_id"
         showTechnicalName={modoAvanzado}
       />
+      <LabeledTextField
+        label="Fecha ancla (rotativos)"
+        value={formData.regimen_fecha_ancla}
+        onValueChange={(v) => onChangeField("regimen_fecha_ancla", v)}
+        placeholder="YYYY-MM-DD"
+        type="date"
+        helpText={ayudaCampos.regimen_fecha_ancla}
+        technicalName="regimen_fecha_ancla"
+        showTechnicalName={modoAvanzado}
+      />
       <LabeledSelect
         label="Centro de costo"
         value={formData.centro_costo_id}

@@ -39,7 +39,6 @@ export function buildHldPayload({ formData, modoEdicion, registroEditId }) {
   const payload = {
     persona_id: formData.persona_id,
     cargo_id: formData.cargo_id,
-    regimen_horario_id: toNull(formData.regimen_horario_id),
     centro_costo_id: toNull(formData.centro_costo_id),
     funcion_real_id: toNull(formData.funcion_real_id),
     nivel_jerarquico: toNull(formData.nivel_jerarquico),
@@ -59,6 +58,8 @@ export function buildHlgPayload({ formData, hldId, cargaPorDiaRows, modoEdicion,
     dato_laboral_id: hldId,
     grupo_de_trabajo_id: formData.grupo_de_trabajo_id,
     nivel_jerarquico: toNull(formData.nivel_jerarquico),
+    regimen_horario_id: toNull(formData.regimen_horario_id),
+    regimen_fecha_ancla: toNull(formData.regimen_fecha_ancla),
     carga_por_dia_semana: (cargaPorDiaRows || [])
       .map((row) => {
         const diaId = String(row.dia_semana_id || "").trim();

@@ -60,6 +60,7 @@ export function buildFormDataFromRecord({ record, idxHld, prevFormData, opciones
     categoria_id: String(record.categoria_id || ""),
     rol_id: String(record.rol_id || (datoRef && datoRef.rol_id) || ""),
     regimen_horario_id: String(record.regimen_horario_id || (datoRef && datoRef.regimen_horario_id) || ""),
+    regimen_fecha_ancla: String(record.regimen_fecha_ancla || ""),
     centro_costo_id: String(record.centro_costo_id || (datoRef && datoRef.centro_costo_id) || ""),
     escalafon_id: String(record.escalafon_id || ""),
     agrupamiento_id: String(record.agrupamiento_id || ""),

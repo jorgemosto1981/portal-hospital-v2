@@ -431,7 +431,6 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       id,
       persona_id: personaId,
       cargo_id: cargoId,
-      regimen_horario_id: toNullableTrimmedString(datos.regimen_horario_id),
       centro_costo_id: toNullableTrimmedString(datos.centro_costo_id),
       escalafon_id: toNullableTrimmedString(datos.escalafon_id),
       agrupamiento_id: toNullableTrimmedString(datos.agrupamiento_id),
@@ -454,7 +453,6 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       fechaDesdeHlc: laboralYmdOrNull(cargoSnap.get("fecha_desde")),
       fechaHastaHlc: laboralYmdOrNull(cargoSnap.get("fecha_hasta")),
     });
-    await assertDocExistsOrNull("cfg_regimen_horario", payload.regimen_horario_id, "regimen_horario_id");
     await assertDocExistsOrNull("cfg_centro_costo", payload.centro_costo_id, "centro_costo_id");
     const ref = db.collection(colRaw).doc(id);
     const existing = await ref.get();
@@ -504,6 +502,9 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     );
   }
   await assertDocExistsOrNull("grupos_de_trabajo", grupoId, "grupo_de_trabajo_id");
+  if (regimenHorarioId) {
+    await assertDocExistsOrNull("cfg_regimen_horario", regimenHorarioId, "regimen_horario_id");
+  }
   const carga = Array.isArray(datos.carga_por_dia_semana)
     ? datos.carga_por_dia_semana.map((x) => {
         if (x && typeof x === "object") {
@@ -518,12 +519,16 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       await assertDocExistsOrNull("cfg_dia_semana", toNullableTrimmedString(item.dia_semana_id), "carga_por_dia_semana.dia_semana_id");
     }
   }
+  const regimenHorarioId = toNullableTrimmedString(datos.regimen_horario_id);
+  const regimenFechaAncla = laboralYmdOrNull(datos.regimen_fecha_ancla);
   const payload = {
     id,
     persona_id: personaId,
     dato_laboral_id: datoLaboralId,
     grupo_de_trabajo_id: grupoId,
     nivel_jerarquico: toNumberOrNull(datos.nivel_jerarquico),
+    regimen_horario_id: regimenHorarioId,
+    regimen_fecha_ancla: regimenFechaAncla,
     carga_por_dia_semana: carga,
     fecha_inicio: laboralYmdOrNull(datos.fecha_inicio),
     fecha_fin: laboralYmdOrNull(datos.fecha_fin),
@@ -1062,7 +1067,8 @@ const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
       estado_admin: estadoAdmin,
       fecha_inicio: fechaInicio || null,
       fecha_fin: fechaFin || null,
-      regimen_horario_id: hld ? toNullableTrimmedString(hld.regimen_horario_id) : null,
+      regimen_horario_id: toNullableTrimmedString(hlg.regimen_horario_id) || (hld ? toNullableTrimmedString(hld.regimen_horario_id) : null),
+      regimen_fecha_ancla: toNullableTrimmedString(hlg.regimen_fecha_ancla) || null,
       centro_costo_id: hld ? toNullableTrimmedString(hld.centro_costo_id) : null,
       rol_id: hlc ? toNullableTrimmedString(hlc.rol_id) : null,
       carga_horas_semana_hlg: sumarCargaSemanal(hlg.carga_por_dia_semana),

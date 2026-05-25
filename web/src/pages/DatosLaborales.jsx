@@ -586,6 +586,7 @@ export default function DatosLaborales() {
       cargo_id: String(targetHlc.id || ""),
       grupo_de_trabajo_id: "",
       regimen_horario_id: "",
+      regimen_fecha_ancla: "",
       centro_costo_id: "",
       funcion_real_id: "",
       nivel_jerarquico: "",
