@@ -50,6 +50,9 @@ const CALLABLE_EXPORT_IDS = [
   "habilitarPlanTurnoServicio",
   "cerrarPlanPerpetuo",
   "listarPlanesTurnoServicio",
+  "registrarCambioTurno",
+  "eliminarCambioTurno",
+  "listarOverridesTurno",
 ];
 
 function gcloudInstalled() {

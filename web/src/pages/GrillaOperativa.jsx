@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import GrillaMesLicenciasPanel from "../features/grilla/GrillaMesLicenciasPanel.jsx";
+import ModalCambioTurno from "../features/grilla/ModalCambioTurno.jsx";
 import { listarReadModelLaboralOperativo } from "../services/readModelLaboralService.js";
 
 export default function GrillaOperativa() {
@@ -13,6 +14,7 @@ export default function GrillaOperativa() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [items, setItems] = useState([]);
+  const [cambioTurnoModal, setCambioTurnoModal] = useState(null);
   const [resumen, setResumen] = useState({
     total: 0,
     vigentes: 0,
@@ -246,6 +248,7 @@ export default function GrillaOperativa() {
               <th className="px-3 py-2">Fin</th>
               <th className="px-3 py-2">Carga HLg</th>
               <th className="px-3 py-2">Carga HLc</th>
+              <th className="px-3 py-2">Turno</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
@@ -264,6 +267,15 @@ export default function GrillaOperativa() {
                 <td className="px-3 py-2">{item.fecha_fin || "—"}</td>
                 <td className="px-3 py-2">{item.carga_horas_semana_hlg ?? "—"}</td>
                 <td className="px-3 py-2">{item.carga_horas_total_hlc ?? "—"}</td>
+                <td className="px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => setCambioTurnoModal({ personaId: item.persona_id, personaNombre: item.persona_nombre || item.persona_id })}
+                    className="rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-medium text-indigo-700 transition hover:bg-indigo-100"
+                  >
+                    Cambio
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -271,6 +283,16 @@ export default function GrillaOperativa() {
       </div>
         </>
       ) : null}
+
+      {cambioTurnoModal && (
+        <ModalCambioTurno
+          personaId={cambioTurnoModal.personaId}
+          fecha={fechaCorte}
+          personaNombre={cambioTurnoModal.personaNombre}
+          onCerrar={() => setCambioTurnoModal(null)}
+          onRegistrado={() => void cargar()}
+        />
+      )}
     </section>
   );
 }

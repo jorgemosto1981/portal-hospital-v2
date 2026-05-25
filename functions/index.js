@@ -44,6 +44,7 @@ const obtenerVistaGrillaMesAgente = require("./onCall/grilla/obtenerVistaGrillaM
 const obtenerResumenSolicitudArticuloGrilla = require("./onCall/grilla/obtenerResumenSolicitudArticuloGrilla");
 const listarVistaGrillaMesPorGrupo = require("./onCall/grilla/listarVistaGrillaMesPorGrupo");
 const planesTurnoServicio = require("./modules/asistencia/planesTurnoServicio");
+const cambiosTurno = require("./modules/asistencia/cambiosTurno");
 
 module.exports = {
   ...login,
@@ -80,4 +81,5 @@ module.exports = {
   ...obtenerResumenSolicitudArticuloGrilla,
   ...listarVistaGrillaMesPorGrupo,
   ...planesTurnoServicio,
+  ...cambiosTurno,
 };

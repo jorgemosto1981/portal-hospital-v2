@@ -320,3 +320,18 @@ export function callCerrarPlanPerpetuo(data) {
 export function callListarPlanesTurnoServicio(data) {
   return httpsCallable(getFunctionsV2(), "listarPlanesTurnoServicio")(data);
 }
+
+/** Registrar override puntual en asistencia_diaria. */
+export function callRegistrarCambioTurno(data) {
+  return httpsCallable(getFunctionsV2(), "registrarCambioTurno")(data);
+}
+
+/** Eliminar (soft-delete) un override por índice. */
+export function callEliminarCambioTurno(data) {
+  return httpsCallable(getFunctionsV2(), "eliminarCambioTurno")(data);
+}
+
+/** Listar overrides activos de un agente para una fecha. */
+export function callListarOverridesTurno(data) {
+  return httpsCallable(getFunctionsV2(), "listarOverridesTurno")(data);
+}
