@@ -53,6 +53,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /cfg_regimen_horario/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     match /grupos_de_trabajo/{docId} {
       allow read: if signedIn();
       allow write: if false;

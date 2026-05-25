@@ -41,6 +41,8 @@ const CALLABLE_EXPORT_IDS = [
   "onboardingMvpDdjjFamiliar",
   "onboardingMvpOmitirDdjjFamiliar",
   "onboardingMvpCompletar",
+  "guardarRegimenHorario",
+  "listarRegimenesHorarios",
 ];
 
 function gcloudInstalled() {

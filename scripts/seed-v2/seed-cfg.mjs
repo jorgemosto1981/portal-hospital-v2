@@ -515,7 +515,197 @@ const cfgCausalFinAsignacionLaboral = () => [];
 
 const cfgTipoActoDesignacion = () => [];
 
-const cfgRegimenHorario = () => [];
+const cfgRegimenHorario = () => {
+  const ts = Timestamp.now();
+  const meta = { creado_en: ts, actualizado_en: ts };
+
+  const turnoAdmin = {
+    ingreso: "07:00", egreso: "14:00", horas_efectivas: 7,
+    es_nocturno: false, tolerancia_ingreso_min: 15, tolerancia_egreso_min: 10,
+    banda_ingreso: null, banda_egreso: null,
+    descanso: { duracion_min: 30, es_pago: true, despues_de_horas: 4 },
+  };
+
+  const turnoGuardia24 = {
+    ingreso: "08:00", egreso: "08:00", horas_efectivas: 24,
+    es_nocturno: false, tolerancia_ingreso_min: 15, tolerancia_egreso_min: 15,
+    banda_ingreso: null, banda_egreso: null,
+    descanso: { duracion_min: 60, es_pago: true, despues_de_horas: 6 },
+  };
+
+  const turnoConsultorio = {
+    ingreso: "08:00", egreso: "14:00", horas_efectivas: 6,
+    es_nocturno: false, tolerancia_ingreso_min: 15, tolerancia_egreso_min: 10,
+    banda_ingreso: null, banda_egreso: null,
+    descanso: null,
+  };
+
+  return [
+    {
+      id: "CFG_REG_HOR_ADMIN_7H_LV",
+      data: {
+        ...meta, id: "CFG_REG_HOR_ADMIN_7H_LV",
+        nombre: "Administrativo 7hs L-V", codigo: "ADM-7H-LV", activo: true,
+        tipo_patron: "fijo",
+        carga_horaria_semanal_teorica: 35,
+        impacta_calendario_institucional: true,
+        tipo_contrato_ids: null, notas_rrhh: null,
+        horas_extra_max_semanal: null, horas_extra_max_mensual: null,
+        dias: [
+          { dia_semana: 1, tipo_dia: "laborable", turno: turnoAdmin },
+          { dia_semana: 2, tipo_dia: "laborable", turno: turnoAdmin },
+          { dia_semana: 3, tipo_dia: "laborable", turno: turnoAdmin },
+          { dia_semana: 4, tipo_dia: "laborable", turno: turnoAdmin },
+          { dia_semana: 5, tipo_dia: "laborable", turno: turnoAdmin },
+          { dia_semana: 6, tipo_dia: "franco", turno: null },
+          { dia_semana: 7, tipo_dia: "franco", turno: null },
+        ],
+      },
+    },
+    {
+      id: "CFG_REG_HOR_GUARDIA_24_JUE",
+      data: {
+        ...meta, id: "CFG_REG_HOR_GUARDIA_24_JUE",
+        nombre: "Guardia 24hs Jueves", codigo: "GUA-24-JUE", activo: true,
+        tipo_patron: "fijo",
+        carga_horaria_semanal_teorica: 24,
+        impacta_calendario_institucional: true,
+        tipo_contrato_ids: null, notas_rrhh: null,
+        horas_extra_max_semanal: null, horas_extra_max_mensual: null,
+        dias: [
+          { dia_semana: 1, tipo_dia: "no_laborable", turno: null },
+          { dia_semana: 2, tipo_dia: "no_laborable", turno: null },
+          { dia_semana: 3, tipo_dia: "no_laborable", turno: null },
+          { dia_semana: 4, tipo_dia: "guardia", turno: turnoGuardia24 },
+          { dia_semana: 5, tipo_dia: "no_laborable", turno: null },
+          { dia_semana: 6, tipo_dia: "no_laborable", turno: null },
+          { dia_semana: 7, tipo_dia: "no_laborable", turno: null },
+        ],
+      },
+    },
+    {
+      id: "CFG_REG_HOR_MED_MIXTO_36",
+      data: {
+        ...meta, id: "CFG_REG_HOR_MED_MIXTO_36",
+        nombre: "Médico mixto 36hs (24h guardia + 12h consultorio)", codigo: "MED-MIX-36", activo: true,
+        tipo_patron: "fijo",
+        carga_horaria_semanal_teorica: 36,
+        impacta_calendario_institucional: true,
+        tipo_contrato_ids: null, notas_rrhh: "24hs guardia martes + 6hs consultorio jueves y viernes",
+        horas_extra_max_semanal: null, horas_extra_max_mensual: null,
+        dias: [
+          { dia_semana: 1, tipo_dia: "no_laborable", turno: null },
+          { dia_semana: 2, tipo_dia: "guardia", turno: turnoGuardia24 },
+          { dia_semana: 3, tipo_dia: "no_laborable", turno: null },
+          { dia_semana: 4, tipo_dia: "laborable", turno: turnoConsultorio },
+          { dia_semana: 5, tipo_dia: "laborable", turno: turnoConsultorio },
+          { dia_semana: 6, tipo_dia: "no_laborable", turno: null },
+          { dia_semana: 7, tipo_dia: "no_laborable", turno: null },
+        ],
+      },
+    },
+    {
+      id: "CFG_REG_HOR_PSICO_12_FLEX",
+      data: {
+        ...meta, id: "CFG_REG_HOR_PSICO_12_FLEX",
+        nombre: "Psicólogo 12hs Mi-Vi flexible", codigo: "PSI-12-FLEX", activo: true,
+        tipo_patron: "fijo",
+        carga_horaria_semanal_teorica: 12,
+        impacta_calendario_institucional: true,
+        tipo_contrato_ids: null, notas_rrhh: "Ingreso flexible entre 08:00 y 09:00",
+        horas_extra_max_semanal: null, horas_extra_max_mensual: null,
+        dias: [
+          { dia_semana: 1, tipo_dia: "no_laborable", turno: null },
+          { dia_semana: 2, tipo_dia: "no_laborable", turno: null },
+          { dia_semana: 3, tipo_dia: "laborable", turno: {
+            ingreso: "08:00", egreso: "14:00", horas_efectivas: 6,
+            es_nocturno: false, tolerancia_ingreso_min: 0, tolerancia_egreso_min: 0,
+            banda_ingreso: { desde: "08:00", hasta: "09:00" },
+            banda_egreso: { desde: "14:00", hasta: "15:00" },
+            descanso: null,
+          }},
+          { dia_semana: 4, tipo_dia: "no_laborable", turno: null },
+          { dia_semana: 5, tipo_dia: "laborable", turno: {
+            ingreso: "08:00", egreso: "14:00", horas_efectivas: 6,
+            es_nocturno: false, tolerancia_ingreso_min: 0, tolerancia_egreso_min: 0,
+            banda_ingreso: { desde: "08:00", hasta: "09:00" },
+            banda_egreso: { desde: "14:00", hasta: "15:00" },
+            descanso: null,
+          }},
+          { dia_semana: 6, tipo_dia: "no_laborable", turno: null },
+          { dia_semana: 7, tipo_dia: "no_laborable", turno: null },
+        ],
+      },
+    },
+    {
+      id: "CFG_REG_HOR_ENF_ROT_2X2_NOCHE",
+      data: {
+        ...meta, id: "CFG_REG_HOR_ENF_ROT_2X2_NOCHE",
+        nombre: "Enfermería rotativo 2x2 noche 8hs", codigo: "ENF-ROT-2X2-N", activo: true,
+        tipo_patron: "rotativo",
+        carga_horaria_semanal_teorica: 28,
+        impacta_calendario_institucional: false,
+        tipo_contrato_ids: null, notas_rrhh: "Ciclo: 2 noches trabajo + 2 francos",
+        horas_extra_max_semanal: null, horas_extra_max_mensual: null,
+        ciclo_total: 4,
+        ciclo: [
+          { posicion: 1, tipo_dia: "laborable", turno: {
+            ingreso: "22:00", egreso: "06:00", horas_efectivas: 8,
+            es_nocturno: true, tolerancia_ingreso_min: 15, tolerancia_egreso_min: 15,
+            banda_ingreso: null, banda_egreso: null, descanso: null,
+          }},
+          { posicion: 2, tipo_dia: "laborable", turno: {
+            ingreso: "22:00", egreso: "06:00", horas_efectivas: 8,
+            es_nocturno: true, tolerancia_ingreso_min: 15, tolerancia_egreso_min: 15,
+            banda_ingreso: null, banda_egreso: null, descanso: null,
+          }},
+          { posicion: 3, tipo_dia: "franco", turno: null },
+          { posicion: 4, tipo_dia: "franco", turno: null },
+        ],
+      },
+    },
+    {
+      id: "CFG_REG_HOR_ENF_PLANIF_MTN",
+      data: {
+        ...meta, id: "CFG_REG_HOR_ENF_PLANIF_MTN",
+        nombre: "Enfermería planificado M/T/N 8hs", codigo: "ENF-PLAN-MTN", activo: true,
+        tipo_patron: "planificado",
+        carga_horaria_semanal_teorica: null,
+        impacta_calendario_institucional: false,
+        tipo_contrato_ids: null, notas_rrhh: "Jefe asigna turnos y francos mensualmente",
+        horas_extra_max_semanal: null, horas_extra_max_mensual: null,
+        turnos_disponibles: [
+          {
+            turno_id: "M", etiqueta: "Mañana",
+            ingreso: "06:00", egreso: "14:00", horas_efectivas: 8,
+            es_nocturno: false, tolerancia_ingreso_min: 15, tolerancia_egreso_min: 15,
+            banda_ingreso: null, banda_egreso: null,
+            descanso: { duracion_min: 30, es_pago: true, despues_de_horas: 4 },
+          },
+          {
+            turno_id: "T", etiqueta: "Tarde",
+            ingreso: "14:00", egreso: "22:00", horas_efectivas: 8,
+            es_nocturno: false, tolerancia_ingreso_min: 15, tolerancia_egreso_min: 15,
+            banda_ingreso: null, banda_egreso: null,
+            descanso: { duracion_min: 30, es_pago: true, despues_de_horas: 4 },
+          },
+          {
+            turno_id: "N", etiqueta: "Noche",
+            ingreso: "22:00", egreso: "06:00", horas_efectivas: 8,
+            es_nocturno: true, tolerancia_ingreso_min: 15, tolerancia_egreso_min: 15,
+            banda_ingreso: null, banda_egreso: null, descanso: null,
+          },
+        ],
+        reglas_planificacion: {
+          dias_trabajo_max_mes: 24,
+          dias_franco_min_mes: 6,
+          max_consecutivos_trabajo: 6,
+          min_consecutivos_franco: 1,
+        },
+      },
+    },
+  ];
+};
 
 const cfgCentroCosto = () => [];
 
@@ -601,6 +791,7 @@ async function main() {
     cfg_estado_declaracion_ddjj: cfgEstadoDeclaracionDdjj().map((x) => x.id),
     cfg_rol: cfgRol().map((x) => x.id),
     cfg_estado_civil: cfgEstadoCivil().map((x) => x.id),
+    cfg_regimen_horario: cfgRegimenHorario().map((x) => x.id),
   };
 
   const outPath = join(__dirname, "seed-ids.v2.json");

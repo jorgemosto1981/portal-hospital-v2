@@ -18,6 +18,10 @@ const {
   rrhhMarcarEventoDatosPersonalesVisto,
   rrhhListarBandejaEventos,
 } = require("./catalogosPersonales");
+const {
+  guardarRegimenHorario,
+  listarRegimenesHorarios,
+} = require("./catalogosRegimenHorario");
 
 module.exports = {
   listarColeccion,
@@ -32,5 +36,7 @@ module.exports = {
   guardarRegistroPersonalTemporal,
   rrhhMarcarEventoDatosPersonalesVisto,
   rrhhListarBandejaEventos,
+  guardarRegimenHorario,
+  listarRegimenesHorarios,
 };
 

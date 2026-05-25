@@ -275,3 +275,13 @@ export function callObtenerResumenSolicitudArticuloGrilla(data) {
 export function callListarVistaGrillaMesPorGrupo(data) {
   return httpsCallable(getFunctionsV2(), "listarVistaGrillaMesPorGrupo")(data);
 }
+
+/** RRHH: crear o actualizar un régimen horario (cfg_regimen_horario). */
+export function callGuardarRegimenHorario(data) {
+  return httpsCallable(getFunctionsV2(), "guardarRegimenHorario")(data);
+}
+
+/** RRHH: listar todos los regímenes horarios. */
+export function callListarRegimenesHorarios(data) {
+  return httpsCallable(getFunctionsV2(), "listarRegimenesHorarios")(data || {});
+}
