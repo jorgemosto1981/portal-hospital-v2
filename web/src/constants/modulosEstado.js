@@ -93,6 +93,13 @@ export const MODULOS_PORTAL = [
     grupo: "rrhh",
   },
   {
+    id: "regimenes-horarios",
+    label: "Regímenes",
+    path: "/portal/rrhh/regimenes-horarios",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
     id: "checkin-saldos",
     label: "Check-in saldos",
     path: "/portal/rrhh/checkin-saldos",
@@ -192,6 +199,7 @@ export function resolverTabPorPath(pathname) {
   }
   if (pathname.startsWith("/portal/rrhh/configuracion-articulos")) return "articulos-cfg";
   if (pathname.startsWith("/portal/rrhh/calendario-institucional")) return "calendario-institucional";
+  if (pathname.startsWith("/portal/rrhh/regimenes-horarios")) return "regimenes-horarios";
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla";

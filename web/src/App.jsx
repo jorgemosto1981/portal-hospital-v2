@@ -37,6 +37,7 @@ import AltaAgenteOnboardingRRHH from "./pages/AltaAgenteOnboardingRRHH.jsx";
 import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
 import SeguimientoEnrolamientoUsuariosRRHH from "./pages/SeguimientoEnrolamientoUsuariosRRHH.jsx";
 import CalendarioConfig from "./pages/rrhh/CalendarioConfig.jsx";
+import RegimenesHorariosPage from "./pages/rrhh/RegimenesHorariosPage.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import SistemasWeb from "./pages/SistemasWeb.jsx";
 import PerfilUsuario from "./pages/PerfilUsuario.jsx";
@@ -137,6 +138,7 @@ export default function App() {
               <Route path="rrhh/solicitudes-articulo" element={<BandejaRrhhSolicitudes />} />
               <Route path="rrhh/checkin-saldos" element={<CheckinSaldosAgente />} />
               <Route path="rrhh/calendario-institucional" element={<CalendarioConfig />} />
+              <Route path="rrhh/regimenes-horarios" element={<RegimenesHorariosPage />} />
               <Route path="rrhh/lao-checkin" element={<LaoCheckinRRHH />} />
               <Route path="rrhh/configuracion-articulos" element={<ArticuloListadoGrilla />} />
               <Route

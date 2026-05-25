@@ -147,10 +147,7 @@ export const regimenRotativoSchema = camposComunesSchema
       ),
     ciclo_total: z.number().int().min(2).max(60),
   })
-  .strict()
-  .refine((r) => r.ciclo.length === r.ciclo_total, {
-    message: "ciclo_total debe coincidir con la cantidad de posiciones en el ciclo",
-  });
+  .strict();
 
 export const regimenPlanificadoSchema = camposComunesSchema
   .extend({
@@ -170,11 +167,21 @@ export const regimenPlanificadoSchema = camposComunesSchema
   })
   .strict();
 
-export const regimenHorarioSchema = z.discriminatedUnion("tipo_patron", [
-  regimenFijoSchema,
-  regimenRotativoSchema,
-  regimenPlanificadoSchema,
-]);
+export const regimenHorarioSchema = z
+  .discriminatedUnion("tipo_patron", [
+    regimenFijoSchema,
+    regimenRotativoSchema,
+    regimenPlanificadoSchema,
+  ])
+  .superRefine((val, ctx) => {
+    if (val.tipo_patron === "rotativo" && val.ciclo.length !== val.ciclo_total) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "ciclo_total debe coincidir con la cantidad de posiciones en el ciclo",
+        path: ["ciclo_total"],
+      });
+    }
+  });
 
 /** @typedef {z.infer<typeof regimenFijoSchema>} RegimenFijo */
 /** @typedef {z.infer<typeof regimenRotativoSchema>} RegimenRotativo */
