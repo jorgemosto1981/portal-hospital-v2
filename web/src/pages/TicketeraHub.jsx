@@ -70,11 +70,16 @@ export default function TicketeraHub() {
     nav(`/portal/solicitudes/lao?${q.toString()}`);
   }
 
-  function irArticulo(articuloId) {
+  function irArticulo(articuloId, patronSaldo) {
     const id = String(articuloId || "").trim();
     if (!/^art_/i.test(id)) return;
     if (id === LAO_ARTICULO_ID) {
       irLaoWizard(id);
+      return;
+    }
+    const patron = String(patronSaldo || "B").trim();
+    if (patron === "C") {
+      nav(`/portal/solicitudes/patron-c?articulo=${encodeURIComponent(id)}`);
       return;
     }
     nav(`/portal/solicitudes/patron-b?articulo=${encodeURIComponent(id)}`);
@@ -106,7 +111,7 @@ export default function TicketeraHub() {
               <button
                 key={id}
                 type="button"
-                onClick={() => irArticulo(id)}
+                onClick={() => irArticulo(id, a.patron_saldo)}
                 className={`${TICKETERA.btnTileBase} ${TICKETERA.btnTilePatron}`}
               >
                 <span className={TICKETERA.codigoPatron}>{cod}</span>

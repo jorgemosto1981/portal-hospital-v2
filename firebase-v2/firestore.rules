@@ -299,8 +299,52 @@ service cloud.firestore {
         ]);
     }
 
+    function solicitudArticuloPatronCFieldsValid(d) {
+      return d.articulo_id is string
+        && cfgArticuloIdValidAgente(d.articulo_id)
+        && d.titular_persona_id is string
+        && cfgPersonaIdValid(d.titular_persona_id)
+        && d.actor_alta_persona_id is string
+        && cfgPersonaIdValid(d.actor_alta_persona_id)
+        && d.version_id_aplicada is string
+        && cfgArticuloVersionIdValidAgente(d.version_id_aplicada)
+        && d.grupo_trabajo_id_ancla is string
+        && grupoTrabajoIdValid(d.grupo_trabajo_id_ancla)
+        && d.fecha_desde is string
+        && d.fecha_desde.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && d.fecha_hasta is string
+        && d.fecha_hasta.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && d.horas_solicitadas is number
+        && d.horas_solicitadas > 0
+        && d.patron_saldo == 'C'
+        && d.estado_solicitud_id == 'cfg_esa_borrador'
+        && d.schema_version == 3;
+    }
+
+    function solicitudArticuloCreateShapePatronC() {
+      let d = request.resource.data;
+      return solicitudArticuloPatronCFieldsValid(d)
+        && d.keys().hasOnly([
+          'articulo_id',
+          'titular_persona_id',
+          'actor_alta_persona_id',
+          'version_id_aplicada',
+          'grupo_trabajo_id_ancla',
+          'fecha_desde',
+          'fecha_hasta',
+          'horas_solicitadas',
+          'patron_saldo',
+          'estado_solicitud_id',
+          'schema_version',
+          'creado_en',
+          'actualizado_en',
+        ]);
+    }
+
     function solicitudArticuloCreateShape() {
-      return solicitudArticuloCreateShapeLao() || solicitudArticuloCreateShapePatronB();
+      return solicitudArticuloCreateShapeLao()
+        || solicitudArticuloCreateShapePatronB()
+        || solicitudArticuloCreateShapePatronC();
     }
 
     /** Alta operativa: el agente crea solo su solicitud en BORRADOR; transiciones las aplica el backend.

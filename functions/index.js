@@ -28,9 +28,11 @@ const persistirCheckinSaldoEstandarLote = require("./onCall/solicitudes/persisti
 const acreditarLaoBolsaAgente = require("./onCall/solicitudes/acreditarLaoBolsaAgente");
 const solicitudArticuloTriggers = require("./triggers/solicitudArticuloLaoOnCreate");
 const solicitudPatronBTriggers = require("./triggers/solicitudArticuloPatronBOnCreate");
+const solicitudPatronCTriggers = require("./triggers/solicitudArticuloPatronCOnCreate");
 const resolverContextoLaboralSolicitud = require("./onCall/solicitudes/resolverContextoLaboralSolicitud");
 const listarArticulosIngresoAgente = require("./onCall/solicitudes/listarArticulosIngresoAgente");
 const previsualizarSolicitudPatronB = require("./onCall/solicitudes/previsualizarSolicitudPatronB");
+const previsualizarSolicitudPatronC = require("./onCall/solicitudes/previsualizarSolicitudPatronC");
 const validarEntornoOperativoSolicitud = require("./onCall/solicitudes/validarEntornoOperativoSolicitud");
 const listarSolicitudesBandejaJefe = require("./onCall/solicitudes/listarSolicitudesBandejaJefe");
 const resolverDecisionJefeSolicitud = require("./onCall/solicitudes/resolverDecisionJefeSolicitud");
@@ -61,9 +63,11 @@ module.exports = {
   ...acreditarLaoBolsaAgente,
   ...solicitudArticuloTriggers,
   ...solicitudPatronBTriggers,
+  ...solicitudPatronCTriggers,
   ...resolverContextoLaboralSolicitud,
   ...listarArticulosIngresoAgente,
   ...previsualizarSolicitudPatronB,
+  ...previsualizarSolicitudPatronC,
   ...validarEntornoOperativoSolicitud,
   ...listarSolicitudesBandejaJefe,
   ...resolverDecisionJefeSolicitud,

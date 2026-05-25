@@ -9,7 +9,10 @@ import {
   ESTADO_SOLICITUD_ARTICULO_EN_REVISION_JEFE,
   ESTADO_SOLICITUD_ARTICULO_RECHAZADA,
 } from "../constants/solicitudesArticuloV2.js";
-import { buildSolicitudPatronBBorradorDocument } from "../schemas/solicitudArticuloCreate.schema.js";
+import {
+  buildSolicitudPatronBBorradorDocument,
+  buildSolicitudPatronCBorradorDocument,
+} from "../schemas/solicitudArticuloCreate.schema.js";
 import { dbV2 } from "./firebase.js";
 
 const SOL_ULID_RE = /^sol_[0-9A-HJKMNP-TV-Z]{26}$/i;
@@ -183,3 +186,49 @@ export async function esperarValidacionMotorPatronB(solicitudId, opts = {}) {
 
   throw new Error("El validador no respondió a tiempo. Revisá el estado de la solicitud más tarde.");
 }
+
+// ---------------------------------------------------------------------------
+// Patrón C — Cuenta corriente continua (horas, saldo global)
+// ---------------------------------------------------------------------------
+
+/**
+ * @param {{
+ *   personaId: string,
+ *   articuloId: string,
+ *   versionIdAplicada: string,
+ *   fechaDesde: string,
+ *   fechaHasta: string,
+ *   horasSolicitadas: number,
+ *   grupoTrabajoIdAncla: string,
+ * }} params
+ */
+export async function crearSolicitudArticuloPatronCBorrador(params) {
+  const payload = buildSolicitudPatronCBorradorDocument(
+    {
+      personaId: params.personaId,
+      articuloId: params.articuloId,
+      versionIdAplicada: params.versionIdAplicada,
+      fechaDesde: params.fechaDesde,
+      fechaHasta: params.fechaHasta,
+      horasSolicitadas: params.horasSolicitadas,
+      grupoTrabajoIdAncla: params.grupoTrabajoIdAncla,
+    },
+    { creado_en: serverTimestamp(), actualizado_en: serverTimestamp() },
+  );
+
+  const solicitud_id = `sol_${ulid()}`;
+  if (!SOL_ULID_RE.test(solicitud_id)) {
+    throw new Error("No se pudo generar solicitud_id.");
+  }
+
+  const ref = doc(dbV2, "solicitudes_articulo", solicitud_id);
+  await setDoc(ref, payload);
+
+  return { solicitud_id };
+}
+
+/**
+ * Espera a que el trigger Patrón C actualice el estado.
+ * Reutiliza la misma lógica de polling que Patrón B.
+ */
+export { esperarValidacionMotorPatronB as esperarValidacionMotorPatronC };

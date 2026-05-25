@@ -1,12 +1,14 @@
 "use strict";
 
 const { parseYmd } = require("./laoPreviewDateUtils");
-const { PATRON_SALDO_B } = require("./resolvePatronSaldo");
+const { PATRON_SALDO_B, PATRON_SALDO_C } = require("./resolvePatronSaldo");
 const {
   filterHlcVigentesEnFecha,
   resolverElegibilidadSolicitud,
 } = require("./solicitudElegibilidadLaboral");
-const { loadHlcArray, patronFromVersion } = require("./solicitudPatronBAltaMotor");
+const { loadHlcArray, patronFromVersion } = require("./patronBAltaMotorV2");
+
+const PATRONES_TICKETERA = new Set([PATRON_SALDO_B, PATRON_SALDO_C]);
 const {
   ARTICULO_IDS_MVP,
   modoListadoArticulosIngreso,
@@ -63,13 +65,15 @@ async function loadArticuloPatronBVersionPublicada(db, articuloId) {
   if (!esArticuloOperativo(core)) return null;
 
   const versionData = verSnap.docs[0].data() || {};
-  if (patronFromVersion(versionData) !== PATRON_SALDO_B) return null;
+  const patron = patronFromVersion(versionData);
+  if (!PATRONES_TICKETERA.has(patron)) return null;
 
   return {
     articuloId,
     core,
     versionData,
     versionId: verSnap.docs[0].id,
+    patron,
   };
 }
 
@@ -89,7 +93,8 @@ async function discoverArticulosPatronBPublicados(db) {
     const articuloId = verDoc.ref.parent?.parent?.id;
     if (!articuloId) continue;
     const versionData = verDoc.data() || {};
-    if (patronFromVersion(versionData) !== PATRON_SALDO_B) continue;
+    const patron = patronFromVersion(versionData);
+    if (!PATRONES_TICKETERA.has(patron)) continue;
     const prev = porArticulo.get(articuloId);
     if (prev && !versionPublicadaEsMasReciente(versionData, prev.versionData)) continue;
     porArticulo.set(articuloId, { versionData, versionId: verDoc.id });
@@ -113,6 +118,7 @@ async function discoverArticulosPatronBPublicados(db) {
       core,
       versionData: meta.versionData,
       versionId: meta.versionId,
+      patron: meta.patron,
     });
   }
   return out;
@@ -162,7 +168,7 @@ async function listarArticulosIngresoPatronB(params) {
   let elegibilidadVacia = null;
 
   for (const cand of candidatos) {
-    const { articuloId, core, versionData, versionId } = cand;
+    const { articuloId, core, versionData, versionId, patron } = cand;
     const eleg = resolverElegibilidadSolicitud({
       versionData,
       hlcVigentes,
@@ -189,7 +195,7 @@ async function listarArticulosIngresoPatronB(params) {
       version_id: versionId,
       codigo_grilla: String(core.codigo || core.nombre_corto || "").trim() || "ART",
       nombre: String(core.nombre || core.codigo || "").trim(),
-      patron_saldo: PATRON_SALDO_B,
+      patron_saldo: patron || PATRON_SALDO_B,
       dias_solicitados: diasSolicitados,
       fecha_hasta: fechaHasta,
       regla_computo_dias_id: String(versionData?.bloque_topes_plazos_computo?.regla_computo_dias_id || "").trim() || null,

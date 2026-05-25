@@ -226,6 +226,11 @@ export function callPrevisualizarSolicitudPatronB(data) {
   return httpsCallable(getFunctionsV2(), "previsualizarSolicitudPatronB")(data);
 }
 
+/** Preview Patrón C (elegibilidad + saldo global, horas) sin crear solicitud. */
+export function callPrevisualizarSolicitudPatronC(data) {
+  return httpsCallable(getFunctionsV2(), "previsualizarSolicitudPatronC")(data);
+}
+
 /** Paso 2 wizard Patrón B: entorno operativo (HLg, turno, grilla RDA) sin motor de saldos. */
 export function callValidarEntornoOperativoSolicitud(data) {
   return httpsCallable(getFunctionsV2(), "validarEntornoOperativoSolicitud")(data);

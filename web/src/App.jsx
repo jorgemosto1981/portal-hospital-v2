@@ -27,10 +27,11 @@ import Solicitud64AAlta from "./pages/Solicitud64AAlta.jsx";
 import TicketeraShell from "./features/solicitudes/TicketeraShell.jsx";
 import TicketeraHub from "./pages/TicketeraHub.jsx";
 import TicketeraPatronB from "./pages/TicketeraPatronB.jsx";
+import TicketeraPatronC from "./pages/TicketeraPatronC.jsx";
 import BandejaJefeSolicitudes from "./pages/BandejaJefeSolicitudes.jsx";
 import BandejaRrhhSolicitudes from "./pages/BandejaRrhhSolicitudes.jsx";
 import GuardArticuloIngreso from "./features/solicitudes/GuardArticuloIngreso.jsx";
-import { ARTICULO_IDS_PATRON_B_MVP } from "./constants/solicitudesArticuloV2.js";
+import { ARTICULO_IDS_PATRON_B_MVP, ARTICULO_IDS_PATRON_C_MVP } from "./constants/solicitudesArticuloV2.js";
 import CheckinSaldosAgente from "./pages/CheckinSaldosAgente.jsx";
 import AltaAgenteOnboardingRRHH from "./pages/AltaAgenteOnboardingRRHH.jsx";
 import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
@@ -106,6 +107,14 @@ export default function App() {
                 element={
                   <GuardArticuloIngreso articuloIds={ARTICULO_IDS_PATRON_B_MVP}>
                     <TicketeraPatronB />
+                  </GuardArticuloIngreso>
+                }
+              />
+              <Route
+                path="patron-c"
+                element={
+                  <GuardArticuloIngreso articuloIds={ARTICULO_IDS_PATRON_C_MVP}>
+                    <TicketeraPatronC />
                   </GuardArticuloIngreso>
                 }
               />
