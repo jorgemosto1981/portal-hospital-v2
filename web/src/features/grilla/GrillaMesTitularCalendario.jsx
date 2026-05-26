@@ -102,7 +102,8 @@ function CalendarioGrupo({ anio, mes, diasMap, gdtId, etiqueta, esMultiGrupo, gr
           const bgFinDeSemana = esFinDeSemana && !tieneEventos && !esFeriado ? "bg-rose-50/40" : "";
           const tachado = tieneEventos && turnoId ? "line-through opacity-60" : "";
 
-          const turnoLabel = turnoId && egreso ? `${turnoId}–${egreso}` : turnoId;
+          const ingreso = cell.rda_ingreso || null;
+          const turnoLabel = ingreso && egreso ? `${ingreso}–${egreso}` : turnoId;
 
           const grupoLabel = cell.etiqueta_grupo_corta
             || grupos.find((g) => g.gdtId === cellGdt)?.etiqueta

@@ -17,29 +17,7 @@ import { claimsIncludeRrhh } from "../../features/routing/portalRole.js";
 import GrillaMensualEditor from "./planes/GrillaMensualEditor.jsx";
 import PlanPerpetualViewer from "./planes/PlanPerpetualViewer.jsx";
 import BandejaAprobaciones from "./planes/BandejaAprobaciones.jsx";
-
-const BADGE_ESTADO = {
-  BORRADOR: "bg-slate-100 text-slate-700",
-  ENVIADO: "bg-blue-100 text-blue-800",
-  EN_REVISION: "bg-amber-100 text-amber-800",
-  HABILITADO: "bg-green-100 text-green-800",
-  CERRADO: "bg-red-100 text-red-700",
-};
-const LABEL_ESTADO = {
-  BORRADOR: "Borrador",
-  ENVIADO: "Enviado",
-  EN_REVISION: "En revisión",
-  HABILITADO: "Habilitado",
-  CERRADO: "Cerrado",
-};
-
-function BadgeEstado({ estado }) {
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${BADGE_ESTADO[estado] || "bg-slate-100 text-slate-600"}`}>
-      {LABEL_ESTADO[estado] || estado}
-    </span>
-  );
-}
+import BadgeEstadoPlan, { LABEL_ESTADO } from "../../components/ui/BadgeEstadoPlan.jsx";
 
 function periodoActual() {
   const now = new Date();
@@ -383,7 +361,7 @@ export default function PlanTurnoServicioPage() {
                           {plan.agentes?.length || 0}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-center">
-                          <BadgeEstado estado={plan.estado} />
+                          <BadgeEstadoPlan estado={plan.estado} />
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-right">
                           <div className="inline-flex gap-1">
@@ -481,7 +459,7 @@ export default function PlanTurnoServicioPage() {
             </div>
             <div className="space-y-3 text-sm text-slate-700">
               <p><span className="font-medium">Tipo:</span> {planDetalle.tipo_plan === "perpetuo" ? "Perpetuo" : "Mensual"}</p>
-              <p><span className="font-medium">Estado:</span> <BadgeEstado estado={planDetalle.estado} /></p>
+              <p><span className="font-medium">Estado:</span> <BadgeEstadoPlan estado={planDetalle.estado} /></p>
               <p><span className="font-medium">Grupo:</span> {planDetalle.grupo_id}</p>
               {planDetalle.periodo && <p><span className="font-medium">Período:</span> {planDetalle.periodo}</p>}
               {planDetalle.vigente_desde && (

@@ -45,6 +45,7 @@ const obtenerResumenSolicitudArticuloGrilla = require("./onCall/grilla/obtenerRe
 const listarVistaGrillaMesPorGrupo = require("./onCall/grilla/listarVistaGrillaMesPorGrupo");
 const planesTurnoServicio = require("./modules/asistencia/planesTurnoServicio");
 const cambiosTurno = require("./modules/asistencia/cambiosTurno");
+const rematerializacion = require("./modules/asistencia/rematerializacion");
 
 module.exports = {
   ...login,
@@ -82,4 +83,5 @@ module.exports = {
   ...listarVistaGrillaMesPorGrupo,
   ...planesTurnoServicio,
   ...cambiosTurno,
+  ...rematerializacion,
 };

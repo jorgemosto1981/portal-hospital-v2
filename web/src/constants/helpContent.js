@@ -53,7 +53,7 @@ export const GLOSARIO_COMPLETO = [
   {
     termino: "Estados del plan",
     definicion:
-      "Máquina de estados: BORRADOR (editable) → ENVIADO (en revisión) → AUTORIZADO_SUPERIOR → HABILITADO (activo, lo usa el motor). También CERRADO para perpetuos finalizados.",
+      "Máquina de estados: BORRADOR (editable) → ENVIADO (en revisión por superior) → HABILITADO (activo, lo usa el motor). EN_REVISION (RRHH revierte). CERRADO para perpetuos finalizados.",
   },
   {
     termino: "Override (Reemplazo)",

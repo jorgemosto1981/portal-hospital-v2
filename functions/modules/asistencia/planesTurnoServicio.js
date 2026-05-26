@@ -241,9 +241,25 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) err("not-found", "[PLT-APR-002] Plan no encontrado.");
-    assertEstado(snap.data(), "ENVIADO");
+    const current = snap.data();
+    assertEstado(current, "ENVIADO");
+
+    if (current.tipo_plan === "mensual" && current.periodo) {
+      const dupSnap = await tx.get(
+        db.collection(COL_PLANES)
+          .where("grupo_id", "==", current.grupo_id)
+          .where("periodo", "==", current.periodo)
+          .where("estado", "==", "HABILITADO")
+          .limit(1),
+      );
+      if (!dupSnap.empty) {
+        err("failed-precondition", `[PLT-APR-DUP] Ya existe un plan HABILITADO para ${current.grupo_id} / ${current.periodo}. Cierre o revierta el existente primero.`);
+      }
+    }
+
     tx.update(ref, {
       estado: "HABILITADO",
+      materializacion_fallida: false,
       historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
       actualizado_en: FieldValue.serverTimestamp(),
     });
@@ -264,6 +280,9 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
       logger.info("materializarGrupoMes_post_aprobar OK", { planId });
     } catch (e) {
       logger.error("materializarGrupoMes_post_aprobar ERROR", { planId, error: String(e) });
+      const ref2 = db.collection(COL_PLANES).doc(planId);
+      await ref2.update({ materializacion_fallida: true, materializacion_error: String(e).slice(0, 500) });
+      warnings.push({ code: "PLT-APR-W002", mensaje: "Materialización falló. El plan queda HABILITADO pero requiere re-materialización manual." });
     }
   }
 
@@ -347,8 +366,8 @@ const listarPlanesPendientesRrhh = onCall({ invoker: "public" }, async (request)
   const COL_GDT = "grupos_de_trabajo";
   const MAX_ITEMS = 200;
 
-  const snapEnviado = await db.collection(COL_PLANES).where("estado", "==", "ENVIADO").get();
-  const snapRevision = await db.collection(COL_PLANES).where("estado", "==", "EN_REVISION").get();
+  const snapEnviado = await db.collection(COL_PLANES).where("estado", "==", "ENVIADO").limit(MAX_ITEMS).get();
+  const snapRevision = await db.collection(COL_PLANES).where("estado", "==", "EN_REVISION").limit(MAX_ITEMS).get();
 
   const docs = [...snapEnviado.docs, ...snapRevision.docs];
   const items = docs.slice(0, MAX_ITEMS).map((d) => ({ id: d.id, ...d.data() }));
@@ -409,11 +428,17 @@ const cerrarPlanPerpetuo = onCall({ invoker: "public" }, async (request) => {
 
   if (grupoId) {
     const hoy = new Date();
-    try {
-      await materializarGrupoMes({ grupoId, anio: hoy.getFullYear(), mes: hoy.getMonth() + 1 });
-      logger.info("materializarGrupoMes_post_cerrar OK", { planId });
-    } catch (e) {
-      logger.error("materializarGrupoMes_post_cerrar ERROR", { planId, error: String(e) });
+    const mesActual = hoy.getMonth() + 1;
+    const anioActual = hoy.getFullYear();
+    const mesSig = mesActual === 12 ? 1 : mesActual + 1;
+    const anioSig = mesActual === 12 ? anioActual + 1 : anioActual;
+    for (const [a, m] of [[anioActual, mesActual], [anioSig, mesSig]]) {
+      try {
+        await materializarGrupoMes({ grupoId, anio: a, mes: m });
+        logger.info("materializarGrupoMes_post_cerrar OK", { planId, anio: a, mes: m });
+      } catch (e) {
+        logger.error("materializarGrupoMes_post_cerrar ERROR", { planId, anio: a, mes: m, error: String(e) });
+      }
     }
   }
 

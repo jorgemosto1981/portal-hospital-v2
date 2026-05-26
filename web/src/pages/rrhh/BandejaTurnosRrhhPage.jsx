@@ -10,29 +10,7 @@ import {
 } from "../../services/callables.js";
 import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
 import BandejaAprobaciones from "../jefe/planes/BandejaAprobaciones.jsx";
-
-const BADGE_ESTADO = {
-  BORRADOR: "bg-slate-100 text-slate-700",
-  ENVIADO: "bg-blue-100 text-blue-800",
-  EN_REVISION: "bg-amber-100 text-amber-800",
-  HABILITADO: "bg-green-100 text-green-800",
-  CERRADO: "bg-red-100 text-red-700",
-};
-const LABEL_ESTADO = {
-  BORRADOR: "Borrador",
-  ENVIADO: "Enviado",
-  EN_REVISION: "En revisión",
-  HABILITADO: "Habilitado",
-  CERRADO: "Cerrado",
-};
-
-function BadgeEstado({ estado }) {
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${BADGE_ESTADO[estado] || "bg-slate-100 text-slate-600"}`}>
-      {LABEL_ESTADO[estado] || estado}
-    </span>
-  );
-}
+import BadgeEstadoPlan from "../../components/ui/BadgeEstadoPlan.jsx";
 
 function etiquetaGrupo(row) {
   return String(row.nombre || row.codigo || row.titulo || "").trim() || String(row.id || "");
@@ -51,6 +29,9 @@ export default function BandejaTurnosRrhhPage() {
   const [gruposCargando, setGruposCargando] = useState(false);
   const [planesHabilitados, setPlanesHabilitados] = useState([]);
   const [habLoading, setHabLoading] = useState(false);
+
+  const [modalRevertir, setModalRevertir] = useState(null);
+  const [obsRevertir, setObsRevertir] = useState("");
 
   const showFeedback = (msg) => {
     setFeedback(msg);
@@ -226,6 +207,43 @@ export default function BandejaTurnosRrhhPage() {
         </div>
       )}
 
+      {modalRevertir && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalRevertir(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-slate-900">Motivo de la revisión</h3>
+            <p className="mt-1 text-sm text-slate-500">Indicá por qué se revierte este plan habilitado.</p>
+            <textarea
+              value={obsRevertir}
+              onChange={(e) => setObsRevertir(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="Motivo (obligatorio, mín. 3 caracteres)"
+              className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setModalRevertir(null)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={obsRevertir.trim().length < 3 || operando}
+                onClick={async () => {
+                  await handleTransicion("revertir", modalRevertir, { observaciones: obsRevertir.trim() });
+                  setModalRevertir(null);
+                }}
+                className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-amber-700 disabled:opacity-50"
+              >
+                {operando ? "Procesando…" : "Revertir"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {tab === "revertir" && (
         <div className="space-y-3">
           <Card className="px-4 py-3">
@@ -275,7 +293,7 @@ export default function BandejaTurnosRrhhPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs text-slate-500">{plan.id}</span>
-                        <BadgeEstado estado={plan.estado} />
+                        <BadgeEstadoPlan estado={plan.estado} />
                       </div>
                       <p className="text-sm text-slate-700">
                         <span className="font-medium">Tipo:</span> {plan.tipo_plan === "perpetuo" ? "Perpetuo" : "Mensual"}
@@ -288,10 +306,7 @@ export default function BandejaTurnosRrhhPage() {
                     <button
                       type="button"
                       disabled={operando}
-                      onClick={() => {
-                        const obs = window.prompt("Motivo de la revisión (obligatorio):");
-                        if (obs && obs.trim()) handleTransicion("revertir", plan.id, { observaciones: obs.trim() });
-                      }}
+                      onClick={() => { setModalRevertir(plan.id); setObsRevertir(""); }}
                       className="rounded-xl bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-50"
                     >
                       Revertir a revisión

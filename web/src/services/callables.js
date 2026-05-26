@@ -345,3 +345,13 @@ export function callEliminarCambioTurno(data) {
 export function callListarOverridesTurno(data) {
   return httpsCallable(getFunctionsV2(), "listarOverridesTurno")(data);
 }
+
+/** Re-materializar tras cambio de calendario institucional (solo RRHH). */
+export function callRematerializarPostCalendario(data) {
+  return httpsCallable(getFunctionsV2(), "rematerializarPostCalendario", { timeout: 540000 })(data);
+}
+
+/** Re-materializar agentes de un régimen tras edición (solo RRHH). */
+export function callRematerializarPostRegimen(data) {
+  return httpsCallable(getFunctionsV2(), "rematerializarPostRegimen", { timeout: 540000 })(data);
+}

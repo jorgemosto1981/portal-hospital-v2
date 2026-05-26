@@ -2,8 +2,8 @@
  * Schema Zod — Plan de Turno de Servicio V2
  * Contrato: docs/v2/PLAN_REGIMEN_HORARIO_V2.md
  *
- * Máquina de estados: BORRADOR → ENVIADO → AUTORIZADO_SUPERIOR → HABILITADO
- * Con path de rechazo en cualquier punto → BORRADOR.
+ * Máquina de estados: BORRADOR → ENVIADO → HABILITADO (aprobado por superior).
+ * EN_REVISION (RRHH revierte). Rechazo en cualquier punto → BORRADOR.
  *
  * Dos tipos: "perpetuo" (fijo/rotativo, sin grilla) y "mensual" (planificado, grilla día×agente).
  */
@@ -19,7 +19,7 @@ const PERIODO = /^\d{4}-\d{2}$/;
 export const ESTADOS_PLAN = /** @type {const} */ ([
   "BORRADOR",
   "ENVIADO",
-  "AUTORIZADO_SUPERIOR",
+  "EN_REVISION",
   "HABILITADO",
   "CERRADO",
 ]);
@@ -31,7 +31,7 @@ const aprobacionSchema = z
     actor_persona_id: z.string().nullable().default(null),
     fecha: z.string().regex(YMD),
     rol: z.enum(["jefe", "superior", "rrhh"]),
-    accion: z.enum(["enviar", "aprobar", "habilitar", "rechazar", "cerrar"]),
+    accion: z.enum(["enviar", "aprobar", "rechazar", "revertir", "cerrar"]),
     observaciones: z.string().max(500).nullable().default(null),
   })
   .strict();

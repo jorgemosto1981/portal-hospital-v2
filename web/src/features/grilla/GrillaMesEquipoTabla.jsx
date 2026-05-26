@@ -112,7 +112,8 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
                     const bgFinde = col.esFinde && !tiene && !esFeriado ? "bg-rose-50/30" : "";
                     const grupoLabel = cell.etiqueta_grupo_corta || null;
 
-                    const turnoCorto = turnoId && egreso ? `${turnoId}–${egreso}` : turnoId;
+                    const ingreso = cell.rda_ingreso || null;
+                    const turnoCorto = ingreso && egreso ? `${ingreso}–${egreso}` : turnoId;
 
                     let contenido;
                     if (label) {

@@ -76,7 +76,10 @@ export default function GrillaMesLicenciasPanel() {
           mes={vista.mes}
           diasMap={vista.titularDias}
           gruposEquipo={vista.gruposEquipo}
-          onDiaClick={({ dia, eventos, grupoLabel }) => setDiaModal({ dia, eventos, grupoLabel })}
+          onDiaClick={({ dia, eventos, grupoLabel }) => {
+            const cell = vista.titularDias?.[dia] || {};
+            setDiaModal({ dia, eventos, grupoLabel, turnoTeorico: { rda_turno_id: cell.rda_turno_id, es_franco: cell.es_franco, capa_teorica: { tipo_dia: cell.es_franco ? "franco" : "laborable", ingreso: cell.rda_ingreso, egreso: cell.rda_egreso } } });
+          }}
         />
       ) : (
         <GrillaMesEquipoTabla
@@ -98,6 +101,7 @@ export default function GrillaMesLicenciasPanel() {
         bandejaPath={bandejaPath}
         subtitulo={diaModal?.personaLabel}
         grupoLabel={diaModal?.grupoLabel}
+        turnoTeorico={diaModal?.turnoTeorico ?? null}
       />
 
       <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">

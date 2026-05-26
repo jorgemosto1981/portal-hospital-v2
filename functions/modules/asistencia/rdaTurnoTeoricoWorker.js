@@ -314,6 +314,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
     const esFranco = tipoDiaFinal === "franco" || tipoDiaFinal === "no_laborable";
     const gdtId = capaTeorica.grupo_de_trabajo_id || null;
     visDias[`dias.${diaKey}.rda_turno_id`] = esFranco ? null : (capaTeorica.turno_id || capaTeorica.ingreso || tipoDiaFinal);
+    visDias[`dias.${diaKey}.rda_ingreso`] = esFranco ? null : (capaTeorica.ingreso || null);
     visDias[`dias.${diaKey}.rda_egreso`] = esFranco ? null : (capaTeorica.egreso || null);
     visDias[`dias.${diaKey}.es_franco`] = esFranco;
     visDias[`dias.${diaKey}.es_feriado`] = capaTeorica.es_feriado || false;
@@ -352,7 +353,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
           mes,
           dias: nestedDias,
           metadata: { ultima_sync_teorica: FieldValue.serverTimestamp() },
-        });
+        }, { merge: true });
       } else {
         throw e;
       }
