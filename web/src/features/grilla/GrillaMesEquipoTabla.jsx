@@ -52,24 +52,28 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, onCeldaClick })
                     const eventos = cell.eventos;
                     const label = etiquetaCelda(eventos);
                     const tiene = Array.isArray(eventos) && eventos.length > 0;
+                    const turnoId = cell.rda_turno_id || null;
+                    const esFranco = cell.es_franco === true;
+                    const tieneDatos = tiene || turnoId || esFranco;
+                    const bgTurno = esFranco ? "bg-slate-50" : turnoId ? "bg-indigo-50" : "";
                     return (
-                      <td key={dia} className="h-8 border border-slate-100 p-0">
+                      <td key={dia} className={`h-8 border border-slate-100 p-0 ${bgTurno}`}>
                         <GrillaMesCeldaLicencia
                           eventos={Array.isArray(eventos) ? eventos : []}
                           personaLabel={personaLabel}
                           dia={dia}
-                          disabled={!tiene}
+                          disabled={!tieneDatos}
                           onClick={() =>
-                            tiene &&
+                            tieneDatos &&
                             onCeldaClick({
                               dia,
-                              eventos,
+                              eventos: Array.isArray(eventos) ? eventos : [],
                               personaLabel,
                             })
                           }
                           className="flex min-h-8 min-w-[1.75rem] items-center justify-center font-semibold"
                         >
-                          {label ? label.slice(0, 4) : ""}
+                          {label ? label.slice(0, 4) : turnoId || (esFranco ? "F" : "")}
                         </GrillaMesCeldaLicencia>
                       </td>
                     );

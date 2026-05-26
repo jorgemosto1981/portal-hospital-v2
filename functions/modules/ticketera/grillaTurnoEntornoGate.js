@@ -24,7 +24,7 @@ function capaTeoricaPresente(capa) {
   return Boolean(
     capa &&
       typeof capa === "object" &&
-      (capa.tipo_id || capa.tipo || capa.ingreso_teorico || capa.egreso_teorico),
+      (capa.tipo_dia || capa.tipo_id || capa.tipo || capa.ingreso_teorico || capa.egreso_teorico || capa.ingreso || capa.origen),
   );
 }
 

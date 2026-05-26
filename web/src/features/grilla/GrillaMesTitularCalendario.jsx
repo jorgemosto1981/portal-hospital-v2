@@ -5,7 +5,7 @@ import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
  * @param {{
  *   anio: number;
  *   mes: number;
- *   diasMap: Record<string, { eventos?: unknown[] }> | null;
+ *   diasMap: Record<string, { eventos?: unknown[], rda_turno_id?: string, es_franco?: boolean }> | null;
  *   onDiaClick: (payload: { dia: string; eventos: unknown[] }) => void;
  * }} props
  */
@@ -21,16 +21,29 @@ export default function GrillaMesTitularCalendario({ anio, mes, diasMap, onDiaCl
         const eventos = cell.eventos;
         const label = etiquetaCelda(eventos);
         const tieneEventos = Array.isArray(eventos) && eventos.length > 0;
+        const turnoId = cell.rda_turno_id || null;
+        const esFranco = cell.es_franco === true;
+        const tieneDatos = tieneEventos || turnoId || esFranco;
+
+        const bgFranco = esFranco && !turnoId ? "bg-slate-100" : "";
+        const tachado = tieneEventos && turnoId ? "line-through opacity-60" : "";
+
         return (
           <GrillaMesCeldaLicencia
             key={dia}
             eventos={Array.isArray(eventos) ? eventos : []}
             dia={dia}
-            disabled={!tieneEventos}
-            onClick={() => tieneEventos && onDiaClick({ dia, eventos })}
-            className="flex min-h-[3rem] flex-col items-center justify-center rounded text-center text-[10px] font-semibold"
+            disabled={!tieneDatos}
+            onClick={() => tieneDatos && onDiaClick({ dia, eventos: Array.isArray(eventos) ? eventos : [] })}
+            className={`flex min-h-[3rem] flex-col items-center justify-center rounded text-center text-[10px] font-semibold ${bgFranco}`}
           >
             <span className="text-[9px] opacity-80">{Number(dia)}</span>
+            {turnoId && (
+              <span className={`text-[9px] font-bold text-indigo-600 ${tachado}`}>{turnoId}</span>
+            )}
+            {esFranco && !turnoId && !tieneEventos && (
+              <span className="text-[9px] text-slate-400">F</span>
+            )}
             <span className="truncate px-0.5">{label}</span>
           </GrillaMesCeldaLicencia>
         );
