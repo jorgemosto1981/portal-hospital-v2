@@ -556,24 +556,24 @@ Frontend local actualizado con mejoras de UI.
 
 ---
 
-## PUNTO DE PAUSA — 2026-05-26 11:28 ART
+## PUNTO DE PAUSA — 2026-05-26 19:25 ART
 
 ### Estado actual
 
 - **Backend**: Todas las fases (0-5) code-complete + 4 bugfixes criticos aplicados y deployados.
-- **Frontend**: Calendario Lun-Dom + tabla equipo con encabezados. Local, no deployado.
-- **Pendiente verificacion**: Re-guardar un HLG del usuario ejemplo (DNI 28914247) para validar que la fusion multi-HLG muestra ambos grupos correctamente:
-  - Lun/Mar/Mie: 08:00 (Oficina Personal)
-  - Jue/Vie: 08:00 (Porteria)
-  - Sab/Dom: F (franco)
+- **Frontend**: Todo deployado a hosting (calendario, equipo, multi-HLG, bandeja RRHH separada).
+- **Maquina de estados**: Simplificada (ENVIADO->HABILITADO directo), EN_REVISION + revertir RRHH, bandeja RRHH en menu propio.
 
-### Proximos pasos al retomar
+### Verificaciones completadas (2026-05-26)
 
-1. **Verificar fusion multi-HLG**: Guardar un HLG -> cargar calendario -> confirmar ambos grupos.
-2. **Verificar detalle dia**: Clic en una celda con turno -> confirmar que DiaGrillaDetalleModal muestra `grupo_de_trabajo_id` del HLG que asigno ese dia.
-3. **Verificar vista equipo**: Cambiar a Equipo -> confirmar encabezados dia semana + turnos.
-4. **Test de licencias (Gate 1)**: Intentar solicitar un articulo con `depende_rda=true` -> confirmar que `capa_teorica` en `asi_*` desbloquea la solicitud.
-5. **Test regimen planificado**: Crear plan mensual para un grupo -> habilitar -> confirmar materializacion.
+1. **Fusion multi-HLG**: OK — ambos grupos visibles en calendario.
+2. **Detalle dia**: OK — modal muestra grupo_de_trabajo_id del HLG asignante.
+3. **Vista equipo**: OK — encabezados dia semana + turnos correctos.
+4. **Test Gate 1 (licencias)**: OK — solicitud sol_01KSK6BYQJ0CENWQR8EG8RPHPA registrada exitosamente con `depende_rda=true`. La `capa_teorica` materializada desbloqueo el gate.
+
+### Verificaciones pendientes
+
+5. **Test regimen planificado**: Crear plan mensual para un grupo -> aprobar -> confirmar materializacion.
 6. **Limpieza**: Los documentos `vis_*` pueden tener campos literales planos residuales de BUG-2 (ej. `"dias.01.rda_turno_id"` como key plana). Evaluar si limpiar manualmente o ignorar (no afectan lectura porque el frontend lee la estructura anidada).
 
 ### Usuario de test

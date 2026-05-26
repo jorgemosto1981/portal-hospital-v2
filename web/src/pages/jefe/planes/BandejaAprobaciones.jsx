@@ -2,11 +2,11 @@ import { useCallback, useState } from "react";
 
 const BADGE_ESTADO = {
   ENVIADO: "bg-blue-100 text-blue-800",
-  AUTORIZADO_SUPERIOR: "bg-amber-100 text-amber-800",
+  EN_REVISION: "bg-amber-100 text-amber-800",
 };
 const LABEL_ESTADO = {
   ENVIADO: "Enviado",
-  AUTORIZADO_SUPERIOR: "Autorizado",
+  EN_REVISION: "En revisión",
 };
 
 function ModalRechazo({ planId, onConfirm, onCancel }) {
@@ -52,7 +52,7 @@ function ModalRechazo({ planId, onConfirm, onCancel }) {
   );
 }
 
-export default function BandejaAprobaciones({ planes, onTransicion, operando }) {
+export default function BandejaAprobaciones({ planes, onTransicion, operando, esRrhh, mostrarGrupo }) {
   const [rechazoModal, setRechazoModal] = useState(null);
 
   const handleRechazar = useCallback((planId) => {
@@ -95,11 +95,16 @@ export default function BandejaAprobaciones({ planes, onTransicion, operando }) 
               <p className="text-sm text-slate-600">
                 <span className="font-medium">Agentes:</span> {plan.agentes?.length || 0}
                 {" — "}
-                <span className="font-medium">Grupo:</span> {plan.grupo_id}
+                <span className="font-medium">Grupo:</span> {mostrarGrupo ? (plan.grupo_label || plan.grupo_id) : plan.grupo_id}
               </p>
               {plan.observaciones_rechazo && (
                 <div className="mt-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700">
                   Rechazo previo: {plan.observaciones_rechazo}
+                </div>
+              )}
+              {plan.observaciones_revision && plan.estado === "EN_REVISION" && (
+                <div className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
+                  Motivo de revisión: {plan.observaciones_revision}
                 </div>
               )}
             </div>
@@ -112,16 +117,6 @@ export default function BandejaAprobaciones({ planes, onTransicion, operando }) 
                   className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-green-700 disabled:opacity-50"
                 >
                   Aprobar
-                </button>
-              )}
-              {plan.estado === "AUTORIZADO_SUPERIOR" && (
-                <button
-                  type="button"
-                  disabled={operando}
-                  onClick={() => onTransicion("habilitar", plan.id)}
-                  className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-green-700 disabled:opacity-50"
-                >
-                  Habilitar
                 </button>
               )}
               <button

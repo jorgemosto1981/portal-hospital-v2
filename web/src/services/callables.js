@@ -296,19 +296,24 @@ export function callEnviarPlanTurnoServicio(data) {
   return httpsCallable(getFunctionsV2(), "enviarPlanTurnoServicio")(data);
 }
 
-/** Superior: aprobar plan (ENVIADO → AUTORIZADO_SUPERIOR). */
+/** Superior o RRHH: aprobar plan (ENVIADO → HABILITADO + materialización). */
 export function callAprobarPlanTurnoServicio(data) {
   return httpsCallable(getFunctionsV2(), "aprobarPlanTurnoServicio")(data);
 }
 
-/** Superior/RRHH: rechazar plan → BORRADOR con observaciones. */
+/** Superior/RRHH: rechazar plan (ENVIADO|EN_REVISION → BORRADOR). */
 export function callRechazarPlanTurnoServicio(data) {
   return httpsCallable(getFunctionsV2(), "rechazarPlanTurnoServicio")(data);
 }
 
-/** RRHH: habilitar plan (AUTORIZADO_SUPERIOR → HABILITADO). */
-export function callHabilitarPlanTurnoServicio(data) {
-  return httpsCallable(getFunctionsV2(), "habilitarPlanTurnoServicio")(data);
+/** RRHH: revertir plan habilitado a revisión (HABILITADO → EN_REVISION). */
+export function callRevertirPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "revertirPlanTurnoServicio")(data);
+}
+
+/** RRHH: bandeja cross-grupo de planes pendientes (ENVIADO + EN_REVISION). */
+export function callListarPlanesPendientesRrhh(data) {
+  return httpsCallable(getFunctionsV2(), "listarPlanesPendientesRrhh")(data);
 }
 
 /** RRHH: cerrar plan perpetuo (HABILITADO → CERRADO). */

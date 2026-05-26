@@ -17,7 +17,7 @@ const { logger } = require("firebase-functions/v2");
 const COL_PLANES = "planes_turno_servicio";
 const COL_ASISTENCIA = "asistencia_diaria";
 
-const ESTADOS_VALIDOS = new Set(["BORRADOR", "ENVIADO", "AUTORIZADO_SUPERIOR", "HABILITADO", "CERRADO"]);
+const ESTADOS_VALIDOS = new Set(["BORRADOR", "ENVIADO", "HABILITADO", "EN_REVISION", "CERRADO"]);
 const TIPOS_PLAN = new Set(["perpetuo", "mensual"]);
 
 function err(code, msg) {
@@ -169,7 +169,7 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
 });
 
 /**
- * Jefe envía plan para aprobación: BORRADOR → ENVIADO.
+ * Jefe envía plan para aprobación: BORRADOR|EN_REVISION → ENVIADO.
  */
 const enviarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) => {
   const planId = request.data && request.data.plan_id;
@@ -180,7 +180,7 @@ const enviarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =>
   if (!snap.exists) err("not-found", "[PLT-ENV-002] Plan no encontrado.");
 
   const plan = snap.data();
-  assertEstado(plan, "BORRADOR");
+  assertEstados(plan, ["BORRADOR", "EN_REVISION"]);
 
   const warnings = [];
   if (plan.tipo_plan === "mensual") {
@@ -200,31 +200,66 @@ const enviarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =>
 });
 
 /**
- * Superior aprueba: ENVIADO → AUTORIZADO_SUPERIOR.
+ * Superior (o RRHH en caso huérfano) aprueba: ENVIADO → HABILITADO.
+ * Absorbe la lógica de materialización + overrides fantasma.
  */
 const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) => {
   const planId = request.data && request.data.plan_id;
+  const confirmarInvalidarOverrides = request.data && request.data.confirmar_invalidar_overrides === true;
   if (!planId) err("invalid-argument", "[PLT-APR-001] plan_id requerido.");
 
   const ref = db.collection(COL_PLANES).doc(planId);
   const snap = await ref.get();
   if (!snap.exists) err("not-found", "[PLT-APR-002] Plan no encontrado.");
 
-  assertEstado(snap.data(), "ENVIADO");
+  const plan = snap.data();
+  assertEstado(plan, "ENVIADO");
+
+  const warnings = [];
+  const overridesEncontrados = await detectarOverridesFantasma(plan);
+
+  if (overridesEncontrados.length > 0 && !confirmarInvalidarOverrides) {
+    return {
+      ok: false,
+      requiere_confirmacion: true,
+      overrides_afectados: overridesEncontrados.length,
+      detalle_overrides: overridesEncontrados.slice(0, 20),
+      mensaje: `Existen ${overridesEncontrados.length} override(s) manual(es) en el período. Al aprobar, se invalidarán. Confirme con confirmar_invalidar_overrides: true.`,
+    };
+  }
+
+  if (overridesEncontrados.length > 0 && confirmarInvalidarOverrides) {
+    const invalidados = await invalidarOverridesFantasma(overridesEncontrados);
+    warnings.push({
+      code: "PLT-APR-W001",
+      mensaje: `Se invalidaron ${invalidados} override(s) por re-planificación.`,
+    });
+  }
 
   const obs = request.data && request.data.observaciones;
   const aprobacion = buildAprobacion(request, "aprobar", obs);
   await ref.update({
-    estado: "AUTORIZADO_SUPERIOR",
+    estado: "HABILITADO",
     historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
     actualizado_en: FieldValue.serverTimestamp(),
   });
 
-  return { ok: true, id: planId, estado: "AUTORIZADO_SUPERIOR" };
+  if (plan.tipo_plan === "mensual" && plan.periodo) {
+    const [anio, mes] = plan.periodo.split("-").map(Number);
+    try {
+      await materializarGrupoMes({ grupoId: plan.grupo_id, anio, mes });
+      logger.info("materializarGrupoMes_post_aprobar OK", { planId });
+    } catch (e) {
+      logger.error("materializarGrupoMes_post_aprobar ERROR", { planId, error: String(e) });
+    }
+  }
+
+  return { ok: true, id: planId, estado: "HABILITADO", warnings };
 });
 
 /**
- * Rechazar plan en cualquier estado (salvo HABILITADO) → BORRADOR.
+ * Rechazar plan: ENVIADO|EN_REVISION → BORRADOR.
+ * Turnos materializados NO se des-materializan.
  */
 const rechazarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) => {
   const planId = request.data && request.data.plan_id;
@@ -239,7 +274,7 @@ const rechazarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) 
   if (!snap.exists) err("not-found", "[PLT-REC-003] Plan no encontrado.");
 
   const plan = snap.data();
-  assertEstados(plan, ["ENVIADO", "AUTORIZADO_SUPERIOR"]);
+  assertEstados(plan, ["ENVIADO", "EN_REVISION"]);
 
   const aprobacion = buildAprobacion(request, "rechazar", observaciones);
   await ref.update({
@@ -253,62 +288,74 @@ const rechazarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) 
 });
 
 /**
- * RRHH habilita plan: AUTORIZADO_SUPERIOR → HABILITADO.
- * Detecta overrides fantasma y los invalida si se confirma.
+ * RRHH revierte plan habilitado: HABILITADO → EN_REVISION.
+ * Los turnos materializados NO se borran (se mantienen hasta re-aprobación).
  */
-const habilitarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) => {
+const revertirPlanTurnoServicio = onCall({ invoker: "public" }, async (request) => {
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
 
   const planId = request.data && request.data.plan_id;
-  const confirmarInvalidarOverrides = request.data && request.data.confirmar_invalidar_overrides === true;
-  if (!planId) err("invalid-argument", "[PLT-HAB-001] plan_id requerido.");
+  const observaciones = request.data && request.data.observaciones;
+  if (!planId) err("invalid-argument", "[PLT-REV-001] plan_id requerido.");
+  if (!observaciones || typeof observaciones !== "string" || !observaciones.trim()) {
+    err("invalid-argument", "[PLT-REV-002] Observaciones de revisión requeridas.");
+  }
 
   const ref = db.collection(COL_PLANES).doc(planId);
   const snap = await ref.get();
-  if (!snap.exists) err("not-found", "[PLT-HAB-002] Plan no encontrado.");
+  if (!snap.exists) err("not-found", "[PLT-REV-003] Plan no encontrado.");
 
   const plan = snap.data();
-  assertEstado(plan, "AUTORIZADO_SUPERIOR");
+  assertEstado(plan, "HABILITADO");
 
-  const warnings = [];
-  const overridesEncontrados = await detectarOverridesFantasma(plan);
-
-  if (overridesEncontrados.length > 0 && !confirmarInvalidarOverrides) {
-    return {
-      ok: false,
-      requiere_confirmacion: true,
-      overrides_afectados: overridesEncontrados.length,
-      detalle_overrides: overridesEncontrados.slice(0, 20),
-      mensaje: `Existen ${overridesEncontrados.length} override(s) manual(es) en el período. Al habilitar, se invalidarán. Confirme con confirmar_invalidar_overrides: true.`,
-    };
-  }
-
-  if (overridesEncontrados.length > 0 && confirmarInvalidarOverrides) {
-    const invalidados = await invalidarOverridesFantasma(overridesEncontrados);
-    warnings.push({
-      code: "PLT-HAB-W001",
-      mensaje: `Se invalidaron ${invalidados} override(s) por re-planificación.`,
-    });
-  }
-
-  const aprobacion = buildAprobacion(request, "habilitar", null);
+  const aprobacion = buildAprobacion(request, "revertir", observaciones);
   await ref.update({
-    estado: "HABILITADO",
+    estado: "EN_REVISION",
+    observaciones_revision: observaciones.trim().slice(0, 500),
     historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
     actualizado_en: FieldValue.serverTimestamp(),
   });
 
-  if (plan.tipo_plan === "mensual" && plan.periodo) {
-    const [anio, mes] = plan.periodo.split("-").map(Number);
+  return { ok: true, id: planId, estado: "EN_REVISION" };
+});
+
+/**
+ * Bandeja RRHH cross-grupo: planes ENVIADO o EN_REVISION de todos los grupos.
+ * Enriquece con nombre de grupo. Límite 200.
+ */
+const listarPlanesPendientesRrhh = onCall({ invoker: "public" }, async (request) => {
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
+
+  const COL_GDT = "grupos_de_trabajo";
+  const MAX_ITEMS = 200;
+
+  const snapEnviado = await db.collection(COL_PLANES).where("estado", "==", "ENVIADO").get();
+  const snapRevision = await db.collection(COL_PLANES).where("estado", "==", "EN_REVISION").get();
+
+  const docs = [...snapEnviado.docs, ...snapRevision.docs];
+  const items = docs.slice(0, MAX_ITEMS).map((d) => ({ id: d.id, ...d.data() }));
+
+  const grupoIds = [...new Set(items.map((i) => i.grupo_id).filter(Boolean))];
+  const grupoLabels = {};
+  for (const gid of grupoIds) {
     try {
-      await materializarGrupoMes({ grupoId: plan.grupo_id, anio, mes });
-      logger.info("materializarGrupoMes_post_habilitar OK", { planId });
-    } catch (e) {
-      logger.error("materializarGrupoMes_post_habilitar ERROR", { planId, error: String(e) });
+      const gSnap = await db.collection(COL_GDT).doc(gid).get();
+      if (gSnap.exists) {
+        const gd = gSnap.data() || {};
+        grupoLabels[gid] = String(gd.nombre || gd.codigo || gd.titulo || "").trim() || gid;
+      } else {
+        grupoLabels[gid] = gid;
+      }
+    } catch {
+      grupoLabels[gid] = gid;
     }
   }
 
-  return { ok: true, id: planId, estado: "HABILITADO", warnings };
+  for (const item of items) {
+    item.grupo_label = grupoLabels[item.grupo_id] || item.grupo_id;
+  }
+
+  return { items, tiene_mas: docs.length > MAX_ITEMS };
 });
 
 /**
@@ -624,8 +671,9 @@ module.exports = {
   enviarPlanTurnoServicio,
   aprobarPlanTurnoServicio,
   rechazarPlanTurnoServicio,
-  habilitarPlanTurnoServicio,
+  revertirPlanTurnoServicio,
   cerrarPlanPerpetuo,
   listarPlanesTurnoServicio,
+  listarPlanesPendientesRrhh,
   listarContextoPlanGrupo,
 };

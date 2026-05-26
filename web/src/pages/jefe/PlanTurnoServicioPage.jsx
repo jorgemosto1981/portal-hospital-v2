@@ -7,9 +7,13 @@ import {
   callEnviarPlanTurnoServicio,
   callAprobarPlanTurnoServicio,
   callRechazarPlanTurnoServicio,
-  callHabilitarPlanTurnoServicio,
   callCerrarPlanPerpetuo,
+  callResolverContextoLaboralSolicitud,
 } from "../../services/callables.js";
+import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
+import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
+import { useAuthSession } from "../../features/auth/useAuthSession.js";
+import { claimsIncludeRrhh } from "../../features/routing/portalRole.js";
 import GrillaMensualEditor from "./planes/GrillaMensualEditor.jsx";
 import PlanPerpetualViewer from "./planes/PlanPerpetualViewer.jsx";
 import BandejaAprobaciones from "./planes/BandejaAprobaciones.jsx";
@@ -17,14 +21,14 @@ import BandejaAprobaciones from "./planes/BandejaAprobaciones.jsx";
 const BADGE_ESTADO = {
   BORRADOR: "bg-slate-100 text-slate-700",
   ENVIADO: "bg-blue-100 text-blue-800",
-  AUTORIZADO_SUPERIOR: "bg-amber-100 text-amber-800",
+  EN_REVISION: "bg-amber-100 text-amber-800",
   HABILITADO: "bg-green-100 text-green-800",
   CERRADO: "bg-red-100 text-red-700",
 };
 const LABEL_ESTADO = {
   BORRADOR: "Borrador",
   ENVIADO: "Enviado",
-  AUTORIZADO_SUPERIOR: "Autorizado",
+  EN_REVISION: "En revisión",
   HABILITADO: "Habilitado",
   CERRADO: "Cerrado",
 };
@@ -42,7 +46,16 @@ function periodoActual() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function etiquetaGrupo(row) {
+  return String(row.nombre || row.codigo || row.titulo || "").trim() || String(row.id || row.grupo_de_trabajo_id || "");
+}
+
 export default function PlanTurnoServicioPage() {
+  const { user } = useAuthSession();
+  const { claims } = useAuthClaims(user);
+  const esRrhh = claimsIncludeRrhh(claims);
+  const personaId = String(claims?.persona_id || "").trim();
+
   const [tab, setTab] = useState("planes");
   const [grupoId, setGrupoId] = useState("");
   const [periodo, setPeriodo] = useState(periodoActual());
@@ -54,6 +67,51 @@ export default function PlanTurnoServicioPage() {
   const [planEdicion, setPlanEdicion] = useState(null);
   const [planDetalle, setPlanDetalle] = useState(null);
   const [operando, setOperando] = useState(false);
+  const [gruposDisponibles, setGruposDisponibles] = useState([]);
+  const [gruposCargando, setGruposCargando] = useState(false);
+
+  useEffect(() => {
+    if (!personaId) return;
+    let cancelled = false;
+    setGruposCargando(true);
+
+    (async () => {
+      try {
+        if (esRrhh) {
+          const rows = await listarColeccionLaboral("grupos_de_trabajo", 400);
+          if (cancelled) return;
+          const activos = rows.filter((r) => r.activo !== false);
+          activos.sort((a, b) => etiquetaGrupo(a).localeCompare(etiquetaGrupo(b), "es"));
+          setGruposDisponibles(activos.map((r) => ({
+            id: r.id,
+            label: etiquetaGrupo(r),
+          })));
+        } else {
+          const fechaCorte = `${periodoActual()}-28`;
+          const res = await callResolverContextoLaboralSolicitud({
+            persona_id: personaId,
+            fecha_desde: fechaCorte,
+          });
+          if (cancelled) return;
+          const list = res?.data?.grupos_trabajo_vigentes || [];
+          const vigentes = Array.isArray(list) ? list : [];
+          setGruposDisponibles(vigentes.map((g) => ({
+            id: g.grupo_de_trabajo_id,
+            label: g.etiqueta_ui || g.grupo_de_trabajo_id,
+          })));
+          if (vigentes.length === 1) {
+            setGrupoId(vigentes[0].grupo_de_trabajo_id);
+          }
+        }
+      } catch {
+        // silencioso: el select queda vacío
+      } finally {
+        if (!cancelled) setGruposCargando(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [personaId, esRrhh]);
 
   const cargar = useCallback(async () => {
     if (!grupoId.trim()) return;
@@ -110,28 +168,29 @@ export default function PlanTurnoServicioPage() {
           }
           break;
         case "aprobar":
-          res = await callAprobarPlanTurnoServicio({ plan_id: planId, observaciones: extras?.observaciones });
-          showFeedback("Plan aprobado por superior.");
-          break;
-        case "rechazar":
-          res = await callRechazarPlanTurnoServicio({ plan_id: planId, observaciones: extras?.observaciones });
-          showFeedback("Plan rechazado, devuelto a borrador.");
-          break;
-        case "habilitar":
-          res = await callHabilitarPlanTurnoServicio({
+          res = await callAprobarPlanTurnoServicio({
             plan_id: planId,
+            observaciones: extras?.observaciones,
             confirmar_invalidar_overrides: extras?.confirmar === true,
           });
           if (res.data?.requiere_confirmacion) {
             const ok = window.confirm(res.data.mensaje);
             if (ok) {
-              await handleTransicion("habilitar", planId, { confirmar: true });
+              await handleTransicion("aprobar", planId, { ...extras, confirmar: true });
               return;
             }
-            showFeedback("Habilitación cancelada.");
+            showFeedback("Aprobación cancelada.");
             break;
           }
-          showFeedback("Plan habilitado.");
+          if (res.data?.warnings?.length) {
+            showFeedback(`Plan aprobado y habilitado con ${res.data.warnings.length} advertencia(s).`);
+          } else {
+            showFeedback("Plan aprobado y habilitado.");
+          }
+          break;
+        case "rechazar":
+          res = await callRechazarPlanTurnoServicio({ plan_id: planId, observaciones: extras?.observaciones });
+          showFeedback("Plan rechazado, devuelto a borrador.");
           break;
         case "cerrar":
           res = await callCerrarPlanPerpetuo({ plan_id: planId, fecha_cierre: extras?.fecha_cierre });
@@ -149,7 +208,7 @@ export default function PlanTurnoServicioPage() {
   }, [cargar]);
 
   const resumenEstados = useMemo(() => {
-    const r = { BORRADOR: 0, ENVIADO: 0, AUTORIZADO_SUPERIOR: 0, HABILITADO: 0, CERRADO: 0 };
+    const r = { BORRADOR: 0, ENVIADO: 0, EN_REVISION: 0, HABILITADO: 0, CERRADO: 0 };
     for (const p of planes) if (r[p.estado] != null) r[p.estado]++;
     return r;
   }, [planes]);
@@ -169,7 +228,7 @@ export default function PlanTurnoServicioPage() {
             </h1>
             <p className="mt-1 max-w-prose text-sm leading-relaxed text-slate-500">
               Planificación mensual (servicios con régimen planificado) y planes perpetuos (fijo/rotativo).
-              Máquina de estados: Borrador → Enviado → Autorizado → Habilitado.
+              Flujo: Borrador → Enviado → Habilitado (aprobado por superior).
             </p>
           </div>
           <button
@@ -191,13 +250,19 @@ export default function PlanTurnoServicioPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1">
             <label className="mb-1 block text-xs font-medium text-slate-500">Grupo de trabajo</label>
-            <input
-              type="text"
+            <select
               value={grupoId}
               onChange={(e) => setGrupoId(e.target.value)}
-              placeholder="ID del grupo…"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 placeholder-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-            />
+              disabled={gruposCargando}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:opacity-50"
+            >
+              <option value="">
+                {gruposCargando ? "Cargando grupos…" : "Seleccionar grupo…"}
+              </option>
+              {gruposDisponibles.map((g) => (
+                <option key={g.id} value={g.id}>{g.label}</option>
+              ))}
+            </select>
           </div>
           <div className="w-36">
             <label className="mb-1 block text-xs font-medium text-slate-500">Período</label>
@@ -218,7 +283,7 @@ export default function PlanTurnoServicioPage() {
               <option value="">Todos</option>
               <option value="BORRADOR">Borrador</option>
               <option value="ENVIADO">Enviado</option>
-              <option value="AUTORIZADO_SUPERIOR">Autorizado</option>
+              <option value="EN_REVISION">En revisión</option>
               <option value="HABILITADO">Habilitado</option>
               <option value="CERRADO">Cerrado</option>
             </select>
@@ -329,7 +394,7 @@ export default function PlanTurnoServicioPage() {
                             >
                               Ver
                             </button>
-                            {plan.estado === "BORRADOR" && (
+                            {(plan.estado === "BORRADOR" || plan.estado === "EN_REVISION") && (
                               <>
                                 <button
                                   type="button"
@@ -372,9 +437,10 @@ export default function PlanTurnoServicioPage() {
 
       {tab === "bandeja" && (
         <BandejaAprobaciones
-          planes={planes.filter((p) => p.estado === "ENVIADO" || p.estado === "AUTORIZADO_SUPERIOR")}
+          planes={planes.filter((p) => p.estado === "ENVIADO" || p.estado === "EN_REVISION")}
           onTransicion={handleTransicion}
           operando={operando}
+          esRrhh={esRrhh}
         />
       )}
 

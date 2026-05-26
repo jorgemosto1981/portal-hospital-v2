@@ -115,6 +115,13 @@ export const MODULOS_PORTAL = [
     bandejaRrhhMenu: true,
   },
   {
+    id: "bandeja-turnos-rrhh",
+    label: "Bandeja turnos",
+    path: "/portal/rrhh/bandeja-turnos",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
     id: "grilla",
     label: "Grilla",
     path: "/portal/grilla",
@@ -207,6 +214,7 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh/configuracion-articulos")) return "articulos-cfg";
   if (pathname.startsWith("/portal/rrhh/calendario-institucional")) return "calendario-institucional";
   if (pathname.startsWith("/portal/rrhh/regimenes-horarios")) return "regimenes-horarios";
+  if (pathname.startsWith("/portal/rrhh/bandeja-turnos")) return "bandeja-turnos-rrhh";
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla";
