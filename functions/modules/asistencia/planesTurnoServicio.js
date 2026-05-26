@@ -298,12 +298,14 @@ const habilitarPlanTurnoServicio = onCall({ invoker: "public" }, async (request)
     actualizado_en: FieldValue.serverTimestamp(),
   });
 
-  // Fire-and-forget: materializar capa teórica para todos los agentes del plan
   if (plan.tipo_plan === "mensual" && plan.periodo) {
     const [anio, mes] = plan.periodo.split("-").map(Number);
-    void materializarGrupoMes({ grupoId: plan.grupo_id, anio, mes }).catch((e) =>
-      logger.error("materializarGrupoMes_post_habilitar", { planId, error: String(e) })
-    );
+    try {
+      await materializarGrupoMes({ grupoId: plan.grupo_id, anio, mes });
+      logger.info("materializarGrupoMes_post_habilitar OK", { planId });
+    } catch (e) {
+      logger.error("materializarGrupoMes_post_habilitar ERROR", { planId, error: String(e) });
+    }
   }
 
   return { ok: true, id: planId, estado: "HABILITADO", warnings };
@@ -338,11 +340,13 @@ const cerrarPlanPerpetuo = onCall({ invoker: "public" }, async (request) => {
     actualizado_en: FieldValue.serverTimestamp(),
   });
 
-  // Fire-and-forget: re-materializar mes actual para reflejar cierre
   const hoy = new Date();
-  void materializarGrupoMes({ grupoId: plan.grupo_id, anio: hoy.getFullYear(), mes: hoy.getMonth() + 1 }).catch((e) =>
-    logger.error("materializarGrupoMes_post_cerrar", { planId, error: String(e) })
-  );
+  try {
+    await materializarGrupoMes({ grupoId: plan.grupo_id, anio: hoy.getFullYear(), mes: hoy.getMonth() + 1 });
+    logger.info("materializarGrupoMes_post_cerrar OK", { planId });
+  } catch (e) {
+    logger.error("materializarGrupoMes_post_cerrar ERROR", { planId, error: String(e) });
+  }
 
   return { ok: true, id: planId, estado: "CERRADO" };
 });

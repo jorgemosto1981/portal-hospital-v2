@@ -61,10 +61,13 @@ function hasAnyPortalRoleLegacy(claims, allowed) {
 }
 
 /**
+ * Jefe = tiene subordinados por jerarquía real en grupo de trabajo,
+ * o legacy CFG_JEFE / portal_role "jefe".
  * @param {Record<string, unknown> | null | undefined} claims
- * @param {readonly string[]} allowed lowercase role ids
  */
 export function claimsIncludeJefe(claims) {
+  if (!claims || typeof claims !== "object") return false;
+  if (claims.tiene_subordinados === true) return true;
   if (rolesHlcFromClaims(claims).includes("CFG_JEFE")) return true;
   return hasAnyPortalRoleLegacy(claims, ["jefe"]);
 }

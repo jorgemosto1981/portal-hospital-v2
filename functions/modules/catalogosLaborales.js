@@ -595,7 +595,6 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   });
   await refreshClaimsLaboralPersona(personaId);
 
-  // Fire-and-forget: materializar capa teórica si el HLG tiene régimen asignado
   if (regimenHorarioId && payload.activo) {
     const { materializarTurnoMesBatch } = require("./asistencia/rdaTurnoTeoricoWorker");
     const hoy = new Date();
@@ -603,10 +602,15 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     const mesActual = hoy.getMonth() + 1;
     const mesSiguiente = mesActual === 12 ? 1 : mesActual + 1;
     const anioSiguiente = mesActual === 12 ? anioActual + 1 : anioActual;
-    void Promise.allSettled([
-      materializarTurnoMesBatch({ personaId, grupoId, anio: anioActual, mes: mesActual }),
-      materializarTurnoMesBatch({ personaId, grupoId, anio: anioSiguiente, mes: mesSiguiente }),
-    ]).catch((e) => console.error("materializarTurnoMesBatch_post_hlg", e));
+    try {
+      const results = await Promise.allSettled([
+        materializarTurnoMesBatch({ personaId, grupoId, anio: anioActual, mes: mesActual }),
+        materializarTurnoMesBatch({ personaId, grupoId, anio: anioSiguiente, mes: mesSiguiente }),
+      ]);
+      console.log("materializarTurnoMesBatch_post_hlg OK", JSON.stringify(results.map(r => r.status)));
+    } catch (e) {
+      console.error("materializarTurnoMesBatch_post_hlg ERROR", e);
+    }
   }
 
   return { ok: true, id, warnings, evento_id: eventoId };
@@ -918,17 +922,21 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
 
     if (personaHlg) await refreshClaimsLaboralPersona(personaHlg);
 
-    // Fire-and-forget: re-materializar capa teórica post deshabilitación
     const grupoHlgDes = toNullableTrimmedString(hlg.grupo_de_trabajo_id);
     if (personaHlg && grupoHlgDes) {
       const { materializarTurnoMesBatch } = require("./asistencia/rdaTurnoTeoricoWorker");
       const hoy = new Date();
-      void materializarTurnoMesBatch({
-        personaId: personaHlg,
-        grupoId: grupoHlgDes,
-        anio: hoy.getFullYear(),
-        mes: hoy.getMonth() + 1,
-      }).catch((e) => console.error("materializarTurnoMesBatch_post_deshabilitar_hlg", e));
+      try {
+        await materializarTurnoMesBatch({
+          personaId: personaHlg,
+          grupoId: grupoHlgDes,
+          anio: hoy.getFullYear(),
+          mes: hoy.getMonth() + 1,
+        });
+        console.log("materializarTurnoMesBatch_post_deshabilitar_hlg OK");
+      } catch (e) {
+        console.error("materializarTurnoMesBatch_post_deshabilitar_hlg ERROR", e);
+      }
     }
 
     return {

@@ -70,6 +70,7 @@ function cruzaMedianoche(turno) {
 function buildTurnoResponse(turno) {
   if (!turno) return null;
   return {
+    turno_id: turno.turno_id || null,
     ingreso: turno.ingreso,
     egreso: turno.egreso,
     horas_efectivas: turno.horas_efectivas,

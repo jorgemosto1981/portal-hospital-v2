@@ -37,26 +37,26 @@ function diasDelMes(anio, mes) {
 }
 
 /**
- * Obtiene HLG vigente para persona+grupo en un rango de mes.
- * @returns {Promise<object|null>} doc data + id
+ * Obtiene TODOS los HLG vigentes para persona en un rango de mes.
+ * @returns {Promise<Array<object>>} lista de HLG (data + id)
  */
-async function obtenerHlgVigenteParaMes(personaId, grupoId, primerDia, ultimoDia) {
-  let q = db.collection(COL_HLG)
+async function obtenerHlgsVigentesParaMes(personaId, primerDia, ultimoDia) {
+  const snap = await db.collection(COL_HLG)
     .where("persona_id", "==", personaId)
-    .where("activo", "==", true);
-  if (grupoId) q = q.where("grupo_de_trabajo_id", "==", grupoId);
-  const snap = await q.get();
-  if (snap.empty) return null;
+    .where("activo", "==", true)
+    .get();
+  if (snap.empty) return [];
 
+  const result = [];
   for (const doc of snap.docs) {
     const d = doc.data();
     const fi = d.fecha_inicio || "";
     const ff = d.fecha_fin || "";
     if (fi && fi > ultimoDia) continue;
     if (ff && ff < primerDia) continue;
-    return { id: doc.id, ...d };
+    result.push({ id: doc.id, ...d });
   }
-  return null;
+  return result;
 }
 
 /**
@@ -163,65 +163,89 @@ function resolverDiaConPreCarga(regimen, fechaYmd, hlg, planData, personaId, ind
 }
 
 /**
- * Materializa turno teórico para 1 agente × 1 mes completo.
+ * Materializa turno teórico para 1 agente × 1 mes, fusionando TODOS los HLG activos.
  *
- * Estrategia: pre-carga HLG+regimen+calendario+plan 1 vez, itera 30 días,
- * lee solo overrides por día, batch write al final.
+ * Cada día se asigna al primer HLG cuyo régimen lo marque como laborable/guardia.
+ * Días sin asignación de ningún grupo quedan como franco.
  *
  * @param {object} params
  * @param {string} params.personaId
- * @param {string} params.grupoId
+ * @param {string} [params.grupoId] - ignorado (se resuelven todos los HLG)
  * @param {number} params.anio
  * @param {number} params.mes
  * @param {object} [params.regimenCache] - Map<regimenId, regimenDoc> para dedup
- * @param {object} [params.planCache] - { planId, plan } pre-cargado
+ * @param {object} [params.planCache] - { planId, plan } pre-cargado (solo planificado)
  * @returns {Promise<{ ok: boolean, diasProcesados: number, error?: string }>}
  */
-async function materializarTurnoMesBatch({ personaId, grupoId, anio, mes, regimenCache, planCache }) {
+async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, mes, regimenCache, planCache }) {
   const periodoId = `${anio}-${String(mes).padStart(2, "0")}`;
   const dias = diasDelMes(anio, mes);
   if (dias.length === 0) return { ok: false, diasProcesados: 0, error: "Mes inválido" };
 
   const primerDia = dias[0];
   const ultimoDia = dias[dias.length - 1];
+  const regCache = regimenCache || new Map();
 
-  // --- PRE-CARGA (1 vez) ---
-  const hlg = await obtenerHlgVigenteParaMes(personaId, grupoId, primerDia, ultimoDia);
-  if (!hlg || !hlg.regimen_horario_id) {
-    return { ok: true, diasProcesados: 0, error: "Sin HLG vigente o sin regimen_horario_id" };
-  }
-
-  let regimen;
-  if (regimenCache && regimenCache.has(hlg.regimen_horario_id)) {
-    regimen = regimenCache.get(hlg.regimen_horario_id);
-  } else {
-    const snap = await db.collection(COL_REGIMEN).doc(hlg.regimen_horario_id).get();
-    if (!snap.exists) return { ok: false, diasProcesados: 0, error: `Regimen ${hlg.regimen_horario_id} no existe` };
-    regimen = snap.data();
-    if (regimenCache) regimenCache.set(hlg.regimen_horario_id, regimen);
+  const hlgs = await obtenerHlgsVigentesParaMes(personaId, primerDia, ultimoDia);
+  if (hlgs.length === 0) {
+    return { ok: true, diasProcesados: 0, error: "Sin HLG vigente" };
   }
 
   const indiceCalendario = await getIndiceCalendario();
 
-  let planData = planCache || null;
-  if (!planData && regimen.tipo_patron === "planificado") {
-    planData = await obtenerPlanHabilitado(grupoId, periodoId);
+  // Pre-cargar regímenes y planes de todos los HLG
+  const hlgContextos = [];
+  for (const hlg of hlgs) {
+    if (!hlg.regimen_horario_id) continue;
+    let regimen;
+    if (regCache.has(hlg.regimen_horario_id)) {
+      regimen = regCache.get(hlg.regimen_horario_id);
+    } else {
+      const snap = await db.collection(COL_REGIMEN).doc(hlg.regimen_horario_id).get();
+      if (!snap.exists) continue;
+      regimen = snap.data();
+      regCache.set(hlg.regimen_horario_id, regimen);
+    }
+    let plan = planCache || null;
+    if (!plan && regimen.tipo_patron === "planificado" && hlg.grupo_de_trabajo_id) {
+      plan = await obtenerPlanHabilitado(hlg.grupo_de_trabajo_id, periodoId);
+    }
+    hlgContextos.push({ hlg, regimen, plan });
   }
 
-  // --- ITERACION POR DIA ---
+  if (hlgContextos.length === 0) {
+    return { ok: true, diasProcesados: 0, error: "Sin HLG con régimen válido" };
+  }
+
+  // --- ITERACION POR DIA: fusionar todos los HLG ---
   const batch = db.batch();
   const visDias = {};
   let diasProcesados = 0;
 
   for (const fechaYmd of dias) {
-    const fi = hlg.fecha_inicio || "";
-    const ff = hlg.fecha_fin || "";
-    if (fi && fi > fechaYmd) continue;
-    if (ff && ff < fechaYmd) continue;
+    let mejorResolucion = null;
+    let mejorHlg = null;
 
-    const resolucion = resolverDiaConPreCarga(regimen, fechaYmd, hlg, planData, personaId, indiceCalendario);
+    for (const { hlg, regimen, plan } of hlgContextos) {
+      const fi = hlg.fecha_inicio || "";
+      const ff = hlg.fecha_fin || "";
+      if (fi && fi > fechaYmd) continue;
+      if (ff && ff < fechaYmd) continue;
 
-    // Override: leer asistencia_diaria del día
+      const res = resolverDiaConPreCarga(regimen, fechaYmd, hlg, plan, personaId, indiceCalendario);
+      const esLaboral = res.tipo_dia === "laborable" || res.tipo_dia === "guardia";
+      if (esLaboral && !mejorResolucion) {
+        mejorResolucion = res;
+        mejorHlg = hlg;
+      }
+      if (!mejorResolucion) {
+        mejorResolucion = res;
+        mejorHlg = hlg;
+      }
+    }
+
+    if (!mejorResolucion || !mejorHlg) continue;
+
     const asiDocId = buildAsiDocumentId(personaId, fechaYmd);
     if (!asiDocId) continue;
     const asiRef = db.collection(COL_ASISTENCIA).doc(asiDocId);
@@ -230,9 +254,9 @@ async function materializarTurnoMesBatch({ personaId, grupoId, anio, mes, regime
       ? (asiSnap.data().overrides_turno || []).filter((o) => o.tipo === "reemplazo" && !o.invalidado_por_replanificacion)
       : [];
 
-    let turnoFinal = resolucion.turno_teorico;
-    let origenFinal = resolucion.origen;
-    let tipoDiaFinal = resolucion.tipo_dia;
+    let turnoFinal = mejorResolucion.turno_teorico;
+    let origenFinal = mejorResolucion.origen;
+    let tipoDiaFinal = mejorResolucion.tipo_dia;
     if (overrides.length > 0) {
       const ultimo = overrides[overrides.length - 1];
       turnoFinal = buildTurnoResponse(ultimo.turno || ultimo);
@@ -242,29 +266,28 @@ async function materializarTurnoMesBatch({ personaId, grupoId, anio, mes, regime
 
     const capaTeorica = {
       tipo_dia: tipoDiaFinal,
-      turno_id: turnoFinal ? (resolucion.plan_id ? resolucion.turno_teorico?.turno_id : null) : null,
+      turno_id: turnoFinal?.turno_id || null,
       ingreso: turnoFinal?.ingreso || null,
       egreso: turnoFinal?.egreso || null,
       horas_efectivas: turnoFinal?.horas_efectivas || 0,
       es_nocturno: turnoFinal?.es_nocturno || false,
-      es_feriado: resolucion.es_feriado || false,
+      es_feriado: mejorResolucion.es_feriado || false,
       origen: origenFinal,
-      regimen_horario_id: hlg.regimen_horario_id,
-      plan_id: resolucion.plan_id || null,
-      posicion_ciclo: resolucion.posicion_ciclo ?? null,
+      regimen_horario_id: mejorHlg.regimen_horario_id,
+      grupo_de_trabajo_id: mejorHlg.grupo_de_trabajo_id || null,
+      plan_id: mejorResolucion.plan_id || null,
+      posicion_ciclo: mejorResolucion.posicion_ciclo ?? null,
     };
 
-    // asi_*: dot-notation update para no destruir aportes_normativos ni overrides_turno
     batch.set(asiRef, {
       persona_id: personaId,
       fecha: fechaYmd,
       "capa_teorica": capaTeorica,
     }, { merge: true });
 
-    // vis_*: acumular para single write
     const diaKey = diaMesKeyDesdeYmd(fechaYmd);
     const esFranco = tipoDiaFinal === "franco" || tipoDiaFinal === "no_laborable";
-    visDias[`dias.${diaKey}.rda_turno_id`] = turnoFinal?.ingreso ? (capaTeorica.turno_id || tipoDiaFinal) : null;
+    visDias[`dias.${diaKey}.rda_turno_id`] = esFranco ? null : (capaTeorica.turno_id || capaTeorica.ingreso || tipoDiaFinal);
     visDias[`dias.${diaKey}.es_franco`] = esFranco;
 
     diasProcesados++;
@@ -272,20 +295,39 @@ async function materializarTurnoMesBatch({ personaId, grupoId, anio, mes, regime
 
   if (diasProcesados === 0) return { ok: true, diasProcesados: 0 };
 
-  // vis_*: single update con dot-notation para preservar eventos[] del MDC
+  await batch.commit();
+
+  // vis_*: update() interpreta dot-notation como paths anidados (set() no lo hace)
   const visDocId = buildVisDocumentId(personaId, `${anio}-${String(mes).padStart(2, "0")}-01`);
   if (visDocId) {
     const visRef = db.collection(COL_VIS).doc(visDocId);
-    batch.set(visRef, {
-      persona_id: personaId,
-      anio,
-      mes,
+    const visUpdateData = {
       ...visDias,
       "metadata.ultima_sync_teorica": FieldValue.serverTimestamp(),
-    }, { merge: true });
+    };
+    try {
+      await visRef.update(visUpdateData);
+    } catch (e) {
+      if (e.code === 5 || (e.message && e.message.includes("NOT_FOUND"))) {
+        const nestedDias = {};
+        for (const [key, value] of Object.entries(visDias)) {
+          const parts = key.split(".");
+          if (!nestedDias[parts[1]]) nestedDias[parts[1]] = {};
+          nestedDias[parts[1]][parts[2]] = value;
+        }
+        await visRef.set({
+          persona_id: personaId,
+          anio,
+          mes,
+          dias: nestedDias,
+          metadata: { ultima_sync_teorica: FieldValue.serverTimestamp() },
+        });
+      } else {
+        throw e;
+      }
+    }
   }
 
-  await batch.commit();
   return { ok: true, diasProcesados };
 }
 

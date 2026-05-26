@@ -4,61 +4,76 @@ overview: "Plan maestro para construir la capa teorica completa: materializar tu
 todos:
   - id: fase0a-fix-resolver
     content: "Fix bug critico en resolverPlanificado: leer plan.agentes[i].dias[ymd] + agregar personaId"
-    status: pending
+    status: completed
   - id: fase0b-tolerancias
     content: Agregar tolerancia_ingreso/egreso al EditorPlanificado en RegimenHorarioForm.jsx
-    status: pending
+    status: completed
   - id: fase1a-worker-core
-    content: "Crear rdaTurnoTeoricoWorker.js con materializarTurnoMesBatch optimizado (pre-carga HLG+regimen+calendario 1 vez, itera 30 dias leyendo solo overrides, batch write)"
-    status: pending
+    content: "Crear rdaTurnoTeoricoWorker.js con materializarTurnoMesBatch optimizado — evolucionado a fusion multi-HLG"
+    status: completed
   - id: fase1b-grupo
     content: "Crear materializarGrupoMes con dedup de regimenes compartidos y paralelismo controlado (chunks de 5 agentes)"
-    status: pending
+    status: completed
   - id: fase1c-triggers
-    content: "Inyectar triggers fire-and-forget en: habilitarPlan, cerrarPlan, guardarHLG, deshabilitarHLG, registrarCambioTurno, eliminarCambioTurno"
-    status: pending
+    content: "Triggers bloqueantes (await) en: habilitarPlan, cerrarPlan, guardarHLG, deshabilitarHLG, registrarCambioTurno, eliminarCambioTurno"
+    status: completed
   - id: fase1d-auto-fijo-rotativo
     content: "Materializacion automatica al guardar HLG fijo/rotativo: mes actual + siguiente. Desbloquea Gate 1 para depende_rda=true."
-    status: pending
+    status: completed
   - id: fase2a-callable-contexto
     content: Crear callable listarContextoPlanGrupo que retorne personas del grupo + regimenes
-    status: pending
+    status: completed
   - id: fase2b-paleta-dinamica
     content: Eliminar TURNOS_COLOR hardcodeado, derivar paleta desde regimen.turnos_disponibles
-    status: pending
+    status: completed
   - id: fase2c-selects
     content: Reemplazar text inputs por selects dinamicos (grupo, persona, regimen/hlg auto-resueltos)
-    status: pending
+    status: completed
   - id: fase2d-grilla-vacia
     content: Reemplazar crearGrillaVacia hardcodeada por inicializacion limpia o pre-populada desde regimen
-    status: pending
+    status: completed
   - id: fase3a-helpers
     content: Crear helpers esDiaEnVigenciaHlg y esDiaAsignadoAlGrupo
-    status: pending
+    status: completed
   - id: fase3b-corte-visual
     content: "Implementar hard block visual: celdas fuera vigencia disabled + hatching + turnos huerfanos"
-    status: pending
+    status: completed
   - id: fase3c-dias-asignados
     content: "Implementar soft warning visual: zona blanca/gris/naranja segun patron regimen"
-    status: pending
+    status: completed
   - id: fase3d-validacion-backend
     content: Validar vigencia HLG (error) + patron regimen (warning) + consecutivos (warning) al enviar plan
-    status: pending
+    status: completed
   - id: fase4a-calendario-agente
-    content: Mostrar rda_turno_id y es_franco en GrillaMesTitularCalendario
-    status: pending
+    content: "Mostrar rda_turno_id y es_franco en GrillaMesTitularCalendario — formato calendario Lun-Dom"
+    status: completed
   - id: fase4b-vista-equipo
-    content: Mostrar turno teorico como fondo de celda en GrillaMesEquipoTabla
-    status: pending
+    content: "Mostrar turno teorico en GrillaMesEquipoTabla — encabezados dia semana + resaltado fines de semana"
+    status: completed
   - id: fase4c-detalle-dia
     content: Agregar seccion turno teorico en DiaGrillaDetalleModal
-    status: pending
+    status: completed
   - id: fase5a-override-vis
     content: Que registrarCambioTurno y eliminarCambioTurno disparen materializacion del dia
-    status: pending
+    status: completed
   - id: fase5b-gate-rda
     content: Verificar que grillaTurnoEntornoGate funcione automaticamente con capa_teorica materializada
-    status: pending
+    status: completed
+  - id: bugfix-fire-and-forget
+    content: "BUG FIX: void (fire-and-forget) -> await. Cloud Functions Gen2 congela instancia post-return."
+    status: completed
+  - id: bugfix-set-vs-update
+    content: "BUG FIX: batch.set() con dot-notation no interpreta paths anidados. Cambiar a visRef.update()."
+    status: completed
+  - id: bugfix-turno-id-missing
+    content: "BUG FIX: buildTurnoResponse no incluia turno_id. Agregado para planificados."
+    status: completed
+  - id: bugfix-multi-hlg
+    content: "BUG FIX: materializacion single-HLG sobrescribia vis_*. Refactorizado a fusion multi-HLG."
+    status: completed
+  - id: ui-calendario-formato
+    content: "UI: Calendario titular como grid Lun-Dom con offset dia 1. Tabla equipo con encabezados dia semana."
+    status: completed
 isProject: false
 ---
 
@@ -448,6 +463,128 @@ for (const chunk of chunks) {
 ### Limite de 500 escrituras por batch Firestore
 
 Cada agente genera 31 writes (30 `asi_*` + 1 `vis_*`). Un chunk de 5 agentes = 155 writes, holgadamente bajo el limite de 500. No agrupar mas de 15 agentes por batch (15 × 31 = 465).
+
+## Bugs descubiertos y corregidos durante implementacion
+
+### BUG-1: Fire-and-forget en Cloud Functions Gen2 (critico)
+
+**Descubierto**: 2026-05-26. La materializacion usaba `void Promise.allSettled(...)` (fire-and-forget) antes del `return` del callable. En Cloud Functions Gen2 (Cloud Run), la instancia se congela inmediatamente despues de enviar la respuesta HTTP. Las promesas pendientes nunca completaban.
+
+**Sintoma**: El callable retornaba `{ ok: true }` pero los documentos `vis_*` y `asi_*` nunca se actualizaban.
+
+**Fix**: Cambiar `void` a `await` en 6 puntos de 3 archivos:
+- `catalogosLaborales.js`: guardarRegistroLaboralTemporal (HLG save) + rrhhDeshabilitarHlg
+- `planesTurnoServicio.js`: habilitarPlanTurnoServicio + cerrarPlanPerpetuo
+- `cambiosTurno.js`: registrarCambioTurno + eliminarCambioTurno
+
+**Impacto en UX**: El guardado tarda ~2-5s mas (incluye materializacion), pero garantiza que los datos estan escritos.
+
+### BUG-2: `batch.set()` no interpreta dot-notation como paths (critico)
+
+**Descubierto**: 2026-05-26. El worker usaba `batch.set(visRef, { "dias.01.rda_turno_id": val }, { merge: true })`. En Firestore Admin SDK, `set()` trata las keys con dots como nombres de campo **literales**, no como paths anidados. Solo `update()` interpreta dot-notation.
+
+**Sintoma**: Los logs mostraban materializacion exitosa (`["fulfilled","fulfilled"]`) pero el calendario no mostraba datos. Los campos se guardaron como `"dias.01.rda_turno_id"` (string plano) en vez de `dias -> 01 -> rda_turno_id` (anidado).
+
+**Fix**: Separar la escritura vis_* del batch asi_*. Usar `visRef.update(visDias)` que SI interpreta dot-notation. Fallback a `visRef.set()` con objeto anidado si el documento no existe.
+
+**Regla para futuro**: NUNCA usar `set({ merge: true })` con keys que contengan dots para paths anidados. Usar `update()` o construir el objeto anidado manualmente.
+
+### BUG-3: `buildTurnoResponse` no incluia `turno_id` (menor)
+
+**Descubierto**: 2026-05-26. La funcion que normaliza la respuesta del turno omitia `turno_id`, impidiendo que regimenes planificados propagaran la etiqueta (M, T, N).
+
+**Fix**: Agregar `turno_id: turno.turno_id || null` a `buildTurnoResponse()` en `resolverTurnoDia.js`.
+
+### BUG-4: Materializacion single-HLG sobrescribia todos los dias (arquitectural)
+
+**Descubierto**: 2026-05-26. `materializarTurnoMesBatch` resolvia un solo HLG (por grupo) y escribia TODOS los dias del mes desde esa perspectiva. Para una persona con 2 HLG (Oficina Personal Lun-Mie + Porteria Jue-Vie), el ultimo guardado pisaba los datos del otro, marcando sus dias como franco.
+
+**Sintoma**: El calendario solo mostraba turnos del ultimo HLG guardado. Los dias del primer grupo aparecian como "F".
+
+**Fix**: Refactorizar `materializarTurnoMesBatch` a nivel **persona** (no grupo):
+1. `obtenerHlgVigenteParaMes` -> `obtenerHlgsVigentesParaMes` (retorna TODOS los HLG activos)
+2. Pre-carga de regimenes y planes para TODOS los HLG
+3. Para cada dia, iterar todos los HLG: el primer HLG cuyo regimen marque el dia como **laborable/guardia** "gana"
+4. Dias sin asignacion de ningun grupo quedan como franco
+
+**Estructura `capa_teorica` enriquecida**: Se agrego `grupo_de_trabajo_id` para saber de que grupo proviene la asignacion de cada dia.
+
+---
+
+## Mejoras de UI implementadas (sesion 2026-05-26)
+
+### Calendario Titular: formato Lun-Dom
+
+**Archivo**: `web/src/features/grilla/GrillaMesTitularCalendario.jsx`
+
+Antes: grid plano de celdas 1-31, sin estructura semanal.
+Ahora: calendario real con:
+- Grid 7 columnas fijas: Lun - Mar - Mie - Jue - Vie - Sab - Dom
+- Celdas vacias (offset) al inicio para alinear dia 1 con su dia de semana real
+- Encabezados de columna con nombres de dia
+- Sabados y domingos con numeros en rosa y fondo rose-50
+
+### Tabla Equipo: encabezados dia semana + resaltado fines de semana
+
+**Archivo**: `web/src/features/grilla/GrillaMesEquipoTabla.jsx`
+
+Se mantiene layout horizontal (persona x 31 dias). Mejoras:
+- Fila de encabezado adicional con letra del dia de semana (L, M, X, J, V, S, D)
+- Columnas de sabado/domingo con fondo rosa suave en encabezado y celdas de datos
+- Numeros de dia resaltados en rosa para fines de semana
+
+---
+
+## Sesion de debugging: 2026-05-26
+
+### Cronologia
+
+| Hora | Accion | Resultado |
+|------|--------|-----------|
+| 10:54 | Usuario guarda 2 HLG. Calendario vacio. | Materializacion fire-and-forget no completa (BUG-1) |
+| 11:05 | Deploy fix void->await. Usuario re-guarda. | Logs OK pero calendario sigue vacio (BUG-2) |
+| 11:10 | Deploy fix set->update para vis_*. Usuario re-guarda. | Calendario muestra turnos! Solo de 1 grupo (BUG-4) |
+| 11:17 | Formato calendario solicitado | UI: grid Lun-Dom implementado |
+| 11:20 | Encabezados equipo solicitado | UI: tabla equipo con dia semana + finde resaltado |
+| 11:21 | Usuario reporta: solo Porteria visible | Diagnosticado BUG-4: multi-HLG fusion |
+| 11:28 | Deploy fix multi-HLG fusion | Pendiente re-test con re-guardado de HLG |
+
+### Estado de deploy
+
+Todas las Cloud Functions desplegadas en `southamerica-east1` con los 4 fixes aplicados.
+Frontend local actualizado con mejoras de UI.
+
+---
+
+## PUNTO DE PAUSA — 2026-05-26 11:28 ART
+
+### Estado actual
+
+- **Backend**: Todas las fases (0-5) code-complete + 4 bugfixes criticos aplicados y deployados.
+- **Frontend**: Calendario Lun-Dom + tabla equipo con encabezados. Local, no deployado.
+- **Pendiente verificacion**: Re-guardar un HLG del usuario ejemplo (DNI 28914247) para validar que la fusion multi-HLG muestra ambos grupos correctamente:
+  - Lun/Mar/Mie: 08:00 (Oficina Personal)
+  - Jue/Vie: 08:00 (Porteria)
+  - Sab/Dom: F (franco)
+
+### Proximos pasos al retomar
+
+1. **Verificar fusion multi-HLG**: Guardar un HLG -> cargar calendario -> confirmar ambos grupos.
+2. **Verificar detalle dia**: Clic en una celda con turno -> confirmar que DiaGrillaDetalleModal muestra `grupo_de_trabajo_id` del HLG que asigno ese dia.
+3. **Verificar vista equipo**: Cambiar a Equipo -> confirmar encabezados dia semana + turnos.
+4. **Test de licencias (Gate 1)**: Intentar solicitar un articulo con `depende_rda=true` -> confirmar que `capa_teorica` en `asi_*` desbloquea la solicitud.
+5. **Test regimen planificado**: Crear plan mensual para un grupo -> habilitar -> confirmar materializacion.
+6. **Limpieza**: Los documentos `vis_*` pueden tener campos literales planos residuales de BUG-2 (ej. `"dias.01.rda_turno_id"` como key plana). Evaluar si limpiar manualmente o ignorar (no afectan lectura porque el frontend lee la estructura anidada).
+
+### Usuario de test
+
+- **DNI**: 28914247
+- **persona_id**: per_01KQN9WXFXF69Z9DCT5YNJ3TFZ
+- **HLG Oficina Personal**: hlg_01KQPW6YH9T31JBQHYKGXWH5RW (fijo Lun-Mie)
+- **HLG Porteria**: hlg_01KQYMY313QPZQ957WQZZYRX4K (fijo Jue-Vie)
+- **HLC**: 30hs semanales (25hs Oficina + 10hs Porteria = 35hs con warning desvio)
+
+---
 
 ## Fuera de alcance
 

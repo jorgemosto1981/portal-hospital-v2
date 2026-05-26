@@ -102,11 +102,13 @@ const registrarCambioTurno = onCall({ invoker: "public" }, async (request) => {
   const overrides = updated.exists && Array.isArray(updated.data().overrides_turno)
     ? updated.data().overrides_turno : [];
 
-  // Fire-and-forget: re-materializar capa teórica del mes afectado
   const [anio, mes] = fecha.split("-").map(Number);
-  void materializarTurnoMesBatch({ personaId, grupoId: null, anio, mes }).catch((e) =>
-    logger.error("materializarTurnoMesBatch_post_override", { personaId, fecha, error: String(e) })
-  );
+  try {
+    await materializarTurnoMesBatch({ personaId, grupoId: null, anio, mes });
+    logger.info("materializarTurnoMesBatch_post_override OK", { personaId, fecha });
+  } catch (e) {
+    logger.error("materializarTurnoMesBatch_post_override ERROR", { personaId, fecha, error: String(e) });
+  }
 
   return {
     ok: true,
@@ -155,11 +157,13 @@ const eliminarCambioTurno = onCall({ invoker: "public" }, async (request) => {
     actualizado_en: FieldValue.serverTimestamp(),
   });
 
-  // Fire-and-forget: re-materializar capa teórica del mes afectado
   const [anio, mes] = fecha.split("-").map(Number);
-  void materializarTurnoMesBatch({ personaId, grupoId: null, anio, mes }).catch((e) =>
-    logger.error("materializarTurnoMesBatch_post_eliminar_override", { personaId, fecha, error: String(e) })
-  );
+  try {
+    await materializarTurnoMesBatch({ personaId, grupoId: null, anio, mes });
+    logger.info("materializarTurnoMesBatch_post_eliminar_override OK", { personaId, fecha });
+  } catch (e) {
+    logger.error("materializarTurnoMesBatch_post_eliminar_override ERROR", { personaId, fecha, error: String(e) });
+  }
 
   return { ok: true, doc_id: docId, override_eliminado_index: idx };
 });
