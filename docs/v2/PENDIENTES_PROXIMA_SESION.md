@@ -1,146 +1,104 @@
-# Pendientes — Próxima Sesión
+# Punto de Continuación — Próxima Sesión
 
-> **Creado:** 2026-05-25
-> **Contexto:** Motor V2 completo (LAO + Patrón B + Patrón C) desplegado y validado en producción.
-
----
-
-## Tema Abierto: Compensatorios en horas — ¿cómo justifican el día?
-
-### Problema
-
-Los artículos de Patrón C (compensatorios, permisos gremiales) computan en **horas**,
-pero la grilla/planilla del hospital trabaja en **días**. Hay una zona gris entre
-consumo parcial y justificación de ausencia completa:
-
-- **Horas totales del día:** Si el agente solicita las horas completas de su jornada
-  según la carga horaria del día (ej: 6hs de un turno de 6hs), ¿el día queda
-  justificado como ausencia completa?
-
-- **Horas parciales:** Si solicita menos horas que su jornada (ej: 3hs de un turno
-  de 6hs), ¿el día NO se justifica como ausencia pero sí se debitan las horas?
-  ¿Cómo se marca esta diferencia en la grilla MDC?
-
-- **Carga horaria variable:** ¿Se busca la carga horaria del día específico
-  (turno asignado en la grilla) o se usa un valor fijo por cargo/grupo?
-  ¿Qué pasa con agentes de turnos rotativos?
-
-- **Multi-día:** Si la solicitud abarca múltiples días, ¿se busca la carga horaria
-  de **cada día** del rango o se aplica un promedio?
-
-### Artículos afectados
-
-- **68-B (Compensatorio):** Horas acumuladas por trabajo extra, consumidas como
-  ausencia parcial o completa.
-- **Permisos gremiales por horas:** Mismo patrón — artículo que puede justificar
-  el día completo pero computa en horas.
-
-### Preguntas de diseño
-
-1. ¿El motor debe consultar la grilla/turno del agente para determinar si las horas
-   solicitadas cubren la jornada completa?
-2. ¿Se necesita un nuevo campo en `motor_snapshot` como `justifica_dia_completo: true/false`?
-3. ¿La grilla MDC ya tiene la información de horas por turno, o hay que agregarla?
-4. ¿El `nivel_ocupacion_dia_id` del configurador resuelve este problema?
-5. ¿RRHH necesita ver en la bandeja si la solicitud justifica ausencia o es parcial?
-
-### Impacto técnico estimado
-
-- **Motor:** Posible nueva fase o extensión de Fase G (Grilla) para comparar
-  `horas_solicitadas` contra `horas_jornada_dia`.
-- **Snapshot:** Agregar campo `justifica_dia_completo` y/o `horas_jornada_dia`.
-- **Grilla MDC:** Verificar si el turno ya expone horas diarias.
-- **Frontend:** Mostrar indicador de "justifica día" o "parcial" en la bandeja.
+**Última sesión**: Lunes 25 Mayo 2026, 21:47 (UTC-3)  
+**Branch activo**: `feature/ticketera-puente-campos-config`  
+**Último commit**: `aa107fd` — docs: release notes, plan QA y arquitectura  
+**Tag**: `v2.0.0-regimen-horario`  
+**Estado deploy**: COMPLETO en producción (portal-hospital-v2.web.app)
 
 ---
 
-## Tema Abierto: Solicitud jornada completa vs parcial (diseño confirmado)
+## Resumen de la Sesión (25/05/2026)
 
-### Decisión de diseño
+### Epic completada: Sistema de Regímenes Horarios V2 (9 Fases)
 
-- Nuevo campo `es_jornada_completa` (boolean) en la solicitud.
-- Caso A (día completo): `{ es_jornada_completa: true, horas_solicitadas: null }` — motor calcula horas desde grilla.
-- Caso B (parcial): `{ es_jornada_completa: false, horas_solicitadas: 3.5 }` — agente inserta horas.
-- Nuevo campo configurador `permite_jornada_parcial` (boolean) en `bloque_topes_plazos_computo`.
-- Wizard muta según config: muestra toggle "Completa/Parcial" si `permite_jornada_parcial=true`.
-- Artículos afectados: 68-B (compensatorio), 70-bis (24hs/mes, aún no creado).
+Se implementó el sistema completo de régimen horario desde cero, abarcando todas las capas de la arquitectura (Firestore, Cloud Functions, Frontend React, Zod schemas, tests unitarios, documentación).
 
-### Preguntas pendientes
+#### Commits realizados en esta sesión (cronológico):
 
-1. Grilla: `capa_teorica` siempre tiene `ingreso/egreso_teorico` para agentes activos?
-2. Multi-día jornada completa: sumar horas reales de cada día o valor fijo?
-3. 70-bis: reinicio mensual o bolsa global con tope mensual?
+| # | Commit | Fase | Descripción |
+|---|--------|------|-------------|
+| 1 | `24d37db` | F1 | Schema Zod `discriminatedUnion` + callables backend + seed 6 regímenes |
+| 2 | `893ee26` | F2 | UI catálogo RRHH: tabla, formulario dinámico 3 patrones, detalle |
+| 3 | `07a078e` | F3 | Migración `regimen_horario_id` HLd → HLg + `regimen_fecha_ancla` |
+| 4 | `699425f` | F4 | Motor `resolverTurnoDia` + 30 unit tests (aritmética modular) |
+| 5 | `53df9e0` | F5 | `planes_turno_servicio`: 7 callables máquina de estados + override fantasma |
+| 6 | `942c17d` | F6 | UI jefe: grilla mensual pincel M/T/N/G/F + bandeja aprobaciones |
+| 7 | `364154a` | F7 | Overrides puntuales (reemplazo/adicional) + modal GSO + soft-delete |
+| 8 | `d13d1ee` | F8 | HelpDrawer contextual global + glosario 20 términos + 3 manuales |
+| 9 | `50d4075` | F9 | Motor V2 Fase H: turnoRegimenGate + superposición intra-día horaria |
+| 10 | `aa107fd` | docs | Release notes, plan QA (22 casos) y diagrama arquitectura |
 
----
+#### Deploy ejecutado (orden):
 
-## PREREQUISITO: Catálogo de Regímenes Horarios (BLOQUEANTE)
+1. **Firestore Rules** — `firebase deploy --only firestore:rules` → OK
+2. **Cloud Functions** — `firebase deploy --only functions` → OK (10 nuevas, ~3.5 min)
+3. **IAM Permisos** — `invoker: "public"` en código → automático por Gen2
+4. **Hosting** — `npm run build` (340 módulos) + `firebase deploy --only hosting` → OK
 
-> **Estado:** Sin definir — debe resolverse ANTES de implementar jornada completa/parcial.
-> **Razón:** Sin un régimen horario asignado al agente, la `capa_teorica` no existe
-> y el motor no puede calcular las horas de la jornada para `es_jornada_completa=true`.
+#### Herramientas instaladas:
 
-### Problema actual
-
-La carga horaria se guarda como array estático de 7 días en `historial_laboral_grupos` (HLg).
-Esto asume "lunes a viernes en horario fijo" y no soporta la realidad hospitalaria:
-- Enfermería rotativos (2x2, 1x3, franqueros de fin de semana)
-- Médicos de guardia (24hs un día específico, con cambios)
-- Directores/jefes (dedicación exclusiva, 44hs semanales sin horario fijo)
-
-### Solución: Desacoplar "Dónde trabaja" de "Cuándo trabaja"
-
-Crear un catálogo `catalogo_regimenes_horarios` gestionado por RRHH.
-Cada agente recibe un `regimen_horario_id` en su historial laboral.
-El sistema usa el régimen para proyectar la `capa_teorica` mensual automáticamente.
-
-### Los 3 arquetipos de régimen
-
-#### Patrón 1 — Fijo / Semanal (administrativos)
-
-- **UI:** Checkboxes días (L-D) + franja horaria (inicio/fin) + carga auto-calculada.
-- **Francos:** Implícitos (días no marcados).
-- **Feriados:** Debe impactar calendario institucional (asuetos, feriados).
-- **Ejemplo:** Admin L-V 07:00 a 14:00 (7hs).
-
-#### Patrón 2 — Guardia fija (profesionales Ley 9282)
-
-- **Similar al Patrón 1** pero con carga horaria distinta y días no laborados
-  son "días no laborales" (no francos).
-- **UI:** Día de guardia + duración (12h/24h) + horario inicio.
-- **Feriados:** Impacta calendario institucional.
-- **Ejemplo:** Médico guardia jueves 08:00 a viernes 08:00 (24hs).
-
-#### Patrón 3 — Rotativo / Cíclico (enfermería)
-
-- **UI:** Días trabajo consecutivos (T) + días descanso consecutivos (F) + franja horaria.
-- **Fecha ancla:** Al asignar al agente, se indica el Día 1 del ciclo.
-  El sistema proyecta hacia futuro con módulo matemático `(T+F)`.
-- **Servicio 24hs abierto**, pero turnos de 8hs y/o 6hs.
-- **Ejemplo:** Enfermería rotativo 2x2, turno noche 22:00-06:00 (8hs).
-
-### Ciclo de vida operativo
-
-1. **Catálogo:** RRHH crea regímenes ("Admin 35h", "Guardia Martes", "Rotativo 2x2 Noche").
-2. **Onboarding:** Al agente se le asigna un `regimen_horario_id` en su HL.
-3. **Batch mensual:** Cron job proyecta el mes siguiente → crea `asi_YYYYMMDD_per*` con `capa_teorica`.
-4. **Validación jefe:** El jefe abre la grilla, ve la proyección, ajusta cambios puntuales, aprueba.
-5. **Motor V2:** Al solicitar 68-B, el motor lee `capa_teorica` del día y sabe cuántas horas descontar.
-
-### Dependencias
-
-- Este catálogo es **prerequisito** para:
-  - Jornada completa automática (`es_jornada_completa`)
-  - Artículo 70-bis
-  - Cualquier artículo futuro que compute en horas
-- Sin él, el motor solo puede operar con horas manuales (estado actual).
+- `gh` CLI v2.92.0 (GitHub CLI) instalado vía `winget`. Pendiente: `gh auth login` para autenticarse.
 
 ---
 
-## Estado del sistema al cierre de sesión
+## Pendientes para Próxima Sesión
 
-- Motor V2 universal: 3 patrones (A/B/C) sobre `runMotorPipeline`.
-- Smoke test E2E Patrón C: `sol_01KSG4MA559JESFB9Z1PK2M42A` — 6hs debitadas, 94hs restantes.
-- Catálogo abierto: discovery dinámico por `collectionGroup("versiones")`.
-- 6 fixes aplicados en producción (ver RFC §8).
-- Todos los tests pasando (23/23).
-- 0 huérfanos en auditoría CI (76 campos).
+### Prioridad Alta
+
+1. **Autenticar `gh` CLI**: ejecutar `gh auth login` para habilitar creación de PRs desde terminal.
+
+2. **Crear Pull Request**: el branch está listo para PR hacia rama de integración. Body del PR disponible en `docs/v2/RELEASE_REGIMEN_HORARIO.md`.
+
+3. **QA Smoke Test**: validar en producción los 4 bloques del plan de pruebas:
+   - Bloque A: crear régimen de cada tipo desde UI RRHH
+   - Bloque B: ciclo completo BORRADOR → HABILITADO
+   - Bloque C: override reemplazo + adicional desde GSO
+   - Bloque D: solicitudes parciales con validación horaria
+
+4. **Seed de datos**: ejecutar `node scripts/seed-v2/seed-cfg.mjs` si RRHH necesita los 6 regímenes de ejemplo precargados en producción.
+
+### Prioridad Media
+
+5. **Instalar `gcloud` CLI** (opcional): para el script `grant-cloud-run-invoker-callables.mjs`. No es crítico porque `invoker: "public"` ya aplica los permisos, pero es buena práctica tenerlo para otros scripts de infraestructura.
+
+6. **Actualizar `docs/v2/ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md`**: referenciar el nuevo catálogo `cfg_regimen_horario` y eliminar la mención obsoleta a `horario_plantilla` en HLC.
+
+7. **Code splitting**: Vite advirtió que el bundle JS supera 500KB (1617KB). Evaluar `React.lazy()` + `import()` para las páginas nuevas (RegimenesHorariosPage, PlanTurnoServicioPage, GrillaMensualEditor).
+
+### Prioridad Baja (Futuro)
+
+8. **Fichadas**: integración futura con reloj biométrico/registro manual para validar ingreso/egreso real contra capa teórica.
+
+9. **Turno partido**: extensión del modelo para soportar `turnos[]` (array) en vez de turno singular, habilitando split shifts nativos.
+
+10. **RFC Epic P**: documento formal para `planes_turno_servicio` como epic independiente con sus propios acceptance criteria.
+
+---
+
+## Archivos Clave para Retomar Contexto
+
+| Archivo | Propósito |
+|---------|-----------|
+| `docs/v2/RELEASE_REGIMEN_HORARIO.md` | Release notes + plan QA + diagrama arquitectura |
+| `docs/v2/PLAN_REGIMEN_HORARIO_V2.md` | Plan original de diseño (todas las decisiones) |
+| `functions/modules/asistencia/resolverTurnoDia.js` | Motor core de resolución de turnos |
+| `functions/modules/asistencia/planesTurnoServicio.js` | Máquina de estados gobernanza |
+| `functions/modules/asistencia/cambiosTurno.js` | Overrides operativos |
+| `functions/modules/shared/turnoRegimenGate.js` | Gate V2 para Motor Patrón C |
+| `functions/modules/shared/patronCAltaMotorV2.js` | Motor Patrón C (Fase H integrada) |
+| `web/src/schemas/regimenHorario.schema.js` | Schema Zod catálogo |
+| `web/src/pages/jefe/PlanTurnoServicioPage.jsx` | UI planificación jefe |
+| `web/src/pages/jefe/planes/GrillaMensualEditor.jsx` | Grilla interactiva pincel |
+| `web/src/components/ui/HelpDrawer.jsx` | Drawer ayuda contextual |
+| `functions/test/resolverTurnoDia.test.js` | 30 unit tests del motor |
+
+---
+
+## Estado del Repositorio
+
+- **Branch**: `feature/ticketera-puente-campos-config` (up to date con remote)
+- **Working tree**: clean
+- **Tag**: `v2.0.0-regimen-horario` (pusheado al remote)
+- **URL producción**: https://portal-hospital-v2.web.app
+- **Consola Firebase**: https://console.firebase.google.com/project/portal-hospital-v2/overview
