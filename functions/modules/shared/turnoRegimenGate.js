@@ -87,7 +87,7 @@ async function validarTurnoRegimenParaSolicitud(db, input) {
   for (const ymd of dias) {
     let resultado;
     try {
-      resultado = await resolverTurnoDia(personaId, ymd, grupoId);
+      resultado = await resolverTurnoDia({ personaId, fecha: ymd, grupoId });
     } catch {
       return {
         ok: false,

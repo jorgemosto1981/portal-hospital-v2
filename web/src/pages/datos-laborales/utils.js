@@ -19,9 +19,31 @@ export function formatValue(v) {
   return String(v);
 }
 
-export function formatCargaPorDia(v) {
-  if (!Array.isArray(v) || v.length === 0) return "—";
-  return v.map((x) => (x == null ? "-" : String(x))).join(" / ");
+export function derivarCargaSemanalDesdeRegimen(regimenDoc) {
+  if (!regimenDoc || typeof regimenDoc !== "object") return null;
+  const tipo = regimenDoc.tipo_patron;
+  if (tipo === "fijo") {
+    const dias = regimenDoc.dias;
+    if (!Array.isArray(dias)) return null;
+    return dias.reduce((acc, d) => {
+      const h = d && d.turno && typeof d.turno.horas_efectivas === "number" ? d.turno.horas_efectivas : 0;
+      return acc + h;
+    }, 0);
+  }
+  if (tipo === "rotativo") {
+    const ciclo = regimenDoc.ciclo;
+    if (!Array.isArray(ciclo) || ciclo.length === 0) return null;
+    const sumaCiclo = ciclo.reduce((acc, pos) => {
+      const h = pos && pos.turno && typeof pos.turno.horas_efectivas === "number" ? pos.turno.horas_efectivas : 0;
+      return acc + h;
+    }, 0);
+    return (sumaCiclo / ciclo.length) * 7;
+  }
+  if (tipo === "planificado") {
+    const v = regimenDoc.carga_horaria_semanal_teorica;
+    return typeof v === "number" && Number.isFinite(v) ? v : null;
+  }
+  return null;
 }
 
 export function isoToDateInput(iso) {
@@ -36,52 +58,8 @@ export function formatDateDdMmAaaa(value, fallback = "—") {
   return `${dd}/${mm}/${yyyy}`;
 }
 
-export function sortOpcionesDiaSemana(opciones) {
-  return [...(opciones || [])].sort((a, b) => {
-    const oa = Number(a && a.orden);
-    const ob = Number(b && b.orden);
-    if (Number.isFinite(oa) && Number.isFinite(ob)) return oa - ob;
-    return String((a && a.id) || "").localeCompare(String((b && b.id) || ""));
-  });
-}
-
-/** Planilla fija de 7 días según catálogo `cfg_dia_semana` (horas vacías = 0 al persistir). */
-export function buildPlanillaCargaSemanal(opcionesDiaSemana, rawCarga) {
-  const dias = sortOpcionesDiaSemana(opcionesDiaSemana);
-  if (dias.length === 0) return normalizeCargaRowsFromRecord(rawCarga);
-  const horasPorDia = new Map();
-  if (Array.isArray(rawCarga)) {
-    rawCarga.forEach((item) => {
-      if (item && typeof item === "object" && !Array.isArray(item)) {
-        const id = String(item.dia_semana_id || "").trim();
-        if (id) horasPorDia.set(id, item.horas == null ? "" : String(item.horas));
-        return;
-      }
-      const n = Number(item);
-      if (Number.isFinite(n)) {
-        // Legacy: sin dia_semana_id no se puede mapear a planilla fija.
-      }
-    });
-  }
-  return dias.map((dia) => ({
-    dia_semana_id: String(dia.id || ""),
-    horas: horasPorDia.has(String(dia.id)) ? horasPorDia.get(String(dia.id)) : "",
-  }));
-}
-
-export function cargaSemanalTieneHorasPositivas(cargaPorDiaRows) {
-  return (cargaPorDiaRows || []).some((row) => {
-    const n = Number(row && row.horas);
-    return Number.isFinite(n) && n > 0;
-  });
-}
-
 export function takeFirst(items, max = 5) {
   return Array.isArray(items) ? items.slice(0, max) : [];
-}
-
-export function emptyCargaDia() {
-  return { dia_semana_id: "", horas: "" };
 }
 
 export function updateFormDataField(prev, key, value) {
@@ -98,36 +76,6 @@ export function updateFormDataField(prev, key, value) {
     return { ...prev, fecha_hasta: nextHasta };
   }
   return { ...prev, [key]: value };
-}
-
-export function updateCargaPorDiaRow(rows, idx, key, value) {
-  return rows.map((row, rowIdx) => (rowIdx === idx ? { ...row, [key]: value } : row));
-}
-
-export function addCargaPorDiaRow(rows) {
-  return [...rows, emptyCargaDia()];
-}
-
-export function removeCargaPorDiaRow(rows, idx) {
-  const next = rows.filter((_, rowIdx) => rowIdx !== idx);
-  return next.length > 0 ? next : [emptyCargaDia()];
-}
-
-export function normalizeCargaRowsFromRecord(rawCarga) {
-  if (!Array.isArray(rawCarga)) return [emptyCargaDia()];
-  if (rawCarga.length === 0) return [emptyCargaDia()];
-  return rawCarga.map((item) => {
-    if (item && typeof item === "object" && !Array.isArray(item)) {
-      return {
-        dia_semana_id: String(item.dia_semana_id || ""),
-        horas: item.horas == null ? "" : String(item.horas),
-      };
-    }
-    return {
-      dia_semana_id: "",
-      horas: item == null ? "" : String(item),
-    };
-  });
 }
 
 export function normalizarWarnings(raw) {
@@ -269,20 +217,10 @@ function estadoDesdeFechas(desde, hasta) {
   return "activo";
 }
 
-export function sumarHorasSemana(cargaPorDiaSemana) {
-  return sumCargaPorDiaSemana(cargaPorDiaSemana);
-}
-
-function sumCargaPorDiaSemana(carga) {
-  if (!Array.isArray(carga)) return 0;
-  return carga.reduce((acc, item) => {
-    if (item && typeof item === "object" && !Array.isArray(item)) {
-      const n = Number(item.horas);
-      return Number.isFinite(n) ? acc + n : acc;
-    }
-    const n = Number(item);
-    return Number.isFinite(n) ? acc + n : acc;
-  }, 0);
+export function cargaSemanalDesdeHlg(hlgRow, idxRegimenes) {
+  const regId = String(hlgRow.regimen_horario_id || "").trim();
+  if (!regId || !idxRegimenes) return null;
+  return derivarCargaSemanalDesdeRegimen(idxRegimenes.get(regId));
 }
 
 function rangoSolapadoInclusivo(desdeA, hastaA, desdeB, hastaB) {
@@ -304,6 +242,7 @@ export function buildTimelineItemsByPersona({
   idxPersonas,
   idxRoles,
   idxFunciones,
+  idxRegimenes,
 }) {
   const persona = String(personaId || "").trim();
   const includeAllPersonas = !persona;
@@ -319,7 +258,8 @@ export function buildTimelineItemsByPersona({
     const cargoId = String((dato && dato.cargo_id) || "");
     if (!cargoId) return;
     const prev = cargoTotalHlg.get(cargoId) || 0;
-    cargoTotalHlg.set(cargoId, prev + sumCargaPorDiaSemana(row.carga_por_dia_semana));
+    const h = cargaSemanalDesdeHlg(row, idxRegimenes);
+    cargoTotalHlg.set(cargoId, prev + (h != null ? h : 0));
   });
 
   (hlcRows || [])
@@ -564,6 +504,7 @@ export function buildVistaGrupoItems({
   idxPersonas,
   idxHld,
   idxHlc,
+  idxRegimenes,
 }) {
   const targetGrupo = String(grupoId || "").trim();
   const includeAllGrupos = !targetGrupo;
@@ -577,9 +518,10 @@ export function buildVistaGrupoItems({
     const dato = idxHld.get(String(row.dato_laboral_id || ""));
     const cargoId = String((dato && dato.cargo_id) || "");
     if (!cargoId) return;
+    const h = cargaSemanalDesdeHlg(row, idxRegimenes);
     cargoTotalHlg.set(
       cargoId,
-      Number(cargoTotalHlg.get(cargoId) || 0) + sumCargaPorDiaSemana(row.carga_por_dia_semana),
+      Number(cargoTotalHlg.get(cargoId) || 0) + (h != null ? h : 0),
     );
   });
 

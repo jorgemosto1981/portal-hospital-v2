@@ -21,7 +21,6 @@ export const COLECCIONES_FORM = [
   "cfg_causal_fin_asignacion_laboral",
   "cfg_motivo_deshabilitacion_hlc",
   "cfg_tipo_acto_designacion",
-  "cfg_dia_semana",
 ];
 
 export const AYUDA_CAMPOS = {
@@ -51,7 +50,6 @@ export const AYUDA_CAMPOS = {
   funcion_real_id: "Función real desempeñada.",
   nivel_jerarquico: "Nivel jerárquico numérico (1 a 99).",
   dato_laboral_id: "Referencia al registro HLd del que depende este subnivel.",
-  carga_por_dia_semana: "Carga distribuida por día (seleccionar dia_semana_id + horas por fila).",
 };
 
 export const INITIAL_FORM_DATA_LABORAL = {
@@ -83,5 +81,4 @@ export const INITIAL_FORM_DATA_LABORAL = {
   funcion_real_id: "",
   nivel_jerarquico: "",
   dato_laboral_id: "",
-  carga_por_dia_semana: "",
 };

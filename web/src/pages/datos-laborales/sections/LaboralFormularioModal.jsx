@@ -12,8 +12,6 @@ export default function LaboralFormularioModal({
   modoEdicion,
   formData,
   onChangeField,
-  cargaPorDiaRows,
-  onChangeCargaRow,
   accionFormularioLabel,
   personaActivaLabel,
   cargoContexto,
@@ -30,7 +28,6 @@ export default function LaboralFormularioModal({
   opcionesTipoActo,
   opcionesRegimenHorario,
   opcionesCentroCosto,
-  opcionesDiaSemana,
   opcionesCausalFinAsignacion,
   errorValidacionFormulario,
   saveMsg,
@@ -128,9 +125,6 @@ export default function LaboralFormularioModal({
               opcionesRegimenHorario={opcionesRegimenHorario}
               opcionesCentroCosto={opcionesCentroCosto}
               opcionesFuncion={opcionesFuncion}
-              cargaPorDiaRows={cargaPorDiaRows}
-              onChangeCargaRow={onChangeCargaRow}
-              opcionesDiaSemana={opcionesDiaSemana}
               ayudaCampos={AYUDA_CAMPOS}
             />
           )}

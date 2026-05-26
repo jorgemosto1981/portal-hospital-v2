@@ -143,7 +143,7 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
   }
 
   if (!id) {
-    const { ulid } = require("../../shared/utils/ulid.cjs");
+    const { ulid } = require("ulid");
     id = `plt_${ulid()}`;
   }
 

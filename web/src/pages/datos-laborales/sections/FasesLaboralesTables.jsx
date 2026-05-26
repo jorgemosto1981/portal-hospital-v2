@@ -1,5 +1,5 @@
 import Card from "../../../components/ui/Card.jsx";
-import { formatCargaPorDia, formatValue, isHlgAsignacionDeshabilitada } from "../utils.js";
+import { formatValue, isHlgAsignacionDeshabilitada } from "../utils.js";
 
 export default function FasesLaboralesTables({
   loadingByCollection,
@@ -168,7 +168,7 @@ export default function FasesLaboralesTables({
                   <th className="px-3 py-2">Grupo (HLg)</th>
                   <th className="px-3 py-2">Grupo (desde HLc)</th>
                   <th className="px-3 py-2">Nivel jerárquico</th>
-                  <th className="px-3 py-2">Carga por día</th>
+                  <th className="px-3 py-2">Régimen horario</th>
                   <th className="px-3 py-2">Desde</th>
                   <th className="px-3 py-2">Hasta</th>
                   <th className="px-3 py-2">Estado</th>
@@ -203,7 +203,7 @@ export default function FasesLaboralesTables({
                         )}
                       </td>
                       <td className="px-3 py-2">{formatValue(row.nivel_jerarquico)}</td>
-                      <td className="px-3 py-2 font-mono">{formatCargaPorDia(row.carga_por_dia_semana)}</td>
+                      <td className="px-3 py-2">{formatValue(row.regimen_horario_id)}</td>
                       <td className="px-3 py-2">{formatValue(row.fecha_inicio)}</td>
                       <td className="px-3 py-2">{formatValue(row.fecha_fin)}</td>
                       <td className="px-3 py-2">

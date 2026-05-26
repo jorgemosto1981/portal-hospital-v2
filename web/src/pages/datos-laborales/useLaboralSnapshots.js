@@ -18,6 +18,7 @@ export function useLaboralSnapshots({
   idxEscalafon,
   idxAgrupamiento,
   idxCategorias,
+  idxRegimenes,
 }) {
   const snapshotActual = useMemo(
     () =>
@@ -35,6 +36,7 @@ export function useLaboralSnapshots({
         idxEscalafon,
         idxAgrupamiento,
         idxCategorias,
+        idxRegimenes,
       }),
     [
       personaId,
@@ -50,6 +52,7 @@ export function useLaboralSnapshots({
       idxEscalafon,
       idxAgrupamiento,
       idxCategorias,
+      idxRegimenes,
     ],
   );
 
@@ -69,6 +72,7 @@ export function useLaboralSnapshots({
         idxEscalafon,
         idxAgrupamiento,
         idxCategorias,
+        idxRegimenes,
       }),
     [
       personaId,
@@ -84,6 +88,7 @@ export function useLaboralSnapshots({
       idxEscalafon,
       idxAgrupamiento,
       idxCategorias,
+      idxRegimenes,
     ],
   );
 

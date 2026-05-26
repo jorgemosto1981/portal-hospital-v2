@@ -1,13 +1,11 @@
 import {
-  buildPlanillaCargaSemanal,
-  cargaSemanalTieneHorasPositivas,
   formatDateDdMmAaaa,
   hlcFechaDesdeYmd,
   hlcFechaHastaYmd,
   isoToDateInput,
 } from "./utils.js";
 
-export function buildFormDataFromRecord({ record, idxHld, prevFormData, opcionesDiaSemana }) {
+export function buildFormDataFromRecord({ record, idxHld, prevFormData }) {
   if (!record || typeof record !== "object") return null;
   const datoRef = idxHld.get(String(record.dato_laboral_id || ""));
   const nextFormData = {
@@ -67,14 +65,8 @@ export function buildFormDataFromRecord({ record, idxHld, prevFormData, opciones
     funcion_real_id: String(record.funcion_real_id || (datoRef && datoRef.funcion_real_id) || ""),
     nivel_jerarquico: record.nivel_jerarquico == null ? "" : String(record.nivel_jerarquico),
     dato_laboral_id: String(record.dato_laboral_id || ""),
-    carga_por_dia_semana: Array.isArray(record.carga_por_dia_semana)
-      ? record.carga_por_dia_semana.join(",")
-      : "",
   };
-  return {
-    formData: nextFormData,
-    cargaPorDiaRows: buildPlanillaCargaSemanal(opcionesDiaSemana, record.carga_por_dia_semana),
-  };
+  return { formData: nextFormData };
 }
 
 export function requiredFieldsByTipo(tipoAlta) {
@@ -105,7 +97,7 @@ export function requiredFieldsByTipo(tipoAlta) {
   ];
 }
 
-export function validateLaboralForm({ tipoAlta, formData, cargaPorDiaRows, idxHlc }) {
+export function validateLaboralForm({ tipoAlta, formData, idxHlc }) {
   const faltantes = requiredFieldsByTipo(tipoAlta).filter((k) => !String(formData[k] || "").trim());
   if (faltantes.length > 0) return `Completá los campos obligatorios: ${faltantes.join(", ")}`;
   if (formData.persona_id && !/^per_/i.test(formData.persona_id.trim())) {
@@ -145,6 +137,9 @@ export function validateLaboralForm({ tipoAlta, formData, cargaPorDiaRows, idxHl
     }
   }
   if (tipoAlta === "historial_laboral_grupos") {
+    if (!String(formData.regimen_horario_id || "").trim()) {
+      return "El régimen horario es obligatorio para la asignación a grupo.";
+    }
     const cargoRef = idxHlc && formData.cargo_id ? idxHlc.get(String(formData.cargo_id || "")) : null;
     if (cargoRef) {
       const cargoDesde = hlcFechaDesdeYmd(cargoRef);
@@ -160,18 +155,6 @@ export function validateLaboralForm({ tipoAlta, formData, cargaPorDiaRows, idxHl
       if (cargoHasta && fechaHasta && fechaHasta > cargoHasta) {
         return `La fecha de fin no puede superar la del cargo (${formatDateDdMmAaaa(cargoHasta)}).`;
       }
-    }
-    const rows = cargaPorDiaRows || [];
-    for (const row of rows) {
-      const horasStr = String(row.horas ?? "").trim();
-      if (!horasStr) continue;
-      const n = Number(horasStr);
-      if (!Number.isFinite(n) || n < 0 || n > 24) {
-        return "Cada día debe tener horas entre 0 y 24.";
-      }
-    }
-    if (!cargaSemanalTieneHorasPositivas(rows)) {
-      return 'Un grupo debe tener al menos un día con carga horaria asignada. Si el grupo ya no opera, utilice la opción "Deshabilitar asignación".';
     }
   }
   return "";

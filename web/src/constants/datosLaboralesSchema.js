@@ -72,7 +72,7 @@ export const DATOS_LABORALES_COLECCIONES = [
     id: "historial_laboral_grupos",
     collectionName: "historial_laboral_grupos",
     titulo: "historial_laboral_grupos (hlg_*)",
-    descripcion: "Nivel 3: asignacion por grupo y carga por dia para burbuja operativa.",
+    descripcion: "Nivel 3: asignacion por grupo y regimen horario para burbuja operativa.",
     campos: [
       "id",
       "dato_laboral_id",
@@ -81,7 +81,6 @@ export const DATOS_LABORALES_COLECCIONES = [
       "nivel_jerarquico",
       "regimen_horario_id",
       "regimen_fecha_ancla",
-      "carga_por_dia_semana[]",
       "fecha_inicio",
       "fecha_fin",
       "activo",

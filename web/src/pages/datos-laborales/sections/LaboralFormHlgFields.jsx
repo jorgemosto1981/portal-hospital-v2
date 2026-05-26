@@ -8,9 +8,6 @@ export default function LaboralFormHlgFields({
   opcionesRegimenHorario,
   opcionesCentroCosto,
   opcionesFuncion,
-  cargaPorDiaRows,
-  onChangeCargaRow,
-  opcionesDiaSemana,
   ayudaCampos,
 }) {
   return (
@@ -24,6 +21,7 @@ export default function LaboralFormHlgFields({
         helpText={ayudaCampos.regimen_horario_id}
         technicalName="regimen_horario_id"
         showTechnicalName={modoAvanzado}
+        required
       />
       <LabeledTextField
         label="Fecha ancla (rotativos)"
@@ -65,35 +63,6 @@ export default function LaboralFormHlgFields({
         technicalName="nivel_jerarquico"
         showTechnicalName={modoAvanzado}
       />
-      <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white p-3">
-        <label className="mb-2 block text-sm font-medium text-slate-700">
-          Carga por día de semana (7 días)
-          {modoAvanzado ? (
-            <span className="block text-xs font-normal text-slate-500">Campo técnico: carga_por_dia_semana</span>
-          ) : null}
-        </label>
-        <p className="mb-2 text-xs text-slate-500">{ayudaCampos.carga_por_dia_semana}</p>
-        <div className="space-y-2">
-          {cargaPorDiaRows.map((row, idx) => {
-            const diaOpt = (opcionesDiaSemana || []).find((o) => String(o.id) === String(row.dia_semana_id));
-            const diaLabel = diaOpt && diaOpt.nombre ? String(diaOpt.nombre) : row.dia_semana_id || `Día ${idx + 1}`;
-            return (
-              <div key={`carga-dia-${row.dia_semana_id || idx}`} className="grid gap-2 md:grid-cols-[1fr_140px]">
-                <p className="flex h-11 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800">
-                  {diaLabel}
-                </p>
-                <LabeledTextField
-                  bare
-                  value={row.horas}
-                  onValueChange={(v) => onChangeCargaRow(idx, "horas", v)}
-                  placeholder="0..24"
-                  inputMode="decimal"
-                />
-              </div>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }

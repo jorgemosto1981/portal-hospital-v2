@@ -135,9 +135,13 @@ function mockDb(cfg = {}) {
           }),
         };
       }
+      const emptyChainable = () => ({
+        where: emptyChainable,
+        get: async () => ({ docs: [], empty: true }),
+      });
       return {
         doc: () => ({ get: async () => snap(false) }),
-        where: () => ({ get: async () => ({ docs: [] }) }),
+        where: emptyChainable,
       };
     },
   };
