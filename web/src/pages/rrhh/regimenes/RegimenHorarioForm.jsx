@@ -359,15 +359,31 @@ function EditorPlanificado({ turnos, reglas, onChangeTurnos, onChangeReglas }) {
                 type="number" min="0" max="24" step="0.5"
               />
             </div>
-            <label className="mt-2 flex items-center gap-1.5 text-xs text-slate-600">
-              <input
-                type="checkbox"
-                checked={t.es_nocturno}
-                onChange={(e) => updateTurno(i, { es_nocturno: e.target.checked })}
-                className="rounded border-slate-300"
+            <div className="mt-2 flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={t.es_nocturno}
+                  onChange={(e) => updateTurno(i, { es_nocturno: e.target.checked })}
+                  className="rounded border-slate-300"
+                />
+                Nocturno
+              </label>
+              <InputField
+                label="Toler. ingreso (min)"
+                value={t.tolerancia_ingreso_min ?? 15}
+                onChange={(v) => updateTurno(i, { tolerancia_ingreso_min: v === "" ? 0 : Number(v) })}
+                type="number" min="0" max="120"
+                className="w-32"
               />
-              Nocturno
-            </label>
+              <InputField
+                label="Toler. egreso (min)"
+                value={t.tolerancia_egreso_min ?? 10}
+                onChange={(v) => updateTurno(i, { tolerancia_egreso_min: v === "" ? 0 : Number(v) })}
+                type="number" min="0" max="120"
+                className="w-32"
+              />
+            </div>
           </div>
         ))}
       </div>

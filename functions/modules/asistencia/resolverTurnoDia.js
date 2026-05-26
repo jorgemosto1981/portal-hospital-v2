@@ -130,9 +130,10 @@ function resolverRotativo(regimen, fechaDate, fechaAnclaYmd) {
  * @param {object} regimen
  * @param {string} fechaYmd
  * @param {string} grupoId
+ * @param {string} personaId
  * @returns {Promise<{ tipo_dia: string, turno_teorico: object|null, plan_id: string|null }>}
  */
-async function resolverPlanificado(regimen, fechaYmd, grupoId) {
+async function resolverPlanificado(regimen, fechaYmd, grupoId, personaId) {
   if (!grupoId) return { tipo_dia: "no_laborable", turno_teorico: null, plan_id: null };
 
   const [anio, mes] = fechaYmd.split("-").map(Number);
@@ -150,8 +151,8 @@ async function resolverPlanificado(regimen, fechaYmd, grupoId) {
 
   const plan = planSnap.docs[0].data();
   const planId = planSnap.docs[0].id;
-  const asignaciones = plan.asignaciones || {};
-  const asignacionDia = asignaciones[fechaYmd];
+  const agentePlan = (plan.agentes || []).find((a) => a.persona_id === personaId);
+  const asignacionDia = agentePlan?.dias?.[fechaYmd];
 
   if (!asignacionDia || asignacionDia.tipo_dia === "franco") {
     return { tipo_dia: asignacionDia?.tipo_dia || "franco", turno_teorico: null, plan_id: planId };
@@ -309,7 +310,7 @@ async function resolverTurnoDia({ personaId, fecha, grupoId }) {
       break;
     }
     case "planificado": {
-      const r = await resolverPlanificado(regimen, fechaYmd, hlg.grupo_de_trabajo_id);
+      const r = await resolverPlanificado(regimen, fechaYmd, hlg.grupo_de_trabajo_id, personaId);
       resolucion = { ...r, origen: "plan_mensual", posicion_ciclo: null };
       break;
     }

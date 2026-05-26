@@ -12,6 +12,8 @@
 
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { db, FieldValue } = require("../shared/context");
+const { materializarTurnoMesBatch } = require("./rdaTurnoTeoricoWorker");
+const { logger } = require("firebase-functions/v2");
 
 const COL_ASISTENCIA = "asistencia_diaria";
 const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -100,6 +102,12 @@ const registrarCambioTurno = onCall({ invoker: "public" }, async (request) => {
   const overrides = updated.exists && Array.isArray(updated.data().overrides_turno)
     ? updated.data().overrides_turno : [];
 
+  // Fire-and-forget: re-materializar capa teórica del mes afectado
+  const [anio, mes] = fecha.split("-").map(Number);
+  void materializarTurnoMesBatch({ personaId, grupoId: null, anio, mes }).catch((e) =>
+    logger.error("materializarTurnoMesBatch_post_override", { personaId, fecha, error: String(e) })
+  );
+
   return {
     ok: true,
     doc_id: docId,
@@ -146,6 +154,12 @@ const eliminarCambioTurno = onCall({ invoker: "public" }, async (request) => {
     overrides_turno: overrides,
     actualizado_en: FieldValue.serverTimestamp(),
   });
+
+  // Fire-and-forget: re-materializar capa teórica del mes afectado
+  const [anio, mes] = fecha.split("-").map(Number);
+  void materializarTurnoMesBatch({ personaId, grupoId: null, anio, mes }).catch((e) =>
+    logger.error("materializarTurnoMesBatch_post_eliminar_override", { personaId, fecha, error: String(e) })
+  );
 
   return { ok: true, doc_id: docId, override_eliminado_index: idx };
 });
