@@ -12,6 +12,8 @@
 
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { db, FieldValue } = require("../shared/context");
+const runtimeFlags = require("../shared/runtimeFlags.json");
+const { assertOverrideAuth } = require("../shared/helpers");
 const { materializarTurnoMesBatch } = require("./rdaTurnoTeoricoWorker");
 const { logger } = require("firebase-functions/v2");
 
@@ -65,6 +67,7 @@ function validarOverride(ov) {
 const registrarCambioTurno = onCall({ invoker: "public" }, async (request) => {
   const data = request.data;
   const { personaId, fecha } = validarInput(data);
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
   const override = validarOverride(data.override);
 
   const uid = (request.auth && request.auth.uid) || "system";
@@ -125,6 +128,7 @@ const registrarCambioTurno = onCall({ invoker: "public" }, async (request) => {
 const eliminarCambioTurno = onCall({ invoker: "public" }, async (request) => {
   const data = request.data;
   const { personaId, fecha } = validarInput(data);
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
 
   const idx = typeof data.override_index === "number" ? data.override_index : -1;
   if (idx < 0) err("invalid-argument", "[OVR-DEL-001] override_index (>=0) requerido.");
@@ -174,6 +178,7 @@ const eliminarCambioTurno = onCall({ invoker: "public" }, async (request) => {
 const listarOverridesTurno = onCall({ invoker: "public" }, async (request) => {
   const data = request.data;
   const { personaId, fecha } = validarInput(data);
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
 
   const docId = docIdAsistencia(personaId, fecha);
   const snap = await db.collection(COL_ASISTENCIA).doc(docId).get();

@@ -2,15 +2,15 @@
 
 /**
  * Callables para gestión de planes de turno por servicio.
- * Máquina de estados: BORRADOR → ENVIADO → AUTORIZADO_SUPERIOR → HABILITADO
- * Rechazo en cualquier punto → BORRADOR.
+ * Máquina de estados: BORRADOR → ENVIADO → HABILITADO.
+ * EN_REVISION (RRHH revierte) → puede re-enviarse o rechazarse.
  * Cerrado: HABILITADO → CERRADO (solo perpetuos).
  */
 
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { db, FieldValue } = require("../shared/context");
 const runtimeFlags = require("../shared/runtimeFlags.json");
-const { assertRrhh } = require("../shared/helpers");
+const { assertRrhh, assertPlanAuth } = require("../shared/helpers");
 const { materializarGrupoMes } = require("./rdaTurnoTeoricoWorker");
 const { logger } = require("firebase-functions/v2");
 
@@ -95,9 +95,9 @@ function validarPlanPerpetuo(datos) {
  * Crea o actualiza un plan en estado BORRADOR.
  */
 const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) => {
-  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
   const datos = request.data && request.data.datos;
   const { grupoId, tipoPlan } = validarDatosBase(datos);
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, grupoId, "guardar");
 
   const now = FieldValue.serverTimestamp();
   const uid = (request.auth && request.auth.uid) || "system";
@@ -176,24 +176,31 @@ const enviarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =>
   if (!planId) err("invalid-argument", "[PLT-ENV-001] plan_id requerido.");
 
   const ref = db.collection(COL_PLANES).doc(planId);
-  const snap = await ref.get();
-  if (!snap.exists) err("not-found", "[PLT-ENV-002] Plan no encontrado.");
+  const preSnap = await ref.get();
+  if (!preSnap.exists) err("not-found", "[PLT-ENV-002] Plan no encontrado.");
+  const prePlan = preSnap.data();
 
-  const plan = snap.data();
-  assertEstados(plan, ["BORRADOR", "EN_REVISION"]);
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, prePlan.grupo_id, "enviar");
 
   const warnings = [];
-  if (plan.tipo_plan === "mensual") {
-    const regWarnings = await validarReglasContraRegimen(plan);
+  if (prePlan.tipo_plan === "mensual") {
+    const regWarnings = await validarReglasContraRegimen(prePlan);
     warnings.push(...regWarnings);
   }
 
   const aprobacion = buildAprobacion(request, "enviar", null);
-  await ref.update({
-    estado: "ENVIADO",
-    observaciones_rechazo: null,
-    historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
-    actualizado_en: FieldValue.serverTimestamp(),
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) err("not-found", "[PLT-ENV-002] Plan no encontrado.");
+    assertEstados(snap.data(), ["BORRADOR", "EN_REVISION"]);
+    tx.update(ref, {
+      estado: "ENVIADO",
+      observaciones_rechazo: null,
+      observaciones_revision: null,
+      historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
+      actualizado_en: FieldValue.serverTimestamp(),
+    });
   });
 
   return { ok: true, id: planId, estado: "ENVIADO", warnings };
@@ -209,11 +216,11 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
   if (!planId) err("invalid-argument", "[PLT-APR-001] plan_id requerido.");
 
   const ref = db.collection(COL_PLANES).doc(planId);
-  const snap = await ref.get();
-  if (!snap.exists) err("not-found", "[PLT-APR-002] Plan no encontrado.");
+  const preSnap = await ref.get();
+  if (!preSnap.exists) err("not-found", "[PLT-APR-002] Plan no encontrado.");
+  const plan = preSnap.data();
 
-  const plan = snap.data();
-  assertEstado(plan, "ENVIADO");
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, plan.grupo_id, "aprobar");
 
   const warnings = [];
   const overridesEncontrados = await detectarOverridesFantasma(plan);
@@ -228,6 +235,20 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
     };
   }
 
+  const obs = request.data && request.data.observaciones;
+  const aprobacion = buildAprobacion(request, "aprobar", obs);
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) err("not-found", "[PLT-APR-002] Plan no encontrado.");
+    assertEstado(snap.data(), "ENVIADO");
+    tx.update(ref, {
+      estado: "HABILITADO",
+      historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
+      actualizado_en: FieldValue.serverTimestamp(),
+    });
+  });
+
   if (overridesEncontrados.length > 0 && confirmarInvalidarOverrides) {
     const invalidados = await invalidarOverridesFantasma(overridesEncontrados);
     warnings.push({
@@ -235,14 +256,6 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
       mensaje: `Se invalidaron ${invalidados} override(s) por re-planificación.`,
     });
   }
-
-  const obs = request.data && request.data.observaciones;
-  const aprobacion = buildAprobacion(request, "aprobar", obs);
-  await ref.update({
-    estado: "HABILITADO",
-    historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
-    actualizado_en: FieldValue.serverTimestamp(),
-  });
 
   if (plan.tipo_plan === "mensual" && plan.periodo) {
     const [anio, mes] = plan.periodo.split("-").map(Number);
@@ -270,18 +283,23 @@ const rechazarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) 
   }
 
   const ref = db.collection(COL_PLANES).doc(planId);
-  const snap = await ref.get();
-  if (!snap.exists) err("not-found", "[PLT-REC-003] Plan no encontrado.");
+  const preSnap = await ref.get();
+  if (!preSnap.exists) err("not-found", "[PLT-REC-003] Plan no encontrado.");
 
-  const plan = snap.data();
-  assertEstados(plan, ["ENVIADO", "EN_REVISION"]);
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, preSnap.data().grupo_id, "rechazar");
 
   const aprobacion = buildAprobacion(request, "rechazar", observaciones);
-  await ref.update({
-    estado: "BORRADOR",
-    observaciones_rechazo: observaciones.trim().slice(0, 500),
-    historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
-    actualizado_en: FieldValue.serverTimestamp(),
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) err("not-found", "[PLT-REC-003] Plan no encontrado.");
+    assertEstados(snap.data(), ["ENVIADO", "EN_REVISION"]);
+    tx.update(ref, {
+      estado: "BORRADOR",
+      observaciones_rechazo: observaciones.trim().slice(0, 500),
+      historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
+      actualizado_en: FieldValue.serverTimestamp(),
+    });
   });
 
   return { ok: true, id: planId, estado: "BORRADOR" };
@@ -301,19 +319,19 @@ const revertirPlanTurnoServicio = onCall({ invoker: "public" }, async (request) 
     err("invalid-argument", "[PLT-REV-002] Observaciones de revisión requeridas.");
   }
 
-  const ref = db.collection(COL_PLANES).doc(planId);
-  const snap = await ref.get();
-  if (!snap.exists) err("not-found", "[PLT-REV-003] Plan no encontrado.");
-
-  const plan = snap.data();
-  assertEstado(plan, "HABILITADO");
-
   const aprobacion = buildAprobacion(request, "revertir", observaciones);
-  await ref.update({
-    estado: "EN_REVISION",
-    observaciones_revision: observaciones.trim().slice(0, 500),
-    historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
-    actualizado_en: FieldValue.serverTimestamp(),
+
+  await db.runTransaction(async (tx) => {
+    const ref = db.collection(COL_PLANES).doc(planId);
+    const snap = await tx.get(ref);
+    if (!snap.exists) err("not-found", "[PLT-REV-003] Plan no encontrado.");
+    assertEstado(snap.data(), "HABILITADO");
+    tx.update(ref, {
+      estado: "EN_REVISION",
+      observaciones_revision: observaciones.trim().slice(0, 500),
+      historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
+      actualizado_en: FieldValue.serverTimestamp(),
+    });
   });
 
   return { ok: true, id: planId, estado: "EN_REVISION" };
@@ -368,31 +386,35 @@ const cerrarPlanPerpetuo = onCall({ invoker: "public" }, async (request) => {
   const fechaCierre = request.data && request.data.fecha_cierre;
   if (!planId) err("invalid-argument", "[PLT-CER-001] plan_id requerido.");
 
-  const ref = db.collection(COL_PLANES).doc(planId);
-  const snap = await ref.get();
-  if (!snap.exists) err("not-found", "[PLT-CER-002] Plan no encontrado.");
-
-  const plan = snap.data();
-  assertEstado(plan, "HABILITADO");
-
-  if (plan.tipo_plan !== "perpetuo") {
-    err("failed-precondition", "[PLT-CER-003] Solo planes perpetuos pueden cerrarse manualmente.");
-  }
-
   const aprobacion = buildAprobacion(request, "cerrar", null);
-  await ref.update({
-    estado: "CERRADO",
-    vigente_hasta: fechaCierre || new Date().toISOString().slice(0, 10),
-    historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
-    actualizado_en: FieldValue.serverTimestamp(),
+  let grupoId;
+
+  await db.runTransaction(async (tx) => {
+    const ref = db.collection(COL_PLANES).doc(planId);
+    const snap = await tx.get(ref);
+    if (!snap.exists) err("not-found", "[PLT-CER-002] Plan no encontrado.");
+    const plan = snap.data();
+    assertEstado(plan, "HABILITADO");
+    if (plan.tipo_plan !== "perpetuo") {
+      err("failed-precondition", "[PLT-CER-003] Solo planes perpetuos pueden cerrarse manualmente.");
+    }
+    grupoId = plan.grupo_id;
+    tx.update(ref, {
+      estado: "CERRADO",
+      vigente_hasta: fechaCierre || new Date().toISOString().slice(0, 10),
+      historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
+      actualizado_en: FieldValue.serverTimestamp(),
+    });
   });
 
-  const hoy = new Date();
-  try {
-    await materializarGrupoMes({ grupoId: plan.grupo_id, anio: hoy.getFullYear(), mes: hoy.getMonth() + 1 });
-    logger.info("materializarGrupoMes_post_cerrar OK", { planId });
-  } catch (e) {
-    logger.error("materializarGrupoMes_post_cerrar ERROR", { planId, error: String(e) });
+  if (grupoId) {
+    const hoy = new Date();
+    try {
+      await materializarGrupoMes({ grupoId, anio: hoy.getFullYear(), mes: hoy.getMonth() + 1 });
+      logger.info("materializarGrupoMes_post_cerrar OK", { planId });
+    } catch (e) {
+      logger.error("materializarGrupoMes_post_cerrar ERROR", { planId, error: String(e) });
+    }
   }
 
   return { ok: true, id: planId, estado: "CERRADO" };
@@ -404,6 +426,7 @@ const cerrarPlanPerpetuo = onCall({ invoker: "public" }, async (request) => {
 const listarPlanesTurnoServicio = onCall({ invoker: "public" }, async (request) => {
   const grupoId = request.data && request.data.grupo_id;
   if (!grupoId) err("invalid-argument", "[PLT-LIST-001] grupo_id requerido.");
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, grupoId, "leer");
 
   let q = db.collection(COL_PLANES).where("grupo_id", "==", grupoId);
 
@@ -592,6 +615,7 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
   const grupoId = request.data && request.data.grupo_id;
   const periodo = request.data && request.data.periodo;
   if (!grupoId) err("invalid-argument", "[CTX-001] grupo_id requerido.");
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, grupoId, "leer");
 
   const hlgSnap = await db.collection("historial_laboral_grupos")
     .where("grupo_de_trabajo_id", "==", grupoId)
