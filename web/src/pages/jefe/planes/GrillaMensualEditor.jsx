@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { callListarContextoPlanGrupo } from "../../../services/callables.js";
 
-const TURNOS_COLOR = {
-  M: { bg: "bg-yellow-100 hover:bg-yellow-200", text: "text-yellow-800", label: "Mañana" },
-  T: { bg: "bg-blue-100 hover:bg-blue-200", text: "text-blue-800", label: "Tarde" },
-  N: { bg: "bg-indigo-100 hover:bg-indigo-200", text: "text-indigo-800", label: "Noche" },
-  G: { bg: "bg-orange-100 hover:bg-orange-200", text: "text-orange-800", label: "Guardia" },
-};
+const PALETA_COLORES_BASE = [
+  { bg: "bg-yellow-100 hover:bg-yellow-200", text: "text-yellow-800" },
+  { bg: "bg-blue-100 hover:bg-blue-200", text: "text-blue-800" },
+  { bg: "bg-indigo-100 hover:bg-indigo-200", text: "text-indigo-800" },
+  { bg: "bg-orange-100 hover:bg-orange-200", text: "text-orange-800" },
+  { bg: "bg-emerald-100 hover:bg-emerald-200", text: "text-emerald-800" },
+  { bg: "bg-pink-100 hover:bg-pink-200", text: "text-pink-800" },
+  { bg: "bg-cyan-100 hover:bg-cyan-200", text: "text-cyan-800" },
+  { bg: "bg-rose-100 hover:bg-rose-200", text: "text-rose-800" },
+  { bg: "bg-violet-100 hover:bg-violet-200", text: "text-violet-800" },
+  { bg: "bg-teal-100 hover:bg-teal-200", text: "text-teal-800" },
+];
 const FRANCO_STYLE = { bg: "bg-slate-200 hover:bg-slate-300", text: "text-slate-600" };
-const OPCIONES_TIPO_DIA = ["laborable", "guardia", "franco", "no_laborable"];
+const BLOQUEADO_STYLE = { bg: "bg-slate-100", text: "text-slate-300" };
+const NO_ASIGNADO_STYLE = { bg: "bg-slate-50 hover:bg-slate-100", text: "text-slate-400" };
 
 function diasDelMes(periodo) {
   const [anio, mes] = periodo.split("-").map(Number);
@@ -23,12 +31,71 @@ function diasDelMes(periodo) {
 
 const DOW_LABELS = ["D", "L", "M", "X", "J", "V", "S"];
 
-function crearGrillaVacia(agentes, dias) {
+/** Hard block: fecha fuera de vigencia HLG */
+function esDiaEnVigenciaHlg(fechaYmd, fechaInicio, fechaFin) {
+  if (fechaInicio && fechaYmd < fechaInicio) return false;
+  if (fechaFin && fechaYmd > fechaFin) return false;
+  return true;
+}
+
+/** Soft check: dia asignado al grupo segun regimen fijo (por dia de semana) */
+function esDiaAsignadoFijo(regimen, fechaYmd) {
+  if (!regimen?.dias?.length) return true;
+  const date = new Date(fechaYmd + "T12:00:00");
+  const dow = date.getUTCDay();
+  const isoWeekday = dow === 0 ? 7 : dow;
+  const diaConf = regimen.dias.find((d) => d.dia_semana === isoWeekday);
+  if (!diaConf) return false;
+  return diaConf.tipo_dia === "laborable" || diaConf.tipo_dia === "guardia";
+}
+
+/** Soft check: dia asignado al grupo segun regimen rotativo (modulo aritmetico) */
+function esDiaAsignadoRotativo(regimen, fechaYmd, fechaAncla) {
+  if (!fechaAncla || !regimen?.ciclo?.length) return true;
+  const ancla = new Date(fechaAncla + "T12:00:00");
+  const fecha = new Date(fechaYmd + "T12:00:00");
+  const diff = Math.round((fecha.getTime() - ancla.getTime()) / 86400000);
+  const cicloTotal = regimen.ciclo_total || regimen.ciclo.length;
+  const posRaw = ((diff % cicloTotal) + cicloTotal) % cicloTotal;
+  const posicion = posRaw + 1;
+  const posConf = regimen.ciclo.find((p) => p.posicion === posicion);
+  if (!posConf) return false;
+  return posConf.tipo_dia === "laborable" || posConf.tipo_dia === "guardia";
+}
+
+function esDiaAsignadoAlGrupo(regimen, fechaYmd, fechaAncla) {
+  if (!regimen) return true;
+  if (regimen.tipo_patron === "planificado") return true;
+  if (regimen.tipo_patron === "fijo") return esDiaAsignadoFijo(regimen, fechaYmd);
+  if (regimen.tipo_patron === "rotativo") return esDiaAsignadoRotativo(regimen, fechaYmd, fechaAncla);
+  return true;
+}
+
+function buildPaletaDinamica(regimenes) {
+  const turnosUnion = new Map();
+  for (const reg of Object.values(regimenes || {})) {
+    for (const t of reg.turnos_disponibles || []) {
+      if (!turnosUnion.has(t.turno_id)) {
+        turnosUnion.set(t.turno_id, t.etiqueta || t.turno_id);
+      }
+    }
+  }
+  const paleta = {};
+  let idx = 0;
+  for (const [tid, label] of turnosUnion) {
+    const color = PALETA_COLORES_BASE[idx % PALETA_COLORES_BASE.length];
+    paleta[tid] = { ...color, label };
+    idx++;
+  }
+  return paleta;
+}
+
+function crearGrillaLimpia(agentes, dias) {
   const grilla = {};
   for (const ag of agentes) {
     grilla[ag.persona_id] = {};
     for (const dia of dias) {
-      grilla[ag.persona_id][dia.ymd] = { tipo_dia: dia.esFinde ? "franco" : "laborable", turno_id: dia.esFinde ? null : "M" };
+      grilla[ag.persona_id][dia.ymd] = { tipo_dia: "franco", turno_id: null };
     }
   }
   return grilla;
@@ -37,8 +104,15 @@ function crearGrillaVacia(agentes, dias) {
 export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando, onGuardar, onCerrar }) {
   const dias = useMemo(() => diasDelMes(periodo), [periodo]);
 
+  const [contexto, setContexto] = useState(null);
+  const [cargandoContexto, setCargandoContexto] = useState(false);
+
   const [agentes, setAgentes] = useState(() => {
-    if (plan?.agentes?.length) return plan.agentes.map((a) => ({ persona_id: a.persona_id, regimen_horario_id: a.regimen_horario_id, hlg_id: a.hlg_id }));
+    if (plan?.agentes?.length) return plan.agentes.map((a) => ({
+      persona_id: a.persona_id,
+      regimen_horario_id: a.regimen_horario_id,
+      hlg_id: a.hlg_id,
+    }));
     return [];
   });
 
@@ -51,34 +125,94 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
     return {};
   });
 
-  const [nuevoAgente, setNuevoAgente] = useState({ persona_id: "", regimen_horario_id: "", hlg_id: "" });
-  const [paleta, setPaleta] = useState("M");
+  const [selAgente, setSelAgente] = useState("");
+  const [paleta, setPaleta] = useState("");
   const [errLocal, setErrLocal] = useState("");
+
+  // Cargar contexto del grupo al montar
+  useEffect(() => {
+    if (!grupoId) return;
+    setCargandoContexto(true);
+    callListarContextoPlanGrupo({ grupo_id: grupoId, periodo })
+      .then((res) => setContexto(res.data || null))
+      .catch((e) => setErrLocal(e?.message || "Error al cargar contexto del grupo."))
+      .finally(() => setCargandoContexto(false));
+  }, [grupoId, periodo]);
+
+  const turnosPaleta = useMemo(() => {
+    if (!contexto?.regimenes) return {};
+    return buildPaletaDinamica(contexto.regimenes);
+  }, [contexto]);
+
+  // Seleccionar primer turno disponible como pincel por defecto
+  useEffect(() => {
+    const keys = Object.keys(turnosPaleta);
+    if (keys.length > 0 && !paleta) setPaleta(keys[0]);
+  }, [turnosPaleta, paleta]);
+
+  const personasDisponibles = useMemo(() => {
+    if (!contexto?.personas_grupo) return [];
+    const yaAgregadas = new Set(agentes.map((a) => a.persona_id));
+    return contexto.personas_grupo.filter((p) => !yaAgregadas.has(p.persona_id));
+  }, [contexto, agentes]);
+
+  const idxRegimenes = useMemo(() => contexto?.regimenes || {}, [contexto]);
+
+  const agentesEnriquecidos = useMemo(() => {
+    if (!contexto?.personas_grupo) return {};
+    const map = {};
+    for (const p of contexto.personas_grupo) map[p.persona_id] = p;
+    return map;
+  }, [contexto]);
 
   useEffect(() => {
     if (agentes.length > 0 && Object.keys(grilla).length === 0) {
-      setGrilla(crearGrillaVacia(agentes, dias));
+      setGrilla(crearGrillaLimpia(agentes, dias));
     }
   }, [agentes, dias, grilla]);
 
   const agregarAgente = useCallback(() => {
-    const pid = nuevoAgente.persona_id.trim();
-    const rid = nuevoAgente.regimen_horario_id.trim();
-    const hid = nuevoAgente.hlg_id.trim();
-    if (!pid || !rid || !hid) return setErrLocal("Todos los campos del agente son obligatorios.");
-    if (agentes.some((a) => a.persona_id === pid)) return setErrLocal("El agente ya está en la grilla.");
+    if (!selAgente) return setErrLocal("Selecciona un agente.");
+    const pgData = contexto?.personas_grupo?.find((p) => p.persona_id === selAgente);
+    if (!pgData) return setErrLocal("Agente no encontrado en el contexto.");
+    if (agentes.some((a) => a.persona_id === selAgente)) return setErrLocal("El agente ya está en la grilla.");
     setErrLocal("");
-    const ag = { persona_id: pid, regimen_horario_id: rid, hlg_id: hid };
+    const ag = {
+      persona_id: pgData.persona_id,
+      regimen_horario_id: pgData.regimen_horario_id || "",
+      hlg_id: pgData.hlg_id || "",
+    };
     setAgentes((prev) => [...prev, ag]);
     setGrilla((prev) => {
       const row = {};
       for (const dia of dias) {
-        row[dia.ymd] = { tipo_dia: dia.esFinde ? "franco" : "laborable", turno_id: dia.esFinde ? null : "M" };
+        row[dia.ymd] = { tipo_dia: "franco", turno_id: null };
       }
-      return { ...prev, [pid]: row };
+      return { ...prev, [pgData.persona_id]: row };
     });
-    setNuevoAgente({ persona_id: "", regimen_horario_id: "", hlg_id: "" });
-  }, [nuevoAgente, agentes, dias]);
+    setSelAgente("");
+  }, [selAgente, agentes, dias, contexto]);
+
+  const agregarTodos = useCallback(() => {
+    if (!personasDisponibles.length) return;
+    setErrLocal("");
+    const nuevos = [];
+    const grillaAdds = {};
+    for (const pg of personasDisponibles) {
+      nuevos.push({
+        persona_id: pg.persona_id,
+        regimen_horario_id: pg.regimen_horario_id || "",
+        hlg_id: pg.hlg_id || "",
+      });
+      const row = {};
+      for (const dia of dias) {
+        row[dia.ymd] = { tipo_dia: "franco", turno_id: null };
+      }
+      grillaAdds[pg.persona_id] = row;
+    }
+    setAgentes((prev) => [...prev, ...nuevos]);
+    setGrilla((prev) => ({ ...prev, ...grillaAdds }));
+  }, [personasDisponibles, dias]);
 
   const quitarAgente = useCallback((pid) => {
     setAgentes((prev) => prev.filter((a) => a.persona_id !== pid));
@@ -90,6 +224,10 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
   }, []);
 
   const toggleCelda = useCallback((pid, ymd) => {
+    const enriquecido = agentesEnriquecidos[pid];
+    if (enriquecido && !esDiaEnVigenciaHlg(ymd, enriquecido.fecha_inicio, enriquecido.fecha_fin)) {
+      return; // hard block
+    }
     setGrilla((prev) => {
       const celda = prev[pid]?.[ymd];
       if (!celda) return prev;
@@ -101,7 +239,7 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
       }
       return { ...prev, [pid]: { ...prev[pid], [ymd]: nueva } };
     });
-  }, [paleta]);
+  }, [paleta, agentesEnriquecidos]);
 
   const resumenAgente = useCallback((pid) => {
     const row = grilla[pid] || {};
@@ -112,6 +250,19 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
     }
     return { trabajo, francos };
   }, [grilla]);
+
+  const getCeldaEstado = useCallback((pid, ymd, cel) => {
+    const enriquecido = agentesEnriquecidos[pid];
+    if (enriquecido && !esDiaEnVigenciaHlg(ymd, enriquecido.fecha_inicio, enriquecido.fecha_fin)) {
+      return "bloqueado";
+    }
+    const regimen = enriquecido ? idxRegimenes[enriquecido.regimen_horario_id] : null;
+    const asignado = esDiaAsignadoAlGrupo(regimen, ymd, enriquecido?.regimen_fecha_ancla);
+    const esFranco = cel?.tipo_dia === "franco" || cel?.tipo_dia === "no_laborable";
+    if (!asignado && !esFranco && cel?.turno_id) return "excepcion";
+    if (!asignado) return "no_asignado";
+    return "normal";
+  }, [agentesEnriquecidos, idxRegimenes]);
 
   const handleGuardar = useCallback(() => {
     if (agentes.length === 0) return setErrLocal("Agrega al menos un agente.");
@@ -130,6 +281,11 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
     onGuardar(datos, plan?.id || null);
   }, [agentes, grilla, grupoId, periodo, plan, onGuardar]);
 
+  const labelAgente = (pid) => {
+    const e = agentesEnriquecidos[pid];
+    return e?.persona_label || pid;
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2" onClick={onCerrar}>
       <div className="flex max-h-[92vh] w-full max-w-[95vw] flex-col rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -139,7 +295,7 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
             <h2 className="text-lg font-semibold text-slate-900">
               {plan ? "Editar plan mensual" : "Nuevo plan mensual"}
             </h2>
-            <p className="text-sm text-slate-500">Período: {periodo} — Grupo: {grupoId}</p>
+            <p className="text-sm text-slate-500">Periodo: {periodo} — Grupo: {grupoId}</p>
           </div>
           <button onClick={onCerrar} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,10 +304,14 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
           </button>
         </div>
 
-        {/* Paleta de turnos */}
-        <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-2">
+        {cargandoContexto && (
+          <div className="px-5 py-3 text-sm text-slate-500">Cargando contexto del grupo...</div>
+        )}
+
+        {/* Paleta dinamica de turnos */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-2">
           <span className="text-xs font-medium text-slate-500">Pincel:</span>
-          {Object.entries(TURNOS_COLOR).map(([key, style]) => (
+          {Object.entries(turnosPaleta).map(([key, style]) => (
             <button
               key={key}
               type="button"
@@ -173,49 +333,45 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
             F
           </button>
           <span className="ml-3 text-xs text-slate-400">
-            {paleta === "F" ? "Franco" : TURNOS_COLOR[paleta]?.label || paleta}
+            {paleta === "F" ? "Franco" : turnosPaleta[paleta]?.label || paleta}
           </span>
         </div>
 
-        {/* Agregar agente */}
+        {/* Agregar agente con select dinamico */}
         <div className="flex flex-wrap items-end gap-2 border-b border-slate-100 px-5 py-2">
-          <div>
-            <label className="mb-0.5 block text-xs text-slate-500">persona_id</label>
-            <input
-              type="text"
-              value={nuevoAgente.persona_id}
-              onChange={(e) => setNuevoAgente((p) => ({ ...p, persona_id: e.target.value }))}
-              className="w-36 rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:border-indigo-400"
-              placeholder="PER_…"
-            />
-          </div>
-          <div>
-            <label className="mb-0.5 block text-xs text-slate-500">regimen_id</label>
-            <input
-              type="text"
-              value={nuevoAgente.regimen_horario_id}
-              onChange={(e) => setNuevoAgente((p) => ({ ...p, regimen_horario_id: e.target.value }))}
-              className="w-44 rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:border-indigo-400"
-              placeholder="CFG_REG_HOR_…"
-            />
-          </div>
-          <div>
-            <label className="mb-0.5 block text-xs text-slate-500">hlg_id</label>
-            <input
-              type="text"
-              value={nuevoAgente.hlg_id}
-              onChange={(e) => setNuevoAgente((p) => ({ ...p, hlg_id: e.target.value }))}
-              className="w-36 rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:border-indigo-400"
-              placeholder="hlg_…"
-            />
+          <div className="flex-1">
+            <label className="mb-0.5 block text-xs text-slate-500">Seleccionar agente</label>
+            <select
+              value={selAgente}
+              onChange={(e) => setSelAgente(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-indigo-400"
+              disabled={!personasDisponibles.length}
+            >
+              <option value="">— Seleccionar —</option>
+              {personasDisponibles.map((p) => (
+                <option key={p.persona_id} value={p.persona_id}>
+                  {p.persona_label || p.persona_id} {p.persona_dni ? `(${p.persona_dni})` : ""}
+                </option>
+              ))}
+            </select>
           </div>
           <button
             type="button"
             onClick={agregarAgente}
-            className="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-indigo-700"
+            disabled={!selAgente}
+            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-700 disabled:opacity-50"
           >
             + Agregar
           </button>
+          {personasDisponibles.length > 0 && (
+            <button
+              type="button"
+              onClick={agregarTodos}
+              className="rounded-lg bg-slate-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-700"
+            >
+              + Todos ({personasDisponibles.length})
+            </button>
+          )}
         </div>
 
         {errLocal && (
@@ -224,17 +380,25 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
           </div>
         )}
 
+        {/* Leyenda */}
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-1.5 text-[10px] text-slate-500">
+          <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-white border border-slate-200"></span> Asignado</span>
+          <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-slate-50 border border-slate-200"></span> No asignado</span>
+          <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-slate-100 border border-slate-200" style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px)" }}></span> Fuera vigencia</span>
+          <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded border-2 border-orange-400 bg-yellow-100"></span> Excepcion</span>
+        </div>
+
         {/* Grilla */}
         <div className="flex-1 overflow-auto px-2 py-3">
           {agentes.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-slate-400">
-              Agrega agentes para comenzar a armar la grilla.
+              {cargandoContexto ? "Cargando..." : "Agrega agentes para comenzar a armar la grilla."}
             </div>
           ) : (
             <table className="min-w-max border-collapse text-xs">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-10 min-w-[140px] bg-white px-2 py-1 text-left text-xs font-semibold text-slate-500">
+                  <th className="sticky left-0 z-10 min-w-[180px] bg-white px-2 py-1 text-left text-xs font-semibold text-slate-500">
                     Agente
                   </th>
                   {dias.map((dia) => (
@@ -259,20 +423,54 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
                   return (
                     <tr key={ag.persona_id} className="group">
                       <td className="sticky left-0 z-10 bg-white px-2 py-0.5">
-                        <span className="font-mono text-xs text-slate-700">{ag.persona_id}</span>
+                        <span className="text-xs text-slate-700">{labelAgente(ag.persona_id)}</span>
                       </td>
                       {dias.map((dia) => {
                         const cel = grilla[ag.persona_id]?.[dia.ymd];
+                        const estado = getCeldaEstado(ag.persona_id, dia.ymd, cel);
                         const esFranco = cel?.tipo_dia === "franco" || cel?.tipo_dia === "no_laborable";
                         const turno = cel?.turno_id || "";
-                        const style = esFranco ? FRANCO_STYLE : (TURNOS_COLOR[turno] || { bg: "bg-green-100 hover:bg-green-200", text: "text-green-700" });
+
+                        if (estado === "bloqueado") {
+                          return (
+                            <td key={dia.ymd} className="px-0.5 py-0.5">
+                              <div
+                                className={`flex h-6 w-7 items-center justify-center rounded text-[10px] ${BLOQUEADO_STYLE.bg} ${BLOQUEADO_STYLE.text}`}
+                                style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px)" }}
+                                title={`${dia.ymd} — Fuera de vigencia HLG`}
+                              >
+                                —
+                              </div>
+                            </td>
+                          );
+                        }
+
+                        let style;
+                        let extraClass = "";
+                        if (esFranco) {
+                          style = estado === "no_asignado" ? NO_ASIGNADO_STYLE : FRANCO_STYLE;
+                        } else {
+                          style = turnosPaleta[turno] || { bg: "bg-green-100 hover:bg-green-200", text: "text-green-700" };
+                        }
+                        if (estado === "excepcion") {
+                          extraClass = "ring-2 ring-orange-400 ring-offset-1";
+                        }
+                        if (estado === "no_asignado" && esFranco) {
+                          style = NO_ASIGNADO_STYLE;
+                        }
+
+                        const tooltipParts = [dia.ymd];
+                        if (estado === "excepcion") tooltipParts.push("(dia no asignado al grupo)");
+                        if (estado === "no_asignado") tooltipParts.push("(no asignado)");
+                        tooltipParts.push(esFranco ? "Franco" : turno);
+
                         return (
                           <td key={dia.ymd} className="px-0.5 py-0.5">
                             <button
                               type="button"
                               onClick={() => toggleCelda(ag.persona_id, dia.ymd)}
-                              className={`flex h-6 w-7 items-center justify-center rounded text-[10px] font-bold transition ${style.bg} ${style.text}`}
-                              title={`${dia.ymd} — ${esFranco ? "Franco" : turno}`}
+                              className={`flex h-6 w-7 items-center justify-center rounded text-[10px] font-bold transition ${style.bg} ${style.text} ${extraClass}`}
+                              title={tooltipParts.join(" ")}
                             >
                               {esFranco ? "F" : turno}
                             </button>
@@ -316,7 +514,7 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
             onClick={handleGuardar}
             className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
           >
-            {guardando ? "Guardando…" : "Guardar borrador"}
+            {guardando ? "Guardando..." : "Guardar borrador"}
           </button>
         </div>
       </div>

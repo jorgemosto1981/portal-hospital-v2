@@ -371,16 +371,60 @@ const listarPlanesTurnoServicio = onCall({ invoker: "public" }, async (request) 
 
 async function validarReglasContraRegimen(plan) {
   const warnings = [];
+  const errors = [];
   for (const ag of plan.agentes || []) {
     if (!ag.regimen_horario_id) continue;
     const regSnap = await db.collection("cfg_regimen_horario").doc(ag.regimen_horario_id).get();
     if (!regSnap.exists) continue;
     const reg = regSnap.data();
-    if (reg.tipo_patron !== "planificado" || !reg.reglas_planificacion) continue;
 
-    const reglas = reg.reglas_planificacion;
     const dias = ag.dias || {};
+    const diasKeys = Object.keys(dias).sort();
     const diasArr = Object.values(dias);
+
+    // Validar vigencia HLG: buscar HLG activo
+    if (ag.hlg_id) {
+      const hlgSnap = await db.collection("historial_laboral_grupos").doc(ag.hlg_id).get();
+      if (hlgSnap.exists) {
+        const hlg = hlgSnap.data();
+        const fi = hlg.fecha_inicio || "";
+        const ff = hlg.fecha_fin || "";
+        for (const ymd of diasKeys) {
+          const cel = dias[ymd];
+          if (cel.tipo_dia === "franco") continue;
+          if ((fi && ymd < fi) || (ff && ymd > ff)) {
+            errors.push({
+              code: "PLT-VIG-E001",
+              persona_id: ag.persona_id,
+              mensaje: `Turno en ${ymd} fuera de vigencia HLG (${fi || "∞"} a ${ff || "∞"}).`,
+            });
+          }
+        }
+      }
+    }
+
+    // Validar dias no asignados al grupo segun regimen (fijo/rotativo)
+    if (reg.tipo_patron === "fijo") {
+      for (const ymd of diasKeys) {
+        const cel = dias[ymd];
+        if (cel.tipo_dia === "franco") continue;
+        const date = new Date(ymd + "T12:00:00");
+        const dow = date.getUTCDay();
+        const isoWeekday = dow === 0 ? 7 : dow;
+        const diaConf = (reg.dias || []).find((d) => d.dia_semana === isoWeekday);
+        const asignado = diaConf && (diaConf.tipo_dia === "laborable" || diaConf.tipo_dia === "guardia");
+        if (!asignado) {
+          warnings.push({
+            code: "PLT-REG-W010",
+            persona_id: ag.persona_id,
+            mensaje: `Turno en ${ymd} no es dia asignado al grupo segun regimen fijo.`,
+          });
+        }
+      }
+    }
+
+    // Reglas de planificacion (solo planificado, pero aplicar a todos si existen)
+    const reglas = reg.reglas_planificacion || {};
     const diasTrabajo = diasArr.filter((d) => d.tipo_dia === "laborable" || d.tipo_dia === "guardia").length;
     const diasFranco = diasArr.filter((d) => d.tipo_dia === "franco").length;
 
@@ -388,17 +432,53 @@ async function validarReglasContraRegimen(plan) {
       warnings.push({
         code: "PLT-REG-W001",
         persona_id: ag.persona_id,
-        mensaje: `${diasTrabajo} días trabajo > máx. ${reglas.dias_trabajo_max_mes}.`,
+        mensaje: `${diasTrabajo} dias trabajo > max. ${reglas.dias_trabajo_max_mes}.`,
       });
     }
     if (reglas.dias_franco_min_mes != null && diasFranco < reglas.dias_franco_min_mes) {
       warnings.push({
         code: "PLT-REG-W002",
         persona_id: ag.persona_id,
-        mensaje: `${diasFranco} francos < mín. ${reglas.dias_franco_min_mes}.`,
+        mensaje: `${diasFranco} francos < min. ${reglas.dias_franco_min_mes}.`,
       });
     }
+
+    // Consecutivos trabajo/franco
+    if (reglas.max_consecutivos_trabajo != null || reglas.min_consecutivos_franco != null) {
+      let consecTrabajo = 0;
+      let consecFranco = 0;
+      for (const ymd of diasKeys) {
+        const cel = dias[ymd];
+        const esTrabajo = cel.tipo_dia === "laborable" || cel.tipo_dia === "guardia";
+        if (esTrabajo) {
+          consecTrabajo++;
+          if (consecFranco > 0 && reglas.min_consecutivos_franco != null && consecFranco < reglas.min_consecutivos_franco) {
+            warnings.push({
+              code: "PLT-REG-W004",
+              persona_id: ag.persona_id,
+              mensaje: `Solo ${consecFranco} franco(s) consecutivo(s) antes de ${ymd} (min: ${reglas.min_consecutivos_franco}).`,
+            });
+          }
+          consecFranco = 0;
+          if (reglas.max_consecutivos_trabajo != null && consecTrabajo > reglas.max_consecutivos_trabajo) {
+            warnings.push({
+              code: "PLT-REG-W003",
+              persona_id: ag.persona_id,
+              mensaje: `${consecTrabajo} dias trabajo consecutivos en ${ymd} > max. ${reglas.max_consecutivos_trabajo}.`,
+            });
+          }
+        } else {
+          consecFranco++;
+          consecTrabajo = 0;
+        }
+      }
+    }
   }
+
+  if (errors.length > 0) {
+    err("failed-precondition", `[PLT-VIG] ${errors.length} error(es) de vigencia: ${errors.map((e) => e.mensaje).join("; ")}`);
+  }
+
   return warnings;
 }
 
@@ -452,6 +532,89 @@ async function invalidarOverridesFantasma(overridesEncontrados) {
   return count;
 }
 
+/**
+ * Retorna contexto enriquecido para la grilla del jefe:
+ * personas del grupo con HLG vigente + regímenes deduplicados.
+ * ~43 reads para 20 agentes con 3 regímenes.
+ */
+const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) => {
+  const grupoId = request.data && request.data.grupo_id;
+  const periodo = request.data && request.data.periodo;
+  if (!grupoId) err("invalid-argument", "[CTX-001] grupo_id requerido.");
+
+  const hlgSnap = await db.collection("historial_laboral_grupos")
+    .where("grupo_de_trabajo_id", "==", grupoId)
+    .where("activo", "==", true)
+    .get();
+
+  if (hlgSnap.empty) return { personas_grupo: [], regimenes: {} };
+
+  const personasGrupo = [];
+  const regimenIds = new Set();
+  const personaIds = new Set();
+
+  for (const doc of hlgSnap.docs) {
+    const d = doc.data();
+    personasGrupo.push({
+      hlg_id: doc.id,
+      persona_id: d.persona_id,
+      regimen_horario_id: d.regimen_horario_id || null,
+      fecha_inicio: d.fecha_inicio || null,
+      fecha_fin: d.fecha_fin || null,
+      regimen_fecha_ancla: d.regimen_fecha_ancla || null,
+      dato_laboral_id: d.dato_laboral_id || null,
+    });
+    if (d.regimen_horario_id) regimenIds.add(d.regimen_horario_id);
+    if (d.persona_id) personaIds.add(d.persona_id);
+  }
+
+  // Enriquecer con nombre de persona
+  const personaDocs = {};
+  if (personaIds.size > 0) {
+    const personaChunks = [...personaIds];
+    for (let i = 0; i < personaChunks.length; i += 10) {
+      const chunk = personaChunks.slice(i, i + 10);
+      const snap = await db.collection("personas").where("__name__", "in", chunk).get();
+      for (const pdoc of snap.docs) {
+        const pd = pdoc.data();
+        personaDocs[pdoc.id] = {
+          nombre_completo: [pd.apellido, pd.nombre].filter(Boolean).join(", ") || pdoc.id,
+          dni: pd.dni || null,
+        };
+      }
+    }
+  }
+
+  for (const pg of personasGrupo) {
+    const pdata = personaDocs[pg.persona_id] || {};
+    pg.persona_label = pdata.nombre_completo || pg.persona_id;
+    pg.persona_dni = pdata.dni || null;
+  }
+
+  // Cargar regímenes deduplicados
+  const regimenes = {};
+  for (const rid of regimenIds) {
+    const rsnap = await db.collection("cfg_regimen_horario").doc(rid).get();
+    if (rsnap.exists) {
+      const rd = rsnap.data();
+      regimenes[rid] = {
+        id: rid,
+        nombre: rd.nombre || "",
+        codigo: rd.codigo || "",
+        tipo_patron: rd.tipo_patron || "",
+        turnos_disponibles: rd.turnos_disponibles || [],
+        dias: rd.dias || [],
+        ciclo: rd.ciclo || [],
+        ciclo_total: rd.ciclo_total || 0,
+        impacta_calendario_institucional: rd.impacta_calendario_institucional !== false,
+        reglas_planificacion: rd.reglas_planificacion || null,
+      };
+    }
+  }
+
+  return { personas_grupo: personasGrupo, regimenes };
+});
+
 module.exports = {
   guardarPlanTurnoServicio,
   enviarPlanTurnoServicio,
@@ -460,4 +623,5 @@ module.exports = {
   habilitarPlanTurnoServicio,
   cerrarPlanPerpetuo,
   listarPlanesTurnoServicio,
+  listarContextoPlanGrupo,
 };

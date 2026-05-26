@@ -447,15 +447,11 @@ export default function PlanTurnoServicioPage() {
                             <td className="whitespace-nowrap px-2 py-1 font-mono text-slate-600">{ag.persona_id}</td>
                             {ag.dias && Object.keys(ag.dias).sort().map((d) => {
                               const cel = ag.dias[d];
-                              const color = cel.tipo_dia === "franco" ? "bg-slate-200 text-slate-500"
-                                : cel.tipo_dia === "no_laborable" ? "bg-red-100 text-red-600"
-                                : cel.turno_id === "M" ? "bg-yellow-100 text-yellow-700"
-                                : cel.turno_id === "T" ? "bg-blue-100 text-blue-700"
-                                : cel.turno_id === "N" ? "bg-indigo-100 text-indigo-700"
-                                : "bg-green-100 text-green-700";
+                              const esFranco = cel.tipo_dia === "franco" || cel.tipo_dia === "no_laborable";
+                              const color = esFranco ? "bg-slate-200 text-slate-500" : "bg-green-100 text-green-700";
                               return (
                                 <td key={d} className={`px-1 py-1 text-center font-medium ${color}`}>
-                                  {cel.tipo_dia === "franco" ? "F" : cel.tipo_dia === "no_laborable" ? "—" : cel.turno_id || "?"}
+                                  {esFranco ? "F" : cel.turno_id || "?"}
                                 </td>
                               );
                             })}

@@ -321,6 +321,11 @@ export function callListarPlanesTurnoServicio(data) {
   return httpsCallable(getFunctionsV2(), "listarPlanesTurnoServicio")(data);
 }
 
+/** Contexto enriquecido para grilla del jefe: personas + regímenes del grupo. */
+export function callListarContextoPlanGrupo(data) {
+  return httpsCallable(getFunctionsV2(), "listarContextoPlanGrupo")(data);
+}
+
 /** Registrar override puntual en asistencia_diaria. */
 export function callRegistrarCambioTurno(data) {
   return httpsCallable(getFunctionsV2(), "registrarCambioTurno")(data);
