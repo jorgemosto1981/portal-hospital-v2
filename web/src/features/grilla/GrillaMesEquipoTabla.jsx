@@ -12,10 +12,11 @@ function diaSemana(anio, mes, dia) {
  *   anio: number;
  *   mes: number;
  *   filas: Array<Record<string, unknown>>;
- *   onCeldaClick: (payload: { dia: string; eventos: unknown[]; personaLabel?: string }) => void;
+ *   grupoSeleccionado?: string;
+ *   onCeldaClick: (payload: { dia: string; eventos: unknown[]; personaLabel?: string; grupoLabel?: string }) => void;
  * }} props
  */
-export default function GrillaMesEquipoTabla({ anio, mes, filas, onCeldaClick }) {
+export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSeleccionado, onCeldaClick }) {
   const totalDias = diasEnMes(anio, mes);
 
   const columnas = Array.from({ length: totalDias }, (_, i) => {
@@ -78,14 +79,54 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, onCeldaClick })
                     const dia = String(col.num).padStart(2, "0");
                     const dias = fila.dias && typeof fila.dias === "object" ? fila.dias : {};
                     const cell = dias[dia] || {};
+                    const cellGdt = cell.grupo_de_trabajo_id || null;
+                    const esOtroGrupo = grupoSeleccionado && cellGdt && cellGdt !== grupoSeleccionado;
+
+                    if (esOtroGrupo) {
+                      const otroLabel = cell.etiqueta_grupo_corta || cellGdt;
+                      const corta = otroLabel.length > 5 ? otroLabel.slice(0, 4) + "…" : otroLabel;
+                      return (
+                        <td key={dia} className="h-8 border border-slate-100 bg-slate-100 p-0">
+                          <div
+                            className="flex min-h-8 min-w-[1.75rem] items-center justify-center"
+                            title={`Asignado a ${otroLabel}`}
+                          >
+                            <span className="text-[7px] text-slate-400">{corta}</span>
+                          </div>
+                        </td>
+                      );
+                    }
+
                     const eventos = cell.eventos;
                     const label = etiquetaCelda(eventos);
                     const tiene = Array.isArray(eventos) && eventos.length > 0;
                     const turnoId = cell.rda_turno_id || null;
+                    const egreso = cell.rda_egreso || null;
                     const esFranco = cell.es_franco === true;
-                    const tieneDatos = tiene || turnoId || esFranco;
-                    const bgTurno = esFranco ? "bg-slate-50" : turnoId ? "bg-indigo-50" : "";
-                    const bgFinde = col.esFinde && !tiene ? "bg-rose-50/30" : "";
+                    const esFeriado = cell.es_feriado === true;
+                    const tipoEvento = cell.tipo_evento_institucional || null;
+                    const tieneDatos = tiene || turnoId || esFranco || esFeriado;
+                    const bgTurno = esFeriado
+                      ? "bg-amber-50"
+                      : esFranco ? "bg-slate-50" : turnoId ? "bg-indigo-50" : "";
+                    const bgFinde = col.esFinde && !tiene && !esFeriado ? "bg-rose-50/30" : "";
+                    const grupoLabel = cell.etiqueta_grupo_corta || null;
+
+                    const turnoCorto = turnoId && egreso ? `${turnoId}–${egreso}` : turnoId;
+
+                    let contenido;
+                    if (label) {
+                      contenido = label.slice(0, 4);
+                    } else if (esFeriado && !turnoId) {
+                      contenido = tipoEvento === "feriado" ? "FER" : tipoEvento === "asueto" ? "ASU" : "INST";
+                    } else {
+                      contenido = turnoCorto || (esFranco ? "F" : "");
+                    }
+
+                    const titleParts = [];
+                    if (esFeriado && tipoEvento) titleParts.push(tipoEvento === "feriado" ? "Feriado" : tipoEvento === "asueto" ? "Asueto" : "Día institucional");
+                    if (turnoCorto) titleParts.push(turnoCorto);
+
                     return (
                       <td key={dia} className={`h-8 border border-slate-100 p-0 ${bgTurno} ${bgFinde}`}>
                         <GrillaMesCeldaLicencia
@@ -99,11 +140,15 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, onCeldaClick })
                               dia,
                               eventos: Array.isArray(eventos) ? eventos : [],
                               personaLabel,
+                              grupoLabel,
                             })
                           }
-                          className="flex min-h-8 min-w-[1.75rem] items-center justify-center font-semibold"
+                          className={`flex min-h-8 min-w-[1.75rem] items-center justify-center font-semibold ${
+                            esFeriado ? "text-amber-700" : ""
+                          }`}
+                          title={titleParts.join(" · ") || undefined}
                         >
-                          {label ? label.slice(0, 4) : turnoId || (esFranco ? "F" : "")}
+                          {contenido}
                         </GrillaMesCeldaLicencia>
                       </td>
                     );

@@ -24,7 +24,7 @@ function labelEstado(id) {
  *   turnoTeorico?: { rda_turno_id?: string; es_franco?: boolean; capa_teorica?: Record<string, unknown> } | null;
  * }} props
  */
-export default function DiaGrillaDetalleModal({ open, onClose, dia, eventos, bandejaPath, subtitulo, turnoTeorico }) {
+export default function DiaGrillaDetalleModal({ open, onClose, dia, eventos, bandejaPath, subtitulo, turnoTeorico, grupoLabel }) {
   const [solFocus, setSolFocus] = useState("");
   const [resumen, setResumen] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -79,6 +79,9 @@ export default function DiaGrillaDetalleModal({ open, onClose, dia, eventos, ban
             Día {Number(dia)} — licencias
             {subtitulo ? (
               <span className="mt-0.5 block text-sm font-normal text-slate-600">{subtitulo}</span>
+            ) : null}
+            {grupoLabel ? (
+              <span className="mt-0.5 block text-xs font-normal text-violet-600">{grupoLabel}</span>
             ) : null}
           </h3>
           <button

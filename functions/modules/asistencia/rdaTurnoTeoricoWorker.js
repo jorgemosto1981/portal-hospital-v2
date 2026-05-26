@@ -17,6 +17,7 @@ const { resolverFijo, resolverRotativo, buildTurnoResponse, ymdToDate, diffDays,
 const { logger } = require("firebase-functions/v2");
 
 const COL_HLG = "historial_laboral_grupos";
+const COL_GDT = "grupos_de_trabajo";
 const COL_REGIMEN = "cfg_regimen_horario";
 const COL_ASISTENCIA = "asistencia_diaria";
 const COL_PLANES = "planes_turno_servicio";
@@ -34,6 +35,24 @@ function diasDelMes(anio, mes) {
     out.push(`${prefix}-${String(d).padStart(2, "0")}`);
   }
   return out;
+}
+
+/**
+ * Resuelve etiqueta corta del grupo de trabajo (nombre || codigo || titulo).
+ * @param {Map<string, string>} cache - shared across the batch
+ * @param {string} gdtId
+ * @returns {Promise<string>}
+ */
+async function resolverEtiquetaGrupo(cache, gdtId) {
+  const id = String(gdtId || "").trim();
+  if (!id) return "";
+  if (cache.has(id)) return cache.get(id);
+  if (!/^gdt_/i.test(id)) { cache.set(id, id); return id; }
+  const snap = await db.collection(COL_GDT).doc(id).get();
+  const d = snap.exists ? (snap.data() || {}) : {};
+  const label = String(d.nombre || d.codigo || d.titulo || "").trim() || id;
+  cache.set(id, label);
+  return label;
 }
 
 /**
@@ -177,7 +196,7 @@ function resolverDiaConPreCarga(regimen, fechaYmd, hlg, planData, personaId, ind
  * @param {object} [params.planCache] - { planId, plan } pre-cargado (solo planificado)
  * @returns {Promise<{ ok: boolean, diasProcesados: number, error?: string }>}
  */
-async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, mes, regimenCache, planCache }) {
+async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, mes, regimenCache, planCache, etiquetaGrupoCache }) {
   const periodoId = `${anio}-${String(mes).padStart(2, "0")}`;
   const dias = diasDelMes(anio, mes);
   if (dias.length === 0) return { ok: false, diasProcesados: 0, error: "Mes inválido" };
@@ -185,6 +204,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
   const primerDia = dias[0];
   const ultimoDia = dias[dias.length - 1];
   const regCache = regimenCache || new Map();
+  const etqCache = etiquetaGrupoCache || new Map();
 
   const hlgs = await obtenerHlgsVigentesParaMes(personaId, primerDia, ultimoDia);
   if (hlgs.length === 0) {
@@ -193,7 +213,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
 
   const indiceCalendario = await getIndiceCalendario();
 
-  // Pre-cargar regímenes y planes de todos los HLG
+  // Pre-cargar regímenes, planes y etiquetas de todos los HLG
   const hlgContextos = [];
   for (const hlg of hlgs) {
     if (!hlg.regimen_horario_id) continue;
@@ -209,6 +229,9 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
     let plan = planCache || null;
     if (!plan && regimen.tipo_patron === "planificado" && hlg.grupo_de_trabajo_id) {
       plan = await obtenerPlanHabilitado(hlg.grupo_de_trabajo_id, periodoId);
+    }
+    if (hlg.grupo_de_trabajo_id) {
+      await resolverEtiquetaGrupo(etqCache, hlg.grupo_de_trabajo_id);
     }
     hlgContextos.push({ hlg, regimen, plan });
   }
@@ -234,13 +257,15 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
 
       const res = resolverDiaConPreCarga(regimen, fechaYmd, hlg, plan, personaId, indiceCalendario);
       const esLaboral = res.tipo_dia === "laborable" || res.tipo_dia === "guardia";
-      if (esLaboral && !mejorResolucion) {
-        mejorResolucion = res;
-        mejorHlg = hlg;
-      }
       if (!mejorResolucion) {
         mejorResolucion = res;
         mejorHlg = hlg;
+      } else if (esLaboral) {
+        const mejorEsLaboral = mejorResolucion.tipo_dia === "laborable" || mejorResolucion.tipo_dia === "guardia";
+        if (!mejorEsLaboral) {
+          mejorResolucion = res;
+          mejorHlg = hlg;
+        }
       }
     }
 
@@ -287,8 +312,14 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
 
     const diaKey = diaMesKeyDesdeYmd(fechaYmd);
     const esFranco = tipoDiaFinal === "franco" || tipoDiaFinal === "no_laborable";
+    const gdtId = capaTeorica.grupo_de_trabajo_id || null;
     visDias[`dias.${diaKey}.rda_turno_id`] = esFranco ? null : (capaTeorica.turno_id || capaTeorica.ingreso || tipoDiaFinal);
+    visDias[`dias.${diaKey}.rda_egreso`] = esFranco ? null : (capaTeorica.egreso || null);
     visDias[`dias.${diaKey}.es_franco`] = esFranco;
+    visDias[`dias.${diaKey}.es_feriado`] = capaTeorica.es_feriado || false;
+    visDias[`dias.${diaKey}.tipo_evento_institucional`] = mejorResolucion.tipo_evento || null;
+    visDias[`dias.${diaKey}.grupo_de_trabajo_id`] = gdtId;
+    visDias[`dias.${diaKey}.etiqueta_grupo_corta`] = gdtId ? (etqCache.get(gdtId) || gdtId) : null;
 
     diasProcesados++;
   }
@@ -390,6 +421,8 @@ async function materializarGrupoMes({ grupoId, anio, mes }) {
     planCache = await obtenerPlanHabilitado(grupoId, periodoId);
   }
 
+  const etiquetaGrupoCache = new Map();
+
   // Chunks de 5 agentes con Promise.allSettled
   const CHUNK_SIZE = 5;
   const fallos = [];
@@ -406,6 +439,7 @@ async function materializarGrupoMes({ grupoId, anio, mes }) {
           mes,
           regimenCache,
           planCache,
+          etiquetaGrupoCache,
         })
       )
     );

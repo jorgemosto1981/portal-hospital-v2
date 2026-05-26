@@ -212,5 +212,6 @@ export function useGrillaMesVista({ personaId, claims, esRrhh }) {
     titularDias,
     titularVisMeta,
     esModoTitular: modo === GRILLA_MES_MODO.TITULAR,
+    esMultiGrupo: gruposEquipo.length >= 2,
   };
 }

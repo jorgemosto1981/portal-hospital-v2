@@ -75,15 +75,17 @@ export default function GrillaMesLicenciasPanel() {
           anio={vista.anio}
           mes={vista.mes}
           diasMap={vista.titularDias}
-          onDiaClick={({ dia, eventos }) => setDiaModal({ dia, eventos })}
+          gruposEquipo={vista.gruposEquipo}
+          onDiaClick={({ dia, eventos, grupoLabel }) => setDiaModal({ dia, eventos, grupoLabel })}
         />
       ) : (
         <GrillaMesEquipoTabla
           anio={vista.anio}
           mes={vista.mes}
           filas={vista.filas}
-          onCeldaClick={({ dia, eventos, personaLabel }) =>
-            setDiaModal({ dia, eventos, personaLabel })
+          grupoSeleccionado={vista.grupoId}
+          onCeldaClick={({ dia, eventos, personaLabel, grupoLabel }) =>
+            setDiaModal({ dia, eventos, personaLabel, grupoLabel })
           }
         />
       )}
@@ -95,6 +97,7 @@ export default function GrillaMesLicenciasPanel() {
         eventos={diaModal?.eventos ?? []}
         bandejaPath={bandejaPath}
         subtitulo={diaModal?.personaLabel}
+        grupoLabel={diaModal?.grupoLabel}
       />
 
       <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
