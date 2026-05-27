@@ -638,6 +638,12 @@ Frontend local actualizado con mejoras de UI.
 
 ---
 
+## Evolución — turnos compuestos (2026-05-27)
+
+Contrato aprobado en [`CAPA_TEORICA_SEGMENTOS_V2.md`](./CAPA_TEORICA_SEGMENTOS_V2.md) (tag git `v2.0.0-rfc-turnos-compuestos`). Reemplaza el modelo de turno único en `capa_teorica` por `segmentos[]` + resumen derivado, cobertura parcial, clasificación día calendario y freeze de período en `vis_*`. Implementación en rama `feat/epic-turnos-compuestos-v2`.
+
+---
+
 ## Fuera de alcance
 
 - Acumulacion de horas semanales/mensuales en grilla

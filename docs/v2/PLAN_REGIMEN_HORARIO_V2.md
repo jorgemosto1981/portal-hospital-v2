@@ -810,10 +810,18 @@ Prioridades (peso):
 - 70: Presente (fichada confirmada)
 - 10: Ausencia injustificada (default)
 
+## Evolución — turnos compuestos (2026-05-27)
+
+- RFC: [`CAPA_TEORICA_SEGMENTOS_V2.md`](./CAPA_TEORICA_SEGMENTOS_V2.md) — paleta dinámica del régimen (sin M/T/N fijos en contrato), combinaciones canónicas, cobertura parcial.
+- Catálogos: [`DICCIONARIO_CFG_ASISTENCIA_TURNOS_V2.md`](./DICCIONARIO_CFG_ASISTENCIA_TURNOS_V2.md).
+- Tag: `v2.0.0-rfc-turnos-compuestos`.
+
+---
+
 ## Gaps documentales a resolver (al implementar)
 
 1. Arquitectura Maestra: actualizar seccion de `horario_plantilla` para reflejar el catalogo de regimenes
-2. Schema Zod formal para `capa_teorica` en `asistencia_diaria`
+2. ~~Schema Zod formal para `capa_teorica`~~ → **En curso:** `web/src/schemas/capaTeoricaSegmentos.schema.js` (ver epic turnos compuestos)
 3. RFC formal para planificacion mensual (Epic P) unificado con este plan
 4. Auditoria motor: retomar los 16 gaps identificados una vez definida jornada completa
 5. Superposicion por horas: resolver falsos positivos en validador (compara dias, no franjas horarias)
