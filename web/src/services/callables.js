@@ -286,6 +286,11 @@ export function callListarRegimenesHorarios(data) {
   return httpsCallable(getFunctionsV2(), "listarRegimenesHorarios")(data || {});
 }
 
+/** Catálogos cfg asistencia/turnos (A0): tcc, epl, cdc, tov. */
+export function callListarCatalogosAsistenciaTurnos(data) {
+  return httpsCallable(getFunctionsV2(), "listarCatalogosAsistenciaTurnos")(data || {});
+}
+
 /** Jefe/RRHH: crear o actualizar plan de turno (BORRADOR). */
 export function callGuardarPlanTurnoServicio(data) {
   return httpsCallable(getFunctionsV2(), "guardarPlanTurnoServicio")(data);

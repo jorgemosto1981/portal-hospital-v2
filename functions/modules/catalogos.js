@@ -22,6 +22,7 @@ const {
   guardarRegimenHorario,
   listarRegimenesHorarios,
 } = require("./catalogosRegimenHorario");
+const { listarCatalogosAsistenciaTurnos } = require("./catalogosAsistenciaTurnos");
 
 module.exports = {
   listarColeccion,
@@ -38,5 +39,6 @@ module.exports = {
   rrhhListarBandejaEventos,
   guardarRegimenHorario,
   listarRegimenesHorarios,
+  listarCatalogosAsistenciaTurnos,
 };
 

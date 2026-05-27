@@ -14,6 +14,8 @@ const { buildAsiDocumentId, buildVisDocumentId, diaMesKeyDesdeYmd } = require(".
 const { getIndiceCalendario } = require("../shared/calendarService");
 const { resolverEventoEnIndice } = require("../shared/calendarInstitucionalCore");
 const { resolverFijo, resolverRotativo, buildTurnoResponse, ymdToDate, diffDays, isoWeekday } = require("./resolverTurnoDia");
+const { buildCapaTeoricaSegmentada } = require("./capaTeoricaSegmentosCore");
+const { CFG_EPL_ABIERTO } = require("../shared/cfgAsistenciaTurnosIds");
 const { logger } = require("firebase-functions/v2");
 
 const COL_HLG = "historial_laboral_grupos";
@@ -289,14 +291,26 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
       tipoDiaFinal = ultimo.tipo_dia || "laborable";
     }
 
-    const capaTeorica = {
+    const regimenDoc = regCache.get(mejorHlg.regimen_horario_id) || {};
+    let turnoCompuestoId = turnoFinal?.turno_id || null;
+    if (!turnoCompuestoId) {
+      const ctxPlan = hlgContextos.find((c) => c.hlg.id === mejorHlg.id);
+      const agPlan = ctxPlan?.plan?.plan?.agentes?.find((a) => a.persona_id === personaId);
+      turnoCompuestoId = agPlan?.dias?.[fechaYmd]?.turno_id || null;
+    }
+    const capaSegmentada = buildCapaTeoricaSegmentada({
+      fechaYmd,
+      personaId,
+      regimen: regimenDoc,
       tipo_dia: tipoDiaFinal,
-      turno_id: turnoFinal?.turno_id || null,
-      ingreso: turnoFinal?.ingreso || null,
-      egreso: turnoFinal?.egreso || null,
-      horas_efectivas: turnoFinal?.horas_efectivas || 0,
+      turnoCompuestoId,
+      origen_segmento: origenFinal === "override" ? "override_cobertura" : "plan_base",
+      indiceCalendario,
+    });
+
+    const capaTeorica = {
+      ...capaSegmentada,
       es_nocturno: turnoFinal?.es_nocturno || false,
-      es_feriado: mejorResolucion.es_feriado || false,
       origen: origenFinal,
       regimen_horario_id: mejorHlg.regimen_horario_id,
       grupo_de_trabajo_id: mejorHlg.grupo_de_trabajo_id || null,
@@ -318,6 +332,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
     visDias[`dias.${diaKey}.rda_egreso`] = esFranco ? null : (capaTeorica.egreso || null);
     visDias[`dias.${diaKey}.es_franco`] = esFranco;
     visDias[`dias.${diaKey}.es_feriado`] = capaTeorica.es_feriado || false;
+    visDias[`dias.${diaKey}.clasificacion_dia_calendario_id`] = capaTeorica.clasificacion_dia_calendario_id || null;
     visDias[`dias.${diaKey}.tipo_evento_institucional`] = mejorResolucion.tipo_evento || null;
     visDias[`dias.${diaKey}.grupo_de_trabajo_id`] = gdtId;
     visDias[`dias.${diaKey}.etiqueta_grupo_corta`] = gdtId ? (etqCache.get(gdtId) || gdtId) : null;
@@ -352,6 +367,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
           anio,
           mes,
           dias: nestedDias,
+          estado_periodo_liquidacion_id: CFG_EPL_ABIERTO,
           metadata: { ultima_sync_teorica: FieldValue.serverTimestamp() },
         }, { merge: true });
       } else {
