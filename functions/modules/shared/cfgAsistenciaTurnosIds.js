@@ -9,7 +9,7 @@ const path = require("path");
 const { readFileSync } = require("fs");
 
 const seedPath = path.join(__dirname, "../../../scripts/seed-v2/seed-ids-asistencia-turnos.v2.json");
-const seedIds = JSON.parse(readFileSync(seedPath, "utf8"));
+const seedIds = JSON.parse(readFileSync(seedPath, "utf8").replace(/^\uFEFF/, ""));
 
 const tcc = seedIds.cfg_tipo_compensacion_cobertura || {};
 const epl = seedIds.cfg_estado_periodo_liquidacion || {};

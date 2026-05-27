@@ -30,6 +30,9 @@ async function listarColeccionCfg(nombre) {
   return items;
 }
 
+/**
+ * @returns {Promise<import("./asistencia/schemas/cfgAsistenciaTurnos.contract").ListarCatalogosAsistenciaTurnosResponse>}
+ */
 const listarCatalogosAsistenciaTurnos = onCall({ invoker: "public" }, async () => {
   const out = {};
   for (const col of COLECCIONES) {
