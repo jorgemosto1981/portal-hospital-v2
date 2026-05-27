@@ -14,6 +14,9 @@ import { useGrillaMesVista } from "./useGrillaMesVista.js";
 import { aplicarBatchAsistencia } from "../../services/coberturaParcialService.js";
 
 export default function GrillaMesLicenciasPanel() {
+  const abrirAyuda = (termino) => {
+    window.dispatchEvent(new CustomEvent("portal-help-open", { detail: { termino } }));
+  };
   const { user } = useAuthSession();
   const { claims } = useAuthClaims(user);
   const esRrhh = claimsIncludeRrhh(claims);
@@ -107,7 +110,18 @@ export default function GrillaMesLicenciasPanel() {
 
       {outbox.hasPending ? (
         <div className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-3 text-sm text-indigo-900">
-          <p className="font-medium">Cambios pendientes: {outbox.count}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium">Cambios pendientes: {outbox.count}</p>
+            <button
+              type="button"
+              onClick={() => abrirAyuda("Cambios Pendientes (Borrador)")}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-indigo-300 bg-white text-xs font-bold text-indigo-700 active:bg-indigo-100"
+              title="¿Cómo funciona Aplicar cambios?"
+              aria-label="Ayuda sobre cambios pendientes"
+            >
+              ?
+            </button>
+          </div>
           <div className="mt-2 flex gap-2">
             <button
               type="button"

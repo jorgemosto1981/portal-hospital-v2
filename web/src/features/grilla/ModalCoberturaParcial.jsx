@@ -41,6 +41,9 @@ export default function ModalCoberturaParcial({
   const [avisosYy, setAvisosYy] = useState([]);
   const [motivo, setMotivo] = useState("");
   const [periodoCerrado, setPeriodoCerrado] = useState(false);
+  const abrirAyuda = (termino) => {
+    window.dispatchEvent(new CustomEvent("portal-help-open", { detail: { termino } }));
+  };
 
   const [anio, mes] = useMemo(() => {
     const [y, m] = String(periodo || fechaYmd.slice(0, 7)).split("-").map(Number);
@@ -190,7 +193,18 @@ export default function ModalCoberturaParcial({
         ) : (
           <div className="mt-4 space-y-4">
             <section>
-              <h3 className="text-sm font-semibold text-slate-700">1. Tramos a cubrir</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-slate-700">1. Tramos a cubrir</h3>
+                <button
+                  type="button"
+                  onClick={() => abrirAyuda("Cobertura Parcial (Tramos)")}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-bold text-slate-700 active:bg-slate-100"
+                  title="Ayuda sobre cobertura parcial"
+                  aria-label="Ayuda sobre cobertura parcial"
+                >
+                  ?
+                </button>
+              </div>
               {segmentos.length === 0 ? (
                 <p className="mt-2 text-xs text-amber-700">
                   Sin segmentos materializados. Materializá el día antes o revisá el plan habilitado.

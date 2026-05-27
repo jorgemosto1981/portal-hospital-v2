@@ -110,6 +110,26 @@ export const GLOSARIO_COMPLETO = [
     definicion:
       "Catálogo de feriados, asuetos y días no laborables del hospital. Si un régimen tiene 'impacta_calendario_institucional: true', el motor anula el turno en esas fechas.",
   },
+  {
+    termino: "Cobertura Parcial (Tramos)",
+    definicion:
+      "Permite reasignar solo una parte de la jornada de un agente a otro compañero (por ejemplo, cubrir solo la tarde de una guardia extensa). El sistema ajusta automáticamente horas y expectativas del reloj para ambas personas.",
+  },
+  {
+    termino: "Turnos Compuestos",
+    definicion:
+      "Son jornadas largas formadas por varios tramos consecutivos (Mañana, Tarde, Noche). Si se cumplen de corrido, se consideran una sola continuidad para el control de fichadas.",
+  },
+  {
+    termino: "Cambios Pendientes (Borrador)",
+    definicion:
+      "Al editar la grilla, tus cambios quedan guardados como borrador en el navegador. Para confirmar y registrar todo en el sistema, debes presionar \"Aplicar cambios\". Si cierras por accidente, podrás recuperar el borrador al volver.",
+  },
+  {
+    termino: "Protección de Datos (Grilla Desactualizada)",
+    definicion:
+      "Si otra persona modifica el mismo período mientras preparas cambios, el sistema pausa el guardado para evitar sobrescribir información. Solo necesitas refrescar la grilla y volver a aplicar tus pendientes.",
+  },
 ];
 
 export const MANUALES_POR_RUTA = {
@@ -243,6 +263,10 @@ export const MANUALES_POR_RUTA = {
       "Override (Adicional)",
       "Divergencia",
       "Fichada",
+      "Cobertura Parcial (Tramos)",
+      "Turnos Compuestos",
+      "Cambios Pendientes (Borrador)",
+      "Protección de Datos (Grilla Desactualizada)",
     ],
   },
 };

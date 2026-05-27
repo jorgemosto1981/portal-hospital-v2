@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 import { GLOSARIO_COMPLETO, resolverAyudaContextual } from "../../constants/helpContent.js";
@@ -8,7 +8,7 @@ import { GLOSARIO_COMPLETO, resolverAyudaContextual } from "../../constants/help
  * Se abre desde la derecha, muestra manual + glosario relevante según la ruta actual.
  * Tabs: "Manual" (si hay contenido para la ruta) y "Glosario".
  */
-export default function HelpDrawer({ abierto, onCerrar }) {
+export default function HelpDrawer({ abierto, onCerrar, focoTermino = "" }) {
   const { pathname } = useLocation();
   const [tab, setTab] = useState("manual");
   const [busqueda, setBusqueda] = useState("");
@@ -25,6 +25,14 @@ export default function HelpDrawer({ abierto, onCerrar }) {
   }, [tab, glosarioFiltrado, busqueda]);
 
   const tabActual = manual ? tab : "glosario";
+
+  useEffect(() => {
+    if (!abierto) return;
+    const termino = String(focoTermino || "").trim();
+    if (!termino) return;
+    setTab("glosario");
+    setBusqueda(termino);
+  }, [abierto, focoTermino]);
 
   if (!abierto) return null;
 

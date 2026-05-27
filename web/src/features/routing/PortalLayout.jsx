@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import MobileLayout from "../../components/layout/MobileLayout.jsx";
@@ -21,6 +21,17 @@ export default function PortalLayout() {
   const personaId = String(claims?.persona_id || "").trim();
   const activeTab = resolverTabPorPath(location.pathname);
   const [helpAbierto, setHelpAbierto] = useState(false);
+  const [helpFocoTermino, setHelpFocoTermino] = useState("");
+
+  useEffect(() => {
+    const handler = (ev) => {
+      const termino = String(ev?.detail?.termino || "").trim();
+      setHelpFocoTermino(termino);
+      setHelpAbierto(true);
+    };
+    window.addEventListener("portal-help-open", handler);
+    return () => window.removeEventListener("portal-help-open", handler);
+  }, []);
 
   return (
     <ArticulosIngresoProvider personaId={personaId}>
@@ -35,7 +46,11 @@ export default function PortalLayout() {
         <Outlet />
       </MobileLayout>
       <HelpFab onClick={() => setHelpAbierto(true)} />
-      <HelpDrawer abierto={helpAbierto} onCerrar={() => setHelpAbierto(false)} />
+      <HelpDrawer
+        abierto={helpAbierto}
+        onCerrar={() => setHelpAbierto(false)}
+        focoTermino={helpFocoTermino}
+      />
     </ArticulosIngresoProvider>
   );
 }
