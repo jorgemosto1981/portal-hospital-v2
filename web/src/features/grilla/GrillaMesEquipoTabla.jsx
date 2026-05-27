@@ -13,7 +13,11 @@ function diaSemana(anio, mes, dia) {
  *   mes: number;
  *   filas: Array<Record<string, unknown>>;
  *   grupoSeleccionado?: string;
- *   onCeldaClick: (payload: { dia: string; eventos: unknown[]; personaLabel?: string; grupoLabel?: string }) => void;
+ *   onCeldaClick: (payload: {
+ *     dia: string; fechaYmd: string; personaId: string; eventos: unknown[];
+ *     personaLabel?: string; grupoLabel?: string;
+ *     turnoTeorico?: { rda_turno_id?: string; es_franco?: boolean; capa_teorica?: Record<string, unknown> };
+ *   }) => void;
  * }} props
  */
 export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSeleccionado, onCeldaClick }) {
@@ -139,9 +143,20 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
                             tieneDatos &&
                             onCeldaClick({
                               dia,
+                              fechaYmd: `${anio}-${String(mes).padStart(2, "0")}-${dia}`,
+                              personaId: String(fila.persona_id || ""),
                               eventos: Array.isArray(eventos) ? eventos : [],
                               personaLabel,
                               grupoLabel,
+                              turnoTeorico: {
+                                rda_turno_id: turnoId || undefined,
+                                es_franco: esFranco,
+                                capa_teorica: {
+                                  tipo_dia: esFranco ? "franco" : "laborable",
+                                  ingreso,
+                                  egreso,
+                                },
+                              },
                             })
                           }
                           className={`flex min-h-8 min-w-[1.75rem] items-center justify-center font-semibold ${

@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { callListarContextoPlanGrupo } from "../../../services/callables.js";
+import { listarPersonasGrupoDisponibles, resolverPersonaGrupoPlan } from "./planGrupoAgentesUtils.js";
+import {
+  esRegimenDerivado,
+  esRegimenPlanificado,
+  generarGrillaDesdeRegimen,
+  labelTipoRegimen,
+} from "./planGrillaRegimenUtils.js";
 
 const PALETA_COLORES_BASE = [
   { bg: "bg-yellow-100 hover:bg-yellow-200", text: "text-yellow-800" },
@@ -101,7 +108,7 @@ function crearGrillaLimpia(agentes, dias) {
   return grilla;
 }
 
-export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando, onGuardar, onCerrar }) {
+export default function GrillaMensualEditor({ plan, grupoId, grupoLabel, periodo, guardando, onGuardar, onCerrar }) {
   const dias = useMemo(() => diasDelMes(periodo), [periodo]);
 
   const [contexto, setContexto] = useState(null);
@@ -150,18 +157,24 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
     if (keys.length > 0 && !paleta) setPaleta(keys[0]);
   }, [turnosPaleta, paleta]);
 
-  const personasDisponibles = useMemo(() => {
-    if (!contexto?.personas_grupo) return [];
-    const yaAgregadas = new Set(agentes.map((a) => a.persona_id));
-    return contexto.personas_grupo.filter((p) => !yaAgregadas.has(p.persona_id));
-  }, [contexto, agentes]);
-
   const idxRegimenes = useMemo(() => contexto?.regimenes || {}, [contexto]);
 
+  const personasDisponibles = useMemo(() => {
+    const yaAgregadas = new Set(agentes.map((a) => a.persona_id));
+    const lista = listarPersonasGrupoDisponibles(contexto?.personas_grupo, yaAgregadas);
+    return lista.filter((p) => esRegimenPlanificado(idxRegimenes[p.regimen_horario_id]));
+  }, [contexto, agentes, idxRegimenes]);
+
+  const agentesNoPlanificadosEnPlan = useMemo(() => {
+    return agentes.filter((ag) => !esRegimenPlanificado(idxRegimenes[ag.regimen_horario_id]));
+  }, [agentes, idxRegimenes]);
+
   const agentesEnriquecidos = useMemo(() => {
-    if (!contexto?.personas_grupo) return {};
     const map = {};
-    for (const p of contexto.personas_grupo) map[p.persona_id] = p;
+    for (const p of contexto?.personas_grupo || []) {
+      const pid = String(p.persona_id || "").trim();
+      if (pid && !map[pid]) map[pid] = p;
+    }
     return map;
   }, [contexto]);
 
@@ -171,10 +184,54 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
     }
   }, [agentes, dias, grilla]);
 
+  // Régimen fijo/rotativo: precargar mes desde el patrón (solo lectura en plan mensual)
+  useEffect(() => {
+    if (!contexto?.regimenes || dias.length === 0 || agentes.length === 0) return;
+    setGrilla((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const ag of agentes) {
+        const regimen = idxRegimenes[ag.regimen_horario_id];
+        if (!esRegimenDerivado(regimen)) continue;
+        const meta = agentesEnriquecidos[ag.persona_id] || {};
+        next[ag.persona_id] = generarGrillaDesdeRegimen(regimen, dias, meta);
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [contexto, agentes, dias, idxRegimenes, agentesEnriquecidos]);
+
+  // Al crear/editar, incluir automáticamente filas de régimen fijo/rotativo del grupo.
+  useEffect(() => {
+    const lista = contexto?.personas_grupo || [];
+    if (!lista.length) return;
+    setAgentes((prev) => {
+      const existentes = new Set(prev.map((a) => a.persona_id));
+      const add = [];
+      for (const p of lista) {
+        const regimen = idxRegimenes[p.regimen_horario_id];
+        if (!esRegimenDerivado(regimen)) continue;
+        const pid = String(p.persona_id || "").trim();
+        if (!pid || existentes.has(pid)) continue;
+        add.push({
+          persona_id: pid,
+          regimen_horario_id: p.regimen_horario_id || "",
+          hlg_id: p.hlg_id || "",
+        });
+      }
+      return add.length ? [...prev, ...add] : prev;
+    });
+  }, [contexto, idxRegimenes]);
+
+  const esFilaEditable = useCallback(
+    (pid) => esRegimenPlanificado(idxRegimenes[agentes.find((a) => a.persona_id === pid)?.regimen_horario_id]),
+    [agentes, idxRegimenes],
+  );
+
   const agregarAgente = useCallback(() => {
     if (!selAgente) return setErrLocal("Selecciona un agente.");
-    const pgData = contexto?.personas_grupo?.find((p) => p.persona_id === selAgente);
-    if (!pgData) return setErrLocal("Agente no encontrado en el contexto.");
+    const pgData = resolverPersonaGrupoPlan(contexto?.personas_grupo, selAgente);
+    if (!pgData) return setErrLocal("Agente no encontrado en el contexto del grupo para este período.");
     if (agentes.some((a) => a.persona_id === selAgente)) return setErrLocal("El agente ya está en la grilla.");
     setErrLocal("");
     const ag = {
@@ -191,7 +248,7 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
       return { ...prev, [pgData.persona_id]: row };
     });
     setSelAgente("");
-  }, [selAgente, agentes, dias, contexto]);
+  }, [selAgente, agentes, dias, contexto, idxRegimenes]);
 
   const agregarTodos = useCallback(() => {
     if (!personasDisponibles.length) return;
@@ -224,6 +281,7 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
   }, []);
 
   const toggleCelda = useCallback((pid, ymd) => {
+    if (!esFilaEditable(pid)) return;
     const enriquecido = agentesEnriquecidos[pid];
     if (enriquecido && !esDiaEnVigenciaHlg(ymd, enriquecido.fecha_inicio, enriquecido.fecha_fin)) {
       return; // hard block
@@ -239,7 +297,7 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
       }
       return { ...prev, [pid]: { ...prev[pid], [ymd]: nueva } };
     });
-  }, [paleta, agentesEnriquecidos]);
+  }, [paleta, agentesEnriquecidos, esFilaEditable]);
 
   const resumenAgente = useCallback((pid) => {
     const row = grilla[pid] || {};
@@ -265,7 +323,9 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
   }, [agentesEnriquecidos, idxRegimenes]);
 
   const handleGuardar = useCallback(() => {
-    if (agentes.length === 0) return setErrLocal("Agrega al menos un agente.");
+    if (agentes.length === 0) {
+      return setErrLocal("Agrega al menos un agente.");
+    }
     setErrLocal("");
     const datos = {
       grupo_id: grupoId,
@@ -279,7 +339,7 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
       })),
     };
     onGuardar(datos, plan?.id || null);
-  }, [agentes, grilla, grupoId, periodo, plan, onGuardar]);
+  }, [agentes, grilla, grupoId, periodo, plan, onGuardar, idxRegimenes]);
 
   const labelAgente = (pid) => {
     const e = agentesEnriquecidos[pid];
@@ -295,7 +355,10 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
             <h2 className="text-lg font-semibold text-slate-900">
               {plan ? "Editar plan mensual" : "Nuevo plan mensual"}
             </h2>
-            <p className="text-sm text-slate-500">Periodo: {periodo} — Grupo: {grupoId}</p>
+            <p className="text-sm text-slate-500">
+              Periodo: {periodo} — Grupo: {grupoLabel || grupoId}
+              {personasDisponibles.length > 0 ? ` · ${personasDisponibles.length} agente(s) disponible(s)` : ""}
+            </p>
           </div>
           <button onClick={onCerrar} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -308,7 +371,14 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
           <div className="px-5 py-3 text-sm text-slate-500">Cargando contexto del grupo...</div>
         )}
 
-        {/* Paleta dinamica de turnos */}
+        {agentesNoPlanificadosEnPlan.length > 0 && (
+          <div className="mx-5 mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <strong>Régimen fijo o rotativo:</strong> esos agentes no se editan en el plan mensual; el turno se calcula desde su régimen.
+            Se incluyen automáticamente en el plan guardado como filas de solo lectura.
+          </div>
+        )}
+
+        {/* Paleta dinamica de turnos (solo planificado) */}
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-2">
           <span className="text-xs font-medium text-slate-500">Pincel:</span>
           {Object.entries(turnosPaleta).map(([key, style]) => (
@@ -334,6 +404,8 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
           </button>
           <span className="ml-3 text-xs text-slate-400">
             {paleta === "F" ? "Franco" : turnosPaleta[paleta]?.label || paleta}
+            {" · "}
+            Solo aplica a filas con régimen planificado
           </span>
         </div>
 
@@ -347,10 +419,12 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
               className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-indigo-400"
               disabled={!personasDisponibles.length}
             >
-              <option value="">— Seleccionar —</option>
+              <option value="">
+                {personasDisponibles.length ? "— Seleccionar —" : "— Sin agentes planificados en el grupo —"}
+              </option>
               {personasDisponibles.map((p) => (
-                <option key={p.persona_id} value={p.persona_id}>
-                  {p.persona_label || p.persona_id} {p.persona_dni ? `(${p.persona_dni})` : ""}
+                <option key={p.hlg_id || p.persona_id} value={p.persona_id}>
+                  {p.persona_label || p.persona_id}{p.persona_dni ? ` (${p.persona_dni})` : ""}
                 </option>
               ))}
             </select>
@@ -420,10 +494,17 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
               <tbody>
                 {agentes.map((ag) => {
                   const res = resumenAgente(ag.persona_id);
+                  const regimen = idxRegimenes[ag.regimen_horario_id];
+                  const editable = esRegimenPlanificado(regimen);
                   return (
-                    <tr key={ag.persona_id} className="group">
+                    <tr key={ag.persona_id} className={`group ${editable ? "" : "bg-slate-50/80"}`}>
                       <td className="sticky left-0 z-10 bg-white px-2 py-0.5">
                         <span className="text-xs text-slate-700">{labelAgente(ag.persona_id)}</span>
+                        {!editable && (
+                          <span className="mt-0.5 block text-[10px] font-medium text-slate-500">
+                            {labelTipoRegimen(regimen)} — solo lectura
+                          </span>
+                        )}
                       </td>
                       {dias.map((dia) => {
                         const cel = grilla[ag.persona_id]?.[dia.ymd];
@@ -464,16 +545,24 @@ export default function GrillaMensualEditor({ plan, grupoId, periodo, guardando,
                         if (estado === "no_asignado") tooltipParts.push("(no asignado)");
                         tooltipParts.push(esFranco ? "Franco" : turno);
 
+                        const celContent = (
+                          <div
+                            className={`flex h-6 w-7 items-center justify-center rounded text-[10px] font-bold ${style.bg} ${style.text} ${extraClass} ${editable ? "" : "cursor-default opacity-90"}`}
+                            title={tooltipParts.join(" ")}
+                          >
+                            {esFranco ? "F" : turno}
+                          </div>
+                        );
+
                         return (
                           <td key={dia.ymd} className="px-0.5 py-0.5">
-                            <button
-                              type="button"
-                              onClick={() => toggleCelda(ag.persona_id, dia.ymd)}
-                              className={`flex h-6 w-7 items-center justify-center rounded text-[10px] font-bold transition ${style.bg} ${style.text} ${extraClass}`}
-                              title={tooltipParts.join(" ")}
-                            >
-                              {esFranco ? "F" : turno}
-                            </button>
+                            {editable ? (
+                              <button type="button" onClick={() => toggleCelda(ag.persona_id, dia.ymd)} className="block">
+                                {celContent}
+                              </button>
+                            ) : (
+                              celContent
+                            )}
                           </td>
                         );
                       })}

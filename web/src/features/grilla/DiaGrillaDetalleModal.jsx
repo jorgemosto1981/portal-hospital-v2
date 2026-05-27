@@ -22,9 +22,14 @@ function labelEstado(id) {
  *   bandejaPath: string;
  *   subtitulo?: string;
  *   turnoTeorico?: { rda_turno_id?: string; es_franco?: boolean; capa_teorica?: Record<string, unknown> } | null;
+ *   personaId?: string;
+ *   fechaYmd?: string;
+ *   onAbrirCobertura?: () => void;
  * }} props
  */
-export default function DiaGrillaDetalleModal({ open, onClose, dia, eventos, bandejaPath, subtitulo, turnoTeorico, grupoLabel }) {
+export default function DiaGrillaDetalleModal({
+  open, onClose, dia, eventos, bandejaPath, subtitulo, turnoTeorico, grupoLabel, personaId, fechaYmd, onAbrirCobertura,
+}) {
   const [solFocus, setSolFocus] = useState("");
   const [resumen, setResumen] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -208,6 +213,19 @@ export default function DiaGrillaDetalleModal({ open, onClose, dia, eventos, ban
               </div>
             ) : null}
           </dl>
+        ) : null}
+
+        {personaId && fechaYmd && onAbrirCobertura ? (
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onAbrirCobertura();
+            }}
+            className="mt-4 flex min-h-11 w-full items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 text-sm font-semibold text-indigo-800 active:bg-indigo-100"
+          >
+            Cobertura parcial por tramos
+          </button>
         ) : null}
 
         {resumen?.solicitud_id && bandejaPath ? (

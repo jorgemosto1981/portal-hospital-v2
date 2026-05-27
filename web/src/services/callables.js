@@ -351,6 +351,11 @@ export function callListarOverridesTurno(data) {
   return httpsCallable(getFunctionsV2(), "listarOverridesTurno")(data);
 }
 
+/** Capa teórica materializada de un día (segmentos + token concurrencia). */
+export function callObtenerCapaTeoricaDia(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerCapaTeoricaDia")(data);
+}
+
 /** Re-materializar tras cambio de calendario institucional (solo RRHH). */
 export function callRematerializarPostCalendario(data) {
   return httpsCallable(getFunctionsV2(), "rematerializarPostCalendario", { timeout: 540000 })(data);

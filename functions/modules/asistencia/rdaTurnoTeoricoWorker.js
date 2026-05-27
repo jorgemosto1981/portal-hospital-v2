@@ -95,6 +95,154 @@ async function obtenerPlanHabilitado(grupoId, periodoId) {
   return { planId: snap.docs[0].id, plan: snap.docs[0].data() };
 }
 
+function esOverrideActivo(ov) {
+  return ov && !ov.eliminado && !ov.invalidado_por_replanificacion;
+}
+
+function esTipoLaboral(tipoDia) {
+  return tipoDia === "laborable" || tipoDia === "guardia";
+}
+
+async function ensureEstadoPeriodoLiquidacionAbierto(visRef) {
+  const snap = await visRef.get();
+  if (!snap.exists) return;
+  const estado = snap.data()?.estado_periodo_liquidacion_id ?? null;
+  if (estado == null || String(estado).trim() === "") {
+    await visRef.set({ estado_periodo_liquidacion_id: CFG_EPL_ABIERTO }, { merge: true });
+  }
+}
+
+async function resolverBaseDiaPersona({ personaId, fechaYmd, indiceCalendario }) {
+  const [anio, mes] = fechaYmd.split("-").map(Number);
+  const periodoId = `${anio}-${String(mes).padStart(2, "0")}`;
+  const hlgs = await obtenerHlgsVigentesParaMes(personaId, fechaYmd, fechaYmd);
+  if (!hlgs.length) return null;
+
+  const regCache = new Map();
+  const hlgContextos = [];
+  for (const hlg of hlgs) {
+    if (!hlg.regimen_horario_id) continue;
+    let regimen = regCache.get(hlg.regimen_horario_id);
+    if (!regimen) {
+      const snap = await db.collection(COL_REGIMEN).doc(hlg.regimen_horario_id).get();
+      if (!snap.exists) continue;
+      regimen = snap.data();
+      regCache.set(hlg.regimen_horario_id, regimen);
+    }
+    let plan = null;
+    if (regimen.tipo_patron === "planificado" && hlg.grupo_de_trabajo_id) {
+      plan = await obtenerPlanHabilitado(hlg.grupo_de_trabajo_id, periodoId);
+    }
+    hlgContextos.push({ hlg, regimen, plan });
+  }
+  if (!hlgContextos.length) return null;
+
+  let mejorResolucion = null;
+  let mejorHlg = null;
+  for (const { hlg, regimen, plan } of hlgContextos) {
+    const fi = hlg.fecha_inicio || "";
+    const ff = hlg.fecha_fin || "";
+    if (fi && fi > fechaYmd) continue;
+    if (ff && ff < fechaYmd) continue;
+
+    const res = resolverDiaConPreCarga(regimen, fechaYmd, hlg, plan, personaId, indiceCalendario);
+    if (!mejorResolucion) {
+      mejorResolucion = res;
+      mejorHlg = hlg;
+      continue;
+    }
+    if (esTipoLaboral(res.tipo_dia) && !esTipoLaboral(mejorResolucion.tipo_dia)) {
+      mejorResolucion = res;
+      mejorHlg = hlg;
+    }
+  }
+  if (!mejorResolucion || !mejorHlg) return null;
+
+  const regimenDoc = regCache.get(mejorHlg.regimen_horario_id) || {};
+  let turnoCompuestoId = mejorResolucion.turno_teorico?.turno_id || null;
+  if (!turnoCompuestoId) {
+    const ctxPlan = hlgContextos.find((c) => c.hlg.id === mejorHlg.id);
+    const agPlan = ctxPlan?.plan?.plan?.agentes?.find((a) => a.persona_id === personaId);
+    turnoCompuestoId = agPlan?.dias?.[fechaYmd]?.turno_id || null;
+  }
+
+  const capaBase = buildCapaTeoricaSegmentada({
+    fechaYmd,
+    personaId,
+    regimen: regimenDoc,
+    tipo_dia: mejorResolucion.tipo_dia,
+    turnoCompuestoId,
+    origen_segmento: "plan_base",
+    indiceCalendario,
+  });
+
+  return {
+    capaBase,
+    mejorResolucion,
+    mejorHlg,
+    regimenDoc,
+  };
+}
+
+function upsertSegmento(segmentos, segmentoNuevo) {
+  const idx = segmentos.findIndex((s) => s.segmento_id === segmentoNuevo.segmento_id
+    && s.persona_titular_id === segmentoNuevo.persona_titular_id
+    && s.persona_ejecutante_id === segmentoNuevo.persona_ejecutante_id);
+  if (idx >= 0) segmentos[idx] = segmentoNuevo;
+  else segmentos.push(segmentoNuevo);
+}
+
+async function listarCoberturasDia(fechaYmd, personaId) {
+  const snap = await db.collection(COL_ASISTENCIA).where("fecha", "==", fechaYmd).get();
+  const out = [];
+  for (const doc of snap.docs) {
+    const all = Array.isArray(doc.data()?.overrides_turno) ? doc.data().overrides_turno : [];
+    for (const ov of all) {
+      if (!esOverrideActivo(ov)) continue;
+      if (ov.tipo !== "cobertura_parcial") continue;
+      if (ov.persona_origen_id === personaId || ov.persona_cobertura_id === personaId) out.push(ov);
+    }
+  }
+  return out;
+}
+
+async function aplicarCoberturasParciales({ personaId, fechaYmd, segmentos, coberturas, indiceCalendario }) {
+  const result = [...segmentos];
+  for (const ov of coberturas) {
+    const ids = Array.isArray(ov.segmentos_cubiertos) ? ov.segmentos_cubiertos : [];
+    if (!ids.length) continue;
+    if (ov.persona_origen_id === personaId) {
+      for (const seg of result) {
+        if (!ids.includes(seg.segmento_id)) continue;
+        seg.persona_ejecutante_id = ov.persona_cobertura_id || seg.persona_ejecutante_id;
+        seg.origen_segmento = "override_cobertura";
+        seg.tipo_compensacion_id = ov.tipo_compensacion_id || null;
+      }
+      continue;
+    }
+    if (ov.persona_cobertura_id !== personaId) continue;
+
+    const baseOrigen = await resolverBaseDiaPersona({
+      personaId: ov.persona_origen_id,
+      fechaYmd,
+      indiceCalendario,
+    });
+    const segmentosOrigen = baseOrigen?.capaBase?.segmentos || [];
+    for (const seg of segmentosOrigen) {
+      if (!ids.includes(seg.segmento_id)) continue;
+      upsertSegmento(result, {
+        ...seg,
+        persona_titular_id: ov.persona_origen_id,
+        persona_ejecutante_id: personaId,
+        origen_segmento: "override_cobertura",
+        tipo_compensacion_id: ov.tipo_compensacion_id || null,
+      });
+    }
+  }
+  result.sort((a, b) => a.ingreso_iso.localeCompare(b.ingreso_iso));
+  return result;
+}
+
 /**
  * Resuelve el turno teórico para un día, usando datos pre-cargados.
  * NO hace reads a Firestore (excepto override).
@@ -354,6 +502,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
     };
     try {
       await visRef.update(visUpdateData);
+      await ensureEstadoPeriodoLiquidacionAbierto(visRef);
     } catch (e) {
       if (e.code === 5 || (e.message && e.message.includes("NOT_FOUND"))) {
         const nestedDias = {};
@@ -370,6 +519,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
           estado_periodo_liquidacion_id: CFG_EPL_ABIERTO,
           metadata: { ultima_sync_teorica: FieldValue.serverTimestamp() },
         }, { merge: true });
+        await ensureEstadoPeriodoLiquidacionAbierto(visRef);
       } else {
         throw e;
       }
@@ -481,14 +631,155 @@ async function materializarGrupoMes({ grupoId, anio, mes }) {
  * Usado por triggers de override (registrarCambioTurno / eliminarCambioTurno).
  */
 async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
+  const _grupoId = grupoId;
   const [anio, mes] = fechaYmd.split("-").map(Number);
-  const result = await materializarTurnoMesBatch({
+  const periodoId = `${anio}-${String(mes).padStart(2, "0")}`;
+  const indiceCalendario = await getIndiceCalendario();
+  const base = await resolverBaseDiaPersona({ personaId, fechaYmd, indiceCalendario });
+  if (!base) return { ok: true, diasProcesados: 0, error: "Sin HLG vigente para fecha" };
+
+  const asiDocId = buildAsiDocumentId(personaId, fechaYmd);
+  if (!asiDocId) return { ok: false, diasProcesados: 0, error: "DocId asistencia inválido" };
+  const asiRef = db.collection(COL_ASISTENCIA).doc(asiDocId);
+  const asiSnap = await asiRef.get();
+  const allOverrides = asiSnap.exists && Array.isArray(asiSnap.data().overrides_turno)
+    ? asiSnap.data().overrides_turno
+    : [];
+  const activos = allOverrides.filter(esOverrideActivo);
+
+  const reemplazos = activos.filter((o) => o.tipo === "reemplazo");
+  const adicionales = activos.filter((o) => o.tipo === "adicional");
+  const coberturas = await listarCoberturasDia(fechaYmd, personaId);
+
+  let turnoCompuestoId = base.mejorResolucion.turno_teorico?.turno_id || base.capaBase.turno_compuesto_id || null;
+  let tipoDiaFinal = base.capaBase.tipo_dia || base.mejorResolucion.tipo_dia;
+  if (reemplazos.length > 0) {
+    const ultimo = reemplazos[reemplazos.length - 1];
+    turnoCompuestoId = ultimo.turno_id || turnoCompuestoId;
+    tipoDiaFinal = ultimo.tipo_dia || "laborable";
+  }
+
+  let segmentos = [];
+  if (turnoCompuestoId && tipoDiaFinal !== "franco" && tipoDiaFinal !== "no_laborable") {
+    const capaPre = buildCapaTeoricaSegmentada({
+      fechaYmd,
+      personaId,
+      regimen: base.regimenDoc,
+      tipo_dia: tipoDiaFinal,
+      turnoCompuestoId,
+      origen_segmento: reemplazos.length > 0 ? "override_cobertura" : "plan_base",
+      indiceCalendario,
+    });
+    segmentos = capaPre.segmentos || [];
+  }
+
+  for (const adicional of adicionales) {
+    if (!adicional.turno_id) continue;
+    const capaAdd = buildCapaTeoricaSegmentada({
+      fechaYmd,
+      personaId,
+      regimen: base.regimenDoc,
+      tipo_dia: "laborable",
+      turnoCompuestoId: adicional.turno_id,
+      origen_segmento: "override_cobertura",
+      indiceCalendario,
+    });
+    for (const seg of capaAdd.segmentos || []) {
+      upsertSegmento(segmentos, seg);
+    }
+  }
+
+  segmentos = await aplicarCoberturasParciales({
     personaId,
-    grupoId,
-    anio,
-    mes,
+    fechaYmd,
+    segmentos,
+    coberturas,
+    indiceCalendario,
   });
-  return result;
+
+  const tipoDiaDerivado = segmentos.length > 0 ? "laborable" : tipoDiaFinal;
+  const capaSegmentada = buildCapaTeoricaSegmentada({
+    fechaYmd,
+    personaId,
+    regimen: base.regimenDoc,
+    tipo_dia: tipoDiaDerivado,
+    turnoCompuestoId: null,
+    origen_segmento: "plan_base",
+    indiceCalendario,
+    segmentosOverride: segmentos,
+  });
+
+  const capaTeorica = {
+    ...capaSegmentada,
+    es_nocturno: false,
+    origen: reemplazos.length > 0 ? "override" : base.mejorResolucion.origen,
+    regimen_horario_id: base.mejorHlg.regimen_horario_id,
+    grupo_de_trabajo_id: base.mejorHlg.grupo_de_trabajo_id || _grupoId || null,
+    plan_id: base.mejorResolucion.plan_id || null,
+    posicion_ciclo: base.mejorResolucion.posicion_ciclo ?? null,
+  };
+
+  await asiRef.set({
+    persona_id: personaId,
+    fecha: fechaYmd,
+    capa_teorica: capaTeorica,
+  }, { merge: true });
+
+  const visDocId = buildVisDocumentId(personaId, `${periodoId}-01`);
+  if (visDocId) {
+    const diaKey = diaMesKeyDesdeYmd(fechaYmd);
+    const esFranco = capaTeorica.tipo_dia === "franco" || capaTeorica.tipo_dia === "no_laborable";
+    const gdtId = capaTeorica.grupo_de_trabajo_id || null;
+    const visRef = db.collection(COL_VIS).doc(visDocId);
+    const visUpdate = {
+      [`dias.${diaKey}.rda_turno_id`]: esFranco ? null : (capaTeorica.turno_id || capaTeorica.ingreso || capaTeorica.tipo_dia),
+      [`dias.${diaKey}.rda_ingreso`]: esFranco ? null : (capaTeorica.ingreso || null),
+      [`dias.${diaKey}.rda_egreso`]: esFranco ? null : (capaTeorica.egreso || null),
+      [`dias.${diaKey}.es_franco`]: esFranco,
+      [`dias.${diaKey}.es_feriado`]: capaTeorica.es_feriado || false,
+      [`dias.${diaKey}.clasificacion_dia_calendario_id`]: capaTeorica.clasificacion_dia_calendario_id || null,
+      [`dias.${diaKey}.tipo_evento_institucional`]: base.mejorResolucion.tipo_evento || null,
+      [`dias.${diaKey}.grupo_de_trabajo_id`]: gdtId,
+      "metadata.ultima_sync_teorica": FieldValue.serverTimestamp(),
+    };
+    try {
+      await visRef.update(visUpdate);
+      await ensureEstadoPeriodoLiquidacionAbierto(visRef);
+    } catch (e) {
+      if (e.code === 5 || (e.message && e.message.includes("NOT_FOUND"))) {
+        const dia = {};
+        dia[diaKey] = {
+          rda_turno_id: esFranco ? null : (capaTeorica.turno_id || capaTeorica.ingreso || capaTeorica.tipo_dia),
+          rda_ingreso: esFranco ? null : (capaTeorica.ingreso || null),
+          rda_egreso: esFranco ? null : (capaTeorica.egreso || null),
+          es_franco: esFranco,
+          es_feriado: capaTeorica.es_feriado || false,
+          clasificacion_dia_calendario_id: capaTeorica.clasificacion_dia_calendario_id || null,
+          tipo_evento_institucional: base.mejorResolucion.tipo_evento || null,
+          grupo_de_trabajo_id: gdtId,
+        };
+        await visRef.set({
+          persona_id: personaId,
+          anio,
+          mes,
+          dias: dia,
+          estado_periodo_liquidacion_id: CFG_EPL_ABIERTO,
+          metadata: { ultima_sync_teorica: FieldValue.serverTimestamp() },
+        }, { merge: true });
+        await ensureEstadoPeriodoLiquidacionAbierto(visRef);
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  return {
+    ok: true,
+    diasProcesados: 1,
+    fecha: fechaYmd,
+    segmentos: capaTeorica.segmentos.length,
+    tipo_dia: capaTeorica.tipo_dia,
+  };
 }
 
 module.exports = {

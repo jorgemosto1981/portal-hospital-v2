@@ -4,6 +4,7 @@ import { useAuthClaims } from "../auth/useAuthClaims.js";
 import { useAuthSession } from "../auth/useAuthSession.js";
 import { claimsIncludeRrhh } from "../routing/portalRole.js";
 import DiaGrillaDetalleModal from "./DiaGrillaDetalleModal.jsx";
+import ModalCoberturaParcial from "./ModalCoberturaParcial.jsx";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
 import GrillaMesSelector from "./GrillaMesSelector.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
@@ -18,6 +19,7 @@ export default function GrillaMesLicenciasPanel() {
 
   const vista = useGrillaMesVista({ personaId, claims, esRrhh });
   const [diaModal, setDiaModal] = useState(null);
+  const [coberturaModal, setCoberturaModal] = useState(null);
 
   return (
     <div className="mt-6 border-t border-slate-200 pt-6">
@@ -78,7 +80,24 @@ export default function GrillaMesLicenciasPanel() {
           gruposEquipo={vista.gruposEquipo}
           onDiaClick={({ dia, eventos, grupoLabel }) => {
             const cell = vista.titularDias?.[dia] || {};
-            setDiaModal({ dia, eventos, grupoLabel, turnoTeorico: { rda_turno_id: cell.rda_turno_id, es_franco: cell.es_franco, capa_teorica: { tipo_dia: cell.es_franco ? "franco" : "laborable", ingreso: cell.rda_ingreso, egreso: cell.rda_egreso } } });
+            const fechaYmd = `${vista.anio}-${String(vista.mes).padStart(2, "0")}-${dia}`;
+            setDiaModal({
+              dia,
+              fechaYmd,
+              personaId,
+              eventos,
+              personaLabel: "Mi calendario",
+              grupoLabel,
+              turnoTeorico: {
+                rda_turno_id: cell.rda_turno_id,
+                es_franco: cell.es_franco,
+                capa_teorica: {
+                  tipo_dia: cell.es_franco ? "franco" : "laborable",
+                  ingreso: cell.rda_ingreso,
+                  egreso: cell.rda_egreso,
+                },
+              },
+            });
           }}
         />
       ) : (
@@ -87,8 +106,8 @@ export default function GrillaMesLicenciasPanel() {
           mes={vista.mes}
           filas={vista.filas}
           grupoSeleccionado={vista.grupoId}
-          onCeldaClick={({ dia, eventos, personaLabel, grupoLabel }) =>
-            setDiaModal({ dia, eventos, personaLabel, grupoLabel })
+          onCeldaClick={({ dia, fechaYmd, personaId: pid, eventos, personaLabel, grupoLabel, turnoTeorico }) =>
+            setDiaModal({ dia, fechaYmd, personaId: pid, eventos, personaLabel, grupoLabel, turnoTeorico })
           }
         />
       )}
@@ -102,7 +121,32 @@ export default function GrillaMesLicenciasPanel() {
         subtitulo={diaModal?.personaLabel}
         grupoLabel={diaModal?.grupoLabel}
         turnoTeorico={diaModal?.turnoTeorico ?? null}
+        personaId={diaModal?.personaId}
+        fechaYmd={diaModal?.fechaYmd}
+        onAbrirCobertura={
+          diaModal?.personaId && diaModal?.fechaYmd
+            ? () => {
+                setCoberturaModal({
+                  personaOrigenId: diaModal.personaId,
+                  personaOrigenLabel: diaModal.personaLabel,
+                  fechaYmd: diaModal.fechaYmd,
+                });
+              }
+            : undefined
+        }
       />
+
+      {coberturaModal ? (
+        <ModalCoberturaParcial
+          personaOrigenId={coberturaModal.personaOrigenId}
+          personaOrigenLabel={coberturaModal.personaOrigenLabel}
+          fechaYmd={coberturaModal.fechaYmd}
+          grupoId={vista.grupoId}
+          periodo={vista.periodo}
+          onCerrar={() => setCoberturaModal(null)}
+          onRegistrado={() => void vista.cargar()}
+        />
+      ) : null}
 
       <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
         <p className="font-medium text-slate-700">Leyenda (MDC → celda)</p>
@@ -119,7 +163,7 @@ export default function GrillaMesLicenciasPanel() {
             En revisión — fondo <span className="font-mono">#F59E0B</span> + borde punteado ámbar oscuro.
           </li>
           <li>Pasar el mouse: artículo, estado legible, <span className="font-mono">sol_id</span> abreviado (en equipo, nombre de la fila).</li>
-          <li>Clic: detalle C3 y enlace a bandeja.</li>
+          <li>Clic: detalle del día; desde ahí, cobertura parcial por tramos (vista equipo / jefe).</li>
         </ul>
       </div>
     </div>

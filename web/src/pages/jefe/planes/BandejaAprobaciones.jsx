@@ -9,6 +9,12 @@ const LABEL_ESTADO = {
   EN_REVISION: "En revisión",
 };
 
+function tituloPlan(plan) {
+  const periodo = plan?.periodo ? `Período: ${plan.periodo}` : "Período: —";
+  const grupo = plan?.grupo_label || plan?.grupo_id || "—";
+  return `${periodo} — Grupo: ${grupo}`;
+}
+
 function ModalRechazo({ planId, onConfirm, onCancel }) {
   const [obs, setObs] = useState("");
   return (
@@ -83,11 +89,17 @@ export default function BandejaAprobaciones({ planes, onTransicion, operando, es
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs text-slate-500">{plan.id}</span>
+                <span className="text-sm font-semibold text-slate-800">{tituloPlan(plan)}</span>
                 <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${BADGE_ESTADO[plan.estado] || "bg-slate-100"}`}>
                   {LABEL_ESTADO[plan.estado] || plan.estado}
                 </span>
+                {plan.aprobacion_pendiente?.huerfano && (
+                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-900">
+                    Huérfano — RRHH
+                  </span>
+                )}
               </div>
+              <p className="font-mono text-[11px] text-slate-400">{plan.id}</p>
               <p className="text-sm text-slate-700">
                 <span className="font-medium">Tipo:</span> {plan.tipo_plan === "perpetuo" ? "Perpetuo" : "Mensual"}
                 {plan.periodo && <> — <span className="font-medium">Período:</span> {plan.periodo}</>}
@@ -119,14 +131,16 @@ export default function BandejaAprobaciones({ planes, onTransicion, operando, es
                   Aprobar
                 </button>
               )}
-              <button
-                type="button"
-                disabled={operando}
-                onClick={() => handleRechazar(plan.id)}
-                className="rounded-xl bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition hover:bg-red-100 disabled:opacity-50"
-              >
-                Rechazar
-              </button>
+              {(plan.estado === "ENVIADO" || plan.estado === "EN_REVISION") && (
+                <button
+                  type="button"
+                  disabled={operando}
+                  onClick={() => handleRechazar(plan.id)}
+                  className="rounded-xl bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition hover:bg-red-100 disabled:opacity-50"
+                >
+                  Rechazar
+                </button>
+              )}
             </div>
           </div>
 
@@ -145,7 +159,9 @@ export default function BandejaAprobaciones({ planes, onTransicion, operando, es
                 <tbody>
                   {plan.agentes.map((ag) => (
                     <tr key={ag.persona_id}>
-                      <td className="whitespace-nowrap px-1 py-0.5 font-mono text-slate-600">{ag.persona_id}</td>
+                      <td className="whitespace-nowrap px-1 py-0.5 text-slate-600">
+                        {ag.persona_label || ag.persona_id}
+                      </td>
                       {ag.dias && Object.keys(ag.dias).sort().map((d) => {
                         const cel = ag.dias[d];
                         const esFranco = cel.tipo_dia === "franco" || cel.tipo_dia === "no_laborable";

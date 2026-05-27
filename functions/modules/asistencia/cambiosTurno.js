@@ -16,6 +16,8 @@ const runtimeFlags = require("../shared/runtimeFlags.json");
 const { assertOverrideAuth } = require("../shared/helpers");
 const { materializarTurnoTeoricoDia } = require("./rdaTurnoTeoricoWorker");
 const { assertPeriodoNoCerrado } = require("./asistenciaPeriodoLiquidacion");
+const { buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
+const { obtenerCapaTeoricaDia } = require("./obtenerCapaTeoricaDia");
 const {
   CFG_TOV_COBERTURA_PARCIAL,
   seedIds,
@@ -23,6 +25,7 @@ const {
 const { logger } = require("firebase-functions/v2");
 
 const COL_ASISTENCIA = "asistencia_diaria";
+const COL_VIS = "vistas_grilla_mes_agente";
 const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
 const PER_ID = /^per_[A-Z0-9]+$/i;
@@ -107,6 +110,28 @@ function validarOverride(ov) {
   return { tipo, ingreso, egreso, horas_efectivas, turno_id, motivo };
 }
 
+function tsToIso(v) {
+  if (!v) return null;
+  if (typeof v.toDate === "function") return v.toDate().toISOString();
+  if (v instanceof Date) return v.toISOString();
+  return String(v);
+}
+
+async function assertConcurrenciaVis(personaId, fecha, tokenEsperado) {
+  const esperado = typeof tokenEsperado === "string" ? tokenEsperado.trim() : "";
+  if (!esperado) return;
+  const visId = buildVisDocumentId(personaId, fecha);
+  if (!visId) return;
+  const snap = await db.collection(COL_VIS).doc(visId).get();
+  const actual = tsToIso(snap.exists ? snap.data()?.metadata?.ultima_sync_teorica : null);
+  if (actual !== esperado) {
+    err(
+      "failed-precondition",
+      "[ASI-CONC-001] La grilla cambió desde que abriste el formulario. Refrescá la vista y reintentá.",
+    );
+  }
+}
+
 async function assertPeriodoEditable(personaId, fecha) {
   try {
     await assertPeriodoNoCerrado(personaId, fecha);
@@ -137,7 +162,11 @@ async function rematerializarTrasOverride(override, personaId, fecha) {
  * Registra un override puntual en asistencia_diaria.overrides_turno[].
  * Si el doc no existe lo crea con estructura mínima.
  */
-const registrarCambioTurno = onCall({ invoker: "public" }, async (request) => {
+const registrarCambioTurno = onCall({
+  invoker: "public",
+  memory: "512MiB",
+  timeoutSeconds: 120,
+}, async (request) => {
   const data = request.data;
   const { personaId, fecha } = validarInput(data);
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
@@ -146,6 +175,8 @@ const registrarCambioTurno = onCall({ invoker: "public" }, async (request) => {
   if (override.tipo === "cobertura_parcial") {
     await assertPeriodoEditable(override.persona_origen_id, fecha);
     await assertPeriodoEditable(override.persona_cobertura_id, fecha);
+    const tokenConc = typeof data.concurrencia_vis_sync === "string" ? data.concurrencia_vis_sync.trim() : "";
+    await assertConcurrenciaVis(override.persona_origen_id, fecha, tokenConc);
   }
 
   const uid = (request.auth && request.auth.uid) || "system";
@@ -197,7 +228,11 @@ const registrarCambioTurno = onCall({ invoker: "public" }, async (request) => {
  * Elimina (marca como eliminado) un override por índice.
  * No borra físicamente: marca eliminado_en + motivo para auditoría.
  */
-const eliminarCambioTurno = onCall({ invoker: "public" }, async (request) => {
+const eliminarCambioTurno = onCall({
+  invoker: "public",
+  memory: "512MiB",
+  timeoutSeconds: 120,
+}, async (request) => {
   const data = request.data;
   const { personaId, fecha } = validarInput(data);
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
@@ -243,7 +278,11 @@ const eliminarCambioTurno = onCall({ invoker: "public" }, async (request) => {
 /**
  * Lista overrides activos de un agente para una fecha.
  */
-const listarOverridesTurno = onCall({ invoker: "public" }, async (request) => {
+const listarOverridesTurno = onCall({
+  invoker: "public",
+  memory: "512MiB",
+  timeoutSeconds: 120,
+}, async (request) => {
   const data = request.data;
   const { personaId, fecha } = validarInput(data);
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
@@ -267,4 +306,5 @@ module.exports = {
   registrarCambioTurno,
   eliminarCambioTurno,
   listarOverridesTurno,
+  obtenerCapaTeoricaDia,
 };

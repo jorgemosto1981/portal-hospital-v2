@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { callListarContextoPlanGrupo } from "../../../services/callables.js";
+import { listarPersonasGrupoDisponibles, resolverPersonaGrupoPlan } from "./planGrupoAgentesUtils.js";
 
-export default function PlanPerpetualViewer({ plan, grupoId, guardando, onGuardar, onCerrar }) {
+export default function PlanPerpetualViewer({ plan, grupoId, grupoLabel, guardando, onGuardar, onCerrar }) {
   const [agentes, setAgentes] = useState(() => {
     if (plan?.agentes?.length) return plan.agentes.map((a) => ({
       persona_id: a.persona_id,
@@ -17,21 +18,27 @@ export default function PlanPerpetualViewer({ plan, grupoId, guardando, onGuarda
   const [errLocal, setErrLocal] = useState("");
   const [contexto, setContexto] = useState(null);
 
+  const periodoContexto = useMemo(() => {
+    const raw = vigente_desde || new Date().toISOString().slice(0, 10);
+    return raw.slice(0, 7);
+  }, [vigente_desde]);
+
   useEffect(() => {
     if (!grupoId) return;
-    callListarContextoPlanGrupo({ grupo_id: grupoId })
+    callListarContextoPlanGrupo({ grupo_id: grupoId, periodo: periodoContexto })
       .then((res) => setContexto(res.data || null))
       .catch((e) => setErrLocal(e?.message || "Error al cargar contexto."));
-  }, [grupoId]);
+  }, [grupoId, periodoContexto]);
 
-  const personasDisponibles = (contexto?.personas_grupo || []).filter(
-    (p) => !agentes.some((a) => a.persona_id === p.persona_id)
-  );
+  const personasDisponibles = useMemo(() => {
+    const yaAgregadas = new Set(agentes.map((a) => a.persona_id));
+    return listarPersonasGrupoDisponibles(contexto?.personas_grupo, yaAgregadas);
+  }, [contexto, agentes]);
 
   const agregarAgente = useCallback(() => {
     if (!selAgente) return setErrLocal("Selecciona un agente.");
-    const pgData = contexto?.personas_grupo?.find((p) => p.persona_id === selAgente);
-    if (!pgData) return setErrLocal("Agente no encontrado.");
+    const pgData = resolverPersonaGrupoPlan(contexto?.personas_grupo, selAgente);
+    if (!pgData) return setErrLocal("Agente no encontrado en el contexto del grupo para este período.");
     if (agentes.some((a) => a.persona_id === selAgente)) return setErrLocal("El agente ya existe.");
     setErrLocal("");
     setAgentes((prev) => [...prev, {
@@ -67,7 +74,7 @@ export default function PlanPerpetualViewer({ plan, grupoId, guardando, onGuarda
   }, [agentes, vigente_desde, vigente_hasta, grupoId, plan, onGuardar]);
 
   const labelPersona = (pid) => {
-    const p = contexto?.personas_grupo?.find((pg) => pg.persona_id === pid);
+    const p = resolverPersonaGrupoPlan(contexto?.personas_grupo, pid);
     return p?.persona_label || pid;
   };
 
@@ -79,7 +86,7 @@ export default function PlanPerpetualViewer({ plan, grupoId, guardando, onGuarda
             <h2 className="text-lg font-semibold text-slate-900">
               {plan ? "Editar plan perpetuo" : "Nuevo plan perpetuo"}
             </h2>
-            <p className="text-sm text-slate-500">Grupo: {grupoId}</p>
+            <p className="text-sm text-slate-500">Grupo: {grupoLabel || grupoId}</p>
           </div>
           <button onClick={onCerrar} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,8 +166,8 @@ export default function PlanPerpetualViewer({ plan, grupoId, guardando, onGuarda
             >
               <option value="">--- Seleccionar ---</option>
               {personasDisponibles.map((p) => (
-                <option key={p.persona_id} value={p.persona_id}>
-                  {p.persona_label || p.persona_id} {p.persona_dni ? `(${p.persona_dni})` : ""}
+                <option key={p.hlg_id || p.persona_id} value={p.persona_id}>
+                  {p.persona_label || p.persona_id}{p.persona_dni ? ` (${p.persona_dni})` : ""}
                 </option>
               ))}
             </select>

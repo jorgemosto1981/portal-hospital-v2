@@ -17,11 +17,81 @@ import { claimsIncludeRrhh } from "../../features/routing/portalRole.js";
 import GrillaMensualEditor from "./planes/GrillaMensualEditor.jsx";
 import PlanPerpetualViewer from "./planes/PlanPerpetualViewer.jsx";
 import BandejaAprobaciones from "./planes/BandejaAprobaciones.jsx";
+import { filtrarPlanesBandejaJefe } from "./planes/planBandejaUtils.js";
 import BadgeEstadoPlan, { LABEL_ESTADO } from "../../components/ui/BadgeEstadoPlan.jsx";
 
 function periodoActual() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function desplazarPeriodo(periodo, deltaMeses) {
+  const [anio, mes] = String(periodo || periodoActual()).split("-").map(Number);
+  const dt = new Date(anio, (mes || 1) - 1 + deltaMeses, 1);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function tituloPlan(plan, grupoLabelFallback = "") {
+  const periodo = plan?.periodo ? `Período: ${plan.periodo}` : "Período: —";
+  const grupo = plan?.grupo_label || grupoLabelFallback || plan?.grupo_id || "—";
+  return `${periodo} — Grupo: ${grupo}`;
+}
+
+function estadoPrincipalGrupo(items) {
+  const list = Array.isArray(items) ? items : [];
+  if (list.some((p) => p.estado === "EN_REVISION")) return "EN_REVISION";
+  if (list.some((p) => p.estado === "ENVIADO")) return "ENVIADO";
+  if (list.some((p) => p.estado === "BORRADOR")) return "BORRADOR";
+  if (list.some((p) => p.estado === "HABILITADO")) return "HABILITADO";
+  if (list.some((p) => p.estado === "CERRADO")) return "CERRADO";
+  return "SIN_PLAN";
+}
+
+function estiloTarjetaGrupo(estado, activo) {
+  const baseActivo = activo ? "ring-2 ring-offset-1" : "";
+  switch (estado) {
+    case "EN_REVISION":
+      return activo
+        ? `border-amber-300 bg-amber-50 text-amber-900 ring-amber-300 ${baseActivo}`
+        : "border-amber-200 bg-amber-50/70 text-amber-900 hover:border-amber-300";
+    case "ENVIADO":
+      return activo
+        ? `border-blue-300 bg-blue-50 text-blue-900 ring-blue-300 ${baseActivo}`
+        : "border-blue-200 bg-blue-50/70 text-blue-900 hover:border-blue-300";
+    case "BORRADOR":
+      return activo
+        ? `border-violet-300 bg-violet-50 text-violet-900 ring-violet-300 ${baseActivo}`
+        : "border-violet-200 bg-violet-50/70 text-violet-900 hover:border-violet-300";
+    case "HABILITADO":
+      return activo
+        ? `border-emerald-300 bg-emerald-50 text-emerald-900 ring-emerald-300 ${baseActivo}`
+        : "border-emerald-200 bg-emerald-50/70 text-emerald-900 hover:border-emerald-300";
+    case "CERRADO":
+      return activo
+        ? `border-slate-400 bg-slate-100 text-slate-900 ring-slate-300 ${baseActivo}`
+        : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300";
+    default:
+      return activo
+        ? `border-indigo-300 bg-indigo-50 text-indigo-900 ring-indigo-300 ${baseActivo}`
+        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300";
+  }
+}
+
+function iconoEstadoGrupo(estado) {
+  switch (estado) {
+    case "EN_REVISION":
+      return "⚠";
+    case "ENVIADO":
+      return "📤";
+    case "BORRADOR":
+      return "✍";
+    case "HABILITADO":
+      return "✅";
+    case "CERRADO":
+      return "🔒";
+    default:
+      return "•";
+  }
 }
 
 function etiquetaGrupo(row) {
@@ -47,6 +117,16 @@ export default function PlanTurnoServicioPage() {
   const [operando, setOperando] = useState(false);
   const [gruposDisponibles, setGruposDisponibles] = useState([]);
   const [gruposCargando, setGruposCargando] = useState(false);
+  const [resumenGrupoPeriodo, setResumenGrupoPeriodo] = useState({});
+  const [bandejaPlanes, setBandejaPlanes] = useState([]);
+  const [bandejaLoading, setBandejaLoading] = useState(false);
+  const [bandejaEstado, setBandejaEstado] = useState("");
+  const [bandejaGrupo, setBandejaGrupo] = useState("");
+  const [bandejaPage, setBandejaPage] = useState(1);
+  const periodosPermitidos = useMemo(() => {
+    const base = periodoActual();
+    return [desplazarPeriodo(base, -1), base, desplazarPeriodo(base, 1)];
+  }, []);
 
   useEffect(() => {
     if (!personaId) return;
@@ -109,9 +189,82 @@ export default function PlanTurnoServicioPage() {
     }
   }, [grupoId, filtroEstado, periodo]);
 
+  const cargarBandejaAprobaciones = useCallback(async () => {
+    if (!gruposDisponibles.length) {
+      setBandejaPlanes([]);
+      return;
+    }
+    setBandejaLoading(true);
+    try {
+      const resultados = await Promise.all(
+        gruposDisponibles.slice(0, 60).map(async (g) => {
+          try {
+            const res = await callListarPlanesTurnoServicio({
+              grupo_id: g.id,
+              periodo,
+            });
+            return (res?.data?.items || []).map((p) => ({
+              ...p,
+              grupo_label: p.grupo_label || g.label || p.grupo_id,
+            }));
+          } catch {
+            return [];
+          }
+        }),
+      );
+      const merged = resultados.flat();
+      const prioridad = { ENVIADO: 0, EN_REVISION: 1, BORRADOR: 2, HABILITADO: 3, CERRADO: 4 };
+      merged.sort((a, b) => {
+        const pa = prioridad[a.estado] ?? 99;
+        const pb = prioridad[b.estado] ?? 99;
+        if (pa !== pb) return pa - pb;
+        return String(a.grupo_label || "").localeCompare(String(b.grupo_label || ""), "es");
+      });
+      setBandejaPlanes(merged);
+      setBandejaPage(1);
+    } finally {
+      setBandejaLoading(false);
+    }
+  }, [gruposDisponibles, periodo]);
+
+  useEffect(() => {
+    if (!gruposDisponibles.length || !periodo) {
+      setResumenGrupoPeriodo({});
+      return;
+    }
+    let cancel = false;
+    (async () => {
+      const gruposObjetivo = gruposDisponibles.slice(0, 30);
+      const resultados = await Promise.all(
+        gruposObjetivo.map(async (g) => {
+          try {
+            const res = await callListarPlanesTurnoServicio({
+              grupo_id: g.id,
+              periodo,
+            });
+            const items = res?.data?.items || [];
+            return [g.id, { estado: estadoPrincipalGrupo(items), cantidad: items.length }];
+          } catch {
+            return [g.id, { estado: "SIN_PLAN", cantidad: 0 }];
+          }
+        }),
+      );
+      if (cancel) return;
+      setResumenGrupoPeriodo(Object.fromEntries(resultados));
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [gruposDisponibles, periodo]);
+
   useEffect(() => {
     if (grupoId.trim()) cargar();
   }, [cargar, grupoId]);
+
+  useEffect(() => {
+    if (tab !== "bandeja") return;
+    cargarBandejaAprobaciones();
+  }, [tab, cargarBandejaAprobaciones]);
 
   const showFeedback = (msg) => {
     setFeedback(msg);
@@ -138,8 +291,26 @@ export default function PlanTurnoServicioPage() {
       let res;
       switch (accion) {
         case "enviar":
+          if (!extras?.confirmarEnvio) {
+            const confirmar = window.confirm(
+              "Vas a enviar el plan para aprobación. Luego no podrás editarlo hasta que el superior o RRHH lo resuelva. ¿Continuar?",
+            );
+            if (!confirmar) {
+              showFeedback("Envío cancelado.");
+              break;
+            }
+            const confirmar2 = window.confirm(
+              "Confirmación final: ¿seguro que querés ENVIAR este plan ahora?",
+            );
+            if (!confirmar2) {
+              showFeedback("Envío cancelado.");
+              break;
+            }
+          }
           res = await callEnviarPlanTurnoServicio({ plan_id: planId });
-          if (res.data?.warnings?.length) {
+          if (res.data?.mensaje_bandeja) {
+            showFeedback(res.data.mensaje_bandeja);
+          } else if (res.data?.warnings?.length) {
             showFeedback(`Enviado con ${res.data.warnings.length} advertencia(s).`);
           } else {
             showFeedback("Plan enviado para aprobación.");
@@ -152,7 +323,17 @@ export default function PlanTurnoServicioPage() {
             confirmar_invalidar_overrides: extras?.confirmar === true,
           });
           if (res.data?.requiere_confirmacion) {
-            const ok = window.confirm(res.data.mensaje);
+            const detalle = Array.isArray(res.data?.detalle_overrides) ? res.data.detalle_overrides : [];
+            const detalleTxt = detalle
+              .slice(0, 10)
+              .map((o) => `- ${o.persona_id} · ${o.fecha} · ${o.cantidad} override(s)`)
+              .join("\n");
+            const extraLinea = detalle.length > 10
+              ? `\n... y ${detalle.length - 10} override(s) más.`
+              : "";
+            const ok = window.confirm(
+              `${res.data.mensaje}\n\nOverrides detectados:\n${detalleTxt || "- (sin detalle)"}${extraLinea}`,
+            );
             if (ok) {
               await handleTransicion("aprobar", planId, { ...extras, confirmar: true });
               return;
@@ -185,11 +366,48 @@ export default function PlanTurnoServicioPage() {
     }
   }, [cargar]);
 
+  const grupoLabel = useMemo(() => {
+    const g = gruposDisponibles.find((x) => x.id === grupoId);
+    return g?.label || grupoId;
+  }, [gruposDisponibles, grupoId]);
+
+  const planesBandejaJefe = useMemo(
+    () => filtrarPlanesBandejaJefe(bandejaPlanes, personaId),
+    [bandejaPlanes, personaId],
+  );
+
+  const gruposBandeja = useMemo(() => {
+    const map = new Map();
+    for (const p of planesBandejaJefe) {
+      const gid = String(p.grupo_id || "").trim();
+      if (!gid || map.has(gid)) continue;
+      map.set(gid, p.grupo_label || gid);
+    }
+    return [...map.entries()].map(([id, label]) => ({ id, label }));
+  }, [planesBandejaJefe]);
+
+  const planesBandejaFiltrados = useMemo(() => {
+    return planesBandejaJefe.filter((p) => {
+      if (bandejaEstado && p.estado !== bandejaEstado) return false;
+      if (bandejaGrupo && p.grupo_id !== bandejaGrupo) return false;
+      return true;
+    });
+  }, [planesBandejaJefe, bandejaEstado, bandejaGrupo]);
+
+  const BANDEJA_PAGE_SIZE = 10;
+  const totalPaginasBandeja = Math.max(1, Math.ceil(planesBandejaFiltrados.length / BANDEJA_PAGE_SIZE));
+  const planesBandejaPagina = useMemo(() => {
+    const p = Math.min(bandejaPage, totalPaginasBandeja);
+    const start = (p - 1) * BANDEJA_PAGE_SIZE;
+    return planesBandejaFiltrados.slice(start, start + BANDEJA_PAGE_SIZE);
+  }, [planesBandejaFiltrados, bandejaPage, totalPaginasBandeja]);
+
+  const resumenFuente = tab === "bandeja" ? planesBandejaFiltrados : planes;
   const resumenEstados = useMemo(() => {
     const r = { BORRADOR: 0, ENVIADO: 0, EN_REVISION: 0, HABILITADO: 0, CERRADO: 0 };
-    for (const p of planes) if (r[p.estado] != null) r[p.estado]++;
+    for (const p of resumenFuente) if (r[p.estado] != null) r[p.estado]++;
     return r;
-  }, [planes]);
+  }, [resumenFuente]);
 
   const TABS = [
     { id: "planes", label: "Mis planes" },
@@ -225,31 +443,44 @@ export default function PlanTurnoServicioPage() {
 
       {/* Filtros */}
       <Card className="px-4 py-3">
+        <div className="mb-3 flex flex-wrap gap-2">
+          {gruposDisponibles.map((g) => {
+            const meta = resumenGrupoPeriodo[g.id] || { estado: "SIN_PLAN", cantidad: 0 };
+            const activo = grupoId === g.id;
+            return (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => setGrupoId(g.id)}
+                className={`rounded-xl border px-3 py-2 text-left text-xs transition ${estiloTarjetaGrupo(meta.estado, activo)}`}
+              >
+                <div className="font-semibold">{g.label}</div>
+                <div className="mt-0.5 text-[11px] opacity-85">
+                  <span className="mr-1">{iconoEstadoGrupo(meta.estado)}</span>
+                  {periodo} — {LABEL_ESTADO[meta.estado] || "Sin plan"}
+                </div>
+              </button>
+            );
+          })}
+        </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-slate-500">Grupo de trabajo</label>
-            <select
-              value={grupoId}
-              onChange={(e) => setGrupoId(e.target.value)}
-              disabled={gruposCargando}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:opacity-50"
-            >
-              <option value="">
-                {gruposCargando ? "Cargando grupos…" : "Seleccionar grupo…"}
-              </option>
-              {gruposDisponibles.map((g) => (
-                <option key={g.id} value={g.id}>{g.label}</option>
-              ))}
-            </select>
+            <label className="mb-1 block text-xs font-medium text-slate-500">Grupo seleccionado</label>
+            <div className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700">
+              {grupoLabel || (gruposCargando ? "Cargando grupos…" : "Seleccionar grupo…")}
+            </div>
           </div>
           <div className="w-36">
             <label className="mb-1 block text-xs font-medium text-slate-500">Período</label>
-            <input
-              type="month"
+            <select
               value={periodo}
               onChange={(e) => setPeriodo(e.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-            />
+            >
+              {periodosPermitidos.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
           </div>
           <div className="w-44">
             <label className="mb-1 block text-xs font-medium text-slate-500">Estado</label>
@@ -349,7 +580,8 @@ export default function PlanTurnoServicioPage() {
                     {planes.map((plan) => (
                       <tr key={plan.id} className="transition hover:bg-slate-50">
                         <td className="whitespace-nowrap px-4 py-3">
-                          <p className="font-mono text-xs text-slate-600">{plan.id}</p>
+                          <p className="text-sm font-medium text-slate-800">{tituloPlan(plan, grupoLabel)}</p>
+                          <p className="font-mono text-[11px] text-slate-400">{plan.id}</p>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">
                           {plan.tipo_plan === "perpetuo" ? "Perpetuo" : "Mensual"}
@@ -414,12 +646,98 @@ export default function PlanTurnoServicioPage() {
       )}
 
       {tab === "bandeja" && (
-        <BandejaAprobaciones
-          planes={planes.filter((p) => p.estado === "ENVIADO" || p.estado === "EN_REVISION")}
-          onTransicion={handleTransicion}
-          operando={operando}
-          esRrhh={esRrhh}
-        />
+        <>
+          <Card className="px-4 py-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="w-full sm:w-52">
+                <label className="mb-1 block text-xs font-medium text-slate-500">Estado</label>
+                <select
+                  value={bandejaEstado}
+                  onChange={(e) => {
+                    setBandejaEstado(e.target.value);
+                    setBandejaPage(1);
+                  }}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                >
+                  <option value="">Todos</option>
+                  <option value="ENVIADO">Pendiente (Enviado)</option>
+                  <option value="EN_REVISION">En revisión</option>
+                  <option value="BORRADOR">Devuelto (Borrador)</option>
+                  <option value="HABILITADO">Aprobado/Habilitado</option>
+                  <option value="CERRADO">Cerrado</option>
+                </select>
+              </div>
+              <div className="w-full sm:flex-1">
+                <label className="mb-1 block text-xs font-medium text-slate-500">Grupo</label>
+                <select
+                  value={bandejaGrupo}
+                  onChange={(e) => {
+                    setBandejaGrupo(e.target.value);
+                    setBandejaPage(1);
+                  }}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                >
+                  <option value="">Todos los grupos</option>
+                  {gruposBandeja.map((g) => (
+                    <option key={g.id} value={g.id}>{g.label}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={cargarBandejaAprobaciones}
+                disabled={bandejaLoading}
+                className="rounded-lg bg-slate-700 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
+              >
+                {bandejaLoading ? "Cargando…" : "Recargar bandeja"}
+              </button>
+            </div>
+          </Card>
+
+          {planes.some((p) => p.estado === "ENVIADO" && p.creado_por_persona_id === personaId) && planesBandejaFiltrados.length === 0 && (
+            <div className="mb-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+              Tenés plan(es) enviado(s) en este grupo. Si el servicio no tiene superior jerárquico, no aparecen acá:
+              RRHH los revisa en su bandeja.
+            </div>
+          )}
+          {bandejaLoading ? (
+            <Card className="px-4 py-8 text-center">
+              <p className="text-sm text-slate-500">Cargando bandeja de aprobaciones…</p>
+            </Card>
+          ) : (
+            <>
+              <BandejaAprobaciones
+                planes={planesBandejaPagina}
+                onTransicion={handleTransicion}
+                operando={operando}
+                esRrhh={esRrhh}
+              />
+              <div className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-xs text-slate-600">
+                <span>
+                  Página {Math.min(bandejaPage, totalPaginasBandeja)} de {totalPaginasBandeja} · {planesBandejaFiltrados.length} resultado(s)
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={bandejaPage <= 1}
+                    onClick={() => setBandejaPage((p) => Math.max(1, p - 1))}
+                    className="rounded border border-slate-200 px-2 py-1 disabled:opacity-50"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bandejaPage >= totalPaginasBandeja}
+                    onClick={() => setBandejaPage((p) => Math.min(totalPaginasBandeja, p + 1))}
+                    className="rounded border border-slate-200 px-2 py-1 disabled:opacity-50"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </>
       )}
 
       {/* Modal Grilla Mensual / Plan Perpetuo */}
@@ -427,6 +745,7 @@ export default function PlanTurnoServicioPage() {
         <GrillaMensualEditor
           plan={planEdicion.nuevo ? null : planEdicion}
           grupoId={grupoId}
+          grupoLabel={grupoLabel}
           periodo={periodo}
           guardando={operando}
           onGuardar={handleGuardarBorrador}
@@ -437,6 +756,7 @@ export default function PlanTurnoServicioPage() {
         <PlanPerpetualViewer
           plan={planEdicion.nuevo ? null : planEdicion}
           grupoId={grupoId}
+          grupoLabel={grupoLabel}
           guardando={operando}
           onGuardar={handleGuardarBorrador}
           onCerrar={() => setPlanEdicion(null)}
@@ -460,7 +780,7 @@ export default function PlanTurnoServicioPage() {
             <div className="space-y-3 text-sm text-slate-700">
               <p><span className="font-medium">Tipo:</span> {planDetalle.tipo_plan === "perpetuo" ? "Perpetuo" : "Mensual"}</p>
               <p><span className="font-medium">Estado:</span> <BadgeEstadoPlan estado={planDetalle.estado} /></p>
-              <p><span className="font-medium">Grupo:</span> {planDetalle.grupo_id}</p>
+              <p><span className="font-medium">Grupo:</span> {planDetalle.grupo_label || grupoLabel || planDetalle.grupo_id}</p>
               {planDetalle.periodo && <p><span className="font-medium">Período:</span> {planDetalle.periodo}</p>}
               {planDetalle.vigente_desde && (
                 <p><span className="font-medium">Vigencia:</span> {planDetalle.vigente_desde} → {planDetalle.vigente_hasta || "∞"}</p>

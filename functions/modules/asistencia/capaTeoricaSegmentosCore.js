@@ -39,6 +39,45 @@ function parseTurnoCompuestoIds(turnoIdRaw) {
   return raw.split("+").map((s) => s.trim()).filter(Boolean);
 }
 
+function tokenizeLabel(value) {
+  const raw = String(value || "").toLowerCase();
+  if (!raw) return "";
+  return raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function canonicalizarTokenTurno(regimen, tokenRaw) {
+  const token = String(tokenRaw || "").trim();
+  if (!token) return "";
+  const list = Array.isArray(regimen?.turnos_disponibles) ? regimen.turnos_disponibles : [];
+  const direct = list.find((t) => String(t?.turno_id || "").trim() === token);
+  if (direct?.turno_id) return String(direct.turno_id);
+
+  const tokenNorm = tokenizeLabel(token);
+  if (!tokenNorm) return "";
+  for (const turno of list) {
+    const turnoId = String(turno?.turno_id || "").trim();
+    if (!turnoId) continue;
+    const aliases = [
+      turnoId,
+      turno?.codigo_interno,
+      turno?.codigo,
+      turno?.sigla,
+      turno?.abreviatura,
+      turno?.etiqueta,
+      turno?.titulo_ui,
+      turno?.nombre,
+    ].map(tokenizeLabel).filter(Boolean);
+    if (aliases.includes(tokenNorm)) return turnoId;
+    if ((tokenNorm === "m" || tokenNorm === "manana") && aliases.some((a) => a.includes("manana"))) return turnoId;
+    if ((tokenNorm === "t" || tokenNorm === "tarde") && aliases.some((a) => a.includes("tarde"))) return turnoId;
+    if ((tokenNorm === "n" || tokenNorm === "noche") && aliases.some((a) => a.includes("noche"))) return turnoId;
+  }
+  return token;
+}
+
 /**
  * @param {object} regimen
  * @param {string} turnoId
@@ -65,7 +104,8 @@ function buildSegmentosDesdeTurnoCompuesto({
   turnoCompuestoId,
   origen_segmento = "plan_base",
 }) {
-  const ids = parseTurnoCompuestoIds(turnoCompuestoId);
+  const idsRaw = parseTurnoCompuestoIds(turnoCompuestoId);
+  const ids = idsRaw.map((id) => canonicalizarTokenTurno(regimen, id));
   if (!ids.length) return [];
 
   const segmentos = [];

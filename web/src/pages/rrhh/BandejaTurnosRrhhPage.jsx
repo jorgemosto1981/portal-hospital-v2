@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import Card from "../../components/ui/Card.jsx";
 import {
@@ -29,6 +29,10 @@ export default function BandejaTurnosRrhhPage() {
   const [gruposCargando, setGruposCargando] = useState(false);
   const [planesHabilitados, setPlanesHabilitados] = useState([]);
   const [habLoading, setHabLoading] = useState(false);
+  const [filtroEstadoPend, setFiltroEstadoPend] = useState("");
+  const [filtroGrupoPend, setFiltroGrupoPend] = useState("");
+  const [pagePend, setPagePend] = useState(1);
+  const PAGE_SIZE = 10;
 
   const [modalRevertir, setModalRevertir] = useState(null);
   const [obsRevertir, setObsRevertir] = useState("");
@@ -44,6 +48,7 @@ export default function BandejaTurnosRrhhPage() {
     try {
       const res = await callListarPlanesPendientesRrhh({});
       setPlanes(res.data?.items || []);
+      setPagePend(1);
     } catch (e) {
       setError(e?.message || "Error al cargar planes pendientes.");
     } finally {
@@ -130,6 +135,31 @@ export default function BandejaTurnosRrhhPage() {
     { id: "revertir", label: "Revertir habilitados" },
   ];
 
+  const gruposPendientes = useMemo(() => {
+    const mapa = new Map();
+    for (const p of planes) {
+      const gid = String(p.grupo_id || "").trim();
+      if (!gid || mapa.has(gid)) continue;
+      mapa.set(gid, p.grupo_label || gid);
+    }
+    return [...mapa.entries()].map(([id, label]) => ({ id, label }));
+  }, [planes]);
+
+  const planesPendientesFiltrados = useMemo(() => {
+    return planes.filter((p) => {
+      if (filtroEstadoPend && p.estado !== filtroEstadoPend) return false;
+      if (filtroGrupoPend && p.grupo_id !== filtroGrupoPend) return false;
+      return true;
+    });
+  }, [planes, filtroEstadoPend, filtroGrupoPend]);
+
+  const totalPaginasPend = Math.max(1, Math.ceil(planesPendientesFiltrados.length / PAGE_SIZE));
+  const planesPendientesPagina = useMemo(() => {
+    const p = Math.min(pagePend, totalPaginasPend);
+    const start = (p - 1) * PAGE_SIZE;
+    return planesPendientesFiltrados.slice(start, start + PAGE_SIZE);
+  }, [planesPendientesFiltrados, pagePend, totalPaginasPend]);
+
   return (
     <div className="min-h-[calc(100dvh-6rem)] space-y-4 bg-slate-50 pb-6 md:pb-8">
       <header className="rounded-2xl border border-slate-100 bg-white px-4 py-5 shadow-sm md:px-6">
@@ -189,6 +219,44 @@ export default function BandejaTurnosRrhhPage() {
             )}
           </div>
 
+          {planes.length > 0 && (
+            <Card className="px-4 py-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="w-full sm:w-52">
+                  <label className="mb-1 block text-xs font-medium text-slate-500">Estado</label>
+                  <select
+                    value={filtroEstadoPend}
+                    onChange={(e) => {
+                      setFiltroEstadoPend(e.target.value);
+                      setPagePend(1);
+                    }}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                  >
+                    <option value="">Todos</option>
+                    <option value="ENVIADO">Enviado</option>
+                    <option value="EN_REVISION">En revisión</option>
+                  </select>
+                </div>
+                <div className="w-full sm:flex-1">
+                  <label className="mb-1 block text-xs font-medium text-slate-500">Grupo</label>
+                  <select
+                    value={filtroGrupoPend}
+                    onChange={(e) => {
+                      setFiltroGrupoPend(e.target.value);
+                      setPagePend(1);
+                    }}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                  >
+                    <option value="">Todos los grupos</option>
+                    {gruposPendientes.map((g) => (
+                      <option key={g.id} value={g.id}>{g.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {!loading && planes.length === 0 && (
             <Card className="px-4 py-8 text-center">
               <p className="text-sm text-slate-500">Pulsá "Cargar pendientes" para ver planes ENVIADO y EN REVISIÓN de todos los grupos.</p>
@@ -196,13 +264,38 @@ export default function BandejaTurnosRrhhPage() {
           )}
 
           {planes.length > 0 && (
-            <BandejaAprobaciones
-              planes={planes}
+            <>
+              <BandejaAprobaciones
+              planes={planesPendientesPagina}
               onTransicion={handleTransicion}
               operando={operando}
               esRrhh={true}
               mostrarGrupo={true}
             />
+              <div className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-xs text-slate-600">
+                <span>
+                  Página {Math.min(pagePend, totalPaginasPend)} de {totalPaginasPend} · {planesPendientesFiltrados.length} resultado(s)
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={pagePend <= 1}
+                    onClick={() => setPagePend((p) => Math.max(1, p - 1))}
+                    className="rounded border border-slate-200 px-2 py-1 disabled:opacity-50"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pagePend >= totalPaginasPend}
+                    onClick={() => setPagePend((p) => Math.min(totalPaginasPend, p + 1))}
+                    className="rounded border border-slate-200 px-2 py-1 disabled:opacity-50"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       )}
