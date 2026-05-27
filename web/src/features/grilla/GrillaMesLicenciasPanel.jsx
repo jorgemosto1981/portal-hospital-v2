@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 import { useAuthClaims } from "../auth/useAuthClaims.js";
 import { useAuthSession } from "../auth/useAuthSession.js";
@@ -8,7 +9,9 @@ import ModalCoberturaParcial from "./ModalCoberturaParcial.jsx";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
 import GrillaMesSelector from "./GrillaMesSelector.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
+import { useAsistenciaOutbox } from "./useAsistenciaOutbox.js";
 import { useGrillaMesVista } from "./useGrillaMesVista.js";
+import { aplicarBatchAsistencia } from "../../services/coberturaParcialService.js";
 
 export default function GrillaMesLicenciasPanel() {
   const { user } = useAuthSession();
@@ -20,6 +23,34 @@ export default function GrillaMesLicenciasPanel() {
   const vista = useGrillaMesVista({ personaId, claims, esRrhh });
   const [diaModal, setDiaModal] = useState(null);
   const [coberturaModal, setCoberturaModal] = useState(null);
+  const [aplicandoBatch, setAplicandoBatch] = useState(false);
+  const outbox = useAsistenciaOutbox({ editorPersonaId: personaId, periodo: vista.periodo });
+
+  const handleAplicarCambios = async () => {
+    if (!outbox.hasPending || aplicandoBatch) return;
+    setAplicandoBatch(true);
+    try {
+      const result = await aplicarBatchAsistencia(outbox.ops, {
+        editorPersonaId: personaId,
+        periodo: vista.periodo,
+      });
+      toast.success(`Cambios aplicados: ${result?.aplicadas ?? outbox.count}.`);
+      outbox.clear();
+      await vista.cargar();
+    } catch (e) {
+      const msg = e?.message || "No se pudo aplicar el batch.";
+      if (msg.includes("ASI-CONC")) {
+        toast.error("La grilla cambió. Se conservaron tus pendientes para reintentar.");
+        await vista.cargar();
+      } else if (msg.includes("ASI-PER")) {
+        toast.error("Período cerrado. Revisá los cambios pendientes.");
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setAplicandoBatch(false);
+    }
+  };
 
   return (
     <div className="mt-6 border-t border-slate-200 pt-6">
@@ -50,6 +81,52 @@ export default function GrillaMesLicenciasPanel() {
         <p className="mt-2 text-sm text-amber-700">{vista.resolverError}</p>
       ) : null}
       {vista.error ? <p className="mt-2 text-sm text-rose-700">{vista.error}</p> : null}
+
+      {outbox.pendingRecovery ? (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+          <p className="font-medium">Tenés cambios pendientes de una sesión anterior ({outbox.pendingRecovery.count}).</p>
+          <p className="mt-1 text-xs text-amber-800">Período {vista.periodo}. ¿Querés recuperarlos o descartarlos?</p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={outbox.recoverPending}
+              className="min-h-11 rounded-lg bg-amber-700 px-3 text-sm font-semibold text-white active:bg-amber-800"
+            >
+              Recuperar
+            </button>
+            <button
+              type="button"
+              onClick={outbox.discardPending}
+              className="min-h-11 rounded-lg border border-amber-300 bg-white px-3 text-sm font-semibold text-amber-800 active:bg-amber-100"
+            >
+              Descartar
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {outbox.hasPending ? (
+        <div className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-3 text-sm text-indigo-900">
+          <p className="font-medium">Cambios pendientes: {outbox.count}</p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => void handleAplicarCambios()}
+              disabled={aplicandoBatch}
+              className="min-h-11 rounded-lg bg-indigo-700 px-3 text-sm font-semibold text-white active:bg-indigo-800 disabled:opacity-60"
+            >
+              {aplicandoBatch ? "Aplicando..." : "Aplicar cambios"}
+            </button>
+            <button
+              type="button"
+              onClick={outbox.clear}
+              className="min-h-11 rounded-lg border border-indigo-300 bg-white px-3 text-sm font-semibold text-indigo-700 active:bg-indigo-100"
+            >
+              Limpiar cola
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {vista.data && !vista.loading ? (
         <p className="mt-2 text-xs text-slate-500">
@@ -144,7 +221,15 @@ export default function GrillaMesLicenciasPanel() {
           grupoId={vista.grupoId}
           periodo={vista.periodo}
           onCerrar={() => setCoberturaModal(null)}
-          onRegistrado={() => void vista.cargar()}
+          onRegistrado={() => {}}
+          onDesactualizado={() => void vista.cargar()}
+          onAgregarOutbox={(op) =>
+            outbox.addOp({
+              ...op,
+              grupoId: vista.grupoId || "",
+              periodo: vista.periodo,
+            })
+          }
         />
       ) : null}
 

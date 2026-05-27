@@ -499,6 +499,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
     const visUpdateData = {
       ...visDias,
       "metadata.ultima_sync_teorica": FieldValue.serverTimestamp(),
+      "metadata.version_token": FieldValue.serverTimestamp(),
     };
     try {
       await visRef.update(visUpdateData);
@@ -517,7 +518,10 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
           mes,
           dias: nestedDias,
           estado_periodo_liquidacion_id: CFG_EPL_ABIERTO,
-          metadata: { ultima_sync_teorica: FieldValue.serverTimestamp() },
+          metadata: {
+            ultima_sync_teorica: FieldValue.serverTimestamp(),
+            version_token: FieldValue.serverTimestamp(),
+          },
         }, { merge: true });
         await ensureEstadoPeriodoLiquidacionAbierto(visRef);
       } else {
@@ -741,6 +745,7 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
       [`dias.${diaKey}.tipo_evento_institucional`]: base.mejorResolucion.tipo_evento || null,
       [`dias.${diaKey}.grupo_de_trabajo_id`]: gdtId,
       "metadata.ultima_sync_teorica": FieldValue.serverTimestamp(),
+      "metadata.version_token": FieldValue.serverTimestamp(),
     };
     try {
       await visRef.update(visUpdate);
@@ -764,7 +769,10 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
           mes,
           dias: dia,
           estado_periodo_liquidacion_id: CFG_EPL_ABIERTO,
-          metadata: { ultima_sync_teorica: FieldValue.serverTimestamp() },
+          metadata: {
+            ultima_sync_teorica: FieldValue.serverTimestamp(),
+            version_token: FieldValue.serverTimestamp(),
+          },
         }, { merge: true });
         await ensureEstadoPeriodoLiquidacionAbierto(visRef);
       } else {

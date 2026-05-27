@@ -6,7 +6,6 @@ import {
   consultarAvisosCoberturaYy,
   listarTiposCompensacionCobertura,
   obtenerCapaTeoricaDiaValidada,
-  registrarCoberturaParcial,
 } from "../../services/coberturaParcialService.js";
 import {
   enrichCapaTeoricaLabels,
@@ -25,13 +24,15 @@ export default function ModalCoberturaParcial({
   periodo,
   onCerrar,
   onRegistrado,
+  onDesactualizado,
+  onAgregarOutbox,
 }) {
   const [cargando, setCargando] = useState(true);
   const [operando, setOperando] = useState(false);
   const [error, setError] = useState("");
   const [segmentos, setSegmentos] = useState([]);
   const [seleccionados, setSeleccionados] = useState(new Set());
-  const [concurrenciaVisSync, setConcurrenciaVisSync] = useState("");
+  const [expectedVersionToken, setExpectedVersionToken] = useState("");
   const [tiposTcc, setTiposTcc] = useState([]);
   const [tipoTccId, setTipoTccId] = useState("");
   const [personasGrupo, setPersonasGrupo] = useState([]);
@@ -55,7 +56,7 @@ export default function ModalCoberturaParcial({
         listarTiposCompensacionCobertura(),
         grupoId ? callListarContextoPlanGrupo({ grupo_id: grupoId, periodo: `${anio}-${String(mes).padStart(2, "0")}` }) : Promise.resolve(null),
       ]);
-      setConcurrenciaVisSync(capaRes.concurrencia?.vis_ultima_sync || "");
+      setExpectedVersionToken(capaRes.concurrencia?.expected_version_token || capaRes.concurrencia?.vis_ultima_sync || "");
       setPeriodoCerrado(capaRes.periodo_liquidacion?.cerrado === true);
       const regimenes = ctx?.data?.regimenes || {};
       const hlg = (ctx?.data?.personas_grupo || []).find((p) => p.persona_id === personaOrigenId);
@@ -136,21 +137,32 @@ export default function ModalCoberturaParcial({
     setOperando(true);
     setError("");
     try {
-      await registrarCoberturaParcial({
+      if (!onAgregarOutbox) {
+        setError("Outbox no inicializado en esta vista.");
+        return;
+      }
+      onAgregarOutbox({
+        tipo: "cobertura_parcial",
         personaOrigenId,
         fechaYmd,
         personaCoberturaId,
         segmentosCubiertos: [...seleccionados],
         tipoCompensacionId: tipoTccId,
-        motivo,
-        concurrenciaVisSync,
+        motivo: motivo.trim(),
+        expectedVersionToken,
       });
-      toast.success("Cobertura parcial registrada.");
+      toast.success("Cobertura agregada a cambios pendientes.");
       if (onRegistrado) onRegistrado();
       onCerrar();
     } catch (e) {
       const msg = e?.message || "Error al registrar cobertura.";
-      setError(msg.includes("ASI-CONC") ? `${msg} Actualizá la grilla y reintentá.` : msg);
+      if (msg.includes("ASI-CONC")) {
+        setError(msg);
+        toast.error("La grilla cambió. Se refrescó la vista.");
+        if (onDesactualizado) onDesactualizado();
+        return;
+      }
+      setError(msg);
     } finally {
       setOperando(false);
     }
@@ -273,7 +285,7 @@ export default function ModalCoberturaParcial({
             onClick={() => void handleSubmit()}
             className="min-h-11 rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {operando ? "Guardando…" : "Registrar cobertura"}
+            {operando ? "Agregando…" : "Agregar a cambios"}
           </button>
         </div>
       </div>

@@ -3,6 +3,7 @@
  * Contrato: web/src/schemas/capaTeoricaSegmentos.schema.js
  */
 import {
+  callAplicarBatchAsistencia,
   callObtenerCapaTeoricaDia,
   callObtenerVistaGrillaMesAgente,
   callRegistrarCambioTurno,
@@ -71,7 +72,7 @@ export async function consultarAvisosCoberturaYy(personaCoberturaId, fechaYmd, a
  * @param {string[]} params.segmentosCubiertos
  * @param {string} params.tipoCompensacionId
  * @param {string} params.motivo
- * @param {string} [params.concurrenciaVisSync]
+ * @param {string} [params.expectedVersionToken]
  */
 export async function registrarCoberturaParcial({
   personaOrigenId,
@@ -80,7 +81,7 @@ export async function registrarCoberturaParcial({
   segmentosCubiertos,
   tipoCompensacionId,
   motivo,
-  concurrenciaVisSync,
+  expectedVersionToken,
 }) {
   const override = coberturaParcialOverrideSchema.parse({
     tipo_override_id: CFG_TOV_COBERTURA_PARCIAL,
@@ -97,8 +98,62 @@ export async function registrarCoberturaParcial({
     fecha: fechaYmd,
     override,
   };
-  if (concurrenciaVisSync) payload.concurrencia_vis_sync = concurrenciaVisSync;
+  if (expectedVersionToken) {
+    payload.expected_version_token = expectedVersionToken;
+    // Compatibilidad temporal con payload anterior.
+    payload.concurrencia_vis_sync = expectedVersionToken;
+  }
 
   const res = await callRegistrarCambioTurno(payload);
+  return res?.data ?? res;
+}
+
+function normalizeFechaYmd(value) {
+  const s = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    throw new Error("Fecha inválida en operación de outbox. Debe usar YYYY-MM-DD.");
+  }
+  return s;
+}
+
+/**
+ * @param {Array<Record<string, unknown>>} opsOutbox
+ * @param {{ editorPersonaId?: string; periodo?: string }} [ctx]
+ */
+export async function aplicarBatchAsistencia(opsOutbox, ctx = {}) {
+  const ops = (opsOutbox || []).map((op, idx) => {
+    const tipo = String(op?.tipo || "").trim();
+    if (tipo !== "cobertura_parcial") {
+      throw new Error(`Operación no soportada en batch (#${idx + 1}): ${tipo || "sin tipo"}.`);
+    }
+    const fecha = normalizeFechaYmd(op?.fechaYmd);
+    return {
+      id: String(op?.id || `op_${idx + 1}`),
+      tipo,
+      creado_en: String(op?.creado_en || new Date().toISOString()),
+      payload: {
+        persona_origen_id: String(op?.personaOrigenId || "").trim(),
+        persona_cobertura_id: String(op?.personaCoberturaId || "").trim(),
+        fecha,
+        segmentos_cubiertos: Array.isArray(op?.segmentosCubiertos) ? op.segmentosCubiertos.map(String) : [],
+        tipo_compensacion_id: String(op?.tipoCompensacionId || "").trim(),
+        motivo: String(op?.motivo || "").trim(),
+      },
+      concurrencia: {
+        expected_version_token: String(op?.expectedVersionToken || "").trim(),
+      },
+      contexto: {
+        grupo_id: String(op?.grupoId || "").trim() || null,
+        periodo: String(op?.periodo || ctx?.periodo || fecha.slice(0, 7)).trim(),
+      },
+    };
+  });
+
+  const payload = {
+    editor_persona_id: String(ctx?.editorPersonaId || "").trim() || null,
+    periodo: String(ctx?.periodo || "").trim() || null,
+    ops,
+  };
+  const res = await callAplicarBatchAsistencia(payload);
   return res?.data ?? res;
 }

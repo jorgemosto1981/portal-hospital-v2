@@ -41,6 +41,8 @@ const obtenerCapaTeoricaDia = onCall({
   const periodo = await consultarEstadoPeriodoLiquidacion(personaId, fecha);
   const diaKey = fecha.slice(8, 10);
   const diaVis = visSnap?.exists && visSnap.data()?.dias?.[diaKey] ? visSnap.data().dias[diaKey] : null;
+  const versionToken = tsToIso(visSnap?.data()?.metadata?.version_token)
+    || tsToIso(visSnap?.data()?.metadata?.ultima_sync_teorica);
 
   return {
     ok: true,
@@ -50,6 +52,7 @@ const obtenerCapaTeoricaDia = onCall({
     concurrencia: {
       version_capa_teorica: capa?.version_capa_teorica ?? null,
       vis_ultima_sync: tsToIso(visSnap?.data()?.metadata?.ultima_sync_teorica),
+      expected_version_token: versionToken,
     },
     periodo_liquidacion: periodo,
     vis_dia: diaVis,

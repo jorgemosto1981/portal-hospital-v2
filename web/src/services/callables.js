@@ -341,6 +341,11 @@ export function callRegistrarCambioTurno(data) {
   return httpsCallable(getFunctionsV2(), "registrarCambioTurno")(data);
 }
 
+/** Aplicar lote atómico de operaciones de asistencia (outbox E2). */
+export function callAplicarBatchAsistencia(data) {
+  return httpsCallable(getFunctionsV2(), "aplicarBatchAsistencia", { timeout: 120000 })(data);
+}
+
 /** Eliminar (soft-delete) un override por índice. */
 export function callEliminarCambioTurno(data) {
   return httpsCallable(getFunctionsV2(), "eliminarCambioTurno")(data);

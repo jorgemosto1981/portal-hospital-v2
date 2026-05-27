@@ -20,6 +20,7 @@ const { buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
 const { obtenerCapaTeoricaDia } = require("./obtenerCapaTeoricaDia");
 const {
   CFG_TOV_COBERTURA_PARCIAL,
+  CFG_EPL_LIQUIDADO_CERRADO,
   seedIds,
 } = require("../shared/cfgAsistenciaTurnosIds");
 const { logger } = require("firebase-functions/v2");
@@ -117,17 +118,23 @@ function tsToIso(v) {
   return String(v);
 }
 
+function readVisVersionToken(visData) {
+  if (!visData || typeof visData !== "object") return null;
+  const meta = visData.metadata || {};
+  return tsToIso(meta.version_token) || tsToIso(meta.ultima_sync_teorica);
+}
+
 async function assertConcurrenciaVis(personaId, fecha, tokenEsperado) {
   const esperado = typeof tokenEsperado === "string" ? tokenEsperado.trim() : "";
   if (!esperado) return;
   const visId = buildVisDocumentId(personaId, fecha);
   if (!visId) return;
   const snap = await db.collection(COL_VIS).doc(visId).get();
-  const actual = tsToIso(snap.exists ? snap.data()?.metadata?.ultima_sync_teorica : null);
+  const actual = snap.exists ? readVisVersionToken(snap.data()) : null;
   if (actual !== esperado) {
     err(
       "failed-precondition",
-      "[ASI-CONC-001] La grilla cambió desde que abriste el formulario. Refrescá la vista y reintentá.",
+      "[ASI-CONC-001] La información en pantalla está desactualizada. Por favor, recargue la grilla.",
     );
   }
 }
@@ -158,6 +165,68 @@ async function rematerializarTrasOverride(override, personaId, fecha) {
   }
 }
 
+function payloadCoberturaDesdeOp(op) {
+  const src = op && typeof op === "object" ? (op.payload && typeof op.payload === "object" ? op.payload : op) : {};
+  return {
+    persona_origen_id: src.persona_origen_id,
+    persona_cobertura_id: src.persona_cobertura_id,
+    fecha: src.fecha,
+    segmentos_cubiertos: src.segmentos_cubiertos,
+    tipo_compensacion_id: src.tipo_compensacion_id,
+    motivo: src.motivo,
+    tipo_override_id: src.tipo_override_id,
+    tipo: src.tipo,
+  };
+}
+
+function normalizeBatchOp(raw, idx) {
+  const op = raw && typeof raw === "object" ? raw : {};
+  const tipo = String(op.tipo || op.payload?.tipo || "cobertura_parcial").trim();
+  if (tipo !== "cobertura_parcial") {
+    err("invalid-argument", `[BATCH-002] op[${idx}] tipo no soportado: ${tipo}`);
+  }
+  const expected = typeof op?.concurrencia?.expected_version_token === "string"
+    ? op.concurrencia.expected_version_token.trim()
+    : "";
+  if (!expected) {
+    err("invalid-argument", `[BATCH-003] op[${idx}] expected_version_token requerido.`);
+  }
+  const payload = payloadCoberturaDesdeOp(op);
+  const fecha = typeof payload.fecha === "string" ? payload.fecha.trim() : "";
+  if (!YMD.test(fecha)) err("invalid-argument", `[BATCH-004] op[${idx}] fecha YYYY-MM-DD requerida.`);
+  const override = validarOverrideCobertura(payload);
+  return {
+    op_id: String(op.id || `op_${idx + 1}`),
+    fecha,
+    expected_version_token: expected,
+    persona_origen_id: override.persona_origen_id,
+    persona_cobertura_id: override.persona_cobertura_id,
+    override,
+  };
+}
+
+function visClosedByData(data) {
+  const estado = data?.estado_periodo_liquidacion_id || null;
+  return estado === CFG_EPL_LIQUIDADO_CERRADO;
+}
+
+async function rematerializarBatchOps(items) {
+  const unique = new Map();
+  for (const it of items) {
+    const fecha = it.fecha;
+    unique.set(`${it.persona_origen_id}|${fecha}`, { personaId: it.persona_origen_id, fechaYmd: fecha });
+    unique.set(`${it.persona_cobertura_id}|${fecha}`, { personaId: it.persona_cobertura_id, fechaYmd: fecha });
+  }
+  for (const obj of unique.values()) {
+    try {
+      await materializarTurnoTeoricoDia({ personaId: obj.personaId, grupoId: null, fechaYmd: obj.fechaYmd });
+      logger.info("materializarTurnoTeoricoDia_post_batch OK", obj);
+    } catch (e) {
+      logger.error("materializarTurnoTeoricoDia_post_batch ERROR", { ...obj, error: String(e) });
+    }
+  }
+}
+
 /**
  * Registra un override puntual en asistencia_diaria.overrides_turno[].
  * Si el doc no existe lo crea con estructura mínima.
@@ -175,7 +244,9 @@ const registrarCambioTurno = onCall({
   if (override.tipo === "cobertura_parcial") {
     await assertPeriodoEditable(override.persona_origen_id, fecha);
     await assertPeriodoEditable(override.persona_cobertura_id, fecha);
-    const tokenConc = typeof data.concurrencia_vis_sync === "string" ? data.concurrencia_vis_sync.trim() : "";
+    const tokenConc = typeof data.expected_version_token === "string"
+      ? data.expected_version_token.trim()
+      : (typeof data.concurrencia_vis_sync === "string" ? data.concurrencia_vis_sync.trim() : "");
     await assertConcurrenciaVis(override.persona_origen_id, fecha, tokenConc);
   }
 
@@ -302,9 +373,156 @@ const listarOverridesTurno = onCall({
   };
 });
 
+/**
+ * Aplica un lote de cambios de asistencia en forma atómica.
+ * MVP E2: soporta solo tipo cobertura_parcial.
+ */
+const aplicarBatchAsistencia = onCall({
+  invoker: "public",
+  memory: "512MiB",
+  timeoutSeconds: 120,
+}, async (request) => {
+  const data = request.data || {};
+  const opsRaw = Array.isArray(data.ops) ? data.ops : [];
+  if (opsRaw.length < 1) err("invalid-argument", "[BATCH-001] ops[] requerido.");
+  if (opsRaw.length > 50) err("invalid-argument", "[BATCH-005] Máximo 50 operaciones por batch.");
+
+  const items = opsRaw.map((op, i) => normalizeBatchOp(op, i));
+  const uniquePeriodo = new Set(items.map((i) => i.fecha.slice(0, 7)));
+  if (uniquePeriodo.size > 1) err("invalid-argument", "[BATCH-006] Todas las operaciones deben ser del mismo período.");
+
+  const uniquePersonas = new Set();
+  for (const it of items) {
+    uniquePersonas.add(it.persona_origen_id);
+    uniquePersonas.add(it.persona_cobertura_id);
+  }
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
+    for (const pid of uniquePersonas) {
+      await assertOverrideAuth(request, pid);
+    }
+  }
+
+  // Pre-flight check (rápido antes de abrir transacción)
+  for (const it of items) {
+    await assertPeriodoEditable(it.persona_origen_id, it.fecha);
+    await assertPeriodoEditable(it.persona_cobertura_id, it.fecha);
+  }
+
+  const uid = (request.auth && request.auth.uid) || "system";
+  const token = (request.auth && request.auth.token) || {};
+  const nowIso = new Date().toISOString();
+
+  const txResult = await db.runTransaction(async (tx) => {
+    const visMap = new Map();
+    const visRefMap = new Map();
+    const visKeySet = new Set();
+    for (const it of items) {
+      visKeySet.add(`${it.persona_origen_id}|${it.fecha}`);
+      visKeySet.add(`${it.persona_cobertura_id}|${it.fecha}`);
+    }
+    for (const key of visKeySet) {
+      const [pid, fecha] = key.split("|");
+      const visId = buildVisDocumentId(pid, fecha);
+      if (!visId) continue;
+      const ref = db.collection(COL_VIS).doc(visId);
+      const snap = await tx.get(ref);
+      visMap.set(key, snap);
+      visRefMap.set(key, ref);
+    }
+
+    const asiMap = new Map();
+    const asiRefMap = new Map();
+    const asiKeySet = new Set(items.map((it) => `${it.persona_origen_id}|${it.fecha}`));
+    for (const key of asiKeySet) {
+      const [pid, fecha] = key.split("|");
+      const docId = docIdAsistencia(pid, fecha);
+      const ref = db.collection(COL_ASISTENCIA).doc(docId);
+      const snap = await tx.get(ref);
+      asiMap.set(key, snap);
+      asiRefMap.set(key, ref);
+    }
+
+    // Validaciones transaccionales (token + freeze)
+    for (const it of items) {
+      const visOrigen = visMap.get(`${it.persona_origen_id}|${it.fecha}`);
+      const actualToken = visOrigen?.exists ? readVisVersionToken(visOrigen.data()) : null;
+      if (actualToken !== it.expected_version_token) {
+        err(
+          "failed-precondition",
+          "[ASI-CONC-001] La información en pantalla está desactualizada. Por favor, recargue la grilla.",
+        );
+      }
+
+      const visX = visMap.get(`${it.persona_origen_id}|${it.fecha}`);
+      const visY = visMap.get(`${it.persona_cobertura_id}|${it.fecha}`);
+      if (visClosedByData(visX?.data()) || visClosedByData(visY?.data())) {
+        err("failed-precondition", "[ASI-PER-001] El período está liquidado y cerrado. No se permiten cambios.");
+      }
+    }
+
+    // Escrituras asistencia_diaria
+    const appendMap = new Map();
+    for (const it of items) {
+      const key = `${it.persona_origen_id}|${it.fecha}`;
+      const list = appendMap.get(key) || [];
+      list.push({
+        ...it.override,
+        es_override_manual: true,
+        creado_por_uid: uid,
+        creado_por_persona_id: token.persona_id || null,
+        creado_en: nowIso,
+        invalidado_por_replanificacion: false,
+        op_batch_id: it.op_id,
+      });
+      appendMap.set(key, list);
+    }
+
+    for (const [key, extra] of appendMap.entries()) {
+      const snap = asiMap.get(key);
+      const ref = asiRefMap.get(key);
+      const [pid, fecha] = key.split("|");
+      if (snap?.exists) {
+        const current = Array.isArray(snap.data()?.overrides_turno) ? snap.data().overrides_turno : [];
+        tx.update(ref, {
+          overrides_turno: [...current, ...extra],
+          actualizado_en: FieldValue.serverTimestamp(),
+        });
+      } else {
+        tx.set(ref, {
+          persona_id: pid,
+          fecha,
+          overrides_turno: extra,
+          creado_en: FieldValue.serverTimestamp(),
+          actualizado_en: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+
+    // Bump token de versión en vis_* afectados
+    for (const ref of visRefMap.values()) {
+      tx.set(ref, {
+        metadata: {
+          version_token: FieldValue.serverTimestamp(),
+          ultima_sync_teorica: FieldValue.serverTimestamp(),
+        },
+      }, { merge: true });
+    }
+
+    return { aplicadas: items.length };
+  });
+
+  await rematerializarBatchOps(items);
+  return {
+    ok: true,
+    aplicadas: txResult.aplicadas,
+    periodo: [...uniquePeriodo][0],
+  };
+});
+
 module.exports = {
   registrarCambioTurno,
   eliminarCambioTurno,
   listarOverridesTurno,
+  aplicarBatchAsistencia,
   obtenerCapaTeoricaDia,
 };
