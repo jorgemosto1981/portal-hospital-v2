@@ -211,6 +211,36 @@ function resolveClasificacionDiaCalendario(fechaYmd, indiceCalendario) {
   };
 }
 
+function contarBloquesContinuos({ segmentos, personaId }) {
+  const pid = String(personaId || "").trim();
+  const propios = (Array.isArray(segmentos) ? segmentos : [])
+    .filter((s) => String(s?.persona_ejecutante_id || "").trim() === pid)
+    .sort((a, b) => String(a?.ingreso_iso || "").localeCompare(String(b?.ingreso_iso || "")));
+
+  let bloques = 0;
+  let ultimoEgreso = null;
+  for (const seg of propios) {
+    const ingreso = String(seg?.ingreso_iso || "");
+    const egreso = String(seg?.egreso_iso || "");
+    if (!ultimoEgreso || ultimoEgreso !== ingreso) {
+      bloques += 1;
+    }
+    ultimoEgreso = egreso;
+  }
+  return bloques;
+}
+
+function calcularFichadasEsperadas({ segmentos, personaId, expectativasFichadaExtra }) {
+  const extras = Array.isArray(expectativasFichadaExtra) ? expectativasFichadaExtra : [];
+  const bloquesContinuos = contarBloquesContinuos({ segmentos, personaId });
+  const fichadasBase = bloquesContinuos * 2;
+  const fichadasExtra = extras.reduce((acc, ex) => {
+    const n = Number(ex?.cantidad_fichadas_esperadas);
+    return acc + (Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0);
+  }, 0);
+  return fichadasBase + fichadasExtra;
+}
+
 /**
  * @param {object} params
  * @returns {object} capa_teorica segmentada
@@ -224,6 +254,7 @@ function buildCapaTeoricaSegmentada({
   origen_segmento,
   indiceCalendario,
   segmentosOverride,
+  expectativasFichadaExtra,
 }) {
   const clasif = resolveClasificacionDiaCalendario(fechaYmd, indiceCalendario);
   let segmentos = segmentosOverride;
@@ -238,6 +269,12 @@ function buildCapaTeoricaSegmentada({
   }
   const resumen = computeResumenDesdeSegmentos(segmentos || []);
   const primerSeg = segmentos?.[0];
+  const expectativas = Array.isArray(expectativasFichadaExtra) ? expectativasFichadaExtra : [];
+  const fichadasEsperadas = calcularFichadasEsperadas({
+    segmentos: segmentos || [],
+    personaId,
+    expectativasFichadaExtra: expectativas,
+  });
   return {
     fecha_base: fechaYmd,
     segmentos: segmentos || [],
@@ -248,7 +285,8 @@ function buildCapaTeoricaSegmentada({
     ingreso: primerSeg ? primerSeg.ingreso_iso.slice(11, 16) : null,
     egreso: primerSeg ? primerSeg.egreso_iso.slice(11, 16) : null,
     horas_efectivas: resumen.horas_teoricas_totales,
-    fichadas_esperadas: (segmentos?.length || 0) * 2,
+    expectativas_fichada_extra: expectativas,
+    fichadas_esperadas: fichadasEsperadas,
   };
 }
 
