@@ -556,25 +556,78 @@ Frontend local actualizado con mejoras de UI.
 
 ---
 
-## PUNTO DE PAUSA — 2026-05-26 19:25 ART
+## Auditoria y correcciones — 2026-05-26
+
+### Ola 1: Seguridad (RBAC) + Integridad (Transacciones) — COMPLETADA
+
+**Commit**: `9979829` | **Tag**: `v2-ola1-rbac-transacciones`
+
+- **assertPlanAuth(request, grupoId, accion)**: Helper RBAC en `helpers.js`. RRHH pasa siempre; aprobar/rechazar requiere `tiene_subordinados`; leer/guardar/enviar requiere HLG vigente en el grupo.
+- **assertOverrideAuth(request, targetPersonaId)**: RRHH pasa; actor sobre si mismo pasa; o actor es superior jerarquico en grupo comun.
+- **RBAC aplicado**: 8 callables de `planesTurnoServicio.js` + 3 de `cambiosTurno.js` (11 total).
+- **db.runTransaction()**: 5 transiciones de estado (enviar, aprobar, rechazar, revertir, cerrar). Estado se valida dentro de la transaccion. Operaciones pesadas (materializacion, overrides) fuera de la tx.
+- **Flag `runtimeFlags.OPEN_ACCESS_TEMP`** (false): bypass temporal para desarrollo.
+
+### Ola 2: Integridad de datos — COMPLETADA
+
+**Commit**: `a26fa35` | **Tag**: `v2-olas2-3-4-auditoria`
+
+- **C3 — Materializacion fallida post-aprobacion**: Si `materializarGrupoMes` falla, el plan se marca `materializacion_fallida: true` + warning al cliente. No falla silenciosamente.
+- **C4 — Race condition vis_* set**: Fallback usa `set({ merge: true })` para evitar sobreescritura entre workers paralelos.
+- **C5 — Unicidad grupo+periodo**: Dentro de la transaccion de aprobar, se valida que no exista otro plan HABILITADO para el mismo grupo+periodo. Error `PLT-APR-DUP`.
+- **I3 — cerrarPlanPerpetuo**: Re-materializa mes actual + siguiente (antes solo actual).
+- **I4 — observaciones_revision**: Se limpian al re-enviar (dentro de transaccion enviar).
+- **I5 — listarPlanesPendientesRrhh**: Queries con `.limit(200)` en Firestore.
+
+### Ola 3: Re-materializacion post-cambio de configuracion — COMPLETADA
+
+- **C6 — rematerializarPostCalendario** (nueva callable): RRHH invoca tras cambio de calendario institucional. Invalida cache + re-materializa todos los grupos activos (mes actual + siguiente). Timeout 540s.
+- **C7 — rematerializarPostRegimen** (nueva callable): RRHH invoca tras editar un regimen horario. Re-materializa solo los grupos que usan ese regimen (mes actual + siguiente).
+- Callables registradas en frontend (`callables.js`).
+
+### Ola 4: UX y limpieza tecnica — COMPLETADA
+
+- **M1 — Fix formato ingreso-egreso**: Nuevo campo `rda_ingreso` en vis_*. Calendarios muestran "08:00–14:00" (antes "M–14:00").
+- **M2 — Prop turnoTeorico conectada al modal**: `GrillaMesLicenciasPanel` pasa datos de turno teorico al `DiaGrillaDetalleModal`.
+- **M5 — BadgeEstadoPlan extraido**: Componente compartido en `components/ui/BadgeEstadoPlan.jsx`. Eliminada duplicacion.
+- **M6 — Modal revertir**: `window.prompt` reemplazado por modal propio con textarea y validacion.
+- **I8 — AUTORIZADO_SUPERIOR eliminado**: Schema Zod actualizado a `EN_REVISION`, helpContent corregido, acciones de aprobacion actualizadas.
+
+### Hallazgos de auditoria NO implementados (a futuro)
+
+- **I1**: `materializarTurnoTeoricoDia` es alias de `materializarTurnoMesBatch` — podria optimizarse para un solo dia.
+- **I2**: `rrhhDeshabilitarHlg` solo re-materializa mes actual (falta mes siguiente).
+- **I7**: Gates `grillaTurnoEntornoGate` y `turnoRegimenGate` con criterio divergente para EN_REVISION.
+- **M3**: Touch targets por debajo de 44px en GrillaMensualEditor y GrillaMesEquipoTabla.
+- **M4**: Boton "quitar agente" invisible en mobile (opacity-0 group-hover).
+
+---
+
+## PUNTO DE PAUSA — 2026-05-26 21:18 ART
 
 ### Estado actual
 
-- **Backend**: Todas las fases (0-5) code-complete + 4 bugfixes criticos aplicados y deployados.
-- **Frontend**: Todo deployado a hosting (calendario, equipo, multi-HLG, bandeja RRHH separada).
-- **Maquina de estados**: Simplificada (ENVIADO->HABILITADO directo), EN_REVISION + revertir RRHH, bandeja RRHH en menu propio.
+- **Backend**: Fases 0-5 completas + auditoria 4 olas completas. 74 Cloud Functions desplegadas (2 nuevas: rematerializarPostCalendario, rematerializarPostRegimen).
+- **Frontend**: Todo deployado a hosting. Calendario con ingreso-egreso, modal con turno teorico, BadgeEstado compartido, modal de revertir.
+- **Maquina de estados**: BORRADOR -> ENVIADO -> HABILITADO, EN_REVISION (RRHH revierte). Sin AUTORIZADO_SUPERIOR.
+- **RBAC**: 11 callables protegidas (assertPlanAuth + assertOverrideAuth).
+- **Transacciones**: 5 transiciones de estado atomicas.
+- **Re-materializacion**: Callables disponibles para RRHH post-cambio calendario/regimen.
 
-### Verificaciones completadas (2026-05-26)
+### Commits de esta sesion
 
-1. **Fusion multi-HLG**: OK — ambos grupos visibles en calendario.
-2. **Detalle dia**: OK — modal muestra grupo_de_trabajo_id del HLG asignante.
-3. **Vista equipo**: OK — encabezados dia semana + turnos correctos.
-4. **Test Gate 1 (licencias)**: OK — solicitud sol_01KSK6BYQJ0CENWQR8EG8RPHPA registrada exitosamente con `depende_rda=true`. La `capa_teorica` materializada desbloqueo el gate.
+| Commit | Tag | Descripcion |
+|--------|-----|-------------|
+| `5c3cbc2` | `v2-capa-teorica-pre-ola1` | Bandeja RRHH + rediseno maquina de estados |
+| `9979829` | `v2-ola1-rbac-transacciones` | Ola 1: RBAC + transacciones (9 callables) |
+| `a26fa35` | `v2-olas2-3-4-auditoria` | Olas 2-4: integridad, re-materializacion, UX |
 
 ### Verificaciones pendientes
 
-5. **Test regimen planificado**: Crear plan mensual para un grupo -> aprobar -> confirmar materializacion.
-6. **Limpieza**: Los documentos `vis_*` pueden tener campos literales planos residuales de BUG-2 (ej. `"dias.01.rda_turno_id"` como key plana). Evaluar si limpiar manualmente o ignorar (no afectan lectura porque el frontend lee la estructura anidada).
+1. **Test regimen planificado**: Crear plan mensual -> aprobar -> confirmar materializacion + unicidad.
+2. **Limpieza datos residuales**: vis_* con campos literales planos de BUG-2.
+3. **Test RBAC**: Verificar que un usuario sin permisos no pueda aprobar/rechazar planes de otro grupo.
+4. **Test re-materializacion**: Invocar `rematerializarPostCalendario` y confirmar propagacion.
 
 ### Usuario de test
 
@@ -582,13 +635,12 @@ Frontend local actualizado con mejoras de UI.
 - **persona_id**: per_01KQN9WXFXF69Z9DCT5YNJ3TFZ
 - **HLG Oficina Personal**: hlg_01KQPW6YH9T31JBQHYKGXWH5RW (fijo Lun-Mie)
 - **HLG Porteria**: hlg_01KQYMY313QPZQ957WQZZYRX4K (fijo Jue-Vie)
-- **HLC**: 30hs semanales (25hs Oficina + 10hs Porteria = 35hs con warning desvio)
 
 ---
 
 ## Fuera de alcance
 
 - Acumulacion de horas semanales/mensuales en grilla
-- Re-materializacion por cambio de calendario institucional (job batch manual)
 - Campos `banda_ingreso` / `banda_egreso` en UI
 - Fichadas reales (capa de control vs capa teorica)
+- Touch targets M3/M4 (mejora mobile pendiente)
