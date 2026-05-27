@@ -59,7 +59,7 @@ function diffDays(from, to) {
  */
 function cruzaMedianoche(turno) {
   if (!turno || !turno.ingreso || !turno.egreso) return false;
-  return turno.egreso <= turno.ingreso && turno.egreso !== "00:00";
+  return turno.egreso <= turno.ingreso;
 }
 
 /**

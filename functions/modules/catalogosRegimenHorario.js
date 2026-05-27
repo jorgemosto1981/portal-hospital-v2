@@ -19,6 +19,10 @@ function assertHHMM(val, campo) {
   if (typeof val !== "string" || !HH_MM_RE.test(val)) err("invalid-argument", `${campo}: formato HH:MM requerido.`);
 }
 
+function assertNoMedianoche(val, campo) {
+  if (val === "00:00") err("invalid-argument", `${campo}: 00:00 no está permitido en regímenes.`);
+}
+
 function assertNumRange(val, campo, min, max, nullable = false) {
   if (nullable && (val === null || val === undefined)) return;
   if (typeof val !== "number" || val < min || val > max) err("invalid-argument", `${campo}: número entre ${min} y ${max}.`);
@@ -59,6 +63,8 @@ function validarTurno(t, path) {
   if (typeof t !== "object") err("invalid-argument", `${path}: objeto turno requerido.`);
   assertHHMM(t.ingreso, `${path}.ingreso`);
   assertHHMM(t.egreso, `${path}.egreso`);
+  assertNoMedianoche(t.ingreso, `${path}.ingreso`);
+  assertNoMedianoche(t.egreso, `${path}.egreso`);
   assertNumRange(t.horas_efectivas, `${path}.horas_efectivas`, 0, 24);
   const es_nocturno = t.es_nocturno === true;
   const tolerancia_ingreso_min = typeof t.tolerancia_ingreso_min === "number" ? t.tolerancia_ingreso_min : 0;
@@ -130,6 +136,8 @@ function validarTurnoDisponible(d, idx) {
   assertStr(d.etiqueta, `${p}.etiqueta`, 50);
   assertHHMM(d.ingreso, `${p}.ingreso`);
   assertHHMM(d.egreso, `${p}.egreso`);
+  assertNoMedianoche(d.ingreso, `${p}.ingreso`);
+  assertNoMedianoche(d.egreso, `${p}.egreso`);
   assertNumRange(d.horas_efectivas, `${p}.horas_efectivas`, 0, 24);
   const es_nocturno = d.es_nocturno === true;
   const tolerancia_ingreso_min = typeof d.tolerancia_ingreso_min === "number" ? d.tolerancia_ingreso_min : 0;

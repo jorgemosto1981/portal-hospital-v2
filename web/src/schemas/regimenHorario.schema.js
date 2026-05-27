@@ -13,6 +13,9 @@ export const cfgRegHorIdSchema = z.string().regex(new RegExp(`^CFG_REG_HOR_${ULI
 
 const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const hhmmSchema = z.string().regex(HH_MM);
+const hhmmNoMedianocheSchema = hhmmSchema.refine((v) => v !== "00:00", {
+  message: "00:00 no está permitido en regímenes",
+});
 
 const bandaHorariaSchema = z
   .object({
@@ -31,8 +34,8 @@ const descansoSchema = z
 
 export const turnoSchema = z
   .object({
-    ingreso: hhmmSchema,
-    egreso: hhmmSchema,
+    ingreso: hhmmNoMedianocheSchema,
+    egreso: hhmmNoMedianocheSchema,
     horas_efectivas: z.number().min(0).max(24),
     es_nocturno: z.boolean().default(false),
     tolerancia_ingreso_min: z.number().int().min(0).max(60).default(0),
@@ -80,8 +83,8 @@ const turnoDisponibleSchema = z
   .object({
     turno_id: z.string().min(1).max(10),
     etiqueta: z.string().min(1).max(50),
-    ingreso: hhmmSchema,
-    egreso: hhmmSchema,
+    ingreso: hhmmNoMedianocheSchema,
+    egreso: hhmmNoMedianocheSchema,
     horas_efectivas: z.number().min(0).max(24),
     es_nocturno: z.boolean().default(false),
     tolerancia_ingreso_min: z.number().int().min(0).max(60).default(0),

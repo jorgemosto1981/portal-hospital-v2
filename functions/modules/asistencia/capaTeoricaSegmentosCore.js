@@ -112,7 +112,7 @@ function buildSegmentosDesdeTurnoCompuesto({
   for (const segId of ids) {
     const turno = buscarTurnoEnRegimen(regimen, segId);
     if (!turno || !turno.ingreso || !turno.egreso) continue;
-    const cruza = turno.egreso <= turno.ingreso && turno.egreso !== "00:00";
+    const cruza = turno.egreso <= turno.ingreso;
     const extraEnd = cruza ? 1 : 0;
     const ingresoIso = ymdHoraToIso(fechaYmd, turno.ingreso, 0);
     const egresoIso = ymdHoraToIso(fechaYmd, turno.egreso, extraEnd);

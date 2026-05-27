@@ -64,6 +64,9 @@ describe("cruzaMedianoche", () => {
   it("guardia 24h cruza (08-08)", () => {
     assert.equal(cruzaMedianoche({ ingreso: "08:00", egreso: "08:00" }), true);
   });
+  it("egreso 00:00 cruza si inicia antes (22-00)", () => {
+    assert.equal(cruzaMedianoche({ ingreso: "22:00", egreso: "00:00" }), true);
+  });
   it("null no cruza", () => {
     assert.equal(cruzaMedianoche(null), false);
   });

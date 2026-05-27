@@ -609,6 +609,14 @@ export default function RegimenHorarioForm({ modo, item, guardando, onGuardar, o
           {errorApi && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{errorApi}</div>
           )}
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+            <p className="font-medium">Nota sobre horarios</p>
+            <p className="mt-1">
+              Para evitar inconsistencias de cruce de día, no se permite usar <span className="font-mono">00:00</span> en ingreso o egreso.
+              Si un turno finaliza en medianoche, cargalo como <span className="font-mono">23:59</span> o redefiní el tramo según la regla operativa.
+            </p>
+          </div>
         </div>
 
         {/* Footer */}
