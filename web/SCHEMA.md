@@ -82,3 +82,13 @@ Campos obligatorios en create: `version_id_aplicada`, `grupo_trabajo_id_ancla`, 
 | Impresión / PDF | `ayudaPatronesBolsaPrint.css` · `window.print()` |
 
 Al cambiar textos de ayuda: editar `ayudaPatronesBolsaSaldo.js` y, si aplica, reflejar en RFC §7 / `GUIA_RRHH_SALDOS_V2.md`.
+
+## 8. Capa teorica segmentada — turnos compuestos V2
+
+| Tema | Ubicacion |
+|------|-----------|
+| RFC | [`docs/v2/CAPA_TEORICA_SEGMENTOS_V2.md`](../docs/v2/CAPA_TEORICA_SEGMENTOS_V2.md) |
+| Tag git | `v2.0.0-rfc-turnos-compuestos` |
+| Zod | `web/src/schemas/capaTeoricaSegmentos.schema.js` |
+| Manifiesto cfg ids | `scripts/seed-v2/seed-ids-asistencia-turnos.v2.json` |
+| Backend ids | `functions/modules/shared/cfgAsistenciaTurnosIds.js` |
