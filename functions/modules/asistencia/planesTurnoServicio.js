@@ -16,6 +16,7 @@ const {
   assertPlanAprobarORechazar,
 } = require("./planAutorizacionJerarquica");
 const { materializarGrupoMes } = require("./rdaTurnoTeoricoWorker");
+const { construirGrillaAprobada } = require("./planGrillaAprobadaBuilder");
 const { logger } = require("firebase-functions/v2");
 const { buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
 const { COL_VISTAS_GRILLA_MES } = require("../shared/mdcComandosConstants");
@@ -361,7 +362,16 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
     const [anio, mes] = plan.periodo.split("-").map(Number);
     try {
       await materializarGrupoMes({ grupoId: plan.grupo_id, anio, mes });
-      logger.info("materializarGrupoMes_post_aprobar OK", { planId });
+      const planSnap = await ref.get();
+      const planActual = planSnap.exists ? planSnap.data() : plan;
+      const grillaAprobada = await construirGrillaAprobada({ plan: planActual, planId });
+      if (grillaAprobada) {
+        await ref.update({
+          grilla_aprobada: grillaAprobada,
+          grilla_aprobada_en: FieldValue.serverTimestamp(),
+        });
+      }
+      logger.info("materializarGrupoMes_post_aprobar OK", { planId, grilla_agentes: grillaAprobada?.agentes?.length || 0 });
     } catch (e) {
       logger.error("materializarGrupoMes_post_aprobar ERROR", { planId, error: String(e) });
       const ref2 = db.collection(COL_PLANES).doc(planId);
@@ -1098,6 +1108,48 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
   };
 });
 
+/**
+ * Vista unificada de plan mensual: lectura de grilla_aprobada (SoT histórico).
+ * Lazy backfill si HABILITADO sin snapshot (planes legacy).
+ */
+const obtenerVistaPlanTurnoServicio = onCall({ invoker: "public" }, async (request) => {
+  const planId = request.data && typeof request.data.plan_id === "string" ? request.data.plan_id.trim() : "";
+  if (!planId) err("invalid-argument", "[PLT-VST-001] plan_id requerido.");
+
+  const ref = db.collection(COL_PLANES).doc(planId);
+  const snap = await ref.get();
+  if (!snap.exists) err("not-found", "[PLT-VST-002] Plan no encontrado.");
+  const data = snap.data() || {};
+  if (data.eliminado === true) err("not-found", "[PLT-VST-003] Plan eliminado.");
+
+  let grillaAprobada = data.grilla_aprobada || null;
+  if (data.tipo_plan === "mensual" && data.estado === "HABILITADO" && !grillaAprobada) {
+    grillaAprobada = await construirGrillaAprobada({ plan: data, planId });
+    if (grillaAprobada) {
+      await ref.update({
+        grilla_aprobada: grillaAprobada,
+        grilla_aprobada_en: FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  return {
+    plan: {
+      id: snap.id,
+      tipo_plan: data.tipo_plan,
+      estado: data.estado,
+      grupo_id: data.grupo_id,
+      grupo_label: data.grupo_label || null,
+      periodo: data.periodo || null,
+      materializacion_fallida: data.materializacion_fallida === true,
+      historial_aprobaciones: data.historial_aprobaciones || [],
+      observaciones_rechazo: data.observaciones_rechazo || null,
+      grilla_aprobada_en: data.grilla_aprobada_en || null,
+    },
+    grilla_aprobada: grillaAprobada,
+  };
+});
+
 module.exports = {
   guardarPlanTurnoServicio,
   enviarPlanTurnoServicio,
@@ -1109,4 +1161,5 @@ module.exports = {
   listarPlanesTurnoServicio,
   listarPlanesPendientesRrhh,
   listarContextoPlanGrupo,
+  obtenerVistaPlanTurnoServicio,
 };

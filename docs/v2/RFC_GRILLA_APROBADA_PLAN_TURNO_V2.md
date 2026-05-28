@@ -1,7 +1,8 @@
 ---
 name: Grilla aprobada en plan turno servicio
-status: aprobado-implementacion
+status: implementado
 tag_checkpoint: v2-pre-grilla-aprobada-plt
+tag_release: v2-grilla-aprobada-plt
 ---
 
 # RFC — `grilla_aprobada` en `planes_turno_servicio`

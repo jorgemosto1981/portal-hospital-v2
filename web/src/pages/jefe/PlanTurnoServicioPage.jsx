@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Card from "../../components/ui/Card.jsx";
 import {
   callListarPlanesTurnoServicio,
-  callListarContextoPlanGrupo,
+  callObtenerVistaPlanTurnoServicio,
   callGuardarPlanTurnoServicio,
   callEnviarPlanTurnoServicio,
   callAprobarPlanTurnoServicio,
@@ -11,8 +11,7 @@ import {
   callCerrarPlanPerpetuo,
   callResolverContextoLaboralSolicitud,
 } from "../../services/callables.js";
-import { etiquetaCeldaPlanDisplay, claseCeldaPlanDisplay } from "../../features/planes/planGrillaCeldaDisplay.js";
-import { diasEnMes } from "../../features/grilla/grillaMesCellUtils.js";
+import PlanGrillaAprobadaTable from "../../features/planes/PlanGrillaAprobadaTable.jsx";
 import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
@@ -36,28 +35,6 @@ function planCanonicaGrupo(items) {
 
 function estadoPrincipalGrupo(items) {
   return planCanonicaGrupo(items)?.estado || "SIN_PLAN";
-}
-
-function diasYmdPeriodo(periodo) {
-  const m = /^(\d{4})-(\d{2})$/.exec(String(periodo || "").trim());
-  if (!m) return [];
-  const anio = Number(m[1]);
-  const mes = Number(m[2]);
-  const n = diasEnMes(anio, mes);
-  const out = [];
-  for (let d = 1; d <= n; d += 1) {
-    out.push(`${periodo}-${String(d).padStart(2, "0")}`);
-  }
-  return out;
-}
-
-function columnasPlanMensual(plan) {
-  const set = new Set(diasYmdPeriodo(plan?.periodo));
-  for (const ag of plan?.agentes || []) {
-    const dias = ag?.dias && typeof ag.dias === "object" ? Object.keys(ag.dias) : [];
-    dias.forEach((d) => set.add(d));
-  }
-  return [...set].sort();
 }
 
 function estiloTarjetaGrupo(estado, activo) {
@@ -224,7 +201,8 @@ export default function PlanTurnoServicioPage() {
   const [feedback, setFeedback] = useState("");
   const [planEdicion, setPlanEdicion] = useState(null);
   const [planDetalle, setPlanDetalle] = useState(null);
-  const [planDetalleRegimenes, setPlanDetalleRegimenes] = useState({});
+  const [planDetalleGrilla, setPlanDetalleGrilla] = useState(null);
+  const [planDetalleLoading, setPlanDetalleLoading] = useState(false);
   const [planOpciones, setPlanOpciones] = useState(null);
   const [operando, setOperando] = useState(false);
   const [gruposDisponibles, setGruposDisponibles] = useState([]);
@@ -235,16 +213,18 @@ export default function PlanTurnoServicioPage() {
 
   const abrirPlanDetalle = useCallback(async (plan) => {
     setPlanDetalle(plan);
-    setPlanDetalleRegimenes({});
-    if (plan?.tipo_plan !== "mensual" || !plan?.grupo_id || !plan?.periodo) return;
+    setPlanDetalleGrilla(null);
+    if (plan?.tipo_plan !== "mensual") return;
+    setPlanDetalleLoading(true);
     try {
-      const res = await callListarContextoPlanGrupo({
-        grupo_id: plan.grupo_id,
-        periodo: plan.periodo,
-      });
-      setPlanDetalleRegimenes(res.data?.regimenes || {});
+      const res = await callObtenerVistaPlanTurnoServicio({ plan_id: plan.id });
+      const data = res.data || {};
+      if (data.plan) setPlanDetalle((prev) => ({ ...prev, ...data.plan, id: plan.id }));
+      setPlanDetalleGrilla(data.grilla_aprobada || null);
     } catch {
-      setPlanDetalleRegimenes({});
+      setPlanDetalleGrilla(null);
+    } finally {
+      setPlanDetalleLoading(false);
     }
   }, []);
 
@@ -695,13 +675,13 @@ export default function PlanTurnoServicioPage() {
 
       {/* Modal detalle read-only */}
       {planDetalle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={() => { setPlanDetalle(null); setPlanDetalleRegimenes({}); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={() => { setPlanDetalle(null); setPlanDetalleGrilla(null); }}>
           <div className="relative flex h-[96vh] w-[98vw] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="px-6 pt-6 text-lg font-semibold text-slate-900">
                 Detalle del plan <span className="font-mono text-sm text-slate-500">{planDetalle.id}</span>
               </h2>
-              <button onClick={() => { setPlanDetalle(null); setPlanDetalleRegimenes({}); }} className="mr-6 mt-6 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+              <button onClick={() => { setPlanDetalle(null); setPlanDetalleGrilla(null); }} className="mr-6 mt-6 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -722,46 +702,22 @@ export default function PlanTurnoServicioPage() {
                   <p>{planDetalle.observaciones_rechazo}</p>
                 </div>
               )}
-              {planDetalle.tipo_plan === "mensual" && planDetalle.agentes?.length > 0 && (
+              {planDetalle.tipo_plan === "mensual" && (
                 <div className="mt-4">
-                  <h3 className="mb-2 text-sm font-semibold text-slate-800">Grilla de asignaciones</h3>
-                  <div className="overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm">
-                    <table className="min-w-full border-collapse text-xs">
-                      <thead>
-                        <tr>
-                          <th className="h-9 min-w-[14rem] border border-slate-300 bg-slate-100 px-2 py-1 text-left font-semibold text-slate-700">Agente</th>
-                          {columnasPlanMensual(planDetalle).map((d) => (
-                            <th key={d} className="h-9 border border-slate-300 bg-slate-100 px-1 py-1 text-center font-semibold text-slate-600">{d.slice(-2)}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y-2 divide-slate-300">
-                        {planDetalle.agentes.map((ag) => (
-                          <tr key={ag.persona_id}>
-                            <td className="whitespace-nowrap border border-slate-300 bg-white px-2 py-2 font-medium text-slate-800">{labelAgentePlan(ag)}</td>
-                            {columnasPlanMensual(planDetalle).map((d) => {
-                              const regimen = planDetalleRegimenes[ag.regimen_horario_id] || null;
-                              const hlgMeta = { regimen_fecha_ancla: ag.regimen_fecha_ancla || null };
-                              const etiqueta = etiquetaCeldaPlanDisplay({
-                                celdaPlan: ag?.dias?.[d],
-                                regimen,
-                                ymd: d,
-                                hlgMeta,
-                              });
-                              return (
-                                <td
-                                  key={d}
-                                  className={`h-9 border border-slate-300 px-1 py-1 text-center text-[10px] leading-tight ${claseCeldaPlanDisplay(ag?.dias?.[d], regimen, d, hlgMeta)}`}
-                                >
-                                  {etiqueta || "—"}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <h3 className="mb-2 text-sm font-semibold text-slate-800">Grilla aprobada (histórico)</h3>
+                  {planDetalleLoading ? (
+                    <p className="text-sm text-slate-600">Cargando grilla aprobada…</p>
+                  ) : (
+                    <PlanGrillaAprobadaTable
+                      grillaAprobada={planDetalleGrilla}
+                      labelsPorPersona={Object.fromEntries(
+                        (planDetalle.agentes || []).map((ag) => [
+                          ag.persona_id,
+                          { nombre: ag.nombre || ag.nombre_completo, dni: ag.dni },
+                        ]),
+                      )}
+                    />
+                  )}
                 </div>
               )}
               {planDetalle.historial_aprobaciones?.length > 0 && (

@@ -79,11 +79,47 @@ export const planPerpetualSchema = camposComunesPlanSchema
   })
   .strict();
 
+const celdaGrillaAprobadaSchema = z
+  .object({
+    tipo_dia: z.string(),
+    turno_id: z.string().nullable().optional(),
+    turno_compuesto_id: z.string().nullable().optional(),
+    ingreso: z.string().nullable().optional(),
+    egreso: z.string().nullable().optional(),
+    ingreso_iso: z.string().nullable().optional(),
+    egreso_iso: z.string().nullable().optional(),
+    es_franco: z.boolean().optional(),
+    es_feriado: z.boolean().optional(),
+    clasificacion_dia_calendario_id: z.string().nullable().optional(),
+    fichadas_esperadas: z.number().nullable().optional(),
+    segmentos: z.array(z.record(z.string(), z.unknown())).optional(),
+  })
+  .passthrough();
+
+export const grillaAprobadaSchema = z
+  .object({
+    version: z.literal(1),
+    periodo: z.string().regex(PERIODO),
+    grupo_id: z.string().nullable().optional(),
+    materializado_en: z.string(),
+    agentes: z.array(
+      z.object({
+        persona_id: z.string().min(1),
+        regimen_horario_id: z.string().min(1),
+        hlg_id: z.string().nullable().optional(),
+        dias: z.record(z.string().regex(YMD), celdaGrillaAprobadaSchema),
+      }),
+    ),
+  })
+  .strict();
+
 export const planMensualSchema = camposComunesPlanSchema
   .extend({
     tipo_plan: z.literal("mensual"),
     periodo: z.string().regex(PERIODO),
     agentes: z.array(agenteGrillaMensualSchema).min(1),
+    grilla_aprobada: grillaAprobadaSchema.optional(),
+    grilla_aprobada_en: z.unknown().optional(),
   })
   .strict();
 

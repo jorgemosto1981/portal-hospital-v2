@@ -341,6 +341,11 @@ export function callListarContextoPlanGrupo(data) {
   return httpsCallable(getFunctionsV2(), "listarContextoPlanGrupo")(data);
 }
 
+/** Vista unificada de plan (grilla_aprobada SoT para VER plan). */
+export function callObtenerVistaPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerVistaPlanTurnoServicio")(data);
+}
+
 /** Registrar override puntual en asistencia_diaria. */
 export function callRegistrarCambioTurno(data) {
   return httpsCallable(getFunctionsV2(), "registrarCambioTurno")(data);

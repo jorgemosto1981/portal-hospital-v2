@@ -795,4 +795,5 @@ module.exports = {
   materializarGrupoMes,
   materializarTurnoTeoricoDia,
   diasDelMes,
+  resolverDiaConPreCarga,
 };
