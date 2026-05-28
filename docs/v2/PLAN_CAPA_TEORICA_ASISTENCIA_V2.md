@@ -77,6 +77,8 @@ todos:
 isProject: false
 ---
 
+> **Continuidad (28/05/2026):** snapshot histórico del plan aprobado en `planes_turno_servicio.grilla_aprobada` — ver [`RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md`](./RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md) y [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) (matriz control asi/vis vs VER plan antes de fichadas).
+
 
 # Plan Maestro: Capa Teorica de Asistencia
 

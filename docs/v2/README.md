@@ -11,6 +11,8 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | **[`ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md`](./ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md)** | **Entrada principal:** RDA, MDC, GSO, fusión 1:N, turnos nocturnos, jerarquía de verdad, identificadores y principios transversales |
 | **[`CAPA_TEORICA_SEGMENTOS_V2.md`](./CAPA_TEORICA_SEGMENTOS_V2.md)** | **RFC aprobado** — turnos compuestos, segmentos SoT, cobertura parcial (tag `v2.0.0-rfc-turnos-compuestos`) |
 | **[`RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md`](./RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md)** | Snapshot `grilla_aprobada` en `plt_*` al habilitar; lectura unificada VER plan vs capa operativa `asi_*`/`vis_*` |
+| **[`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md)** | **RETOMAR AQUÍ** — control turno en todas las vistas; matriz asi/vis vs plan; piloto `plt_01KSR8…` |
+| [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) | Índice corto → handoff 28/05 |
 | [`DICCIONARIO_CFG_ASISTENCIA_TURNOS_V2.md`](./DICCIONARIO_CFG_ASISTENCIA_TURNOS_V2.md) | Catálogos `cfg_tcc_*`, `cfg_epl_*`, `cfg_cdc_*`, manifiesto ids |
 | [`EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md`](./EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md) | Fórmula fichadas esperadas + salida momentánea |
 | [`RFC_CIERRE_PERIODO_LIQUIDACION_V2.md`](./RFC_CIERRE_PERIODO_LIQUIDACION_V2.md) | Freeze período liquidación en `vis_*` |

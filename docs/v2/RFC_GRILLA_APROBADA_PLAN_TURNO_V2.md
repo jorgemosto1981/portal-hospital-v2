@@ -103,6 +103,10 @@ Extremo opuesto al `plt_*` aprobado: **cierre mensual RRHH** sobre realidad cons
 - Cliente: **no** puede escribir `grilla_aprobada` (solo callables Admin SDK).
 - `estado` HABILITADO: update de campos de gobernanza limitados; `grilla_aprobada` solo backend.
 
+## Próxima sesión (QA)
+
+Control del piloto en todas las pantallas y colecciones: [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) — matriz de 10 ítems (VER plan vs `asi_*` vs `vis_*` vs grilla operativa antes de fichadas reales).
+
 ## Referencias
 
 - [`PLAN_REGIMEN_HORARIO_V2.md`](./PLAN_REGIMEN_HORARIO_V2.md) — gobernanza `planes_turno_servicio`
