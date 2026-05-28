@@ -4,11 +4,12 @@ import Card from "../../components/ui/Card.jsx";
 import BadgeEstadoPlan from "../../components/ui/BadgeEstadoPlan.jsx";
 import {
   callListarPlanesTurnoServicio,
-  callObtenerVistaPlanTurnoServicio,
   callRevertirPlanTurnoServicio,
   callEliminarPlanTurnoServicio,
 } from "../../services/callables.js";
+import PlanGrillaVistaModal from "../../features/planes/PlanGrillaVistaModal.jsx";
 import PlanGrillaAprobadaTable from "../../features/planes/PlanGrillaAprobadaTable.jsx";
+import { useVistaPlanTurno } from "../../features/planes/useVistaPlanTurno.js";
 import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
 
 function etiquetaGrupo(row) {
@@ -136,8 +137,6 @@ export default function ExploradorTurnosRrhhPage() {
   const [feedback, setFeedback] = useState("");
   const [operando, setOperando] = useState(false);
   const [planVista, setPlanVista] = useState(null);
-  const [planVistaGrilla, setPlanVistaGrilla] = useState(null);
-  const [planVistaLoading, setPlanVistaLoading] = useState(false);
   const [planDetalle, setPlanDetalle] = useState(null);
   const [modalRevertir, setModalRevertir] = useState(null);
   const [obsRevertir, setObsRevertir] = useState("");
@@ -153,22 +152,30 @@ export default function ExploradorTurnosRrhhPage() {
     setTimeout(() => setFeedback(""), 5000);
   };
 
-  const abrirGrillaPlan = useCallback(async (plan) => {
-    setPlanVista(plan);
-    setPlanVistaGrilla(null);
-    if (plan?.tipo_plan !== "mensual") return;
-    setPlanVistaLoading(true);
-    try {
-      const res = await callObtenerVistaPlanTurnoServicio({ plan_id: plan.id });
-      const data = res.data || {};
-      if (data.plan) setPlanVista((prev) => ({ ...prev, ...data.plan }));
-      setPlanVistaGrilla(data.grilla_aprobada || null);
-    } catch (e) {
-      showFeedback(e?.message || "No se pudo cargar la grilla aprobada del plan.");
-    } finally {
-      setPlanVistaLoading(false);
+  const labelsDesdePlan = useCallback((p) => {
+    const out = {};
+    for (const ag of p?.agentes || []) {
+      if (!ag.persona_id) continue;
+      out[ag.persona_id] = {
+        nombre: ag.nombre || ag.nombre_completo || ag.persona_label,
+        dni: ag.dni || ag.persona_dni,
+      };
     }
+    return out;
   }, []);
+
+  const labelsVistaExtra = useMemo(() => labelsDesdePlan(planVista), [planVista, labelsDesdePlan]);
+  const labelsDetalleExtra = useMemo(() => labelsDesdePlan(planDetalle), [planDetalle, labelsDesdePlan]);
+
+  const {
+    loading: detalleGrillaLoading,
+    grillaAprobada: detalleGrilla,
+    labelsPorPersona: detalleGrillaLabels,
+    error: detalleGrillaError,
+  } = useVistaPlanTurno(
+    planDetalle?.tipo_plan === "mensual" ? planDetalle.id : null,
+    Boolean(planDetalle?.tipo_plan === "mensual" && modalTab === "grilla"),
+  );
 
   const cargarGrupos = useCallback(async () => {
     if (grupos.length > 0) return;
@@ -463,7 +470,7 @@ export default function ExploradorTurnosRrhhPage() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => void abrirGrillaPlan(plan)}
+                    onClick={() => setPlanVista(plan)}
                     className="min-h-11 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
                   >
                     VER
@@ -531,46 +538,11 @@ export default function ExploradorTurnosRrhhPage() {
       )}
 
       {planVista && (
-        <div className="fixed inset-0 z-50 bg-black/50 p-2 md:p-4" onClick={() => setPlanVista(null)}>
-          <div className="mx-auto flex h-full w-full max-w-[98vw] flex-col rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <header className="flex items-start justify-between border-b border-slate-200 px-4 py-3">
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">Grilla del turno</h3>
-                <p className="text-xs text-slate-500">
-                  {planVista.id} · {planVista.grupo_label || planVista.grupo_id} · {planVista.periodo || "Perpetuo"}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPlanVista(null)}
-                className="rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
-              >
-                Cerrar
-              </button>
-            </header>
-            <div className="flex-1 overflow-auto p-4">
-              {planVista.tipo_plan !== "mensual" ? (
-                <Card className="px-4 py-6 text-center">
-                  <p className="text-sm text-slate-600">
-                    Este plan es perpetuo y no trae grilla mensual de días en el payload actual.
-                  </p>
-                </Card>
-              ) : planVistaLoading ? (
-                <p className="text-sm text-slate-600">Cargando grilla aprobada…</p>
-              ) : (
-                <PlanGrillaAprobadaTable
-                  grillaAprobada={planVistaGrilla}
-                  labelsPorPersona={Object.fromEntries(
-                    (planVista.agentes || []).map((ag) => [
-                      ag.persona_id,
-                      { nombre: ag.nombre || ag.nombre_completo, dni: ag.dni },
-                    ]),
-                  )}
-                />
-              )}
-            </div>
-          </div>
-        </div>
+        <PlanGrillaVistaModal
+          plan={planVista}
+          labelsExtra={labelsVistaExtra}
+          onClose={() => setPlanVista(null)}
+        />
       )}
 
       {planDetalle && (
@@ -587,6 +559,7 @@ export default function ExploradorTurnosRrhhPage() {
               <div className="flex flex-wrap gap-2">
                 {[
                   { id: "resumen", label: "Resumen" },
+                  { id: "grilla", label: "Grilla" },
                   { id: "agentes", label: "Agentes" },
                   { id: "historial", label: "Historial" },
                 ].map((t) => (
@@ -643,6 +616,22 @@ export default function ExploradorTurnosRrhhPage() {
                     )}
                   </Card>
                 </>
+              )}
+
+              {modalTab === "grilla" && planDetalle.tipo_plan === "mensual" && (
+                <Card className="px-4 py-3">
+                  <h4 className="mb-2 text-sm font-semibold text-slate-800">Grilla del plan (documento aprobado)</h4>
+                  {detalleGrillaLoading ? (
+                    <p className="text-sm text-slate-600">Cargando…</p>
+                  ) : detalleGrillaError ? (
+                    <p className="text-sm text-red-700">{detalleGrillaError}</p>
+                  ) : (
+                    <PlanGrillaAprobadaTable
+                      grillaAprobada={detalleGrilla}
+                      labelsPorPersona={{ ...labelsDetalleExtra, ...detalleGrillaLabels }}
+                    />
+                  )}
+                </Card>
               )}
 
               {modalTab === "agentes" && (

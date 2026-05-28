@@ -1123,15 +1123,24 @@ const obtenerVistaPlanTurnoServicio = onCall({ invoker: "public" }, async (reque
   if (data.eliminado === true) err("not-found", "[PLT-VST-003] Plan eliminado.");
 
   let grillaAprobada = data.grilla_aprobada || null;
-  if (data.tipo_plan === "mensual" && data.estado === "HABILITADO" && !grillaAprobada) {
+  let esSnapshotPersistido = Boolean(grillaAprobada);
+
+  if (data.tipo_plan === "mensual" && !grillaAprobada) {
     grillaAprobada = await construirGrillaAprobada({ plan: data, planId });
-    if (grillaAprobada) {
+    if (grillaAprobada && data.estado === "HABILITADO") {
       await ref.update({
         grilla_aprobada: grillaAprobada,
         grilla_aprobada_en: FieldValue.serverTimestamp(),
       });
+      esSnapshotPersistido = true;
     }
   }
+
+  const agentesMeta = (data.agentes || []).map((ag) => ({
+    persona_id: ag.persona_id,
+    nombre: ag.nombre || ag.nombre_completo || ag.persona_label || null,
+    dni: ag.dni || ag.persona_dni || null,
+  }));
 
   return {
     plan: {
@@ -1145,8 +1154,10 @@ const obtenerVistaPlanTurnoServicio = onCall({ invoker: "public" }, async (reque
       historial_aprobaciones: data.historial_aprobaciones || [],
       observaciones_rechazo: data.observaciones_rechazo || null,
       grilla_aprobada_en: data.grilla_aprobada_en || null,
+      es_snapshot_persistido: esSnapshotPersistido,
     },
     grilla_aprobada: grillaAprobada,
+    agentes_meta: agentesMeta,
   };
 });
 

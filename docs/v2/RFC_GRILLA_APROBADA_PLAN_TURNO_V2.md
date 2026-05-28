@@ -83,11 +83,16 @@ Si materialización falla: `materializacion_fallida: true` y **no** se escribe `
 - Planes legacy HABILITADO sin snapshot: el callable puede **generar y persistir** una vez (lazy backfill administrativo).
 - Scripts ops: `scripts/backfill-grilla-aprobada-plan.mjs <plt_id>`.
 
-## UI
+## UI (lectura unificada)
 
-- Componente compartido `PlanGrillaAprobadaTable` — solo props desde `grilla_aprobada`.
-- Explorador RRHH, detalle jefe, bandeja: **VER** → solo `obtenerVistaPlanTurnoServicio`.
-- Grillas operativas (`/portal/grilla`, equipo): siguen `obtenerVistaGrillaMesAgente` / `vis_*`.
+- `useVistaPlanTurno` + `PlanGrillaVistaModal` + `PlanGrillaAprobadaTable`.
+- **VER turno original** (mismo callable, mismo documento):
+  - Explorador RRHH → botón VER
+  - Explorador RRHH → pestaña Grilla en Detalles
+  - Bandeja RRHH → Ver turno (`BandejaAprobaciones`)
+  - Jefe → detalle plan HABILITADO / histórico
+- Planes **ENVIADO/BORRADOR**: vista calculada en servidor (no persiste hasta HABILITADO).
+- Grillas **operativas** (`/portal/grilla`, equipo): siguen `obtenerVistaGrillaMesAgente` / `vis_*`.
 
 ## Cierre de turno (pendiente producto)
 

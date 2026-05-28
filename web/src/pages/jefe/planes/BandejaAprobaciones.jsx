@@ -1,4 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+
+import PlanGrillaVistaModal from "../../../features/planes/PlanGrillaVistaModal.jsx";
 
 const BADGE_ESTADO = {
   ENVIADO: "bg-blue-100 text-blue-800",
@@ -60,6 +62,20 @@ function ModalRechazo({ planId, onConfirm, onCancel }) {
 
 export default function BandejaAprobaciones({ planes, onTransicion, operando, esRrhh, mostrarGrupo }) {
   const [rechazoModal, setRechazoModal] = useState(null);
+  const [planVer, setPlanVer] = useState(null);
+
+  const labelsExtra = useMemo(() => {
+    if (!planVer) return {};
+    const out = {};
+    for (const ag of planVer.agentes || []) {
+      if (!ag.persona_id) continue;
+      out[ag.persona_id] = {
+        nombre: ag.persona_label || ag.nombre || ag.nombre_completo,
+        dni: ag.persona_dni || ag.dni,
+      };
+    }
+    return out;
+  }, [planVer]);
 
   const handleRechazar = useCallback((planId) => {
     setRechazoModal(planId);
@@ -120,7 +136,16 @@ export default function BandejaAprobaciones({ planes, onTransicion, operando, es
                 </div>
               )}
             </div>
-            <div className="flex flex-shrink-0 gap-2">
+            <div className="flex flex-shrink-0 flex-wrap gap-2">
+              {plan.tipo_plan === "mensual" && (
+                <button
+                  type="button"
+                  onClick={() => setPlanVer(plan)}
+                  className="min-h-11 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-800 shadow-sm transition hover:bg-indigo-100"
+                >
+                  Ver turno
+                </button>
+              )}
               {plan.estado === "ENVIADO" && (
                 <button
                   type="button"
@@ -144,46 +169,12 @@ export default function BandejaAprobaciones({ planes, onTransicion, operando, es
             </div>
           </div>
 
-          {/* Mini grilla read-only para mensuales */}
-          {plan.tipo_plan === "mensual" && plan.agentes?.length > 0 && plan.agentes[0]?.dias && (
-            <div className="mt-3 overflow-x-auto rounded-lg border border-slate-100 bg-slate-50 p-2">
-              <table className="min-w-max text-[10px]">
-                <thead>
-                  <tr>
-                    <th className="px-1 py-0.5 text-left text-slate-400">Agente</th>
-                    {Object.keys(plan.agentes[0].dias).sort().map((d) => (
-                      <th key={d} className="px-0.5 py-0.5 text-center text-slate-400">{d.slice(-2)}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {plan.agentes.map((ag) => (
-                    <tr key={ag.persona_id}>
-                      <td className="whitespace-nowrap px-1 py-0.5 text-slate-600">
-                        {ag.persona_label || ag.persona_id}
-                      </td>
-                      {ag.dias && Object.keys(ag.dias).sort().map((d) => {
-                        const cel = ag.dias[d];
-                        const esFranco = cel.tipo_dia === "franco" || cel.tipo_dia === "no_laborable";
-                        const bg = esFranco ? "bg-slate-200 text-slate-500"
-                          : cel.turno_id === "M" ? "bg-yellow-100 text-yellow-700"
-                          : cel.turno_id === "T" ? "bg-blue-100 text-blue-700"
-                          : cel.turno_id === "N" ? "bg-indigo-100 text-indigo-700"
-                          : "bg-green-100 text-green-700";
-                        return (
-                          <td key={d} className={`px-0.5 py-0.5 text-center font-bold ${bg}`}>
-                            {esFranco ? "F" : cel.turno_id || "?"}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
       ))}
+
+      {planVer && (
+        <PlanGrillaVistaModal plan={planVer} labelsExtra={labelsExtra} onClose={() => setPlanVer(null)} />
+      )}
 
       {rechazoModal && (
         <ModalRechazo planId={rechazoModal} onConfirm={confirmRechazo} onCancel={() => setRechazoModal(null)} />

@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Card from "../../components/ui/Card.jsx";
 import {
   callListarPlanesTurnoServicio,
-  callObtenerVistaPlanTurnoServicio,
   callGuardarPlanTurnoServicio,
   callEnviarPlanTurnoServicio,
   callAprobarPlanTurnoServicio,
@@ -12,6 +11,7 @@ import {
   callResolverContextoLaboralSolicitud,
 } from "../../services/callables.js";
 import PlanGrillaAprobadaTable from "../../features/planes/PlanGrillaAprobadaTable.jsx";
+import { useVistaPlanTurno } from "../../features/planes/useVistaPlanTurno.js";
 import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
@@ -201,8 +201,6 @@ export default function PlanTurnoServicioPage() {
   const [feedback, setFeedback] = useState("");
   const [planEdicion, setPlanEdicion] = useState(null);
   const [planDetalle, setPlanDetalle] = useState(null);
-  const [planDetalleGrilla, setPlanDetalleGrilla] = useState(null);
-  const [planDetalleLoading, setPlanDetalleLoading] = useState(false);
   const [planOpciones, setPlanOpciones] = useState(null);
   const [operando, setOperando] = useState(false);
   const [gruposDisponibles, setGruposDisponibles] = useState([]);
@@ -211,22 +209,18 @@ export default function PlanTurnoServicioPage() {
   const [resumenGrupoPeriodo, setResumenGrupoPeriodo] = useState({});
   const periodosPermitidos = useMemo(() => periodosVentanaJefe(), []);
 
-  const abrirPlanDetalle = useCallback(async (plan) => {
+  const abrirPlanDetalle = useCallback((plan) => {
     setPlanDetalle(plan);
-    setPlanDetalleGrilla(null);
-    if (plan?.tipo_plan !== "mensual") return;
-    setPlanDetalleLoading(true);
-    try {
-      const res = await callObtenerVistaPlanTurnoServicio({ plan_id: plan.id });
-      const data = res.data || {};
-      if (data.plan) setPlanDetalle((prev) => ({ ...prev, ...data.plan, id: plan.id }));
-      setPlanDetalleGrilla(data.grilla_aprobada || null);
-    } catch {
-      setPlanDetalleGrilla(null);
-    } finally {
-      setPlanDetalleLoading(false);
-    }
   }, []);
+
+  const {
+    loading: planDetalleGrillaLoading,
+    grillaAprobada: planDetalleGrilla,
+    labelsPorPersona: planDetalleGrillaLabels,
+  } = useVistaPlanTurno(
+    planDetalle?.tipo_plan === "mensual" ? planDetalle.id : null,
+    Boolean(planDetalle?.tipo_plan === "mensual"),
+  );
 
   useEffect(() => {
     if (!personaId) return;
@@ -675,13 +669,13 @@ export default function PlanTurnoServicioPage() {
 
       {/* Modal detalle read-only */}
       {planDetalle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={() => { setPlanDetalle(null); setPlanDetalleGrilla(null); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={() => setPlanDetalle(null)}>
           <div className="relative flex h-[96vh] w-[98vw] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="px-6 pt-6 text-lg font-semibold text-slate-900">
                 Detalle del plan <span className="font-mono text-sm text-slate-500">{planDetalle.id}</span>
               </h2>
-              <button onClick={() => { setPlanDetalle(null); setPlanDetalleGrilla(null); }} className="mr-6 mt-6 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+              <button onClick={() => setPlanDetalle(null)} className="mr-6 mt-6 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -705,17 +699,20 @@ export default function PlanTurnoServicioPage() {
               {planDetalle.tipo_plan === "mensual" && (
                 <div className="mt-4">
                   <h3 className="mb-2 text-sm font-semibold text-slate-800">Grilla aprobada (histórico)</h3>
-                  {planDetalleLoading ? (
+                  {planDetalleGrillaLoading ? (
                     <p className="text-sm text-slate-600">Cargando grilla aprobada…</p>
                   ) : (
                     <PlanGrillaAprobadaTable
                       grillaAprobada={planDetalleGrilla}
-                      labelsPorPersona={Object.fromEntries(
-                        (planDetalle.agentes || []).map((ag) => [
-                          ag.persona_id,
-                          { nombre: ag.nombre || ag.nombre_completo, dni: ag.dni },
-                        ]),
-                      )}
+                      labelsPorPersona={{
+                        ...Object.fromEntries(
+                          (planDetalle.agentes || []).map((ag) => [
+                            ag.persona_id,
+                            { nombre: ag.nombre || ag.nombre_completo, dni: ag.dni },
+                          ]),
+                        ),
+                        ...planDetalleGrillaLabels,
+                      }}
                     />
                   )}
                 </div>
