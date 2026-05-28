@@ -29,16 +29,16 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
   });
 
   return (
-    <div className="mt-4 overflow-x-auto">
+    <div className="mt-4 overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm">
       <table className="min-w-full border-collapse text-[10px]">
         <thead>
           <tr className="text-slate-400">
-            <th className="sticky left-0 z-10 min-w-[10rem] border border-slate-200 bg-slate-50 px-2 py-0.5" />
+            <th className="h-10 min-w-[10rem] border border-slate-300 bg-slate-100 px-2 py-0.5" />
             {columnas.map((c) => (
               <th
                 key={`ds-${c.num}`}
-                className={`border-x border-t border-slate-200 px-0 py-0.5 text-[8px] font-medium ${
-                  c.esFinde ? "bg-rose-50 text-rose-400" : "bg-slate-50"
+                className={`h-10 border-x border-t border-slate-300 px-0 py-0.5 text-[8px] font-semibold ${
+                  c.esFinde ? "bg-rose-100 text-rose-700" : "bg-slate-100 text-slate-600"
                 }`}
               >
                 {DIAS_SEMANA_CORTO[c.ds]}
@@ -46,14 +46,14 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
             ))}
           </tr>
           <tr className="bg-slate-50 text-slate-600">
-            <th className="sticky left-0 z-10 min-w-[10rem] border border-slate-200 bg-slate-50 px-2 py-1 text-left">
+            <th className="h-10 min-w-[10rem] border border-slate-300 bg-slate-100 px-2 py-1 text-left">
               Persona
             </th>
             {columnas.map((c) => (
               <th
                 key={c.num}
-                className={`border border-slate-200 px-0.5 py-1 font-normal ${
-                  c.esFinde ? "bg-rose-50/60 text-rose-500" : ""
+                className={`h-10 border border-slate-300 px-0.5 py-1 font-semibold ${
+                  c.esFinde ? "bg-rose-100 text-rose-700" : ""
                 }`}
               >
                 {c.num}
@@ -61,7 +61,7 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y-2 divide-slate-300">
           {filas.length === 0 ? (
             <tr>
               <td
@@ -76,7 +76,7 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
               const personaLabel = String(fila.persona_label || fila.persona_id || "");
               return (
                 <tr key={String(fila.persona_id)}>
-                  <td className="sticky left-0 z-10 max-w-[12rem] truncate border border-slate-200 bg-white px-2 py-1 text-left text-xs font-medium text-slate-800">
+                  <td className="max-w-[12rem] truncate border border-slate-300 bg-white px-2 py-3 text-left text-xs font-semibold text-slate-800">
                     {personaLabel}
                   </td>
                   {columnas.map((col) => {
@@ -90,9 +90,9 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
                       const otroLabel = cell.etiqueta_grupo_corta || cellGdt;
                       const corta = otroLabel.length > 5 ? otroLabel.slice(0, 4) + "…" : otroLabel;
                       return (
-                        <td key={dia} className="h-8 border border-slate-100 bg-slate-100 p-0">
+                        <td key={dia} className="h-12 border border-slate-300 bg-slate-100 p-0">
                           <div
-                            className="flex min-h-8 min-w-[1.75rem] items-center justify-center"
+                            className="flex min-h-12 min-w-[1.75rem] items-center justify-center"
                             title={`Asignado a ${otroLabel}`}
                           >
                             <span className="text-[7px] text-slate-400">{corta}</span>
@@ -133,7 +133,7 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
                     if (turnoCorto) titleParts.push(turnoCorto);
 
                     return (
-                      <td key={dia} className={`h-8 border border-slate-100 p-0 ${bgTurno} ${bgFinde}`}>
+                      <td key={dia} className={`h-12 border border-slate-300 p-0 ${bgTurno} ${bgFinde}`}>
                         <GrillaMesCeldaLicencia
                           eventos={Array.isArray(eventos) ? eventos : []}
                           personaLabel={personaLabel}
@@ -159,7 +159,7 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
                               },
                             })
                           }
-                          className={`flex min-h-8 min-w-[1.75rem] items-center justify-center font-semibold ${
+                          className={`flex min-h-12 min-w-[1.75rem] items-center justify-center font-semibold ${
                             esFeriado ? "text-amber-700" : ""
                           }`}
                           title={titleParts.join(" · ") || undefined}

@@ -6,6 +6,8 @@ import {
   callResolverContextoLaboralSolicitud,
 } from "../../services/callables.js";
 import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
+import { claimsIncludeJefe } from "../routing/portalRole.js";
+import { normalizarPeriodoJefe } from "../jefe/periodoJefe.js";
 import { GRILLA_MES_MODO } from "./GrillaMesSelector.jsx";
 import { anioMesDesdePeriodo, fechaCorteFinMesDesdePeriodo } from "./grillaMesPeriodoUtils.js";
 
@@ -19,6 +21,7 @@ function etiquetaGrupoSector(row) {
  * @param {{ personaId: string; claims: Record<string, unknown> | null | undefined; esRrhh: boolean }} ctx
  */
 export function useGrillaMesVista({ personaId, claims, esRrhh }) {
+  const esJefe = claimsIncludeJefe(claims);
   const hoy = new Date();
   const [periodo, setPeriodo] = useState(
     () => `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`,
@@ -37,6 +40,12 @@ export function useGrillaMesVista({ personaId, claims, esRrhh }) {
   const [titularVisMeta, setTitularVisMeta] = useState(null);
 
   const { anio, mes } = anioMesDesdePeriodo(periodo);
+
+  useEffect(() => {
+    if (!esJefe) return;
+    const normalizado = normalizarPeriodoJefe(periodo);
+    if (normalizado !== periodo) setPeriodo(normalizado);
+  }, [esJefe, periodo]);
 
   const recargarGruposEquipo = useCallback(async () => {
     const fechaCorte = fechaCorteFinMesDesdePeriodo(periodo);

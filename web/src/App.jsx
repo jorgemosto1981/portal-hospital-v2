@@ -40,6 +40,7 @@ import CalendarioConfig from "./pages/rrhh/CalendarioConfig.jsx";
 import RegimenesHorariosPage from "./pages/rrhh/RegimenesHorariosPage.jsx";
 import PlanTurnoServicioPage from "./pages/jefe/PlanTurnoServicioPage.jsx";
 import BandejaTurnosRrhhPage from "./pages/rrhh/BandejaTurnosRrhhPage.jsx";
+import ExploradorTurnosRrhhPage from "./pages/rrhh/ExploradorTurnosRrhhPage.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import SistemasWeb from "./pages/SistemasWeb.jsx";
 import PerfilUsuario from "./pages/PerfilUsuario.jsx";
@@ -143,6 +144,7 @@ export default function App() {
               <Route path="rrhh/calendario-institucional" element={<CalendarioConfig />} />
               <Route path="rrhh/regimenes-horarios" element={<RegimenesHorariosPage />} />
               <Route path="rrhh/bandeja-turnos" element={<BandejaTurnosRrhhPage />} />
+              <Route path="rrhh/explorador-turnos" element={<ExploradorTurnosRrhhPage />} />
               <Route path="rrhh/lao-checkin" element={<LaoCheckinRRHH />} />
               <Route path="rrhh/configuracion-articulos" element={<ArticuloListadoGrilla />} />
               <Route

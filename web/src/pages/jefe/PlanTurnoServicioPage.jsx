@@ -13,29 +13,11 @@ import {
 import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
-import { claimsIncludeRrhh } from "../../features/routing/portalRole.js";
+import { claimsIncludeJefe, claimsIncludeRrhh } from "../../features/routing/portalRole.js";
 import GrillaMensualEditor from "./planes/GrillaMensualEditor.jsx";
 import PlanPerpetualViewer from "./planes/PlanPerpetualViewer.jsx";
-import BandejaAprobaciones from "./planes/BandejaAprobaciones.jsx";
-import { filtrarPlanesBandejaJefe } from "./planes/planBandejaUtils.js";
 import BadgeEstadoPlan, { LABEL_ESTADO } from "../../components/ui/BadgeEstadoPlan.jsx";
-
-function periodoActual() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function desplazarPeriodo(periodo, deltaMeses) {
-  const [anio, mes] = String(periodo || periodoActual()).split("-").map(Number);
-  const dt = new Date(anio, (mes || 1) - 1 + deltaMeses, 1);
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function tituloPlan(plan, grupoLabelFallback = "") {
-  const periodo = plan?.periodo ? `Período: ${plan.periodo}` : "Período: —";
-  const grupo = plan?.grupo_label || grupoLabelFallback || plan?.grupo_id || "—";
-  return `${periodo} — Grupo: ${grupo}`;
-}
+import { periodosVentanaJefe } from "../../features/jefe/periodoJefe.js";
 
 function estadoPrincipalGrupo(items) {
   const list = Array.isArray(items) ? items : [];
@@ -94,39 +76,130 @@ function iconoEstadoGrupo(estado) {
   }
 }
 
+function estiloTarjetaMisTurnos(estado, activo, esHistorico) {
+  const baseActivo = activo ? "ring-2 ring-offset-1" : "";
+  if (esHistorico) {
+    return activo
+      ? `border-slate-300 bg-slate-100 text-slate-800 ring-slate-300 ${baseActivo}`
+      : "border-slate-200 bg-slate-100/80 text-slate-700 hover:border-slate-300";
+  }
+  if (estado === "SIN_PLAN") {
+    return activo
+      ? `border-rose-300 bg-rose-50 text-rose-900 ring-rose-300 ${baseActivo}`
+      : "border-rose-200 bg-rose-50/80 text-rose-900 hover:border-rose-300";
+  }
+  if (estado === "HABILITADO") {
+    return activo
+      ? `border-emerald-300 bg-emerald-50 text-emerald-900 ring-emerald-300 ${baseActivo}`
+      : "border-emerald-200 bg-emerald-50/80 text-emerald-900 hover:border-emerald-300";
+  }
+  return activo
+    ? `border-amber-300 bg-amber-50 text-amber-900 ring-amber-300 ${baseActivo}`
+    : "border-amber-200 bg-amber-50/80 text-amber-900 hover:border-amber-300";
+}
+
+function etiquetaEstadoTarjeta(estado, esHistorico = false) {
+  if (estado === "SIN_PLAN") return esHistorico ? "Sin Turno" : "Crear Turno";
+  return LABEL_ESTADO[estado] || estado;
+}
+
 function etiquetaGrupo(row) {
   return String(row.nombre || row.codigo || row.titulo || "").trim() || String(row.id || row.grupo_de_trabajo_id || "");
+}
+
+function fechaCorteFinMes(periodo) {
+  const [anio, mes] = String(periodo || "").split("-").map(Number);
+  if (!Number.isFinite(anio) || !Number.isFinite(mes)) return "";
+  const d = new Date(anio, mes, 0);
+  return `${anio}-${String(mes).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function labelPeriodoCard(periodo, idx) {
+  const [anio, mes] = String(periodo || "").split("-").map(Number);
+  const fecha = new Date(anio, (mes || 1) - 1, 1);
+  const mesTxt = fecha.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+  const pref = idx === 0 ? "Mes anterior" : idx === 1 ? "Mes actual" : "Mes siguiente";
+  return `${pref} · ${mesTxt}`;
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+  try {
+    if (typeof value === "string") {
+      const d = new Date(value);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toLocaleString("es-AR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+    }
+    if (typeof value === "object" && value._seconds) {
+      const d = new Date(Number(value._seconds) * 1000);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toLocaleString("es-AR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+    }
+  } catch {
+    // no-op
+  }
+  return String(value);
+}
+
+function labelAgentePlan(ag) {
+  return (
+    String(ag?.persona_label || "").trim() ||
+    String(ag?.persona_nombre || "").trim() ||
+    String(ag?.label || "").trim() ||
+    String(ag?.persona_id || "—")
+  );
+}
+
+function labelActorHistorial(h) {
+  const label =
+    String(h?.actor_label || "").trim() ||
+    String(h?.actor_nombre || "").trim() ||
+    String(h?.actor_persona_label || "").trim();
+  if (label) return label;
+  const rol = String(h?.rol || "").toLowerCase();
+  if (rol.includes("rrhh")) return "Usuario RRHH";
+  if (rol.includes("jefe")) return "Usuario Jefatura";
+  return "Usuario del sistema";
 }
 
 export default function PlanTurnoServicioPage() {
   const { user } = useAuthSession();
   const { claims } = useAuthClaims(user);
   const esRrhh = claimsIncludeRrhh(claims);
+  const esJefe = claimsIncludeJefe(claims);
+  const tieneGruposHijos = claims?.tiene_subordinados === true;
+  const mostrarAprobacionTurnos = esRrhh || (esJefe && tieneGruposHijos);
   const personaId = String(claims?.persona_id || "").trim();
 
-  const [tab, setTab] = useState("planes");
   const [grupoId, setGrupoId] = useState("");
-  const [periodo, setPeriodo] = useState(periodoActual());
-  const [filtroEstado, setFiltroEstado] = useState("");
+  const [periodo, setPeriodo] = useState(periodosVentanaJefe()[1]);
   const [planes, setPlanes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
   const [planEdicion, setPlanEdicion] = useState(null);
   const [planDetalle, setPlanDetalle] = useState(null);
+  const [planOpciones, setPlanOpciones] = useState(null);
   const [operando, setOperando] = useState(false);
   const [gruposDisponibles, setGruposDisponibles] = useState([]);
+  const [gruposPorPeriodo, setGruposPorPeriodo] = useState({});
   const [gruposCargando, setGruposCargando] = useState(false);
   const [resumenGrupoPeriodo, setResumenGrupoPeriodo] = useState({});
-  const [bandejaPlanes, setBandejaPlanes] = useState([]);
-  const [bandejaLoading, setBandejaLoading] = useState(false);
-  const [bandejaEstado, setBandejaEstado] = useState("");
-  const [bandejaGrupo, setBandejaGrupo] = useState("");
-  const [bandejaPage, setBandejaPage] = useState(1);
-  const periodosPermitidos = useMemo(() => {
-    const base = periodoActual();
-    return [desplazarPeriodo(base, -1), base, desplazarPeriodo(base, 1)];
-  }, []);
+  const periodosPermitidos = useMemo(() => periodosVentanaJefe(), []);
 
   useEffect(() => {
     if (!personaId) return;
@@ -140,26 +213,38 @@ export default function PlanTurnoServicioPage() {
           if (cancelled) return;
           const activos = rows.filter((r) => r.activo !== false);
           activos.sort((a, b) => etiquetaGrupo(a).localeCompare(etiquetaGrupo(b), "es"));
-          setGruposDisponibles(activos.map((r) => ({
+          const list = activos.map((r) => ({
             id: r.id,
             label: etiquetaGrupo(r),
-          })));
+          }));
+          setGruposDisponibles(list);
+          const byPeriodo = Object.fromEntries(
+            periodosPermitidos.map((p) => [p, list]),
+          );
+          setGruposPorPeriodo(byPeriodo);
         } else {
-          const fechaCorte = `${periodoActual()}-28`;
-          const res = await callResolverContextoLaboralSolicitud({
-            persona_id: personaId,
-            fecha_desde: fechaCorte,
-          });
           if (cancelled) return;
-          const list = res?.data?.grupos_trabajo_vigentes || [];
-          const vigentes = Array.isArray(list) ? list : [];
-          setGruposDisponibles(vigentes.map((g) => ({
-            id: g.grupo_de_trabajo_id,
-            label: g.etiqueta_ui || g.grupo_de_trabajo_id,
-          })));
-          if (vigentes.length === 1) {
-            setGrupoId(vigentes[0].grupo_de_trabajo_id);
+          const byPeriodo = {};
+          const unionMap = new Map();
+          for (const p of periodosPermitidos) {
+            const res = await callResolverContextoLaboralSolicitud({
+              persona_id: personaId,
+              fecha_desde: fechaCorteFinMes(p),
+            });
+            const raw = Array.isArray(res?.data?.grupos_trabajo_vigentes)
+              ? res.data.grupos_trabajo_vigentes
+              : [];
+            const mapped = raw.map((g) => ({
+              id: g.grupo_de_trabajo_id,
+              label: g.etiqueta_ui || g.grupo_de_trabajo_id,
+            }));
+            byPeriodo[p] = mapped;
+            mapped.forEach((g) => {
+              if (!unionMap.has(g.id)) unionMap.set(g.id, g);
+            });
           }
+          setGruposPorPeriodo(byPeriodo);
+          setGruposDisponibles([...unionMap.values()]);
         }
       } catch {
         // silencioso: el select queda vacío
@@ -169,7 +254,7 @@ export default function PlanTurnoServicioPage() {
     })();
 
     return () => { cancelled = true; };
-  }, [personaId, esRrhh]);
+  }, [personaId, esRrhh, periodosPermitidos]);
 
   const cargar = useCallback(async () => {
     if (!grupoId.trim()) return;
@@ -178,7 +263,6 @@ export default function PlanTurnoServicioPage() {
     try {
       const res = await callListarPlanesTurnoServicio({
         grupo_id: grupoId.trim(),
-        estado: filtroEstado || undefined,
         periodo: periodo || undefined,
       });
       setPlanes(res.data?.items || []);
@@ -187,84 +271,52 @@ export default function PlanTurnoServicioPage() {
     } finally {
       setLoading(false);
     }
-  }, [grupoId, filtroEstado, periodo]);
-
-  const cargarBandejaAprobaciones = useCallback(async () => {
-    if (!gruposDisponibles.length) {
-      setBandejaPlanes([]);
-      return;
-    }
-    setBandejaLoading(true);
-    try {
-      const resultados = await Promise.all(
-        gruposDisponibles.slice(0, 60).map(async (g) => {
-          try {
-            const res = await callListarPlanesTurnoServicio({
-              grupo_id: g.id,
-              periodo,
-            });
-            return (res?.data?.items || []).map((p) => ({
-              ...p,
-              grupo_label: p.grupo_label || g.label || p.grupo_id,
-            }));
-          } catch {
-            return [];
-          }
-        }),
-      );
-      const merged = resultados.flat();
-      const prioridad = { ENVIADO: 0, EN_REVISION: 1, BORRADOR: 2, HABILITADO: 3, CERRADO: 4 };
-      merged.sort((a, b) => {
-        const pa = prioridad[a.estado] ?? 99;
-        const pb = prioridad[b.estado] ?? 99;
-        if (pa !== pb) return pa - pb;
-        return String(a.grupo_label || "").localeCompare(String(b.grupo_label || ""), "es");
-      });
-      setBandejaPlanes(merged);
-      setBandejaPage(1);
-    } finally {
-      setBandejaLoading(false);
-    }
-  }, [gruposDisponibles, periodo]);
+  }, [grupoId, periodo]);
 
   useEffect(() => {
-    if (!gruposDisponibles.length || !periodo) {
+    if (!periodosPermitidos.length) {
       setResumenGrupoPeriodo({});
       return;
     }
     let cancel = false;
     (async () => {
-      const gruposObjetivo = gruposDisponibles.slice(0, 30);
-      const resultados = await Promise.all(
-        gruposObjetivo.map(async (g) => {
-          try {
-            const res = await callListarPlanesTurnoServicio({
-              grupo_id: g.id,
-              periodo,
-            });
-            const items = res?.data?.items || [];
-            return [g.id, { estado: estadoPrincipalGrupo(items), cantidad: items.length }];
-          } catch {
-            return [g.id, { estado: "SIN_PLAN", cantidad: 0 }];
-          }
-        }),
-      );
+      const resumen = {};
+      for (const p of periodosPermitidos) {
+        const gruposObjetivo = (gruposPorPeriodo[p] || []).slice(0, 30);
+        const resultados = await Promise.all(
+          gruposObjetivo.map(async (g) => {
+            try {
+              const res = await callListarPlanesTurnoServicio({
+                grupo_id: g.id,
+                periodo: p,
+              });
+              const items = res?.data?.items || [];
+              return [g.id, { estado: estadoPrincipalGrupo(items), cantidad: items.length, items }];
+            } catch {
+              return [g.id, { estado: "SIN_PLAN", cantidad: 0, items: [] }];
+            }
+          }),
+        );
+        resumen[p] = Object.fromEntries(resultados);
+      }
       if (cancel) return;
-      setResumenGrupoPeriodo(Object.fromEntries(resultados));
+      setResumenGrupoPeriodo(resumen);
     })();
     return () => {
       cancel = true;
     };
-  }, [gruposDisponibles, periodo]);
+  }, [periodosPermitidos, gruposPorPeriodo]);
 
   useEffect(() => {
     if (grupoId.trim()) cargar();
   }, [cargar, grupoId]);
 
   useEffect(() => {
-    if (tab !== "bandeja") return;
-    cargarBandejaAprobaciones();
-  }, [tab, cargarBandejaAprobaciones]);
+    const gruposMesActual = gruposPorPeriodo[periodo] || [];
+    if (!gruposMesActual.length) return;
+    if (grupoId && gruposMesActual.some((g) => g.id === grupoId)) return;
+    setGrupoId(gruposMesActual[0].id);
+  }, [periodo, gruposPorPeriodo, grupoId]);
 
   const showFeedback = (msg) => {
     setFeedback(msg);
@@ -371,48 +423,59 @@ export default function PlanTurnoServicioPage() {
     return g?.label || grupoId;
   }, [gruposDisponibles, grupoId]);
 
-  const planesBandejaJefe = useMemo(
-    () => filtrarPlanesBandejaJefe(bandejaPlanes, personaId),
-    [bandejaPlanes, personaId],
+  const estadosInbox = new Set(["ENVIADO", "EN_REVISION"]);
+
+  const seleccionarTarjetaPlan = useCallback(
+    async (p, g, esHistorico = false) => {
+      setPeriodo(p);
+      setGrupoId(g.id);
+      let meta = resumenGrupoPeriodo[p]?.[g.id];
+      let items = Array.isArray(meta?.items) ? meta.items : [];
+      if (!meta || items.length === 0) {
+        try {
+          const res = await callListarPlanesTurnoServicio({
+            grupo_id: g.id,
+            periodo: p,
+          });
+          items = res?.data?.items || [];
+          meta = { estado: estadoPrincipalGrupo(items), cantidad: items.length, items };
+        } catch {
+          items = [];
+          meta = { estado: "SIN_PLAN", cantidad: 0, items: [] };
+        }
+      }
+
+      if (esHistorico && (meta.estado === "SIN_PLAN" || items.length === 0)) {
+        showFeedback("Mes anterior en modo histórico: no se pueden crear planes.");
+        return;
+      }
+
+      if (meta.estado === "SIN_PLAN" || items.length === 0) {
+        setPlanEdicion({ nuevo: true, tipo_plan: "mensual" });
+        return;
+      }
+
+      const plan = items[0];
+      if (esHistorico) {
+        setPlanDetalle(plan);
+        return;
+      }
+      if (meta.estado === "HABILITADO") {
+        setPlanDetalle(plan);
+        return;
+      }
+      setPlanOpciones({ plan, estado: meta.estado, grupoLabel: g.label, periodo: p });
+    },
+    [resumenGrupoPeriodo],
   );
 
-  const gruposBandeja = useMemo(() => {
-    const map = new Map();
-    for (const p of planesBandejaJefe) {
-      const gid = String(p.grupo_id || "").trim();
-      if (!gid || map.has(gid)) continue;
-      map.set(gid, p.grupo_label || gid);
-    }
-    return [...map.entries()].map(([id, label]) => ({ id, label }));
-  }, [planesBandejaJefe]);
-
-  const planesBandejaFiltrados = useMemo(() => {
-    return planesBandejaJefe.filter((p) => {
-      if (bandejaEstado && p.estado !== bandejaEstado) return false;
-      if (bandejaGrupo && p.grupo_id !== bandejaGrupo) return false;
-      return true;
-    });
-  }, [planesBandejaJefe, bandejaEstado, bandejaGrupo]);
-
-  const BANDEJA_PAGE_SIZE = 10;
-  const totalPaginasBandeja = Math.max(1, Math.ceil(planesBandejaFiltrados.length / BANDEJA_PAGE_SIZE));
-  const planesBandejaPagina = useMemo(() => {
-    const p = Math.min(bandejaPage, totalPaginasBandeja);
-    const start = (p - 1) * BANDEJA_PAGE_SIZE;
-    return planesBandejaFiltrados.slice(start, start + BANDEJA_PAGE_SIZE);
-  }, [planesBandejaFiltrados, bandejaPage, totalPaginasBandeja]);
-
-  const resumenFuente = tab === "bandeja" ? planesBandejaFiltrados : planes;
-  const resumenEstados = useMemo(() => {
-    const r = { BORRADOR: 0, ENVIADO: 0, EN_REVISION: 0, HABILITADO: 0, CERRADO: 0 };
-    for (const p of resumenFuente) if (r[p.estado] != null) r[p.estado]++;
-    return r;
-  }, [resumenFuente]);
-
-  const TABS = [
-    { id: "planes", label: "Mis planes" },
-    { id: "bandeja", label: "Bandeja aprobaciones" },
-  ];
+  if (!esJefe && !esRrhh) {
+    return (
+      <Card className="px-4 py-6">
+        <p className="text-sm text-slate-700">Sin permisos de jefatura para esta sección.</p>
+      </Card>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100dvh-6rem)] space-y-4 bg-slate-50 pb-6 md:pb-8">
@@ -420,119 +483,98 @@ export default function PlanTurnoServicioPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">
-              Planes de turno
+              Turnos Mensuales
             </h1>
-            <p className="mt-1 max-w-prose text-sm leading-relaxed text-slate-500">
-              Planificación mensual (servicios con régimen planificado) y planes perpetuos (fijo/rotativo).
-              Flujo: Borrador → Enviado → Habilitado (aprobado por superior).
+            <p className="mt-1 text-sm text-slate-600">
+              Gestión de la capa teórica mensual y circuito de aprobación superior: creación, visualización y trazabilidad histórica por grupo y período.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setPlanEdicion({ nuevo: true, tipo_plan: "mensual" })}
-            disabled={!grupoId.trim()}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Nuevo plan
-          </button>
         </div>
       </header>
 
       {/* Filtros */}
       <Card className="px-4 py-3">
-        <div className="mb-3 flex flex-wrap gap-2">
-          {gruposDisponibles.map((g) => {
-            const meta = resumenGrupoPeriodo[g.id] || { estado: "SIN_PLAN", cantidad: 0 };
-            const activo = grupoId === g.id;
-            return (
-              <button
-                key={g.id}
-                type="button"
-                onClick={() => setGrupoId(g.id)}
-                className={`rounded-xl border px-3 py-2 text-left text-xs transition ${estiloTarjetaGrupo(meta.estado, activo)}`}
-              >
-                <div className="font-semibold">{g.label}</div>
-                <div className="mt-0.5 text-[11px] opacity-85">
-                  <span className="mr-1">{iconoEstadoGrupo(meta.estado)}</span>
-                  {periodo} — {LABEL_ESTADO[meta.estado] || "Sin plan"}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-slate-500">Grupo seleccionado</label>
-            <div className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700">
-              {grupoLabel || (gruposCargando ? "Cargando grupos…" : "Seleccionar grupo…")}
-            </div>
-          </div>
-          <div className="w-36">
-            <label className="mb-1 block text-xs font-medium text-slate-500">Período</label>
-            <select
-              value={periodo}
-              onChange={(e) => setPeriodo(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-            >
-              {periodosPermitidos.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </div>
-          <div className="w-44">
-            <label className="mb-1 block text-xs font-medium text-slate-500">Estado</label>
-            <select
-              value={filtroEstado}
-              onChange={(e) => setFiltroEstado(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-            >
-              <option value="">Todos</option>
-              <option value="BORRADOR">Borrador</option>
-              <option value="ENVIADO">Enviado</option>
-              <option value="EN_REVISION">En revisión</option>
-              <option value="HABILITADO">Habilitado</option>
-              <option value="CERRADO">Cerrado</option>
-            </select>
-          </div>
-          <button
-            type="button"
-            onClick={cargar}
-            disabled={loading || !grupoId.trim()}
-            className="rounded-lg bg-slate-700 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
-          >
-            {loading ? "…" : "Buscar"}
-          </button>
+        <h2 className="mb-3 text-sm font-semibold text-slate-800">Mis turnos mensuales</h2>
+        <div className="grid gap-3 lg:grid-cols-3">
+          {periodosPermitidos.map((p, idx) => (
+            <section key={p} className="rounded-xl border border-slate-200 bg-white p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                {idx === 0 ? "Mes anterior" : idx === 1 ? "Mes actual" : "Mes siguiente"}
+              </p>
+              <p className="text-sm font-medium text-slate-900">{labelPeriodoCard(p, idx).split(" · ")[1]}</p>
+              <div className="mt-2 space-y-2">
+                {(gruposPorPeriodo[p] || []).length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500">
+                    Sin grupos disponibles.
+                  </p>
+                ) : (
+                  (gruposPorPeriodo[p] || []).map((g) => {
+                    const meta = resumenGrupoPeriodo[p]?.[g.id] || { estado: "SIN_PLAN", cantidad: 0 };
+                    const activo = grupoId === g.id && periodo === p;
+                    const esHistorico = idx === 0;
+                    return (
+                      <button
+                        key={`${p}-${g.id}`}
+                        type="button"
+                        onClick={() => void seleccionarTarjetaPlan(p, g, esHistorico)}
+                        className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${estiloTarjetaMisTurnos(meta.estado, activo, esHistorico)}`}
+                      >
+                        <span className="font-medium">{g.label}</span>
+                        <span className="text-xs opacity-85">
+                          {iconoEstadoGrupo(meta.estado)} {etiquetaEstadoTarjeta(meta.estado, esHistorico)}
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+          ))}
         </div>
       </Card>
 
-      {/* Tabs */}
-      <div className="flex gap-1.5">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              tab === t.id ? "bg-indigo-600 text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Indicadores */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        {Object.entries(resumenEstados).map(([est, n]) => (
-          <Card key={est} className="px-4 py-3">
-            <p className="text-xs font-medium text-slate-500">{LABEL_ESTADO[est]}</p>
-            <p className="text-2xl font-bold text-slate-900">{n}</p>
-          </Card>
-        ))}
-      </div>
+      {mostrarAprobacionTurnos ? (
+        <Card className="px-4 py-3">
+          <h2 className="mb-1 text-sm font-semibold text-slate-800">Aprobación de Turnos Mensuales</h2>
+          <p className="mb-3 text-xs text-slate-600">Bandeja tipo inbox para planes enviados/en revisión de grupos hijos.</p>
+          <div className="grid gap-3 lg:grid-cols-3">
+            {periodosPermitidos.map((p, idx) => (
+              <section key={`inbox-${p}`} className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {idx === 0 ? "Mes anterior" : idx === 1 ? "Mes actual" : "Mes siguiente"}
+                </p>
+                <p className="text-sm font-medium text-slate-900">{labelPeriodoCard(p, idx).split(" · ")[1]}</p>
+                <div className="mt-2 space-y-2">
+                  {(gruposPorPeriodo[p] || [])
+                    .filter((g) => estadosInbox.has(resumenGrupoPeriodo[p]?.[g.id]?.estado || ""))
+                    .map((g) => {
+                      const meta = resumenGrupoPeriodo[p]?.[g.id] || { estado: "SIN_PLAN", cantidad: 0 };
+                      const activo = grupoId === g.id && periodo === p;
+                      return (
+                        <button
+                          key={`inbox-${p}-${g.id}`}
+                          type="button"
+                          onClick={() => void seleccionarTarjetaPlan(p, g, idx === 0)}
+                          className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${estiloTarjetaGrupo(meta.estado, activo)}`}
+                        >
+                          <span className="font-medium">{g.label}</span>
+                          <span className="text-xs opacity-85">
+                            {iconoEstadoGrupo(meta.estado)} {LABEL_ESTADO[meta.estado] || meta.estado}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  {(gruposPorPeriodo[p] || []).filter((g) => estadosInbox.has(resumenGrupoPeriodo[p]?.[g.id]?.estado || "")).length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500">
+                      Sin pendientes de aprobación.
+                    </p>
+                  ) : null}
+                </div>
+              </section>
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       {/* Feedback */}
       {feedback && (
@@ -548,197 +590,11 @@ export default function PlanTurnoServicioPage() {
           </button>
         </Card>
       )}
-
-      {/* Contenido según tab */}
-      {tab === "planes" && (
-        <>
-          {loading && (
-            <Card className="px-4 py-8 text-center">
-              <p className="text-sm text-slate-500">Cargando planes…</p>
-            </Card>
-          )}
-          {!loading && planes.length === 0 && grupoId.trim() && (
-            <Card className="px-4 py-8 text-center">
-              <p className="text-sm text-slate-500">No hay planes para este grupo/período.</p>
-            </Card>
-          )}
-          {!loading && planes.length > 0 && (
-            <Card className="overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Tipo</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Período</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Agentes</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Estado</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
-                    {planes.map((plan) => (
-                      <tr key={plan.id} className="transition hover:bg-slate-50">
-                        <td className="whitespace-nowrap px-4 py-3">
-                          <p className="text-sm font-medium text-slate-800">{tituloPlan(plan, grupoLabel)}</p>
-                          <p className="font-mono text-[11px] text-slate-400">{plan.id}</p>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">
-                          {plan.tipo_plan === "perpetuo" ? "Perpetuo" : "Mensual"}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-slate-700">
-                          {plan.periodo || `${plan.vigente_desde || "—"} → ${plan.vigente_hasta || "∞"}`}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-slate-600">
-                          {plan.agentes?.length || 0}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-center">
-                          <BadgeEstadoPlan estado={plan.estado} />
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right">
-                          <div className="inline-flex gap-1">
-                            <button
-                              type="button"
-                              onClick={() => setPlanDetalle(plan)}
-                              className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
-                            >
-                              Ver
-                            </button>
-                            {(plan.estado === "BORRADOR" || plan.estado === "EN_REVISION") && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => setPlanEdicion(plan)}
-                                  className="rounded-lg px-2.5 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50"
-                                >
-                                  Editar
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={operando}
-                                  onClick={() => handleTransicion("enviar", plan.id)}
-                                  className="rounded-lg px-2.5 py-1 text-xs font-medium text-blue-600 transition hover:bg-blue-50 disabled:opacity-50"
-                                >
-                                  Enviar
-                                </button>
-                              </>
-                            )}
-                            {plan.estado === "HABILITADO" && plan.tipo_plan === "perpetuo" && (
-                              <button
-                                type="button"
-                                disabled={operando}
-                                onClick={() => handleTransicion("cerrar", plan.id)}
-                                className="rounded-lg px-2.5 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-                              >
-                                Cerrar
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          )}
-        </>
-      )}
-
-      {tab === "bandeja" && (
-        <>
-          <Card className="px-4 py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="w-full sm:w-52">
-                <label className="mb-1 block text-xs font-medium text-slate-500">Estado</label>
-                <select
-                  value={bandejaEstado}
-                  onChange={(e) => {
-                    setBandejaEstado(e.target.value);
-                    setBandejaPage(1);
-                  }}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                >
-                  <option value="">Todos</option>
-                  <option value="ENVIADO">Pendiente (Enviado)</option>
-                  <option value="EN_REVISION">En revisión</option>
-                  <option value="BORRADOR">Devuelto (Borrador)</option>
-                  <option value="HABILITADO">Aprobado/Habilitado</option>
-                  <option value="CERRADO">Cerrado</option>
-                </select>
-              </div>
-              <div className="w-full sm:flex-1">
-                <label className="mb-1 block text-xs font-medium text-slate-500">Grupo</label>
-                <select
-                  value={bandejaGrupo}
-                  onChange={(e) => {
-                    setBandejaGrupo(e.target.value);
-                    setBandejaPage(1);
-                  }}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                >
-                  <option value="">Todos los grupos</option>
-                  {gruposBandeja.map((g) => (
-                    <option key={g.id} value={g.id}>{g.label}</option>
-                  ))}
-                </select>
-              </div>
-              <button
-                type="button"
-                onClick={cargarBandejaAprobaciones}
-                disabled={bandejaLoading}
-                className="rounded-lg bg-slate-700 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
-              >
-                {bandejaLoading ? "Cargando…" : "Recargar bandeja"}
-              </button>
-            </div>
-          </Card>
-
-          {planes.some((p) => p.estado === "ENVIADO" && p.creado_por_persona_id === personaId) && planesBandejaFiltrados.length === 0 && (
-            <div className="mb-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-              Tenés plan(es) enviado(s) en este grupo. Si el servicio no tiene superior jerárquico, no aparecen acá:
-              RRHH los revisa en su bandeja.
-            </div>
-          )}
-          {bandejaLoading ? (
-            <Card className="px-4 py-8 text-center">
-              <p className="text-sm text-slate-500">Cargando bandeja de aprobaciones…</p>
-            </Card>
-          ) : (
-            <>
-              <BandejaAprobaciones
-                planes={planesBandejaPagina}
-                onTransicion={handleTransicion}
-                operando={operando}
-                esRrhh={esRrhh}
-              />
-              <div className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-xs text-slate-600">
-                <span>
-                  Página {Math.min(bandejaPage, totalPaginasBandeja)} de {totalPaginasBandeja} · {planesBandejaFiltrados.length} resultado(s)
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={bandejaPage <= 1}
-                    onClick={() => setBandejaPage((p) => Math.max(1, p - 1))}
-                    className="rounded border border-slate-200 px-2 py-1 disabled:opacity-50"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    type="button"
-                    disabled={bandejaPage >= totalPaginasBandeja}
-                    onClick={() => setBandejaPage((p) => Math.min(totalPaginasBandeja, p + 1))}
-                    className="rounded border border-slate-200 px-2 py-1 disabled:opacity-50"
-                  >
-                    Siguiente
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </>
-      )}
+      {loading ? (
+        <Card className="px-4 py-5 text-center">
+          <p className="text-sm text-slate-500">Cargando planes...</p>
+        </Card>
+      ) : null}
 
       {/* Modal Grilla Mensual / Plan Perpetuo */}
       {planEdicion && planEdicion.tipo_plan === "mensual" && (
@@ -763,21 +619,47 @@ export default function PlanTurnoServicioPage() {
         />
       )}
 
+      {planOpciones && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setPlanOpciones(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-slate-900">Opciones del plan</h3>
+            <p className="mt-1 text-xs text-slate-600">
+              {planOpciones.grupoLabel} · {planOpciones.periodo} · {LABEL_ESTADO[planOpciones.estado] || planOpciones.estado}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={() => { setPlanDetalle(planOpciones.plan); setPlanOpciones(null); }} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                Ver
+              </button>
+              {(planOpciones.plan.estado === "BORRADOR" || planOpciones.plan.estado === "EN_REVISION") && (
+                <button type="button" onClick={() => { setPlanEdicion(planOpciones.plan); setPlanOpciones(null); }} className="rounded-lg border border-indigo-300 px-3 py-2 text-sm text-indigo-700 hover:bg-indigo-50">
+                  Editar
+                </button>
+              )}
+              {planOpciones.plan.estado === "BORRADOR" && (
+                <button type="button" disabled={operando} onClick={() => { void handleTransicion("enviar", planOpciones.plan.id); setPlanOpciones(null); }} className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-50">
+                  Enviar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal detalle read-only */}
       {planDetalle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setPlanDetalle(null)}>
-          <div className="max-h-[85vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={() => setPlanDetalle(null)}>
+          <div className="relative flex h-[96vh] w-[98vw] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900">
+              <h2 className="px-6 pt-6 text-lg font-semibold text-slate-900">
                 Detalle del plan <span className="font-mono text-sm text-slate-500">{planDetalle.id}</span>
               </h2>
-              <button onClick={() => setPlanDetalle(null)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+              <button onClick={() => setPlanDetalle(null)} className="mr-6 mt-6 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div className="space-y-3 text-sm text-slate-700">
+            <div className="min-h-0 flex-1 space-y-3 overflow-auto px-6 pb-6 text-sm text-slate-700">
               <p><span className="font-medium">Tipo:</span> {planDetalle.tipo_plan === "perpetuo" ? "Perpetuo" : "Mensual"}</p>
               <p><span className="font-medium">Estado:</span> <BadgeEstadoPlan estado={planDetalle.estado} /></p>
               <p><span className="font-medium">Grupo:</span> {planDetalle.grupo_label || grupoLabel || planDetalle.grupo_id}</p>
@@ -795,26 +677,26 @@ export default function PlanTurnoServicioPage() {
               {planDetalle.tipo_plan === "mensual" && planDetalle.agentes?.length > 0 && (
                 <div className="mt-4">
                   <h3 className="mb-2 text-sm font-semibold text-slate-800">Grilla de asignaciones</h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200 text-xs">
-                      <thead className="bg-slate-50">
+                  <div className="overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm">
+                    <table className="min-w-full border-collapse text-xs">
+                      <thead>
                         <tr>
-                          <th className="px-2 py-1 text-left font-medium text-slate-500">Agente</th>
+                          <th className="h-9 min-w-[14rem] border border-slate-300 bg-slate-100 px-2 py-1 text-left font-semibold text-slate-700">Agente</th>
                           {planDetalle.agentes[0]?.dias && Object.keys(planDetalle.agentes[0].dias).sort().map((d) => (
-                            <th key={d} className="px-1 py-1 text-center font-medium text-slate-400">{d.slice(-2)}</th>
+                            <th key={d} className="h-9 border border-slate-300 bg-slate-100 px-1 py-1 text-center font-semibold text-slate-600">{d.slice(-2)}</th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y-2 divide-slate-300">
                         {planDetalle.agentes.map((ag) => (
                           <tr key={ag.persona_id}>
-                            <td className="whitespace-nowrap px-2 py-1 font-mono text-slate-600">{ag.persona_id}</td>
+                            <td className="whitespace-nowrap border border-slate-300 bg-white px-2 py-2 font-medium text-slate-800">{labelAgentePlan(ag)}</td>
                             {ag.dias && Object.keys(ag.dias).sort().map((d) => {
                               const cel = ag.dias[d];
                               const esFranco = cel.tipo_dia === "franco" || cel.tipo_dia === "no_laborable";
                               const color = esFranco ? "bg-slate-200 text-slate-500" : "bg-green-100 text-green-700";
                               return (
-                                <td key={d} className={`px-1 py-1 text-center font-medium ${color}`}>
+                                <td key={d} className={`h-9 border border-slate-300 px-1 py-1 text-center font-medium ${color}`}>
                                   {esFranco ? "F" : cel.turno_id || "?"}
                                 </td>
                               );
@@ -828,18 +710,24 @@ export default function PlanTurnoServicioPage() {
               )}
               {planDetalle.historial_aprobaciones?.length > 0 && (
                 <div className="mt-4">
-                  <h3 className="mb-2 text-sm font-semibold text-slate-800">Historial de aprobaciones</h3>
-                  <div className="space-y-1">
-                    {planDetalle.historial_aprobaciones.map((h, i) => (
-                      <div key={i} className="flex items-center gap-2 rounded-lg border border-slate-100 px-3 py-2 text-xs text-slate-600">
-                        <span className="font-medium capitalize">{h.accion}</span>
-                        <span className="text-slate-400">por</span>
-                        <span className="font-mono">{h.actor_uid?.slice(0, 12)}…</span>
-                        <span className="text-slate-400">({h.rol})</span>
-                        <span className="ml-auto text-slate-400">{h.fecha}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <details className="rounded-xl border border-slate-200 bg-slate-50">
+                    <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-slate-800">
+                      Historial de aprobaciones
+                    </summary>
+                    <div className="space-y-1 px-3 pb-3">
+                      {planDetalle.historial_aprobaciones.map((h, i) => (
+                        <div key={i} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+                          <span className="font-medium capitalize">{h.accion || "—"}</span>
+                          <span className="text-slate-400">por</span>
+                          <span>{labelActorHistorial(h)}</span>
+                          <span className="text-slate-400">({h.rol || "—"})</span>
+                          <span className="ml-auto text-slate-500">
+                            {formatDateTime(h.fecha || h.fecha_hora || h.created_at || h.timestamp)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
                 </div>
               )}
             </div>

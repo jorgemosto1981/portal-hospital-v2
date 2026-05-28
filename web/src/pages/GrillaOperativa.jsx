@@ -146,7 +146,10 @@ export default function GrillaOperativa() {
 
   return (
     <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm md:p-6">
-      <h1 className="text-xl font-semibold tracking-tight text-slate-900">Grilla operativa</h1>
+      <h1 className="text-xl font-semibold tracking-tight text-slate-900">Grilla Operativa</h1>
+      <p className="mt-1 text-sm text-slate-600">
+        Capa real y activa: integración operativa entre capa teórica, fichadas y licencias.
+      </p>
       <div className="mt-3 flex gap-2 border-b border-slate-200">
         <button
           type="button"

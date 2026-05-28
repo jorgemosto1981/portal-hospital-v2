@@ -316,6 +316,11 @@ export function callRevertirPlanTurnoServicio(data) {
   return httpsCallable(getFunctionsV2(), "revertirPlanTurnoServicio")(data);
 }
 
+/** RRHH: eliminar plan de turno (borrado lógico). */
+export function callEliminarPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "eliminarPlanTurnoServicio")(data);
+}
+
 /** RRHH: bandeja cross-grupo de planes pendientes (ENVIADO + EN_REVISION). */
 export function callListarPlanesPendientesRrhh(data) {
   return httpsCallable(getFunctionsV2(), "listarPlanesPendientesRrhh")(data);

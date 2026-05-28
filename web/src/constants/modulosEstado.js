@@ -115,22 +115,38 @@ export const MODULOS_PORTAL = [
     bandejaRrhhMenu: true,
   },
   {
-    id: "bandeja-turnos-rrhh",
-    label: "Bandeja turnos",
+    id: "bandeja-turnos-raiz-rrhh",
+    label: "Bandeja de Turnos Mensuales",
     path: "/portal/rrhh/bandeja-turnos",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
   },
   {
+    id: "bandeja-turnos-evaluador-rrhh",
+    label: "Evaluador",
+    path: "/portal/rrhh/bandeja-turnos",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "bandeja-turnos-raiz-rrhh",
+  },
+  {
+    id: "bandeja-turnos-explorador-rrhh",
+    label: "Explorador",
+    path: "/portal/rrhh/explorador-turnos",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "bandeja-turnos-raiz-rrhh",
+  },
+  {
     id: "grilla",
-    label: "Grilla",
+    label: "Grilla Operativa",
     path: "/portal/grilla",
     estado: ESTADOS_MODULO.MVP,
     grupo: "jefe",
   },
   {
     id: "planes-turno-jefe",
-    label: "Planes turno",
+    label: "Turnos Mensuales",
     path: "/portal/jefe/planes-turno",
     estado: ESTADOS_MODULO.MVP,
     grupo: "jefe",
@@ -214,7 +230,8 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh/configuracion-articulos")) return "articulos-cfg";
   if (pathname.startsWith("/portal/rrhh/calendario-institucional")) return "calendario-institucional";
   if (pathname.startsWith("/portal/rrhh/regimenes-horarios")) return "regimenes-horarios";
-  if (pathname.startsWith("/portal/rrhh/bandeja-turnos")) return "bandeja-turnos-rrhh";
+  if (pathname.startsWith("/portal/rrhh/explorador-turnos")) return "bandeja-turnos-explorador-rrhh";
+  if (pathname.startsWith("/portal/rrhh/bandeja-turnos")) return "bandeja-turnos-evaluador-rrhh";
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla";

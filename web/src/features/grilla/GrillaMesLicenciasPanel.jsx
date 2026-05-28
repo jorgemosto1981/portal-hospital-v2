@@ -1,17 +1,41 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 import { useAuthClaims } from "../auth/useAuthClaims.js";
 import { useAuthSession } from "../auth/useAuthSession.js";
-import { claimsIncludeRrhh } from "../routing/portalRole.js";
+import { claimsIncludeJefe, claimsIncludeRrhh } from "../routing/portalRole.js";
 import DiaGrillaDetalleModal from "./DiaGrillaDetalleModal.jsx";
 import ModalCoberturaParcial from "./ModalCoberturaParcial.jsx";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
-import GrillaMesSelector from "./GrillaMesSelector.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
 import { useAsistenciaOutbox } from "./useAsistenciaOutbox.js";
 import { useGrillaMesVista } from "./useGrillaMesVista.js";
 import { aplicarBatchAsistencia } from "../../services/coberturaParcialService.js";
+import { periodosVentanaJefe } from "../jefe/periodoJefe.js";
+
+function parsePeriodo(periodo) {
+  const [yyyy, mm] = String(periodo || "").split("-");
+  const anio = Number(yyyy);
+  const mes = Number(mm);
+  if (!Number.isFinite(anio) || !Number.isFinite(mes) || mes < 1 || mes > 12) return null;
+  return { anio, mes };
+}
+
+function sumarMeses(basePeriodo, delta) {
+  const ref = parsePeriodo(basePeriodo);
+  if (!ref) return basePeriodo;
+  const d = new Date(ref.anio, ref.mes - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function labelPeriodo(periodo) {
+  const ref = parsePeriodo(periodo);
+  if (!ref) return periodo;
+  return new Date(ref.anio, ref.mes - 1, 1).toLocaleDateString("es-AR", {
+    month: "long",
+    year: "numeric",
+  });
+}
 
 export default function GrillaMesLicenciasPanel() {
   const abrirAyuda = (termino) => {
@@ -20,6 +44,7 @@ export default function GrillaMesLicenciasPanel() {
   const { user } = useAuthSession();
   const { claims } = useAuthClaims(user);
   const esRrhh = claimsIncludeRrhh(claims);
+  const esJefe = claimsIncludeJefe(claims);
   const bandejaPath = esRrhh ? "/portal/rrhh/solicitudes-articulo" : "/portal/jefe/solicitudes";
   const personaId = String(claims?.persona_id || "").trim();
 
@@ -27,7 +52,13 @@ export default function GrillaMesLicenciasPanel() {
   const [diaModal, setDiaModal] = useState(null);
   const [coberturaModal, setCoberturaModal] = useState(null);
   const [aplicandoBatch, setAplicandoBatch] = useState(false);
+  const [vistaModal, setVistaModal] = useState(null);
+  const [cargaPendienteKey, setCargaPendienteKey] = useState("");
   const outbox = useAsistenciaOutbox({ editorPersonaId: personaId, periodo: vista.periodo });
+  const periodos = esJefe
+    ? periodosVentanaJefe()
+    : [sumarMeses(vista.periodo, -1), vista.periodo, sumarMeses(vista.periodo, 1)];
+  const cargandoTarjeta = Boolean(cargaPendienteKey) || vista.loading;
 
   const handleAplicarCambios = async () => {
     if (!outbox.hasPending || aplicandoBatch) return;
@@ -55,30 +86,90 @@ export default function GrillaMesLicenciasPanel() {
     }
   };
 
+  function seleccionarTarjeta({ periodo, modo, grupoId = "", titulo }) {
+    vista.setPeriodo(periodo);
+    vista.onModoChange(modo);
+    vista.setGrupoId(grupoId);
+    setVistaModal({ titulo, periodo });
+    setCargaPendienteKey(`${periodo}::${modo}::${grupoId || "-"}`);
+  }
+
+  useEffect(() => {
+    if (!cargaPendienteKey) return;
+    const [periodoTarget, modoTarget, grupoTarget] = cargaPendienteKey.split("::");
+    const grupoNormalizado = grupoTarget === "-" ? "" : grupoTarget;
+    const listo =
+      vista.periodo === periodoTarget &&
+      vista.modo === modoTarget &&
+      String(vista.grupoId || "") === grupoNormalizado;
+    if (!listo) return;
+    setCargaPendienteKey("");
+    void vista.cargar();
+  }, [cargaPendienteKey, vista]);
+
   return (
     <div className="mt-6 border-t border-slate-200 pt-6">
-      <h2 className="text-lg font-semibold text-slate-900">Calendario de licencias (vista mes)</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Proyección MDC en <code className="text-xs">vistas_grilla_mes_agente</code>. Titular, equipo o sector
-        (RRHH) desde un solo selector — el período se conserva al cambiar de vista.
-      </p>
-      <p className="mt-2 text-sm text-slate-600">{vista.hintModo}</p>
-
-      <GrillaMesSelector
-        periodo={vista.periodo}
-        onPeriodoChange={vista.setPeriodo}
-        modo={vista.modo}
-        onModoChange={vista.onModoChange}
-        grupoId={vista.grupoId}
-        onGrupoIdChange={vista.setGrupoId}
-        gruposEquipo={vista.gruposEquipo}
-        gruposSector={vista.gruposSector}
-        resolverCargando={vista.resolverCargando}
-        sectorCargando={vista.sectorCargando}
-        esRrhh={esRrhh}
-        onCargar={() => void vista.cargar()}
-        cargandoDatos={vista.loading}
-      />
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <h2 className="text-lg font-semibold text-slate-900">Calendario licencias</h2>
+        <p className="mt-1 text-sm text-slate-600">Seleccioná una tarjeta para abrir la grilla mensual.</p>
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          {periodos.map((periodo, idx) => {
+            const titulo = idx === 0 ? "Mes anterior" : idx === 1 ? "Mes actual" : "Mes próximo";
+            return (
+              <section key={periodo} className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{titulo}</p>
+                <p className="text-sm font-medium text-slate-900">{labelPeriodo(periodo)}</p>
+                <div className="mt-2 space-y-2">
+                  <button
+                    type="button"
+                    disabled={cargandoTarjeta}
+                    onClick={() =>
+                      seleccionarTarjeta({
+                        periodo,
+                        modo: "TITULAR",
+                        titulo: `Titular (mi caso) · ${labelPeriodo(periodo)}`,
+                      })
+                    }
+                    className="flex min-h-11 w-full items-center justify-between rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-left text-sm font-semibold text-violet-900 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <span>Titular (mi caso)</span>
+                    <span className="text-xs font-medium">{labelPeriodo(periodo)}</span>
+                  </button>
+                  {vista.gruposEquipo.length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500">
+                      Sin grupos vigentes.
+                    </p>
+                  ) : (
+                    vista.gruposEquipo.map((g) => {
+                      const gid = String(g.grupo_de_trabajo_id || "");
+                      const glabel = String(g.etiqueta_ui || gid);
+                      return (
+                        <button
+                          key={`${periodo}-${gid}`}
+                          type="button"
+                          disabled={cargandoTarjeta}
+                          onClick={() =>
+                            seleccionarTarjeta({
+                              periodo,
+                              modo: "EQUIPO",
+                              grupoId: gid,
+                              titulo: `${glabel} · ${labelPeriodo(periodo)}`,
+                            })
+                          }
+                          className="flex min-h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-left text-sm text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <span className="font-medium">{glabel}</span>
+                          <span className="text-xs text-slate-600">{labelPeriodo(periodo)}</span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      </div>
 
       {vista.resolverError ? (
         <p className="mt-2 text-sm text-amber-700">{vista.resolverError}</p>
@@ -142,66 +233,82 @@ export default function GrillaMesLicenciasPanel() {
         </div>
       ) : null}
 
-      {vista.data && !vista.loading ? (
-        <p className="mt-2 text-xs text-slate-500">
-          {vista.esModoTitular && vista.titularVisMeta ? (
-            vista.titularVisMeta.existe ? (
-              <>
-                Doc <span className="font-mono">{vista.titularVisMeta.vis_id}</span>
-              </>
-            ) : (
-              <>
-                Sin documento <span className="font-mono">{vista.titularVisMeta.vis_id}</span> para este mes.
-              </>
-            )
-          ) : (
-            <>
-              {vista.data.total_personas} persona(s) · corte {vista.data.fecha_corte}
-              {vista.data.truncado ? " · listado truncado (máx. 60)" : ""}
-            </>
-          )}
-        </p>
+      {vistaModal ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 p-2 sm:p-4" role="dialog" aria-modal="true" aria-label="Grilla mensual">
+          <button type="button" className="absolute inset-0 cursor-default" onClick={() => setVistaModal(null)} aria-label="Cerrar modal" />
+          <div className="relative z-10 flex h-[96vh] w-[98vw] flex-col rounded-2xl border border-slate-300 bg-white p-3 shadow-2xl sm:p-4">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Calendario licencias</p>
+                <h3 className="text-base font-semibold text-slate-900">{vistaModal.titulo}</h3>
+              </div>
+              <button type="button" onClick={() => setVistaModal(null)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Cerrar
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-auto">
+              {cargandoTarjeta ? (
+                <div className="flex h-full min-h-[18rem] items-center justify-center">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+                    Cargando grilla...
+                  </div>
+                </div>
+              ) : vista.esModoTitular ? (
+                <GrillaMesTitularCalendario
+                  anio={vista.anio}
+                  mes={vista.mes}
+                  diasMap={vista.titularDias}
+                  gruposEquipo={vista.gruposEquipo}
+                  onDiaClick={({ dia, eventos, grupoLabel }) => {
+                    const cell = vista.titularDias?.[dia] || {};
+                    const fechaYmd = `${vista.anio}-${String(vista.mes).padStart(2, "0")}-${dia}`;
+                    setDiaModal({
+                      dia,
+                      fechaYmd,
+                      personaId,
+                      eventos,
+                      personaLabel: "Mi calendario",
+                      grupoLabel,
+                      turnoTeorico: {
+                        rda_turno_id: cell.rda_turno_id,
+                        es_franco: cell.es_franco,
+                        capa_teorica: {
+                          tipo_dia: cell.es_franco ? "franco" : "laborable",
+                          ingreso: cell.rda_ingreso,
+                          egreso: cell.rda_egreso,
+                        },
+                      },
+                    });
+                  }}
+                />
+              ) : (
+                <GrillaMesEquipoTabla
+                  anio={vista.anio}
+                  mes={vista.mes}
+                  filas={vista.filas}
+                  grupoSeleccionado={vista.grupoId}
+                  onCeldaClick={({ dia, fechaYmd, personaId: pid, eventos, personaLabel, grupoLabel, turnoTeorico }) =>
+                    setDiaModal({ dia, fechaYmd, personaId: pid, eventos, personaLabel, grupoLabel, turnoTeorico })
+                  }
+                />
+              )}
+            </div>
+            <div className="mt-2 border-t border-slate-200 pt-2 text-xs text-slate-700">
+              <div className="flex flex-wrap items-center gap-4">
+                <span>
+                  <span className="mr-1 inline-block h-3 w-5 rounded border border-blue-900/25 bg-[#3B82F6] align-middle" />
+                  Consolidado / aprobado
+                </span>
+                <span>
+                  <span className="mr-1 inline-block h-3 w-5 rounded border-2 border-dashed border-amber-900 bg-[#F59E0B] align-middle" />
+                  En revisión
+                </span>
+                <span>Clic = detalles</span>
+              </div>
+            </div>
+          </div>
+        </div>
       ) : null}
-
-      {vista.esModoTitular ? (
-        <GrillaMesTitularCalendario
-          anio={vista.anio}
-          mes={vista.mes}
-          diasMap={vista.titularDias}
-          gruposEquipo={vista.gruposEquipo}
-          onDiaClick={({ dia, eventos, grupoLabel }) => {
-            const cell = vista.titularDias?.[dia] || {};
-            const fechaYmd = `${vista.anio}-${String(vista.mes).padStart(2, "0")}-${dia}`;
-            setDiaModal({
-              dia,
-              fechaYmd,
-              personaId,
-              eventos,
-              personaLabel: "Mi calendario",
-              grupoLabel,
-              turnoTeorico: {
-                rda_turno_id: cell.rda_turno_id,
-                es_franco: cell.es_franco,
-                capa_teorica: {
-                  tipo_dia: cell.es_franco ? "franco" : "laborable",
-                  ingreso: cell.rda_ingreso,
-                  egreso: cell.rda_egreso,
-                },
-              },
-            });
-          }}
-        />
-      ) : (
-        <GrillaMesEquipoTabla
-          anio={vista.anio}
-          mes={vista.mes}
-          filas={vista.filas}
-          grupoSeleccionado={vista.grupoId}
-          onCeldaClick={({ dia, fechaYmd, personaId: pid, eventos, personaLabel, grupoLabel, turnoTeorico }) =>
-            setDiaModal({ dia, fechaYmd, personaId: pid, eventos, personaLabel, grupoLabel, turnoTeorico })
-          }
-        />
-      )}
 
       <DiaGrillaDetalleModal
         open={diaModal != null}
@@ -247,24 +354,6 @@ export default function GrillaMesLicenciasPanel() {
         />
       ) : null}
 
-      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-        <p className="font-medium text-slate-700">Leyenda (MDC → celda)</p>
-        <ul className="mt-1 list-inside list-disc space-y-0.5">
-          <li>
-            <span
-              className="mr-1 inline-block h-3 w-5 align-middle rounded border border-blue-900/25"
-              style={{ backgroundColor: "#3B82F6" }}
-            />{" "}
-            Consolidado / aprobado — fondo <span className="font-mono">#3B82F6</span>, texto claro.
-          </li>
-          <li>
-            <span className="mr-1 inline-block h-3 w-5 align-middle rounded border-2 border-dashed border-amber-900 bg-[#F59E0B]" />{" "}
-            En revisión — fondo <span className="font-mono">#F59E0B</span> + borde punteado ámbar oscuro.
-          </li>
-          <li>Pasar el mouse: artículo, estado legible, <span className="font-mono">sol_id</span> abreviado (en equipo, nombre de la fila).</li>
-          <li>Clic: detalle del día; desde ahí, cobertura parcial por tramos (vista equipo / jefe).</li>
-        </ul>
-      </div>
     </div>
   );
 }

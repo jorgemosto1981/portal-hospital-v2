@@ -10,16 +10,24 @@ function isoWeekdayFromYmd(ymd) {
   return dow === 0 ? 7 : dow;
 }
 
+function normalizarTipoDia(tipoDiaRaw) {
+  const t = String(tipoDiaRaw || "").trim().toLowerCase().replace(/\s+/g, "_");
+  if (t === "laborable" || t === "guardia" || t === "franco" || t === "no_laborable") return t;
+  if (t === "no-laborable" || t === "nolaborable" || t === "no_laboral") return "no_laborable";
+  return "franco";
+}
+
 function celdaDesdeRegimenFijo(regimen, ymd) {
   const isoWeekday = isoWeekdayFromYmd(ymd);
   const diaConf = (regimen.dias || []).find((d) => d.dia_semana === isoWeekday);
-  if (!diaConf || (diaConf.tipo_dia !== "laborable" && diaConf.tipo_dia !== "guardia")) {
+  if (!diaConf) {
     return { tipo_dia: "franco", turno_id: null };
   }
+  const tipoDia = normalizarTipoDia(diaConf.tipo_dia);
   const turno = diaConf.turno || {};
   return {
-    tipo_dia: diaConf.tipo_dia || "laborable",
-    turno_id: turno.turno_id || null,
+    tipo_dia: tipoDia,
+    turno_id: tipoDia === "laborable" || tipoDia === "guardia" ? (turno.turno_id || null) : null,
   };
 }
 
@@ -34,13 +42,14 @@ function celdaDesdeRegimenRotativo(regimen, ymd, fechaAncla) {
   const posRaw = ((diff % cicloTotal) + cicloTotal) % cicloTotal;
   const posicion = posRaw + 1;
   const posConf = regimen.ciclo.find((p) => p.posicion === posicion);
-  if (!posConf || (posConf.tipo_dia !== "laborable" && posConf.tipo_dia !== "guardia")) {
+  if (!posConf) {
     return { tipo_dia: "franco", turno_id: null };
   }
+  const tipoDia = normalizarTipoDia(posConf.tipo_dia);
   const turno = posConf.turno || {};
   return {
-    tipo_dia: posConf.tipo_dia || "laborable",
-    turno_id: turno.turno_id || null,
+    tipo_dia: tipoDia,
+    turno_id: tipoDia === "laborable" || tipoDia === "guardia" ? (turno.turno_id || null) : null,
   };
 }
 

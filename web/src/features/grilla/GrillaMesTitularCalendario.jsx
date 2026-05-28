@@ -43,12 +43,12 @@ function CalendarioGrupo({ anio, mes, diasMap, gdtId, etiqueta, esMultiGrupo, gr
           {etiqueta}
         </h4>
       )}
-      <div className="grid grid-cols-7 gap-px">
+      <div className="grid grid-cols-7 gap-px rounded-xl border border-slate-300 bg-slate-300 p-px">
         {DIAS_SEMANA.map((nombre, idx) => (
           <div
             key={nombre}
-            className={`py-1 text-center text-[10px] font-bold uppercase tracking-wider ${
-              idx >= 5 ? "text-rose-400" : "text-slate-500"
+            className={`h-10 bg-slate-100 py-1 text-center text-[10px] font-bold uppercase tracking-wider ${
+              idx >= 5 ? "text-rose-700" : "text-slate-600"
             }`}
           >
             {nombre}
@@ -74,7 +74,7 @@ function CalendarioGrupo({ anio, mes, diasMap, gdtId, etiqueta, esMultiGrupo, gr
             return (
               <div
                 key={dia}
-                className={`flex min-h-[3.2rem] flex-col items-center justify-center rounded bg-slate-100 text-center ${
+                className={`flex min-h-[5rem] flex-col items-center justify-center rounded-none border border-slate-200 bg-slate-100 text-center ${
                   esFinDeSemana ? "bg-slate-100/80" : ""
                 }`}
                 title={`Asignado a ${otroLabel}`}
@@ -124,7 +124,7 @@ function CalendarioGrupo({ anio, mes, diasMap, gdtId, etiqueta, esMultiGrupo, gr
                 eventos: Array.isArray(eventos) ? eventos : [],
                 grupoLabel,
               })}
-              className={`flex min-h-[3.2rem] flex-col items-center justify-center rounded text-center text-[10px] font-semibold ${bgFranco} ${bgFeriado} ${bgFinDeSemana}`}
+              className={`flex min-h-[5rem] flex-col items-center justify-center rounded-none border border-slate-200 text-center text-[10px] font-semibold ${bgFranco} ${bgFeriado} ${bgFinDeSemana}`}
               title={titleParts.join(" · ") || undefined}
             >
               <span className={`text-[9px] ${esFinDeSemana ? "text-rose-400" : "opacity-80"}`}>

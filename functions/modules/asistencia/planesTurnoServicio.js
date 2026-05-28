@@ -17,6 +17,9 @@ const {
 } = require("./planAutorizacionJerarquica");
 const { materializarGrupoMes } = require("./rdaTurnoTeoricoWorker");
 const { logger } = require("firebase-functions/v2");
+const { buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
+const { COL_VISTAS_GRILLA_MES } = require("../shared/mdcComandosConstants");
+const { getInfoDia } = require("../shared/calendarService");
 
 const COL_PLANES = "planes_turno_servicio";
 const COL_ASISTENCIA = "asistencia_diaria";
@@ -44,9 +47,16 @@ function assertEstados(doc, esperados) {
 function buildAprobacion(request, accion, observaciones) {
   const uid = (request.auth && request.auth.uid) || "system";
   const token = (request.auth && request.auth.token) || {};
+  const actorLabel =
+    String(token.nombre_completo || "").trim() ||
+    String(token.display_name || "").trim() ||
+    String(token.name || "").trim() ||
+    String(token.email || "").trim() ||
+    null;
   return {
     actor_uid: uid,
     actor_persona_id: token.persona_id || null,
+    actor_label: actorLabel,
     fecha: new Date().toISOString().slice(0, 10),
     rol: token.portal_role || "rrhh",
     accion,
@@ -393,6 +403,104 @@ const revertirPlanTurnoServicio = onCall({ invoker: "public" }, async (request) 
 });
 
 /**
+ * RRHH: eliminar plan (borrado lógico).
+ * No borra físicamente: marca flags de eliminación + auditoría.
+ * Si estaba HABILITADO, desmaterializa capa teórica del/los mes(es) afectados.
+ */
+const eliminarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) => {
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
+
+  const planId = request.data && request.data.plan_id;
+  if (!planId) err("invalid-argument", "[PLT-DEL-001] plan_id requerido.");
+
+  const motivo = typeof (request.data && request.data.motivo_eliminacion) === "string"
+    ? request.data.motivo_eliminacion.trim()
+    : "";
+  if (motivo.length < 10) {
+    err("invalid-argument", "[PLT-DEL-002] motivo_eliminacion requerido (mín. 10 caracteres).");
+  }
+
+  const confirmar = request.data && request.data.confirmar_eliminacion === true;
+  if (!confirmar) {
+    err("failed-precondition", "[PLT-DEL-003] confirmar_eliminacion=true requerido.");
+  }
+
+  const uid = (request.auth && request.auth.uid) || "system";
+  const token = (request.auth && request.auth.token) || {};
+
+  const ref = db.collection(COL_PLANES).doc(planId);
+  const snap = await ref.get();
+  if (!snap.exists) err("not-found", "[PLT-DEL-004] Plan no encontrado.");
+  const plan = snap.data();
+
+  if (plan.eliminado === true) {
+    return { ok: true, id: planId, ya_eliminado: true };
+  }
+
+  const aprobacion = buildAprobacion(request, "eliminar_logico", motivo);
+  const estadoAnterior = String(plan.estado || "");
+
+  await ref.update({
+    eliminado: true,
+    eliminado_en: new Date().toISOString(),
+    eliminado_por_uid: uid,
+    eliminado_por_persona_id: token.persona_id || null,
+    motivo_eliminacion: motivo,
+    estado_anterior_eliminacion: estadoAnterior,
+    historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
+    actualizado_en: FieldValue.serverTimestamp(),
+  });
+
+  const warnings = [];
+  const overridesEncontrados = await detectarOverridesFantasma(plan);
+  if (overridesEncontrados.length > 0) {
+    const invalidados = await invalidarOverridesFantasma(overridesEncontrados);
+    warnings.push({
+      code: "PLT-DEL-W001",
+      mensaje: `Se invalidaron ${invalidados} override(s) por eliminación del plan.`,
+    });
+  }
+
+  if (estadoAnterior === "HABILITADO") {
+    if (plan.tipo_plan === "mensual" && plan.periodo) {
+      const [anio, mes] = String(plan.periodo).split("-").map(Number);
+      try {
+        await materializarGrupoMes({ grupoId: plan.grupo_id, anio, mes });
+        logger.info("materializarGrupoMes_post_eliminar OK", { planId, anio, mes });
+      } catch (e) {
+        logger.error("materializarGrupoMes_post_eliminar ERROR", { planId, anio, mes, error: String(e) });
+        warnings.push({
+          code: "PLT-DEL-W002",
+          mensaje: "No se pudo desmaterializar automáticamente el mes del plan eliminado.",
+        });
+      }
+    }
+
+    if (plan.tipo_plan === "perpetuo") {
+      const hoy = new Date();
+      const mesActual = hoy.getMonth() + 1;
+      const anioActual = hoy.getFullYear();
+      const mesSig = mesActual === 12 ? 1 : mesActual + 1;
+      const anioSig = mesActual === 12 ? anioActual + 1 : anioActual;
+      for (const [a, m] of [[anioActual, mesActual], [anioSig, mesSig]]) {
+        try {
+          await materializarGrupoMes({ grupoId: plan.grupo_id, anio: a, mes: m });
+          logger.info("materializarGrupoMes_post_eliminar_perpetuo OK", { planId, anio: a, mes: m });
+        } catch (e) {
+          logger.error("materializarGrupoMes_post_eliminar_perpetuo ERROR", { planId, anio: a, mes: m, error: String(e) });
+          warnings.push({
+            code: "PLT-DEL-W003",
+            mensaje: `No se pudo desmaterializar ${a}-${String(m).padStart(2, "0")} del plan perpetuo eliminado.`,
+          });
+        }
+      }
+    }
+  }
+
+  return { ok: true, id: planId, eliminado: true, warnings };
+});
+
+/**
  * Bandeja RRHH cross-grupo: planes ENVIADO o EN_REVISION de todos los grupos.
  * Enriquece con nombre de grupo. Límite 200.
  */
@@ -406,7 +514,8 @@ const listarPlanesPendientesRrhh = onCall({ invoker: "public" }, async (request)
 
   const docs = [...snapEnviado.docs, ...snapRevision.docs];
   const raw = docs.slice(0, MAX_ITEMS).map((d) => ({ id: d.id, ...d.data() }));
-  const withPendiente = await enrichPlanesAprobacionPendiente(raw);
+  const activos = raw.filter((p) => p.eliminado !== true);
+  const withPendiente = await enrichPlanesAprobacionPendiente(activos);
   const items = await enrichPlanesConLabels(withPendiente);
 
   return { items, tiene_mas: docs.length > MAX_ITEMS };
@@ -480,7 +589,8 @@ const listarPlanesTurnoServicio = onCall({ invoker: "public" }, async (request) 
 
   const snap = await q.get();
   const raw = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  const withPendiente = await enrichPlanesAprobacionPendiente(raw);
+  const activos = raw.filter((p) => p.eliminado !== true);
+  const withPendiente = await enrichPlanesAprobacionPendiente(activos);
   const items = await enrichPlanesConLabels(withPendiente);
   return { items };
 });
@@ -534,6 +644,10 @@ async function enrichPlanesConLabels(items) {
       const pid = String(ag?.persona_id || "").trim();
       if (pid) personaIds.add(pid);
     }
+    for (const h of plan.historial_aprobaciones || []) {
+      const actorPid = String(h?.actor_persona_id || "").trim();
+      if (actorPid) personaIds.add(actorPid);
+    }
   }
 
   const personaDocs = {};
@@ -559,6 +673,16 @@ async function enrichPlanesConLabels(items) {
         ...ag,
         persona_label: meta.persona_label || ag.persona_id,
         persona_dni: meta.persona_dni || null,
+      };
+    }),
+    historial_aprobaciones: (plan.historial_aprobaciones || []).map((h) => {
+      const actorMeta = personaDocs[String(h?.actor_persona_id || "").trim()] || {};
+      return {
+        ...h,
+        actor_label:
+          String(h?.actor_label || "").trim() ||
+          String(actorMeta.persona_label || "").trim() ||
+          null,
       };
     }),
   }));
@@ -872,20 +996,63 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
       const rd = rsnap.data();
       regimenes[rid] = {
         id: rid,
-        nombre: rd.nombre || "",
-        codigo: rd.codigo || "",
-        tipo_patron: rd.tipo_patron || "",
-        turnos_disponibles: rd.turnos_disponibles || [],
-        dias: rd.dias || [],
-        ciclo: rd.ciclo || [],
-        ciclo_total: rd.ciclo_total || 0,
-        impacta_calendario_institucional: rd.impacta_calendario_institucional !== false,
-        reglas_planificacion: rd.reglas_planificacion || null,
+        ...rd,
       };
     }
   }
 
-  return { personas_grupo: personasGrupo, regimenes, periodo: periodoNorm };
+  // Cargar eventos/licencias proyectados del mes desde vis_* (sin nueva llamada frontend).
+  const licenciasPorPersonaYmd = {};
+  for (const pg of personasGrupo) {
+    const pid = String(pg.persona_id || "").trim();
+    if (!pid) continue;
+    const visId = buildVisDocumentId(pid, `${periodoNorm}-01`);
+    if (!visId) continue;
+    const visSnap = await db.collection(COL_VISTAS_GRILLA_MES).doc(visId).get();
+    if (!visSnap.exists) continue;
+    const vis = visSnap.data() || {};
+    const dias = vis.dias || {};
+    const row = {};
+    for (const [diaKey, payload] of Object.entries(dias)) {
+      const eventos = Array.isArray(payload?.eventos) ? payload.eventos : [];
+      if (eventos.length === 0) continue;
+      const ymd = `${periodoNorm}-${String(diaKey).padStart(2, "0")}`;
+      row[ymd] = eventos.map((ev) => ({
+        solicitud_id: ev?.solicitud_id || null,
+        articulo_id: ev?.articulo_id || null,
+        codigo_grilla: ev?.codigo_grilla || null,
+        estado_solicitud_id: ev?.estado_solicitud_id || null,
+        color_ui: ev?.color_ui || null,
+        nivel_ocupacion_dia_id: ev?.nivel_ocupacion_dia_id || null,
+      }));
+    }
+    if (Object.keys(row).length > 0) licenciasPorPersonaYmd[pid] = row;
+  }
+
+  // Calendario institucional del mes (feriados/asuetos) para impacto directo en grilla.
+  const calendarioInstitucionalMes = {};
+  const [anio, mes] = periodoNorm.split("-").map(Number);
+  const diasMes = new Date(anio, mes, 0).getDate();
+  for (let d = 1; d <= diasMes; d += 1) {
+    const ymd = `${periodoNorm}-${String(d).padStart(2, "0")}`;
+    const info = await getInfoDia(ymd);
+    if (info?.evento) {
+      calendarioInstitucionalMes[ymd] = {
+        es_feriado: true,
+        tipo: String(info?.evento?.tipo || "feriado"),
+        motivo: String(info?.evento?.descripcion || "").trim() || null,
+        multiplicador: info.multiplicador || 1,
+      };
+    }
+  }
+
+  return {
+    personas_grupo: personasGrupo,
+    regimenes,
+    periodo: periodoNorm,
+    licencias_por_persona_ymd: licenciasPorPersonaYmd,
+    calendario_institucional_mes: calendarioInstitucionalMes,
+  };
 });
 
 module.exports = {
@@ -894,6 +1061,7 @@ module.exports = {
   aprobarPlanTurnoServicio,
   rechazarPlanTurnoServicio,
   revertirPlanTurnoServicio,
+  eliminarPlanTurnoServicio,
   cerrarPlanPerpetuo,
   listarPlanesTurnoServicio,
   listarPlanesPendientesRrhh,
