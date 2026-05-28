@@ -319,6 +319,7 @@ Reemplaza/extiende la existente `planificacion_mensual_rotativa`. El gate existe
 - `periodo`: YYYY-MM
 - Contiene la grilla dia por dia con turno asignado a cada agente
 - Deadline configurable por RRHH (ej: "antes del 25 del mes anterior")
+- Al **HABILITAR**, el backend escribe **`grilla_aprobada`** (foto inmutable del mes: turnos, horarios, francos, feriados, fichadas esperadas). Todas las pantallas **VER plan** leen solo ese bloque. Ver [`RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md`](./RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md).
 
 ### Estados del plan
 

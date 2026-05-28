@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Card from "../../components/ui/Card.jsx";
 import {
   callListarPlanesTurnoServicio,
+  callListarContextoPlanGrupo,
   callGuardarPlanTurnoServicio,
   callEnviarPlanTurnoServicio,
   callAprobarPlanTurnoServicio,
@@ -10,6 +11,8 @@ import {
   callCerrarPlanPerpetuo,
   callResolverContextoLaboralSolicitud,
 } from "../../services/callables.js";
+import { etiquetaCeldaPlanDisplay, claseCeldaPlanDisplay } from "../../features/planes/planGrillaCeldaDisplay.js";
+import { diasEnMes } from "../../features/grilla/grillaMesCellUtils.js";
 import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
@@ -19,14 +22,42 @@ import PlanPerpetualViewer from "./planes/PlanPerpetualViewer.jsx";
 import BadgeEstadoPlan, { LABEL_ESTADO } from "../../components/ui/BadgeEstadoPlan.jsx";
 import { periodosVentanaJefe } from "../../features/jefe/periodoJefe.js";
 
-function estadoPrincipalGrupo(items) {
+/** Plan vigente a mostrar cuando hay varios docs (mismo grupo+período). HABILITADO gana sobre pendientes. */
+const ORDEN_PLAN_CANONICO = ["HABILITADO", "EN_REVISION", "ENVIADO", "BORRADOR", "CERRADO"];
+
+function planCanonicaGrupo(items) {
   const list = Array.isArray(items) ? items : [];
-  if (list.some((p) => p.estado === "EN_REVISION")) return "EN_REVISION";
-  if (list.some((p) => p.estado === "ENVIADO")) return "ENVIADO";
-  if (list.some((p) => p.estado === "BORRADOR")) return "BORRADOR";
-  if (list.some((p) => p.estado === "HABILITADO")) return "HABILITADO";
-  if (list.some((p) => p.estado === "CERRADO")) return "CERRADO";
-  return "SIN_PLAN";
+  for (const estado of ORDEN_PLAN_CANONICO) {
+    const found = list.find((p) => p.estado === estado);
+    if (found) return found;
+  }
+  return list[0] || null;
+}
+
+function estadoPrincipalGrupo(items) {
+  return planCanonicaGrupo(items)?.estado || "SIN_PLAN";
+}
+
+function diasYmdPeriodo(periodo) {
+  const m = /^(\d{4})-(\d{2})$/.exec(String(periodo || "").trim());
+  if (!m) return [];
+  const anio = Number(m[1]);
+  const mes = Number(m[2]);
+  const n = diasEnMes(anio, mes);
+  const out = [];
+  for (let d = 1; d <= n; d += 1) {
+    out.push(`${periodo}-${String(d).padStart(2, "0")}`);
+  }
+  return out;
+}
+
+function columnasPlanMensual(plan) {
+  const set = new Set(diasYmdPeriodo(plan?.periodo));
+  for (const ag of plan?.agentes || []) {
+    const dias = ag?.dias && typeof ag.dias === "object" ? Object.keys(ag.dias) : [];
+    dias.forEach((d) => set.add(d));
+  }
+  return [...set].sort();
 }
 
 function estiloTarjetaGrupo(estado, activo) {
@@ -193,6 +224,7 @@ export default function PlanTurnoServicioPage() {
   const [feedback, setFeedback] = useState("");
   const [planEdicion, setPlanEdicion] = useState(null);
   const [planDetalle, setPlanDetalle] = useState(null);
+  const [planDetalleRegimenes, setPlanDetalleRegimenes] = useState({});
   const [planOpciones, setPlanOpciones] = useState(null);
   const [operando, setOperando] = useState(false);
   const [gruposDisponibles, setGruposDisponibles] = useState([]);
@@ -200,6 +232,21 @@ export default function PlanTurnoServicioPage() {
   const [gruposCargando, setGruposCargando] = useState(false);
   const [resumenGrupoPeriodo, setResumenGrupoPeriodo] = useState({});
   const periodosPermitidos = useMemo(() => periodosVentanaJefe(), []);
+
+  const abrirPlanDetalle = useCallback(async (plan) => {
+    setPlanDetalle(plan);
+    setPlanDetalleRegimenes({});
+    if (plan?.tipo_plan !== "mensual" || !plan?.grupo_id || !plan?.periodo) return;
+    try {
+      const res = await callListarContextoPlanGrupo({
+        grupo_id: plan.grupo_id,
+        periodo: plan.periodo,
+      });
+      setPlanDetalleRegimenes(res.data?.regimenes || {});
+    } catch {
+      setPlanDetalleRegimenes({});
+    }
+  }, []);
 
   useEffect(() => {
     if (!personaId) return;
@@ -455,18 +502,19 @@ export default function PlanTurnoServicioPage() {
         return;
       }
 
-      const plan = items[0];
+      const plan = planCanonicaGrupo(items);
+      if (!plan) return;
       if (esHistorico) {
-        setPlanDetalle(plan);
+        void abrirPlanDetalle(plan);
         return;
       }
-      if (meta.estado === "HABILITADO") {
-        setPlanDetalle(plan);
+      if (plan.estado === "HABILITADO" || plan.estado === "CERRADO") {
+        void abrirPlanDetalle(plan);
         return;
       }
-      setPlanOpciones({ plan, estado: meta.estado, grupoLabel: g.label, periodo: p });
+      setPlanOpciones({ plan, estado: plan.estado, grupoLabel: g.label, periodo: p });
     },
-    [resumenGrupoPeriodo],
+    [resumenGrupoPeriodo, abrirPlanDetalle],
   );
 
   if (!esJefe && !esRrhh) {
@@ -627,7 +675,7 @@ export default function PlanTurnoServicioPage() {
               {planOpciones.grupoLabel} · {planOpciones.periodo} · {LABEL_ESTADO[planOpciones.estado] || planOpciones.estado}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => { setPlanDetalle(planOpciones.plan); setPlanOpciones(null); }} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              <button type="button" onClick={() => { void abrirPlanDetalle(planOpciones.plan); setPlanOpciones(null); }} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
                 Ver
               </button>
               {(planOpciones.plan.estado === "BORRADOR" || planOpciones.plan.estado === "EN_REVISION") && (
@@ -647,13 +695,13 @@ export default function PlanTurnoServicioPage() {
 
       {/* Modal detalle read-only */}
       {planDetalle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={() => setPlanDetalle(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={() => { setPlanDetalle(null); setPlanDetalleRegimenes({}); }}>
           <div className="relative flex h-[96vh] w-[98vw] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="px-6 pt-6 text-lg font-semibold text-slate-900">
                 Detalle del plan <span className="font-mono text-sm text-slate-500">{planDetalle.id}</span>
               </h2>
-              <button onClick={() => setPlanDetalle(null)} className="mr-6 mt-6 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+              <button onClick={() => { setPlanDetalle(null); setPlanDetalleRegimenes({}); }} className="mr-6 mt-6 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -682,7 +730,7 @@ export default function PlanTurnoServicioPage() {
                       <thead>
                         <tr>
                           <th className="h-9 min-w-[14rem] border border-slate-300 bg-slate-100 px-2 py-1 text-left font-semibold text-slate-700">Agente</th>
-                          {planDetalle.agentes[0]?.dias && Object.keys(planDetalle.agentes[0].dias).sort().map((d) => (
+                          {columnasPlanMensual(planDetalle).map((d) => (
                             <th key={d} className="h-9 border border-slate-300 bg-slate-100 px-1 py-1 text-center font-semibold text-slate-600">{d.slice(-2)}</th>
                           ))}
                         </tr>
@@ -691,13 +739,21 @@ export default function PlanTurnoServicioPage() {
                         {planDetalle.agentes.map((ag) => (
                           <tr key={ag.persona_id}>
                             <td className="whitespace-nowrap border border-slate-300 bg-white px-2 py-2 font-medium text-slate-800">{labelAgentePlan(ag)}</td>
-                            {ag.dias && Object.keys(ag.dias).sort().map((d) => {
-                              const cel = ag.dias[d];
-                              const esFranco = cel.tipo_dia === "franco" || cel.tipo_dia === "no_laborable";
-                              const color = esFranco ? "bg-slate-200 text-slate-500" : "bg-green-100 text-green-700";
+                            {columnasPlanMensual(planDetalle).map((d) => {
+                              const regimen = planDetalleRegimenes[ag.regimen_horario_id] || null;
+                              const hlgMeta = { regimen_fecha_ancla: ag.regimen_fecha_ancla || null };
+                              const etiqueta = etiquetaCeldaPlanDisplay({
+                                celdaPlan: ag?.dias?.[d],
+                                regimen,
+                                ymd: d,
+                                hlgMeta,
+                              });
                               return (
-                                <td key={d} className={`h-9 border border-slate-300 px-1 py-1 text-center font-medium ${color}`}>
-                                  {esFranco ? "F" : cel.turno_id || "?"}
+                                <td
+                                  key={d}
+                                  className={`h-9 border border-slate-300 px-1 py-1 text-center text-[10px] leading-tight ${claseCeldaPlanDisplay(ag?.dias?.[d], regimen, d, hlgMeta)}`}
+                                >
+                                  {etiqueta || "—"}
                                 </td>
                               );
                             })}

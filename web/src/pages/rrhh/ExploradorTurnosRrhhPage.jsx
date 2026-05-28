@@ -2,7 +2,13 @@ import { useCallback, useMemo, useState } from "react";
 
 import Card from "../../components/ui/Card.jsx";
 import BadgeEstadoPlan from "../../components/ui/BadgeEstadoPlan.jsx";
-import { callListarPlanesTurnoServicio, callRevertirPlanTurnoServicio, callEliminarPlanTurnoServicio } from "../../services/callables.js";
+import {
+  callListarPlanesTurnoServicio,
+  callListarContextoPlanGrupo,
+  callRevertirPlanTurnoServicio,
+  callEliminarPlanTurnoServicio,
+} from "../../services/callables.js";
+import { etiquetaCeldaPlanDisplay, claseCeldaPlanDisplay } from "../../features/planes/planGrillaCeldaDisplay.js";
 import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
 
 function etiquetaGrupo(row) {
@@ -130,6 +136,7 @@ export default function ExploradorTurnosRrhhPage() {
   const [feedback, setFeedback] = useState("");
   const [operando, setOperando] = useState(false);
   const [planVista, setPlanVista] = useState(null);
+  const [planVistaRegimenes, setPlanVistaRegimenes] = useState({});
   const [planDetalle, setPlanDetalle] = useState(null);
   const [modalRevertir, setModalRevertir] = useState(null);
   const [obsRevertir, setObsRevertir] = useState("");
@@ -144,6 +151,21 @@ export default function ExploradorTurnosRrhhPage() {
     setFeedback(msg);
     setTimeout(() => setFeedback(""), 5000);
   };
+
+  const abrirGrillaPlan = useCallback(async (plan) => {
+    setPlanVista(plan);
+    setPlanVistaRegimenes({});
+    if (plan?.tipo_plan !== "mensual" || !plan?.grupo_id || !plan?.periodo) return;
+    try {
+      const res = await callListarContextoPlanGrupo({
+        grupo_id: plan.grupo_id,
+        periodo: plan.periodo,
+      });
+      setPlanVistaRegimenes(res.data?.regimenes || {});
+    } catch {
+      setPlanVistaRegimenes({});
+    }
+  }, []);
 
   const cargarGrupos = useCallback(async () => {
     if (grupos.length > 0) return;
@@ -438,9 +460,7 @@ export default function ExploradorTurnosRrhhPage() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setPlanVista(plan);
-                    }}
+                    onClick={() => void abrirGrillaPlan(plan)}
                     className="min-h-11 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
                   >
                     VER
@@ -553,14 +573,24 @@ export default function ExploradorTurnosRrhhPage() {
                           <td className="max-w-[14rem] truncate border border-slate-300 px-2 py-3 text-left text-xs font-semibold text-slate-900">
                             {labelAgentePlan(ag)}
                           </td>
-                          {columnasDesdeAgentes(planVista.agentes || []).map((dia) => (
+                          {columnasDesdeAgentes(planVista.agentes || []).map((dia) => {
+                            const regimen = planVistaRegimenes[ag.regimen_horario_id] || null;
+                            const hlgMeta = { regimen_fecha_ancla: ag.regimen_fecha_ancla || null };
+                            const etiqueta = etiquetaCeldaPlanDisplay({
+                              celdaPlan: ag?.dias?.[dia],
+                              regimen,
+                              ymd: dia,
+                              hlgMeta,
+                            });
+                            return (
                             <td
                               key={`${ag.persona_id}-${dia}`}
-                              className={`h-12 border border-slate-300 px-1 py-1 text-center text-[10px] ${claseCeldaDia(ag?.dias?.[dia])}`}
+                              className={`h-12 border border-slate-300 px-1 py-1 text-center text-[10px] leading-tight ${claseCeldaPlanDisplay(ag?.dias?.[dia], regimen, dia, hlgMeta)}`}
                             >
-                              {etiquetaCeldaDia(ag?.dias?.[dia]) || "—"}
+                              {etiqueta || "—"}
                             </td>
-                          ))}
+                            );
+                          })}
                         </tr>
                       ))}
                       {(planVista.agentes || []).length === 0 && (

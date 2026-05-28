@@ -31,6 +31,33 @@ function err(code, msg) {
   throw new HttpsError(code, msg);
 }
 
+/**
+ * Un solo plan mensual activo por grupo+período. Solo `eliminado: true` libera el slot.
+ */
+async function assertSinPlanMensualVigente({ grupoId, periodo, excludePlanId }) {
+  if (!grupoId || !periodo) return;
+  const snap = await db
+    .collection(COL_PLANES)
+    .where("grupo_id", "==", grupoId)
+    .where("periodo", "==", periodo)
+    .where("tipo_plan", "==", "mensual")
+    .limit(20)
+    .get();
+  const conflicto = snap.docs.find((d) => {
+    if (excludePlanId && d.id === excludePlanId) return false;
+    return d.data()?.eliminado !== true;
+  });
+  if (conflicto) {
+    const p = conflicto.data() || {};
+    err(
+      "failed-precondition",
+      `[PLT-GRD-001] Ya existe un plan activo para ${grupoId} / ${periodo} ` +
+        `(${conflicto.id}, estado ${p.estado || "?"}). ` +
+        "Eliminá el plan anterior con borrado lógico (RRHH) antes de crear otro.",
+    );
+  }
+}
+
 function assertEstado(doc, esperado) {
   const estado = doc.estado;
   if (estado !== esperado) {
@@ -163,6 +190,14 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
     id = `plt_${ulid()}`;
   }
 
+  if (tipoPlan === "mensual") {
+    await assertSinPlanMensualVigente({
+      grupoId,
+      periodo: especificos.periodo,
+      excludePlanId: exists ? id : null,
+    });
+  }
+
   const payload = {
     id,
     grupo_id: grupoId,
@@ -290,11 +325,19 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
         db.collection(COL_PLANES)
           .where("grupo_id", "==", current.grupo_id)
           .where("periodo", "==", current.periodo)
-          .where("estado", "==", "HABILITADO")
-          .limit(1),
+          .where("tipo_plan", "==", "mensual")
+          .limit(20),
       );
-      if (!dupSnap.empty) {
-        err("failed-precondition", `[PLT-APR-DUP] Ya existe un plan HABILITADO para ${current.grupo_id} / ${current.periodo}. Cierre o revierta el existente primero.`);
+      const dupActivo = dupSnap.docs.find(
+        (d) => d.id !== planId && d.data()?.eliminado !== true,
+      );
+      if (dupActivo) {
+        const e = dupActivo.data()?.estado || "?";
+        err(
+          "failed-precondition",
+          `[PLT-APR-DUP] Ya existe un plan activo para ${current.grupo_id} / ${current.periodo} ` +
+            `(${dupActivo.id}, estado ${e}). Eliminá el plan anterior (borrado lógico) primero.`,
+        );
       }
     }
 
