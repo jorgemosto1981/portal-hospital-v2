@@ -644,6 +644,86 @@ Contrato aprobado en [`CAPA_TEORICA_SEGMENTOS_V2.md`](./CAPA_TEORICA_SEGMENTOS_V
 
 ---
 
+## Actualización UI/UX — Editor mensual Jefe (2026-05-28)
+
+Cambios implementados sobre `GrillaMensualEditor.jsx` y utilidades asociadas, manteniendo coherencia con la capa teórica y sin lecturas adicionales al abrir/pintar:
+
+### 1) Carga inicial y datos de contexto en una sola lectura
+
+- `listarContextoPlanGrupo` retorna:
+  - personas vigentes del grupo/período,
+  - catálogo completo de regímenes usados,
+  - `licencias_por_persona_ymd`,
+  - `calendario_institucional_mes`.
+- La grilla usa este contexto para pintar estados (sin roundtrips extra por celda).
+
+### 2) Reglas de celda (estado operativo + estado calendario)
+
+- Licencia/proyección:
+  - color fucsia,
+  - no editable,
+  - muestra código/artículo en celda.
+- Institucional (feriado/asueto):
+  - fondo de columna completo (encabezado + celdas),
+  - tooltip con tipo/motivo.
+- Fines de semana:
+  - fondo de columna completo, análogo al institucional.
+- Diferenciación contractual:
+  - `franco` y `no_laborable` se preservan como estados distintos.
+  - `No lab` se contabiliza en columna separada.
+
+### 3) Normalización robusta de `tipo_dia`
+
+- Se normalizan variantes de origen (`no laborable`, `no-laborable`, `nolaborable`, etc.) a `no_laborable`.
+- Impacto:
+  - evita que `no_laborable` caiga en `franco` por diferencias de formato,
+  - mantiene contadores y colorimetría correctos.
+
+### 4) Pintado (planificado) y bloqueo (fijo/rotativo)
+
+- Pintado individual y por arrastre:
+  - `mousedown` inicia, `mouseenter` continúa, `mouseup` finaliza.
+- Aplica solo en filas editables (régimen planificado).
+- Filas fijo/rotativo:
+  - no editables,
+  - warning simple al intentar modificar.
+
+### 5) Contenido de celda por tipo de régimen
+
+- Planificado:
+  - línea 1: turno (`M`, `T`, `N`, `M+T`, etc.),
+  - línea 2: `ingreso-egreso`.
+- Fijo/rotativo:
+  - solo `ingreso-egreso` en celda.
+- Compactación horaria:
+  - `08:00-14:00` se muestra como `08-14` cuando ambos minutos son `00`.
+
+### 6) Orden y navegación de agentes
+
+- Orden de filas:
+  1. planificado,
+  2. rotativo,
+  3. fijo,
+  - y dentro de cada tramo, apellido/nombre ascendente.
+- Mobile:
+  - modo “una fila por vez” con navegación entre agentes (anterior/siguiente).
+
+### 7) Contraste, bordes y legibilidad
+
+- Ajuste de paleta para mayor contraste.
+- Bordes de celdas uniformes en contorno completo.
+- Texto autoajustable por longitud.
+- Variante opcional “Alto contraste” con toggle.
+
+### 8) Contrato visual final (consensuado)
+
+- Columna institucional siempre visible en amarillo.
+- Columna sábado/domingo siempre visible en fondo diferenciado.
+- `Franco` y `No laborable` diferenciados visual y funcionalmente.
+- Contadores separados: `Trab`, `Franc`, `No lab`.
+
+---
+
 ## Fuera de alcance
 
 - Acumulacion de horas semanales/mensuales en grilla
