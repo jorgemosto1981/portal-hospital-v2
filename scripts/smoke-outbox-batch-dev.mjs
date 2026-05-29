@@ -210,5 +210,6 @@ async function main() {
 
 main().catch((e) => {
   console.error(`${TAG} ❌ FAIL`, e?.message || e);
+  if (e?.stack) console.error(e.stack);
   process.exit(1);
 });

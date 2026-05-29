@@ -156,9 +156,9 @@ async function assertConcurrenciaVis(personaId, fecha, tokenEsperado, grupoId) {
   }
 }
 
-async function assertPeriodoEditable(personaId, fecha) {
+async function assertPeriodoEditable(personaId, fecha, grupoId) {
   try {
-    await assertPeriodoNoCerrado(personaId, fecha);
+    await assertPeriodoNoCerrado(personaId, fecha, grupoId);
   } catch (e) {
     const code = e && e.code === "failed-precondition" ? "failed-precondition" : "internal";
     err(code, (e && e.message) || "[ASI-PER-001] Período cerrado.");
@@ -263,16 +263,16 @@ const registrarCambioTurno = onCall({
 }, async (request) => {
   const data = request.data;
   const { personaId, fecha } = validarInput(data);
+  const grupoTrabajoId = requireGrupoTrabajoId(
+    resolveGrupoTrabajoId(data, data.context),
+    "[OVR-031] grupo_trabajo_id (gdt_*) requerido.",
+  );
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
-  await assertPeriodoEditable(personaId, fecha);
+  await assertPeriodoEditable(personaId, fecha, grupoTrabajoId);
   const override = validarOverride(data.override);
   if (override.tipo === "cobertura_parcial") {
-    await assertPeriodoEditable(override.persona_origen_id, fecha);
-    await assertPeriodoEditable(override.persona_cobertura_id, fecha);
-    const grupoTrabajoId = requireGrupoTrabajoId(
-      resolveGrupoTrabajoId(data, data.context),
-      "[OVR-030] grupo_trabajo_id (gdt_*) requerido para cobertura parcial.",
-    );
+    await assertPeriodoEditable(override.persona_origen_id, fecha, grupoTrabajoId);
+    await assertPeriodoEditable(override.persona_cobertura_id, fecha, grupoTrabajoId);
     const tokenConc = typeof data.expected_version_token === "string"
       ? data.expected_version_token.trim()
       : (typeof data.concurrencia_vis_sync === "string" ? data.concurrencia_vis_sync.trim() : "");
@@ -314,11 +314,6 @@ const registrarCambioTurno = onCall({
   const overrides = updated.exists && Array.isArray(updated.data().overrides_turno)
     ? updated.data().overrides_turno : [];
 
-  const grupoTrabajoId = requireGrupoTrabajoId(
-    resolveGrupoTrabajoId(data, data.context),
-    "[OVR-031] grupo_trabajo_id (gdt_*) requerido para rematerializar.",
-  );
-
   await rematerializarTrasOverride(override, personaId, fecha, grupoTrabajoId);
 
   return {
@@ -340,8 +335,12 @@ const eliminarCambioTurno = onCall({
 }, async (request) => {
   const data = request.data;
   const { personaId, fecha } = validarInput(data);
+  const grupoTrabajoId = requireGrupoTrabajoId(
+    resolveGrupoTrabajoId(data, data.context),
+    "[OVR-031] grupo_trabajo_id (gdt_*) requerido.",
+  );
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
-  await assertPeriodoEditable(personaId, fecha);
+  await assertPeriodoEditable(personaId, fecha, grupoTrabajoId);
 
   const idx = typeof data.override_index === "number" ? data.override_index : -1;
   if (idx < 0) err("invalid-argument", "[OVR-DEL-001] override_index (>=0) requerido.");
@@ -375,10 +374,6 @@ const eliminarCambioTurno = onCall({
   });
 
   const eliminado = overrides[idx];
-  const grupoTrabajoId = requireGrupoTrabajoId(
-    resolveGrupoTrabajoId(data, data.context),
-    "[OVR-031] grupo_trabajo_id (gdt_*) requerido para rematerializar.",
-  );
   await rematerializarTrasOverride(eliminado || {}, personaId, fecha, grupoTrabajoId);
 
   return { ok: true, doc_id: docId, override_eliminado_index: idx };
@@ -442,8 +437,8 @@ const aplicarBatchAsistencia = onCall({
 
   // Pre-flight check (rápido antes de abrir transacción)
   for (const it of items) {
-    await assertPeriodoEditable(it.persona_origen_id, it.fecha);
-    await assertPeriodoEditable(it.persona_cobertura_id, it.fecha);
+    await assertPeriodoEditable(it.persona_origen_id, it.fecha, it.grupo_trabajo_id);
+    await assertPeriodoEditable(it.persona_cobertura_id, it.fecha, it.grupo_trabajo_id);
   }
 
   const uid = (request.auth && request.auth.uid) || "system";

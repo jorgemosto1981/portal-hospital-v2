@@ -10,6 +10,7 @@ const { registrarCambioTurno } = require("../functions/modules/asistencia/cambio
 const {
   CFG_TOV_COBERTURA_PARCIAL,
   CFG_TCC_CAMBIO_INTERNO,
+  CFG_EPL_ABIERTO,
 } = require("../functions/modules/shared/cfgAsistenciaTurnosIds.js");
 
 const TAG = "[smoke-concurrencia-dev]";
@@ -75,7 +76,12 @@ async function main() {
   const visRef = db.collection("vistas_grilla_mes_agente").doc(visId);
 
   const beforeSnap = await visRef.get();
-  const tokenA = getVersionToken(beforeSnap.data());
+  const prevEstado = beforeSnap.exists ? (beforeSnap.data()?.estado_periodo_liquidacion_id ?? null) : null;
+  await visRef.set({ estado_periodo_liquidacion_id: CFG_EPL_ABIERTO }, { merge: true });
+
+  try {
+  const freshSnap = await visRef.get();
+  const tokenA = getVersionToken(freshSnap.data());
   if (!tokenA) throw new Error("No se pudo obtener Token A desde vis_*. Materializá la grilla antes del smoke.");
 
   const payloadBase = {
@@ -141,6 +147,9 @@ async function main() {
   );
 
   if (!okFail) throw new Error("El segundo intento con Token A no falló con ASI-CONC-001.");
+  } finally {
+    await visRef.set({ estado_periodo_liquidacion_id: prevEstado || CFG_EPL_ABIERTO }, { merge: true });
+  }
 }
 
 main().catch((e) => {

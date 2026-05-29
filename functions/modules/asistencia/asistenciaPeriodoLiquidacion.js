@@ -9,11 +9,11 @@ const COL_VIS = "vistas_grilla_mes_agente";
 /**
  * @param {string} personaId
  * @param {string} fechaYmd
+ * @param {string} grupoTrabajoId gdt_* — obligatorio (vis scoped)
  * @returns {Promise<{ cerrado: boolean, estado_periodo_liquidacion_id: string|null }>}
  */
-async function consultarEstadoPeriodoLiquidacion(personaId, fechaYmd) {
-  const visId = buildVisDocumentId(personaId, fechaYmd);
-  if (!visId) return { cerrado: false, estado_periodo_liquidacion_id: null };
+async function consultarEstadoPeriodoLiquidacion(personaId, fechaYmd, grupoTrabajoId) {
+  const visId = buildVisDocumentId(personaId, fechaYmd, grupoTrabajoId);
   const snap = await db.collection(COL_VIS).doc(visId).get();
   if (!snap.exists) return { cerrado: false, estado_periodo_liquidacion_id: null };
   const id = snap.data()?.estado_periodo_liquidacion_id || null;
@@ -26,10 +26,11 @@ async function consultarEstadoPeriodoLiquidacion(personaId, fechaYmd) {
 /**
  * @param {string} personaId
  * @param {string} fechaYmd
+ * @param {string} grupoTrabajoId gdt_*
  * @returns {Promise<void>}
  */
-async function assertPeriodoNoCerrado(personaId, fechaYmd) {
-  const { cerrado } = await consultarEstadoPeriodoLiquidacion(personaId, fechaYmd);
+async function assertPeriodoNoCerrado(personaId, fechaYmd, grupoTrabajoId) {
+  const { cerrado } = await consultarEstadoPeriodoLiquidacion(personaId, fechaYmd, grupoTrabajoId);
   if (cerrado) {
     const err = new Error("[ASI-PER-001] El período está liquidado y cerrado. No se permiten cambios.");
     err.code = "failed-precondition";
