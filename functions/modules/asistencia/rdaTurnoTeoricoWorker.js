@@ -15,6 +15,7 @@ const { getIndiceCalendario } = require("../shared/calendarService");
 const { resolverEventoEnIndice } = require("../shared/calendarInstitucionalCore");
 const { resolverFijo, resolverRotativo, buildTurnoResponse, ymdToDate, diffDays, isoWeekday } = require("./resolverTurnoDia");
 const { buildCapaTeoricaSegmentada } = require("./capaTeoricaSegmentosCore");
+const { toHhmmInstitucionalDisplay } = require("../shared/horarioInstitucionalDisplay");
 const { CFG_EPL_ABIERTO } = require("../shared/cfgAsistenciaTurnosIds");
 const { logger } = require("firebase-functions/v2");
 
@@ -101,6 +102,32 @@ function esOverrideActivo(ov) {
 
 function esTipoLaboral(tipoDia) {
   return tipoDia === "laborable" || tipoDia === "guardia";
+}
+
+function pickRdaTurnoId(capaTeorica, esFranco) {
+  if (esFranco) return null;
+  const tid = capaTeorica?.turno_id || capaTeorica?.turno_compuesto_id || null;
+  return tid ? String(tid).trim() : null;
+}
+
+function aplicarFotoPlanDia({ planCache, personaId, fechaYmd, tipoDiaFinal, turnoFinal }) {
+  const agentes = planCache?.plan?.agentes;
+  if (!Array.isArray(agentes)) return { tipoDiaFinal, turnoFinal };
+  const ag = agentes.find((a) => a.persona_id === personaId);
+  const foto = ag?.dias?.[fechaYmd];
+  if (!foto || typeof foto !== "object") return { tipoDiaFinal, turnoFinal };
+  const tipo = foto.tipo_dia != null ? String(foto.tipo_dia).trim() : tipoDiaFinal;
+  let turno = turnoFinal;
+  if (foto.turno_id != null && String(foto.turno_id).trim() !== "") {
+    turno = {
+      ...(turno || {}),
+      turno_id: String(foto.turno_id).trim(),
+      ingreso: foto.ingreso || turno?.ingreso,
+      egreso: foto.egreso || turno?.egreso,
+      cruza_medianoche: turno?.cruza_medianoche,
+    };
+  }
+  return { tipoDiaFinal: tipo, turnoFinal: turno };
 }
 
 async function ensureEstadoPeriodoLiquidacionAbierto(visRef) {
@@ -432,6 +459,18 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
     let turnoFinal = mejorResolucion.turno_teorico;
     let origenFinal = mejorResolucion.origen;
     let tipoDiaFinal = mejorResolucion.tipo_dia;
+    const planEntry = hlgContextos.find((c) => c.plan)?.plan;
+    if (planEntry) {
+      const merged = aplicarFotoPlanDia({
+        planCache: planEntry,
+        personaId,
+        fechaYmd,
+        tipoDiaFinal,
+        turnoFinal,
+      });
+      tipoDiaFinal = merged.tipoDiaFinal;
+      turnoFinal = merged.turnoFinal;
+    }
     if (overrides.length > 0) {
       const ultimo = overrides[overrides.length - 1];
       turnoFinal = buildTurnoResponse(ultimo.turno || ultimo);
@@ -475,9 +514,13 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
     const diaKey = diaMesKeyDesdeYmd(fechaYmd);
     const esFranco = tipoDiaFinal === "franco" || tipoDiaFinal === "no_laborable";
     const gdtId = capaTeorica.grupo_de_trabajo_id || null;
-    visDias[`dias.${diaKey}.rda_turno_id`] = esFranco ? null : (capaTeorica.turno_id || capaTeorica.ingreso || tipoDiaFinal);
-    visDias[`dias.${diaKey}.rda_ingreso`] = esFranco ? null : (capaTeorica.ingreso || null);
-    visDias[`dias.${diaKey}.rda_egreso`] = esFranco ? null : (capaTeorica.egreso || null);
+    visDias[`dias.${diaKey}.rda_turno_id`] = pickRdaTurnoId(capaTeorica, esFranco);
+    visDias[`dias.${diaKey}.rda_ingreso`] = esFranco
+      ? null
+      : toHhmmInstitucionalDisplay(capaTeorica.ingreso) || null;
+    visDias[`dias.${diaKey}.rda_egreso`] = esFranco
+      ? null
+      : toHhmmInstitucionalDisplay(capaTeorica.egreso) || null;
     visDias[`dias.${diaKey}.es_franco`] = esFranco;
     visDias[`dias.${diaKey}.es_feriado`] = capaTeorica.es_feriado || false;
     visDias[`dias.${diaKey}.clasificacion_dia_calendario_id`] = capaTeorica.clasificacion_dia_calendario_id || null;
@@ -548,7 +591,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
  * @param {number} params.mes
  * @returns {Promise<{ ok: boolean, procesados: number, fallos: Array<{ personaId: string, error: string }> }>}
  */
-async function materializarGrupoMes({ grupoId, anio, mes }) {
+async function materializarGrupoMes({ grupoId, anio, mes, planCache: planCacheIn }) {
   const periodoId = `${anio}-${String(mes).padStart(2, "0")}`;
   const primerDia = `${periodoId}-01`;
   const ultimoDia = diasDelMes(anio, mes).pop() || primerDia;
@@ -582,14 +625,15 @@ async function materializarGrupoMes({ grupoId, anio, mes }) {
     if (snap.exists) regimenCache.set(rid, snap.data());
   }));
 
-  // Plan habilitado para planificados
-  let planCache = null;
-  const tienesPlanificado = agentes.some((a) => {
-    const reg = regimenCache.get(a.regimenId);
-    return reg?.tipo_patron === "planificado";
-  });
-  if (tienesPlanificado) {
-    planCache = await obtenerPlanHabilitado(grupoId, periodoId);
+  let planCache = planCacheIn || null;
+  if (!planCache) {
+    const tienesPlanificado = agentes.some((a) => {
+      const reg = regimenCache.get(a.regimenId);
+      return reg?.tipo_patron === "planificado";
+    });
+    if (tienesPlanificado) {
+      planCache = await obtenerPlanHabilitado(grupoId, periodoId);
+    }
   }
 
   const etiquetaGrupoCache = new Map();
@@ -736,7 +780,7 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
     const gdtId = capaTeorica.grupo_de_trabajo_id || null;
     const visRef = db.collection(COL_VIS).doc(visDocId);
     const visUpdate = {
-      [`dias.${diaKey}.rda_turno_id`]: esFranco ? null : (capaTeorica.turno_id || capaTeorica.ingreso || capaTeorica.tipo_dia),
+      [`dias.${diaKey}.rda_turno_id`]: pickRdaTurnoId(capaTeorica, esFranco),
       [`dias.${diaKey}.rda_ingreso`]: esFranco ? null : (capaTeorica.ingreso || null),
       [`dias.${diaKey}.rda_egreso`]: esFranco ? null : (capaTeorica.egreso || null),
       [`dias.${diaKey}.es_franco`]: esFranco,
@@ -754,7 +798,7 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
       if (e.code === 5 || (e.message && e.message.includes("NOT_FOUND"))) {
         const dia = {};
         dia[diaKey] = {
-          rda_turno_id: esFranco ? null : (capaTeorica.turno_id || capaTeorica.ingreso || capaTeorica.tipo_dia),
+          rda_turno_id: pickRdaTurnoId(capaTeorica, esFranco),
           rda_ingreso: esFranco ? null : (capaTeorica.ingreso || null),
           rda_egreso: esFranco ? null : (capaTeorica.egreso || null),
           es_franco: esFranco,

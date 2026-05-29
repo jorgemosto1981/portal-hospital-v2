@@ -6,6 +6,7 @@
  */
 
 const { civilDateInZonaToUtcAnchorMs } = require("../shared/fechaInstitucionalBa");
+const { isoToHhmmInstitucional } = require("../shared/horarioInstitucionalDisplay");
 const { resolverEventoEnIndice } = require("../shared/calendarInstitucionalCore");
 const {
   CFG_CDC_HABIL,
@@ -282,8 +283,8 @@ function buildCapaTeoricaSegmentada({
     ...clasif,
     tipo_dia,
     turno_id: resumen.turno_compuesto_id || null,
-    ingreso: primerSeg ? primerSeg.ingreso_iso.slice(11, 16) : null,
-    egreso: primerSeg ? primerSeg.egreso_iso.slice(11, 16) : null,
+    ingreso: primerSeg ? isoToHhmmInstitucional(primerSeg.ingreso_iso) : null,
+    egreso: primerSeg ? isoToHhmmInstitucional(primerSeg.egreso_iso) : null,
     horas_efectivas: resumen.horas_teoricas_totales,
     expectativas_fichada_extra: expectativas,
     fichadas_esperadas: fichadasEsperadas,

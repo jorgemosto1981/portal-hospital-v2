@@ -9,6 +9,10 @@ const { db } = require("../shared/context");
 const { getIndiceCalendario } = require("../shared/calendarService");
 const { buildCapaTeoricaSegmentada, ymdHoraToIso } = require("./capaTeoricaSegmentosCore");
 const { resolverDiaConPreCarga, diasDelMes } = require("./rdaTurnoTeoricoWorker");
+const {
+  isoToHhmmInstitucional,
+  toHhmmInstitucionalDisplay,
+} = require("../shared/horarioInstitucionalDisplay");
 
 const COL_HLG = "historial_laboral_grupos";
 const COL_REGIMEN = "cfg_regimen_horario";
@@ -25,22 +29,6 @@ function normalizarTipoDia(raw) {
   return "franco";
 }
 
-function isoToHhmmAr(iso) {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  const parts = new Intl.DateTimeFormat("es-AR", {
-    timeZone: "America/Argentina/Buenos_Aires",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(d);
-  const hh = parts.find((p) => p.type === "hour")?.value;
-  const mm = parts.find((p) => p.type === "minute")?.value;
-  if (!hh || !mm) return null;
-  return `${hh}:${mm}`;
-}
-
 function hhmmDesdeTurno(turno) {
   if (!turno) return { ingreso: null, egreso: null };
   const ingreso = turno.ingreso || turno.hora_ingreso || null;
@@ -49,16 +37,6 @@ function hhmmDesdeTurno(turno) {
     ingreso: ingreso ? String(ingreso).trim().slice(0, 5) : null,
     egreso: egreso ? String(egreso).trim().slice(0, 5) : null,
   };
-}
-
-/** Solo HH:mm civil AR; nunca persistir ISO en ingreso/egreso de display. */
-function toHhmmArDisplay(val) {
-  if (val == null || val === "") return null;
-  const s = String(val).trim();
-  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return isoToHhmmAr(s);
-  const m = /^(\d{1,2}):(\d{2})$/.exec(s);
-  if (m) return `${String(Number(m[1])).padStart(2, "0")}:${m[2]}`;
-  return null;
 }
 
 function celdaPlanDesdeResolucion(fechaYmd, res, capa) {
@@ -74,16 +52,16 @@ function celdaPlanDesdeResolucion(fechaYmd, res, capa) {
   const { ingreso: ingHh, egreso: egrHh } = hhmmDesdeTurno(res.turno_teorico);
   let ingreso = esFranco
     ? null
-    : toHhmmArDisplay(ingHh) ||
-      isoToHhmmAr(ingresoIso) ||
-      toHhmmArDisplay(capa.ingreso) ||
-      toHhmmArDisplay(capa.ingreso_teorico_final);
+    : toHhmmInstitucionalDisplay(ingHh) ||
+      isoToHhmmInstitucional(ingresoIso) ||
+      toHhmmInstitucionalDisplay(capa.ingreso) ||
+      toHhmmInstitucionalDisplay(capa.ingreso_teorico_final);
   let egreso = esFranco
     ? null
-    : toHhmmArDisplay(egrHh) ||
-      isoToHhmmAr(egresoIso) ||
-      toHhmmArDisplay(capa.egreso) ||
-      toHhmmArDisplay(capa.egreso_teorico_final);
+    : toHhmmInstitucionalDisplay(egrHh) ||
+      isoToHhmmInstitucional(egresoIso) ||
+      toHhmmInstitucionalDisplay(capa.egreso) ||
+      toHhmmInstitucionalDisplay(capa.egreso_teorico_final);
 
   if (!esFranco && ingreso && egreso && !ingresoIso) {
     const cruza =
@@ -212,4 +190,104 @@ async function enriquecerAgentesDiasPlan({ periodo, planId, agentes }) {
   return agentesOut;
 }
 
-module.exports = { enriquecerAgentesDiasPlan, normalizarTipoDia };
+function celdaPlanToGrillaAprobada(celdaPlan, capa) {
+  const tipo = normalizarTipoDia(celdaPlan.tipo_dia);
+  const esFranco = tipo === "franco" || tipo === "no_laborable";
+  const segmentos = Array.isArray(capa.segmentos) ? capa.segmentos : [];
+  return {
+    ...celdaPlan,
+    tipo_dia: tipo,
+    turno_id: esFranco ? null : celdaPlan.turno_id,
+    turno_compuesto_id: esFranco ? null : celdaPlan.turno_id,
+    es_franco: esFranco,
+    clasificacion_dia_calendario_id: capa.clasificacion_dia_calendario_id || null,
+    fichadas_esperadas: typeof capa.fichadas_esperadas === "number" ? capa.fichadas_esperadas : null,
+    segmentos: segmentos.map((s) => ({
+      segmento_id: s.segmento_id,
+      ingreso_iso: s.ingreso_iso,
+      egreso_iso: s.egreso_iso,
+    })),
+  };
+}
+
+/**
+ * Snapshot grilla_aprobada desde la foto ya persistida en plan.agentes[].dias.
+ */
+async function construirGrillaAprobadaDesdePlanFoto({ plan, planId }) {
+  if (!plan || plan.tipo_plan !== "mensual" || !plan.periodo) return null;
+  const agentesIn = Array.isArray(plan.agentes) ? plan.agentes : [];
+  if (agentesIn.length === 0) return null;
+
+  const agentesEnriquecidos = await enriquecerAgentesDiasPlan({
+    periodo: plan.periodo,
+    planId: planId || plan.id,
+    agentes: agentesIn,
+  });
+  if (agentesEnriquecidos.length === 0) return null;
+
+  const [anio, mes] = plan.periodo.split("-").map(Number);
+  const ymdsMes = diasDelMes(anio, mes);
+  const indiceCalendario = await getIndiceCalendario();
+  const regimenCache = new Map();
+  const planData = { planId: planId || plan.id, plan: { agentes: agentesIn } };
+  const agentesOut = [];
+
+  for (const agBase of agentesEnriquecidos) {
+    const agIn = agentesIn.find((a) => a.persona_id === agBase.persona_id) || agBase;
+    const regimen = await cargarRegimen(agBase.regimen_horario_id, regimenCache);
+    if (!regimen) continue;
+
+    let hlg = { regimen_fecha_ancla: agIn.regimen_fecha_ancla || null };
+    if (agIn.hlg_id) {
+      const hlgSnap = await db.collection(COL_HLG).doc(agIn.hlg_id).get();
+      if (hlgSnap.exists) hlg = { id: hlgSnap.id, ...hlgSnap.data() };
+    }
+
+    const diasMap = {};
+    for (const fechaYmd of ymdsMes) {
+      const celdaPlan = agBase.dias?.[fechaYmd];
+      if (!celdaPlan) continue;
+      const res = resolverDiaConPreCarga(
+        regimen,
+        fechaYmd,
+        hlg,
+        planData,
+        agBase.persona_id,
+        indiceCalendario,
+      );
+      const tipo_dia = normalizarTipoDia(celdaPlan.tipo_dia || res.tipo_dia);
+      let turnoCompuestoId = celdaPlan.turno_id || res.turno_teorico?.turno_id || null;
+      if (tipo_dia === "franco" || tipo_dia === "no_laborable") turnoCompuestoId = null;
+
+      const capa = buildCapaTeoricaSegmentada({
+        fechaYmd,
+        personaId: agBase.persona_id,
+        regimen,
+        tipo_dia,
+        turnoCompuestoId,
+        origen_segmento: "plan_base",
+        indiceCalendario,
+      });
+      if (celdaPlan.es_feriado === true || res.es_feriado) capa.es_feriado = true;
+
+      diasMap[fechaYmd] = celdaPlanToGrillaAprobada(celdaPlan, capa);
+    }
+
+    agentesOut.push({
+      persona_id: agBase.persona_id,
+      regimen_horario_id: agBase.regimen_horario_id,
+      hlg_id: agBase.hlg_id,
+      dias: diasMap,
+    });
+  }
+
+  return agentesOut;
+}
+
+module.exports = {
+  enriquecerAgentesDiasPlan,
+  normalizarTipoDia,
+  celdaPlanDesdeResolucion,
+  celdaPlanToGrillaAprobada,
+  construirGrillaAprobadaDesdePlanFoto,
+};

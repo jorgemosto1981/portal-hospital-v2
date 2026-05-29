@@ -431,6 +431,36 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
   const obs = request.data && request.data.observaciones;
   const aprobacion = buildAprobacion(request, "aprobar", obs);
 
+  if (overridesEncontrados.length > 0 && confirmarInvalidarOverrides) {
+    const invalidados = await invalidarOverridesFantasma(overridesEncontrados);
+    warnings.push({
+      code: "PLT-APR-W001",
+      mensaje: `Se invalidaron ${invalidados} override(s) por re-planificación.`,
+    });
+  }
+
+  let grillaAprobada = null;
+  if (plan.tipo_plan === "mensual" && plan.periodo) {
+    const [anio, mes] = plan.periodo.split("-").map(Number);
+    const planCache = { planId, plan };
+    const mat = await materializarGrupoMes({ grupoId: plan.grupo_id, anio, mes, planCache });
+    if (!mat.ok) {
+      const det = (mat.fallos || []).slice(0, 5).map((f) => `${f.personaId}: ${f.error}`).join("; ");
+      err(
+        "failed-precondition",
+        `[PLT-APR-MAT] Materialización incompleta (${mat.fallos?.length || 0} fallo(s)). ${det}`,
+      );
+    }
+    grillaAprobada = await construirGrillaAprobada({ plan, planId });
+    if (!grillaAprobada) {
+      err("failed-precondition", "[PLT-APR-GRD] No se pudo construir grilla_aprobada desde la foto del plan.");
+    }
+    logger.info("materializarGrupoMes_pre_aprobar OK", {
+      planId,
+      grilla_agentes: grillaAprobada?.agentes?.length || 0,
+    });
+  }
+
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) err("not-found", "[PLT-APR-002] Plan no encontrado.");
@@ -458,43 +488,19 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
       }
     }
 
-    tx.update(ref, {
+    const updatePayload = {
       estado: "HABILITADO",
       materializacion_fallida: false,
+      materializacion_error: null,
       historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
       actualizado_en: FieldValue.serverTimestamp(),
-    });
-  });
-
-  if (overridesEncontrados.length > 0 && confirmarInvalidarOverrides) {
-    const invalidados = await invalidarOverridesFantasma(overridesEncontrados);
-    warnings.push({
-      code: "PLT-APR-W001",
-      mensaje: `Se invalidaron ${invalidados} override(s) por re-planificación.`,
-    });
-  }
-
-  if (plan.tipo_plan === "mensual" && plan.periodo) {
-    const [anio, mes] = plan.periodo.split("-").map(Number);
-    try {
-      await materializarGrupoMes({ grupoId: plan.grupo_id, anio, mes });
-      const planSnap = await ref.get();
-      const planActual = planSnap.exists ? planSnap.data() : plan;
-      const grillaAprobada = await construirGrillaAprobada({ plan: planActual, planId });
-      if (grillaAprobada) {
-        await ref.update({
-          grilla_aprobada: grillaAprobada,
-          grilla_aprobada_en: FieldValue.serverTimestamp(),
-        });
-      }
-      logger.info("materializarGrupoMes_post_aprobar OK", { planId, grilla_agentes: grillaAprobada?.agentes?.length || 0 });
-    } catch (e) {
-      logger.error("materializarGrupoMes_post_aprobar ERROR", { planId, error: String(e) });
-      const ref2 = db.collection(COL_PLANES).doc(planId);
-      await ref2.update({ materializacion_fallida: true, materializacion_error: String(e).slice(0, 500) });
-      warnings.push({ code: "PLT-APR-W002", mensaje: "Materialización falló. El plan queda HABILITADO pero requiere re-materialización manual." });
+    };
+    if (grillaAprobada) {
+      updatePayload.grilla_aprobada = grillaAprobada;
+      updatePayload.grilla_aprobada_en = FieldValue.serverTimestamp();
     }
-  }
+    tx.update(ref, updatePayload);
+  });
 
   return { ok: true, id: planId, estado: "HABILITADO", warnings };
 });
