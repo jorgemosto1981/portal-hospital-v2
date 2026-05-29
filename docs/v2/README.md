@@ -9,6 +9,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | Documento | Rol |
 |-----------|-----|
 | **[`ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md`](./ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md)** | **Entrada principal:** RDA, MDC, GSO, fusión 1:N, turnos nocturnos, jerarquía de verdad, identificadores y principios transversales |
+| **[`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md)** | **Biblia multi-HLG (Opción A):** taxonomía Z/P/M, bounded context `gdt_*`, contrato `vis_*`/`asi_*`, matriz E1–E20, DoD, Known Issues |
 | **[`CAPA_TEORICA_SEGMENTOS_V2.md`](./CAPA_TEORICA_SEGMENTOS_V2.md)** | **RFC aprobado** — turnos compuestos, segmentos SoT, cobertura parcial (tag `v2.0.0-rfc-turnos-compuestos`) |
 | **[`RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md`](./RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md)** | Snapshot `grilla_aprobada` en `plt_*` al habilitar; lectura unificada VER plan vs capa operativa `asi_*`/`vis_*` |
 | **[`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md)** | **RETOMAR AQUÍ** — control turno en todas las vistas; matriz asi/vis vs plan; piloto `plt_01KSR8…` |

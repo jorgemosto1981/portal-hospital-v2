@@ -1,15 +1,15 @@
 # Punto de Continuación — Próxima Sesión
 
-**Última actualización**: Jueves 28 Mayo 2026  
-**RETOMAR AQUÍ**: [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md)
+**Última actualización**: Viernes 29 Mayo 2026  
+**RETOMAR AQUÍ**: [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) §8 (Pasos 2–4: strip, gates, mayo, merge)
 
 | Campo | Valor |
 |-------|--------|
-| **Branch** | `feat/epic-turnos-compuestos-v2` |
-| **Último commit** | `730b4b9` — unifica VER plan en todas las pantallas |
-| **Tags** | `v2-pre-grilla-aprobada-plt`, `v2-grilla-aprobada-plt` |
+| **Branch** | `feat/epic-multi-hlg-fase1-execution` |
+| **Biblia multi-HLG** | [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) |
+| **Handoff turnos 28/05** | [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) |
 | **Producción** | https://portal-hospital-v2.web.app |
-| **Plan piloto** | `plt_01KSR8J55H1TN10M3ANSSWMPF2` (Sala Internación 1, 2026-05, HABILITADO) |
+| **Plan piloto junio** | `plt_01KSSPY2H5EZA925FQP4S1G2XW` (Sala Internación 1, 2026-06, HABILITADO) |
 
 ---
 
