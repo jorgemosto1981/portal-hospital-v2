@@ -265,8 +265,9 @@ La épica **no** se considera cerrada arquitectónicamente con solo limpieza RRH
 
 ### D. Documentación
 
-- [ ] Este handoff referenciado en `PENDIENTES_PROXIMA_SESION.md`.
-- [ ] RFC o addendum a `RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md` con prioridad Plan > HLG.
+- [x] Handoffs y `PENDIENTES_PROXIMA_SESION.md` actualizados (29/05 cierre).
+- [x] Biblia [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) — modelo final documentado.
+- [ ] RFC o addendum a `RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md` con prioridad Plan > HLG (opcional post-merge).
 
 ---
 
@@ -277,7 +278,7 @@ La épica **no** se considera cerrada arquitectónicamente con solo limpieza RRH
 | **1 — Táctica** | Operativa (RRHH) | Cerrar HLGs zombie; rehabilitar plan junio; validar UI. |
 | **2 — Estratégica** | Backend | **✅ Cerrada** — Opción A scoped + Plan > HLG por `gdt` + strip legacy (29/05). |
 
-**Siguiente hito:** Paso 4 del plan maestro — QA §4.2 residual + merge `feat/epic-multi-hlg-fase1-execution` → `main`.
+**Siguiente hito:** Paso 4 — QA §4.2 + **PR/merge a `master`**. Ver [`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md) y [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md).
 
 ---
 

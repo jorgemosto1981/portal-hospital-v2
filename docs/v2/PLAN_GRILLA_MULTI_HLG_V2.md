@@ -328,7 +328,7 @@ Documentados explícitamente para evitar tickets “bug” futuros.
 |------|-----------|--------|
 | **2 — Limpieza y gates** | strip `capa_teorica` + `grillaTurnoEntornoGate` + overrides E2 + sin fallback legacy | **✅ Cerrado 29/05/2026** |
 | **3 — Paridad histórica** | materializar **mayo 2026** scoped (Sala, 93 agentes) | **✅ Cerrado 29/05/2026** |
-| **4 — QA + merge** | matriz §4.2 (ítems 2–3, 6, 8–9) + merge rama → `main` | **Pendiente** |
+| **4 — QA + merge** | matriz §4.2 (ítems 2–3, 6, 8–9) + **PR** + merge rama → `master` | **Pendiente** — ver [`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md) |
 
 **Modelo final vigente:** `asi_*` y `vis_*` 100 % scoped por `gdt_*`; sin fusión global ni campo `capa_teorica` raíz en BD.
 
@@ -356,6 +356,7 @@ Documentados explícitamente para evitar tickets “bug” futuros.
 | 2026-05-29 | Piloto junio validado; purge 8 `vis_*` legacy |
 | 2026-05-29 | Este documento — biblia de referencia |
 | 2026-05-29 | **Limpieza quirúrgica:** deploy gates `fc54e8b`, mayo scoped (93), strip 244 `asi_*` → 0 legacy |
+| 2026-05-29 | Sesión cerrada — handoff cierre + push `origin`; PR → `master` pendiente |
 
 ---
 
