@@ -51,13 +51,18 @@ export default function ModalCoberturaParcial({
   }, [periodo, fechaYmd]);
 
   const cargar = useCallback(async () => {
+    if (!/^gdt_/i.test(String(grupoId || "").trim())) {
+      setError("Elegí el cargo (grupo de trabajo) antes de cargar la cobertura.");
+      setCargando(false);
+      return;
+    }
     setCargando(true);
     setError("");
     try {
       const [capaRes, tcc, ctx] = await Promise.all([
-        obtenerCapaTeoricaDiaValidada(personaOrigenId, fechaYmd),
+        obtenerCapaTeoricaDiaValidada(personaOrigenId, fechaYmd, grupoId),
         listarTiposCompensacionCobertura(),
-        grupoId ? callListarContextoPlanGrupo({ grupo_id: grupoId, periodo: `${anio}-${String(mes).padStart(2, "0")}` }) : Promise.resolve(null),
+        callListarContextoPlanGrupo({ grupo_id: grupoId, periodo: `${anio}-${String(mes).padStart(2, "0")}` }),
       ]);
       setExpectedVersionToken(capaRes.concurrencia?.expected_version_token || capaRes.concurrencia?.vis_ultima_sync || "");
       setPeriodoCerrado(capaRes.periodo_liquidacion?.cerrado === true);
@@ -91,14 +96,14 @@ export default function ModalCoberturaParcial({
     let cancelled = false;
     void (async () => {
       try {
-        const avisos = await consultarAvisosCoberturaYy(personaCoberturaId, fechaYmd, anio, mes);
+        const avisos = await consultarAvisosCoberturaYy(personaCoberturaId, fechaYmd, anio, mes, grupoId);
         if (!cancelled) setAvisosYy(avisos);
       } catch {
         if (!cancelled) setAvisosYy([]);
       }
     })();
     return () => { cancelled = true; };
-  }, [personaCoberturaId, fechaYmd, anio, mes]);
+  }, [personaCoberturaId, fechaYmd, anio, mes, grupoId]);
 
   const personasFiltradas = useMemo(() => {
     const q = busquedaYy.trim().toLowerCase();
@@ -180,6 +185,11 @@ export default function ModalCoberturaParcial({
         <h2 className="text-lg font-semibold text-slate-900">Cobertura parcial</h2>
         <p className="mt-1 text-sm text-slate-500">
           {personaOrigenLabel || personaOrigenId} — <span className="font-mono">{fechaYmd}</span>
+          {grupoId ? (
+            <span className="mt-1 block text-xs text-violet-700">Cargo: {grupoId}</span>
+          ) : (
+            <span className="mt-1 block text-xs text-amber-700">Sin cargo seleccionado en la grilla.</span>
+          )}
         </p>
 
         {periodoCerrado ? (

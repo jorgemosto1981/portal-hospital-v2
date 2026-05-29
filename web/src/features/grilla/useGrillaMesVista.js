@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   callListarVistaGrillaMesPorGrupo,
@@ -10,6 +10,13 @@ import { claimsIncludeJefe } from "../routing/portalRole.js";
 import { normalizarPeriodoJefe } from "../jefe/periodoJefe.js";
 import { GRILLA_MES_MODO } from "./GrillaMesSelector.jsx";
 import { anioMesDesdePeriodo, fechaCorteFinMesDesdePeriodo } from "./grillaMesPeriodoUtils.js";
+import {
+  assertGrupoTrabajoId,
+  etiquetaGrupoDesdeLista,
+  normalizeGrupoTrabajoId,
+  resolverGrupoIdInicial,
+  RX_GDT,
+} from "./grillaGrupoUtils.js";
 
 function etiquetaGrupoSector(row) {
   const nombre = String(row.nombre || row.codigo || row.titulo || "").trim();
@@ -18,6 +25,7 @@ function etiquetaGrupoSector(row) {
 
 /**
  * Estado y carga unificados calendario GSO (C2c + C2d).
+ * Titular y equipo operan sobre un bounded context (gdt) activo.
  * @param {{ personaId: string; claims: Record<string, unknown> | null | undefined; esRrhh: boolean }} ctx
  */
 export function useGrillaMesVista({ personaId, claims, esRrhh }) {
@@ -65,22 +73,14 @@ export function useGrillaMesVista({ personaId, claims, esRrhh }) {
       const vigentes = Array.isArray(list) ? list : [];
       setGruposEquipo(vigentes);
       const sugerido = String(res?.data?.grupo_trabajo_id_ancla_sugerido || "").trim();
-      if (modo === GRILLA_MES_MODO.EQUIPO) {
-        setGrupoId((prev) => {
-          const ids = vigentes.map((g) => String(g.grupo_de_trabajo_id || ""));
-          if (prev && ids.includes(prev)) return prev;
-          if (sugerido && ids.includes(sugerido)) return sugerido;
-          if (vigentes.length === 1) return ids[0] || "";
-          return "";
-        });
-      }
+      setGrupoId((prev) => resolverGrupoIdInicial(vigentes, prev, sugerido));
     } catch (e) {
       setGruposEquipo([]);
       setResolverError(e?.message || "No se pudo resolver grupos vigentes.");
     } finally {
       setResolverCargando(false);
     }
-  }, [periodo, personaId, modo]);
+  }, [periodo, personaId]);
 
   useEffect(() => {
     void recargarGruposEquipo();
@@ -114,15 +114,24 @@ export function useGrillaMesVista({ personaId, claims, esRrhh }) {
       setData(null);
       setTitularVisMeta(null);
       setError("");
-      if (next === GRILLA_MES_MODO.TITULAR) {
+      if (next === GRILLA_MES_MODO.SECTOR) {
         setGrupoId("");
-      } else if (next === GRILLA_MES_MODO.EQUIPO) {
+      } else {
         void recargarGruposEquipo();
-      } else if (next === GRILLA_MES_MODO.SECTOR) {
-        setGrupoId("");
       }
     },
     [recargarGruposEquipo],
+  );
+
+  const esMultiGrupoTitular = gruposEquipo.length >= 2;
+  const requiereSeleccionGrupo =
+    (modo === GRILLA_MES_MODO.TITULAR && esMultiGrupoTitular && !RX_GDT.test(grupoId))
+    || (modo === GRILLA_MES_MODO.EQUIPO && !RX_GDT.test(grupoId))
+    || (modo === GRILLA_MES_MODO.SECTOR && !RX_GDT.test(grupoId));
+
+  const grupoActivoLabel = useMemo(
+    () => etiquetaGrupoDesdeLista(gruposEquipo, grupoId),
+    [gruposEquipo, grupoId],
   );
 
   const cargar = useCallback(async () => {
@@ -137,18 +146,35 @@ export function useGrillaMesVista({ personaId, claims, esRrhh }) {
           setError("Sin persona en sesión.");
           return;
         }
+        if (gruposEquipo.length === 0) {
+          setError("Sin grupos de trabajo vigentes en el mes. Verificá tu HLg.");
+          return;
+        }
+        const gdt = assertGrupoTrabajoId(
+          grupoId,
+          esMultiGrupoTitular
+            ? "Elegí el cargo (grupo de trabajo) para ver tu calendario."
+            : "No se pudo resolver el grupo de trabajo vigente.",
+        );
         const res = await callObtenerVistaGrillaMesAgente({
           persona_id: personaId,
+          grupo_trabajo_id: gdt,
           anio,
           mes,
         });
         const vista = res?.data || {};
-        setTitularVisMeta({ vis_id: vista.vis_id, existe: vista.existe === true });
+        setTitularVisMeta({
+          vis_id: vista.vis_id,
+          existe: vista.existe === true,
+          grupo_trabajo_id: gdt,
+        });
         const label =
           String(claims?.nombre_completo || claims?.display_name || "").trim() || personaId;
+        const cargoLabel = etiquetaGrupoDesdeLista(gruposEquipo, gdt);
         setData({
           ok: true,
           modo: GRILLA_MES_MODO.TITULAR,
+          grupo_trabajo_id: gdt,
           fecha_corte: fechaCorteFinMesDesdePeriodo(periodo),
           total_personas: 1,
           truncado: false,
@@ -159,17 +185,20 @@ export function useGrillaMesVista({ personaId, claims, esRrhh }) {
               vis_id: vista.vis_id,
               existe: vista.existe === true,
               dias: vista.dias || {},
+              grupo_trabajo_id: gdt,
+              grupo_label: cargoLabel,
             },
           ],
         });
         return;
       }
 
-      const gdt = grupoId.trim();
-      if (!/^gdt_/i.test(gdt)) {
-        setError("Elegí un grupo de trabajo vigente.");
-        return;
-      }
+      const gdt = assertGrupoTrabajoId(
+        grupoId,
+        modo === GRILLA_MES_MODO.SECTOR
+          ? "Elegí un sector / grupo de trabajo."
+          : "Elegí un grupo de trabajo vigente.",
+      );
       const res = await callListarVistaGrillaMesPorGrupo({
         grupo_trabajo_id: gdt,
         anio,
@@ -183,11 +212,21 @@ export function useGrillaMesVista({ personaId, claims, esRrhh }) {
     } finally {
       setLoading(false);
     }
-  }, [modo, grupoId, anio, mes, personaId, periodo, claims]);
+  }, [
+    modo,
+    grupoId,
+    anio,
+    mes,
+    personaId,
+    periodo,
+    claims,
+    gruposEquipo.length,
+    esMultiGrupoTitular,
+  ]);
 
   const hintModo =
     modo === GRILLA_MES_MODO.TITULAR
-      ? "Calendario mensual del titular (documento vis_* de MDC)."
+      ? "Calendario mensual del titular en el cargo seleccionado (vis_* por grupo)."
       : modo === GRILLA_MES_MODO.EQUIPO
         ? "Tabla equipo: HLg vigente al cierre del mes (máx. 60 personas)."
         : "Tabla sector RRHH según grupo elegido en catálogo.";
@@ -222,5 +261,9 @@ export function useGrillaMesVista({ personaId, claims, esRrhh }) {
     titularVisMeta,
     esModoTitular: modo === GRILLA_MES_MODO.TITULAR,
     esMultiGrupo: gruposEquipo.length >= 2,
+    esMultiGrupoTitular,
+    requiereSeleccionGrupo,
+    grupoActivoLabel,
+    grupoActivoId: normalizeGrupoTrabajoId(grupoId),
   };
 }

@@ -10,6 +10,7 @@ import {
 } from "./callables.js";
 import { listarCatalogosAsistenciaTurnosValidado } from "./catalogosAsistenciaTurnosService.js";
 import { coberturaParcialOverrideSchema } from "../schemas/capaTeoricaSegmentos.schema.js";
+import { assertGrupoTrabajoId } from "../features/grilla/grillaGrupoUtils.js";
 import seedIds from "../../../scripts/seed-v2/seed-ids-asistencia-turnos.v2.json" with { type: "json" };
 
 const CFG_TOV_COBERTURA_PARCIAL = seedIds.cfg_tipo_override_turno?.COBERTURA_PARCIAL;
@@ -17,9 +18,15 @@ const CFG_TOV_COBERTURA_PARCIAL = seedIds.cfg_tipo_override_turno?.COBERTURA_PAR
 /**
  * @param {string} personaId
  * @param {string} fechaYmd
+ * @param {string} grupoTrabajoId gdt_*
  */
-export async function obtenerCapaTeoricaDiaValidada(personaId, fechaYmd) {
-  const res = await callObtenerCapaTeoricaDia({ persona_id: personaId, fecha: fechaYmd });
+export async function obtenerCapaTeoricaDiaValidada(personaId, fechaYmd, grupoTrabajoId) {
+  const gdt = assertGrupoTrabajoId(grupoTrabajoId);
+  const res = await callObtenerCapaTeoricaDia({
+    persona_id: personaId,
+    fecha: fechaYmd,
+    grupo_trabajo_id: gdt,
+  });
   return res?.data ?? res;
 }
 
@@ -32,16 +39,19 @@ export async function listarTiposCompensacionCobertura() {
 }
 
 /**
- * Avisos no bloqueantes sobre el día de la persona cobertura (vis_*).
+ * Avisos no bloqueantes sobre el día de la persona cobertura (vis_* scoped).
  * @param {string} personaCoberturaId
  * @param {string} fechaYmd
  * @param {number} anio
  * @param {number} mes
+ * @param {string} grupoTrabajoId gdt_*
  */
-export async function consultarAvisosCoberturaYy(personaCoberturaId, fechaYmd, anio, mes) {
+export async function consultarAvisosCoberturaYy(personaCoberturaId, fechaYmd, anio, mes, grupoTrabajoId) {
+  const gdt = assertGrupoTrabajoId(grupoTrabajoId);
   const avisos = [];
   const res = await callObtenerVistaGrillaMesAgente({
     persona_id: personaCoberturaId,
+    grupo_trabajo_id: gdt,
     anio,
     mes,
   });
@@ -49,7 +59,7 @@ export async function consultarAvisosCoberturaYy(personaCoberturaId, fechaYmd, a
   const diaKey = fechaYmd.slice(8, 10);
   const cell = vista?.dias?.[diaKey];
   if (!vista?.existe) {
-    avisos.push("Sin vista mensual (vis_*) para este agente en el período.");
+    avisos.push("Sin vista mensual (vis_*) para este agente en el período y cargo seleccionados.");
     return avisos;
   }
   if (cell?.es_franco) {
@@ -68,6 +78,7 @@ export async function consultarAvisosCoberturaYy(personaCoberturaId, fechaYmd, a
  * @param {object} params
  * @param {string} params.personaOrigenId — titular del doc asi (XX)
  * @param {string} params.fechaYmd
+ * @param {string} params.grupoTrabajoId gdt_*
  * @param {string} params.personaCoberturaId
  * @param {string[]} params.segmentosCubiertos
  * @param {string} params.tipoCompensacionId
@@ -77,12 +88,14 @@ export async function consultarAvisosCoberturaYy(personaCoberturaId, fechaYmd, a
 export async function registrarCoberturaParcial({
   personaOrigenId,
   fechaYmd,
+  grupoTrabajoId,
   personaCoberturaId,
   segmentosCubiertos,
   tipoCompensacionId,
   motivo,
   expectedVersionToken,
 }) {
+  const gdt = assertGrupoTrabajoId(grupoTrabajoId);
   const override = coberturaParcialOverrideSchema.parse({
     tipo_override_id: CFG_TOV_COBERTURA_PARCIAL,
     tipo_compensacion_id: tipoCompensacionId,
@@ -96,11 +109,11 @@ export async function registrarCoberturaParcial({
   const payload = {
     persona_id: personaOrigenId,
     fecha: fechaYmd,
+    grupo_trabajo_id: gdt,
     override,
   };
   if (expectedVersionToken) {
     payload.expected_version_token = expectedVersionToken;
-    // Compatibilidad temporal con payload anterior.
     payload.concurrencia_vis_sync = expectedVersionToken;
   }
 
@@ -127,6 +140,10 @@ export async function aplicarBatchAsistencia(opsOutbox, ctx = {}) {
       throw new Error(`Operación no soportada en batch (#${idx + 1}): ${tipo || "sin tipo"}.`);
     }
     const fecha = normalizeFechaYmd(op?.fechaYmd);
+    const gdt = assertGrupoTrabajoId(
+      op?.grupoId,
+      `[Batch #${idx + 1}] Falta grupo_trabajo_id en la operación pendiente.`,
+    );
     return {
       id: String(op?.id || `op_${idx + 1}`),
       tipo,
@@ -142,8 +159,8 @@ export async function aplicarBatchAsistencia(opsOutbox, ctx = {}) {
       concurrencia: {
         expected_version_token: String(op?.expectedVersionToken || "").trim(),
       },
-      contexto: {
-        grupo_id: String(op?.grupoId || "").trim() || null,
+      context: {
+        grupo_id: gdt,
         periodo: String(op?.periodo || ctx?.periodo || fecha.slice(0, 7)).trim(),
       },
     };

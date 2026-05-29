@@ -261,9 +261,23 @@ export function callRegistrarTomaConocimientoRrhhSolicitud(data) {
   return httpsCallable(getFunctionsV2(), "registrarTomaConocimientoRrhhSolicitud")(data);
 }
 
-/** Oleada C — vista mensual `vistas_grilla_mes_agente` (fan-out MDC). */
+/** Oleada C — vista mensual `vistas_grilla_mes_agente` (bounded context gdt). */
 export function callObtenerVistaGrillaMesAgente(data) {
-  return httpsCallable(getFunctionsV2(), "obtenerVistaGrillaMesAgente")(data);
+  const payload = data && typeof data === "object" ? data : {};
+  const gdt = String(payload.grupo_trabajo_id || payload.grupo_id || "").trim();
+  if (!/^gdt_/i.test(gdt)) {
+    return Promise.reject(new Error("grupo_trabajo_id (gdt_*) es obligatorio para la vista mensual."));
+  }
+  const persona_id = String(payload.persona_id || "").trim();
+  if (!/^per_/i.test(persona_id)) {
+    return Promise.reject(new Error("persona_id inválido para la vista mensual."));
+  }
+  return httpsCallable(getFunctionsV2(), "obtenerVistaGrillaMesAgente")({
+    persona_id,
+    anio: Number(payload.anio),
+    mes: Number(payload.mes),
+    grupo_trabajo_id: gdt,
+  });
 }
 
 /** Resumen lectura solicitud desde grilla GSO (Oleada C3). */
@@ -346,9 +360,17 @@ export function callObtenerVistaPlanTurnoServicio(data) {
   return httpsCallable(getFunctionsV2(), "obtenerVistaPlanTurnoServicio")(data);
 }
 
-/** Registrar override puntual en asistencia_diaria. */
+/** Registrar override puntual en asistencia_diaria (requiere grupo_trabajo_id en coberturas). */
 export function callRegistrarCambioTurno(data) {
-  return httpsCallable(getFunctionsV2(), "registrarCambioTurno")(data);
+  const payload = data && typeof data === "object" ? data : {};
+  const gdt = String(payload.grupo_trabajo_id || payload.grupo_id || payload.context?.grupo_id || "").trim();
+  if (!/^gdt_/i.test(gdt)) {
+    return Promise.reject(new Error("grupo_trabajo_id (gdt_*) es obligatorio para registrar cambios de turno."));
+  }
+  return httpsCallable(getFunctionsV2(), "registrarCambioTurno")({
+    ...payload,
+    grupo_trabajo_id: gdt,
+  });
 }
 
 /** Aplicar lote atómico de operaciones de asistencia (outbox E2). */
@@ -366,9 +388,20 @@ export function callListarOverridesTurno(data) {
   return httpsCallable(getFunctionsV2(), "listarOverridesTurno")(data);
 }
 
-/** Capa teórica materializada de un día (segmentos + token concurrencia). */
+/** Capa teórica materializada de un día (segmentos + token concurrencia) por gdt. */
 export function callObtenerCapaTeoricaDia(data) {
-  return httpsCallable(getFunctionsV2(), "obtenerCapaTeoricaDia")(data);
+  const payload = data && typeof data === "object" ? data : {};
+  const gdt = String(payload.grupo_trabajo_id || payload.grupo_id || "").trim();
+  if (!/^gdt_/i.test(gdt)) {
+    return Promise.reject(new Error("grupo_trabajo_id (gdt_*) es obligatorio para la capa teórica del día."));
+  }
+  const persona_id = String(payload.persona_id || "").trim();
+  const fecha = String(payload.fecha || "").trim();
+  return httpsCallable(getFunctionsV2(), "obtenerCapaTeoricaDia")({
+    persona_id,
+    fecha,
+    grupo_trabajo_id: gdt,
+  });
 }
 
 /** Re-materializar tras cambio de calendario institucional (solo RRHH). */

@@ -10,6 +10,7 @@ import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
 import { useAsistenciaOutbox } from "./useAsistenciaOutbox.js";
 import { useGrillaMesVista } from "./useGrillaMesVista.js";
+import { resolverGrupoIdInicial, RX_GDT } from "./grillaGrupoUtils.js";
 import { aplicarBatchAsistencia } from "../../services/coberturaParcialService.js";
 import { periodosVentanaJefe } from "../jefe/periodoJefe.js";
 
@@ -122,14 +123,20 @@ export default function GrillaMesLicenciasPanel() {
                 <div className="mt-2 space-y-2">
                   <button
                     type="button"
-                    disabled={cargandoTarjeta}
-                    onClick={() =>
+                    disabled={cargandoTarjeta || vista.gruposEquipo.length === 0}
+                    onClick={() => {
+                      if (vista.gruposEquipo.length === 0) {
+                        toast.error("Sin cargos vigentes en el mes seleccionado.");
+                        return;
+                      }
+                      const gid = resolverGrupoIdInicial(vista.gruposEquipo, "", "");
                       seleccionarTarjeta({
                         periodo,
                         modo: "TITULAR",
+                        grupoId: gid,
                         titulo: `Titular (mi caso) · ${labelPeriodo(periodo)}`,
-                      })
-                    }
+                      });
+                    }}
                     className="flex min-h-11 w-full items-center justify-between rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-left text-sm font-semibold text-violet-900 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <span>Titular (mi caso)</span>
@@ -253,12 +260,43 @@ export default function GrillaMesLicenciasPanel() {
                     Cargando grilla...
                   </div>
                 </div>
+              ) : vista.esModoTitular && vista.requiereSeleccionGrupo ? (
+                <div className="mx-auto mt-8 max-w-md rounded-xl border border-violet-200 bg-violet-50 p-4">
+                  <p className="text-sm font-semibold text-violet-900">Elegí el cargo para este mes</p>
+                  <p className="mt-1 text-xs text-violet-800">
+                    Tenés más de un grupo de trabajo vigente. La grilla se carga por cargo (bounded context).
+                  </p>
+                  <label className="mt-3 flex flex-col gap-1 text-xs font-medium text-slate-700">
+                    Grupo / cargo
+                    <select
+                      value={vista.grupoId}
+                      onChange={(e) => {
+                        const gid = e.target.value;
+                        vista.setGrupoId(gid);
+                        if (RX_GDT.test(gid)) {
+                          setCargaPendienteKey(`${vista.periodo}::TITULAR::${gid}`);
+                        }
+                      }}
+                      className="h-11 rounded-xl border border-violet-300 bg-white px-3 text-sm"
+                    >
+                      <option value="">Seleccionar cargo…</option>
+                      {vista.gruposEquipo.map((g) => {
+                        const id = String(g.grupo_de_trabajo_id || "");
+                        return (
+                          <option key={id} value={id}>
+                            {String(g.etiqueta_ui || id)}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </label>
+                </div>
               ) : vista.esModoTitular ? (
                 <GrillaMesTitularCalendario
                   anio={vista.anio}
                   mes={vista.mes}
                   diasMap={vista.titularDias}
-                  gruposEquipo={vista.gruposEquipo}
+                  grupoLabel={vista.grupoActivoLabel}
                   onDiaClick={({ dia, eventos, grupoLabel }) => {
                     const cell = vista.titularDias?.[dia] || {};
                     const fechaYmd = `${vista.anio}-${String(vista.mes).padStart(2, "0")}-${dia}`;
@@ -347,7 +385,7 @@ export default function GrillaMesLicenciasPanel() {
           personaOrigenId={coberturaModal.personaOrigenId}
           personaOrigenLabel={coberturaModal.personaOrigenLabel}
           fechaYmd={coberturaModal.fechaYmd}
-          grupoId={vista.grupoId}
+          grupoId={vista.grupoActivoId}
           periodo={vista.periodo}
           onCerrar={() => setCoberturaModal(null)}
           onRegistrado={() => {}}
@@ -355,7 +393,7 @@ export default function GrillaMesLicenciasPanel() {
           onAgregarOutbox={(op) =>
             outbox.addOp({
               ...op,
-              grupoId: vista.grupoId || "",
+              grupoId: vista.grupoActivoId || "",
               periodo: vista.periodo,
             })
           }
