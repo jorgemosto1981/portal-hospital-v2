@@ -1,10 +1,10 @@
 # Plan maestro — Grilla multi-HLG (Opción A)
 
 **Épica:** Turnos compuestos / coberturas — bounded context por grupo de trabajo  
-**Estado:** Implementación core **cerrada** (piloto junio 2026); deuda técnica residual documentada en §8  
+**Estado:** **Modelo final en producción** — Pasos 2–3 cerrados (gates, overrides E2, materialización mayo, strip legacy). QA §4.2 y merge a `main` pendientes.  
 **Rama de entrega:** `feat/epic-multi-hlg-fase1-execution`  
 **Tag salvavidas:** `v2.2.0-pre-multi-hlg`  
-**Última actualización:** 29 de mayo de 2026
+**Última actualización:** 29 de mayo de 2026 (cierre limpieza quirúrgica `asi_*`)
 
 ---
 
@@ -163,13 +163,14 @@ flowchart LR
 
 **Helper de lectura:** `functions/modules/shared/capaTeoricaPorGrupoCore.js` → `resolverCapaTeoricaGrupo(asiData, gdtId)`.
 
-### 2.4 Campo obsoleto — `capa_teorica` (raíz)
+### 2.4 Campo obsoleto — `capa_teorica` (raíz) — **ELIMINADO**
 
 | Estado | Detalle |
 |--------|---------|
-| Escritura | El worker **ya no escribe** `capa_teorica` plano en el path nuevo |
-| Lectura legacy | Algunos gates aún hacen fallback — **Paso 2 pendiente** |
-| BD | Puede existir en docs históricos — strip planificado (`strip-capa-teorica-legacy.mjs`) |
+| Escritura | El worker **no escribe** `capa_teorica` raíz |
+| Lectura | **Prohibida** en código productivo — `resolverCapaTeoricaGrupo` + gate E11 |
+| BD | **Strip aplicado 29/05/2026:** 244 `asi_*` sin campo raíz; dry-run post-apply = **0** legacy |
+| Script | [`strip-capa-teorica-legacy.mjs`](../../scripts/strip-capa-teorica-legacy.mjs) (`--dry-run` default) |
 
 ### 2.5 Plan de turno — `planes_turno_servicio`
 
@@ -197,7 +198,7 @@ Referencia para QA y code review. **Comportamiento esperado** tras Opción A.
 | ID | Escenario | Comportamiento esperado | Mitigación / estado |
 |----|-----------|-------------------------|---------------------|
 | **E1** | Materializar Grupo A luego B el mismo día | Cada uno escribe solo su clave en `capa_teorica_por_grupo` y su `vis_*` | Dot-path write; remat idempotente — **✅ implementado** |
-| **E2** | `overrides_turno[]` sin `grupo_de_trabajo_id` | Override de Internación no altera slice Urgencias | Tag en registro + filtro en worker — **⚠️ pendiente** |
+| **E2** | `overrides_turno[]` sin `grupo_de_trabajo_id` | Override de Internación no altera slice Urgencias | Tag en registro + filtro en worker — **✅ implementado** (Paso 2) |
 | **E3** | Outbox / batch sin `grupo_id` | Error `[BATCH-007]`; no rematerializar a ciegas | Validación FE + BE — **✅ implementado** |
 | **E4** | `assertConcurrenciaVis` / `version_token` | Token del `vis_*` del **grupo activo** | `buildVisDocumentId(pid, fecha, gdt)` — **✅ implementado** |
 | **E5** | `obtenerCapaTeoricaDia` sin gdt | Rechazo `PARAMS_INVALIDOS` | Param obligatorio — **✅ implementado** |
@@ -211,7 +212,7 @@ Referencia para QA y code review. **Comportamiento esperado** tras Opción A.
 | **E8** | Deshabilitar HLG / `fecha_fin` mid-month | Borrar `capa_teorica_por_grupo[gdtX]` en días futuros; dejar de escribir `vis_*` de ese gdt |
 | **E9** | Revert plan HABILITADO → EN_REVISION | `materializarGrupoMes` post-eliminar **no** borra slices de **otros** gdt |
 | **E10** | Cobertura parcial titular + cobertura mismo gdt | Batch rematerializa ambos con el **mismo** `grupo_id` del contexto grilla |
-| **E11** | Gate `depende_rda` sin plan HABILITADO en gdt ancla | Usar `capa_teorica_por_grupo[gdt_ancla]`; no aceptar capa solo en otro gdt — **⚠️ gate legacy pendiente** |
+| **E11** | Gate `depende_rda` sin plan HABILITADO en gdt ancla | Usar `capa_teorica_por_grupo[gdt_ancla]`; no aceptar capa solo en otro gdt — **✅ implementado** (`grillaTurnoEntornoGate`) |
 
 ### 3.3 Medios
 
@@ -248,12 +249,12 @@ Checklist de cierre de épica. Marcar en PR / release notes.
 - [x] Outbox / batch: `context.grupo_id` obligatorio (`[BATCH-007]`)
 - [x] UI titular: selector multicargo + lazy load al cambiar `gdt` (T2)
 - [x] Purga `vis_*` sin `_gdt_` (Fase 5)
-- [ ] Strip campo `capa_teorica` raíz en `asi_*` (Fase 5b)
-- [ ] Gates: `grillaTurnoEntornoGate` + eliminar fallback legacy en `obtenerCapaTeoricaDia`
-- [ ] `overrides_turno[].grupo_de_trabajo_id` + filtro materialización (E2)
+- [x] Strip campo `capa_teorica` raíz en `asi_*` (Fase 5b) — **244 docs**, post-dry-run **0** legacy
+- [x] Gates: `grillaTurnoEntornoGate` (E11 scoped) + sin fallback en `obtenerCapaTeoricaDia`
+- [x] `overrides_turno[].grupo_de_trabajo_id` + filtro materialización (E2)
 - [ ] Hook `proyectarAportesNormativosVisGrupo` best-effort (T3 / KI-1)
 - [ ] Scripts audit/smoke actualizados (`audit-fase4-6`, `rematerializar-vis-turno-teorico`)
-- [ ] Cero lecturas de `capa_teorica` raíz en código productivo (grep gate en PR)
+- [x] Cero lecturas de `capa_teorica` raíz en código productivo (gates/callables/worker)
 
 ### 4.2 Matriz de control manual (10 puntos — sign-off QA)
 
@@ -261,25 +262,28 @@ Ejecutar antes de merge a `main`.
 
 | # | Caso | Verificar | Estado piloto |
 |---|------|-----------|---------------|
-| 1 | CHAPARRO junio Internación | `grilla_aprobada` = `vis_*` scoped = slice `asi_*` (NL / 08–14 / F) | ⚠️ junio OK; mayo sin remat |
+| 1 | CHAPARRO junio Internación | `grilla_aprobada` = `vis_*` scoped = slice `asi_*` (NL / 08–14 / F) | ✅ junio; mayo 31/31 slice scoped |
 | 2 | MOSTO LAO + GS-A en días distintos | Eventos MDC en `vis_*` del `gdt` correcto | ⚠️ parcial |
 | 3 | LOKITO régimen planificado / compuesto | Sin regresión turnos compuestos | ⚠️ pendiente doc |
 | 4 | Outbox cobertura parcial | Token concurrencia + remat con `gdt` | ✅ smoke dev |
 | 5 | Titular multicargo | Cambiar `gdt` recarga otro calendario; Oficina vacío si sin plan | ✅ MOSTO jun 2026 |
 | 6 | Rehabilitar / eliminar plan | No pisa `vis_*` de otro `gdt` | ⚠️ pendiente |
-| 7 | Solicitud `depende_rda` | Gate OK con capa en `gdt` ancla o plan HABILITADO | ❌ gate legacy |
+| 7 | Solicitud `depende_rda` | Gate OK con capa en `gdt` ancla o plan HABILITADO | ✅ gate E11 deploy `fc54e8b` |
 | 8 | Grilla equipo jefe | `listarVistaGrillaMesPorGrupo` coherente con materialización | ⚠️ pendiente |
 | 9 | Override jefe | Solo muta `asi_*`/`vis_*` del contexto; snapshot plan intacto | ⚠️ pendiente |
 | 10 | Período liquidado | `assertPeriodoNoCerrado` scoped al `gdt` activo | ✅ fix gate jun 2026 |
 
 ### 4.3 Operaciones pre-prod ejecutadas
 
-| Acción | Script | Resultado |
-|--------|--------|-----------|
+| Acción | Script / commit | Resultado |
+|--------|-----------------|-----------|
 | Materializar junio 2026 Sala | `materializar-grupo-mes.mjs` | 90 días-procesados (3 agentes × 30) |
-| Verificar agente | `verificar-vis-mes-agente.mjs` | MOSTO/CHAPARRO 30/30 celdas |
+| **Paso 2 — Deploy gates/overrides** | `fc54e8b` + `firebase deploy --only functions` | ✅ |
+| **Materializar mayo 2026 Sala** | `materializar-grupo-mes.mjs --periodo=2026-05` | **93** personas; 0 fallos |
+| **Strip `capa_teorica` raíz** | `strip-capa-teorica-legacy.mjs --apply` | **244** stripped; dry-run post = **0** legacy |
+| Verificar agente | `verificar-vis-mes-agente.mjs` | MOSTO/CHAPARRO: jun 30/30; may 31/31 `asi_dias_capa_grupo` |
 | Purga vis legacy | `purge-vis-legacy.mjs --apply` | 8 docs borrados; 3 scoped conservados |
-| Deploy | `firebase deploy --only "functions,hosting"` | ✅ |
+| Deploy UI+functions (épica core) | `firebase deploy --only "functions,hosting"` | ✅ |
 
 ---
 
@@ -302,7 +306,7 @@ Documentados explícitamente para evitar tickets “bug” futuros.
 | [`materializar-grupo-mes.mjs`](../../scripts/materializar-grupo-mes.mjs) | `--gdt=gdt_* --periodo=YYYY-MM` — rematerialización batch |
 | [`verificar-vis-mes-agente.mjs`](../../scripts/verificar-vis-mes-agente.mjs) | Auditoría post-mat por persona/`gdt`/mes |
 | [`purge-vis-legacy.mjs`](../../scripts/purge-vis-legacy.mjs) | Purga `vis_*` sin `_gdt_` (`--dry-run` default) |
-| `strip-capa-teorica-legacy.mjs` | **Pendiente** — delete campo `capa_teorica` raíz |
+| [`strip-capa-teorica-legacy.mjs`](../../scripts/strip-capa-teorica-legacy.mjs) | Delete campo `capa_teorica` raíz — **aplicado 29/05** (244 docs) |
 
 ---
 
@@ -312,7 +316,7 @@ Documentados explícitamente para evitar tickets “bug” futuros.
 |-------|--------|
 | Plan | `plt_01KSSPY2H5EZA925FQP4S1G2XW` |
 | Grupo | Sala Internación 1 — `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` |
-| Período | `2026-06` |
+| Períodos materializados scoped | `2026-05`, `2026-06` (Sala) |
 | Agentes smoke | MOSTO `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ`, CHAPARRO `per_01KQQJA5Q1VKBTJ74RHQ0HSHSB` |
 | DNI piloto habitual | 28914247 (MOSTO) |
 
@@ -320,11 +324,13 @@ Documentados explícitamente para evitar tickets “bug” futuros.
 
 ## 8. Roadmap post-épica (Pasos 2–4 acordados)
 
-Orden de estabilización **antes** de merge a `main`:
+| Paso | Contenido | Estado |
+|------|-----------|--------|
+| **2 — Limpieza y gates** | strip `capa_teorica` + `grillaTurnoEntornoGate` + overrides E2 + sin fallback legacy | **✅ Cerrado 29/05/2026** |
+| **3 — Paridad histórica** | materializar **mayo 2026** scoped (Sala, 93 agentes) | **✅ Cerrado 29/05/2026** |
+| **4 — QA + merge** | matriz §4.2 (ítems 2–3, 6, 8–9) + merge rama → `main` | **Pendiente** |
 
-1. **Paso 2 — Limpieza y gates:** strip `capa_teorica` + `grillaTurnoEntornoGate` + overrides E2 + eliminar fallbacks legacy.
-2. **Paso 3 — Paridad histórica:** materializar **mayo 2026** scoped para grupos con plan HABILITADO.
-3. **Paso 4 — QA + merge:** completar matriz §4.2 (ítems 6–10) → merge `feat/epic-multi-hlg-fase1-execution` → `main`.
+**Modelo final vigente:** `asi_*` y `vis_*` 100 % scoped por `gdt_*`; sin fusión global ni campo `capa_teorica` raíz en BD.
 
 ---
 
@@ -349,6 +355,7 @@ Orden de estabilización **antes** de merge a `main`:
 | 2026-05-29 | Fases 1–4 implementadas; deploy conjunto |
 | 2026-05-29 | Piloto junio validado; purge 8 `vis_*` legacy |
 | 2026-05-29 | Este documento — biblia de referencia |
+| 2026-05-29 | **Limpieza quirúrgica:** deploy gates `fc54e8b`, mayo scoped (93), strip 244 `asi_*` → 0 legacy |
 
 ---
 

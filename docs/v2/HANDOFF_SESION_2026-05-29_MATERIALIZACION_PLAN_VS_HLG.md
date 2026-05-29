@@ -1,7 +1,7 @@
 # Handoff — Materialización: Foto del plan vs fusión multi-HLG
 
 **Fecha:** 29 de mayo de 2026  
-**Estado:** Épica core **cerrada** (jun 2026); deuda residual en [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) §8  
+**Estado:** **Arquitectura modelo final en BD y functions** — limpieza quirúrgica `asi_*` completada (0 legacy). QA §4.2 plan maestro y merge a `main` pendientes.  
 **Épica:** Multi-HLG Opción A — `feat/epic-multi-hlg-fase1-execution`  
 **Plan maestro:** [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md)  
 **Audiencia:** RRHH, Jefe de servicio, desarrollo backend, QA
@@ -14,7 +14,28 @@
 | **MOSTO** | Una sola HLG vigente (extras cerrados) | VER plan ≈ Calendario: **08:00–14:00** en laborables, **F** en fines de semana |
 | **LOKITO** | Sin cambio requerido en incidente | Ya estaba alineado en auditoría previa |
 
-Pendiente formalizar con script: `node scripts/audit-vis-junio-2026.mjs` (plan = `vis_*` = `asi_*` en verde). La **épica sigue abierta** hasta Opción 2 (Plan > HLG en motor).
+Pendiente formalizar con script: `node scripts/audit-vis-junio-2026.mjs` (plan = `vis_*` = `asi_*` en verde). **Motor Opción A + Plan > HLG por `gdt`** implementado; fusión global **eliminada** en BD (strip 29/05).
+
+---
+
+## Cierre — Limpieza quirúrgica (29/05/2026)
+
+Secuencia ejecutada en datos vivos (pre-prod):
+
+| Paso | Acción | Resultado |
+|------|--------|-----------|
+| A | Deploy `fc54e8b` — gates E11, overrides E2, sin fallback `capa_teorica` | `firebase deploy --only functions` ✅ |
+| B | Materializar mayo scoped Sala | `materializar-grupo-mes.mjs --gdt=gdt_01KQA6QCA8TDQK9YBTHKYA4R2V --periodo=2026-05` → **93** procesados |
+| C | Strip campo legacy | `strip-capa-teorica-legacy.mjs --apply` → **244** docs; dry-run post = **0** con `capa_teorica` raíz |
+
+**Verificación piloto post-strip:**
+
+| Agente | Mayo 2026 | Junio 2026 |
+|--------|-----------|------------|
+| MOSTO | `asi_dias_capa_grupo` **31/31**, `vis` 31 celdas | **30/30** turnos + capa scoped ✅ |
+| CHAPARRO | **31/31** capa scoped | Validación visual junio previa ✅ |
+
+**Modelo final:** lectura/escritura solo vía `capa_teorica_por_grupo[gdt]` y `vis_*` con `_gdt_` en ID. Sin “inventar” capa cross-grupo.
 
 ---
 
@@ -231,9 +252,10 @@ La épica **no** se considera cerrada arquitectónicamente con solo limpieza RRH
 
 ### B. Motor (blindaje)
 
-- [ ] Implementada **Regla objetivo** (Plan > HLG) en path Aprobar/Rehabilitar.
-- [ ] Deploy de functions afectadas.
-- [ ] Repetir auditoría post-deploy **sin** depender del enriquecimiento frontend como parche.
+- [x] Implementada **Regla objetivo** (Plan > HLG) en materialización scoped por `gdt` (`rdaTurnoTeoricoWorker`).
+- [x] Deploy de functions (gates E11, overrides E2, `fc54e8b`).
+- [x] Strip `capa_teorica` raíz — **244** `asi_*`; **0** legacy post-apply.
+- [ ] Repetir auditoría `audit-vis-junio-2026.mjs` post-strip (confirmación formal Firestore).
 
 ### C. Validación UI (muestra)
 
@@ -253,9 +275,9 @@ La épica **no** se considera cerrada arquitectónicamente con solo limpieza RRH
 | Fase | Tipo | Acción |
 |------|------|--------|
 | **1 — Táctica** | Operativa (RRHH) | Cerrar HLGs zombie; rehabilitar plan junio; validar UI. |
-| **2 — Estratégica** | Backend (próximo PR) | Regla Plan > HLG en materialización por aprobación; DoD B. |
+| **2 — Estratégica** | Backend | **✅ Cerrada** — Opción A scoped + Plan > HLG por `gdt` + strip legacy (29/05). |
 
-**No bloquear** la fase 2 sobre la fase 1 para desarrollo, pero **no cerrar la épica** sin la fase 2.
+**Siguiente hito:** Paso 4 del plan maestro — QA §4.2 residual + merge `feat/epic-multi-hlg-fase1-execution` → `main`.
 
 ---
 
@@ -274,4 +296,4 @@ La épica **no** se considera cerrada arquitectónicamente con solo limpieza RRH
 
 ---
 
-*Documento generado a partir de auditoría forense Firestore (29/05/2026). Sin cambios de código en este commit documental.*
+*Documento generado a partir de auditoría forense Firestore (29/05/2026). Actualizado con cierre limpieza quirúrgica `asi_*` (29/05/2026).*
