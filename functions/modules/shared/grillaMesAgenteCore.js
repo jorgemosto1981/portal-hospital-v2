@@ -46,21 +46,24 @@ async function resolvePersonaLabel(db, personaId, cache) {
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
- * @param {{ personaId: string, anio: number, mes: number }} opts
+ * @param {{ personaId: string, grupoTrabajoId: string, anio: number, mes: number }} opts
  */
-async function obtenerVistaGrillaMesAgente(db, { personaId, anio, mes }) {
+async function obtenerVistaGrillaMesAgente(db, { personaId, grupoTrabajoId, anio, mes }) {
   const pid = String(personaId || "").trim();
+  const gdt = String(grupoTrabajoId || "").trim();
   const y = Number(anio);
   const m = Number(mes);
-  if (!/^per_/i.test(pid) || !Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
-    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "persona_id, anio o mes inválidos." };
+  if (!/^per_/i.test(pid) || !/^gdt_/i.test(gdt) || !Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
+    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "persona_id, grupo_trabajo_id (gdt_*), anio o mes inválidos." };
   }
 
   const mm = String(m).padStart(2, "0");
   const fechaRef = `${y}-${mm}-01`;
-  const visId = buildVisDocumentId(pid, fechaRef);
-  if (!visId) {
-    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "No se pudo resolver id de vista." };
+  let visId;
+  try {
+    visId = buildVisDocumentId(pid, fechaRef, gdt);
+  } catch (e) {
+    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: e.message || "No se pudo resolver id de vista." };
   }
 
   const snap = await db.collection(COL_VISTAS_GRILLA_MES).doc(visId).get();
@@ -70,6 +73,7 @@ async function obtenerVistaGrillaMesAgente(db, { personaId, anio, mes }) {
       existe: false,
       vis_id: visId,
       persona_id: pid,
+      grupo_trabajo_id: gdt,
       anio: y,
       mes: m,
       dias: {},
@@ -82,6 +86,7 @@ async function obtenerVistaGrillaMesAgente(db, { personaId, anio, mes }) {
     existe: true,
     vis_id: visId,
     persona_id: String(data.persona_id || pid),
+    grupo_trabajo_id: String(data.grupo_de_trabajo_id || gdt),
     anio: data.anio ?? y,
     mes: data.mes ?? m,
     dias: data.dias && typeof data.dias === "object" ? data.dias : {},
@@ -147,7 +152,7 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
   const filas = [];
 
   for (const pid of limited) {
-    const vista = await obtenerVistaGrillaMesAgente(db, { personaId: pid, anio: y, mes: m });
+    const vista = await obtenerVistaGrillaMesAgente(db, { personaId: pid, grupoTrabajoId: gdt, anio: y, mes: m });
     const persona_label = await resolvePersonaLabel(db, pid, personaCache);
     filas.push({
       persona_id: pid,

@@ -1191,8 +1191,7 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
   for (const pg of personasGrupo) {
     const pid = String(pg.persona_id || "").trim();
     if (!pid) continue;
-    const visId = buildVisDocumentId(pid, `${periodoNorm}-01`);
-    if (!visId) continue;
+    const visId = buildVisDocumentId(pid, `${periodoNorm}-01`, grupoId);
     const visSnap = await db.collection(COL_VISTAS_GRILLA_MES).doc(visId).get();
     if (!visSnap.exists) continue;
     const vis = visSnap.data() || {};

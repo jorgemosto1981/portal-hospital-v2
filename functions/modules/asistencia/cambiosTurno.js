@@ -30,12 +30,29 @@ const COL_VIS = "vistas_grilla_mes_agente";
 const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
 const PER_ID = /^per_[A-Z0-9]+$/i;
+const GDT_ID = /^gdt_[A-Z0-9]+$/i;
 const TIPOS_OVERRIDE = new Set(["reemplazo", "adicional", "cobertura_parcial"]);
 
 const TCC_IDS = new Set(Object.values(seedIds.cfg_tipo_compensacion_cobertura || {}));
 
 function err(code, msg) {
   throw new HttpsError(code, msg);
+}
+
+function resolveGrupoTrabajoId(data, ctx) {
+  const fromCtx = ctx && typeof ctx === "object"
+    ? String(ctx.grupo_id || ctx.grupo_trabajo_id || "").trim()
+    : "";
+  const direct = data && typeof data === "object"
+    ? String(data.grupo_trabajo_id || data.grupo_id || "").trim()
+    : "";
+  return fromCtx || direct;
+}
+
+function requireGrupoTrabajoId(value, code) {
+  const gdt = String(value || "").trim();
+  if (!GDT_ID.test(gdt)) err("invalid-argument", code);
+  return gdt;
 }
 
 function docIdAsistencia(personaId, fechaYmd) {
@@ -124,11 +141,11 @@ function readVisVersionToken(visData) {
   return tsToIso(meta.version_token) || tsToIso(meta.ultima_sync_teorica);
 }
 
-async function assertConcurrenciaVis(personaId, fecha, tokenEsperado) {
+async function assertConcurrenciaVis(personaId, fecha, tokenEsperado, grupoId) {
   const esperado = typeof tokenEsperado === "string" ? tokenEsperado.trim() : "";
   if (!esperado) return;
-  const visId = buildVisDocumentId(personaId, fecha);
-  if (!visId) return;
+  const gdt = requireGrupoTrabajoId(grupoId, "[OVR-030] grupo_trabajo_id (gdt_*) requerido para concurrencia.");
+  const visId = buildVisDocumentId(personaId, fecha, gdt);
   const snap = await db.collection(COL_VIS).doc(visId).get();
   const actual = snap.exists ? readVisVersionToken(snap.data()) : null;
   if (actual !== esperado) {
@@ -148,18 +165,19 @@ async function assertPeriodoEditable(personaId, fecha) {
   }
 }
 
-async function rematerializarTrasOverride(override, personaId, fecha) {
+async function rematerializarTrasOverride(override, personaId, fecha, grupoId) {
+  const gdt = requireGrupoTrabajoId(grupoId, "[OVR-031] grupo_trabajo_id (gdt_*) requerido para rematerializar.");
   const personas = new Set([personaId]);
   if (override.persona_origen_id) personas.add(override.persona_origen_id);
   if (override.persona_cobertura_id) personas.add(override.persona_cobertura_id);
 
   for (const pid of personas) {
     try {
-      await materializarTurnoTeoricoDia({ personaId: pid, grupoId: null, fechaYmd: fecha });
-      logger.info("materializarTurnoTeoricoDia_post_override OK", { personaId: pid, fecha });
+      await materializarTurnoTeoricoDia({ personaId: pid, grupoId: gdt, fechaYmd: fecha });
+      logger.info("materializarTurnoTeoricoDia_post_override OK", { personaId: pid, fecha, grupoId: gdt });
     } catch (e) {
       logger.error("materializarTurnoTeoricoDia_post_override ERROR", {
-        personaId: pid, fecha, error: String(e),
+        personaId: pid, fecha, grupoId: gdt, error: String(e),
       });
     }
   }
@@ -185,6 +203,11 @@ function normalizeBatchOp(raw, idx) {
   if (tipo !== "cobertura_parcial") {
     err("invalid-argument", `[BATCH-002] op[${idx}] tipo no soportado: ${tipo}`);
   }
+  const ctx = op.context && typeof op.context === "object" ? op.context : {};
+  const grupo_trabajo_id = requireGrupoTrabajoId(
+    resolveGrupoTrabajoId(op, ctx),
+    `[BATCH-007] op[${idx}] context.grupo_id (gdt_*) requerido.`,
+  );
   const expected = typeof op?.concurrencia?.expected_version_token === "string"
     ? op.concurrencia.expected_version_token.trim()
     : "";
@@ -198,6 +221,7 @@ function normalizeBatchOp(raw, idx) {
   return {
     op_id: String(op.id || `op_${idx + 1}`),
     fecha,
+    grupo_trabajo_id,
     expected_version_token: expected,
     persona_origen_id: override.persona_origen_id,
     persona_cobertura_id: override.persona_cobertura_id,
@@ -214,12 +238,13 @@ async function rematerializarBatchOps(items) {
   const unique = new Map();
   for (const it of items) {
     const fecha = it.fecha;
-    unique.set(`${it.persona_origen_id}|${fecha}`, { personaId: it.persona_origen_id, fechaYmd: fecha });
-    unique.set(`${it.persona_cobertura_id}|${fecha}`, { personaId: it.persona_cobertura_id, fechaYmd: fecha });
+    const gdt = it.grupo_trabajo_id;
+    unique.set(`${it.persona_origen_id}|${fecha}|${gdt}`, { personaId: it.persona_origen_id, fechaYmd: fecha, grupoId: gdt });
+    unique.set(`${it.persona_cobertura_id}|${fecha}|${gdt}`, { personaId: it.persona_cobertura_id, fechaYmd: fecha, grupoId: gdt });
   }
   for (const obj of unique.values()) {
     try {
-      await materializarTurnoTeoricoDia({ personaId: obj.personaId, grupoId: null, fechaYmd: obj.fechaYmd });
+      await materializarTurnoTeoricoDia({ personaId: obj.personaId, grupoId: obj.grupoId, fechaYmd: obj.fechaYmd });
       logger.info("materializarTurnoTeoricoDia_post_batch OK", obj);
     } catch (e) {
       logger.error("materializarTurnoTeoricoDia_post_batch ERROR", { ...obj, error: String(e) });
@@ -244,10 +269,14 @@ const registrarCambioTurno = onCall({
   if (override.tipo === "cobertura_parcial") {
     await assertPeriodoEditable(override.persona_origen_id, fecha);
     await assertPeriodoEditable(override.persona_cobertura_id, fecha);
+    const grupoTrabajoId = requireGrupoTrabajoId(
+      resolveGrupoTrabajoId(data, data.context),
+      "[OVR-030] grupo_trabajo_id (gdt_*) requerido para cobertura parcial.",
+    );
     const tokenConc = typeof data.expected_version_token === "string"
       ? data.expected_version_token.trim()
       : (typeof data.concurrencia_vis_sync === "string" ? data.concurrencia_vis_sync.trim() : "");
-    await assertConcurrenciaVis(override.persona_origen_id, fecha, tokenConc);
+    await assertConcurrenciaVis(override.persona_origen_id, fecha, tokenConc, grupoTrabajoId);
   }
 
   const uid = (request.auth && request.auth.uid) || "system";
@@ -285,7 +314,12 @@ const registrarCambioTurno = onCall({
   const overrides = updated.exists && Array.isArray(updated.data().overrides_turno)
     ? updated.data().overrides_turno : [];
 
-  await rematerializarTrasOverride(override, personaId, fecha);
+  const grupoTrabajoId = requireGrupoTrabajoId(
+    resolveGrupoTrabajoId(data, data.context),
+    "[OVR-031] grupo_trabajo_id (gdt_*) requerido para rematerializar.",
+  );
+
+  await rematerializarTrasOverride(override, personaId, fecha, grupoTrabajoId);
 
   return {
     ok: true,
@@ -341,7 +375,11 @@ const eliminarCambioTurno = onCall({
   });
 
   const eliminado = overrides[idx];
-  await rematerializarTrasOverride(eliminado || {}, personaId, fecha);
+  const grupoTrabajoId = requireGrupoTrabajoId(
+    resolveGrupoTrabajoId(data, data.context),
+    "[OVR-031] grupo_trabajo_id (gdt_*) requerido para rematerializar.",
+  );
+  await rematerializarTrasOverride(eliminado || {}, personaId, fecha, grupoTrabajoId);
 
   return { ok: true, doc_id: docId, override_eliminado_index: idx };
 });
@@ -417,13 +455,12 @@ const aplicarBatchAsistencia = onCall({
     const visRefMap = new Map();
     const visKeySet = new Set();
     for (const it of items) {
-      visKeySet.add(`${it.persona_origen_id}|${it.fecha}`);
-      visKeySet.add(`${it.persona_cobertura_id}|${it.fecha}`);
+      visKeySet.add(`${it.persona_origen_id}|${it.fecha}|${it.grupo_trabajo_id}`);
+      visKeySet.add(`${it.persona_cobertura_id}|${it.fecha}|${it.grupo_trabajo_id}`);
     }
     for (const key of visKeySet) {
-      const [pid, fecha] = key.split("|");
-      const visId = buildVisDocumentId(pid, fecha);
-      if (!visId) continue;
+      const [pid, fecha, gdt] = key.split("|");
+      const visId = buildVisDocumentId(pid, fecha, gdt);
       const ref = db.collection(COL_VIS).doc(visId);
       const snap = await tx.get(ref);
       visMap.set(key, snap);
@@ -444,7 +481,7 @@ const aplicarBatchAsistencia = onCall({
 
     // Validaciones transaccionales (token + freeze)
     for (const it of items) {
-      const visOrigen = visMap.get(`${it.persona_origen_id}|${it.fecha}`);
+      const visOrigen = visMap.get(`${it.persona_origen_id}|${it.fecha}|${it.grupo_trabajo_id}`);
       const actualToken = visOrigen?.exists ? readVisVersionToken(visOrigen.data()) : null;
       if (actualToken !== it.expected_version_token) {
         err(
@@ -453,8 +490,8 @@ const aplicarBatchAsistencia = onCall({
         );
       }
 
-      const visX = visMap.get(`${it.persona_origen_id}|${it.fecha}`);
-      const visY = visMap.get(`${it.persona_cobertura_id}|${it.fecha}`);
+      const visX = visMap.get(`${it.persona_origen_id}|${it.fecha}|${it.grupo_trabajo_id}`);
+      const visY = visMap.get(`${it.persona_cobertura_id}|${it.fecha}|${it.grupo_trabajo_id}`);
       if (visClosedByData(visX?.data()) || visClosedByData(visY?.data())) {
         err("failed-precondition", "[ASI-PER-001] El período está liquidado y cerrado. No se permiten cambios.");
       }

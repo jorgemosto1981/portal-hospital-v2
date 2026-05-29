@@ -54,6 +54,11 @@ function normalizarPayload(payload) {
     codigo_grilla: String(payload.codigo_grilla || "").trim(),
     grupo_trabajo_id_ancla:
       String(payload.grupo_trabajo_id_ancla || payload.grupo_de_trabajo_id || "").trim() || null,
+    grupos_trabajo_involucrados_ids: Array.isArray(payload.grupos_trabajo_involucrados_ids)
+      ? payload.grupos_trabajo_involucrados_ids
+        .map((g) => String(g || "").trim())
+        .filter((g) => /^gdt_/i.test(g))
+      : [],
     estado_solicitud_id: String(payload.estado_solicitud_id || "").trim() || null,
     autorizacion_rrhh_sustituta: payload.autorizacion_rrhh_sustituta === true,
     nivel_ocupacion_dia_id: String(payload.nivel_ocupacion_dia_id || "").trim() || null,
@@ -158,6 +163,8 @@ async function aplicarProyeccionPendienteDia(db, p, ymd, aporteBase) {
     codigo_grilla: p.codigo_grilla,
     estado_solicitud_id: p.estado_solicitud_id || "cfg_esa_en_revision_jefe",
     nivel_ocupacion_dia_id: p.nivel_ocupacion_dia_id,
+    grupos_trabajo_involucrados_ids: p.grupos_trabajo_involucrados_ids,
+    grupo_trabajo_id_ancla: p.grupo_trabajo_id_ancla,
     modo: "pendiente",
   });
 }
@@ -192,6 +199,8 @@ async function aplicarAutorizacionJefeDia(db, p, ymd, aporteBase) {
     codigo_grilla: p.codigo_grilla,
     estado_solicitud_id: estadoSol,
     nivel_ocupacion_dia_id: p.nivel_ocupacion_dia_id,
+    grupos_trabajo_involucrados_ids: p.grupos_trabajo_involucrados_ids,
+    grupo_trabajo_id_ancla: p.grupo_trabajo_id_ancla,
     modo: "pendiente",
   });
 }
@@ -224,6 +233,8 @@ async function aplicarConsolidadoDia(db, p, ymd, aporteBase) {
     codigo_grilla: p.codigo_grilla,
     estado_solicitud_id: p.estado_solicitud_id || "cfg_esa_aprobada",
     nivel_ocupacion_dia_id: p.nivel_ocupacion_dia_id,
+    grupos_trabajo_involucrados_ids: p.grupos_trabajo_involucrados_ids,
+    grupo_trabajo_id_ancla: p.grupo_trabajo_id_ancla,
     modo: "aprobado",
   });
 }
@@ -250,6 +261,8 @@ async function aplicarReversoDia(db, p, ymd) {
     articulo_id: p.articulo_id,
     codigo_grilla: p.codigo_grilla,
     estado_solicitud_id: "cfg_esa_rechazada",
+    grupos_trabajo_involucrados_ids: p.grupos_trabajo_involucrados_ids,
+    grupo_trabajo_id_ancla: p.grupo_trabajo_id_ancla,
     modo: "revertir",
   });
 }
@@ -279,6 +292,11 @@ function buildMdcPayloadDesdeSolicitud(sol, comando) {
     codigo_grilla: String(d.codigo_grilla || d.articulo_codigo || "").trim(),
     grupo_trabajo_id_ancla:
       String(d.grupo_trabajo_id_ancla || d.grupo_de_trabajo_id || "").trim() || null,
+    grupos_trabajo_involucrados_ids: Array.isArray(d.grupos_trabajo_involucrados_ids)
+      ? d.grupos_trabajo_involucrados_ids
+        .map((g) => String(g || "").trim())
+        .filter((g) => /^gdt_/i.test(g))
+      : [],
     estado_solicitud_id: String(d.estado_solicitud_id || "").trim() || null,
     autorizacion_rrhh_sustituta: d.autorizacion_rrhh_sustituta === true,
   };
