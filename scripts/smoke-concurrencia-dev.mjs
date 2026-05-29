@@ -42,6 +42,25 @@ async function cargarCredenciales() {
   if (!getApps().length) initializeApp({ credential: cert(sa), projectId: sa.project_id });
 }
 
+async function resolverGdt(db, personaId, fecha, gdtArg) {
+  const explicit = String(gdtArg || "").trim();
+  if (/^gdt_/i.test(explicit)) return explicit;
+  const snap = await db.collection("historial_laboral_grupos")
+    .where("persona_id", "==", personaId)
+    .where("activo", "==", true)
+    .get();
+  for (const doc of snap.docs) {
+    const d = doc.data() || {};
+    const fi = d.fecha_inicio || "";
+    const ff = d.fecha_fin || "";
+    if (fi && fi > fecha) continue;
+    if (ff && ff < fecha) continue;
+    const gdt = String(d.grupo_de_trabajo_id || "").trim();
+    if (/^gdt_/i.test(gdt)) return gdt;
+  }
+  throw new Error("No se pudo resolver gdt. Pasá --gdt=gdt_*.");
+}
+
 async function main() {
   await cargarCredenciales();
   const db = getFirestore();
@@ -50,8 +69,9 @@ async function main() {
   const personaCobertura = getArg("persona-cobertura", "per_01KQQJA5Q1VKBTJ74RHQ0HSHSB");
   const fecha = getArg("fecha", "2026-06-10");
   const segmento = getArg("segmento", "cfg_reg_turno_01_manana");
+  const gdt = await resolverGdt(db, personaOrigen, fecha, getArg("gdt", ""));
 
-  const visId = buildVisDocumentId(personaOrigen, fecha);
+  const visId = buildVisDocumentId(personaOrigen, fecha, gdt);
   const visRef = db.collection("vistas_grilla_mes_agente").doc(visId);
 
   const beforeSnap = await visRef.get();
@@ -61,6 +81,7 @@ async function main() {
   const payloadBase = {
     persona_id: personaOrigen,
     fecha,
+    grupo_trabajo_id: gdt,
     override: {
       tipo: "cobertura_parcial",
       tipo_override_id: CFG_TOV_COBERTURA_PARCIAL,
@@ -105,6 +126,7 @@ async function main() {
       {
         persona_origen: personaOrigen,
         persona_cobertura: personaCobertura,
+        grupo_trabajo_id: gdt,
         fecha,
         segmento,
         tokenA,

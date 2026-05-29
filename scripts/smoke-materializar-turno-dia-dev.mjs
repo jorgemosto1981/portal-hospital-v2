@@ -50,6 +50,9 @@ const {
   CFG_TOV_COBERTURA_PARCIAL,
   CFG_TCC_CAMBIO_INTERNO,
 } = require(join(repoRoot, "functions/modules/shared/cfgAsistenciaTurnosIds.js"));
+const {
+  resolverCapaTeoricaGrupo,
+} = require(join(repoRoot, "functions/modules/shared/capaTeoricaPorGrupoCore.js"));
 
 function loadGacPath() {
   const envFile = join(repoRoot, ".env.v2.local");
@@ -344,15 +347,18 @@ function validarVis(visData, fechaYmd, capa) {
   }
 }
 
-async function leerEstado(db, personaId, fechaYmd) {
+async function leerEstado(db, personaId, fechaYmd, gdt) {
   const asiDocId = buildAsiDocumentId(personaId, fechaYmd);
-  const visDocId = buildVisDocumentId(personaId, fechaYmd);
+  const visDocId = buildVisDocumentId(personaId, fechaYmd, gdt);
   const asiSnap = await db.collection(COL_ASISTENCIA).doc(asiDocId).get();
   const visSnap = await db.collection(COL_VIS).doc(visDocId).get();
+  const asiRaw = asiSnap.exists ? asiSnap.data() : null;
+  const capaGrupo = resolverCapaTeoricaGrupo(asiRaw, gdt);
   return {
     asiDocId,
     visDocId,
-    asi: asiSnap.exists ? asiSnap.data() : null,
+    asi: asiRaw,
+    capa: capaGrupo || asiRaw?.capa_teorica || null,
     vis: visSnap.exists ? visSnap.data() : null,
   };
 }
@@ -431,12 +437,12 @@ async function main() {
     console.warn(`${TAG} Sin --apply: solo validación de estado actual`);
   }
 
-  const stX = await leerEstado(db, personaOrigen, fechaYmd);
-  const stY = await leerEstado(db, personaCobertura, fechaYmd);
+  const stX = await leerEstado(db, personaOrigen, fechaYmd, ctx.grupoId);
+  const stY = await leerEstado(db, personaCobertura, fechaYmd, ctx.grupoId);
 
-  if (!stX.asi?.capa_teorica) throw new Error(`${stX.asiDocId} sin capa_teorica`);
+  if (!stX.capa) throw new Error(`${stX.asiDocId} sin capa teórica para ${ctx.grupoId}`);
   const capaX = validarCapaPersona({
-    capa: stX.asi.capa_teorica,
+    capa: stX.capa,
     personaId: personaOrigen,
     rol: "origen",
     segmento: args.segmento,
@@ -445,11 +451,11 @@ async function main() {
   });
   if (stX.vis) validarVis(stX.vis, fechaYmd, capaX);
 
-  if (!stY.asi?.capa_teorica) {
-    throw new Error(`${stY.asiDocId} sin capa_teorica (cobertura debe reflejar segmento ${args.segmento})`);
+  if (!stY.capa) {
+    throw new Error(`${stY.asiDocId} sin capa teórica para ${ctx.grupoId} (cobertura debe reflejar segmento ${args.segmento})`);
   }
   const capaY = validarCapaPersona({
-    capa: stY.asi.capa_teorica,
+    capa: stY.capa,
     personaId: personaCobertura,
     rol: "cobertura",
     segmento: args.segmento,

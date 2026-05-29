@@ -33,7 +33,7 @@ function arg(name, fallback = "") {
   return hit ? hit.slice(key.length) : fallback;
 }
 
-function mkOp({ id, personaOrigen, personaCobertura, fecha, segmento, token, motivo }) {
+function mkOp({ id, personaOrigen, personaCobertura, fecha, segmento, token, motivo, gdt }) {
   return {
     id,
     tipo: "cobertura_parcial",
@@ -51,10 +51,30 @@ function mkOp({ id, personaOrigen, personaCobertura, fecha, segmento, token, mot
     concurrencia: {
       expected_version_token: token,
     },
-    contexto: {
+    context: {
+      grupo_id: gdt,
       periodo: fecha.slice(0, 7),
     },
   };
+}
+
+async function resolverGdt(db, personaId, fecha, gdtArg) {
+  const explicit = String(gdtArg || "").trim();
+  if (/^gdt_/i.test(explicit)) return explicit;
+  const snap = await db.collection("historial_laboral_grupos")
+    .where("persona_id", "==", personaId)
+    .where("activo", "==", true)
+    .get();
+  for (const doc of snap.docs) {
+    const d = doc.data() || {};
+    const fi = d.fecha_inicio || "";
+    const ff = d.fecha_fin || "";
+    if (fi && fi > fecha) continue;
+    if (ff && ff < fecha) continue;
+    const gdt = String(d.grupo_de_trabajo_id || "").trim();
+    if (/^gdt_/i.test(gdt)) return gdt;
+  }
+  throw new Error("No se pudo resolver gdt. Pasá --gdt=gdt_*.");
 }
 
 async function initDb() {
@@ -74,10 +94,11 @@ async function main() {
   const personaCobertura = arg("persona-cobertura", "per_01KQQJA5Q1VKBTJ74RHQ0HSHSB");
   const fecha = arg("fecha", "2026-06-10");
   const segmento = arg("segmento", "cfg_reg_turno_01_manana");
+  const gdt = await resolverGdt(db, personaOrigen, fecha, arg("gdt", ""));
 
-  const visId = buildVisDocumentId(personaOrigen, fecha);
+  const visId = buildVisDocumentId(personaOrigen, fecha, gdt);
   const visRef = db.collection("vistas_grilla_mes_agente").doc(visId);
-  const visCobId = buildVisDocumentId(personaCobertura, fecha);
+  const visCobId = buildVisDocumentId(personaCobertura, fecha, gdt);
   const visCobRef = db.collection("vistas_grilla_mes_agente").doc(visCobId);
   const asiId = buildAsiDocumentId(personaOrigen, fecha);
   const asiRef = db.collection("asistencia_diaria").doc(asiId);
@@ -103,6 +124,7 @@ async function main() {
       segmento,
       token: tokenA,
       motivo: `Smoke outbox success #${i + 1}`,
+      gdt,
     }));
 
   const auth = { uid: "smoke-outbox", token: { persona_id: personaOrigen } };
@@ -131,6 +153,7 @@ async function main() {
           segmento,
           token: tokenB,
           motivo: `Smoke outbox rollback valid #${i + 1}`,
+          gdt,
         }),
       );
     }
@@ -143,6 +166,7 @@ async function main() {
         segmento,
         token: tokenA,
         motivo: "Smoke outbox rollback stale token",
+        gdt,
       }),
     );
 
@@ -167,6 +191,7 @@ async function main() {
     console.log(JSON.stringify({
       persona_origen: personaOrigen,
       persona_cobertura: personaCobertura,
+      grupo_trabajo_id: gdt,
       fecha,
       tokenA,
       tokenB,
