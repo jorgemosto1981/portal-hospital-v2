@@ -112,6 +112,17 @@ function esOverrideActivo(ov) {
   return ov && !ov.eliminado && !ov.invalidado_por_replanificacion;
 }
 
+/** E2: overrides acotados al bounded context; legacy sin grupo_de_trabajo_id se ignoran. */
+function filtrarOverridesActivosPorGrupo(allOverrides, gdtId) {
+  const gdt = String(gdtId || "").trim();
+  if (!/^gdt_/i.test(gdt)) return [];
+  return (allOverrides || []).filter((o) => {
+    if (!esOverrideActivo(o)) return false;
+    const og = String(o.grupo_de_trabajo_id || "").trim();
+    return og === gdt;
+  });
+}
+
 function esTipoLaboral(tipoDia) {
   return tipoDia === "laborable" || tipoDia === "guardia";
 }
@@ -312,7 +323,8 @@ function upsertSegmento(segmentos, segmentoNuevo) {
   else segmentos.push(segmentoNuevo);
 }
 
-async function listarCoberturasDia(fechaYmd, personaId) {
+async function listarCoberturasDia(fechaYmd, personaId, grupoId) {
+  const gdt = String(grupoId || "").trim();
   const snap = await db.collection(COL_ASISTENCIA).where("fecha", "==", fechaYmd).get();
   const out = [];
   for (const doc of snap.docs) {
@@ -320,6 +332,10 @@ async function listarCoberturasDia(fechaYmd, personaId) {
     for (const ov of all) {
       if (!esOverrideActivo(ov)) continue;
       if (ov.tipo !== "cobertura_parcial") continue;
+      if (gdt) {
+        const og = String(ov.grupo_de_trabajo_id || "").trim();
+        if (og !== gdt) continue;
+      }
       if (ov.persona_origen_id === personaId || ov.persona_cobertura_id === personaId) out.push(ov);
     }
   }
@@ -547,9 +563,10 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
     if (!asiDocId) continue;
     const asiRef = db.collection(COL_ASISTENCIA).doc(asiDocId);
     const asiSnap = await asiRef.get();
-    const overrides = asiSnap.exists
-      ? (asiSnap.data().overrides_turno || []).filter((o) => o.tipo === "reemplazo" && !o.invalidado_por_replanificacion)
-      : [];
+    const overrides = filtrarOverridesActivosPorGrupo(
+      asiSnap.exists ? asiSnap.data().overrides_turno : [],
+      gdt,
+    ).filter((o) => o.tipo === "reemplazo");
 
     let turnoFinal = mejorResolucion.turno_teorico;
     let origenFinal = mejorResolucion.origen;
@@ -806,11 +823,11 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
   const allOverrides = asiSnap.exists && Array.isArray(asiSnap.data().overrides_turno)
     ? asiSnap.data().overrides_turno
     : [];
-  const activos = allOverrides.filter(esOverrideActivo);
+  const activos = filtrarOverridesActivosPorGrupo(allOverrides, gdt);
 
   const reemplazos = activos.filter((o) => o.tipo === "reemplazo");
   const adicionales = activos.filter((o) => o.tipo === "adicional");
-  const coberturas = await listarCoberturasDia(fechaYmd, personaId);
+  const coberturas = await listarCoberturasDia(fechaYmd, personaId, gdt);
 
   let turnoCompuestoId = base.mejorResolucion.turno_teorico?.turno_id || base.capaBase.turno_compuesto_id || null;
   let tipoDiaFinal = base.capaBase.tipo_dia || base.mejorResolucion.tipo_dia;

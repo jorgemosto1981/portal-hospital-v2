@@ -45,7 +45,6 @@ const obtenerCapaTeoricaDia = onCall({
 
   const asiData = asiSnap.exists ? asiSnap.data() : null;
   const capaGrupo = resolverCapaTeoricaGrupo(asiData, grupoTrabajoId);
-  const capaLegacy = asiData?.capa_teorica || null;
   const periodo = await consultarEstadoPeriodoLiquidacion(personaId, fecha, grupoTrabajoId);
   const diaKey = fecha.slice(8, 10);
   const diaVis = visSnap?.exists && visSnap.data()?.dias?.[diaKey] ? visSnap.data().dias[diaKey] : null;
@@ -57,10 +56,10 @@ const obtenerCapaTeoricaDia = onCall({
     doc_id: asiDocId,
     vis_id: visDocId,
     grupo_trabajo_id: grupoTrabajoId,
-    capa_teorica: capaGrupo || capaLegacy,
+    capa_teorica: capaGrupo,
     capa_teorica_grupo: capaGrupo,
     concurrencia: {
-      version_capa_teorica: (capaGrupo || capaLegacy)?.version_capa_teorica ?? null,
+      version_capa_teorica: capaGrupo?.version_capa_teorica ?? null,
       vis_ultima_sync: tsToIso(visSnap?.data()?.metadata?.ultima_sync_teorica),
       expected_version_token: versionToken,
     },

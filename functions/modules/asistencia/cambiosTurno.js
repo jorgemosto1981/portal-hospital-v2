@@ -284,6 +284,7 @@ const registrarCambioTurno = onCall({
 
   const entry = {
     ...override,
+    grupo_de_trabajo_id: grupoTrabajoId,
     es_override_manual: true,
     creado_por_uid: uid,
     creado_por_persona_id: token.persona_id || null,
@@ -499,6 +500,7 @@ const aplicarBatchAsistencia = onCall({
       const list = appendMap.get(key) || [];
       list.push({
         ...it.override,
+        grupo_de_trabajo_id: it.grupo_trabajo_id,
         es_override_manual: true,
         creado_por_uid: uid,
         creado_por_persona_id: token.persona_id || null,

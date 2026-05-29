@@ -1,6 +1,7 @@
 "use strict";
 
 const { buildAsiDocumentId, iterarYmdInclusive } = require("../shared/mdcRdaDocumentIds");
+const { resolverCapaTeoricaGrupo } = require("../shared/capaTeoricaPorGrupoCore");
 const { COL_ASISTENCIA_DIARIA } = require("../shared/mdcComandosConstants");
 
 const COL_PLAN_ROTATIVA = "planificacion_mensual_rotativa";
@@ -54,54 +55,62 @@ async function evaluarGrillaTurnoEntorno(db, input) {
   const hasta = String(input.fecha_hasta || desde).slice(0, 10);
   const gdtId = String(input.grupo_trabajo_id || "").trim();
 
-  if (gdtId) {
-    const periodo = desde.slice(0, 7);
-    const v2Snap = await db.collection(COL_PLANES_TURNO)
-      .where("grupo_id", "==", gdtId)
-      .where("estado", "==", PLAN_ESTADO_HABILITADO)
-      .get();
-    const v2Match = v2Snap.docs.find((d) => {
-      const data = d.data();
-      if (data.tipo_plan === "mensual") return data.periodo === periodo;
-      if (data.tipo_plan === "perpetuo") {
-        const vDesde = data.vigente_desde || "";
-        const vHasta = data.vigente_hasta || "9999-12-31";
-        return desde >= vDesde && desde <= vHasta;
-      }
-      return false;
-    });
-    if (v2Match) {
-      return { ok: true, codigo: null, mensaje: null, checks: { grilla_rda: true, turno: true } };
-    }
-
-    const periodoKey = desde.slice(0, 7).replace("-", "_");
-    const planId = `${gdtId}_${periodoKey}`;
-    const planSnap = await db.collection(COL_PLAN_ROTATIVA).doc(planId).get();
-    if (planSnap.exists) {
-      const estado = String(planSnap.data()?.estado_plan || planSnap.data()?.estado || "").trim();
-      if (estado && estado !== PLAN_ESTADO_AUTORIZADO) {
-        return {
-          ok: false,
-          codigo: CODIGO_GRILLA_NO_AUTORIZADA,
-          mensaje: MSG_GRILLA_BLOQUEADA,
-          checks: { grilla_rda: false, turno: false },
-        };
-      }
-      return {
-        ok: true,
-        codigo: null,
-        mensaje: null,
-        checks: { grilla_rda: true, turno: true },
-      };
-    }
+  if (!gdtId) {
+    return {
+      ok: false,
+      codigo: CODIGO_TURNO_NO_PLANIFICADO,
+      mensaje: MSG_TURNO_NO_PLANIFICADO,
+      checks: { grilla_rda: false, turno: false },
+    };
   }
 
+  const periodo = desde.slice(0, 7);
+  const v2Snap = await db.collection(COL_PLANES_TURNO)
+    .where("grupo_id", "==", gdtId)
+    .where("estado", "==", PLAN_ESTADO_HABILITADO)
+    .get();
+  const v2Match = v2Snap.docs.find((d) => {
+    const data = d.data();
+    if (data.tipo_plan === "mensual") return data.periodo === periodo;
+    if (data.tipo_plan === "perpetuo") {
+      const vDesde = data.vigente_desde || "";
+      const vHasta = data.vigente_hasta || "9999-12-31";
+      return desde >= vDesde && desde <= vHasta;
+    }
+    return false;
+  });
+  if (v2Match) {
+    return { ok: true, codigo: null, mensaje: null, checks: { grilla_rda: true, turno: true } };
+  }
+
+  const periodoKey = desde.slice(0, 7).replace("-", "_");
+  const planId = `${gdtId}_${periodoKey}`;
+  const planSnap = await db.collection(COL_PLAN_ROTATIVA).doc(planId).get();
+  if (planSnap.exists) {
+    const estado = String(planSnap.data()?.estado_plan || planSnap.data()?.estado || "").trim();
+    if (estado && estado !== PLAN_ESTADO_AUTORIZADO) {
+      return {
+        ok: false,
+        codigo: CODIGO_GRILLA_NO_AUTORIZADA,
+        mensaje: MSG_GRILLA_BLOQUEADA,
+        checks: { grilla_rda: false, turno: false },
+      };
+    }
+    return {
+      ok: true,
+      codigo: null,
+      mensaje: null,
+      checks: { grilla_rda: true, turno: true },
+    };
+  }
+
+  // E11: sin plan autorizado — capa teórica scoped al gdt ancla (no capa_teorica raíz)
   const dias = iterarYmdInclusive(desde, hasta);
   for (const ymd of dias) {
     const asiId = buildAsiDocumentId(personaId, ymd);
     if (!asiId) continue;
     const snap = await db.collection(COL_ASISTENCIA_DIARIA).doc(asiId).get();
-    const capa = snap.exists ? snap.data()?.capa_teorica : null;
+    const capa = resolverCapaTeoricaGrupo(snap.exists ? snap.data() : null, gdtId);
     if (!capaTeoricaPresente(capa)) {
       return {
         ok: false,
