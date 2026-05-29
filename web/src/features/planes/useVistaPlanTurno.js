@@ -53,7 +53,11 @@ export function useVistaPlanTurno(planId, enabled = true) {
     const out = {};
     for (const ag of agentesMeta) {
       if (!ag?.persona_id) continue;
-      out[ag.persona_id] = { nombre: ag.nombre, dni: ag.dni };
+      out[ag.persona_id] = {
+        nombre: ag.nombre || ag.nombre_completo || ag.persona_label,
+        dni: ag.dni || ag.persona_dni,
+        persona_label: ag.persona_label,
+      };
     }
     return out;
   }, [agentesMeta]);

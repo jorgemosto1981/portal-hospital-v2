@@ -2,27 +2,26 @@
  * Etiquetas de celda desde grilla_aprobada (snapshot del plan HABILITADO).
  */
 
-function compactarHora(hhmm) {
-  const s = String(hhmm || "").trim();
-  const m = s.match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return s;
-  if (m[2] === "00") return m[1].padStart(2, "0");
-  return s;
-}
+import {
+  resolverHorarioCelda,
+  rangoHhmmLabel,
+} from "../../../../shared/utils/horarioInstitucionalDisplay.js";
 
 function horarioDesdeCelda(celda) {
-  const ingreso = String(celda?.ingreso || "").trim();
-  const egreso = String(celda?.egreso || "").trim();
-  if (ingreso && egreso) return `${compactarHora(ingreso)}-${compactarHora(egreso)}`;
-  if (ingreso) return ingreso;
-  if (egreso) return egreso;
-  return "";
+  const { ingreso, egreso } = resolverHorarioCelda(celda);
+  return rangoHhmmLabel(ingreso, egreso);
 }
 
 export function etiquetaCeldaAprobada(celda) {
   if (!celda || typeof celda !== "object") return "";
   if (celda.es_franco || celda.tipo_dia === "franco" || celda.tipo_dia === "no_laborable") return "F";
-  if (celda.es_feriado && !celda.turno_id) return "Fer";
+  if (
+    (celda.es_feriado || celda.tipo_evento_institucional === "feriado" || celda.tipo_evento_institucional === "asueto") &&
+    !celda.turno_id &&
+    !celda.turno_compuesto_id
+  ) {
+    return celda.tipo_evento_institucional === "asueto" ? "Asu" : "Fer";
+  }
   const turno = String(celda.turno_id || celda.turno_compuesto_id || "").trim();
   const horario = horarioDesdeCelda(celda);
   if (turno && horario) return `${turno} ${horario}`;
@@ -36,7 +35,11 @@ export function claseCeldaAprobada(celda) {
   if (celda.es_franco || celda.tipo_dia === "franco" || celda.tipo_dia === "no_laborable") {
     return "bg-slate-100 text-slate-700";
   }
-  if (celda.es_feriado) return "bg-amber-100 text-amber-900";
+  const esInstitucional =
+    celda.es_feriado === true ||
+    celda.tipo_evento_institucional === "feriado" ||
+    celda.tipo_evento_institucional === "asueto";
+  if (esInstitucional) return "bg-amber-100 text-amber-900";
   if (celda.turno_id || celda.turno_compuesto_id) return "bg-emerald-50 text-emerald-900";
   return "bg-white";
 }

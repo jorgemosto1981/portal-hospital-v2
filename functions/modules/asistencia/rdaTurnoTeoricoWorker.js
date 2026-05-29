@@ -27,6 +27,15 @@ const COL_PLANES = "planes_turno_servicio";
 const COL_VIS = "vistas_grilla_mes_agente";
 
 /**
+ * Grupo operativo en asi_* / vis_*: el plan mensual (o materializarGrupoMes) manda sobre el HLG base.
+ * @param {{ grupoIdCtx?: string|null, planCache?: { plan?: { grupo_id?: string } }|null, mejorHlg?: { grupo_de_trabajo_id?: string }|null }} p
+ */
+function grupoOperativoMaterializacion({ grupoIdCtx, planCache, mejorHlg }) {
+  const desdePlan = planCache?.plan?.grupo_id || null;
+  return grupoIdCtx || desdePlan || mejorHlg?.grupo_de_trabajo_id || null;
+}
+
+/**
  * Genera array de "YYYY-MM-DD" para todos los días de un mes.
  * Usa aritmética de strings para evitar problemas de timezone.
  */
@@ -366,7 +375,7 @@ function resolverDiaConPreCarga(regimen, fechaYmd, hlg, planData, personaId, ind
  *
  * @param {object} params
  * @param {string} params.personaId
- * @param {string} [params.grupoId] - ignorado (se resuelven todos los HLG)
+ * @param {string} [params.grupoId] - grupo del plan / materializarGrupoMes (prioridad sobre HLG en vis_*)
  * @param {number} params.anio
  * @param {number} params.mes
  * @param {object} [params.regimenCache] - Map<regimenId, regimenDoc> para dedup
@@ -382,6 +391,10 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
   const ultimoDia = dias[dias.length - 1];
   const regCache = regimenCache || new Map();
   const etqCache = etiquetaGrupoCache || new Map();
+  const planBundle = planCache?.plan ? planCache : null;
+
+  if (_grupoId) await resolverEtiquetaGrupo(etqCache, _grupoId);
+  if (planBundle?.plan?.grupo_id) await resolverEtiquetaGrupo(etqCache, planBundle.plan.grupo_id);
 
   const hlgs = await obtenerHlgsVigentesParaMes(personaId, primerDia, ultimoDia);
   if (hlgs.length === 0) {
@@ -403,7 +416,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
       regimen = snap.data();
       regCache.set(hlg.regimen_horario_id, regimen);
     }
-    let plan = planCache || null;
+    let plan = planBundle || null;
     if (!plan && regimen.tipo_patron === "planificado" && hlg.grupo_de_trabajo_id) {
       plan = await obtenerPlanHabilitado(hlg.grupo_de_trabajo_id, periodoId);
     }
@@ -495,13 +508,19 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
       indiceCalendario,
     });
 
+    const gdtOperativo = grupoOperativoMaterializacion({
+      grupoIdCtx: _grupoId,
+      planCache: planBundle,
+      mejorHlg,
+    });
+
     const capaTeorica = {
       ...capaSegmentada,
       es_nocturno: turnoFinal?.es_nocturno || false,
       origen: origenFinal,
       regimen_horario_id: mejorHlg.regimen_horario_id,
-      grupo_de_trabajo_id: mejorHlg.grupo_de_trabajo_id || null,
-      plan_id: mejorResolucion.plan_id || null,
+      grupo_de_trabajo_id: gdtOperativo,
+      plan_id: mejorResolucion.plan_id || planBundle?.planId || null,
       posicion_ciclo: mejorResolucion.posicion_ciclo ?? null,
     };
 
@@ -637,6 +656,8 @@ async function materializarGrupoMes({ grupoId, anio, mes, planCache: planCacheIn
   }
 
   const etiquetaGrupoCache = new Map();
+  if (grupoId) await resolverEtiquetaGrupo(etiquetaGrupoCache, grupoId);
+  if (planCacheIn?.plan?.grupo_id) await resolverEtiquetaGrupo(etiquetaGrupoCache, planCacheIn.plan.grupo_id);
 
   // Chunks de 5 agentes con Promise.allSettled
   const CHUNK_SIZE = 5;
@@ -762,7 +783,11 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
     es_nocturno: false,
     origen: reemplazos.length > 0 ? "override" : base.mejorResolucion.origen,
     regimen_horario_id: base.mejorHlg.regimen_horario_id,
-    grupo_de_trabajo_id: base.mejorHlg.grupo_de_trabajo_id || _grupoId || null,
+    grupo_de_trabajo_id: grupoOperativoMaterializacion({
+      grupoIdCtx: _grupoId,
+      planCache: null,
+      mejorHlg: base.mejorHlg,
+    }),
     plan_id: base.mejorResolucion.plan_id || null,
     posicion_ciclo: base.mejorResolucion.posicion_ciclo ?? null,
   };

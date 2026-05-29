@@ -22,9 +22,19 @@ const { buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
 const { COL_VISTAS_GRILLA_MES } = require("../shared/mdcComandosConstants");
 const { getInfoDia } = require("../shared/calendarService");
 const { enriquecerAgentesDiasPlan } = require("./planEnriquecimientoDias");
+const { buildPersonaLabel } = require("../shared/eventosV2");
 const crypto = require("crypto");
 
 const COL_PLANES = "planes_turno_servicio";
+const COL_PERSONAS = "personas";
+const PERSONAS_GETALL_CHUNK = 10;
+
+function nombreLegiblePersonaDoc(d) {
+  const apellido = String(d?.apellido || "").trim();
+  const nombre = String(d?.nombre || "").trim();
+  const full = [apellido, nombre].filter(Boolean).join(", ");
+  return full || buildPersonaLabel(d);
+}
 const MAX_AGENTES_PLAN = 50;
 const COL_ASISTENCIA = "asistencia_diaria";
 
@@ -1231,6 +1241,63 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
 });
 
 /**
+ * Lookup personas para agentes_meta legible (nombres en VER plan).
+ * @param {object[]} agentesPlan
+ * @param {object|null} grillaAprobada
+ */
+async function resolverAgentesMetaVistaPlan(agentesPlan = [], grillaAprobada = null) {
+  const ids = new Set();
+  for (const ag of agentesPlan) {
+    const pid = String(ag?.persona_id || "").trim();
+    if (/^per_/i.test(pid)) ids.add(pid);
+  }
+  for (const ag of grillaAprobada?.agentes || []) {
+    const pid = String(ag?.persona_id || "").trim();
+    if (/^per_/i.test(pid)) ids.add(pid);
+  }
+
+  const personaPorId = new Map();
+  const idList = [...ids];
+  for (let i = 0; i < idList.length; i += PERSONAS_GETALL_CHUNK) {
+    const chunk = idList.slice(i, i + PERSONAS_GETALL_CHUNK);
+    const refs = chunk.map((id) => db.collection(COL_PERSONAS).doc(id));
+    const snaps = await db.getAll(...refs);
+    for (const snap of snaps) {
+      if (!snap.exists) continue;
+      const d = snap.data() || {};
+      const dni = String(d.dni || d?.documento?.numero || "").trim() || null;
+      personaPorId.set(snap.id, {
+        nombre: nombreLegiblePersonaDoc(d),
+        dni,
+        persona_label: buildPersonaLabel(d),
+      });
+    }
+  }
+
+  const metaMap = new Map();
+  const pushMeta = (ag) => {
+    const pid = String(ag?.persona_id || "").trim();
+    if (!pid) return;
+    const fromDb = personaPorId.get(pid);
+    const nombrePlan = ag.nombre || ag.nombre_completo || ag.persona_label || null;
+    const dniPlan = ag.dni || ag.persona_dni || null;
+    metaMap.set(pid, {
+      persona_id: pid,
+      nombre: fromDb?.nombre || nombrePlan || null,
+      dni: fromDb?.dni || dniPlan || null,
+      persona_label: fromDb?.persona_label || nombrePlan || fromDb?.nombre || null,
+    });
+  };
+
+  for (const ag of agentesPlan) pushMeta(ag);
+  for (const ag of grillaAprobada?.agentes || []) {
+    if (!metaMap.has(String(ag?.persona_id || "").trim())) pushMeta(ag);
+  }
+
+  return [...metaMap.values()];
+}
+
+/**
  * Vista unificada de plan mensual: lectura de grilla_aprobada (SoT histórico).
  * Lazy backfill si HABILITADO sin snapshot (planes legacy).
  */
@@ -1258,11 +1325,7 @@ const obtenerVistaPlanTurnoServicio = onCall({ invoker: "public" }, async (reque
     }
   }
 
-  const agentesMeta = (data.agentes || []).map((ag) => ({
-    persona_id: ag.persona_id,
-    nombre: ag.nombre || ag.nombre_completo || ag.persona_label || null,
-    dni: ag.dni || ag.persona_dni || null,
-  }));
+  const agentesMeta = await resolverAgentesMetaVistaPlan(data.agentes || [], grillaAprobada);
 
   return {
     plan: {

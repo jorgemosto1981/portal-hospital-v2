@@ -67,7 +67,18 @@ function labelActorHistorial(h) {
 }
 
 function labelAgentePlan(ag) {
-  return String(ag?.persona_label || "").trim() || String(ag?.persona_id || "—");
+  const nombre = String(ag?.persona_label || ag?.nombre || ag?.nombre_completo || "").trim();
+  const dni = String(ag?.persona_dni || ag?.dni || "").trim();
+  if (nombre && dni) return `${nombre} · DNI ${dni}`;
+  return nombre || String(ag?.persona_id || "—");
+}
+
+function labelPersonaIdEnPlan(personaId, agentes = []) {
+  const pid = String(personaId || "").trim();
+  if (!pid) return "—";
+  const ag = (agentes || []).find((a) => String(a?.persona_id || "") === pid);
+  if (ag) return labelAgentePlan(ag);
+  return pid;
 }
 
 function columnasDesdeAgentes(agentes = []) {
@@ -589,7 +600,10 @@ export default function ExploradorTurnosRrhhPage() {
                       <p className="text-sm text-slate-700"><span className="font-medium">Vigente hasta:</span> {planDetalle.vigente_hasta || "—"}</p>
                       <p className="text-sm text-slate-700"><span className="font-medium">Creado:</span> {formatDateTime(planDetalle.creado_en)}</p>
                       <p className="text-sm text-slate-700"><span className="font-medium">Actualizado:</span> {formatDateTime(planDetalle.actualizado_en)}</p>
-                      <p className="text-sm text-slate-700"><span className="font-medium">Creado por (persona):</span> {planDetalle.creado_por_persona_id || "—"}</p>
+                      <p className="text-sm text-slate-700">
+                        <span className="font-medium">Creado por:</span>{" "}
+                        {labelPersonaIdEnPlan(planDetalle.creado_por_persona_id, planDetalle.agentes)}
+                      </p>
                       <p className="text-sm text-slate-700"><span className="font-medium">Creado por (uid):</span> {planDetalle.creado_por_uid || "—"}</p>
                     </div>
                   </Card>
@@ -600,7 +614,10 @@ export default function ExploradorTurnosRrhhPage() {
                       <span className="font-medium">Aprobación pendiente:</span>{" "}
                       {planDetalle.aprobacion_pendiente?.tipo || "—"}
                       {planDetalle.aprobacion_pendiente?.destino_persona_id ? (
-                        <> · {planDetalle.aprobacion_pendiente.destino_persona_id}</>
+                        <>
+                          {" "}
+                          · {labelPersonaIdEnPlan(planDetalle.aprobacion_pendiente.destino_persona_id, planDetalle.agentes)}
+                        </>
                       ) : null}
                     </p>
                     <p className="text-sm text-slate-700">
@@ -643,10 +660,7 @@ export default function ExploradorTurnosRrhhPage() {
                   <div className="mt-2 max-h-52 space-y-1 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-2">
                     {(planDetalle.agentes || []).slice(0, 60).map((ag) => (
                       <p key={`${ag.persona_id}-${ag.hlg_id || "-"}`} className="text-xs text-slate-700">
-                        {ag.persona_label || ag.persona_id}
-                        {ag.persona_dni ? ` · DNI ${ag.persona_dni}` : ""}
-                        {ag.regimen_horario_id ? ` · Reg ${ag.regimen_horario_id}` : ""}
-                        {ag.hlg_id ? ` · HLG ${ag.hlg_id}` : ""}
+                        {labelAgentePlan(ag)}
                       </p>
                     ))}
                     {(planDetalle.agentes || []).length === 0 && (
