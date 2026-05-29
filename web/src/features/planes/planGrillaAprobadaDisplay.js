@@ -1,43 +1,30 @@
 /**
- * Etiquetas de celda desde grilla_aprobada (snapshot del plan HABILITADO).
+ * Estilos y columnas para grilla_aprobada (vistas VER).
  */
 
-function compactarHora(hhmm) {
-  const s = String(hhmm || "").trim();
-  const m = s.match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return s;
-  if (m[2] === "00") return m[1].padStart(2, "0");
-  return s;
-}
+import {
+  normalizarTipoDiaCelda,
+  presentacionCeldaGrillaAprobada,
+} from "./planGrillaCeldaDisplay.js";
 
-function horarioDesdeCelda(celda) {
-  const ingreso = String(celda?.ingreso || "").trim();
-  const egreso = String(celda?.egreso || "").trim();
-  if (ingreso && egreso) return `${compactarHora(ingreso)}-${compactarHora(egreso)}`;
-  if (ingreso) return ingreso;
-  if (egreso) return egreso;
-  return "";
-}
+export { normalizarTipoDiaCelda, presentacionCeldaGrillaAprobada };
 
-export function etiquetaCeldaAprobada(celda) {
-  if (!celda || typeof celda !== "object") return "";
-  if (celda.es_franco || celda.tipo_dia === "franco" || celda.tipo_dia === "no_laborable") return "F";
-  if (celda.es_feriado && !celda.turno_id) return "Fer";
-  const turno = String(celda.turno_id || celda.turno_compuesto_id || "").trim();
-  const horario = horarioDesdeCelda(celda);
-  if (turno && horario) return `${turno} ${horario}`;
-  if (turno) return turno;
-  if (horario) return horario;
-  return "";
+export function etiquetaCeldaAprobada(celda, opts = {}) {
+  return presentacionCeldaGrillaAprobada(celda, opts).unaLinea;
 }
 
 export function claseCeldaAprobada(celda) {
   if (!celda || typeof celda !== "object") return "bg-white";
-  if (celda.es_franco || celda.tipo_dia === "franco" || celda.tipo_dia === "no_laborable") {
+  const tipo = normalizarTipoDiaCelda(celda.tipo_dia);
+  if (celda.es_franco || tipo === "franco" || tipo === "no_laborable") {
     return "bg-slate-100 text-slate-700";
   }
   if (celda.es_feriado) return "bg-amber-100 text-amber-900";
   if (celda.turno_id || celda.turno_compuesto_id) return "bg-emerald-50 text-emerald-900";
+  const { ingreso, egreso } = celda;
+  if (ingreso || egreso || celda.ingreso_iso || celda.egreso_iso) {
+    return "bg-sky-50 text-sky-900";
+  }
   return "bg-white";
 }
 

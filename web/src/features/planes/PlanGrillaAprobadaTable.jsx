@@ -1,7 +1,7 @@
 import {
   columnasDesdeGrillaAprobada,
-  etiquetaCeldaAprobada,
   claseCeldaAprobada,
+  presentacionCeldaGrillaAprobada,
 } from "./planGrillaAprobadaDisplay.js";
 
 function labelAgente(ag) {
@@ -12,18 +12,27 @@ function labelAgente(ag) {
 }
 
 /**
- * @param {{ grillaAprobada: object, labelsPorPersona?: Record<string, { nombre?: string, dni?: string }> }} props
+ * @param {{
+ *   grillaAprobada: object,
+ *   labelsPorPersona?: Record<string, { nombre?: string, dni?: string }>,
+ *   turnoEtiquetas?: Record<string, string>,
+ * }} props
  */
-export default function PlanGrillaAprobadaTable({ grillaAprobada, labelsPorPersona = {} }) {
+export default function PlanGrillaAprobadaTable({
+  grillaAprobada,
+  labelsPorPersona = {},
+  turnoEtiquetas = {},
+}) {
   if (!grillaAprobada?.agentes?.length) {
     return <p className="text-sm text-slate-500">Sin grilla aprobada registrada.</p>;
   }
 
   const columnas = columnasDesdeGrillaAprobada(grillaAprobada);
+  const displayOpts = { turnoEtiquetas };
 
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm">
-      <table className="min-w-full border-collapse text-xs">
+      <table className="min-w-full border-collapse text-xs print:text-[9px]">
         <thead>
           <tr>
             <th className="sticky left-0 z-10 h-9 min-w-[14rem] border border-slate-300 bg-slate-100 px-2 py-1 text-left font-semibold text-slate-700">
@@ -32,7 +41,7 @@ export default function PlanGrillaAprobadaTable({ grillaAprobada, labelsPorPerso
             {columnas.map((d) => (
               <th
                 key={d}
-                className="h-9 min-w-[2.5rem] border border-slate-300 bg-slate-100 px-1 py-1 text-center font-semibold text-slate-600"
+                className="h-9 min-w-[2.75rem] border border-slate-300 bg-slate-100 px-0.5 py-1 text-center font-semibold text-slate-600"
                 title={d}
               >
                 {d.slice(-2)}
@@ -51,14 +60,25 @@ export default function PlanGrillaAprobadaTable({ grillaAprobada, labelsPorPerso
                 </td>
                 {columnas.map((dia) => {
                   const cel = ag?.dias?.[dia];
-                  const etiqueta = etiquetaCeldaAprobada(cel);
+                  const pres = presentacionCeldaGrillaAprobada(cel, displayOpts);
                   return (
                     <td
                       key={`${ag.persona_id}-${dia}`}
-                      className={`h-10 border border-slate-300 px-0.5 py-0.5 text-center text-[10px] leading-tight ${claseCeldaAprobada(cel)}`}
-                      title={cel?.fichadas_esperadas != null ? `Fichadas esp.: ${cel.fichadas_esperadas}` : dia}
+                      className={`border border-slate-300 px-0.5 py-0.5 align-middle ${claseCeldaAprobada(cel)}`}
+                      title={pres.title || dia}
                     >
-                      {etiqueta || "—"}
+                      <div className="mx-auto flex h-12 w-[2.75rem] flex-col items-center justify-center leading-none print:h-10">
+                        {pres.dosLineas ? (
+                          <>
+                            <span className="max-w-full truncate text-[8px] font-bold">{pres.linea1}</span>
+                            <span className="mt-0.5 max-w-full truncate text-[7px] font-medium">{pres.linea2}</span>
+                          </>
+                        ) : (
+                          <span className="max-w-full truncate px-0.5 text-[9px] font-semibold">
+                            {pres.unaLinea}
+                          </span>
+                        )}
+                      </div>
                     </td>
                   );
                 })}

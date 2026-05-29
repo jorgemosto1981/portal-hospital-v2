@@ -10,7 +10,7 @@ import {
   callCerrarPlanPerpetuo,
   callResolverContextoLaboralSolicitud,
 } from "../../services/callables.js";
-import PlanGrillaAprobadaTable from "../../features/planes/PlanGrillaAprobadaTable.jsx";
+import PlanGrillaVerContenido from "../../features/planes/PlanGrillaVerContenido.jsx";
 import { useVistaPlanTurno } from "../../features/planes/useVistaPlanTurno.js";
 import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
@@ -216,8 +216,12 @@ export default function PlanTurnoServicioPage() {
 
   const {
     loading: planDetalleGrillaLoading,
+    plan: planDetalleVista,
     grillaAprobada: planDetalleGrilla,
     labelsPorPersona: planDetalleGrillaLabels,
+    turnoEtiquetas: planDetalleTurnoEtiquetas,
+    comentariosJefe: planDetalleComentarios,
+    historialAprobaciones: planDetalleHistorialVista,
   } = useVistaPlanTurno(
     planDetalle?.tipo_plan === "mensual" ? planDetalle.id : null,
     Boolean(planDetalle?.tipo_plan === "mensual"),
@@ -718,13 +722,25 @@ export default function PlanTurnoServicioPage() {
                   <p>{planDetalle.observaciones_rechazo}</p>
                 </div>
               )}
+              {String(planDetalleComentarios || planDetalle.comentarios_jefe || "").trim() ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  <p className="text-xs font-medium text-slate-600">Comentarios del jefe</p>
+                  <p>{planDetalleComentarios || planDetalle.comentarios_jefe}</p>
+                </div>
+              ) : null}
               {planDetalle.tipo_plan === "mensual" && (
                 <div className="mt-4">
                   <h3 className="mb-2 text-sm font-semibold text-slate-800">Grilla aprobada (histórico)</h3>
                   {planDetalleGrillaLoading ? (
                     <p className="text-sm text-slate-600">Cargando grilla aprobada…</p>
                   ) : (
-                    <PlanGrillaAprobadaTable
+                    <PlanGrillaVerContenido
+                      planId={planDetalle.id}
+                      grupoLabel={planDetalle.grupo_label || grupoLabel || planDetalle.grupo_id}
+                      periodo={planDetalle.periodo}
+                      estado={planDetalle.estado}
+                      comentariosJefe={planDetalleComentarios ?? planDetalle.comentarios_jefe}
+                      esPreliminar={planDetalleVista?.es_snapshot_persistido !== true}
                       grillaAprobada={planDetalleGrilla}
                       labelsPorPersona={{
                         ...Object.fromEntries(
@@ -735,18 +751,22 @@ export default function PlanTurnoServicioPage() {
                         ),
                         ...planDetalleGrillaLabels,
                       }}
+                      turnoEtiquetas={planDetalleTurnoEtiquetas}
                     />
                   )}
                 </div>
               )}
-              {planDetalle.historial_aprobaciones?.length > 0 && (
+              {(planDetalleHistorialVista?.length > 0 || planDetalle.historial_aprobaciones?.length > 0) && (
                 <div className="mt-4">
                   <details className="rounded-xl border border-slate-200 bg-slate-50">
                     <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-slate-800">
                       Historial de aprobaciones
                     </summary>
                     <div className="space-y-1 px-3 pb-3">
-                      {planDetalle.historial_aprobaciones.map((h, i) => (
+                      {(planDetalleHistorialVista?.length
+                        ? planDetalleHistorialVista
+                        : planDetalle.historial_aprobaciones
+                      ).map((h, i) => (
                         <div key={i} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
                           <span className="font-medium capitalize">{h.accion || "—"}</span>
                           <span className="text-slate-400">por</span>

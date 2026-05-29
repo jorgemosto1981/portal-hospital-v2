@@ -1,54 +1,62 @@
 # Punto de Continuación — Próxima Sesión
 
-**Última actualización**: Jueves 28 Mayo 2026  
-**RETOMAR AQUÍ**: [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md)
+**Última actualización**: Viernes 29 Mayo 2026  
+**RETOMAR AQUÍ**: [`HANDOFF_SESION_2026-05-29_TURNO_MENSUAL_PR3_PAUSA.md`](./HANDOFF_SESION_2026-05-29_TURNO_MENSUAL_PR3_PAUSA.md)
 
 | Campo | Valor |
 |-------|--------|
-| **Branch** | `feat/epic-turnos-compuestos-v2` |
-| **Último commit** | `730b4b9` — unifica VER plan en todas las pantallas |
-| **Tags** | `v2-pre-grilla-aprobada-plt`, `v2-grilla-aprobada-plt` |
+| **Branch trabajo** | `feat/epic-turno-mensual-fase2-pr3` |
+| **Épica base** | `feat/epic-turnos-compuestos-v2` |
+| **Estado PR3** | Implementado + QA prod OK — **pausa antes de merge PR4** |
 | **Producción** | https://portal-hospital-v2.web.app |
-| **Plan piloto** | `plt_01KSR8J55H1TN10M3ANSSWMPF2` (Sala Internación 1, 2026-05, HABILITADO) |
+| **Plan piloto junio** | `plt_01KSSPY2H5EZA925FQP4S1G2XW` (2026-06, HABILITADO, comentarios jefe) |
+| **Plan piloto mayo** | `plt_01KSR8J55H1TN10M3ANSSWMPF2` (2026-05, VER validado) |
 
 ---
 
 ## Objetivo principal próxima sesión
 
-**CONTROL ESTE TURNO EN TODAS LAS PANTALLAS DE VISTA, IMPACTO DE DATOS EN ASI / VIS Y DEMÁS REGISTROS, E IR CORROBORANDO CÓMO SE FORMA GRILLA OPERATIVA ANTES DE RECIBIR FICHADAS.**
+1. **Merge** rama `feat/epic-turno-mensual-fase2-pr3` en `feat/epic-turnos-compuestos-v2` (o PR en GitHub).
+2. **PR4 — Fase 3 GSO:** horarios `rda_*` legibles + menú/ruta RRHH `/portal/rrhh/grilla-operativa`.
+3. Continuar matriz **C** (grilla operativa jun-2026) y smoke fichadas (Fase 5D) según plan maestro.
 
-Ver matriz de 10 ítems y scripts en el handoff del 28/05.
+Handoff anterior (28/05): [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md)
 
 ---
 
-## Hecho en sesión 28/05 (resumen)
+## Hecho hasta la pausa (29/05)
 
-1. `grilla_aprobada` inmutable en `plt_*` al habilitar.
-2. Callable `obtenerVistaPlanTurnoServicio` — lectura única VER plan.
-3. UI unificada: Explorador, Bandeja RRHH, detalle jefe.
-4. Regla un plan activo por grupo/mes (`PLT-GRD-001`, `PLT-APR-DUP`).
-5. Backfill piloto + deploy functions/hosting.
-6. RFC [`RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md`](./RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md).
+### PR1 + PR2 (en épica `cbe14d3`, deploy functions)
+
+- Foto teórica en borrador, comentarios jefe, token concurrencia, max 50 agentes.
+- `grilla_aprobada` desde foto; materialización/RDA; sin `slice` UTC en display.
+
+### PR3 (rama `feat/epic-turno-mensual-fase2-pr3`, deploy 29/05)
+
+- Vistas VER unificadas (Explorador, Detalle Grilla, Jefe detalle; Bandeja = mismo modal).
+- `obtenerVistaPlanTurnoServicio`: enrich personas, historial, `turno_etiquetas`, `comentarios_jefe`.
+- Imprimir nativo (`window.print`).
+- Known issue documentado: fijos sin `turno_id` → sin segmentos en snapshot.
 
 ---
 
 ## Pendientes priorizados
 
-### Alta (próxima sesión)
+### Alta (retomar)
 
-1. Ejecutar matriz de control plan vs `asi_*` vs `vis_*` vs grillas UI (handoff § matriz).
-2. Documentar hallazgos por agente (LOKITO compuesto, CHAPARRO/MOSTO fijo).
-3. Probar gate `depende_rda` con/sin turno materializado.
+1. Merge PR3 → épica.
+2. PR4 GSO + ruta RRHH grilla operativa.
+3. Matriz C: `vis_*` / `asi_*` jun-2026 vs plan (`plt_01KSSPY2…`).
 
 ### Media
 
-4. RFC **cierre turno mensual RRHH** (realidad vs plan aprobado).
-5. Indicador visual “grilla operativa difiere del plan” (opcional).
-6. `git push` remoto hecho — verificar pull en otra PC.
+4. Confirmar Bandeja → Ver turno (B3) si falta tick explícito.
+5. Pulido UX: encabezado duplicado modal VER.
+6. `display_linea1/2` en builder al aprobar (opcional; hoy formatter web).
 
 ### Baja
 
-7. Fichadas reales (reloj).
+7. Épica R2 biométrico + segmentos “fantasma” fijos.
 8. Code splitting bundle > 500KB.
 
 ---
@@ -57,15 +65,8 @@ Ver matriz de 10 ítems y scripts en el handoff del 28/05.
 
 | Área | Archivo |
 |------|---------|
+| Handoff pausa | `docs/v2/HANDOFF_SESION_2026-05-29_TURNO_MENSUAL_PR3_PAUSA.md` |
 | RFC snapshot | `docs/v2/RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md` |
-| Builder snapshot | `functions/modules/asistencia/planGrillaAprobadaBuilder.js` |
 | Callables plan | `functions/modules/asistencia/planesTurnoServicio.js` |
-| Materialización | `functions/modules/asistencia/rdaTurnoTeoricoWorker.js` |
-| Modal VER | `web/src/features/planes/PlanGrillaVistaModal.jsx` |
-| Hook | `web/src/features/planes/useVistaPlanTurno.js` |
-
----
-
-## Historial (sesión anterior — régimen horario)
-
-Ver commits `24d37db`…`aa107fd` y tag `v2.0.0-regimen-horario` en [`RELEASE_REGIMEN_HORARIO.md`](./RELEASE_REGIMEN_HORARIO.md) para el epic régimen horario (mayo 2026).
+| Display VER | `web/src/features/planes/planGrillaCeldaDisplay.js` |
+| Print + tabla | `web/src/features/planes/PlanGrillaVerContenido.jsx` |

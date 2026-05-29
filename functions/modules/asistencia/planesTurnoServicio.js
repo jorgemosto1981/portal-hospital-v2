@@ -809,6 +809,45 @@ async function loadGrupoLabels(items) {
   return grupoLabels;
 }
 
+async function loadPersonaDocsMap(personaIdsSet) {
+  const personaDocs = {};
+  const personaChunks = [...personaIdsSet].filter(Boolean);
+  for (let i = 0; i < personaChunks.length; i += 10) {
+    const chunk = personaChunks.slice(i, i + 10);
+    if (chunk.length === 0) continue;
+    const snap = await db.collection("personas").where("__name__", "in", chunk).get();
+    for (const pdoc of snap.docs) {
+      const pd = pdoc.data() || {};
+      personaDocs[pdoc.id] = {
+        persona_label: [pd.apellido, pd.nombre].filter(Boolean).join(", ") || pdoc.id,
+        persona_dni: pd.dni || null,
+      };
+    }
+  }
+  return personaDocs;
+}
+
+async function loadTurnoEtiquetasPorRegimenes(regimenIdsSet) {
+  const etiquetas = {};
+  for (const rid of regimenIdsSet) {
+    const regId = String(rid || "").trim();
+    if (!regId) continue;
+    try {
+      const rsnap = await db.collection("cfg_regimen_horario").doc(regId).get();
+      if (!rsnap.exists) continue;
+      const reg = rsnap.data() || {};
+      for (const t of reg.turnos_disponibles || []) {
+        const tid = String(t?.turno_id || t?.id || "").trim();
+        if (!tid || etiquetas[tid]) continue;
+        etiquetas[tid] = String(t?.etiqueta || tid).trim() || tid;
+      }
+    } catch {
+      // omitir régimen no legible
+    }
+  }
+  return etiquetas;
+}
+
 async function enrichPlanesConLabels(items) {
   const base = Array.isArray(items) ? items : [];
   const grupoLabels = await loadGrupoLabels(base);
@@ -825,19 +864,7 @@ async function enrichPlanesConLabels(items) {
     }
   }
 
-  const personaDocs = {};
-  const personaChunks = [...personaIds];
-  for (let i = 0; i < personaChunks.length; i += 10) {
-    const chunk = personaChunks.slice(i, i + 10);
-    const snap = await db.collection("personas").where("__name__", "in", chunk).get();
-    for (const pdoc of snap.docs) {
-      const pd = pdoc.data() || {};
-      personaDocs[pdoc.id] = {
-        persona_label: [pd.apellido, pd.nombre].filter(Boolean).join(", ") || pdoc.id,
-        persona_dni: pd.dni || null,
-      };
-    }
-  }
+  const personaDocs = await loadPersonaDocsMap(personaIds);
 
   return base.map((plan) => ({
     ...plan,
@@ -1258,11 +1285,47 @@ const obtenerVistaPlanTurnoServicio = onCall({ invoker: "public" }, async (reque
     }
   }
 
-  const agentesMeta = (data.agentes || []).map((ag) => ({
-    persona_id: ag.persona_id,
-    nombre: ag.nombre || ag.nombre_completo || ag.persona_label || null,
-    dni: ag.dni || ag.persona_dni || null,
-  }));
+  const personaIds = new Set();
+  const regimenIds = new Set();
+  for (const ag of data.agentes || []) {
+    const pid = String(ag?.persona_id || "").trim();
+    if (pid) personaIds.add(pid);
+    const rid = String(ag?.regimen_horario_id || "").trim();
+    if (rid) regimenIds.add(rid);
+  }
+  for (const h of data.historial_aprobaciones || []) {
+    const actorPid = String(h?.actor_persona_id || "").trim();
+    if (actorPid) personaIds.add(actorPid);
+  }
+
+  const [personaDocs, turnoEtiquetas] = await Promise.all([
+    loadPersonaDocsMap(personaIds),
+    loadTurnoEtiquetasPorRegimenes(regimenIds),
+  ]);
+
+  const agentesMeta = (data.agentes || []).map((ag) => {
+    const pid = String(ag?.persona_id || "").trim();
+    const meta = personaDocs[pid] || {};
+    return {
+      persona_id: ag.persona_id,
+      nombre:
+        meta.persona_label ||
+        ag.nombre ||
+        ag.nombre_completo ||
+        ag.persona_label ||
+        null,
+      dni: meta.persona_dni || ag.dni || ag.persona_dni || null,
+    };
+  });
+
+  const historialAprobaciones = (data.historial_aprobaciones || []).map((h) => {
+    const actorMeta = personaDocs[String(h?.actor_persona_id || "").trim()] || {};
+    const nombrePersona = String(actorMeta.persona_label || "").trim();
+    return {
+      ...h,
+      actor_label: nombrePersona || String(h?.actor_label || "").trim() || null,
+    };
+  });
 
   return {
     plan: {
@@ -1272,14 +1335,16 @@ const obtenerVistaPlanTurnoServicio = onCall({ invoker: "public" }, async (reque
       grupo_id: data.grupo_id,
       grupo_label: data.grupo_label || null,
       periodo: data.periodo || null,
+      comentarios_jefe: data.comentarios_jefe || null,
       materializacion_fallida: data.materializacion_fallida === true,
-      historial_aprobaciones: data.historial_aprobaciones || [],
+      historial_aprobaciones: historialAprobaciones,
       observaciones_rechazo: data.observaciones_rechazo || null,
       grilla_aprobada_en: data.grilla_aprobada_en || null,
       es_snapshot_persistido: esSnapshotPersistido,
     },
     grilla_aprobada: grillaAprobada,
     agentes_meta: agentesMeta,
+    turno_etiquetas: turnoEtiquetas,
   };
 });
 

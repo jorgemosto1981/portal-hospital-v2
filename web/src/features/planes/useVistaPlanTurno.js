@@ -10,6 +10,7 @@ export function useVistaPlanTurno(planId, enabled = true) {
   const [plan, setPlan] = useState(null);
   const [grillaAprobada, setGrillaAprobada] = useState(null);
   const [agentesMeta, setAgentesMeta] = useState([]);
+  const [turnoEtiquetas, setTurnoEtiquetas] = useState({});
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -17,6 +18,7 @@ export function useVistaPlanTurno(planId, enabled = true) {
       setPlan(null);
       setGrillaAprobada(null);
       setAgentesMeta([]);
+      setTurnoEtiquetas({});
       return undefined;
     }
 
@@ -32,12 +34,18 @@ export function useVistaPlanTurno(planId, enabled = true) {
         setPlan(data.plan || null);
         setGrillaAprobada(data.grilla_aprobada || null);
         setAgentesMeta(Array.isArray(data.agentes_meta) ? data.agentes_meta : []);
+        setTurnoEtiquetas(
+          data.turno_etiquetas && typeof data.turno_etiquetas === "object"
+            ? data.turno_etiquetas
+            : {},
+        );
       } catch (e) {
         if (!cancelled) {
           setError(e?.message || "No se pudo cargar la vista del plan.");
           setPlan(null);
           setGrillaAprobada(null);
           setAgentesMeta([]);
+          setTurnoEtiquetas({});
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -58,5 +66,17 @@ export function useVistaPlanTurno(planId, enabled = true) {
     return out;
   }, [agentesMeta]);
 
-  return { loading, plan, grillaAprobada, labelsPorPersona, error };
+  const comentariosJefe = plan?.comentarios_jefe ?? null;
+  const historialAprobaciones = plan?.historial_aprobaciones ?? [];
+
+  return {
+    loading,
+    plan,
+    grillaAprobada,
+    labelsPorPersona,
+    turnoEtiquetas,
+    comentariosJefe,
+    historialAprobaciones,
+    error,
+  };
 }

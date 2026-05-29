@@ -8,7 +8,7 @@ import {
   callEliminarPlanTurnoServicio,
 } from "../../services/callables.js";
 import PlanGrillaVistaModal from "../../features/planes/PlanGrillaVistaModal.jsx";
-import PlanGrillaAprobadaTable from "../../features/planes/PlanGrillaAprobadaTable.jsx";
+import PlanGrillaVerContenido from "../../features/planes/PlanGrillaVerContenido.jsx";
 import { useVistaPlanTurno } from "../../features/planes/useVistaPlanTurno.js";
 import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
 
@@ -169,12 +169,16 @@ export default function ExploradorTurnosRrhhPage() {
 
   const {
     loading: detalleGrillaLoading,
+    plan: detallePlanVista,
     grillaAprobada: detalleGrilla,
     labelsPorPersona: detalleGrillaLabels,
+    turnoEtiquetas: detalleTurnoEtiquetas,
+    comentariosJefe: detalleComentariosJefe,
+    historialAprobaciones: detalleHistorialVista,
     error: detalleGrillaError,
   } = useVistaPlanTurno(
     planDetalle?.tipo_plan === "mensual" ? planDetalle.id : null,
-    Boolean(planDetalle?.tipo_plan === "mensual" && modalTab === "grilla"),
+    Boolean(planDetalle?.tipo_plan === "mensual"),
   );
 
   const cargarGrupos = useCallback(async () => {
@@ -609,6 +613,10 @@ export default function ExploradorTurnosRrhhPage() {
                     <p className="text-sm text-slate-700">
                       <span className="font-medium">Obs. rechazo:</span> {String(planDetalle.observaciones_rechazo || "").trim() || "—"}
                     </p>
+                    <p className="text-sm text-slate-700 sm:col-span-2">
+                      <span className="font-medium">Comentarios del jefe:</span>{" "}
+                      {String(detalleComentariosJefe ?? planDetalle.comentarios_jefe ?? "").trim() || "—"}
+                    </p>
                     {Array.isArray(planDetalle.warnings) && planDetalle.warnings.length > 0 && (
                       <p className="text-sm text-amber-700">
                         <span className="font-medium">Warnings:</span> {planDetalle.warnings.length}
@@ -626,9 +634,16 @@ export default function ExploradorTurnosRrhhPage() {
                   ) : detalleGrillaError ? (
                     <p className="text-sm text-red-700">{detalleGrillaError}</p>
                   ) : (
-                    <PlanGrillaAprobadaTable
+                    <PlanGrillaVerContenido
+                      planId={planDetalle.id}
+                      grupoLabel={planDetalle.grupo_label || planDetalle.grupo_id}
+                      periodo={planDetalle.periodo}
+                      estado={planDetalle.estado}
+                      comentariosJefe={detalleComentariosJefe ?? planDetalle.comentarios_jefe}
+                      esPreliminar={detallePlanVista?.es_snapshot_persistido !== true}
                       grillaAprobada={detalleGrilla}
                       labelsPorPersona={{ ...labelsDetalleExtra, ...detalleGrillaLabels }}
+                      turnoEtiquetas={detalleTurnoEtiquetas}
                     />
                   )}
                 </Card>
@@ -666,7 +681,10 @@ export default function ExploradorTurnosRrhhPage() {
                       {(planDetalle.historial_aprobaciones || []).length === 0 && (
                         <p className="text-xs text-slate-500">Sin eventos de historial.</p>
                       )}
-                      {(planDetalle.historial_aprobaciones || []).map((h, idx) => (
+                      {((detalleHistorialVista?.length
+                        ? detalleHistorialVista
+                        : planDetalle.historial_aprobaciones) || []
+                      ).map((h, idx) => (
                         <div key={`${h?.accion || "evt"}-${idx}`} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
                           <p className="text-xs text-slate-700">
                             <span className="font-semibold">{labelActorHistorial(h)}</span> · {String(h?.accion || "—").toUpperCase()} · {h?.rol || "—"}

@@ -6,7 +6,9 @@ retomar_aqui: true
 
 # Handoff — Turnos mensuales, `grilla_aprobada` y vistas unificadas
 
-**RETOMAR AQUÍ** en la próxima sesión.
+**Superseded (pausa 29/05):** retomar en [`HANDOFF_SESION_2026-05-29_TURNO_MENSUAL_PR3_PAUSA.md`](./HANDOFF_SESION_2026-05-29_TURNO_MENSUAL_PR3_PAUSA.md).
+
+**RETOMAR AQUÍ** en la próxima sesión (histórico 28/05).
 
 ## Estado al cierre (28/05/2026)
 
