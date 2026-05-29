@@ -36,10 +36,27 @@ const aprobacionSchema = z
   })
   .strict();
 
-const asignacionDiaMensualSchema = z
+const HHMM_AR = /^([01]?\d|2[0-3]):[0-5]\d$/;
+
+/** Intención que envía el editor al guardar (enriquecimiento en backend). */
+export const asignacionDiaIntencionSchema = z
   .object({
     tipo_dia: z.enum(["laborable", "guardia", "franco", "no_laborable"]),
-    turno_id: z.string().max(10).nullable().default(null),
+    turno_id: z.string().max(32).nullable().default(null),
+  })
+  .strict();
+
+/** Celda persistida en plt_* tras guardar borrador. */
+export const asignacionDiaMensualSchema = z
+  .object({
+    tipo_dia: z.enum(["laborable", "guardia", "franco", "no_laborable"]),
+    turno_id: z.string().max(32).nullable().default(null),
+    ingreso: z.string().regex(HHMM_AR).nullable().default(null),
+    egreso: z.string().regex(HHMM_AR).nullable().default(null),
+    ingreso_iso: z.string().max(40).nullable().default(null),
+    egreso_iso: z.string().max(40).nullable().default(null),
+    es_feriado: z.boolean().default(false),
+    tipo_evento_institucional: z.string().max(64).nullable().default(null),
   })
   .strict();
 
@@ -117,9 +134,35 @@ export const planMensualSchema = camposComunesPlanSchema
   .extend({
     tipo_plan: z.literal("mensual"),
     periodo: z.string().regex(PERIODO),
-    agentes: z.array(agenteGrillaMensualSchema).min(1),
+    comentarios_jefe: z.string().max(200).nullable().default(null),
+    plan_version_token: z.string().min(1).optional(),
+    agentes: z.array(agenteGrillaMensualSchema).min(1).max(50),
     grilla_aprobada: grillaAprobadaSchema.optional(),
     grilla_aprobada_en: z.unknown().optional(),
+  })
+  .strict();
+
+/** Payload del callable guardarPlanTurnoServicio (plan mensual). */
+export const guardarPlanMensualDatosSchema = z
+  .object({
+    grupo_id: z.string().min(1),
+    tipo_plan: z.literal("mensual"),
+    periodo: z.string().regex(PERIODO),
+    comentarios_jefe: z.string().max(200).nullable().optional(),
+    plan_version_token: z.string().min(1).optional(),
+    agentes: z
+      .array(
+        z
+          .object({
+            persona_id: z.string().min(1),
+            regimen_horario_id: z.string().min(1),
+            hlg_id: z.string().min(1),
+            dias: z.record(z.string().regex(YMD), asignacionDiaIntencionSchema),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(50),
   })
   .strict();
 

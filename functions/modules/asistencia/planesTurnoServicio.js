@@ -21,8 +21,11 @@ const { logger } = require("firebase-functions/v2");
 const { buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
 const { COL_VISTAS_GRILLA_MES } = require("../shared/mdcComandosConstants");
 const { getInfoDia } = require("../shared/calendarService");
+const { enriquecerAgentesDiasPlan } = require("./planEnriquecimientoDias");
+const crypto = require("crypto");
 
 const COL_PLANES = "planes_turno_servicio";
+const MAX_AGENTES_PLAN = 50;
 const COL_ASISTENCIA = "asistencia_diaria";
 
 const ESTADOS_VALIDOS = new Set(["BORRADOR", "ENVIADO", "HABILITADO", "EN_REVISION", "CERRADO"]);
@@ -104,9 +107,74 @@ function validarDatosBase(datos) {
   return { grupoId, tipoPlan };
 }
 
+function assertLimiteAgentes(datos) {
+  if (datos.agentes.length > MAX_AGENTES_PLAN) {
+    err(
+      "resource-exhausted",
+      `[PLT-MAX-050] El plan no puede superar ${MAX_AGENTES_PLAN} agentes (tiene ${datos.agentes.length}).`,
+    );
+  }
+}
+
+function parseComentariosJefe(datos) {
+  const c = datos.comentarios_jefe;
+  if (c == null || c === "") return null;
+  if (typeof c !== "string") err("invalid-argument", "[PLT-COM-001] comentarios_jefe debe ser texto.");
+  const t = c.trim();
+  if (t.length > 200) err("invalid-argument", "[PLT-COM-002] comentarios_jefe máximo 200 caracteres.");
+  return t;
+}
+
+function nuevoPlanVersionToken() {
+  return crypto.randomUUID();
+}
+
+function assertAgentesEnriquecidos(agentesIn, agentesOut) {
+  if (!Array.isArray(agentesOut) || agentesOut.length !== agentesIn.length) {
+    err(
+      "failed-precondition",
+      "[PLT-ENR-001] No se pudo enriquecer el plan (revisá regímenes horarios y desplegá Functions v2).",
+    );
+  }
+  for (const ag of agentesOut) {
+    const dias = ag.dias && typeof ag.dias === "object" ? ag.dias : {};
+    for (const [ymd, cel] of Object.entries(dias)) {
+      if (!cel || typeof cel !== "object") continue;
+      const tipo = cel.tipo_dia;
+      if (tipo === "laborable" || tipo === "guardia") {
+        if (cel.turno_id && !cel.ingreso && !cel.ingreso_iso) {
+          err(
+            "failed-precondition",
+            `[PLT-ENR-002] Horario teórico faltante en ${ag.persona_id} · ${ymd} (turno ${cel.turno_id}).`,
+          );
+        }
+        if (cel.ingreso && /^\d{4}-\d{2}-\d{2}T/.test(String(cel.ingreso))) {
+          err(
+            "failed-precondition",
+            `[PLT-ENR-004] ingreso debe ser HH:mm AR en ${ag.persona_id} · ${ymd}.`,
+          );
+        }
+        if ((cel.ingreso || cel.turno_id) && !cel.ingreso_iso) {
+          err(
+            "failed-precondition",
+            `[PLT-ENR-005] ingreso_iso faltante en ${ag.persona_id} · ${ymd}.`,
+          );
+        }
+      }
+      if (typeof cel.es_feriado !== "boolean") {
+        err(
+          "failed-precondition",
+          `[PLT-ENR-003] Celda sin es_feriado en ${ag.persona_id} · ${ymd}.`,
+        );
+      }
+    }
+  }
+}
+
 function validarPlanMensual(datos) {
   const periodo = typeof datos.periodo === "string" ? datos.periodo.trim() : "";
   if (!/^\d{4}-\d{2}$/.test(periodo)) err("invalid-argument", "[PLT-005] periodo YYYY-MM requerido para plan mensual.");
+  assertLimiteAgentes(datos);
   for (let i = 0; i < datos.agentes.length; i++) {
     const ag = datos.agentes[i];
     if (!ag.persona_id || !ag.regimen_horario_id || !ag.hlg_id) {
@@ -124,6 +192,7 @@ function validarPlanPerpetuo(datos) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(vigente_desde)) {
     err("invalid-argument", "[PLT-007] vigente_desde YYYY-MM-DD requerido para plan perpetuo.");
   }
+  assertLimiteAgentes(datos);
   for (let i = 0; i < datos.agentes.length; i++) {
     const ag = datos.agentes[i];
     if (!ag.persona_id || !ag.regimen_horario_id || !ag.hlg_id) {
@@ -145,18 +214,17 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
   const uid = (request.auth && request.auth.uid) || "system";
   const token = (request.auth && request.auth.token) || {};
 
+  const comentariosJefe = parseComentariosJefe(datos);
+  const tokenEnviado =
+    typeof datos.plan_version_token === "string" ? datos.plan_version_token.trim() : "";
+
   let especificos;
   if (tipoPlan === "mensual") {
     const { periodo } = validarPlanMensual(datos);
     especificos = {
       tipo_plan: "mensual",
       periodo,
-      agentes: datos.agentes.map((ag) => ({
-        persona_id: ag.persona_id,
-        regimen_horario_id: ag.regimen_horario_id,
-        hlg_id: ag.hlg_id,
-        dias: ag.dias,
-      })),
+      agentes: [],
     };
   } else {
     const { vigente_desde, vigente_hasta } = validarPlanPerpetuo(datos);
@@ -197,25 +265,73 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
       periodo: especificos.periodo,
       excludePlanId: exists ? id : null,
     });
+    const agentesEnriquecidos = await enriquecerAgentesDiasPlan({
+      periodo: especificos.periodo,
+      planId: id,
+      agentes: datos.agentes,
+    });
+    assertAgentesEnriquecidos(datos.agentes, agentesEnriquecidos);
+    especificos.agentes = agentesEnriquecidos;
   }
 
-  const payload = {
+  const planVersionToken = nuevoPlanVersionToken();
+  const ref = db.collection(COL_PLANES).doc(id);
+
+  const payloadBase = {
     id,
     grupo_id: grupoId,
     estado: "BORRADOR",
     ...especificos,
+    comentarios_jefe: comentariosJefe,
+    plan_version_token: planVersionToken,
     creado_por_uid: uid,
     creado_por_persona_id: token.persona_id || null,
     observaciones_rechazo: null,
     actualizado_en: now,
   };
+
   if (!exists) {
-    payload.creado_en = now;
-    payload.historial_aprobaciones = [];
+    const payload = {
+      ...payloadBase,
+      creado_en: now,
+      historial_aprobaciones: [],
+    };
+    await ref.set(payload, { merge: true });
+    return {
+      ok: true,
+      id,
+      estado: "BORRADOR",
+      modo: "creado",
+      plan_version_token: planVersionToken,
+    };
   }
 
-  await db.collection(COL_PLANES).doc(id).set(payload, { merge: true });
-  return { ok: true, id, estado: "BORRADOR", modo: exists ? "actualizado" : "creado" };
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      err("not-found", "[PLT-SAV-001] Plan no encontrado.");
+    }
+    const actual = snap.data();
+    assertEstado(actual, "BORRADOR");
+    const almacenado = String(actual.plan_version_token || "").trim();
+    if (almacenado) {
+      if (!tokenEnviado || tokenEnviado !== almacenado) {
+        err(
+          "aborted",
+          "[PLT-CONC-001] El plan fue modificado por otro usuario. Recargá y volvé a guardar.",
+        );
+      }
+    }
+    tx.set(ref, payloadBase, { merge: true });
+  });
+
+  return {
+    ok: true,
+    id,
+    estado: "BORRADOR",
+    modo: "actualizado",
+    plan_version_token: planVersionToken,
+  };
 });
 
 /**

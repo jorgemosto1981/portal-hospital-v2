@@ -17,6 +17,7 @@ import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
 import { claimsIncludeJefe, claimsIncludeRrhh } from "../../features/routing/portalRole.js";
 import GrillaMensualEditor from "./planes/GrillaMensualEditor.jsx";
+import { guardarPlanMensualDatosSchema } from "../../schemas/planTurnoServicio.schema.js";
 import PlanPerpetualViewer from "./planes/PlanPerpetualViewer.jsx";
 import BadgeEstadoPlan, { LABEL_ESTADO } from "../../components/ui/BadgeEstadoPlan.jsx";
 import { periodosVentanaJefe } from "../../features/jefe/periodoJefe.js";
@@ -346,13 +347,30 @@ export default function PlanTurnoServicioPage() {
 
   const handleGuardarBorrador = useCallback(async (datos, existingId) => {
     setOperando(true);
+    setError("");
     try {
-      const res = await callGuardarPlanTurnoServicio({ datos, id: existingId || undefined });
+      const parsed = guardarPlanMensualDatosSchema.safeParse(datos);
+      if (!parsed.success) {
+        const msg =
+          parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(" · ") ||
+          "Datos del plan inválidos.";
+        setError(msg);
+        return { ok: false, error: msg };
+      }
+      const res = await callGuardarPlanTurnoServicio({ datos: parsed.data, id: existingId || undefined });
       showFeedback(`Plan ${res.data?.modo || "guardado"} (${res.data?.id}).`);
       setPlanEdicion(null);
       await cargar();
+      return {
+        ok: true,
+        id: res.data?.id,
+        plan_version_token: res.data?.plan_version_token || null,
+      };
     } catch (e) {
-      setError(e?.message || "Error al guardar.");
+      const msg = e?.message || "Error al guardar.";
+      const visible = msg.includes("PLT-") ? msg : `Error al guardar. ${msg}`;
+      setError(visible);
+      return { ok: false, error: visible };
     } finally {
       setOperando(false);
     }
@@ -626,8 +644,12 @@ export default function PlanTurnoServicioPage() {
           grupoLabel={grupoLabel}
           periodo={periodo}
           guardando={operando}
+          errorGuardar={error}
           onGuardar={handleGuardarBorrador}
-          onCerrar={() => setPlanEdicion(null)}
+          onCerrar={() => {
+            setPlanEdicion(null);
+            setError("");
+          }}
         />
       )}
       {planEdicion && planEdicion.tipo_plan === "perpetuo" && (

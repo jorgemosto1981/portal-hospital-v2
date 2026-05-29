@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { callListarContextoPlanGrupo } from "../../../services/callables.js";
+import { callListarContextoPlanGrupo, callListarPlanesTurnoServicio } from "../../../services/callables.js";
 import {
   esRegimenDerivado,
   esRegimenPlanificado,
@@ -286,7 +286,16 @@ function clasesTextoCelda(valor) {
   return "text-[7px]";
 }
 
-export default function GrillaMensualEditor({ plan, grupoId, grupoLabel, periodo, guardando, onGuardar, onCerrar }) {
+export default function GrillaMensualEditor({
+  plan,
+  grupoId,
+  grupoLabel,
+  periodo,
+  guardando,
+  errorGuardar,
+  onGuardar,
+  onCerrar,
+}) {
   const dias = useMemo(() => diasDelMes(periodo), [periodo]);
 
   const [contexto, setContexto] = useState(null);
@@ -313,6 +322,10 @@ export default function GrillaMensualEditor({ plan, grupoId, grupoLabel, periodo
   const [paleta, setPaleta] = useState("");
   const [altoContraste, setAltoContraste] = useState(false);
   const [errLocal, setErrLocal] = useState("");
+  const [comentariosJefe, setComentariosJefe] = useState(() =>
+    typeof plan?.comentarios_jefe === "string" ? plan.comentarios_jefe : "",
+  );
+  const [planVersionToken, setPlanVersionToken] = useState(() => plan?.plan_version_token || "");
   const [pintando, setPintando] = useState(false);
   const [indiceAgenteMobile, setIndiceAgenteMobile] = useState(0);
   const ultimaCeldaPintadaRef = useRef("");
@@ -326,6 +339,28 @@ export default function GrillaMensualEditor({ plan, grupoId, grupoLabel, periodo
       .catch((e) => setErrLocal(e?.message || "Error al cargar contexto del grupo."))
       .finally(() => setCargandoContexto(false));
   }, [grupoId, periodo]);
+
+  useEffect(() => {
+    setPlanVersionToken(plan?.plan_version_token || "");
+    setComentariosJefe(typeof plan?.comentarios_jefe === "string" ? plan.comentarios_jefe : "");
+  }, [plan?.id, plan?.plan_version_token, plan?.comentarios_jefe]);
+
+  useEffect(() => {
+    if (!plan?.id || !grupoId || !periodo) return;
+    let cancel = false;
+    callListarPlanesTurnoServicio({ grupo_id: grupoId, periodo })
+      .then((res) => {
+        if (cancel) return;
+        const fresh = (res.data?.items || []).find((p) => p.id === plan.id);
+        if (!fresh) return;
+        if (fresh.plan_version_token) setPlanVersionToken(fresh.plan_version_token);
+        if (typeof fresh.comentarios_jefe === "string") setComentariosJefe(fresh.comentarios_jefe);
+      })
+      .catch(() => {});
+    return () => {
+      cancel = true;
+    };
+  }, [plan?.id, grupoId, periodo]);
 
   const turnosPaleta = useMemo(() => {
     if (!contexto?.regimenes) return {};
@@ -515,24 +550,60 @@ export default function GrillaMensualEditor({ plan, grupoId, grupoLabel, periodo
     return "normal";
   }, [agentesEnriquecidos, idxRegimenes, contexto]);
 
-  const handleGuardar = useCallback(() => {
+  const extraerIntencionDia = useCallback((cel) => ({
+    tipo_dia: normalizarTipoDiaCelda(cel?.tipo_dia),
+    turno_id: cel?.turno_id != null && String(cel.turno_id).trim() !== "" ? String(cel.turno_id).trim() : null,
+  }), []);
+
+  const handleGuardar = useCallback(async () => {
     if (agentes.length === 0) {
       return setErrLocal("Agrega al menos un agente.");
+    }
+    if (agentes.length > 50) {
+      return setErrLocal("[PLT-MAX-050] El plan no puede superar 50 agentes.");
+    }
+    const comTrim = String(comentariosJefe || "").trim();
+    if (comTrim.length > 200) {
+      return setErrLocal("Comentarios del jefe: máximo 200 caracteres.");
     }
     setErrLocal("");
     const datos = {
       grupo_id: grupoId,
       tipo_plan: "mensual",
       periodo,
-      agentes: agentes.map((ag) => ({
-        persona_id: ag.persona_id,
-        regimen_horario_id: ag.regimen_horario_id,
-        hlg_id: ag.hlg_id,
-        dias: grilla[ag.persona_id] || {},
-      })),
+      comentarios_jefe: comTrim || null,
+      ...(planVersionToken ? { plan_version_token: planVersionToken } : {}),
+      agentes: agentes.map((ag) => {
+        const row = grilla[ag.persona_id] || {};
+        const dias = {};
+        for (const [ymd, cel] of Object.entries(row)) {
+          dias[ymd] = extraerIntencionDia(cel);
+        }
+        return {
+          persona_id: ag.persona_id,
+          regimen_horario_id: ag.regimen_horario_id,
+          hlg_id: ag.hlg_id,
+          dias,
+        };
+      }),
     };
-    onGuardar(datos, plan?.id || null);
-  }, [agentes, grilla, grupoId, periodo, plan, onGuardar, idxRegimenes]);
+    const result = await onGuardar(datos, plan?.id || null);
+    if (result?.ok === false) {
+      setErrLocal(result.error || "No se pudo guardar el borrador.");
+      return;
+    }
+    if (result?.plan_version_token) setPlanVersionToken(result.plan_version_token);
+  }, [
+    agentes,
+    grilla,
+    grupoId,
+    periodo,
+    plan,
+    onGuardar,
+    comentariosJefe,
+    planVersionToken,
+    extraerIntencionDia,
+  ]);
 
   const labelAgente = (pid) => {
     const e = agentesEnriquecidos[pid];
@@ -913,7 +984,28 @@ export default function GrillaMensualEditor({ plan, grupoId, grupoLabel, periodo
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-3">
+        <div className="border-t border-slate-200 px-5 py-3">
+          <label className="mb-2 block text-xs font-medium text-slate-600">
+            Comentarios del jefe (opcional, máx. 200)
+          </label>
+          <textarea
+            value={comentariosJefe}
+            onChange={(e) => setComentariosJefe(e.target.value.slice(0, 200))}
+            rows={2}
+            className="mb-3 w-full max-w-xl rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800"
+            placeholder="Notas visibles en las vistas del turno…"
+          />
+          {(errorGuardar || errLocal) && (
+            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {errorGuardar || errLocal}
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-slate-500">
+              {agentes.length}/50 agentes
+              {agentes.length > 50 ? " · supera el límite" : ""}
+            </p>
+            <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onCerrar}
@@ -923,12 +1015,14 @@ export default function GrillaMensualEditor({ plan, grupoId, grupoLabel, periodo
           </button>
           <button
             type="button"
-            disabled={guardando || agentes.length === 0}
+            disabled={guardando || agentes.length === 0 || agentes.length > 50}
             onClick={handleGuardar}
             className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
           >
             {guardando ? "Guardando..." : "Guardar borrador"}
           </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
