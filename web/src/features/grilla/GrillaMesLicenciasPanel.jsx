@@ -271,9 +271,9 @@ export default function GrillaMesLicenciasPanel() {
                       grupoLabel,
                       turnoTeorico: {
                         rda_turno_id: cell.rda_turno_id,
-                        es_franco: cell.es_franco,
+                        es_franco: cell.tipo_dia === "franco" || cell.es_franco === true,
                         capa_teorica: {
-                          tipo_dia: cell.es_franco ? "franco" : "laborable",
+                          tipo_dia: cell.tipo_dia || (cell.es_franco ? "franco" : "laborable"),
                           ingreso: cell.rda_ingreso,
                           egreso: cell.rda_egreso,
                         },
@@ -310,6 +310,18 @@ export default function GrillaMesLicenciasPanel() {
                 <span>
                   <span className="mr-1 inline-block h-3 w-5 rounded bg-rose-100 align-middle" />
                   Fin de semana
+                </span>
+                <span>
+                  <span className="mr-1 inline-block h-3 w-5 rounded bg-teal-100 align-middle text-center text-[9px] font-bold leading-3 text-teal-800">
+                    F
+                  </span>
+                  Franco (plan/ciclo)
+                </span>
+                <span>
+                  <span className="mr-1 inline-block h-3 w-5 rounded bg-zinc-200 align-middle text-center text-[9px] font-bold leading-3 text-zinc-600">
+                    NL
+                  </span>
+                  No laborable (régimen)
                 </span>
                 <span>Clic = detalles</span>
               </div>

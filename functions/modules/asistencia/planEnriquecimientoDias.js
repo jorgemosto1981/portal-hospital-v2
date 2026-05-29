@@ -41,7 +41,9 @@ function hhmmDesdeTurno(turno) {
 
 function celdaPlanDesdeResolucion(fechaYmd, res, capa) {
   const tipo = normalizarTipoDia(capa.tipo_dia || res.tipo_dia);
-  const esFranco = tipo === "franco" || tipo === "no_laborable";
+  const esFranco = tipo === "franco";
+  const esNoLaborable = tipo === "no_laborable";
+  const sinHorario = esFranco || esNoLaborable;
   const turnoId =
     capa.turno_compuesto_id ||
     res.turno_teorico?.turno_id ||
@@ -50,20 +52,20 @@ function celdaPlanDesdeResolucion(fechaYmd, res, capa) {
   let ingresoIso = segmentos[0]?.ingreso_iso || null;
   let egresoIso = segmentos.length ? segmentos[segmentos.length - 1].egreso_iso : null;
   const { ingreso: ingHh, egreso: egrHh } = hhmmDesdeTurno(res.turno_teorico);
-  let ingreso = esFranco
+  let ingreso = sinHorario
     ? null
     : toHhmmInstitucionalDisplay(ingHh) ||
       isoToHhmmInstitucional(ingresoIso) ||
       toHhmmInstitucionalDisplay(capa.ingreso) ||
       toHhmmInstitucionalDisplay(capa.ingreso_teorico_final);
-  let egreso = esFranco
+  let egreso = sinHorario
     ? null
     : toHhmmInstitucionalDisplay(egrHh) ||
       isoToHhmmInstitucional(egresoIso) ||
       toHhmmInstitucionalDisplay(capa.egreso) ||
       toHhmmInstitucionalDisplay(capa.egreso_teorico_final);
 
-  if (!esFranco && ingreso && egreso && !ingresoIso) {
+  if (!sinHorario && ingreso && egreso && !ingresoIso) {
     const cruza =
       res.turno_teorico?.cruza_medianoche === true ||
       String(egreso) <= String(ingreso);
@@ -75,11 +77,11 @@ function celdaPlanDesdeResolucion(fechaYmd, res, capa) {
 
   return {
     tipo_dia: tipo,
-    turno_id: esFranco ? null : turnoId,
+    turno_id: sinHorario ? null : turnoId,
     ingreso,
     egreso,
-    ingreso_iso: esFranco ? null : ingresoIso,
-    egreso_iso: esFranco ? null : egresoIso,
+    ingreso_iso: sinHorario ? null : ingresoIso,
+    egreso_iso: sinHorario ? null : egresoIso,
     es_feriado: esFeriado,
     tipo_evento_institucional: esFeriado ? res.tipo_evento || "feriado" : null,
   };
@@ -192,13 +194,14 @@ async function enriquecerAgentesDiasPlan({ periodo, planId, agentes }) {
 
 function celdaPlanToGrillaAprobada(celdaPlan, capa) {
   const tipo = normalizarTipoDia(celdaPlan.tipo_dia);
-  const esFranco = tipo === "franco" || tipo === "no_laborable";
+  const esFranco = tipo === "franco";
+  const sinHorario = esFranco || tipo === "no_laborable";
   const segmentos = Array.isArray(capa.segmentos) ? capa.segmentos : [];
   return {
     ...celdaPlan,
     tipo_dia: tipo,
-    turno_id: esFranco ? null : celdaPlan.turno_id,
-    turno_compuesto_id: esFranco ? null : celdaPlan.turno_id,
+    turno_id: sinHorario ? null : celdaPlan.turno_id,
+    turno_compuesto_id: sinHorario ? null : celdaPlan.turno_id,
     es_franco: esFranco,
     clasificacion_dia_calendario_id: capa.clasificacion_dia_calendario_id || null,
     fichadas_esperadas: typeof capa.fichadas_esperadas === "number" ? capa.fichadas_esperadas : null,

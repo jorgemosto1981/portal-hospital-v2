@@ -52,10 +52,14 @@ export async function consultarAvisosCoberturaYy(personaCoberturaId, fechaYmd, a
     avisos.push("Sin vista mensual (vis_*) para este agente en el período.");
     return avisos;
   }
-  if (cell?.es_franco) {
+  const tipoDia = String(cell?.tipo_dia || "").trim().toLowerCase();
+  if (tipoDia === "franco" || cell?.es_franco) {
     avisos.push("El agente de cobertura figura en franco ese día en la grilla.");
   }
-  if (cell?.rda_turno_id && !cell?.es_franco) {
+  if (tipoDia === "no_laborable") {
+    avisos.push("El agente de cobertura tiene día no laborable del régimen ese día.");
+  }
+  if (cell?.rda_turno_id && tipoDia !== "franco" && !cell?.es_franco) {
     avisos.push(`Ya tiene asignación operativa: ${cell.rda_ingreso || ""}–${cell.rda_egreso || ""} (${cell.rda_turno_id}).`);
   }
   if (cell?.grupo_de_trabajo_id) {

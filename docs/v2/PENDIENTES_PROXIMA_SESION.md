@@ -1,7 +1,8 @@
 # Punto de Continuación — Próxima Sesión
 
-**Última actualización**: Jueves 28 Mayo 2026  
-**RETOMAR AQUÍ**: [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md)
+**Última actualización**: Viernes 29 Mayo 2026  
+**RETOMAR AQUÍ**: [`HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md`](./HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md)  
+**Handoff anterior (grilla aprobada UI):** [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md)
 
 | Campo | Valor |
 |-------|--------|
@@ -9,15 +10,18 @@
 | **Último commit** | `730b4b9` — unifica VER plan en todas las pantallas |
 | **Tags** | `v2-pre-grilla-aprobada-plt`, `v2-grilla-aprobada-plt` |
 | **Producción** | https://portal-hospital-v2.web.app |
-| **Plan piloto** | `plt_01KSR8J55H1TN10M3ANSSWMPF2` (Sala Internación 1, 2026-05, HABILITADO) |
+| **Plan piloto mayo** | `plt_01KSR8J55H1TN10M3ANSSWMPF2` (Sala Internación 1, 2026-05, HABILITADO) |
+| **Plan piloto junio (incidente NL)** | `plt_01KSSPY2H5EZA925FQP4S1G2XW` — ver handoff 29/05 |
 
 ---
 
 ## Objetivo principal próxima sesión
 
-**CONTROL ESTE TURNO EN TODAS LAS PANTALLAS DE VISTA, IMPACTO DE DATOS EN ASI / VIS Y DEMÁS REGISTROS, E IR CORROBORANDO CÓMO SE FORMA GRILLA OPERATIVA ANTES DE RECIBIR FICHADAS.**
+1. **Limpieza táctica (RRHH):** HLGs zombie — handoff 29/05 § datos afectados.  
+2. **Evolución motor (PR):** Regla **Plan > HLG** en materialización por aprobar/rehabilitar plan.  
+3. **DoD épica:** Auditoría `node scripts/audit-vis-junio-2026.mjs` en verde + UI alineada sin parche de enriquecimiento.
 
-Ver matriz de 10 ítems y scripts en el handoff del 28/05.
+Ver también matriz del handoff 28/05.
 
 ---
 
@@ -36,9 +40,10 @@ Ver matriz de 10 ítems y scripts en el handoff del 28/05.
 
 ### Alta (próxima sesión)
 
-1. Ejecutar matriz de control plan vs `asi_*` vs `vis_*` vs grillas UI (handoff § matriz).
-2. Documentar hallazgos por agente (LOKITO compuesto, CHAPARRO/MOSTO fijo).
-3. Probar gate `depende_rda` con/sin turno materializado.
+1. ~~**RRHH:** Cerrar HLGs zombie CHAPARRO + MOSTO~~ — hecho (una HLG vigente c/u). Correr `audit-vis-junio-2026.mjs`.
+2. **Dev:** PR materialización Plan > HLG (`rdaTurnoTeoricoWorker.js`).
+3. Re-auditar junio (`audit-vis-junio-2026.mjs`) + matriz handoff 28/05.
+4. Probar gate `depende_rda` con/sin turno materializado.
 
 ### Media
 

@@ -3,10 +3,14 @@ import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 import {
   columnasCalendario,
   institucionalPorDiaEnFilas,
+  resolverTipoDiaCelda,
+  tieneHorarioTeorico,
   textoHorarioTurno,
   etiquetaInstitucional,
   claseFondoColumna,
-  claseFondoCelda,
+  estiloFondoCelda,
+  claseTextoTipoDia,
+  tituloTipoDia,
 } from "./grillaMesEquipoDisplay.js";
 
 /**
@@ -29,14 +33,14 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
 
   return (
     <div className="mt-4 overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm">
-      <table className="min-w-full table-fixed border-collapse text-[10px]">
+      <table className="min-w-full border-collapse text-[10px]">
         <thead>
           <tr className="text-slate-400">
-            <th className="h-9 w-[12rem] border border-slate-300 bg-slate-100 px-2 py-0.5" />
+            <th className="h-9 min-w-[12rem] border border-slate-300 bg-slate-100 px-2 py-0.5" />
             {columnas.map((c) => (
               <th
                 key={`ds-${c.dia}`}
-                className={`h-9 border border-slate-300 px-0 py-0.5 text-[8px] font-semibold ${claseFondoColumna({
+                className={`h-9 min-w-[2.35rem] border border-slate-300 px-0 py-0.5 text-[8px] font-semibold ${claseFondoColumna({
                   esFinde: c.esFinde,
                   tipoInstitucional: institucionalPorDia[c.dia],
                 })}`}
@@ -46,13 +50,13 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
             ))}
           </tr>
           <tr className="bg-slate-50 text-slate-600">
-            <th className="h-9 w-[12rem] border border-slate-300 bg-slate-100 px-2 py-1 text-left text-xs font-semibold text-slate-700">
+            <th className="h-9 min-w-[12rem] border border-slate-300 bg-slate-100 px-2 py-1 text-left text-xs font-semibold text-slate-700">
               Persona
             </th>
             {columnas.map((c) => (
               <th
                 key={c.dia}
-                className={`h-9 border border-slate-300 px-0.5 py-1 text-center font-semibold ${claseFondoColumna({
+                className={`h-9 min-w-[2.35rem] border border-slate-300 px-0.5 py-1 text-center font-semibold ${claseFondoColumna({
                   esFinde: c.esFinde,
                   tipoInstitucional: institucionalPorDia[c.dia],
                 })}`}
@@ -77,7 +81,7 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
               const personaLabel = String(fila.persona_label || fila.persona_id || "");
               return (
                 <tr key={String(fila.persona_id)} className="align-middle">
-                  <td className="w-[12rem] truncate border border-slate-300 bg-white px-2 py-2 text-left text-[11px] font-semibold leading-snug text-slate-800">
+                  <td className="min-w-[12rem] max-w-[14rem] truncate border border-slate-300 bg-white px-2 py-2 text-left text-[11px] font-semibold leading-snug text-slate-800">
                     {personaLabel}
                   </td>
                   {columnas.map((col) => {
@@ -105,20 +109,29 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
                     const eventos = cell.eventos;
                     const licenciaCod = etiquetaCelda(eventos);
                     const tieneLicencia = Boolean(licenciaCod);
+                    const tipoDia = resolverTipoDiaCelda(cell);
                     const turnoText = textoHorarioTurno(cell);
-                    const tieneTurno = Boolean(turnoText && turnoText !== "F");
-                    const esFranco = cell.es_franco === true || turnoText === "F";
+                    const tieneHorario = tieneHorarioTeorico(cell);
+                    const tieneTurno =
+                      tieneHorario || Boolean(turnoText && turnoText !== "F" && turnoText !== "NL");
                     const tipoInstCol = institucionalPorDia[dia];
                     const tipoInstCel = cell.tipo_evento_institucional || tipoInstCol;
                     const esInstitucional = Boolean(
                       tipoInstCol || cell.es_feriado === true || tipoInstCel === "feriado" || tipoInstCel === "asueto",
                     );
 
-                    const tieneDatos = tieneLicencia || tieneTurno || esFranco || esInstitucional;
+                    const tieneDatos = tieneLicencia || tieneTurno || tipoDia || esInstitucional;
                     const ingreso = cell.rda_ingreso || null;
                     const egreso = cell.rda_egreso || null;
                     const turnoId = cell.rda_turno_id || null;
                     const grupoLabel = cell.etiqueta_grupo_corta || null;
+                    const { className: fondoCelda, style: fondoCeldaStyle } = estiloFondoCelda({
+                      esFinde: col.esFinde,
+                      tipoInstitucional: tipoInstCol,
+                      tieneLicencia,
+                      tipoDia,
+                      tieneTurno,
+                    });
 
                     const titleParts = [];
                     if (esInstitucional && tipoInstCel) {
@@ -126,45 +139,42 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
                         tipoInstCel === "feriado" ? "Feriado" : tipoInstCel === "asueto" ? "Asueto" : "Día institucional",
                       );
                     }
-                    if (turnoText) titleParts.push(turnoText);
+                    if (tipoDia) titleParts.push(tituloTipoDia(tipoDia));
+                    if (turnoText && !tipoDia) titleParts.push(turnoText);
                     if (licenciaCod) titleParts.push(`Licencia: ${licenciaCod}`);
 
                     let contenido;
-                    if (tieneLicencia && (tieneTurno || esFranco)) {
+                    const lineaTurno = tipoDia ? (
+                      <span className={`text-[9px] ${claseTextoTipoDia(tipoDia)}`}>{turnoText}</span>
+                    ) : (
+                      <span className={`text-[9px] font-semibold ${esInstitucional ? "text-amber-800" : "text-slate-800"}`}>
+                        {turnoText}
+                      </span>
+                    );
+
+                    if (tieneLicencia && (tieneTurno || tipoDia)) {
                       contenido = (
                         <span className="flex flex-col items-center justify-center gap-0.5 leading-none">
-                          <span className={`text-[9px] font-semibold ${esInstitucional ? "text-amber-900" : "text-slate-800"}`}>
-                            {turnoText}
-                          </span>
+                          {lineaTurno}
                           <span className="text-[8px] font-bold text-slate-900">{licenciaCod.slice(0, 4)}</span>
                         </span>
                       );
                     } else if (tieneLicencia) {
                       contenido = <span className="text-[9px] font-bold">{licenciaCod.slice(0, 4)}</span>;
-                    } else if (esInstitucional && !tieneTurno) {
+                    } else if (esInstitucional && !tieneTurno && !tipoDia) {
                       contenido = (
                         <span className="text-[9px] font-bold text-amber-800">
                           {etiquetaInstitucional(tipoInstCel || tipoInstCol)}
                         </span>
                       );
                     } else {
-                      contenido = (
-                        <span className={`text-[9px] font-semibold ${esInstitucional ? "text-amber-800" : "text-slate-800"}`}>
-                          {turnoText}
-                        </span>
-                      );
+                      contenido = lineaTurno;
                     }
 
                     return (
                       <td
                         key={dia}
-                        className={`h-14 border border-slate-300 p-0 align-middle ${claseFondoCelda({
-                          esFinde: col.esFinde,
-                          tipoInstitucional: tipoInstCol,
-                          tieneLicencia,
-                          esFranco,
-                          tieneTurno,
-                        })}`}
+                        className={`h-14 min-w-[2.35rem] border border-slate-300 p-0 align-middle ${fondoCelda}`}
                       >
                         <GrillaMesCeldaLicencia
                           eventos={Array.isArray(eventos) ? eventos : []}
@@ -182,9 +192,9 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
                               grupoLabel,
                               turnoTeorico: {
                                 rda_turno_id: turnoId || undefined,
-                                es_franco: esFranco,
+                                es_franco: tipoDia === "franco",
                                 capa_teorica: {
-                                  tipo_dia: esFranco ? "franco" : "laborable",
+                                  tipo_dia: tipoDia || (tieneTurno ? "laborable" : "no_laborable"),
                                   ingreso,
                                   egreso,
                                   es_feriado: esInstitucional,
@@ -193,7 +203,8 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
                               },
                             })
                           }
-                          className="flex h-14 w-full items-center justify-center"
+                          className={`flex h-14 w-full items-center justify-center border-0 p-0 ${fondoCelda}`}
+                          cellStyle={tieneLicencia ? undefined : fondoCeldaStyle}
                           title={titleParts.join(" · ") || undefined}
                         >
                           {contenido}

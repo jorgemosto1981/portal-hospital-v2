@@ -14,7 +14,9 @@ function horarioDesdeCelda(celda) {
 
 export function etiquetaCeldaAprobada(celda) {
   if (!celda || typeof celda !== "object") return "";
-  if (celda.es_franco || celda.tipo_dia === "franco" || celda.tipo_dia === "no_laborable") return "F";
+  const tipo = String(celda.tipo_dia || "").trim().toLowerCase();
+  if (tipo === "franco" || celda.es_franco === true) return "F";
+  if (tipo === "no_laborable") return "NL";
   if (
     (celda.es_feriado || celda.tipo_evento_institucional === "feriado" || celda.tipo_evento_institucional === "asueto") &&
     !celda.turno_id &&
@@ -32,9 +34,9 @@ export function etiquetaCeldaAprobada(celda) {
 
 export function claseCeldaAprobada(celda) {
   if (!celda || typeof celda !== "object") return "bg-white";
-  if (celda.es_franco || celda.tipo_dia === "franco" || celda.tipo_dia === "no_laborable") {
-    return "bg-slate-100 text-slate-700";
-  }
+  const tipo = String(celda.tipo_dia || "").trim().toLowerCase();
+  if (tipo === "franco" || celda.es_franco === true) return "bg-teal-50 text-teal-800";
+  if (tipo === "no_laborable") return "bg-zinc-100 text-zinc-600";
   const esInstitucional =
     celda.es_feriado === true ||
     celda.tipo_evento_institucional === "feriado" ||

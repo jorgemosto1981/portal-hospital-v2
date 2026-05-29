@@ -21,7 +21,7 @@ function celdaDesdeRegimenFijo(regimen, ymd) {
   const isoWeekday = isoWeekdayFromYmd(ymd);
   const diaConf = (regimen.dias || []).find((d) => d.dia_semana === isoWeekday);
   if (!diaConf) {
-    return { tipo_dia: "franco", turno_id: null };
+    return { tipo_dia: "no_laborable", turno_id: null };
   }
   const tipoDia = normalizarTipoDia(diaConf.tipo_dia);
   const turno = diaConf.turno || {};

@@ -113,18 +113,32 @@ function esTipoLaboral(tipoDia) {
   return tipoDia === "laborable" || tipoDia === "guardia";
 }
 
-function pickRdaTurnoId(capaTeorica, esFranco) {
-  if (esFranco) return null;
+function esDiaSinTurnoLaboral(tipoDia) {
+  return tipoDia === "franco" || tipoDia === "no_laborable";
+}
+
+function pickRdaTurnoId(capaTeorica, tipoDia) {
+  if (esDiaSinTurnoLaboral(tipoDia)) return null;
   const tid = capaTeorica?.turno_id || capaTeorica?.turno_compuesto_id || null;
   return tid ? String(tid).trim() : null;
 }
 
-function aplicarFotoPlanDia({ planCache, personaId, fechaYmd, tipoDiaFinal, turnoFinal }) {
+function aplicarFotoPlanDia({ planCache, personaId, fechaYmd, tipoDiaFinal, turnoFinal, regimen }) {
   const agentes = planCache?.plan?.agentes;
   if (!Array.isArray(agentes)) return { tipoDiaFinal, turnoFinal };
   const ag = agentes.find((a) => a.persona_id === personaId);
   const foto = ag?.dias?.[fechaYmd];
   if (!foto || typeof foto !== "object") return { tipoDiaFinal, turnoFinal };
+
+  const patron = regimen?.tipo_patron;
+  const tipoFoto = foto.tipo_dia != null ? String(foto.tipo_dia).trim().toLowerCase() : null;
+  if (patron === "fijo" || patron === "rotativo") {
+    if (tipoFoto === "franco") {
+      return { tipoDiaFinal: "franco", turnoFinal: null };
+    }
+    return { tipoDiaFinal, turnoFinal };
+  }
+
   const tipo = foto.tipo_dia != null ? String(foto.tipo_dia).trim() : tipoDiaFinal;
   let turno = turnoFinal;
   const turnoIdFoto = foto.turno_id != null ? String(foto.turno_id).trim() : "";
@@ -140,6 +154,17 @@ function aplicarFotoPlanDia({ planCache, personaId, fechaYmd, tipoDiaFinal, turn
     };
   }
   return { tipoDiaFinal: tipo, turnoFinal: turno };
+}
+
+function horariosVisDesdeCapaYTurno({ sinTurnoLaboral, capaTeorica, turnoFinal }) {
+  if (sinTurnoLaboral) return { ingreso: null, egreso: null };
+  let ingreso = toHhmmInstitucionalDisplay(capaTeorica?.ingreso) || null;
+  let egreso = toHhmmInstitucionalDisplay(capaTeorica?.egreso) || null;
+  if (!ingreso && !egreso && turnoFinal) {
+    ingreso = toHhmmInstitucionalDisplay(turnoFinal.ingreso) || null;
+    egreso = toHhmmInstitucionalDisplay(turnoFinal.egreso) || null;
+  }
+  return { ingreso, egreso };
 }
 
 async function ensureEstadoPeriodoLiquidacionAbierto(visRef) {
@@ -475,6 +500,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
     let turnoFinal = mejorResolucion.turno_teorico;
     let origenFinal = mejorResolucion.origen;
     let tipoDiaFinal = mejorResolucion.tipo_dia;
+    const regimenDocPre = regCache.get(mejorHlg.regimen_horario_id) || {};
     const planEntry = hlgContextos.find((c) => c.plan)?.plan;
     if (planEntry) {
       const merged = aplicarFotoPlanDia({
@@ -483,6 +509,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
         fechaYmd,
         tipoDiaFinal,
         turnoFinal,
+        regimen: regimenDocPre,
       });
       tipoDiaFinal = merged.tipoDiaFinal;
       turnoFinal = merged.turnoFinal;
@@ -494,7 +521,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
       tipoDiaFinal = ultimo.tipo_dia || "laborable";
     }
 
-    const regimenDoc = regCache.get(mejorHlg.regimen_horario_id) || {};
+    const regimenDoc = regimenDocPre || regCache.get(mejorHlg.regimen_horario_id) || {};
     let turnoCompuestoId = turnoFinal?.turno_id || null;
     const fotoDiaPlan = planBundle?.plan?.agentes?.find((a) => a.persona_id === personaId)?.dias?.[fechaYmd];
     if (!turnoCompuestoId && fotoDiaPlan?.turno_id) {
@@ -536,16 +563,25 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
     }, { merge: true });
 
     const diaKey = diaMesKeyDesdeYmd(fechaYmd);
-    const esFranco = tipoDiaFinal === "franco" || tipoDiaFinal === "no_laborable";
+    const sinTurnoLaboral = esDiaSinTurnoLaboral(tipoDiaFinal);
     const gdtId = capaTeorica.grupo_de_trabajo_id || null;
-    visDias[`dias.${diaKey}.rda_turno_id`] = pickRdaTurnoId(capaTeorica, esFranco);
-    visDias[`dias.${diaKey}.rda_ingreso`] = esFranco
-      ? null
-      : toHhmmInstitucionalDisplay(capaTeorica.ingreso) || null;
-    visDias[`dias.${diaKey}.rda_egreso`] = esFranco
-      ? null
-      : toHhmmInstitucionalDisplay(capaTeorica.egreso) || null;
-    visDias[`dias.${diaKey}.es_franco`] = esFranco;
+    const { ingreso: rdaIngreso, egreso: rdaEgreso } = horariosVisDesdeCapaYTurno({
+      sinTurnoLaboral,
+      capaTeorica,
+      turnoFinal,
+    });
+    visDias[`dias.${diaKey}.rda_turno_id`] = pickRdaTurnoId(capaTeorica, tipoDiaFinal);
+    visDias[`dias.${diaKey}.rda_ingreso`] = rdaIngreso;
+    visDias[`dias.${diaKey}.rda_egreso`] = rdaEgreso;
+    let tipoDiaVis = tipoDiaFinal;
+    if (
+      capaTeorica.es_feriado === true &&
+      (tipoDiaVis === "laborable" || tipoDiaVis === "guardia")
+    ) {
+      tipoDiaVis = "no_laborable";
+    }
+    visDias[`dias.${diaKey}.tipo_dia`] = tipoDiaVis;
+    visDias[`dias.${diaKey}.es_franco`] = tipoDiaVis === "franco";
     visDias[`dias.${diaKey}.es_feriado`] = capaTeorica.es_feriado || false;
     visDias[`dias.${diaKey}.clasificacion_dia_calendario_id`] = capaTeorica.clasificacion_dia_calendario_id || null;
     visDias[`dias.${diaKey}.tipo_evento_institucional`] = mejorResolucion.tipo_evento || null;
@@ -806,14 +842,28 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
   const visDocId = buildVisDocumentId(personaId, `${periodoId}-01`);
   if (visDocId) {
     const diaKey = diaMesKeyDesdeYmd(fechaYmd);
-    const esFranco = capaTeorica.tipo_dia === "franco" || capaTeorica.tipo_dia === "no_laborable";
+    let tipoDiaVis = capaTeorica.tipo_dia || "laborable";
+    if (
+      capaTeorica.es_feriado === true &&
+      (tipoDiaVis === "laborable" || tipoDiaVis === "guardia")
+    ) {
+      tipoDiaVis = "no_laborable";
+    }
+    const sinTurnoLaboral = esDiaSinTurnoLaboral(tipoDiaVis);
     const gdtId = capaTeorica.grupo_de_trabajo_id || null;
+    const turnoFallback = base.mejorResolucion.turno_teorico || null;
+    const { ingreso: rdaIngreso, egreso: rdaEgreso } = horariosVisDesdeCapaYTurno({
+      sinTurnoLaboral,
+      capaTeorica,
+      turnoFinal: turnoFallback,
+    });
     const visRef = db.collection(COL_VIS).doc(visDocId);
     const visUpdate = {
-      [`dias.${diaKey}.rda_turno_id`]: pickRdaTurnoId(capaTeorica, esFranco),
-      [`dias.${diaKey}.rda_ingreso`]: esFranco ? null : (capaTeorica.ingreso || null),
-      [`dias.${diaKey}.rda_egreso`]: esFranco ? null : (capaTeorica.egreso || null),
-      [`dias.${diaKey}.es_franco`]: esFranco,
+      [`dias.${diaKey}.rda_turno_id`]: pickRdaTurnoId(capaTeorica, tipoDiaVis),
+      [`dias.${diaKey}.rda_ingreso`]: rdaIngreso,
+      [`dias.${diaKey}.rda_egreso`]: rdaEgreso,
+      [`dias.${diaKey}.tipo_dia`]: tipoDiaVis,
+      [`dias.${diaKey}.es_franco`]: tipoDiaVis === "franco",
       [`dias.${diaKey}.es_feriado`]: capaTeorica.es_feriado || false,
       [`dias.${diaKey}.clasificacion_dia_calendario_id`]: capaTeorica.clasificacion_dia_calendario_id || null,
       [`dias.${diaKey}.tipo_evento_institucional`]: base.mejorResolucion.tipo_evento || null,
@@ -828,10 +878,11 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
       if (e.code === 5 || (e.message && e.message.includes("NOT_FOUND"))) {
         const dia = {};
         dia[diaKey] = {
-          rda_turno_id: pickRdaTurnoId(capaTeorica, esFranco),
-          rda_ingreso: esFranco ? null : (capaTeorica.ingreso || null),
-          rda_egreso: esFranco ? null : (capaTeorica.egreso || null),
-          es_franco: esFranco,
+          rda_turno_id: pickRdaTurnoId(capaTeorica, tipoDiaVis),
+          rda_ingreso: rdaIngreso,
+          rda_egreso: rdaEgreso,
+          tipo_dia: tipoDiaVis,
+          es_franco: tipoDiaVis === "franco",
           es_feriado: capaTeorica.es_feriado || false,
           clasificacion_dia_calendario_id: capaTeorica.clasificacion_dia_calendario_id || null,
           tipo_evento_institucional: base.mejorResolucion.tipo_evento || null,

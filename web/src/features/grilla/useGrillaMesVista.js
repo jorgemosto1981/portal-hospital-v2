@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  callListarPlanesTurnoServicio,
   callListarVistaGrillaMesPorGrupo,
   callObtenerVistaGrillaMesAgente,
+  callObtenerVistaPlanTurnoServicio,
   callResolverContextoLaboralSolicitud,
 } from "../../services/callables.js";
+import { enriquecerFilasConGrillaAprobada } from "./grillaMesVisEnriquecimiento.js";
 import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
 import { claimsIncludeJefe } from "../routing/portalRole.js";
 import { normalizarPeriodoJefe } from "../jefe/periodoJefe.js";
@@ -175,7 +178,29 @@ export function useGrillaMesVista({ personaId, claims, esRrhh }) {
         anio,
         mes,
       });
-      const payload = res?.data || null;
+      let payload = res?.data || null;
+      if (payload?.filas) {
+        try {
+          const listRes = await callListarPlanesTurnoServicio({
+            grupo_id: gdt,
+            periodo,
+            estado: "HABILITADO",
+          });
+          const planId = listRes?.data?.items?.[0]?.id;
+          if (planId) {
+            const vistaPlan = await callObtenerVistaPlanTurnoServicio({ plan_id: planId });
+            const grillaAprobada = vistaPlan?.data?.grilla_aprobada;
+            if (grillaAprobada) {
+              payload = {
+                ...payload,
+                filas: enriquecerFilasConGrillaAprobada(payload.filas, grillaAprobada, periodo),
+              };
+            }
+          }
+        } catch {
+          /* sin plan habilitado: solo vis_* */
+        }
+      }
       setData(payload ? { ...payload, modo } : null);
     } catch (e) {
       setData(null);

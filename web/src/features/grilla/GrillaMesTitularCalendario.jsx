@@ -1,5 +1,12 @@
 import { useMemo } from "react";
 import { diasEnMes, etiquetaCelda } from "./grillaMesCellUtils.js";
+import {
+  resolverTipoDiaCelda,
+  tieneHorarioTeorico,
+  etiquetaTipoDia,
+  claseTextoTipoDia,
+  tituloTipoDia,
+} from "./grillaMesEquipoDisplay.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 
 const DIAS_SEMANA = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -91,25 +98,36 @@ function CalendarioGrupo({ anio, mes, diasMap, gdtId, etiqueta, esMultiGrupo, gr
           const label = etiquetaCelda(eventos);
           const tieneEventos = Array.isArray(eventos) && eventos.length > 0;
           const turnoId = cell.rda_turno_id || null;
+          const ingreso = cell.rda_ingreso || null;
           const egreso = cell.rda_egreso || null;
-          const esFranco = cell.es_franco === true;
+          const tipoDia = resolverTipoDiaCelda(cell);
+          const etiquetaDia = etiquetaTipoDia(tipoDia);
+          const tieneHorario = tieneHorarioTeorico(cell);
           const esFeriado = cell.es_feriado === true;
           const tipoEvento = cell.tipo_evento_institucional || null;
-          const tieneDatos = tieneEventos || turnoId || esFranco || esFeriado;
+          const tieneDatos = tieneEventos || turnoId || tieneHorario || tipoDia || esFeriado;
 
-          const bgFranco = esFranco && !turnoId && !esFeriado ? "bg-slate-50" : "";
+          const bgTipoDia =
+            tipoDia === "franco" && !turnoId && !esFeriado
+              ? "bg-teal-50"
+              : tipoDia === "no_laborable" && !turnoId && !esFeriado
+                ? "bg-zinc-100"
+                : "";
           const bgFeriado = esFeriado ? "bg-amber-50 ring-1 ring-inset ring-amber-200" : "";
           const bgFinDeSemana = esFinDeSemana && !tieneEventos && !esFeriado ? "bg-rose-50/40" : "";
           const tachado = tieneEventos && turnoId ? "line-through opacity-60" : "";
 
-          const ingreso = cell.rda_ingreso || null;
-          const turnoLabel = ingreso && egreso ? `${ingreso}–${egreso}` : turnoId;
+          const turnoLabel =
+            tieneHorario && tipoDia !== "franco" && tipoDia !== "no_laborable"
+              ? `${ingreso}–${egreso}`
+              : turnoId;
 
           const grupoLabel = cell.etiqueta_grupo_corta
             || grupos.find((g) => g.gdtId === cellGdt)?.etiqueta
             || etiqueta;
 
           const titleParts = [];
+          if (tipoDia) titleParts.push(tituloTipoDia(tipoDia));
           if (esFeriado && tipoEvento) titleParts.push(tipoEvento === "feriado" ? "Feriado" : tipoEvento === "asueto" ? "Asueto" : "Día institucional");
           if (turnoLabel) titleParts.push(turnoLabel);
 
@@ -124,7 +142,7 @@ function CalendarioGrupo({ anio, mes, diasMap, gdtId, etiqueta, esMultiGrupo, gr
                 eventos: Array.isArray(eventos) ? eventos : [],
                 grupoLabel,
               })}
-              className={`flex min-h-[5rem] flex-col items-center justify-center rounded-none border border-slate-200 text-center text-[10px] font-semibold ${bgFranco} ${bgFeriado} ${bgFinDeSemana}`}
+              className={`flex min-h-[5rem] flex-col items-center justify-center rounded-none border border-slate-200 text-center text-[10px] font-semibold ${bgTipoDia} ${bgFeriado} ${bgFinDeSemana}`}
               title={titleParts.join(" · ") || undefined}
             >
               <span className={`text-[9px] ${esFinDeSemana ? "text-rose-400" : "opacity-80"}`}>
@@ -138,8 +156,8 @@ function CalendarioGrupo({ anio, mes, diasMap, gdtId, etiqueta, esMultiGrupo, gr
               {turnoLabel && (
                 <span className={`text-[9px] font-bold text-indigo-600 ${tachado}`}>{turnoLabel}</span>
               )}
-              {esFranco && !turnoId && !tieneEventos && !esFeriado && (
-                <span className="text-[9px] text-slate-400">F</span>
+              {etiquetaDia && !turnoLabel && !tieneEventos && !esFeriado && (
+                <span className={`text-[9px] ${claseTextoTipoDia(tipoDia)}`}>{etiquetaDia}</span>
               )}
               <span className="truncate px-0.5">{label}</span>
             </GrillaMesCeldaLicencia>

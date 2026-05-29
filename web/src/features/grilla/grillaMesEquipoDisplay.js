@@ -19,6 +19,37 @@ export function columnasCalendario(anio, mes) {
 }
 
 /**
+ * Franco (asignado en plan/ciclo) vs no_laborable (régimen: sáb/dom u otro patrón fijo).
+ * @param {object|null|undefined} cell
+ * @returns {"franco"|"no_laborable"|null}
+ */
+export function resolverTipoDiaCelda(cell) {
+  if (!cell || typeof cell !== "object") return null;
+  const t = String(cell.tipo_dia || "").trim().toLowerCase();
+  if (t === "franco") return "franco";
+  if (t === "no_laborable") return "no_laborable";
+  if (cell.es_feriado === true && t !== "franco") return "no_laborable";
+  if (t === "laborable" || t === "guardia") return null;
+  if (cell.es_franco === true) return "franco";
+  return null;
+}
+
+/** @param {object} cell */
+export function tieneHorarioTeorico(cell) {
+  if (!cell || typeof cell !== "object") return false;
+  return Boolean(String(cell.rda_ingreso || "").trim() && String(cell.rda_egreso || "").trim());
+}
+
+/**
+ * @param {"franco"|"no_laborable"|null} tipoDia
+ */
+export function etiquetaTipoDia(tipoDia) {
+  if (tipoDia === "franco") return "F";
+  if (tipoDia === "no_laborable") return "NL";
+  return "";
+}
+
+/**
  * Feriado/asueto por día (cualquier agente del mes marca la columna).
  * @param {Array<{ dias?: Record<string, object> }>} filas
  * @param {number} totalDias
@@ -46,10 +77,14 @@ export function institucionalPorDiaEnFilas(filas, totalDias) {
 
 /** @param {object} cell */
 export function textoHorarioTurno(cell) {
-  if (!cell || typeof cell !== "object") return "";
-  if (cell.es_franco === true) return "F";
   const ing = String(cell.rda_ingreso || "").trim();
   const egr = String(cell.rda_egreso || "").trim();
+  const tipoDia = resolverTipoDiaCelda(cell);
+  if (ing && egr && tipoDia !== "franco" && tipoDia !== "no_laborable") {
+    return `${ing}–${egr}`;
+  }
+  const etiqueta = etiquetaTipoDia(tipoDia);
+  if (etiqueta) return etiqueta;
   if (ing && egr) return `${ing}–${egr}`;
   if (ing) return ing;
   const tid = String(cell.rda_turno_id || "").trim();
@@ -70,10 +105,46 @@ export function claseFondoColumna({ esFinde, tipoInstitucional }) {
   return "bg-slate-100 text-slate-600";
 }
 
-export function claseFondoCelda({ esFinde, tipoInstitucional, tieneLicencia, esFranco, tieneTurno }) {
+export function claseFondoCelda({ esFinde, tipoInstitucional, tieneLicencia, tipoDia, tieneTurno }) {
   if (tipoInstitucional) return "bg-amber-50";
-  if (esFranco && !tieneTurno && !tieneLicencia) return "bg-slate-50";
-  if (tieneTurno && !tieneLicencia) return "bg-indigo-50/80";
-  if (esFinde && !tieneLicencia && !tieneTurno) return "bg-rose-50/40";
+  if (tieneTurno && !tieneLicencia) return "bg-indigo-100";
+  if (tipoDia === "franco") return esFinde ? "bg-teal-100 ring-1 ring-inset ring-rose-200" : "bg-teal-100";
+  if (tipoDia === "no_laborable") return esFinde ? "bg-zinc-200 ring-1 ring-inset ring-rose-200" : "bg-zinc-200";
+  if (esFinde && !tieneLicencia && !tieneTurno) return "bg-rose-100";
   return "bg-white";
+}
+
+/** Fondo explícito: el UA style del <button> tapa clases Tailwind suaves. */
+const FONDO_CELDA_HEX = {
+  "bg-amber-50": "#fffbeb",
+  "bg-indigo-100": "#e0e7ff",
+  "bg-teal-100": "#ccfbf1",
+  "bg-zinc-200": "#e4e4e7",
+  "bg-rose-100": "#ffe4e6",
+  "bg-white": "#ffffff",
+};
+
+/**
+ * @param {Parameters<typeof claseFondoCelda>[0]} params
+ * @returns {{ className: string, style: { backgroundColor: string } }}
+ */
+export function estiloFondoCelda(params) {
+  const className = claseFondoCelda(params);
+  const base = className.split(" ").find((c) => FONDO_CELDA_HEX[c]) || "bg-white";
+  return {
+    className,
+    style: { backgroundColor: FONDO_CELDA_HEX[base] || "#ffffff" },
+  };
+}
+
+export function claseTextoTipoDia(tipoDia) {
+  if (tipoDia === "franco") return "font-bold text-teal-800";
+  if (tipoDia === "no_laborable") return "font-semibold text-zinc-500";
+  return "font-semibold text-slate-800";
+}
+
+export function tituloTipoDia(tipoDia) {
+  if (tipoDia === "franco") return "Franco (asignado en plan o ciclo)";
+  if (tipoDia === "no_laborable") return "Día no laborable del régimen";
+  return "";
 }

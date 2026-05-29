@@ -108,10 +108,16 @@ export default function DiaGrillaDetalleModal({
                   <dd className="font-bold text-indigo-700">{turnoTeorico.rda_turno_id}</dd>
                 </div>
               ) : null}
-              {turnoTeorico.es_franco ? (
+              {turnoTeorico.capa_teorica?.tipo_dia === "franco" || turnoTeorico.es_franco ? (
                 <div className="flex gap-2">
                   <dt className="font-medium text-slate-500">Tipo:</dt>
-                  <dd className="text-slate-600">Franco / No laborable</dd>
+                  <dd className="font-semibold text-teal-800">Franco (asignado en plan o ciclo)</dd>
+                </div>
+              ) : null}
+              {turnoTeorico.capa_teorica?.tipo_dia === "no_laborable" ? (
+                <div className="flex gap-2">
+                  <dt className="font-medium text-slate-500">Tipo:</dt>
+                  <dd className="font-semibold text-zinc-600">Día no laborable del régimen</dd>
                 </div>
               ) : null}
               {turnoTeorico.capa_teorica ? (

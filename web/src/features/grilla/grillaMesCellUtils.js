@@ -93,7 +93,7 @@ export function estiloVisualCelda(eventos) {
   const tiene = Array.isArray(eventos) && eventos.length > 0;
   if (!tiene) {
     return {
-      style: { backgroundColor: "#f8fafc" },
+      style: {},
       className: "",
     };
   }

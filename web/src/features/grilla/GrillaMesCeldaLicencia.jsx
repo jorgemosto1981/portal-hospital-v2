@@ -11,6 +11,7 @@ import { lineasTooltipCelda, estiloVisualCelda } from "./grillaMesCellUtils.js";
  *   disabled?: boolean;
  *   onClick?: () => void;
  *   className?: string;
+ *   cellStyle?: { backgroundColor?: string };
  *   children: import("react").ReactNode;
  * }} props
  */
@@ -21,12 +22,14 @@ export default function GrillaMesCeldaLicencia({
   disabled,
   onClick,
   className = "",
+  cellStyle,
   children,
 }) {
   const [hover, setHover] = useState(false);
   const tiene = Array.isArray(eventos) && eventos.length > 0;
-  const { style, className: visualClass } = estiloVisualCelda(eventos);
+  const { style: licenciaStyle, className: visualClass } = estiloVisualCelda(eventos);
   const lines = tiene ? lineasTooltipCelda(eventos, { personaLabel, dia }) : [];
+  const mergedStyle = tiene ? licenciaStyle : { ...cellStyle, ...licenciaStyle };
 
   return (
     <div
@@ -39,12 +42,12 @@ export default function GrillaMesCeldaLicencia({
         disabled={disabled}
         onClick={onClick}
         className={[
-          "h-full w-full",
+          "h-full w-full appearance-none",
           visualClass,
           tiene ? "cursor-pointer hover:ring-2 hover:ring-violet-400 hover:ring-offset-1" : "",
           className,
         ].join(" ")}
-        style={style}
+        style={mergedStyle}
         aria-label={lines[0] || undefined}
       >
         {children}
