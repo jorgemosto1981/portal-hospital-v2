@@ -127,12 +127,15 @@ function aplicarFotoPlanDia({ planCache, personaId, fechaYmd, tipoDiaFinal, turn
   if (!foto || typeof foto !== "object") return { tipoDiaFinal, turnoFinal };
   const tipo = foto.tipo_dia != null ? String(foto.tipo_dia).trim() : tipoDiaFinal;
   let turno = turnoFinal;
-  if (foto.turno_id != null && String(foto.turno_id).trim() !== "") {
+  const turnoIdFoto = foto.turno_id != null ? String(foto.turno_id).trim() : "";
+  const ingresoFoto = foto.ingreso || foto.ingreso_iso || null;
+  const egresoFoto = foto.egreso || foto.egreso_iso || null;
+  if (turnoIdFoto || ingresoFoto || egresoFoto) {
     turno = {
       ...(turno || {}),
-      turno_id: String(foto.turno_id).trim(),
-      ingreso: foto.ingreso || turno?.ingreso,
-      egreso: foto.egreso || turno?.egreso,
+      turno_id: turnoIdFoto || turno?.turno_id || null,
+      ingreso: ingresoFoto || turno?.ingreso,
+      egreso: egresoFoto || turno?.egreso,
       cruza_medianoche: turno?.cruza_medianoche,
     };
   }
@@ -493,10 +496,12 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
 
     const regimenDoc = regCache.get(mejorHlg.regimen_horario_id) || {};
     let turnoCompuestoId = turnoFinal?.turno_id || null;
-    if (!turnoCompuestoId) {
-      const ctxPlan = hlgContextos.find((c) => c.hlg.id === mejorHlg.id);
-      const agPlan = ctxPlan?.plan?.plan?.agentes?.find((a) => a.persona_id === personaId);
-      turnoCompuestoId = agPlan?.dias?.[fechaYmd]?.turno_id || null;
+    const fotoDiaPlan = planBundle?.plan?.agentes?.find((a) => a.persona_id === personaId)?.dias?.[fechaYmd];
+    if (!turnoCompuestoId && fotoDiaPlan?.turno_id) {
+      turnoCompuestoId = String(fotoDiaPlan.turno_id).trim();
+    }
+    if (!turnoCompuestoId && (turnoFinal?.ingreso || turnoFinal?.egreso)) {
+      turnoCompuestoId = "plan_horario";
     }
     const capaSegmentada = buildCapaTeoricaSegmentada({
       fechaYmd,

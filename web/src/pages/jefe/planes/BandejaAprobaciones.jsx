@@ -146,14 +146,14 @@ export default function BandejaAprobaciones({ planes, onTransicion, operando, es
                   Ver turno
                 </button>
               )}
-              {plan.estado === "ENVIADO" && (
+              {(plan.estado === "ENVIADO" || plan.estado === "EN_REVISION") && (
                 <button
                   type="button"
                   disabled={operando}
                   onClick={() => onTransicion("aprobar", plan.id)}
                   className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-green-700 disabled:opacity-50"
                 >
-                  Aprobar
+                  {plan.estado === "EN_REVISION" ? "Rehabilitar" : "Aprobar"}
                 </button>
               )}
               {(plan.estado === "ENVIADO" || plan.estado === "EN_REVISION") && (

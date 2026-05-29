@@ -679,9 +679,9 @@ export default function PlanTurnoServicioPage() {
                   Editar
                 </button>
               )}
-              {planOpciones.plan.estado === "BORRADOR" && (
+              {(planOpciones.plan.estado === "BORRADOR" || planOpciones.plan.estado === "EN_REVISION") && (
                 <button type="button" disabled={operando} onClick={() => { void handleTransicion("enviar", planOpciones.plan.id); setPlanOpciones(null); }} className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-50">
-                  Enviar
+                  {planOpciones.plan.estado === "EN_REVISION" ? "Reenviar" : "Enviar"}
                 </button>
               )}
             </div>

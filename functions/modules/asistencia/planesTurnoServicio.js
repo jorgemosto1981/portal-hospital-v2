@@ -259,7 +259,7 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
     id = existingId.trim();
     const snap = await db.collection(COL_PLANES).doc(id).get();
     if (snap.exists) {
-      assertEstado(snap.data(), "BORRADOR");
+      assertEstados(snap.data(), ["BORRADOR", "EN_REVISION"]);
       exists = true;
     }
   }
@@ -322,7 +322,7 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
       err("not-found", "[PLT-SAV-001] Plan no encontrado.");
     }
     const actual = snap.data();
-    assertEstado(actual, "BORRADOR");
+    assertEstados(actual, ["BORRADOR", "EN_REVISION"]);
     const almacenado = String(actual.plan_version_token || "").trim();
     if (almacenado) {
       if (!tokenEnviado || tokenEnviado !== almacenado) {
@@ -475,7 +475,7 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
     const snap = await tx.get(ref);
     if (!snap.exists) err("not-found", "[PLT-APR-002] Plan no encontrado.");
     const current = snap.data();
-    assertEstado(current, "ENVIADO");
+    assertEstados(current, ["ENVIADO", "EN_REVISION"]);
 
     if (current.tipo_plan === "mensual" && current.periodo) {
       const dupSnap = await tx.get(

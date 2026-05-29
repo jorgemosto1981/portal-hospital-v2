@@ -303,6 +303,14 @@ export default function GrillaMesLicenciasPanel() {
                   <span className="mr-1 inline-block h-3 w-5 rounded border-2 border-dashed border-amber-900 bg-[#F59E0B] align-middle" />
                   En revisión
                 </span>
+                <span>
+                  <span className="mr-1 inline-block h-3 w-5 rounded bg-amber-100 ring-1 ring-amber-300 align-middle" />
+                  Feriado / asueto
+                </span>
+                <span>
+                  <span className="mr-1 inline-block h-3 w-5 rounded bg-rose-100 align-middle" />
+                  Fin de semana
+                </span>
                 <span>Clic = detalles</span>
               </div>
             </div>
