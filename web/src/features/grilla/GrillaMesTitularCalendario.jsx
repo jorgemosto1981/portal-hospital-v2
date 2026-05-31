@@ -1,6 +1,7 @@
-import { useMemo } from "react";
 import { diasEnMes, etiquetaCelda } from "./grillaMesCellUtils.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
+import { claseTdColumna } from "./grillaTurnosVisual.js";
+import { celdaTieneJornadaVis } from "./grillaMesEquipoDisplay.js";
 
 const DIAS_SEMANA = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
@@ -23,15 +24,9 @@ export default function GrillaMesTitularCalendario({ anio, mes, diasMap, grupoLa
   const map = diasMap && typeof diasMap === "object" ? diasMap : {};
   const totalDias = diasEnMes(anio, mes);
   const offset = primerDiaSemana(anio, mes) - 1;
-  const labelCargo = useMemo(() => String(grupoLabel || "").trim(), [grupoLabel]);
 
   return (
     <div className="mt-2">
-      {labelCargo ? (
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-violet-700">
-          Cargo: {labelCargo}
-        </p>
-      ) : null}
       <div className="grid grid-cols-7 gap-px rounded-xl border border-slate-300 bg-slate-300 p-px">
         {DIAS_SEMANA.map((nombre, idx) => (
           <div
@@ -58,16 +53,30 @@ export default function GrillaMesTitularCalendario({ anio, mes, diasMap, grupoLa
           const tieneEventos = Array.isArray(eventos) && eventos.length > 0;
           const turnoId = cell.rda_turno_id || null;
           const egreso = cell.rda_egreso || null;
-          const esFranco = cell.es_franco === true;
+          const tipoDia = String(cell.tipo_dia || "").trim().toLowerCase().replace(/\s+/g, "_");
+          const jornadaVis = celdaTieneJornadaVis(cell);
+          const esNoLaborable =
+            !jornadaVis && (tipoDia === "no_laborable" || tipoDia === "no-laborable");
+          const esFranco = cell.es_franco === true && !esNoLaborable && !jornadaVis;
           const esFeriado = cell.es_feriado === true;
           const tipoEvento = cell.tipo_evento_institucional || null;
-          const tieneDatos = tieneEventos || turnoId || esFranco || esFeriado;
-          const bgFranco = esFranco && !turnoId && !esFeriado ? "bg-slate-50" : "";
-          const bgFeriado = esFeriado ? "bg-amber-50 ring-1 ring-inset ring-amber-200" : "";
-          const bgFinDeSemana = esFinDeSemana && !tieneEventos && !esFeriado ? "bg-rose-50/40" : "";
-          const tachado = tieneEventos && turnoId ? "line-through opacity-60" : "";
+          const tieneDatos = tieneEventos || turnoId || esFranco || esNoLaborable || esFeriado;
           const ingreso = cell.rda_ingreso || null;
-          const turnoLabel = ingreso && egreso ? `${ingreso}–${egreso}` : turnoId;
+          const turnoLabel = esNoLaborable
+            ? "NL"
+            : esFranco
+              ? "F"
+              : ingreso && egreso
+                ? `${ingreso}–${egreso}`
+                : turnoId;
+          const bgCelda = claseTdColumna({
+            esFinde: esFinDeSemana,
+            esFeriado,
+          });
+          const chipNl = esNoLaborable ? "bg-slate-200 text-slate-700" : "";
+          const chipFranco = esFranco && !esNoLaborable && !esFeriado ? "bg-slate-400 text-slate-900" : "";
+          const chipTurno = turnoLabel && !esNoLaborable && !esFranco ? "bg-green-300 text-green-950" : "";
+          const tachado = tieneEventos && turnoId ? "line-through opacity-60" : "";
           const titleParts = [];
           if (esFeriado && tipoEvento) {
             titleParts.push(tipoEvento === "feriado" ? "Feriado" : tipoEvento === "asueto" ? "Asueto" : "Día institucional");
@@ -83,24 +92,24 @@ export default function GrillaMesTitularCalendario({ anio, mes, diasMap, grupoLa
               onClick={() => tieneDatos && onDiaClick({
                 dia,
                 eventos: Array.isArray(eventos) ? eventos : [],
-                grupoLabel: labelCargo || cell.etiqueta_grupo_corta || null,
+                grupoLabel: grupoLabel || cell.etiqueta_grupo_corta || null,
               })}
-              className={`flex min-h-[5rem] flex-col items-center justify-center rounded-none border border-slate-200 text-center text-[10px] font-semibold ${bgFranco} ${bgFeriado} ${bgFinDeSemana}`}
+              className={`flex min-h-[5rem] flex-col items-center justify-center rounded-none border border-slate-300 text-center text-[10px] font-semibold ${bgCelda}`}
               title={titleParts.join(" · ") || undefined}
             >
               <span className={`text-[9px] ${esFinDeSemana ? "text-rose-400" : "opacity-80"}`}>
                 {Number(dia)}
               </span>
-              {esFeriado && !turnoId && (
-                <span className="text-[9px] font-bold text-amber-600">
-                  {tipoEvento === "feriado" ? "FER" : tipoEvento === "asueto" ? "ASU" : "INST"}
+              {turnoLabel && !esNoLaborable && (
+                <span className={`rounded border border-slate-400 px-1 text-[8px] font-bold ${chipTurno} ${tachado}`}>
+                  {turnoLabel}
                 </span>
               )}
-              {turnoLabel && (
-                <span className={`text-[9px] font-bold text-indigo-600 ${tachado}`}>{turnoLabel}</span>
+              {esFranco && !turnoLabel && !tieneEventos && !esFeriado && (
+                <span className={`rounded border border-slate-400 px-1 text-[8px] font-bold ${chipFranco}`}>F</span>
               )}
-              {esFranco && !turnoId && !tieneEventos && !esFeriado && (
-                <span className="text-[9px] text-slate-400">F</span>
+              {esNoLaborable && (
+                <span className={`rounded border border-slate-400 px-1 text-[8px] font-bold ${chipNl}`}>NL</span>
               )}
               <span className="truncate px-0.5">{label}</span>
             </GrillaMesCeldaLicencia>

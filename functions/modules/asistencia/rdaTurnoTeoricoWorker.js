@@ -124,7 +124,18 @@ function filtrarOverridesActivosPorGrupo(allOverrides, gdtId) {
 }
 
 function esTipoLaboral(tipoDia) {
-  return tipoDia === "laborable" || tipoDia === "guardia";
+  const t = normalizarTipoDiaMaterializacion(tipoDia);
+  return t === "laborable" || t === "guardia";
+}
+
+function normalizarTipoDiaMaterializacion(raw) {
+  const t = String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  if (t === "laborable" || t === "guardia" || t === "franco" || t === "no_laborable") return t;
+  if (t === "no-laborable" || t === "nolaborable" || t === "no_laboral") return "no_laborable";
+  return "franco";
 }
 
 function pickRdaTurnoId(capaTeorica, esFranco) {
@@ -170,6 +181,36 @@ function encolarCapaTeoricaPorGrupo(batch, asiRef, asiSnap, gdtId, capaSlice, pe
   }
 }
 
+function resolucionDesdeFotoPlan(planBundle, personaId, fechaYmd) {
+  const agentes = planBundle?.plan?.agentes;
+  if (!Array.isArray(agentes)) return null;
+  const ag = agentes.find((a) => a.persona_id === personaId);
+  const foto = ag?.dias?.[fechaYmd];
+  if (!foto || typeof foto !== "object" || foto.tipo_dia == null) return null;
+
+  const tipo_dia = normalizarTipoDiaMaterializacion(foto.tipo_dia);
+  const turnoIdFoto = foto.turno_id != null ? String(foto.turno_id).trim() : "";
+  const ingresoFoto = foto.ingreso || foto.ingreso_iso || null;
+  const egresoFoto = foto.egreso || foto.egreso_iso || null;
+  let turno_teorico = null;
+  if (tipo_dia === "laborable" || tipo_dia === "guardia") {
+    if (turnoIdFoto || ingresoFoto || egresoFoto) {
+      turno_teorico = {
+        turno_id: turnoIdFoto || null,
+        ingreso: ingresoFoto || null,
+        egreso: egresoFoto || null,
+      };
+    }
+  }
+  return {
+    tipo_dia,
+    turno_teorico,
+    origen: "plan_mensual",
+    plan_id: planBundle.planId || null,
+    posicion_ciclo: null,
+  };
+}
+
 function aplicarFotoPlanDia({ planCache, personaId, fechaYmd, tipoDiaFinal, turnoFinal }) {
   const agentes = planCache?.plan?.agentes;
   if (!Array.isArray(agentes)) return { tipoDiaFinal, turnoFinal };
@@ -177,7 +218,7 @@ function aplicarFotoPlanDia({ planCache, personaId, fechaYmd, tipoDiaFinal, turn
   const foto = ag?.dias?.[fechaYmd];
   if (!foto || typeof foto !== "object") return { tipoDiaFinal, turnoFinal };
 
-  const fotoTipo = foto.tipo_dia != null ? String(foto.tipo_dia).trim() : null;
+  const fotoTipo = foto.tipo_dia != null ? normalizarTipoDiaMaterializacion(foto.tipo_dia) : null;
 
   // Plan > HLG: la foto del plan protege NL/franco frente a cualquier HLG del batch
   if (fotoTipo === "no_laborable" || fotoTipo === "franco") {
@@ -195,7 +236,7 @@ function aplicarFotoPlanDia({ planCache, personaId, fechaYmd, tipoDiaFinal, turn
     return { tipoDiaFinal: fotoTipo, turnoFinal: turno };
   }
 
-  const tipo = fotoTipo || tipoDiaFinal;
+  const tipo = fotoTipo || normalizarTipoDiaMaterializacion(tipoDiaFinal);
   let turno = turnoFinal;
   const turnoIdFoto = foto.turno_id != null ? String(foto.turno_id).trim() : "";
   const ingresoFoto = foto.ingreso || foto.ingreso_iso || null;
@@ -283,10 +324,10 @@ async function resolverBaseDiaPersona({ personaId, fechaYmd, indiceCalendario, g
 
   let tipoDiaFinal = mejorResolucion.tipo_dia;
   let turnoFinal = mejorResolucion.turno_teorico;
-  const planEntry = hlgContextos.find((c) => c.plan)?.plan;
-  if (planEntry) {
+  const planCacheFoto = hlgContextos.find((c) => c.plan) || null;
+  if (planCacheFoto) {
     const merged = aplicarFotoPlanDia({
-      planCache: planEntry,
+      planCache: planCacheFoto,
       personaId,
       fechaYmd,
       tipoDiaFinal,
@@ -311,7 +352,7 @@ async function resolverBaseDiaPersona({ personaId, fechaYmd, indiceCalendario, g
     mejorResolucion: { ...mejorResolucion, tipo_dia: tipoDiaFinal, turno_teorico: turnoFinal },
     mejorHlg,
     regimenDoc,
-    planCache: planEntry,
+    planCache: planCacheFoto,
   };
 }
 
@@ -391,7 +432,13 @@ function resolverDiaConPreCarga(regimen, fechaYmd, hlg, planData, personaId, ind
   switch (regimen.tipo_patron) {
     case "fijo": {
       const r = resolverFijo(regimen, fechaDate);
-      resolucion = { ...r, origen: "regimen_fijo", plan_id: null, posicion_ciclo: null };
+      resolucion = {
+        ...r,
+        tipo_dia: normalizarTipoDiaMaterializacion(r.tipo_dia),
+        origen: "regimen_fijo",
+        plan_id: null,
+        posicion_ciclo: null,
+      };
       break;
     }
     case "rotativo": {
@@ -410,7 +457,7 @@ function resolverDiaConPreCarga(regimen, fechaYmd, hlg, planData, personaId, ind
         resolucion = { tipo_dia: "no_laborable", turno_teorico: null, origen: "regimen_rotativo", plan_id: null, posicion_ciclo: posicion };
       } else {
         resolucion = {
-          tipo_dia: posConf.tipo_dia,
+          tipo_dia: normalizarTipoDiaMaterializacion(posConf.tipo_dia),
           turno_teorico: buildTurnoResponse(posConf.turno),
           origen: "regimen_rotativo",
           plan_id: null,
@@ -537,24 +584,35 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
   let diasProcesados = 0;
 
   for (const fechaYmd of dias) {
-    let mejorResolucion = null;
+    let mejorResolucion = resolucionDesdeFotoPlan(planBundle, personaId, fechaYmd);
     let mejorHlg = null;
 
-    for (const { hlg, regimen, plan } of hlgContextos) {
-      const fi = hlg.fecha_inicio || "";
-      const ff = hlg.fecha_fin || "";
-      if (fi && fi > fechaYmd) continue;
-      if (ff && ff < fechaYmd) continue;
+    if (!mejorResolucion) {
+      for (const { hlg, regimen, plan } of hlgContextos) {
+        const fi = hlg.fecha_inicio || "";
+        const ff = hlg.fecha_fin || "";
+        if (fi && fi > fechaYmd) continue;
+        if (ff && ff < fechaYmd) continue;
 
-      const res = resolverDiaConPreCarga(regimen, fechaYmd, hlg, plan, personaId, indiceCalendario);
-      const esLaboral = esTipoLaboral(res.tipo_dia);
-      if (!mejorResolucion) {
-        mejorResolucion = res;
-        mejorHlg = hlg;
-      } else if (esLaboral && !esTipoLaboral(mejorResolucion.tipo_dia)) {
-        mejorResolucion = res;
-        mejorHlg = hlg;
+        const res = resolverDiaConPreCarga(regimen, fechaYmd, hlg, plan, personaId, indiceCalendario);
+        const esLaboral = esTipoLaboral(res.tipo_dia);
+        if (!mejorResolucion) {
+          mejorResolucion = res;
+          mejorHlg = hlg;
+        } else if (esLaboral && !esTipoLaboral(mejorResolucion.tipo_dia)) {
+          mejorResolucion = res;
+          mejorHlg = hlg;
+        }
       }
+    } else {
+      const ctx = hlgContextos.find((c) => {
+        const fi = c.hlg.fecha_inicio || "";
+        const ff = c.hlg.fecha_fin || "";
+        if (fi && fi > fechaYmd) return false;
+        if (ff && ff < fechaYmd) return false;
+        return true;
+      });
+      mejorHlg = ctx?.hlg || hlgContextos[0]?.hlg;
     }
 
     if (!mejorResolucion || !mejorHlg) continue;
@@ -570,17 +628,17 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
 
     let turnoFinal = mejorResolucion.turno_teorico;
     let origenFinal = mejorResolucion.origen;
-    let tipoDiaFinal = mejorResolucion.tipo_dia;
-    const planEntry = planBundle || hlgContextos.find((c) => c.plan)?.plan;
-    if (planEntry) {
+    let tipoDiaFinal = normalizarTipoDiaMaterializacion(mejorResolucion.tipo_dia);
+    const planCacheFoto = planBundle || hlgContextos.find((c) => c.plan) || null;
+    if (planCacheFoto && mejorResolucion.origen !== "plan_mensual") {
       const merged = aplicarFotoPlanDia({
-        planCache: planEntry,
+        planCache: planCacheFoto,
         personaId,
         fechaYmd,
         tipoDiaFinal,
         turnoFinal,
       });
-      tipoDiaFinal = merged.tipoDiaFinal;
+      tipoDiaFinal = normalizarTipoDiaMaterializacion(merged.tipoDiaFinal);
       turnoFinal = merged.turnoFinal;
     }
     if (overrides.length > 0) {
@@ -592,7 +650,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
 
     const regimenDoc = regCache.get(mejorHlg.regimen_horario_id) || {};
     let turnoCompuestoId = turnoFinal?.turno_id || null;
-    const fotoDiaPlan = planEntry?.plan?.agentes?.find((a) => a.persona_id === personaId)?.dias?.[fechaYmd];
+    const fotoDiaPlan = planCacheFoto?.plan?.agentes?.find((a) => a.persona_id === personaId)?.dias?.[fechaYmd];
     if (!turnoCompuestoId && fotoDiaPlan?.turno_id) {
       turnoCompuestoId = String(fotoDiaPlan.turno_id).trim();
     }
@@ -615,7 +673,7 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
       ...capaSegmentada,
       es_nocturno: turnoFinal?.es_nocturno || false,
       origen: origenFinal,
-      regimen_horario_id: planEntry?.plan?.agentes?.find((a) => a.persona_id === personaId)?.regimen_horario_id
+      regimen_horario_id: planCacheFoto?.plan?.agentes?.find((a) => a.persona_id === personaId)?.regimen_horario_id
         || mejorHlg.regimen_horario_id,
       hlg_id: mejorHlg.id,
       grupo_de_trabajo_id: gdtOperativo,
@@ -627,16 +685,39 @@ async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, m
     encolarCapaTeoricaPorGrupo(batch, asiRef, asiSnap, gdt, capaSlice, personaId, fechaYmd);
 
     const diaKey = diaMesKeyDesdeYmd(fechaYmd);
-    const sinTurnoLaboral = esDiaSinTurnoLaboral(tipoDiaFinal);
+    let tipoDiaVis = normalizarTipoDiaMaterializacion(tipoDiaFinal);
+    const esFeriadoInst = capaSlice.es_feriado === true;
+    const fotoTipoPlan =
+      fotoDiaPlan?.tipo_dia != null ? normalizarTipoDiaMaterializacion(fotoDiaPlan.tipo_dia) : null;
+    const jornadaDesdePlanFoto =
+      fotoDiaPlan &&
+      (fotoTipoPlan === "laborable" || fotoTipoPlan === "guardia") &&
+      Boolean(
+        String(fotoDiaPlan.turno_id || "").trim() ||
+          fotoDiaPlan.ingreso ||
+          fotoDiaPlan.ingreso_iso ||
+          fotoDiaPlan.egreso ||
+          fotoDiaPlan.egreso_iso,
+      );
+    const jornadaResuelta =
+      (tipoDiaVis === "laborable" || tipoDiaVis === "guardia") &&
+      Boolean(
+        turnoFinal?.turno_id ||
+          fotoDiaPlan?.turno_id ||
+          turnoFinal?.ingreso ||
+          turnoFinal?.egreso,
+      );
+    if (esFeriadoInst && jornadaDesdePlanFoto) {
+      tipoDiaVis = fotoTipoPlan === "guardia" ? "guardia" : "laborable";
+    } else if (esFeriadoInst && (tipoDiaVis === "laborable" || tipoDiaVis === "guardia") && !jornadaResuelta) {
+      tipoDiaVis = "no_laborable";
+    }
+    const sinTurnoLaboral = esDiaSinTurnoLaboral(tipoDiaVis);
     const { ingreso: rdaIngreso, egreso: rdaEgreso } = horariosVisDesdeCapaYTurno({
       sinTurnoLaboral,
       capaTeorica: capaSlice,
       turnoFinal,
     });
-    let tipoDiaVis = tipoDiaFinal;
-    if (capaSlice.es_feriado === true && (tipoDiaVis === "laborable" || tipoDiaVis === "guardia")) {
-      tipoDiaVis = "no_laborable";
-    }
     visDias[`dias.${diaKey}.rda_turno_id`] = pickRdaTurnoId(capaSlice, sinTurnoLaboral);
     visDias[`dias.${diaKey}.rda_ingreso`] = rdaIngreso;
     visDias[`dias.${diaKey}.rda_egreso`] = rdaEgreso;
@@ -998,4 +1079,5 @@ module.exports = {
   materializarTurnoTeoricoDia,
   diasDelMes,
   resolverDiaConPreCarga,
+  normalizarTipoDiaMaterializacion,
 };

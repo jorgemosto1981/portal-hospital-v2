@@ -595,10 +595,14 @@ Frontend local actualizado con mejoras de UI.
 - **M6 — Modal revertir**: `window.prompt` reemplazado por modal propio con textarea y validacion.
 - **I8 — AUTORIZADO_SUPERIOR eliminado**: Schema Zod actualizado a `EN_REVISION`, helpContent corregido, acciones de aprobacion actualizadas.
 
+### Deuda arquitectónica — MUY IMPORTANTE (A DEFINIR)
+
+- **DEUDA-CT-001** — **Orquestación única de materialización** (`asi_*` / `vis_*`): reemplazar disparadores dispersos (HLg, plan, remat RRHH) por un orquestador + job de rollover mensual (ventana actual + siguiente). Sin cron hoy → huecos tipo “julio no materializado hasta guardar HLg en junio”. Detalle: [`REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md`](./REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md).
+
 ### Hallazgos de auditoria NO implementados (a futuro)
 
 - **I1**: `materializarTurnoTeoricoDia` es alias de `materializarTurnoMesBatch` — podria optimizarse para un solo dia.
-- **I2**: `rrhhDeshabilitarHlg` solo re-materializa mes actual (falta mes siguiente).
+- **I2**: `rrhhDeshabilitarHlg` solo re-materializa mes actual (falta mes siguiente). Relacionado con DEUDA-CT-001.
 - **I7**: Gates `grillaTurnoEntornoGate` y `turnoRegimenGate` con criterio divergente para EN_REVISION.
 - **M3**: Touch targets por debajo de 44px en GrillaMensualEditor y GrillaMesEquipoTabla.
 - **M4**: Boton "quitar agente" invisible en mobile (opacity-0 group-hover).

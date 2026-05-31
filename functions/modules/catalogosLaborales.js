@@ -13,7 +13,9 @@ const {
   isRangoInvalido,
   assertDocExistsOrNull,
   findSolapeHlc,
-  findSolapeHlgMismoCargo,
+  findSolapeHlgMismoGrupo,
+  assertRegimenHorarioActivo,
+  assertHlgRegimenNoModificadoEnEdicion,
   assertHlgDentroDeHlc,
   assertHldDentroDeHlc,
   buildWarningReconciliacionCarga,
@@ -502,6 +504,10 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   if (!regimenSnap.exists) {
     throw new HttpsError("invalid-argument", `regimen_horario_id inválido o inexistente: ${regimenHorarioId}`);
   }
+  assertRegimenHorarioActivo(regimenSnap, regimenHorarioId);
+  const ref = db.collection(colRaw).doc(id);
+  const existing = await ref.get();
+  assertHlgRegimenNoModificadoEnEdicion(existing, regimenHorarioId);
   const regimenDoc = regimenSnap.data();
   const regimenFechaAncla = laboralYmdOrNull(datos.regimen_fecha_ancla);
   const payload = {
@@ -545,19 +551,17 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     fechaDesdeHlc: toNullableTrimmedString(cargoSnap.get("fecha_desde")),
     fechaHastaHlc: toNullableTrimmedString(cargoSnap.get("fecha_hasta")),
   });
-  const solapeHlg = await findSolapeHlgMismoCargo({
+  const solapeMismoGrupo = await findSolapeHlgMismoGrupo({
     id,
+    personaId,
     grupoId,
-    cargoId,
     fechaInicio: payload.fecha_inicio,
     fechaFin: payload.fecha_fin,
   });
-  if (solapeHlg) {
-    pushWarning(
-      warnings,
-      "VAL-HLG-W002",
-      `Advertencia: esta asignación a grupo se superpone con otra asignación del mismo cargo y mismo grupo (registro relacionado: ${solapeHlg.id}).`,
-      { persona_id: personaId, cargo_id: cargoId, id, grupo_de_trabajo_id: grupoId, conflictivo_id: solapeHlg.id, collection: colRaw },
+  if (solapeMismoGrupo) {
+    throw new HttpsError(
+      "failed-precondition",
+      `[VAL-HLG-014] Ya existe otra asignación de esta persona al mismo grupo de trabajo con fechas superpuestas (registro: ${solapeMismoGrupo.id}). Cerrá o ajustá el período anterior antes de guardar.`,
     );
   }
   const cargaSemanalActual = derivarCargaSemanalDesdeRegimen(regimenDoc);
@@ -568,8 +572,6 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     cargaHorariaTotalHlc: cargoSnap.get("carga_horaria_total"),
   });
   if (warningCarga) warnings.push(warningCarga);
-  const ref = db.collection(colRaw).doc(id);
-  const existing = await ref.get();
   const exists = existing.exists;
   if (!exists) payload.creado_en = now;
   await ref.set(payload, { merge: true });

@@ -42,7 +42,8 @@ export const AYUDA_CAMPOS = {
   fecha_hasta: "Fecha de fin de vigencia (vacío = abierto).",
   cargo_id: "Referencia al registro HLc base del puesto.",
   rol_id: "Rol de la persona en el cargo base (HLc).",
-  regimen_horario_id: "Régimen horario asignado al agente en este grupo (define capa teórica de asistencia).",
+  regimen_horario_id:
+    "Régimen horario activo en catálogo. Para cambiarlo en una asignación vigente, cerrá el HLg y creá uno nuevo desde la fecha del cambio.",
   regimen_fecha_ancla: "Día 1 del ciclo para regímenes rotativos. Para fijos/planificados, dejar vacío.",
   centro_costo_id: "Centro de costo o imputación presupuestaria del dato laboral.",
   escalafon_id: "Escalafón administrativo/laboral del cargo.",

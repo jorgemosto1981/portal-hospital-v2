@@ -66,7 +66,7 @@ export default function VistaOperativaGrupoCard({
   if (nivelMax) chipsActivos.push(`Nivel max: ${nivelMax}`);
   if (warningTipo !== "todos") chipsActivos.push(`Warning: ${warningTipo}`);
   const warningSolape = itemsFiltrados.filter((x) =>
-    (x.warning_codes || []).includes("SOLAPE_CARGO_GRUPO"),
+    (x.warning_codes || []).some((c) => c === "SOLAPE_MISMO_GRUPO" || c === "SOLAPE_CARGO_GRUPO"),
   ).length;
   const warningDesvio = itemsFiltrados.filter((x) =>
     (x.warning_codes || []).includes("DESVIO_CARGA_NORMATIVA"),
@@ -162,7 +162,7 @@ export default function VistaOperativaGrupoCard({
             className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
           >
             <option value="todos">Todos</option>
-            <option value="SOLAPE_CARGO_GRUPO">Solape mismo cargo+grupo</option>
+            <option value="SOLAPE_MISMO_GRUPO">Solape mismo grupo</option>
             <option value="DESVIO_CARGA_NORMATIVA">Desvío carga normativa vs operativa</option>
           </select>
         </div>

@@ -19,6 +19,8 @@
 | [`RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md`](./RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md) | Fan-out MDC multi-`gdt` vía `grupos_trabajo_involucrados_ids` |
 | [`OLEADA_C2_HOJA_RUTA_GSO_EQUIPO.md`](./OLEADA_C2_HOJA_RUTA_GSO_EQUIPO.md) | Grilla equipo jefe — lectura por `gdt` |
 | [`PLAN_CAPA_TEORICA_ASISTENCIA_V2.md`](./PLAN_CAPA_TEORICA_ASISTENCIA_V2.md) | Motor materialización — addendum Fase 6 multi-HLG |
+| [`REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md`](./REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md) | **DEUDA-CT-001** (orquestación materialización) + **DEUDA-GO-001/002** (Grilla Operativa / Calendario) |
+| [`HANDOFF_SESION_2026-05-30_CONTINUACION.md`](./HANDOFF_SESION_2026-05-30_CONTINUACION.md) | **Punto exacto de continuación** — QA, archivos, deploy, piloto |
 | [`RFC_CIERRE_PERIODO_LIQUIDACION_V2.md`](./RFC_CIERRE_PERIODO_LIQUIDACION_V2.md) | Freeze en `vis_*` (ahora scoped por `gdt`) |
 
 ---
@@ -322,6 +324,18 @@ Documentados explícitamente para evitar tickets “bug” futuros.
 
 ---
 
+## 7bis. Deuda registrada (30/05/2026)
+
+| ID | Prioridad | Resumen |
+|----|-----------|---------|
+| **DEUDA-CT-001** | **MUY IMPORTANTE — A DEFINIR** | Orquestador único + materialización proactiva por tiempo (no solo post-HLg/plan) |
+| **DEUDA-GO-001** | ALTA — A INVESTIGAR | Calendario licencias: Titular, Oficina PERSONAL, Portería — turno vacío |
+| **DEUDA-GO-002** | MEDIA — A DEFINIR | Sala Internación visible pero sin paridad visual con Turnos Mensuales |
+
+Detalle: [`REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md`](./REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md).
+
+---
+
 ## 8. Roadmap post-épica (Pasos 2–4 acordados)
 
 | Paso | Contenido | Estado |
@@ -357,6 +371,8 @@ Documentados explícitamente para evitar tickets “bug” futuros.
 | 2026-05-29 | Este documento — biblia de referencia |
 | 2026-05-29 | **Limpieza quirúrgica:** deploy gates `fc54e8b`, mayo scoped (93), strip 244 `asi_*` → 0 legacy |
 | 2026-05-29 | Sesión cerrada — handoff cierre + push `origin`; PR → `master` pendiente |
+| 2026-05-30 | Registro deuda CT-001 (orquestación materialización) + GO-001/002 (Grilla Operativa Calendario) |
+| 2026-05-30 | Titular multicargo: calendarios apilados; lazy `vis_*`; fix NL en materialización; deploy functions + web — ver handoff 30/05 |
 
 ---
 

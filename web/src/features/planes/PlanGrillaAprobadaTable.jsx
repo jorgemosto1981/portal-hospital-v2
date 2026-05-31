@@ -1,8 +1,17 @@
 import {
   etiquetaCeldaAprobada,
-  claseCeldaAprobada,
+  varianteCeldaAprobada,
 } from "./planGrillaAprobadaDisplay.js";
 import { columnasMetadataGrilla } from "./planGrillaColumnas.js";
+import {
+  claseHeaderColumna,
+  claseTdColumna,
+  claseHeaderAgenteSticky,
+  claseCeldaAgenteSticky,
+  clasesTextoCelda,
+} from "../grilla/grillaTurnosVisual.js";
+import GrillaTurnosCeldaChip from "../grilla/GrillaTurnosCeldaChip.jsx";
+import GrillaTurnosLeyenda from "../grilla/GrillaTurnosLeyenda.jsx";
 
 function labelAgente(ag) {
   const nombre = String(
@@ -13,16 +22,14 @@ function labelAgente(ag) {
   return nombre || dni || ag?.persona_id || "—";
 }
 
-function claseHeaderColumna(col) {
-  if (col.esFeriadoCol) return "bg-amber-100 text-amber-800";
-  if (col.esFinde) return "bg-rose-100 text-rose-700";
-  return "bg-slate-100 text-slate-600";
-}
-
 /**
- * @param {{ grillaAprobada: object, labelsPorPersona?: Record<string, { nombre?: string, dni?: string, persona_label?: string }> }} props
+ * @param {{
+ *   grillaAprobada: object;
+ *   labelsPorPersona?: Record<string, { nombre?: string, dni?: string, persona_label?: string }>;
+ *   conLeyenda?: boolean;
+ * }} props
  */
-export default function PlanGrillaAprobadaTable({ grillaAprobada, labelsPorPersona = {} }) {
+export default function PlanGrillaAprobadaTable({ grillaAprobada, labelsPorPersona = {}, conLeyenda = false }) {
   if (!grillaAprobada?.agentes?.length) {
     return <p className="text-sm text-slate-500">Sin grilla aprobada registrada.</p>;
   }
@@ -30,32 +37,40 @@ export default function PlanGrillaAprobadaTable({ grillaAprobada, labelsPorPerso
   const columnas = columnasMetadataGrilla(grillaAprobada);
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm">
-      <table className="min-w-full border-collapse text-xs">
+    <div className="flex min-h-0 flex-col">
+      {conLeyenda ? <GrillaTurnosLeyenda className="px-0" /> : null}
+      <div className="min-h-0 flex-1 overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm">
+      <table className="min-w-max border-separate border-spacing-0 text-xs">
         <thead>
-          <tr className="text-slate-400">
-            <th className="sticky left-0 z-10 h-9 min-w-[14rem] border border-slate-300 bg-slate-100 px-2 py-0.5" />
+          <tr>
+            <th className={`${claseHeaderAgenteSticky()} h-9 border-b`} />
             {columnas.map((col) => (
               <th
                 key={`ds-${col.diaKey}`}
-                className={`h-9 min-w-[2.5rem] border border-slate-300 px-0 py-0.5 text-[8px] font-semibold ${claseHeaderColumna(col)}`}
+                className={`min-w-[2.5rem] h-9 ${claseHeaderColumna({
+                  esFinde: col.esFinde,
+                  esFeriado: col.esFeriadoCol,
+                })}`}
                 title={col.diaKey}
               >
                 {col.letra}
               </th>
             ))}
           </tr>
-          <tr className="bg-slate-50 text-slate-600">
-            <th className="sticky left-0 z-10 h-9 min-w-[14rem] border border-slate-300 bg-slate-100 px-2 py-1 text-left font-semibold text-slate-700">
+          <tr>
+            <th className={`${claseHeaderAgenteSticky()} h-9 border-b`}>
               Agente
             </th>
             {columnas.map((col) => (
               <th
                 key={col.diaKey}
-                className={`h-9 min-w-[2.5rem] border border-slate-300 px-1 py-1 text-center font-semibold ${claseHeaderColumna(col)}`}
+                className={`min-w-[2.5rem] h-9 ${claseHeaderColumna({
+                  esFinde: col.esFinde,
+                  esFeriado: col.esFeriadoCol,
+                })}`}
                 title={col.diaKey}
               >
-                {String(col.num).padStart(2, "0")}
+                <span className="text-[10px] font-bold">{String(col.num).padStart(2, "0")}</span>
               </th>
             ))}
           </tr>
@@ -65,9 +80,9 @@ export default function PlanGrillaAprobadaTable({ grillaAprobada, labelsPorPerso
             const meta = labelsPorPersona[ag.persona_id] || {};
             const rowLabel = labelAgente({ ...ag, ...meta });
             return (
-              <tr key={ag.persona_id}>
-                <td className="sticky left-0 z-10 whitespace-nowrap border border-slate-300 bg-white px-2 py-2 font-medium text-slate-800">
-                  {rowLabel}
+              <tr key={ag.persona_id} className="h-16">
+                <td className={claseCeldaAgenteSticky()}>
+                  <span className="block truncate text-xs font-semibold text-slate-800">{rowLabel}</span>
                 </td>
                 {columnas.map((col) => {
                   const dias = ag?.dias && typeof ag.dias === "object" ? ag.dias : {};
@@ -76,13 +91,19 @@ export default function PlanGrillaAprobadaTable({ grillaAprobada, labelsPorPerso
                     dias[String(col.num).padStart(2, "0")] ||
                     null;
                   const etiqueta = etiquetaCeldaAprobada(cel);
+                  const variant = varianteCeldaAprobada(cel);
                   return (
                     <td
                       key={`${ag.persona_id}-${col.diaKey}`}
-                      className={`h-10 border border-slate-300 px-0.5 py-0.5 text-center text-[10px] leading-tight ${claseCeldaAprobada(cel)}`}
+                      className={claseTdColumna({
+                        esFinde: col.esFinde,
+                        esFeriado: col.esFeriadoCol,
+                      })}
                       title={cel?.fichadas_esperadas != null ? `Fichadas esp.: ${cel.fichadas_esperadas}` : col.diaKey}
                     >
-                      {etiqueta || "—"}
+                      <GrillaTurnosCeldaChip variant={variant} title={col.diaKey}>
+                        <span className={clasesTextoCelda(etiqueta)}>{etiqueta || "—"}</span>
+                      </GrillaTurnosCeldaChip>
                     </td>
                   );
                 })}
@@ -91,6 +112,7 @@ export default function PlanGrillaAprobadaTable({ grillaAprobada, labelsPorPerso
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

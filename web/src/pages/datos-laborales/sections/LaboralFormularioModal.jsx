@@ -120,6 +120,7 @@ export default function LaboralFormularioModal({
           {tipoAlta === "historial_laboral_grupos" && (
             <LaboralFormHlgFields
               modoAvanzado={modoAvanzado}
+              modoEdicion={modoEdicion}
               formData={formData}
               onChangeField={onChangeField}
               opcionesRegimenHorario={opcionesRegimenHorario}

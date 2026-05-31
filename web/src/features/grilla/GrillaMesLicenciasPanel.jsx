@@ -10,7 +10,6 @@ import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
 import { useAsistenciaOutbox } from "./useAsistenciaOutbox.js";
 import { useGrillaMesVista } from "./useGrillaMesVista.js";
-import { resolverGrupoIdInicial, RX_GDT } from "./grillaGrupoUtils.js";
 import { aplicarBatchAsistencia } from "../../services/coberturaParcialService.js";
 import { periodosVentanaJefe } from "../jefe/periodoJefe.js";
 
@@ -99,10 +98,11 @@ export default function GrillaMesLicenciasPanel() {
     if (!cargaPendienteKey) return;
     const [periodoTarget, modoTarget, grupoTarget] = cargaPendienteKey.split("::");
     const grupoNormalizado = grupoTarget === "-" ? "" : grupoTarget;
+    const listoTitular = modoTarget === "TITULAR";
     const listo =
       vista.periodo === periodoTarget &&
       vista.modo === modoTarget &&
-      String(vista.grupoId || "") === grupoNormalizado;
+      (listoTitular || String(vista.grupoId || "") === grupoNormalizado);
     if (!listo) return;
     setCargaPendienteKey("");
     void vista.cargar();
@@ -129,11 +129,10 @@ export default function GrillaMesLicenciasPanel() {
                         toast.error("Sin cargos vigentes en el mes seleccionado.");
                         return;
                       }
-                      const gid = resolverGrupoIdInicial(vista.gruposEquipo, "", "");
                       seleccionarTarjeta({
                         periodo,
                         modo: "TITULAR",
-                        grupoId: gid,
+                        grupoId: "",
                         titulo: `Titular (mi caso) · ${labelPeriodo(periodo)}`,
                       });
                     }}
@@ -260,65 +259,70 @@ export default function GrillaMesLicenciasPanel() {
                     Cargando grilla...
                   </div>
                 </div>
-              ) : vista.esModoTitular && vista.requiereSeleccionGrupo ? (
-                <div className="mx-auto mt-8 max-w-md rounded-xl border border-violet-200 bg-violet-50 p-4">
-                  <p className="text-sm font-semibold text-violet-900">Elegí el cargo para este mes</p>
-                  <p className="mt-1 text-xs text-violet-800">
-                    Tenés más de un grupo de trabajo vigente. La grilla se carga por cargo (bounded context).
-                  </p>
-                  <label className="mt-3 flex flex-col gap-1 text-xs font-medium text-slate-700">
-                    Grupo / cargo
-                    <select
-                      value={vista.grupoId}
-                      onChange={(e) => {
-                        const gid = e.target.value;
-                        vista.setGrupoId(gid);
-                        if (RX_GDT.test(gid)) {
-                          setCargaPendienteKey(`${vista.periodo}::TITULAR::${gid}`);
-                        }
-                      }}
-                      className="h-11 rounded-xl border border-violet-300 bg-white px-3 text-sm"
-                    >
-                      <option value="">Seleccionar cargo…</option>
-                      {vista.gruposEquipo.map((g) => {
-                        const id = String(g.grupo_de_trabajo_id || "");
-                        return (
-                          <option key={id} value={id}>
-                            {String(g.etiqueta_ui || id)}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </label>
-                </div>
               ) : vista.esModoTitular ? (
-                <GrillaMesTitularCalendario
-                  anio={vista.anio}
-                  mes={vista.mes}
-                  diasMap={vista.titularDias}
-                  grupoLabel={vista.grupoActivoLabel}
-                  onDiaClick={({ dia, eventos, grupoLabel }) => {
-                    const cell = vista.titularDias?.[dia] || {};
-                    const fechaYmd = `${vista.anio}-${String(vista.mes).padStart(2, "0")}-${dia}`;
-                    setDiaModal({
-                      dia,
-                      fechaYmd,
-                      personaId,
-                      eventos,
-                      personaLabel: "Mi calendario",
-                      grupoLabel,
-                      turnoTeorico: {
-                        rda_turno_id: cell.rda_turno_id,
-                        es_franco: cell.es_franco,
-                        capa_teorica: {
-                          tipo_dia: cell.es_franco ? "franco" : "laborable",
-                          ingreso: cell.rda_ingreso,
-                          egreso: cell.rda_egreso,
-                        },
-                      },
-                    });
-                  }}
-                />
+                vista.titularCalendarios.length === 0 ? (
+                  <p className="mt-8 text-center text-sm text-slate-600">
+                    Sin cargos vigentes para este mes.
+                  </p>
+                ) : (
+                  <div className="space-y-8 pb-4">
+                    <p className="text-sm text-slate-600">
+                      {vista.titularCalendarios.length === 1
+                        ? "1 cargo vigente en el mes"
+                        : `${vista.titularCalendarios.length} cargos vigentes en el mes`}
+                      {" · "}
+                      {vista.hintModo}
+                    </p>
+                    {vista.titularCalendarios.map((cal) => (
+                      <section
+                        key={cal.grupo_trabajo_id}
+                        className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 shadow-sm"
+                      >
+                        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-violet-200/80 pb-2">
+                          <h4 className="text-base font-semibold text-violet-950">{cal.grupo_label}</h4>
+                          {cal.error_carga ? (
+                            <span className="text-xs font-medium text-amber-800">Error al cargar turnos</span>
+                          ) : cal.existe ? (
+                            <span className="text-xs text-slate-500">Grilla sincronizada</span>
+                          ) : (
+                            <span className="text-xs text-amber-700">Sin materialización aún</span>
+                          )}
+                        </div>
+                        <GrillaMesTitularCalendario
+                          anio={vista.anio}
+                          mes={vista.mes}
+                          diasMap={cal.dias}
+                          grupoLabel={cal.grupo_label}
+                          onDiaClick={({ dia, eventos, grupoLabel }) => {
+                            const cell = cal.dias?.[dia] || {};
+                            const fechaYmd = `${vista.anio}-${String(vista.mes).padStart(2, "0")}-${dia}`;
+                            setDiaModal({
+                              dia,
+                              fechaYmd,
+                              personaId,
+                              grupoTrabajoId: cal.grupo_trabajo_id,
+                              eventos,
+                              personaLabel: "Mi calendario",
+                              grupoLabel: grupoLabel || cal.grupo_label,
+                              turnoTeorico: {
+                                rda_turno_id: cell.rda_turno_id,
+                                es_franco: cell.es_franco,
+                                capa_teorica: {
+                                  tipo_dia: cell.tipo_dia
+                                    || (cell.es_franco ? "franco" : "laborable"),
+                                  ingreso: cell.rda_ingreso,
+                                  egreso: cell.rda_egreso,
+                                  es_feriado: cell.es_feriado,
+                                  tipo_evento_institucional: cell.tipo_evento_institucional,
+                                },
+                              },
+                            });
+                          }}
+                        />
+                      </section>
+                    ))}
+                  </div>
+                )
               ) : (
                 <GrillaMesEquipoTabla
                   anio={vista.anio}
@@ -385,7 +389,7 @@ export default function GrillaMesLicenciasPanel() {
           personaOrigenId={coberturaModal.personaOrigenId}
           personaOrigenLabel={coberturaModal.personaOrigenLabel}
           fechaYmd={coberturaModal.fechaYmd}
-          grupoId={vista.grupoActivoId}
+          grupoId={diaModal?.grupoTrabajoId || vista.grupoActivoId}
           periodo={vista.periodo}
           onCerrar={() => setCoberturaModal(null)}
           onRegistrado={() => {}}
@@ -393,7 +397,7 @@ export default function GrillaMesLicenciasPanel() {
           onAgregarOutbox={(op) =>
             outbox.addOp({
               ...op,
-              grupoId: vista.grupoActivoId || "",
+              grupoId: diaModal?.grupoTrabajoId || vista.grupoActivoId || "",
               periodo: vista.periodo,
             })
           }

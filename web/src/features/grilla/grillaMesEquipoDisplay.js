@@ -2,6 +2,14 @@
  * Presentación de celdas en grilla equipo (calendario licencias).
  */
 
+import {
+  claseHeaderColumna,
+  claseTdColumna,
+  varianteCeldaOperativa,
+} from "./grillaTurnosVisual.js";
+
+export { claseHeaderColumna as claseFondoColumna, claseTdColumna as claseFondoCelda, varianteCeldaOperativa };
+
 /** @param {number} anio @param {number} mes */
 export function columnasCalendario(anio, mes) {
   const totalDias = new Date(anio, mes, 0).getDate();
@@ -44,36 +52,37 @@ export function institucionalPorDiaEnFilas(filas, totalDias) {
   return out;
 }
 
+function normalizarTipoDiaVis(raw) {
+  const t = String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  if (t === "no_laborable" || t === "no-laborable" || t === "nolaborable") return "no_laborable";
+  if (t === "franco") return "franco";
+  return t;
+}
+
+/** Jornada en vis_* (incluye turno en feriado aunque tipo_dia sea no_laborable). */
+export function celdaTieneJornadaVis(cell) {
+  if (!cell || typeof cell !== "object") return false;
+  const ing = String(cell.rda_ingreso || "").trim();
+  const egr = String(cell.rda_egreso || "").trim();
+  if (ing || egr) return true;
+  const tid = String(cell.rda_turno_id || "").trim();
+  return Boolean(tid);
+}
+
 /** @param {object} cell */
 export function textoHorarioTurno(cell) {
   if (!cell || typeof cell !== "object") return "";
-  if (cell.es_franco === true) return "F";
+  const tipo = normalizarTipoDiaVis(cell.tipo_dia);
+  const tieneJornada = celdaTieneJornadaVis(cell);
+  if (tipo === "no_laborable" && !tieneJornada) return "NL";
+  if ((cell.es_franco === true || tipo === "franco") && !tieneJornada) return "F";
   const ing = String(cell.rda_ingreso || "").trim();
   const egr = String(cell.rda_egreso || "").trim();
   if (ing && egr) return `${ing}–${egr}`;
   if (ing) return ing;
   const tid = String(cell.rda_turno_id || "").trim();
   return tid;
-}
-
-/** @param {string|null} tipoInstitucional */
-export function etiquetaInstitucional(tipoInstitucional) {
-  if (tipoInstitucional === "feriado") return "FER";
-  if (tipoInstitucional === "asueto") return "ASU";
-  if (tipoInstitucional) return "INST";
-  return "FER";
-}
-
-export function claseFondoColumna({ esFinde, tipoInstitucional }) {
-  if (tipoInstitucional) return "bg-amber-100 text-amber-900";
-  if (esFinde) return "bg-rose-100 text-rose-700";
-  return "bg-slate-100 text-slate-600";
-}
-
-export function claseFondoCelda({ esFinde, tipoInstitucional, tieneLicencia, esFranco, tieneTurno }) {
-  if (tipoInstitucional) return "bg-amber-50";
-  if (esFranco && !tieneTurno && !tieneLicencia) return "bg-slate-50";
-  if (tieneTurno && !tieneLicencia) return "bg-indigo-50/80";
-  if (esFinde && !tieneLicencia && !tieneTurno) return "bg-rose-50/40";
-  return "bg-white";
 }

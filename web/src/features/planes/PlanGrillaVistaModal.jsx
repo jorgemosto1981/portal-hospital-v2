@@ -24,9 +24,9 @@ export default function PlanGrillaVistaModal({ plan, onClose, labelsExtra = {} }
   if (!planId) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 p-2 md:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose}>
       <div
-        className="mx-auto flex h-full w-full max-w-[98vw] flex-col rounded-2xl bg-white shadow-xl"
+        className="flex h-full w-full flex-col bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-start justify-between border-b border-slate-200 px-4 py-3">
@@ -63,6 +63,7 @@ export default function PlanGrillaVistaModal({ plan, onClose, labelsExtra = {} }
             <p className="text-sm text-red-700">{error}</p>
           ) : (
             <PlanGrillaAprobadaTable
+              conLeyenda
               grillaAprobada={grillaAprobada}
               labelsPorPersona={mergeLabels(labelsExtra, labelsPorPersona)}
             />

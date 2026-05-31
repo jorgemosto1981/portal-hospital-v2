@@ -223,7 +223,7 @@ export function cargaSemanalDesdeHlg(hlgRow, idxRegimenes) {
   return derivarCargaSemanalDesdeRegimen(idxRegimenes.get(regId));
 }
 
-function rangoSolapadoInclusivo(desdeA, hastaA, desdeB, hastaB) {
+export function rangoSolapadoInclusivo(desdeA, hastaA, desdeB, hastaB) {
   if (!desdeA || !desdeB) return false;
   const finA = hastaA || "9999-12-31";
   const finB = hastaB || "9999-12-31";
@@ -373,19 +373,21 @@ export function buildTimelineItemsByPersona({
       const rowHasta = hldHlgFechaFinYmd(row);
       const solape = (hlgRows || []).find((other) => {
         if (String(other.id || "") === String(row.id || "")) return false;
-        const otherDato = idxHld.get(String(other.dato_laboral_id || ""));
-        const otherCargoId = String((otherDato && otherDato.cargo_id) || "");
-        if (!cargoId || !otherCargoId || otherCargoId !== cargoId) return false;
+        if (!registroLaboralActivo(other)) return false;
+        if (String(other.persona_id || "") !== persona) return false;
         if (String(other.grupo_de_trabajo_id || "") !== grupoId) return false;
-        const otherDesde = hldHlgFechaInicioYmd(other);
-        const otherHasta = hldHlgFechaFinYmd(other);
-        return rangoSolapadoInclusivo(rowDesde, rowHasta, otherDesde, otherHasta);
+        return rangoSolapadoInclusivo(
+          rowDesde,
+          rowHasta,
+          hldHlgFechaInicioYmd(other),
+          hldHlgFechaFinYmd(other),
+        );
       });
       if (solape) {
         conflictos.push(
-          `Solape operativo en mismo cargo+grupo detectado (conflicto con ${String(solape.id || "—")}).`,
+          `Solape en mismo grupo de trabajo (conflicto con ${String(solape.id || "—")}).`,
         );
-        warningCodes.push("SOLAPE_CARGO_GRUPO");
+        warningCodes.push("SOLAPE_MISMO_GRUPO");
       }
       const esperado = Number(cargo && cargo.carga_horaria_total);
       const totalHlg = Number(cargoTotalHlg.get(cargoId) || 0);
@@ -487,7 +489,13 @@ export function filterTimelineItemsAdvanced(items, filters) {
     if (onlySolape) {
       const codes = Array.isArray(item.warning_codes) ? item.warning_codes : [];
       const refs = (item.conflictos || []).join(" ").toLowerCase();
-      if (!codes.includes("SOLAPE_CARGO_GRUPO") && !refs.includes("solape")) return false;
+      if (
+        !codes.includes("SOLAPE_MISMO_GRUPO") &&
+        !codes.includes("SOLAPE_CARGO_GRUPO") &&
+        !refs.includes("solape")
+      ) {
+        return false;
+      }
     }
     if (warningTipo !== "todos") {
       const codes = Array.isArray(item.warning_codes) ? item.warning_codes : [];
@@ -539,10 +547,8 @@ export function buildVistaGrupoItems({
       const conflictos = [];
       const solape = rows.find((other) => {
         if (String(other.id || "") === String(row.id || "")) return false;
+        if (String(other.persona_id || "") !== String(row.persona_id || "")) return false;
         if (String(other.grupo_de_trabajo_id || "") !== String(row.grupo_de_trabajo_id || "")) return false;
-        const otherDato = idxHld.get(String(other.dato_laboral_id || ""));
-        const otherCargoId = String((otherDato && otherDato.cargo_id) || "");
-        if (!cargoId || !otherCargoId || otherCargoId !== cargoId) return false;
         return rangoSolapadoInclusivo(
           hldHlgFechaInicioYmd(row),
           hldHlgFechaFinYmd(row),
@@ -551,8 +557,8 @@ export function buildVistaGrupoItems({
         );
       });
       if (solape) {
-        warningCodes.push("SOLAPE_CARGO_GRUPO");
-        conflictos.push(`Solape mismo cargo+grupo con ${String(solape.id || "—")}.`);
+        warningCodes.push("SOLAPE_MISMO_GRUPO");
+        conflictos.push(`Solape mismo grupo con ${String(solape.id || "—")}.`);
       }
       const esperado = Number(cargo && cargo.carga_horaria_total);
       const totalHlg = Number(cargoTotalHlg.get(cargoId) || 0);
@@ -660,7 +666,9 @@ export function buildTimelineResumen(items) {
     if (item.tipo === "HLd") base.hld += 1;
     if (item.tipo === "HLg") base.hlg += 1;
     const codes = Array.isArray(item.warning_codes) ? item.warning_codes : [];
-    if (codes.includes("SOLAPE_CARGO_GRUPO")) base.warningSolapeCargoGrupo += 1;
+    if (codes.includes("SOLAPE_MISMO_GRUPO") || codes.includes("SOLAPE_CARGO_GRUPO")) {
+      base.warningSolapeCargoGrupo += 1;
+    }
     if (codes.includes("DESVIO_CARGA_NORMATIVA")) base.warningDesvioCargaNormativa += 1;
   });
   return base;

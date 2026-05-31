@@ -2,19 +2,18 @@
  * Etiquetas de celda desde grilla_aprobada (snapshot del plan HABILITADO).
  */
 
-import {
-  resolverHorarioCelda,
-  rangoHhmmLabel,
-} from "../../../../shared/utils/horarioInstitucionalDisplay.js";
+import { rangoHhmmLabel } from "../../../../shared/utils/horarioInstitucionalDisplay.js";
+import { horarioVisibleEnCelda } from "../grilla/grillaTurnosVisual.js";
 
 function horarioDesdeCelda(celda) {
-  const { ingreso, egreso } = resolverHorarioCelda(celda);
+  const { ingreso, egreso } = horarioVisibleEnCelda(celda);
   return rangoHhmmLabel(ingreso, egreso);
 }
 
 export function etiquetaCeldaAprobada(celda) {
   if (!celda || typeof celda !== "object") return "";
-  if (celda.es_franco || celda.tipo_dia === "franco" || celda.tipo_dia === "no_laborable") return "F";
+  if (celda.tipo_dia === "no_laborable") return "NL";
+  if (celda.es_franco || celda.tipo_dia === "franco") return "F";
   if (
     (celda.es_feriado || celda.tipo_evento_institucional === "feriado" || celda.tipo_evento_institucional === "asueto") &&
     !celda.turno_id &&
@@ -30,19 +29,10 @@ export function etiquetaCeldaAprobada(celda) {
   return "";
 }
 
-export function claseCeldaAprobada(celda) {
-  if (!celda || typeof celda !== "object") return "bg-white";
-  if (celda.es_franco || celda.tipo_dia === "franco" || celda.tipo_dia === "no_laborable") {
-    return "bg-slate-100 text-slate-700";
-  }
-  const esInstitucional =
-    celda.es_feriado === true ||
-    celda.tipo_evento_institucional === "feriado" ||
-    celda.tipo_evento_institucional === "asueto";
-  if (esInstitucional) return "bg-amber-100 text-amber-900";
-  if (celda.turno_id || celda.turno_compuesto_id) return "bg-emerald-50 text-emerald-900";
-  return "bg-white";
-}
+export {
+  varianteCeldaAprobada,
+  celdaTieneJornadaLaboral,
+} from "../grilla/grillaTurnosVisual.js";
 
 export function columnasDesdeGrillaAprobada(grillaAprobada) {
   const set = new Set();

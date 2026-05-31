@@ -204,7 +204,7 @@ export default function TimelineLaboralPersonaCard({
             className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-blue-600 focus:ring-2"
           >
             <option value="todos">Todos</option>
-            <option value="SOLAPE_CARGO_GRUPO">Solape mismo cargo+grupo</option>
+            <option value="SOLAPE_MISMO_GRUPO">Solape mismo grupo</option>
             <option value="DESVIO_CARGA_NORMATIVA">Desvío carga normativa vs operativa</option>
           </select>
         </div>

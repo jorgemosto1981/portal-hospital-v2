@@ -173,6 +173,19 @@ export default function DatosLaborales() {
   const opcionesTipoActo = rowsByCollection.cfg_tipo_acto_designacion || [];
   const opcionesRegimenHorario = rowsByCollection.cfg_regimen_horario || [];
   const idxRegimenes = crearIndicePorId(opcionesRegimenHorario);
+  const regimenHorarioOriginalHlg = useMemo(() => {
+    if (!modoEdicion || tipoAlta !== "historial_laboral_grupos") return "";
+    const row = hlgRows.find((r) => String(r.id) === String(registroEditId || ""));
+    return row ? String(row.regimen_horario_id || "") : "";
+  }, [modoEdicion, tipoAlta, registroEditId, hlgRows]);
+  const opcionesRegimenHorarioActivos = useMemo(() => {
+    const list = opcionesRegimenHorario || [];
+    const permitirId = String(regimenHorarioOriginalHlg || formData.regimen_horario_id || "").trim();
+    return list.filter((r) => {
+      if (r.activo !== false) return true;
+      return permitirId && String(r.id) === permitirId;
+    });
+  }, [opcionesRegimenHorario, regimenHorarioOriginalHlg, formData.regimen_horario_id]);
   const opcionesCentroCosto = rowsByCollection.cfg_centro_costo || [];
 
   async function refrescarClaimsSesion() {
@@ -333,8 +346,22 @@ export default function DatosLaborales() {
         tipoAlta,
         formData,
         idxHlc,
+        idxRegimenes,
+        modoEdicion,
+        registroEditId,
+        regimenHorarioOriginalId: regimenHorarioOriginalHlg,
+        hlgRows,
       }),
-    [tipoAlta, formData, idxHlc],
+    [
+      tipoAlta,
+      formData,
+      idxHlc,
+      idxRegimenes,
+      modoEdicion,
+      registroEditId,
+      regimenHorarioOriginalHlg,
+      hlgRows,
+    ],
   );
   const puedeGuardarFormulario = !errorValidacionFormulario;
 
@@ -801,7 +828,7 @@ export default function DatosLaborales() {
             opcionesFuncion={opcionesFuncion}
             opcionesModalidadJornada={opcionesModalidadJornada}
             opcionesTipoActo={opcionesTipoActo}
-            opcionesRegimenHorario={opcionesRegimenHorario}
+            opcionesRegimenHorario={opcionesRegimenHorarioActivos}
             opcionesCentroCosto={opcionesCentroCosto}
             opcionesCausalFinAsignacion={opcionesCausalFinAsignacion}
             errorValidacionFormulario={errorValidacionFormulario}

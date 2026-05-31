@@ -270,6 +270,9 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
   }
 
   if (tipoPlan === "mensual") {
+    if (!exists) {
+      await assertPlanMensualConAgentesPlanificados(grupoId, especificos.periodo);
+    }
     await assertSinPlanMensualVigente({
       grupoId,
       periodo: especificos.periodo,
@@ -1058,6 +1061,43 @@ function hlgSolapaPeriodo(hlg, primerDia, ultimoDia) {
   return true;
 }
 
+function regimenDocEsPlanificado(regimenDoc) {
+  return regimenDoc && regimenDoc.tipo_patron === "planificado";
+}
+
+/** Al menos un HLg activo del grupo en el mes con régimen planificado. */
+async function hayAgentesPlanificadosEnGrupoMes(grupoId, periodo) {
+  const { primerDia, ultimoDia } = rangoPeriodoMensual(periodo);
+  const hlgSnap = await db.collection("historial_laboral_grupos")
+    .where("grupo_de_trabajo_id", "==", grupoId)
+    .where("activo", "==", true)
+    .get();
+  if (hlgSnap.empty) return false;
+
+  const regimenIds = new Set();
+  for (const doc of hlgSnap.docs) {
+    const d = doc.data();
+    if (!hlgSolapaPeriodo(d, primerDia, ultimoDia)) continue;
+    const rid = typeof d.regimen_horario_id === "string" ? d.regimen_horario_id.trim() : "";
+    if (rid) regimenIds.add(rid);
+  }
+  if (regimenIds.size === 0) return false;
+
+  const refs = [...regimenIds].map((rid) => db.collection("cfg_regimen_horario").doc(rid));
+  const snaps = await db.getAll(...refs);
+  return snaps.some((s) => s.exists && regimenDocEsPlanificado(s.data()));
+}
+
+async function assertPlanMensualConAgentesPlanificados(grupoId, periodo) {
+  const ok = await hayAgentesPlanificadosEnGrupoMes(grupoId, periodo);
+  if (!ok) {
+    err(
+      "failed-precondition",
+      "[PLT-017] Este grupo no tiene agentes con régimen planificado en el período. No se puede crear un plan mensual; use la vista de equipo (turnos derivados del régimen).",
+    );
+  }
+}
+
 /** Una fila por persona_id: preferir HLG con régimen y fecha_inicio más reciente. */
 function deduplicarPersonasGrupoPorPersona(rows) {
   const byPersona = new Map();
@@ -1119,7 +1159,14 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
     .where("activo", "==", true)
     .get();
 
-  if (hlgSnap.empty) return { personas_grupo: [], regimenes: {}, periodo: periodoNorm };
+  if (hlgSnap.empty) {
+    return {
+      personas_grupo: [],
+      regimenes: {},
+      periodo: periodoNorm,
+      hay_agentes_planificados: false,
+    };
+  }
 
   const hlgFilas = [];
   for (const doc of hlgSnap.docs) {
@@ -1230,10 +1277,13 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
     }
   }
 
+  const hayAgentesPlanificados = Object.values(regimenes).some((reg) => regimenDocEsPlanificado(reg));
+
   return {
     personas_grupo: personasGrupo,
     regimenes,
     periodo: periodoNorm,
+    hay_agentes_planificados: hayAgentesPlanificados,
     licencias_por_persona_ymd: licenciasPorPersonaYmd,
     calendario_institucional_mes: calendarioInstitucionalMes,
   };

@@ -2,7 +2,11 @@ import {
   formatDateDdMmAaaa,
   hlcFechaDesdeYmd,
   hlcFechaHastaYmd,
+  hldHlgFechaFinYmd,
+  hldHlgFechaInicioYmd,
   isoToDateInput,
+  rangoSolapadoInclusivo,
+  registroLaboralActivo,
 } from "./utils.js";
 
 export function buildFormDataFromRecord({ record, idxHld, prevFormData }) {
@@ -97,7 +101,16 @@ export function requiredFieldsByTipo(tipoAlta) {
   ];
 }
 
-export function validateLaboralForm({ tipoAlta, formData, idxHlc }) {
+export function validateLaboralForm({
+  tipoAlta,
+  formData,
+  idxHlc,
+  idxRegimenes,
+  modoEdicion,
+  registroEditId,
+  regimenHorarioOriginalId,
+  hlgRows,
+}) {
   const faltantes = requiredFieldsByTipo(tipoAlta).filter((k) => !String(formData[k] || "").trim());
   if (faltantes.length > 0) return `Completá los campos obligatorios: ${faltantes.join(", ")}`;
   if (formData.persona_id && !/^per_/i.test(formData.persona_id.trim())) {
@@ -137,8 +150,39 @@ export function validateLaboralForm({ tipoAlta, formData, idxHlc }) {
     }
   }
   if (tipoAlta === "historial_laboral_grupos") {
-    if (!String(formData.regimen_horario_id || "").trim()) {
+    const regId = String(formData.regimen_horario_id || "").trim();
+    if (!regId) {
       return "El régimen horario es obligatorio para la asignación a grupo.";
+    }
+    const reg = idxRegimenes ? idxRegimenes.get(regId) : null;
+    if (reg && reg.activo === false) {
+      return "El régimen horario seleccionado está inactivo en catálogo.";
+    }
+    const regimenOriginal = String(regimenHorarioOriginalId || "").trim();
+    if (modoEdicion && regimenOriginal && regId !== regimenOriginal) {
+      return "No podés cambiar el régimen horario en una asignación existente. Cerrá este grupo (fecha de fin) y creá una nueva asignación desde la fecha del cambio.";
+    }
+    const personaId = String(formData.persona_id || "").trim();
+    const grupoId = String(formData.grupo_de_trabajo_id || "").trim();
+    const fechaDesde = String(formData.fecha_desde || "").trim();
+    const fechaHasta = String(formData.fecha_hasta || "").trim();
+    const editId = modoEdicion ? String(registroEditId || "").trim() : "";
+    if (personaId && grupoId && fechaDesde && Array.isArray(hlgRows)) {
+      const solape = hlgRows.find((other) => {
+        if (editId && String(other.id || "") === editId) return false;
+        if (!registroLaboralActivo(other)) return false;
+        if (String(other.persona_id || "") !== personaId) return false;
+        if (String(other.grupo_de_trabajo_id || "") !== grupoId) return false;
+        return rangoSolapadoInclusivo(
+          fechaDesde,
+          fechaHasta,
+          hldHlgFechaInicioYmd(other),
+          hldHlgFechaFinYmd(other),
+        );
+      });
+      if (solape) {
+        return `Ya existe otra asignación al mismo grupo con fechas superpuestas (${String(solape.id || "—")}). Ajustá el período o cerrá la asignación anterior.`;
+      }
     }
     const cargoRef = idxHlc && formData.cargo_id ? idxHlc.get(String(formData.cargo_id || "")) : null;
     if (cargoRef) {

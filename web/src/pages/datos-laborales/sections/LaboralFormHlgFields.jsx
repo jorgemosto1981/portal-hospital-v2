@@ -3,6 +3,7 @@ import LabeledTextField from "../components/LabeledTextField.jsx";
 
 export default function LaboralFormHlgFields({
   modoAvanzado,
+  modoEdicion,
   formData,
   onChangeField,
   opcionesRegimenHorario,
@@ -10,6 +11,11 @@ export default function LaboralFormHlgFields({
   opcionesFuncion,
   ayudaCampos,
 }) {
+  const regimenBloqueadoEnEdicion = modoEdicion && !!String(formData.regimen_horario_id || "").trim();
+  const ayudaRegimen = regimenBloqueadoEnEdicion
+    ? `${ayudaCampos.regimen_horario_id} En edición el régimen no se modifica: cerrá el período y creá una nueva asignación desde la fecha del cambio.`
+    : ayudaCampos.regimen_horario_id;
+
   return (
     <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
       <LabeledSelect
@@ -18,9 +24,10 @@ export default function LaboralFormHlgFields({
         onValueChange={(v) => onChangeField("regimen_horario_id", v)}
         options={opcionesRegimenHorario}
         placeholder="Seleccionar régimen..."
-        helpText={ayudaCampos.regimen_horario_id}
+        helpText={ayudaRegimen}
         technicalName="regimen_horario_id"
         showTechnicalName={modoAvanzado}
+        disabled={regimenBloqueadoEnEdicion}
         required
       />
       <LabeledTextField

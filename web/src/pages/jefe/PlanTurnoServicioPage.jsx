@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Card from "../../components/ui/Card.jsx";
 import {
   callListarPlanesTurnoServicio,
+  callListarContextoPlanGrupo,
   callGuardarPlanTurnoServicio,
   callEnviarPlanTurnoServicio,
   callAprobarPlanTurnoServicio,
@@ -22,8 +23,8 @@ import PlanPerpetualViewer from "./planes/PlanPerpetualViewer.jsx";
 import BadgeEstadoPlan, { LABEL_ESTADO } from "../../components/ui/BadgeEstadoPlan.jsx";
 import { periodosVentanaJefe } from "../../features/jefe/periodoJefe.js";
 
-/** Plan vigente a mostrar cuando hay varios docs (mismo grupo+período). HABILITADO gana sobre pendientes. */
-const ORDEN_PLAN_CANONICO = ["HABILITADO", "EN_REVISION", "ENVIADO", "BORRADOR", "CERRADO"];
+/** Plan vigente a mostrar cuando hay varios docs (mismo grupo+período). HABILITADO gana; ENVIADO antes que EN_REVISION. */
+const ORDEN_PLAN_CANONICO = ["HABILITADO", "ENVIADO", "EN_REVISION", "BORRADOR", "CERRADO"];
 
 function planCanonicaGrupo(items) {
   const list = Array.isArray(items) ? items : [];
@@ -85,7 +86,7 @@ function iconoEstadoGrupo(estado) {
   }
 }
 
-function estiloTarjetaMisTurnos(estado, activo, esHistorico) {
+function estiloTarjetaMisTurnos(estado, activo, esHistorico, verEquipoSinPlan = false) {
   const baseActivo = activo ? "ring-2 ring-offset-1" : "";
   if (esHistorico) {
     return activo
@@ -93,6 +94,11 @@ function estiloTarjetaMisTurnos(estado, activo, esHistorico) {
       : "border-slate-200 bg-slate-100/80 text-slate-700 hover:border-slate-300";
   }
   if (estado === "SIN_PLAN") {
+    if (verEquipoSinPlan) {
+      return activo
+        ? `border-slate-300 bg-slate-50 text-slate-800 ring-slate-300 ${baseActivo}`
+        : "border-slate-200 bg-slate-50/90 text-slate-700 hover:border-slate-300";
+    }
     return activo
       ? `border-rose-300 bg-rose-50 text-rose-900 ring-rose-300 ${baseActivo}`
       : "border-rose-200 bg-rose-50/80 text-rose-900 hover:border-rose-300";
@@ -107,8 +113,12 @@ function estiloTarjetaMisTurnos(estado, activo, esHistorico) {
     : "border-amber-200 bg-amber-50/80 text-amber-900 hover:border-amber-300";
 }
 
-function etiquetaEstadoTarjeta(estado, esHistorico = false) {
-  if (estado === "SIN_PLAN") return esHistorico ? "Sin Turno" : "Crear Turno";
+function etiquetaEstadoTarjeta(estado, esHistorico = false, hayPlanificados) {
+  if (estado === "SIN_PLAN") {
+    if (esHistorico) return "Sin Turno";
+    if (hayPlanificados === false) return "Ver equipo";
+    return "Crear Turno";
+  }
   return LABEL_ESTADO[estado] || estado;
 }
 
@@ -295,39 +305,51 @@ export default function PlanTurnoServicioPage() {
     }
   }, [grupoId, periodo]);
 
-  useEffect(() => {
+  const cargarResumenGrupos = useCallback(async () => {
     if (!periodosPermitidos.length) {
       setResumenGrupoPeriodo({});
       return;
     }
+    const resumen = {};
+    for (const p of periodosPermitidos) {
+      const gruposObjetivo = (gruposPorPeriodo[p] || []).slice(0, 30);
+      const resultados = await Promise.all(
+        gruposObjetivo.map(async (g) => {
+          try {
+            const [resPlanes, resCtx] = await Promise.all([
+              callListarPlanesTurnoServicio({ grupo_id: g.id, periodo: p }),
+              callListarContextoPlanGrupo({ grupo_id: g.id, periodo: p }),
+            ]);
+            const items = resPlanes?.data?.items || [];
+            return [
+              g.id,
+              {
+                estado: estadoPrincipalGrupo(items),
+                cantidad: items.length,
+                items,
+                hay_planificados: resCtx?.data?.hay_agentes_planificados === true,
+              },
+            ];
+          } catch {
+            return [g.id, { estado: "SIN_PLAN", cantidad: 0, items: [], hay_planificados: false }];
+          }
+        }),
+      );
+      resumen[p] = Object.fromEntries(resultados);
+    }
+    setResumenGrupoPeriodo(resumen);
+  }, [periodosPermitidos, gruposPorPeriodo]);
+
+  useEffect(() => {
     let cancel = false;
     (async () => {
-      const resumen = {};
-      for (const p of periodosPermitidos) {
-        const gruposObjetivo = (gruposPorPeriodo[p] || []).slice(0, 30);
-        const resultados = await Promise.all(
-          gruposObjetivo.map(async (g) => {
-            try {
-              const res = await callListarPlanesTurnoServicio({
-                grupo_id: g.id,
-                periodo: p,
-              });
-              const items = res?.data?.items || [];
-              return [g.id, { estado: estadoPrincipalGrupo(items), cantidad: items.length, items }];
-            } catch {
-              return [g.id, { estado: "SIN_PLAN", cantidad: 0, items: [] }];
-            }
-          }),
-        );
-        resumen[p] = Object.fromEntries(resultados);
-      }
+      await cargarResumenGrupos();
       if (cancel) return;
-      setResumenGrupoPeriodo(resumen);
     })();
     return () => {
       cancel = true;
     };
-  }, [periodosPermitidos, gruposPorPeriodo]);
+  }, [cargarResumenGrupos]);
 
   useEffect(() => {
     if (grupoId.trim()) cargar();
@@ -361,6 +383,7 @@ export default function PlanTurnoServicioPage() {
       showFeedback(`Plan ${res.data?.modo || "guardado"} (${res.data?.id}).`);
       setPlanEdicion(null);
       await cargar();
+      await cargarResumenGrupos();
       return {
         ok: true,
         id: res.data?.id,
@@ -374,7 +397,7 @@ export default function PlanTurnoServicioPage() {
     } finally {
       setOperando(false);
     }
-  }, [cargar]);
+  }, [cargar, cargarResumenGrupos]);
 
   const handleTransicion = useCallback(async (accion, planId, extras) => {
     setOperando(true);
@@ -449,13 +472,15 @@ export default function PlanTurnoServicioPage() {
         default:
           break;
       }
+      setPlanOpciones(null);
       await cargar();
+      await cargarResumenGrupos();
     } catch (e) {
       setError(e?.message || `Error en acción ${accion}.`);
     } finally {
       setOperando(false);
     }
-  }, [cargar]);
+  }, [cargar, cargarResumenGrupos]);
 
   const grupoLabel = useMemo(() => {
     const g = gruposDisponibles.find((x) => x.id === grupoId);
@@ -490,6 +515,19 @@ export default function PlanTurnoServicioPage() {
       }
 
       if (meta.estado === "SIN_PLAN" || items.length === 0) {
+        let hayPlanificados = meta.hay_planificados === true;
+        if (meta.hay_planificados !== true && meta.hay_planificados !== false) {
+          try {
+            const ctx = await callListarContextoPlanGrupo({ grupo_id: g.id, periodo: p });
+            hayPlanificados = ctx?.data?.hay_agentes_planificados === true;
+          } catch {
+            hayPlanificados = false;
+          }
+        }
+        if (!hayPlanificados) {
+          setPlanEdicion({ modoVistaEquipo: true, tipo_plan: "mensual" });
+          return;
+        }
         setPlanEdicion({ nuevo: true, tipo_plan: "mensual" });
         return;
       }
@@ -552,16 +590,19 @@ export default function PlanTurnoServicioPage() {
                     const meta = resumenGrupoPeriodo[p]?.[g.id] || { estado: "SIN_PLAN", cantidad: 0 };
                     const activo = grupoId === g.id && periodo === p;
                     const esHistorico = idx === 0;
+                    const verEquipoSinPlan =
+                      meta.estado === "SIN_PLAN" && !esHistorico && meta.hay_planificados === false;
                     return (
                       <button
                         key={`${p}-${g.id}`}
                         type="button"
                         onClick={() => void seleccionarTarjetaPlan(p, g, esHistorico)}
-                        className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${estiloTarjetaMisTurnos(meta.estado, activo, esHistorico)}`}
+                        className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${estiloTarjetaMisTurnos(meta.estado, activo, esHistorico, verEquipoSinPlan)}`}
                       >
                         <span className="font-medium">{g.label}</span>
                         <span className="text-xs opacity-85">
-                          {iconoEstadoGrupo(meta.estado)} {etiquetaEstadoTarjeta(meta.estado, esHistorico)}
+                          {iconoEstadoGrupo(meta.estado)}{" "}
+                          {etiquetaEstadoTarjeta(meta.estado, esHistorico, meta.hay_planificados)}
                         </span>
                       </button>
                     );
@@ -639,7 +680,8 @@ export default function PlanTurnoServicioPage() {
       {/* Modal Grilla Mensual / Plan Perpetuo */}
       {planEdicion && planEdicion.tipo_plan === "mensual" && (
         <GrillaMensualEditor
-          plan={planEdicion.nuevo ? null : planEdicion}
+          plan={planEdicion.nuevo || planEdicion.modoVistaEquipo ? null : planEdicion}
+          modoVistaEquipo={Boolean(planEdicion.modoVistaEquipo)}
           grupoId={grupoId}
           grupoLabel={grupoLabel}
           periodo={periodo}
@@ -680,7 +722,12 @@ export default function PlanTurnoServicioPage() {
                 </button>
               )}
               {(planOpciones.plan.estado === "BORRADOR" || planOpciones.plan.estado === "EN_REVISION") && (
-                <button type="button" disabled={operando} onClick={() => { void handleTransicion("enviar", planOpciones.plan.id); setPlanOpciones(null); }} className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-50">
+                <button
+                  type="button"
+                  disabled={operando}
+                  onClick={() => void handleTransicion("enviar", planOpciones.plan.id)}
+                  className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                >
                   {planOpciones.plan.estado === "EN_REVISION" ? "Reenviar" : "Enviar"}
                 </button>
               )}
@@ -689,27 +736,37 @@ export default function PlanTurnoServicioPage() {
         </div>
       )}
 
-      {/* Modal detalle read-only */}
+      {/* Modal detalle read-only — mismo marco visual que Ver turnos del equipo */}
       {planDetalle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={() => setPlanDetalle(null)}>
-          <div className="relative flex h-[96vh] w-[98vw] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="px-6 pt-6 text-lg font-semibold text-slate-900">
-                Detalle del plan <span className="font-mono text-sm text-slate-500">{planDetalle.id}</span>
-              </h2>
-              <button onClick={() => setPlanDetalle(null)} className="mr-6 mt-6 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+        <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setPlanDetalle(null)}>
+          <div className="flex h-full w-full flex-col bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Detalle del plan <span className="font-mono text-sm text-slate-500">{planDetalle.id}</span>
+                </h2>
+                <p className="text-sm text-slate-500">
+                  {planDetalle.tipo_plan === "perpetuo" ? "Perpetuo" : "Mensual"}
+                  {" · "}
+                  <BadgeEstadoPlan estado={planDetalle.estado} />
+                  {" · "}
+                  {planDetalle.grupo_label || grupoLabel || planDetalle.grupo_id}
+                  {planDetalle.periodo ? ` · ${planDetalle.periodo}` : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPlanDetalle(null)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div className="min-h-0 flex-1 space-y-3 overflow-auto px-6 pb-6 text-sm text-slate-700">
-              <p><span className="font-medium">Tipo:</span> {planDetalle.tipo_plan === "perpetuo" ? "Perpetuo" : "Mensual"}</p>
-              <p><span className="font-medium">Estado:</span> <BadgeEstadoPlan estado={planDetalle.estado} /></p>
-              <p><span className="font-medium">Grupo:</span> {planDetalle.grupo_label || grupoLabel || planDetalle.grupo_id}</p>
-              {planDetalle.periodo && <p><span className="font-medium">Período:</span> {planDetalle.periodo}</p>}
+            <div className="min-h-0 flex-1 overflow-auto px-5 pb-5 text-sm text-slate-700">
               {planDetalle.vigente_desde && (
-                <p><span className="font-medium">Vigencia:</span> {planDetalle.vigente_desde} → {planDetalle.vigente_hasta || "∞"}</p>
+                <p className="mt-2"><span className="font-medium">Vigencia:</span> {planDetalle.vigente_desde} → {planDetalle.vigente_hasta || "∞"}</p>
               )}
               <p><span className="font-medium">Agentes:</span> {planDetalle.agentes?.length || 0}</p>
               {planDetalle.observaciones_rechazo && (
@@ -719,12 +776,13 @@ export default function PlanTurnoServicioPage() {
                 </div>
               )}
               {planDetalle.tipo_plan === "mensual" && (
-                <div className="mt-4">
-                  <h3 className="mb-2 text-sm font-semibold text-slate-800">Grilla aprobada (histórico)</h3>
+                <div className="mt-3 flex min-h-[50vh] flex-col">
+                  <h3 className="mb-1 text-sm font-semibold text-slate-800">Grilla aprobada (histórico)</h3>
                   {planDetalleGrillaLoading ? (
                     <p className="text-sm text-slate-600">Cargando grilla aprobada…</p>
                   ) : (
                     <PlanGrillaAprobadaTable
+                      conLeyenda
                       grillaAprobada={planDetalleGrilla}
                       labelsPorPersona={{
                         ...Object.fromEntries(

@@ -6,6 +6,20 @@ import {
   generarGrillaDesdeRegimen,
   labelTipoRegimen,
 } from "./planGrillaRegimenUtils.js";
+import {
+  FRANCO_STYLE,
+  BLOQUEADO_STYLE,
+  claseHeaderColumna,
+  claseTdColumna,
+  claseHeaderAgenteSticky,
+  claseCeldaAgenteSticky,
+  claseBordeTablaResumen,
+  clasesTextoCelda,
+  CHIP_BASE,
+  estiloChipDesdeVariante,
+  varianteCeldaMensual,
+} from "../../../features/grilla/grillaTurnosVisual.js";
+import GrillaTurnosLeyenda from "../../../features/grilla/GrillaTurnosLeyenda.jsx";
 
 const PALETA_COLORES_BASE = [
   { bg: "bg-yellow-300 hover:bg-yellow-400", text: "text-yellow-950" },
@@ -19,12 +33,6 @@ const PALETA_COLORES_BASE = [
   { bg: "bg-violet-300 hover:bg-violet-400", text: "text-violet-950" },
   { bg: "bg-teal-300 hover:bg-teal-400", text: "text-teal-950" },
 ];
-const FRANCO_STYLE = { bg: "bg-slate-400 hover:bg-slate-500", text: "text-slate-900" };
-const NO_LABORABLE_STYLE = { bg: "bg-slate-200 hover:bg-slate-300", text: "text-slate-700" };
-const BLOQUEADO_STYLE = { bg: "bg-slate-100", text: "text-slate-300" };
-const NO_ASIGNADO_STYLE = { bg: "bg-slate-400 hover:bg-slate-500", text: "text-slate-900" };
-const LICENCIA_STYLE = { bg: "bg-fuchsia-300", text: "text-fuchsia-950" };
-const INSTITUCIONAL_STYLE = { bg: "bg-amber-300", text: "text-amber-950" };
 
 function diasDelMes(periodo) {
   const [anio, mes] = periodo.split("-").map(Number);
@@ -234,10 +242,12 @@ function detalleHorariosRegimen(regimen) {
 function buildPaletaDinamica(regimenes) {
   const turnosUnion = new Map();
   for (const reg of Object.values(regimenes || {})) {
+    if (!esRegimenPlanificado(reg)) continue;
     for (const t of reg.turnos_disponibles || []) {
-      if (!turnosUnion.has(t.turno_id)) {
-        turnosUnion.set(t.turno_id, t.etiqueta || t.turno_id);
-      }
+      const tid = String(t.turno_id || "").trim();
+      if (!tid || turnosUnion.has(tid)) continue;
+      const etiqueta = String(t.etiqueta || "").trim();
+      turnosUnion.set(tid, etiqueta || tid);
     }
   }
   const paleta = {};
@@ -278,16 +288,9 @@ function normalizarFilaDias(fila, dias) {
   return base;
 }
 
-function clasesTextoCelda(valor) {
-  const len = String(valor || "").trim().length;
-  if (len <= 5) return "text-[10px]";
-  if (len <= 9) return "text-[9px]";
-  if (len <= 13) return "text-[8px]";
-  return "text-[7px]";
-}
-
 export default function GrillaMensualEditor({
   plan,
+  modoVistaEquipo = false,
   grupoId,
   grupoLabel,
   periodo,
@@ -320,7 +323,6 @@ export default function GrillaMensualEditor({
   });
 
   const [paleta, setPaleta] = useState("");
-  const [altoContraste, setAltoContraste] = useState(false);
   const [errLocal, setErrLocal] = useState("");
   const [comentariosJefe, setComentariosJefe] = useState(() =>
     typeof plan?.comentarios_jefe === "string" ? plan.comentarios_jefe : "",
@@ -362,18 +364,32 @@ export default function GrillaMensualEditor({
     };
   }, [plan?.id, grupoId, periodo]);
 
+  const idxRegimenes = useMemo(() => contexto?.regimenes || {}, [contexto]);
+
   const turnosPaleta = useMemo(() => {
     if (!contexto?.regimenes) return {};
     return buildPaletaDinamica(contexto.regimenes);
   }, [contexto]);
 
-  // Seleccionar primer turno disponible como pincel por defecto
+  const hayFilasPlanificadas = useMemo(
+    () =>
+      agentes.some((ag) =>
+        esRegimenPlanificado(idxRegimenes[ag.regimen_horario_id]),
+      ),
+    [agentes, idxRegimenes],
+  );
+
+  // Seleccionar primer turno planificado como pincel por defecto
   useEffect(() => {
     const keys = Object.keys(turnosPaleta);
-    if (keys.length > 0 && !paleta) setPaleta(keys[0]);
+    if (keys.length === 0) {
+      if (paleta) setPaleta("");
+      return;
+    }
+    if (!paleta || (paleta !== "F" && !keys.includes(paleta))) {
+      setPaleta(keys[0]);
+    }
   }, [turnosPaleta, paleta]);
-
-  const idxRegimenes = useMemo(() => contexto?.regimenes || {}, [contexto]);
 
   const agentesNoPlanificadosEnPlan = useMemo(() => {
     return agentes.filter((ag) => !esRegimenPlanificado(idxRegimenes[ag.regimen_horario_id]));
@@ -455,7 +471,7 @@ export default function GrillaMensualEditor({
   // La grilla usa todos los agentes vigentes del grupo en el período (sin selección manual).
 
   const aplicarPincelEnCelda = useCallback((pid, ymd) => {
-    if (!esFilaEditable(pid)) return;
+    if (!paleta || !esFilaEditable(pid)) return;
     const key = `${pid}:${ymd}:${paleta}`;
     if (ultimaCeldaPintadaRef.current === key) return;
     const enriquecido = agentesEnriquecidos[pid];
@@ -617,12 +633,22 @@ export default function GrillaMensualEditor({
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">
-              {plan ? "Editar Turno Mensual" : "Crear Turno Mensual"}
+              {modoVistaEquipo
+                ? "Ver turnos del equipo"
+                : plan
+                  ? "Editar Turno Mensual"
+                  : "Crear Turno Mensual"}
             </h2>
             <p className="text-sm text-slate-500">
               Período: <strong className="font-semibold text-slate-700">{periodo}</strong>
               {" · "}
               Grupo: <strong className="font-semibold text-slate-700">{grupoLabel || grupoId}</strong>
+              {modoVistaEquipo ? (
+                <span className="text-slate-600">
+                  {" "}
+                  · Sin agentes planificados: turnos derivados del régimen (solo lectura).
+                </span>
+              ) : null}
             </p>
           </div>
           <button onClick={onCerrar} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
@@ -636,46 +662,43 @@ export default function GrillaMensualEditor({
           <div className="px-5 py-3 text-sm text-slate-500">Cargando contexto del grupo...</div>
         )}
 
-        {/* Paleta dinamica de turnos (solo planificado) */}
+        {/* Paleta de turnos: solo regímenes planificados */}
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-2">
-          <span className="text-xs font-medium text-slate-500">Pincel:</span>
-          {Object.entries(turnosPaleta).map(([key, style]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setPaleta(key)}
-              className={`rounded-lg px-3 py-1 text-xs font-bold transition ${style.bg} ${style.text} ${
-                paleta === key ? "ring-2 ring-indigo-400 ring-offset-1" : ""
-              }`}
-            >
-              {key}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setPaleta("F")}
-            className={`rounded-lg px-3 py-1 text-xs font-bold transition ${FRANCO_STYLE.bg} ${FRANCO_STYLE.text} ${
-              paleta === "F" ? "ring-2 ring-indigo-400 ring-offset-1" : ""
-            }`}
-          >
-            F
-          </button>
-          <span className="ml-3 text-xs text-slate-400">
-            {paleta === "F" ? "Franco" : turnosPaleta[paleta]?.label || paleta}
-            {" · "}
-            Solo aplica a filas con régimen planificado
-          </span>
-          <button
-            type="button"
-            onClick={() => setAltoContraste((v) => !v)}
-            className={`ml-auto rounded-lg border px-3 py-1 text-xs font-semibold transition ${
-              altoContraste
-                ? "border-slate-800 bg-slate-800 text-white hover:bg-black"
-                : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-            }`}
-          >
-            {altoContraste ? "Alto contraste: ON" : "Alto contraste: OFF"}
-          </button>
+          {hayFilasPlanificadas ? (
+            <>
+              <span className="text-xs font-medium text-slate-500">Pincel:</span>
+              {Object.entries(turnosPaleta).map(([key, style]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setPaleta(key)}
+                  className={`rounded-lg px-3 py-1 text-xs font-bold transition ${style.bg} ${style.text} ${
+                    paleta === key ? "ring-2 ring-indigo-400 ring-offset-1" : ""
+                  }`}
+                >
+                  {style.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setPaleta("F")}
+                className={`rounded-lg px-3 py-1 text-xs font-bold transition ${FRANCO_STYLE.bg} ${FRANCO_STYLE.text} ${
+                  paleta === "F" ? "ring-2 ring-indigo-400 ring-offset-1" : ""
+                }`}
+              >
+                F
+              </button>
+              <span className="ml-3 text-xs text-slate-400">
+                {paleta === "F" ? "Franco" : turnosPaleta[paleta]?.label || paleta}
+                {" · "}
+                Solo aplica a filas con régimen planificado
+              </span>
+            </>
+          ) : (
+            <span className="text-xs text-slate-500">
+              Sin filas planificadas en este grupo: la grilla es solo lectura (régimen fijo o rotativo).
+            </span>
+          )}
         </div>
 
         {errLocal && (
@@ -684,15 +707,7 @@ export default function GrillaMensualEditor({
           </div>
         )}
 
-        {/* Leyenda */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-1.5 text-[10px] text-slate-500">
-          <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-white border border-slate-200"></span> Asignado</span>
-          <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-slate-50 border border-slate-200"></span> No asignado</span>
-          <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-slate-100 border border-slate-200" style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px)" }}></span> Fuera vigencia</span>
-          <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-fuchsia-100 border border-fuchsia-200"></span> Licencia/proyección</span>
-          <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-amber-100 border border-amber-200"></span> Feriado/asueto</span>
-          <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded border-2 border-orange-400 bg-yellow-100"></span> Excepcion</span>
-        </div>
+        <GrillaTurnosLeyenda />
 
         {/* Grilla */}
         <div className="flex-1 overflow-auto px-2 py-3">
@@ -732,31 +747,16 @@ export default function GrillaMensualEditor({
             <table className="min-w-max border-separate border-spacing-0 text-xs">
               <thead>
                 <tr>
-                  <th className={`sticky left-0 z-20 min-w-[132px] border-b border-r px-2 py-1 text-left text-xs font-semibold md:min-w-[210px] ${
-                    altoContraste
-                      ? "border-slate-400 bg-slate-200 text-slate-800"
-                      : "border-slate-200 bg-slate-50 text-slate-600"
-                  }`}>
+                  <th className={claseHeaderAgenteSticky()}>
                     Agente
                   </th>
                   {dias.map((dia) => (
                     <th
                       key={dia.ymd}
-                      className={`min-w-[28px] border-b px-0.5 py-1 text-center text-[10px] font-semibold ${
-                        altoContraste ? "border-slate-400" : "border-slate-200"
-                      } ${
-                        contexto?.calendario_institucional_mes?.[dia.ymd]
-                          ? altoContraste
-                            ? "bg-amber-300 text-amber-950"
-                            : "bg-amber-100 text-amber-900"
-                          : dia.esFinde
-                            ? altoContraste
-                              ? "bg-rose-50 text-rose-700"
-                              : "text-rose-500"
-                            : altoContraste
-                              ? "text-slate-700"
-                              : "text-slate-500"
-                      }`}
+                      className={`min-w-[28px] ${claseHeaderColumna({
+                        esFeriado: Boolean(contexto?.calendario_institucional_mes?.[dia.ymd]),
+                        esFinde: dia.esFinde,
+                      })}`}
                       title={
                         contexto?.calendario_institucional_mes?.[dia.ymd]
                           ? `${dia.ymd} — ${
@@ -771,10 +771,10 @@ export default function GrillaMensualEditor({
                       <div className="text-[10px] font-bold">{dia.d}</div>
                     </th>
                   ))}
-                  <th className={`border-b px-2 py-1 text-center text-xs font-semibold ${altoContraste ? "border-slate-400 text-slate-800" : "border-slate-200 text-slate-600"}`}>Trab</th>
-                  <th className={`border-b px-2 py-1 text-center text-xs font-semibold ${altoContraste ? "border-slate-400 text-slate-800" : "border-slate-200 text-slate-600"}`}>Franc</th>
-                  <th className={`border-b px-2 py-1 text-center text-xs font-semibold ${altoContraste ? "border-slate-400 text-slate-800" : "border-slate-200 text-slate-600"}`}>No lab</th>
-                  <th className={`border-b px-2 py-1 ${altoContraste ? "border-slate-400" : "border-slate-200"}`}></th>
+                  <th className={`border-b px-2 py-1 text-center text-xs font-semibold ${claseBordeTablaResumen()}`}>Trab</th>
+                  <th className={`border-b px-2 py-1 text-center text-xs font-semibold ${claseBordeTablaResumen()}`}>Franc</th>
+                  <th className={`border-b px-2 py-1 text-center text-xs font-semibold ${claseBordeTablaResumen()}`}>No lab</th>
+                  <th className={`border-b px-2 py-1 ${claseBordeTablaResumen()}`}></th>
                 </tr>
               </thead>
               <tbody>
@@ -790,9 +790,7 @@ export default function GrillaMensualEditor({
                         idxAgente === indiceAgenteMobile ? "table-row md:table-row" : "hidden md:table-row"
                       }`}
                     >
-                      <td className={`sticky left-0 z-10 border-b border-r bg-white px-2 py-1 align-middle ${
-                        altoContraste ? "border-slate-400" : "border-slate-200"
-                      }`}>
+                      <td className={claseCeldaAgenteSticky()}>
                         <span className="block truncate text-xs font-semibold text-slate-800">
                           {labelAgente(ag.persona_id)}
                         </span>
@@ -829,22 +827,13 @@ export default function GrillaMensualEditor({
                           return (
                             <td
                               key={dia.ymd}
-                              className={`border px-0.5 py-0.5 align-middle ${
-                                esInstitucionalDia
-                                  ? altoContraste
-                                    ? "bg-amber-200"
-                                    : "bg-amber-100"
-                                  : esFindeDia
-                                    ? altoContraste
-                                      ? "bg-rose-100"
-                                      : "bg-rose-50"
-                                  : ""
-                              } ${altoContraste ? "border-slate-300" : "border-slate-200"}`}
+                              className={claseTdColumna({
+                                esFeriado: esInstitucionalDia,
+                                esFinde: esFindeDia,
+                              })}
                             >
                               <div
-                                className={`mx-auto flex h-12 w-14 items-center justify-center rounded border text-[10px] ${
-                                  altoContraste ? "border-slate-400" : "border-slate-200"
-                                } ${BLOQUEADO_STYLE.bg} ${BLOQUEADO_STYLE.text}`}
+                                className={`${CHIP_BASE} text-[10px] ${BLOQUEADO_STYLE.bg} ${BLOQUEADO_STYLE.text}`}
                                 style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px)" }}
                                 title={`${dia.ymd} — Fuera de vigencia HLG`}
                               >
@@ -854,26 +843,25 @@ export default function GrillaMensualEditor({
                           );
                         }
 
-                        let style;
+                        const horarioCeldaPre = String(horarioDerivado || horarioPlanificado || "").trim();
+                        const variantMensual = varianteCeldaMensual({
+                          esFranco,
+                          esNoLaborable,
+                          horarioText: horarioCeldaPre,
+                          turnoId: turno,
+                          estado,
+                          tieneLicencia: estado === "licencia",
+                        });
+                        let style = estiloChipDesdeVariante(variantMensual);
                         let extraClass = "";
-                        if (esFranco) {
-                          if (estado === "no_asignado") style = NO_ASIGNADO_STYLE;
-                          else style = esNoLaborable ? NO_LABORABLE_STYLE : FRANCO_STYLE;
-                        } else {
-                          style = turnosPaleta[turno] || { bg: "bg-green-300 hover:bg-green-400", text: "text-green-950" };
-                        }
-                        if (estado === "licencia") {
-                          style = LICENCIA_STYLE;
+                        if (variantMensual === "laborable" && turno && turnosPaleta[turno]) {
+                          style = turnosPaleta[turno];
                         }
                         if (estado === "institucional") {
-                          // Fondo institucional se marca en toda la columna (td/th).
-                          // La celda mantiene su color operativo.
+                          // Fondo institucional en columna; chip conserva color operativo.
                         }
                         if (estado === "excepcion") {
                           extraClass = "ring-2 ring-orange-400 ring-offset-1";
-                        }
-                        if (estado === "no_asignado" && esFranco && !esNoLaborable) {
-                          style = NO_ASIGNADO_STYLE;
                         }
 
                         const tooltipParts = [dia.ymd];
@@ -899,7 +887,7 @@ export default function GrillaMensualEditor({
                             .join("/")
                           : "";
                         const etiquetaTurno = String(turnosPaleta?.[turno]?.label || turno || "").trim();
-                        const horarioCelda = String(horarioDerivado || horarioPlanificado || "").trim();
+                        const horarioCelda = horarioCeldaPre;
                         const contenidoCelda = estado === "licencia"
                           ? (licenciaTxt || "LIC")
                           : (esFranco
@@ -912,11 +900,7 @@ export default function GrillaMensualEditor({
                           Boolean(etiquetaTurno || horarioCelda);
                         const celContent = (
                           <div
-                            className={`mx-auto flex h-12 w-14 items-center justify-center rounded border px-0.5 font-semibold leading-tight ${
-                              altoContraste
-                                ? "border-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]"
-                                : "border-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
-                            } ${style.bg} ${style.text} ${extraClass} ${editable ? "" : "cursor-default opacity-90"}`}
+                            className={`${CHIP_BASE} ${style.bg} ${style.text} ${extraClass} ${editable ? "" : "cursor-default opacity-90"}`}
                             title={tooltipParts.join(" ")}
                           >
                             {mostrarDosLineasTurnoHora ? (
@@ -933,17 +917,10 @@ export default function GrillaMensualEditor({
                         return (
                           <td
                             key={dia.ymd}
-                            className={`border px-0.5 py-0.5 align-middle ${
-                              esInstitucionalDia
-                                ? altoContraste
-                                  ? "bg-amber-200"
-                                  : "bg-amber-100"
-                                : esFindeDia
-                                  ? altoContraste
-                                    ? "bg-rose-100"
-                                    : "bg-rose-50"
-                                : ""
-                            } ${altoContraste ? "border-slate-300" : "border-slate-200"}`}
+                            className={claseTdColumna({
+                              esFeriado: esInstitucionalDia,
+                              esFinde: esFindeDia,
+                            })}
                           >
                             {editable && estado !== "licencia" ? (
                               <button
@@ -971,10 +948,10 @@ export default function GrillaMensualEditor({
                           </td>
                         );
                       })}
-                      <td className={`border-b px-2 py-1 align-middle text-center font-semibold ${altoContraste ? "border-slate-300 text-slate-800" : "border-slate-100 text-slate-700"}`}>{res.trabajo}</td>
-                      <td className={`border-b px-2 py-1 align-middle text-center font-semibold ${altoContraste ? "border-slate-300 text-slate-700" : "border-slate-100 text-slate-500"}`}>{res.francos}</td>
-                      <td className={`border-b px-2 py-1 align-middle text-center font-semibold ${altoContraste ? "border-slate-300 text-slate-700" : "border-slate-100 text-slate-500"}`}>{res.noLaborables}</td>
-                      <td className={`border-b px-1 py-1 align-middle ${altoContraste ? "border-slate-300" : "border-slate-100"}`} />
+                      <td className={`border-b px-2 py-1 align-middle text-center font-semibold border-slate-300 text-slate-800`}>{res.trabajo}</td>
+                      <td className={`border-b px-2 py-1 align-middle text-center font-semibold border-slate-300 text-slate-700`}>{res.francos}</td>
+                      <td className={`border-b px-2 py-1 align-middle text-center font-semibold border-slate-300 text-slate-700`}>{res.noLaborables}</td>
+                      <td className="border-b border-slate-300 px-1 py-1 align-middle" />
                     </tr>
                   );
                 })}
@@ -985,44 +962,61 @@ export default function GrillaMensualEditor({
 
         {/* Footer */}
         <div className="border-t border-slate-200 px-5 py-3">
-          <label className="mb-2 block text-xs font-medium text-slate-600">
-            Comentarios del jefe (opcional, máx. 200)
-          </label>
-          <textarea
-            value={comentariosJefe}
-            onChange={(e) => setComentariosJefe(e.target.value.slice(0, 200))}
-            rows={2}
-            className="mb-3 w-full max-w-xl rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800"
-            placeholder="Notas visibles en las vistas del turno…"
-          />
-          {(errorGuardar || errLocal) && (
-            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-              {errorGuardar || errLocal}
+          {modoVistaEquipo ? (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-slate-500">
+                {agentes.length} agente{agentes.length === 1 ? "" : "s"} · vista sin plan mensual
+              </p>
+              <button
+                type="button"
+                onClick={onCerrar}
+                className="rounded-xl bg-slate-700 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+              >
+                Cerrar
+              </button>
             </div>
+          ) : (
+            <>
+              <label className="mb-2 block text-xs font-medium text-slate-600">
+                Comentarios del jefe (opcional, máx. 200)
+              </label>
+              <textarea
+                value={comentariosJefe}
+                onChange={(e) => setComentariosJefe(e.target.value.slice(0, 200))}
+                rows={2}
+                className="mb-3 w-full max-w-xl rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800"
+                placeholder="Notas visibles en las vistas del turno…"
+              />
+              {(errorGuardar || errLocal) && (
+                <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                  {errorGuardar || errLocal}
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-slate-500">
+                  {agentes.length}/50 agentes
+                  {agentes.length > 50 ? " · supera el límite" : ""}
+                </p>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={onCerrar}
+                    className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={guardando || agentes.length === 0 || agentes.length > 50}
+                    onClick={handleGuardar}
+                    className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {guardando ? "Guardando..." : "Guardar borrador"}
+                  </button>
+                </div>
+              </div>
+            </>
           )}
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-slate-500">
-              {agentes.length}/50 agentes
-              {agentes.length > 50 ? " · supera el límite" : ""}
-            </p>
-            <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onCerrar}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            disabled={guardando || agentes.length === 0 || agentes.length > 50}
-            onClick={handleGuardar}
-            className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {guardando ? "Guardando..." : "Guardar borrador"}
-          </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
