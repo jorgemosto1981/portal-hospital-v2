@@ -15,10 +15,14 @@
 
 ---
 
-## 2. Callables (futuro)
+## 2. Callables
 
-- `cerrarPeriodoLiquidacion` — solo RRHH; set `estado_periodo_liquidacion_id`, auditoría `periodo_cerrado_en`, `periodo_cerrado_por_persona_id`.
+**Fase 1 (prioridad — repaso 2026-05-29):**
+
+- `cerrarPeriodoLiquidacion` — solo RRHH; botón GSO; set `estado_periodo_liquidacion_id`, auditoría `periodo_cerrado_en`, `periodo_cerrado_por_persona_id`.
 - `reabrirPeriodoLiquidacion` — solo RRHH con motivo.
+
+**Fase 2 (diferida):** job Cloud Scheduler día 5 / `cerrarPeriodosPendientes` masivo — solo tras validación operativa del freeze en M-1.
 
 ---
 

@@ -833,6 +833,15 @@ flowchart BT
 
 **Materialización** = recalcular **solo la capa 1** (teórica) desde la capa 0, y volcar el resultado a `asi_*` + `vis_*` **sin borrar** licencias (`eventos[]`) ni overrides (regla merge ya en worker/MDC).
 
+### 15.2 Definición operativa «materializar» y visibilidad (decisión repaso)
+
+| Requisito | Detalle |
+|-----------|---------|
+| **Identidad del concepto** | «Materializar» ≠ rematerializar por purge, ≠ lazy silencioso sin aviso, ≠ MDC, ≠ aprobar plan. Siempre: **capa 1** desde base vigente. |
+| **Informar en la app** | Toda ejecución iniciada por UI o job visible para RRHH/jefe debe mostrar **qué** se materializó (`per`, `gdt`, mes/es), **por qué** (alta HLg, día 5, régimen, plan, manual) y **resultado**. Deuda: unificar en callables existentes + evitar lazy como único feedback en producción. |
+| **Ventana automática fijo/rotativo** | Mantener **mes calendario actual + mes siguiente**. Alta HLg: ambos; al avanzar el calendario: materializar el **nuevo** M+1 (ej. alta mayo → may+jun; en junio → julio). |
+| **Licencias** | Tope de `fecha_desde` alineado a la **misma ventana** (fin del mes siguiente); `fecha_hasta` sin tope. Propuesta 45d corridos **archivada** salvo RRHH. |
+
 **Plan aprobado (`grilla_aprobada`)** = foto **legal/histórica** del mes al aprobar; **no** es la grilla operativa del día a día.
 
 ---
@@ -985,22 +994,18 @@ Donde:
 
 ---
 
-#### C — “Cambiar régimen” en HLg vigente
+#### C — “Cambiar régimen” en HLg vigente — **bloqueado (decisión repaso)**
 
-**Hoy:** VAL-HLG-018 **prohíbe** cambiar `regimen_horario_id` en edición → patrón obligatorio: cerrar HLg + nueva HLg con `fecha_inicio` = día del cambio.
-
-**Propuesta alineada al usuario:**
+**Regla:** **no** se puede modificar `regimen_horario_id` (ni patrón equivalente) en un HLg **vigente**. Debe **cerrarse** o **eliminarse** el HLg y crear el vínculo correcto (nueva HLg con el régimen deseado).
 
 | Paso | Acción |
 |------|--------|
-| 1 | Cerrar HLg actual: `fecha_fin = D-1` |
-| 2 | Nueva HLg mismo `gdt`, nuevo régimen: `fecha_inicio = D` |
-| 3 | Rematerializar **D → min(fin mes, fin HLg)** |
-| 4 | Anotación en plan / evento (16.5) |
+| 1 | Cerrar HLg actual (`fecha_fin`) **o** eliminar HLg (ver §19.4) |
+| 2 | Nueva HLg con régimen nuevo: `fecha_inicio` = primer día de vigencia del cambio |
+| 3 | Purge teórica del `gdt` viejo desde la fecha de impacto (§19) + materializar nueva burbuja (M+M+1) |
+| 4 | Anotación en plan / evento (16.5); aviso **turnos mensuales** si aplica (§19.6) |
 
-**Planificado:** desde D el editor permite programar turnos; mes en curso operativo recalcula teórica desde D.
-
-**Si en el futuro se permitiera editar régimen in-place:** igualmente exigir campo **`vigencia_desde`** obligatorio y disparar mismo rango (no mes entero retroactivo salvo RRHH explícito).
+VAL-HLG-018 en código ya apunta a este patrón; **no** habilitar edición in-place de régimen en HLg abierto.
 
 ---
 
@@ -1038,7 +1043,7 @@ materializarRango({
   personaId, grupoId, anio, mes,
   fecha_desde,      // YMD inclusive
   fecha_hasta,      // YMD inclusive; default = fin mes o fin HLg
-  motivo,           // "alta_hlg" | "cierre_hlg" | "cambio_regimen" | "feriado" | "plan_aprobado" | "correccion"
+  motivo,           // "alta_hlg" | "purge_cierre_hlg" | "purge_eliminacion_hlg" | "feriado" | "plan_aprobado" | "correccion"
   origen_evento_id  // opcional: evt_* o plt_*
 })
 ```
@@ -1104,20 +1109,24 @@ timeline
 | Rol | Día 1 del mes | Días 1–4 | Día 5 | Después de CERRADO |
 |-----|---------------|----------|-------|---------------------|
 | **Usuario / Jefe grupo** | Mes anterior **solo lectura** (UI); no overrides ni nuevas licencias que impacten M-1 | Igual | Igual | N/A |
-| **RRHH** | Puede operar y **cerrar** M-1 manualmente | Idem | **Auto-cierre** de M-1 pendiente (`CFG_EPL_LIQUIDADO_CERRADO`) | Reapertura → materializar rango si corrige base; luego re-cerrar |
+| **RRHH** | Puede operar y **cerrar** M-1 manualmente (primera entrega) | Idem | **Fase 2:** auto-cierre M-1 pendiente vía job (diferido) | Reapertura → materializar rango si corrige base; luego re-cerrar |
 
 **Después de CERRADO (todos los roles salvo excepción RRHH):**
 
 | Permitido | Prohibido |
 |-----------|-----------|
-| Terminar workflow de cierre pendiente (conciliación, validar última licencia en trámite si política lo define) | Nuevos overrides, nuevas licencias que escriban `vis` M-1, rematerializar teórica M-1 |
-| Lectura / export | Nuevas fichadas M-1 (futuro) |
+| **Licencias ya en trámite** que impactan M-1: seguir workflow hasta **aprobar o rechazar** (decisión repaso: cierre 5/jun sobre mayo) | **Nuevas** solicitudes/overrides que **creen** escritura operativa en M-1 |
+| Conciliación / lectura / export | Rematerializar teórica M-1; nuevas fichadas M-1 (futuro) |
 
-**Implementación sugerida:**
+**Implementación gate:** `assertPeriodoNoCerrado` debe permitir transiciones MDC de solicitudes **abiertas antes del cierre** (por `sol_id` / estado workflow), y rechazar **altas nuevas** con días en M-1 cerrado.
 
-1. **UI:** filtro por `estado_periodo_liquidacion_id` en callables GSO (mes anterior devuelve `solo_lectura: true`).
-2. **Backend:** extender `assertPeriodoNoCerrado` a MDC fan-out y `rematerializar*` (hoy incompleto).
-3. **Job día 5:** Cloud Scheduler → callable `cerrarPeriodosPendientes({ mes: M-1, scope: global | gdt })`.
+**Implementación (decisión repaso — fase 1 manual):**
+
+1. **UI GSO + callable** `cerrarPeriodoLiquidacion` (solo RRHH): botón cerrar mes M-1, auditoría `periodo_cerrado_en` / `periodo_cerrado_por_persona_id` (ver RFC).
+2. **UI:** mes M-1 `solo_lectura` para usuario/jefe desde día 1 (`estado_periodo_liquidacion_id` en respuestas GSO).
+3. **Backend:** extender `assertPeriodoNoCerrado` a MDC fan-out y `rematerializar*` (hoy incompleto).
+
+**Fase 2 (diferida):** Cloud Scheduler día 5 → `cerrarPeriodosPendientes` solo cuando RRHH haya asimilado el freeze de M-1 (rematerialización + MDC bloqueados).
 
 **Estados existentes en seed:** `CFG_EPL_ABIERTO`, `CFG_EPL_CONCILIADO`, `CFG_EPL_LIQUIDADO_CERRADO` — usar CONCILIADO como “terminando pendientes” si hace falta.
 
@@ -1173,31 +1182,50 @@ timeline
 | **Cambio de base** | Rematerializar meses **ABIERTOS** afectados (régimen vía nueva HLg, feriado, etc.) |
 | **Planificado** | **Fuera** del auto; sigue plan HABILITADO + aprobar + `materializarGrupoMes` |
 
-### 17.2 Regla día 5 (¿rehacer mes ya materializado?)
+### 17.2 Regla día 5 — solo fijo / rotativo (decisión repaso)
+
+**Alcance:** únicamente `tipo_patron` **fijo** y **rotativo**. Planificado queda fuera (§17.1).
+
+**Por qué el día 5 (y no el día 1):** los **días 1–4** suelen concentrar **cambios de grupo y movimientos de personal**; al cargar o ajustar HLg el sistema ya dispara materialización de **mes en curso + mes siguiente**. El job del día 5 **cierra** la ventana rodante **después** de esa ventana de movimientos, no antes.
 
 | Mes | Día 5 del mes M |
 |-----|-----------------|
-| **M+1** (ej. agosto el 5/jul) | **Siempre materializar** mes completo — es el mes que **entra** en la ventana |
-| **M** (ej. julio el 5/jul) | **Solo si hubo cambio de base** desde `metadata.ultima_sync_teorica` / evento `evt_*` |
+| **M+1** (ej. julio el 5/jun) | Materializar mes completo **solo si aún no está hecho** de forma válida (ver 17.2.1). Es el mes que **entra** como nuevo M+1 en la ventana. |
+| **M** (ej. junio el 5/jun) | **Solo si** hubo cambio de base desde última sync o snapshot degenerado |
 | **M-1 y anteriores** | **No** si `CFG_EPL_LIQUIDADO_CERRADO`; RRHH reapertura excepcional |
 
-**Respuesta a “¿julio ya materializado en junio al crear HLg?”** → **No rehacer julio el 5/jul** salvo cambio de base o snapshot degenerado.
+**Licencias:** tope de `fecha_desde` **a la par** de esta ventana M + M+1 (fin del mes siguiente); coherente con lo que el teórico automático cubre.
 
-**Detección “cambió algo” (mínimo):** `ultimo_motivo` + timestamp en `vis_*.metadata`; o bit por `gdt` al guardar HLg/régimen/feriado.
+#### 17.2.1 Idempotencia M+1 el día 5 (no pisar, no escribir de más)
 
-### 17.3 Ventana 45 días vs “mes actual + siguiente”
+Antes de invocar `materializarTurnoMesBatch` para **M+1**, el job debe **validar por `per × gdt × mes`**:
 
-**Propuesta unificar:**
+| Condición | Acción |
+|-----------|--------|
+| Mes M+1 ya materializado con snapshot **no degenerado**, `metadata.ultima_sync_teorica` reciente y **sin** evento pendiente de cambio de base (HLg/régimen/feriado) posterior a esa sync | **Omitir** batch (0 writes innecesarios) |
+| Materializado en días 1–4 por **alta/cambio HLg** (mismo mes M+1) | **Omitir** salvo degenerado o cambio de base posterior |
+| Sin `vis_*` / capa 1 vacía o `visSnapshotDegenerado` | **Materializar** |
+| Cambio de base registrado después de la última materialización de ese mes | **Rematerializar** M+1 (o M según tabla) |
 
-- **Materialización automática (fijo/rotativo):** todos los meses que intersectan `[hoy, hoy + 45 días]`.
-- **Solicitudes:** `fecha_desde ≤ hoy + 45` (ver §20); `fecha_hasta` **sin tope** por horizonte.
+**Ejemplo:** alta HLg el 2/jun materializa junio + **julio** → el **5/jun** el job **no** rehace julio si la validación pasa.
 
-El día 5 **sigue necesario** para “empujar” la ventana cuando el calendario avanza (días 31–45 que “mes+1” en junio no cubía).
+**Detección “cambió algo” (mínimo):** `ultimo_motivo` + timestamp en `vis_*.metadata`; flag/evento al guardar HLg, régimen o feriado institucional.
+
+### 17.3 Ventana temporal — decisión repaso (M + M+1, no 45d corridos)
+
+**Cerrado en repaso:**
+
+- **Materialización automática (fijo/rotativo):** siempre **mes calendario actual (M)** y **mes siguiente (M+1)**.
+- **Alta HLg:** materializar M y M+1 (ej. mayo → mayo + junio).
+- **Avance de calendario:** el **día 5** (fijo/rotativo) materializa el **nuevo M+1** si aún no quedó cubierto por altas HLg en días 1–4 (idempotente, §17.2.1).
+- **Solicitudes:** `fecha_desde` no más allá del **fin del mes siguiente** (misma ventana que §20); `fecha_hasta` sin tope.
+
+**Archivado:** propuesta `[hoy, hoy + 45 días]` como horizonte único — no adoptada en repaso; conservar solo como nota histórica si RRHH la reabre.
 
 ### 17.4 Costo Firestore (orden de magnitud piloto)
 
 - ~35–40 reads + ~32 writes por `persona × gdt × mes` materializado.
-- Job día 5: priorizar **M+1 siempre**; M condicional → evita rehacer ~70 batches/mes si no hubo cambios.
+- Job día 5: **M+1** solo si falta o hay cambio de base; **M** condicional → evita rehacer batches tras movimientos HLg del 1–4.
 - **No** materializar diario todo el hospital.
 
 ### 17.5 Relación con lazy GSO
@@ -1211,7 +1239,7 @@ Si el job día 5 + alta HLg cubren bien: **desactivar o acotar** lazy para fijo/
 | Rol | Día 1 del mes | Días 1–4 | Día 5 | Post-CERRADO |
 |-----|---------------|----------|-------|--------------|
 | **Usuario / Jefe** | Mes M-1 **solo lectura** en GSO | Igual | Igual | Sin nuevas licencias/overrides que escriban M-1 |
-| **RRHH** | Puede cerrar M-1 manual | Idem | **Auto-cierre** M-1 pendiente | Reapertura auditada; luego re-cerrar |
+| **RRHH** | Cerrar M-1 **manual** (fase 1) | Idem | Auto-cierre job (**fase 2**, diferido) | Reapertura auditada; luego re-cerrar |
 
 **Permitido tras CERRADO:** terminar workflows de cierre pendiente (conciliación, última validación en trámite — **a definir**).
 
@@ -1226,81 +1254,142 @@ Si el job día 5 + alta HLg cubren bien: **desactivar o acotar** lazy para fijo/
 - `rrhhDeshabilitarHlg` rematerializa **solo mes en curso**.
 - Días **posteriores** a `fecha_fin`: worker no escribe (sin vigencia) pero **no borra** teórico viejo → turnos fantasma en `asi`/`vis`.
 
-### 19.2 Regla propuesta
+### 19.2 Qué se purga (solo capa teórica de materialización)
 
-Desde **`fecha_fin + 1`** hasta `min(fin mes abierto, hoy+45)` en ese **`gdt`**:
+**Alcance del purge:** únicamente lo que produce **materializar** en **capa 1** para ese `gdt`: horarios esperados, turnos teóricos, `rda_*` / `capa_teorica_por_grupo[gdt]`, etc.
 
-| Acción | `asi_*` | `vis_*` |
-|--------|---------|---------|
-| **Purge teórico** | Quitar/vaciar `capa_teorica_por_grupo[gdt]` | Limpiar `rda_*`, `tipo_dia` turno; **conservar** `eventos[]` salvo política explícita |
-| Mes **CERRADO** | **No purge** (histórico) | |
+**No tocar:** licencias (`eventos[]` / MDC), **fichadas reales** (futuro capa 4), **overrides** de turno, ni otros datos operativos.
 
-**Antes de `fecha_fin`:** mantener histórico en mes abierto.
+**Tope hacia adelante:** hasta fin de meses **abiertos** en liquidación, acotado por ventana teórica **M + M+1** (misma regla de horizonte del repaso). **No purge** en mes `CFG_EPL_LIQUIDADO_CERRADO`.
 
-### 19.3 Nueva HLg vs baja sin HLg
+### 19.3 Cerrar HLg vs eliminar HLg — **fecha de impacto (decisión repaso)**
+
+| Acción | Fecha que define el purge “desde” (inclusive hacia adelante) | Ejemplo |
+|--------|--------------------------------------------------------------|---------|
+| **Cerrar HLg** | **`fecha_fin + 1`** | `fecha_fin = 15/05/2026` → purge desde **16/05/2026** inclusive |
+| **Eliminar HLg** | **`fecha_inicio`** del HLg eliminado | HLg vigente desde 01/03 → purge desde **01/03/2026** inclusive en ese `gdt` |
+
+En ambos casos la **misma operación de purge** sobre capa 1; cambia solo el **origen temporal** impuesto por la acción de RRHH.
+
+**Antes del día de impacto:** mantener histórico teórico del tramo donde el HLg aplicaba.
+
+### 19.4 UX obligatoria al cerrar / eliminar HLg
+
+Callable + pantalla RRHH deben mostrar **antes** de confirmar:
+
+- Tipo de acción (cierre vs eliminación).
+- **`purge_desde`** (YMD) calculado según §19.3.
+- `gdt`, persona, días/meses afectados (resumen).
+- Qué se borra (solo teórico materializado) y qué **no** (licencias, overrides, fichadas).
+- Impacto en **turnos mensuales** si hay plan del grupo/mes (§19.6).
+
+**Doble aceptación** (checkbox + confirmar / segundo botón). Registrar auditoría (`evt_*`, motivo).
+
+**Purge ≠ materializar:** no usar `materializarTurnoMesBatch` como sustituto del purge.
+
+### 19.5 Nueva HLg vs baja sin HLg
 
 | Caso | Acción |
 |------|--------|
-| **Nueva HLg** (otro `gdt` o mismo grupo) | Purge `gdt` viejo forward + materializar nueva desde `fecha_inicio` |
-| **Baja** (sin HLg nueva) | Solo purge forward; agente fuera de listado equipo |
+| **Nueva HLg** (otro `gdt` o mismo grupo) | Purge `gdt` viejo desde fecha de impacto del cierre/eliminación + materializar nueva desde `fecha_inicio` (M+M+1) |
+| **Baja** (sin HLg nueva) | Solo purge forward en `gdt` cerrado/eliminado |
 
-**Grilla:** superposición por burbuja — licencias/overrides del `gdt` viejo no deben mostrar turno teórico futuro; overrides post-baja **ignorar** al renderizar.
+**Grilla:** licencias/overrides del `gdt` viejo no deben mostrar turno teórico futuro; overrides post-baja **ignorar** al renderizar.
 
-**Importante:** purge **≠** `materializarTurnoMesBatch` (rematerializar omite días sin HLg y deja basura).
+### 19.6 Sector turnos mensuales — usuario nuevo en plan existente (decisión repaso)
+
+Cuando cierre/eliminación HLg + alta nueva implica un **usuario que entra** a un turno **ya planificado** (cualquier estado del `plt_*`: borrador, enviado, aprobado, etc.):
+
+| Regla | Detalle |
+|-------|---------|
+| **Aviso** | Indicador / warning en **Turnos mensuales**: “Requiere plan individual para agente(s) nuevo(s)”. |
+| **Plan grupal** | El plan del grupo **no se reescribe** para los agentes que ya estaban; **`grilla_aprobada`** de quienes ya figuraban **no cambia** por este proceso. |
+| **Proceso paralelo** | El plan puede **reabrirse en paralelo** (flujo acotado) solo para **incorporar** el/los usuario(s) nuevo(s): habilitar turno únicamente de ese agente en el mes afectado. |
+| **Sin efecto colateral** | Agentes ya en el plan **no sufren cambios** de horario/turno durante este proceso; es exclusivo del alta nueva. |
+
+Tras habilitar al nuevo en el plan paralelo → `materializarGrupoMes` / rango solo para ese `per` (o política documentada en implementación).
 
 ---
 
 ## 20. Licencias, horizonte 45 días y tramos largos (LAO 1 año) — DUDAS ABIERTAS
 
-### 20.1 Horizonte de pedido (acordado en conversación)
+### 20.1 Horizonte de pedido (decisión repaso)
 
-| Campo | Regla propuesta |
-|-------|-----------------|
-| **`fecha_desde`** | Máximo **`hoy + 45 días`** |
+| Campo | Regla |
+|-------|--------|
+| **`fecha_desde`** | Máximo **fin del mes calendario siguiente** al mes en curso (ventana **M + M+1**, alineada a materialización automática fijo/rotativo) |
 | **`fecha_hasta`** | **Sin límite** por horizonte (1 día o 1 año indistinto) |
 
-**Cambio vs hoy:** `validarHorizonteTemporalAgente` usa fin del **mes siguiente**, no 45 días fijos.
+**Código:** `validarHorizonteTemporalAgente` ya apunta a fin de **mes siguiente** — **mantener y reforzar mensajes** al usuario; no implementar 45d corridos salvo nueva decisión RRHH.
 
 ### 20.2 ¿Materializar automáticamente todo el tramo de la licencia?
 
-**No.** La ventana automática (~45 d) es para **capa 1 teórica** (fijo/rotativo), no para precalcular 365 días por cada LAO.
+**No.** La ventana automática (**M + M+1**) es para **capa 1 teórica** (fijo/rotativo), no para precalcular 365 días por cada LAO.
 
 | Capa | Licencia 1 año |
 |------|----------------|
 | **1 Teórica** | Se va llenando con día 5 / cambios HLg **mes a mes** |
 | **3 Licencias** | **MDC** (`mdcFanOutVis`) pinta `eventos[]` en `vis_*` **mes a mes** al aprobar |
 
-### 20.3 Choque técnico actual (`depende_rda`)
+### 20.3 `fecha_hasta` más allá del teórico materializado (decisión repaso)
 
-`evaluarGrillaTurnoEntorno` recorre **cada día** `[fecha_desde, fecha_hasta]` y exige `capa_teorica_por_grupo[gdt]` en `asi_*`.
+**`fecha_desde`:** tope ya fijado en bloques anteriores (**fin del mes siguiente**, ventana M+M+1).
 
-→ LAO 1 año = hasta **365 reads** y fallo en días sin materializar (>45 d).
+**El conflicto aparece cuando `fecha_hasta` supera los días con RDA/capa 1 materializada** y el artículo exige validación contra turno teórico.
 
-### 20.4 Opciones a definir mañana (producto)
+| Tipo de artículo / validación | Alta de solicitud |
+|------------------------------|-------------------|
+| **Calendario institucional**, **días corridos**, **días hábiles** | **Permitir** (no dependen de RDA día a día en el gate de grilla). |
+| **`depende_rda: true`** (requiere RDA previo para iniciar) | **Bloquear** si no hay capa teórica/RDA en los **anclajes** del pedido (ver gate abajo). |
 
-| ID | Opción | Descripción |
-|----|--------|-------------|
-| **L-A** | Gate solo **`fecha_desde`** | `depende_rda` valida un día de inicio; tramo largo lo gobierna motor + MDC |
-| **L-B** | Gate por **mes** del tramo | Un check por mes calendario; meses >45d sin mat → falla o warning |
-| **L-C** | Materializar año al aprobar | **No recomendado** (costo, régimen cambiante, meses cerrados) |
-| **L-D** | `depende_rda: false` en LAO | Si el artículo no requiere turno día a día en alta |
+**Frecuencia:** casos excepcionales; en la práctica los plazos suelen caer dentro del período ya materializado.
 
-### 20.5 ¿Qué régimen “aplana” el año?
+**Gate `depende_rda` (decisión repaso — implementación):** si `fecha_hasta` es lejana, **no** iterar día a día todo el tramo. Consultar RDA/capa teórica en **`fecha_hasta`** (y en **`fecha_desde`** al validar el inicio). Si falta en el ancla comprobado → **bloqueo**. *(Hoy el código recorre `desde..hasta` completo — deuda cambiar a anclas.)*
 
-| Enfoque | Descripción |
-|---------|-------------|
-| **Rodante** (default implícito) | Régimen/HLg vigente **el día** que se materializa o se proyecta MDC |
-| **Congelado al aprobar** | Guardar `hlg_id` + `regimen_horario_id` en solicitud — **más legal, más complejo** |
+### 20.4 Caso excepcional `depende_rda` + cola sin materializar — **regla diferida**
 
-**Ancla hoy:** `resolverGrupoTrabajoIdAnclaParaSolicitud` usa **`fecha_desde`**.
+Si en producción aparece un pedido **válido en RRHH** con `fecha_hasta` más allá del teórico ya generado (ej. LAO largo con `depende_rda`):
 
-### 20.6 Preguntas abiertas para mañana
+- **No** adoptar por defecto “materializar el año” ni materialización masiva al aprobar (**L-C** descartada).
+- **No** implementar aún “materializar solo los RDA faltantes del tramo” sin un caso real documentado.
+- **Procedimiento:** registrar el caso (artículo, persona, gdt, rango, meses sin `vis`), decidir con RRHH entre:
+  - materializar **rango acotado** de meses abiertos (`materializarRango` / batches por mes), o
+  - ajuste puntual de configuración del artículo si corresponde.
+- Hasta tener ese precedente: mantener **bloqueo** coherente con §20.3.
 
-1. ¿LAO y artículos largos llevan `depende_rda: true` en configurador?
-2. Si `true`: ¿**L-A** (solo inicio) o **L-B** (por mes)?
-3. ¿Congelar régimen/HLg al aprobar solicitud larga o rodante?
-4. ¿`eventos[]` en meses sin `vis_*` previo: MDC crea doc mínimo o exige materialización previa?
-5. Alinear código horizonte a **45d solo `fecha_desde`** + mensaje usuario.
+*(Opción histórica del análisis L-A / L-B / L-D: sustituida por la tabla §20.3 + diferido §20.4.)*
+
+### 20.5 Régimen en tramo largo (LAO) — **rodante (cerrado)**
+
+**Política:** **rodante** por defecto.
+
+| Situación | Comportamiento |
+|-----------|----------------|
+| Usuario con **LAO vigente** (capa 3 / `eventos[]`) | Cambiar o cerrar HLg **solo afecta capa 1** (teórica). **La LAO no se toca.** |
+| **Reintegro** / nuevo vínculo | Aplica **`grupo_de_trabajo_id` vigente** en esa fecha + materialización M+M+1 correspondiente. |
+| MDC mes a mes | Sigue el HLg/grupo vigente **cada mes** al fan-out (no congelar año entero al aprobar). |
+
+**Congelado al aprobar:** no adoptado salvo requisito legal futuro documentado.
+
+### 20.6 `vis_*` mínimo (MDC) y fusión con materialización
+
+**Requisito (repaso):** el motor de licencias **necesita** `vis_*`; debe poder **crearlo mínimo** (solo datos del motor al momento del pedido: `dias[].eventos[]`, metadata MDC, `persona_id`, `anio`, `mes`, `grupo_de_trabajo_id`).
+
+**Comportamiento actual de la app:**
+
+| Orden | Qué pasa |
+|-------|----------|
+| **MDC primero** (solicitud pendiente/aprobada sin teórico previo) | [`mdcFanOutVis.js`](functions/modules/shared/mdcFanOutVis.js): transacción `set(..., { merge: true })` en `vistas_grilla_mes_agente/{visId}`; crea o actualiza el doc; en `dias[diaKey]` deja **`eventos[]`** (y `tiene_conflicto`); **no** escribe `rda_*`. |
+| **Materialización después** (mismo `visId` = `per + YMD-mes-01 + gdt`) | [`rdaTurnoTeoricoWorker.js`](functions/modules/asistencia/rdaTurnoTeoricoWorker.js): `update` con rutas punteadas `dias.{diaKey}.rda_*`, `tipo_dia`, etc. En Firestore **no pisa** hermanos del mismo día → **`eventos[]` se conservan** en el mismo `vis_*`. |
+| **Materialización primero, MDC después** | MDC hace merge en `dias[diaKey]` con `...prev` y reemplaza solo la lista de eventos de esa solicitud → **coexisten** teórico + licencia en el mismo documento. |
+
+**Mismo `vis_*`:** un documento por `(persona_id, mes calendario, gdt)` — capa 3 y capa 1 **comparten** el doc; no hay dos `vis` paralelos para el mismo mes/grupo.
+
+**Deuda / riesgos a revisar en implementación:**
+
+1. Gate `depende_rda`: pasar de bucle `desde..hasta` a validación por **anclas** (`fecha_desde` + `fecha_hasta`) §20.3.
+2. Mensajes `HORIZONTE_TEMPORAL` (M+M+1).
+3. Caso excepcional §20.4 (materializar rango acotado solo con precedente RRHH).
 
 ---
 
@@ -1308,16 +1397,18 @@ Desde **`fecha_fin + 1`** hasta `min(fin mes abierto, hoy+45)` en ese **`gdt`**:
 
 | Evento | Tipo | Capa 1 | Capa 2–3 | Plan histórico | Período cerrado |
 |--------|------|--------|----------|---------------|-----------------|
-| Alta HLg | A | Mat ventana 45d (o mes+mes) | — | Anotación opcional | — |
-| Cierre HLg | A | Purge gdt desde fin+1 | No nuevos OVR/lic M-1 | Anotación | No purge cerrado |
+| Alta HLg | A | Mat **M + M+1** | — | Anotación opcional | — |
+| Cierre HLg | A | Purge capa1 desde fin+1; UX doble ok | — | Anotación; §19.6 si plan | No purge cerrado |
+| Eliminar HLg | A | Purge capa1 desde fecha_inicio HLg | — | Idem | No purge cerrado |
 | Nueva HLg | A | Mat desde inicio; purge gdt viejo | — | Anotación | — |
 | Editar régimen (nueva HLg) | A | Remat ABIERTOS en ventana | — | Anotación | Bloqueado |
 | Feriado institucional | A | Remat días/grupos afectados | — | — | Bloqueado |
 | Aprobar plan | A | `materializarGrupoMes` | — | `grilla_aprobada` | — |
-| Job día 5 | Tiempo | M+1 siempre; M si cambió | — | — | Skip M-1 cerrado |
-| Día 1 | Tiempo | — | UI solo lectura M-1 | — | — |
+| Job día 5 | Tiempo | M+1 si falta (idempotente); M si cambió | — | — | Skip M-1 cerrado |
+| Día 1 | Tiempo | — | UI solo lectura M-1 (usuario/jefe) | — | — |
+| Cierre período RRHH | B | — | — | — | Callable manual fase 1; job día 5 fase 2 |
 | Override turno | B | Re-día afectado | Escribe OVR | — | Bloqueado |
-| Licencia aprobada | B | — | MDC `eventos[]` | — | Bloqueado |
+| Licencia aprobada / en trámite | B | — | MDC `eventos[]` | — | Cerrado: **nuevas** bloqueadas; **en trámite** hasta aprobar/rechazar |
 | Lazy GSO | C | Si degenerado/vacío | — | — | Bloqueado |
 
 **Tipo:** A = base, B = operativo, C = reparación.
@@ -1326,7 +1417,15 @@ Desde **`fecha_fin + 1`** hasta `min(fin mes abierto, hoy+45)` en ese **`gdt`**:
 
 ## 22. Punto de continuación (sesión siguiente)
 
-**Retomar análisis en §20** (licencias largas + gate `depende_rda` + alineación 45d código).
+**Repaso Bloques 1–6:** decisiones cerradas en [`HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md`](HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md) §7.
+
+**Backlog implementación:** [`PENDIENTES_PROXIMA_SESION.md`](PENDIENTES_PROXIMA_SESION.md) — sección *Backlog orquestación* (O-P0 … O-P2).
+
+**Contención P0 (no prod sin mitigar):** ver [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md) §5.
+
+**Roadmap implementación sucesiva (F0→F4):** [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md) — Epic 1 (segmentos + día atómico) antes de Epic 2 (Outbox).
+
+**Siguiente trabajo sugerido:** **F0** contención → **F1** merge Multi-HLG + freeze manual → **F2** orquestación HLg.
 
 **Referencias código:** `validarFechasArticulo.js`, `grillaTurnoEntornoGate.js`, `rdaTurnoTeoricoWorker.js`, `catalogosLaborales.js`, `asistenciaPeriodoLiquidacion.js`, `mdcFanOutVis.js`.
 

@@ -18,7 +18,13 @@
 | **4 Fichadas** | Futuro | `asi_*.fichadas[]` | — |
 | **GSO** | Pantalla grilla | Lee `vis_*` | **No escribe** |
 
-**Materialización** = recalcular capa 1. **No** borra licencias ni overrides (merge en el día).
+### Qué es **materializar** (definición cerrada en repaso)
+
+| Aspecto | Regla |
+|---------|--------|
+| **Qué hace** | Recalcula **solo capa 1** (teórica) desde capa 0 y escribe `asi_*` + `vis_*` del tramo afectado. |
+| **Qué no hace** | No borra licencias (`eventos[]`) ni overrides (merge por día). **No** es purge HLg ni cierre de período. |
+| **Trazabilidad** | Cada ejecución debe quedar **identificada e informada** en la app: disparador (alta HLg, día 5, régimen, plan, lazy reparación, RRHH manual), alcance (`per`, `gdt`, mes/es), resultado (éxito / parcial / error). Hoy parcial en `metadata` del worker; **deuda producto:** UI/toast/auditoría unificada en todos los callables. |
 
 **Orden en un día:** Base → teórica → override → licencia (visual) → fichada (futuro).
 
@@ -26,82 +32,107 @@
 
 ## 2. Ventana automática (fijo / rotativo)
 
+**Ventana operativa rodante:** en todo momento el hospital mantiene teórico materializado para **mes calendario actual (M)** y **mes siguiente (M+1)**.
+
 | Disparador | Acción |
 |------------|--------|
-| **Alta HLg** | Materializar mes actual + mes siguiente (código actual en `catalogosLaborales.js`) |
-| **Día 5 de cada mes** | Materializar **M+1** siempre; **M** solo si hubo cambio de base |
+| **Alta HLg** | Materializar **M + M+1** (ej. alta en mayo → mayo y junio). Código: `catalogosLaborales.js`. |
+| **Días 1–4 del mes** | Movimientos de personal / cambios de grupo: al **cargar HLg** se materializa de nuevo **M + M+1** (puede adelantar el nuevo M+1, ej. julio en junio). |
+| **Día 5** (solo **fijo / rotativo**) | Materializar **M+1** **solo si no está ya hecho** (validar antes: no pisar ni escribir de más). **M** solo si cambió la base o snapshot degenerado. |
 | **Cambio régimen / feriado / HLg** | Rematerializar meses **abiertos** en rango afectado |
 | **Plan aprobado** | Fuera del auto: `materializarGrupoMes` tras aprobar |
 
-**Propuesta unificar horizonte:** meses que intersectan `[hoy, hoy + 45 días]` (no solo “mes+mes”). El día 5 empuja la ventana cuando avanza el calendario.
+**No rehacer** mes ya OK: ej. julio materializado el 2/jun por alta HLg → el **5/jun** el job **omite** julio salvo cambio de base o degenerado.
 
-**No rehacer** mes ya OK sin cambios (ej. julio materializado en junio al alta HLg → el 5/jul no rematerializa julio salvo evento).
+**Licencias:** tope `fecha_desde` alineado a **M + M+1** (mismos plazos que la ventana teórica automática).
+
+**Nota:** la propuesta alternativa “45 días corridos” queda **archivada**; horizonte de pedidos y capa 1 automática se alinean a **M + M+1** (ver §5).
 
 ---
 
-## 3. Cierre de período (día 1 / día 5)
+## 3. Cierre de período (día 1 / manual RRHH)
 
 | Rol | Regla |
 |-----|-------|
-| **Usuario / Jefe** | Desde día 1: mes M-1 **solo lectura** en GSO |
-| **RRHH** | Día 5: auto-cierre M-1 pendiente (`CFG_EPL_LIQUIDADO_CERRADO` en `vis_*`) |
+| **Usuario / Jefe** | Desde día 1 del mes: mes M-1 **solo lectura** en GSO |
+| **RRHH** | **Cierre manual** del mes M-1 (botón en GSO + callable); estado `CFG_EPL_LIQUIDADO_CERRADO` en `vis_*` |
 
-Mes **cerrado** = no rematerializar, no nuevos overrides/licencias que escriban M-1 (gates pendientes en MDC y `rematerializar*`).
+**Decisión repaso:** **no** automatizar cierre con Cloud Scheduler en la primera entrega (riesgo operativo hasta asimilar bloqueo de rematerialización y MDC sobre M-1). Job día 5 de **liquidación** queda **fase 2**; el día 5 de **materialización** M+1 (§2) es otro proceso.
 
----
-
-## 4. Baja / cierre HLg (purge, no solo rematerializar)
-
-Desde **`fecha_fin + 1`** en el **`gdt`** afectado:
-
-- **Purge** `capa_teorica_por_grupo[gdt]` en `asi_*` y `rda_*` / turno en `vis_*`.
-- **Conservar** `eventos[]` de licencias salvo política explícita.
-- **No purge** en meses ya cerrados.
-
-**Nueva HLg:** materializar desde `fecha_inicio` + purge `gdt` viejo forward.  
-**Baja sin nueva HLg:** solo purge forward.
+Mes **cerrado** = no rematerializar, no nuevos overrides/licencias que escriban M-1 (gates: hoy parcial en `cambiosTurno.js`; extender MDC y `rematerializar*`).
 
 ---
 
-## 5. Licencias y horizonte 45 días
+## 4. HLg — régimen, cierre, eliminación y purge
 
-| Campo | Regla propuesta |
-|-------|-----------------|
-| `fecha_desde` | Máximo **hoy + 45 días** |
-| `fecha_hasta` | **Sin tope** (1 día o 1 año) |
+| Regla | Detalle |
+|-------|---------|
+| **Régimen en HLg vigente** | **Bloqueado.** Cerrar o eliminar HLg; nueva HLg con el régimen correcto. |
+| **Cerrar HLg** | `fecha_fin` (ej. 15/05) → purge teórico desde **`fecha_fin + 1`** (16/05 inclusive). |
+| **Eliminar HLg** | Purge teórico desde **`fecha_inicio`** del HLg (inclusive adelante). |
+| **Qué purga** | Solo capa 1 (horarios/turnos de materialización). **No** licencias, overrides, fichadas. |
+| **UX** | Warning con `purge_desde`, impacto, turnos mensuales si aplica; **doble aceptación**. |
 
-**No** materializar automáticamente todo un LAO de 1 año: capa 3 (MDC) pinta mes a mes; capa 1 se llena con job día 5 / cambios HLg.
-
-**Choque actual:** `depende_rda` en `grillaTurnoEntornoGate.js` recorre **todos** los días del tramo → incompatible con tramo anual sin materializar.
-
-**Opciones abiertas (§20 del plan):**
-
-- **L-A:** validar solo `fecha_desde`
-- **L-B:** validar por mes calendario
-- **L-C:** materializar año (no recomendado)
-- **L-D:** `depende_rda: false` en artículos largos
-
-**Régimen:** rodante (vigente el día que se materializa) vs congelado al aprobar (pendiente decisión).
+**Nueva HLg:** purge `gdt` viejo + materializar M+M+1 desde `fecha_inicio`.  
+**Turnos mensuales:** si hay plan del grupo y entra usuario nuevo → warning + plan paralelo solo para el/los nuevos; quienes ya estaban **sin cambios** (ver plan §19.6).
 
 ---
 
-## 6. Tabla evento → acción (resumen)
+## 5. Licencias y horizonte (alineado a ventana M + M+1)
 
-| Evento | Capa 1 | Capa 2–3 | Cerrado |
-|--------|--------|----------|---------|
-| Alta HLg | Mat ventana | — | — |
-| Cierre HLg | Purge gdt fin+1 | — | No purge |
-| Feriado | Remat días afectados | — | Bloqueado |
-| Plan aprobado | `materializarGrupoMes` | — | — |
-| Job día 5 | M+1; M si cambió | — | Skip M-1 |
-| Override / licencia | Re-día si aplica | Escribe | Bloqueado |
-| Lazy GSO | Si degenerado | — | Bloqueado |
+| Campo | Regla (repaso cerrado) |
+|-------|-------------------------|
+| **`fecha_desde`** | No más allá del **fin del mes siguiente** al mes en curso (misma ventana que capa 1 automática: solo se puede pedir licencia donde el teórico del régimen fijo/rotativo está previsto materializarse). |
+| **`fecha_hasta`** | **Sin tope** por horizonte (1 día o 1 año). |
+
+**Capa 3:** MDC pinta licencias mes a mes; **no** pre-materializar un año entero de capa 1 por cada LAO.
+
+| Validación del artículo | Al crear solicitud |
+|-------------------------|-------------------|
+| Calendario institucional / días hábiles / días corridos | **Permitido** (sin gate RDA día a día). |
+| **`depende_rda`** | **Bloqueado** si falta RDA en anclajes del pedido; si `fecha_hasta` es lejana, validar **`fecha_hasta`** (no leer toda la cadena día a día). |
+
+**Excepcional:** si `fecha_hasta` va más allá del teórico ya materializado y RRHH necesita igualmente el pedido → **regla diferida**: resolver cuando exista un caso concreto (plan §20.4); no materializar masivo por defecto.
+
+**LAO + cambio HLg:** rodante — solo capa 1 cambia; LAO intacta; al reintegro, `gdt` vigente + materialización. **`vis` mínimo:** MDC crea/merge; materialización añade `rda_*` en el **mismo** doc (§20.6 plan).
 
 ---
 
-## 7. Continuar mañana
+## 6. Tabla evento → acción (para manual RRHH)
 
-Retomar **§20 del plan**: gate `depende_rda`, alinear `validarFechasArticulo.js` a 45d, tabla evento final, manual RRHH 1 página.
+**Tipos:** **A** = cambio de base (HLg, régimen, calendario, tiempo); **B** = operativo (licencia, override, cierre período); **C** = reparación (lazy GSO).
+
+| Evento | Tipo | Capa 1 | Capa 2–3 | Plan / notas | Si período cerrado |
+|--------|------|--------|----------|--------------|-------------------|
+| Alta HLg | A | Mat **M+M+1**; informar | — | Anotación opcional | — |
+| Cerrar HLg | A | Purge desde **fin+1**; doble OK | — | §19.6 turnos mensuales si usuario nuevo | No purge mes cerrado |
+| Eliminar HLg | A | Purge desde **fecha_inicio** HLg | — | Idem | No purge mes cerrado |
+| Nueva HLg | A | Mat + purge `gdt` viejo | — | Régimen solo vía HLg nueva | — |
+| Feriado institucional | A | Remat días afectados | — | — | Bloqueado |
+| Aprobar plan mensual | A | `materializarGrupoMes` | — | `grilla_aprobada` fija | — |
+| Job día 5 (fijo/rot) | A | M+1 si falta; M si cambió base | — | ≠ cierre liquidación | Skip M-1 cerrado |
+| Día 1 calendario | A | — | UI M-1 solo lectura (no jefe) | — | — |
+| Cierre período RRHH | B | — | — | Manual fase 1 | Congela M-1 |
+| Override turno | B | Re-día | Escribe OVR | — | Bloqueado |
+| Licencia (MDC) | B | — | `eventos[]`; `vis` mínimo OK | Rodante: LAO no se toca si cambia HLg | **Nuevas** en M-1 cerrado: no. **En trámite:** hasta aprobar/rechazar |
+| Lazy GSO | C | Si degenerado | — | Acotar si día 5 OK | Bloqueado |
+
+**SSoT detallada:** plan §21.
+
+---
+
+## 7. Grilla operativa (GSO) — quién ve qué (decisión producto)
+
+| Rol | Menú (objetivo) | Capas visibles en GSO |
+|-----|-----------------|------------------------|
+| **RRHH** | **Primero** — dueño de la grilla operativa | Teórica, overrides, licencias; fichadas **reales** y auditoría cuando existan |
+| **Jefe** | **Después** de validación RRHH — acceso similar | Teórica, overrides, licencias, **fichadas esperadas** (teórico); **resultado** auditoría RRHH; **no** fichadas reales del reloj |
+
+---
+
+## 8. Siguiente fase (post-repaso documental)
+
+Implementación priorizada en plan §22: gate anclas `depende_rda`, purge HLg, cierre manual período, UX materializar, P0 piloto.
 
 **IDs piloto:** MOSTO `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ`; Portería `gdt_01KQA9FVEW53JSNTPGX32NWQ5B`; Sala `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V`; CHAPARRO `per_01KR3HD24AMJ6YX3N7B3GPAZJ4`; LOKITO `per_01KQQJA5Q1VKBTJ74RHQ0HSHSB`.
 

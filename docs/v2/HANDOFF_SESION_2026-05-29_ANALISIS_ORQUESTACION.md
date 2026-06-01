@@ -2,7 +2,7 @@
 
 **Proyecto:** `portal-hospital-v2`  
 **Rama habitual:** `feat/epic-multi-hlg-fase1-execution` (verificar con `git branch`)  
-**Punto de reentrada mañana:** §20 del plan (licencias largas + horizonte 45d + gate `depende_rda`)
+**Punto de reentrada:** §20 del plan (licencias largas + gate `depende_rda`; horizonte pedidos = ventana **M + M+1**)
 
 ---
 
@@ -16,29 +16,42 @@
 
 ---
 
-## 2. Decisiones / ideas registradas (pendiente validación)
+## 2. Decisiones / ideas registradas
 
-### Ventana automática fijo/rotativo
+### Materializar (definición + producto) — **cerrado en repaso**
 
-- Alta HLg: mes actual + siguiente (ya en código).
-- **Día 5:** M+1 siempre; mes en curso solo si cambió la base.
-- Alinear con **45 días** hacia adelante (propuesta unificar materialización y `fecha_desde` máxima de solicitudes).
+- **Materializar** = recalcular capa 1; no es purge ni cierre de período.
+- **Cada vez que la app materializa** debe quedar **identificado e informado** al usuario/RRHH (disparador, alcance, resultado). Deuda: unificar toasts/auditoría en callables + lazy.
 
-### Cierre HLg
+### Ventana automática fijo/rotativo — **cerrado en repaso**
 
-- Desde `fecha_fin + 1`: **purge explícito** slice `gdt` en `asi`/`vis` (rematerializar solo no alcanza).
-- Nueva HLg: materializar burbuja nueva + purge vieja forward.
+- **Alta HLg:** mes actual + mes siguiente (ya en código).
+- **Ventana rodante:** M + M+1. **Días 1–4:** altas/cambios HLg rematerializan M y M+1 (movimientos de personal). **Día 5 (fijo/rotativo):** materializar **M+1 solo si falta** (idempotente; no pisar lo hecho el 1–4). **M** el día 5 solo si cambió la base.
+- **Licencias:** mismos plazos (fin mes siguiente).
+- **Licencias:** límites de `fecha_desde` alineados a la **misma ventana M + M+1** (no propuesta 45d corridos, salvo nueva decisión RRHH).
 
-### Licencias largas (LAO 1 año)
+### HLg, régimen y purge (repaso Bloque 4 — cerrado)
 
-- `fecha_hasta` sin tope; `fecha_desde` máx hoy+45 (propuesto).
-- **No** materializar año automático; MDC pinta capa 3.
-- **Problema:** `depende_rda` recorre todo el tramo → definir L-A / L-B / L-D mañana.
+- **Régimen en HLg vigente:** bloqueado → cerrar o eliminar HLg + nueva HLg.
+- **Cerrar HLg:** `fecha_fin` → purge capa 1 desde **día siguiente** inclusive; UX warning + doble aceptación.
+- **Eliminar HLg:** purge desde **`fecha_inicio`** inclusive; misma limpieza teórica; no tocar licencias/overrides/fichadas.
+- **Turnos mensuales:** warning si usuario nuevo en plan existente; reapertura **paralela** solo para nuevo(s); sin cambiar quienes ya estaban.
 
-### Cierre período
+### Licencias largas (Bloque 5 — cerrado salvo excepción documentada)
 
-- Día 1: usuario/jefe solo lectura M-1.
-- Día 5: RRHH auto-cierre M-1 (`CFG_EPL_LIQUIDADO_CERRADO`).
+- `fecha_desde`: fin mes siguiente (M+M+1). `fecha_hasta`: sin tope.
+- Artículos por **calendario / hábiles / corridos**: permitir alta sin RDA en todo el tramo.
+- **`depende_rda`:** bloqueo si falta RDA en anclajes; optimización: leer **`fecha_hasta`** (no toda la cadena) si el tramo es lejano.
+- **Rodante LAO:** cambio HLg solo capa 1; LAO no se toca; reintegro con nuevo `gdt` + mat.
+- **`vis` mínimo:** MDC crea con merge; mat posterior fusiona `rda_*` en el mismo `vis_*`.
+- Cola sin materializar + caso RRHH excepcional: **regla diferida** §20.4 (no materializar año por defecto).
+
+### Cierre período — **cerrado en repaso**
+
+- Día 1: usuario/jefe solo lectura M-1 en GSO (UI + callables).
+- **Primera entrega:** cierre **manual RRHH** (botón en GSO + callable `cerrarPeriodoLiquidacion`); extender gates a MDC y `rematerializar*`.
+- **Diferido:** auto-cierre día 5 vía Cloud Scheduler hasta que el equipo asimile el impacto de bloquear rematerialización y MDC sobre M-1.
+- **Mes cerrado + licencias:** las **en trámite** que impactan M-1 siguen hasta aprobar/rechazar; **no** nuevas solicitudes que escriban M-1.
 
 ---
 
@@ -54,11 +67,11 @@
 
 ## 4. Preguntas abiertas (orden sugerido mañana)
 
-1. ¿`depende_rda` en LAO largo: solo `fecha_desde` (L-A) o por mes (L-B)?
-2. ¿Implementar horizonte 45d en `validarFechasArticulo.js`?
-3. ¿Congelar régimen/HLg al aprobar solicitud larga o rodante?
+1. ~~`depende_rda`~~ → **Cerrado:** tramo completo con RDA o bloqueo; hábiles/corridos/calendario permitidos.
+2. ~~Horizonte~~ → **Cerrado:** fin mes siguiente.
+3. ~~Congelar régimen~~ → **Rodante** (LAO no se toca al cambiar HLg; §20.5).
 4. ¿Tabla evento→acción definitiva + manual RRHH?
-5. ¿Orquestador día 5 manual RRHH primero vs job Cloud Scheduler?
+5. ~~Cierre día 5 auto~~ → **Manual RRHH primero** (botón GSO + callable); Scheduler **después**.
 
 ---
 
@@ -86,7 +99,36 @@ Leer: `docs/v2/MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`, `docs/v2/REGISTRO_DEUDA_2
 
 ---
 
-## 7. Referencias código
+## 7. Roadmap sucesivo
+
+Plan maestro F0–F4 (objetivos, DoD, avance esperado): [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md).
+
+---
+
+## 8. Contención P0 inmediata (evaluación técnica equipo)
+
+Tres riesgos **no** llevar a prod sin mitigar (detalle en [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md) §5):
+
+1. **Purge HLg** (O-P0-4) — fantasma teórico post `fecha_fin`.
+2. **N+1** — gate anclas (O-P0-1) + listado sector bulk (O-P0-7), no 60 lazy en serie.
+3. **Observabilidad GSO** (O-P0-5) — toasts/badges si lazy/batch falla o `materializado_lazy`.
+
+---
+
+## 9. Decisiones cerradas — repaso orquestación (Bloques 1–6)
+
+| Bloque | Cierre |
+|--------|--------|
+| 1 | Solo documentar pilotos; capas 0–4 + materializar definido |
+| 2 | M+M+1; día 5 fijo/rot idempotente; informar cada materialización |
+| 3 | Cierre período **manual RRHH** primero; día 1 solo lectura M-1 |
+| 4 | Régimen en HLg vigente bloqueado; purge capa1; turnos mensuales usuario nuevo |
+| 5 | `depende_rda` anclas; hábiles/corridos/calendario OK; rodante LAO; `vis` mínimo MDC |
+| 6 | Tabla §21 — **cerrado:** licencia **en trámite** en M-1 sigue hasta aprobar/rechazar tras cierre RRHH; **nuevas** en M-1 no |
+
+---
+
+## 10. Referencias código
 
 - `functions/modules/shared/grillaMesAgenteCore.js` — lazy / degenerado
 - `functions/modules/asistencia/rdaTurnoTeoricoWorker.js` — materialización
