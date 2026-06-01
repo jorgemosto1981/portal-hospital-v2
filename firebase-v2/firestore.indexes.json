@@ -91,6 +91,15 @@
         { "fieldPath": "grupos_trabajo_involucrados_ids", "arrayConfig": "CONTAINS" },
         { "fieldPath": "estado_solicitud_id", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "vistas_grilla_mes_agente",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "grupo_de_trabajo_id", "order": "ASCENDING" },
+        { "fieldPath": "anio", "order": "ASCENDING" },
+        { "fieldPath": "mes", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

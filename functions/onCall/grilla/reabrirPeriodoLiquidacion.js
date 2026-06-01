@@ -4,7 +4,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db } = require("../../modules/shared/context");
 const { assertRrhh } = require("../../modules/shared/helpers");
 const { reabrirPeriodoLiquidacionCore } = require("../../modules/asistencia/asistenciaPeriodoLiquidacion");
-const runtimeFlags = require("../../../shared/runtimeFlags.json");
+const runtimeFlags = require("../../modules/shared/runtimeFlags.json");
 
 function actorPersonaIdFromRequest(request) {
   const t = request.auth?.token || {};

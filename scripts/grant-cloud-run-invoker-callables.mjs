@@ -53,6 +53,13 @@ const CALLABLE_EXPORT_IDS = [
   "registrarCambioTurno",
   "eliminarCambioTurno",
   "listarOverridesTurno",
+  "obtenerVistaGrillaMesAgente",
+  "obtenerResumenSolicitudArticuloGrilla",
+  "listarVistaGrillaMesPorGrupo",
+  "cerrarPeriodoLiquidacion",
+  "reabrirPeriodoLiquidacion",
+  "rematerializarPostCalendario",
+  "rematerializarPostRegimen",
 ];
 
 function gcloudInstalled() {

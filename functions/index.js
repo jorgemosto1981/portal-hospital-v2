@@ -4,7 +4,8 @@ const { setGlobalOptions } = require("firebase-functions/v2");
 /** Más memoria / tiempo de arranque para Cloud Run (evita fallos de healthcheck en cold start con Admin SDK). */
 setGlobalOptions({
   region: "southamerica-east1",
-  memory: "512MiB",
+  memory: "1GiB",
+  cpu: 1,
   timeoutSeconds: 120,
   /** Necesario para callables desde el navegador (OPTIONS sin auth); si falta, CORS muestra 403. */
   invoker: "public",

@@ -1,6 +1,6 @@
 # Punto de Continuación — Próxima Sesión
 
-**Última actualización:** Checkpoint F-UX.1 + F0 + núcleo F1 — commit `942adcf`, merge `master` @ `25bc00c` (2026-06-01)  
+**Última actualización:** Cierre sesión deploy — docs `397f600`; código `942adcf` / merge `master` @ `25bc00c` (2026-06-01)  
 **RETOMAR AQUÍ (épica scoped):** [`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md)  
 **RETOMAR AQUÍ (reglas orquestación):** [`HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md`](./HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md)
 
@@ -51,8 +51,9 @@
 | **F0** (O-P0-4,1,7,5) | ✅ Código | Purge HLg, gate anclas, bulk sector, toasts |
 | **F1.1** Multi-HLG → master | ✅ Merge | `25bc00c` en `origin/master` |
 | **F1.3** cierre período | ✅ Código | `cerrarPeriodoLiquidacion` + botón GSO RRHH |
-| **F1** restante | ⏳ | O-P0-3 MDC trámite; Paso 4 QA; deploy functions/hosting |
-| **F2–F4** | ⏳ | No iniciar hasta validar smoke en dev/staging |
+| **F1** restante | ⏳ | O-P0-3 MDC trámite; Paso 4 QA |
+| **Deploy producción** | ✅ Checkpoint | **Hosting** OK. **Functions** grilla/cierre/purge: deploy OK tras fix `runtimeFlags.json` en `onCall/grilla/*`. Resto del bundle: redeploy masivo opcional |
+| **F2–F4** | ⏳ | Tras smoke F1 en prod |
 
 **Smoke manual post-deploy:**
 
@@ -60,7 +61,9 @@
 2. Cargar mes → **Cerrar período de liquidación** → en Firestore `vis_*` del mes: `estado_periodo_liquidacion_id` = `cfg_epl_01KSN4ZJPVJE8C6X1VS2HQSR20` (`CFG_EPL_LIQUIDADO_CERRADO`).
 3. Deshabilitar HLg de prueba → verificar purge forward (sin `rda_*` fantasmas en días posteriores en ese `gdt`).
 
-**Índice Firestore:** si el cierre falla en consola, crear compuesto en `vistas_grilla_mes_agente`: `grupo_de_trabajo_id` + `anio` + `mes`.
+**Índice Firestore:** compuesto `vistas_grilla_mes_agente` (`grupo_de_trabajo_id` + `anio` + `mes`) en `firebase-v2/firestore.indexes.json` — desplegar reglas/índices si aún no está en prod; commitear el JSON si queda solo local.
+
+**Causa healthcheck (resuelta):** `cerrarPeriodoLiquidacion` / `reabrirPeriodoLiquidacion` requerían `../../../shared/runtimeFlags.json` (inexistente en Cloud Run); correcto: `../../modules/shared/runtimeFlags.json`. Tras el fix: `npm run firebase:grant-callables-invoker` si hay 403 CORS en callables nuevas.
 
 ---
 
