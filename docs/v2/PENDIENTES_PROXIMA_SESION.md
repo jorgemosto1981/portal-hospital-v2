@@ -3,6 +3,8 @@
 **Última actualización**: Viernes 29 Mayo 2026  
 **RETOMAR AQUÍ**: [`HANDOFF_SESION_2026-05-29_TURNO_MENSUAL_PR3_PAUSA.md`](./HANDOFF_SESION_2026-05-29_TURNO_MENSUAL_PR3_PAUSA.md)
 
+**Mapa E2E (HLG → turnos → materialización → GSO):** [`ANALISIS_INTEGRAL_HLG_TURNOS_MATERIALIZACION_GSO.md`](./ANALISIS_INTEGRAL_HLG_TURNOS_MATERIALIZACION_GSO.md)
+
 | Campo | Valor |
 |-------|--------|
 | **Branch trabajo** | `feat/epic-turno-mensual-fase2-pr3` |
