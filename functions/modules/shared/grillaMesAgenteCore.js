@@ -249,8 +249,18 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
   const personaCache = new Map();
   const filas = [];
 
+  const periodoId = `${y}-${mm}`;
+  const planCache = await obtenerPlanHabilitadoCache(db, gdt, periodoId);
+  const { materializarGrupoMes } = require("../asistencia/rdaTurnoTeoricoWorker");
+  const matGrupo = await materializarGrupoMes({
+    grupoId: gdt,
+    anio: y,
+    mes: m,
+    planCache,
+  });
+
   for (const pid of limited) {
-    const { vista } = await ensureMaterializacionVisMes(db, {
+    const vista = await leerVistaGrillaMesAgente(db, {
       personaId: pid,
       grupoTrabajoId: gdt,
       anio: y,
@@ -263,6 +273,7 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
       vis_id: vista.vis_id || null,
       existe: vista.existe === true,
       dias: vista.ok !== false && vista.dias ? vista.dias : {},
+      materializado_lazy: false,
     });
   }
 
@@ -276,6 +287,11 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
     fecha_corte: fechaCorte,
     total_personas: filas.length,
     truncado,
+    materializacion_grupo: {
+      ok: matGrupo.ok === true,
+      procesados: matGrupo.procesados ?? 0,
+      fallos: Array.isArray(matGrupo.fallos) ? matGrupo.fallos.length : 0,
+    },
     filas,
   };
 }

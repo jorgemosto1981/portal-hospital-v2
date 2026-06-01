@@ -8,9 +8,12 @@ import DiaGrillaDetalleModal from "./DiaGrillaDetalleModal.jsx";
 import ModalCoberturaParcial from "./ModalCoberturaParcial.jsx";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
+import GrillaMesSelector from "./GrillaMesSelector.jsx";
 import { useAsistenciaOutbox } from "./useAsistenciaOutbox.js";
 import { useGrillaMesVista } from "./useGrillaMesVista.js";
 import { aplicarBatchAsistencia } from "../../services/coberturaParcialService.js";
+import { callCerrarPeriodoLiquidacion } from "../../services/callables.js";
+import { RX_GDT } from "./grillaGrupoUtils.js";
 import { periodosVentanaJefe } from "../jefe/periodoJefe.js";
 
 function parsePeriodo(periodo) {
@@ -37,7 +40,11 @@ function labelPeriodo(periodo) {
   });
 }
 
-export default function GrillaMesLicenciasPanel() {
+/**
+ * @param {{ variant?: "default" | "rrhh" }} props
+ */
+export default function GrillaMesLicenciasPanel({ variant = "default" }) {
+  const esVistaRrhh = variant === "rrhh";
   const abrirAyuda = (termino) => {
     window.dispatchEvent(new CustomEvent("portal-help-open", { detail: { termino } }));
   };
@@ -48,17 +55,47 @@ export default function GrillaMesLicenciasPanel() {
   const bandejaPath = esRrhh ? "/portal/rrhh/solicitudes-articulo" : "/portal/jefe/solicitudes";
   const personaId = String(claims?.persona_id || "").trim();
 
-  const vista = useGrillaMesVista({ personaId, claims, esRrhh });
+  const vista = useGrillaMesVista({ personaId, claims, esRrhh, preferSector: esVistaRrhh });
   const [diaModal, setDiaModal] = useState(null);
   const [coberturaModal, setCoberturaModal] = useState(null);
   const [aplicandoBatch, setAplicandoBatch] = useState(false);
   const [vistaModal, setVistaModal] = useState(null);
   const [cargaPendienteKey, setCargaPendienteKey] = useState("");
+  const [cerrandoPeriodo, setCerrandoPeriodo] = useState(false);
   const outbox = useAsistenciaOutbox({ editorPersonaId: personaId, periodo: vista.periodo });
   const periodos = esJefe
     ? periodosVentanaJefe()
     : [sumarMeses(vista.periodo, -1), vista.periodo, sumarMeses(vista.periodo, 1)];
   const cargandoTarjeta = Boolean(cargaPendienteKey) || vista.loading;
+
+  const handleCerrarPeriodoLiquidacion = async () => {
+    if (!esVistaRrhh || cerrandoPeriodo) return;
+    const gdt = String(vista.grupoId || "").trim();
+    if (!RX_GDT.test(gdt)) {
+      toast.error("Elegí un sector (grupo de trabajo) antes de cerrar el período.");
+      return;
+    }
+    const ok = window.confirm(
+      `¿Cerrar liquidación de ${labelPeriodo(vista.periodo)} para todo el sector? El mes quedará en solo lectura para cambios de turno.`,
+    );
+    if (!ok) return;
+    setCerrandoPeriodo(true);
+    try {
+      const res = await callCerrarPeriodoLiquidacion({
+        grupo_trabajo_id: gdt,
+        anio: vista.anio,
+        mes: vista.mes,
+        motivo: "cierre_manual_rrhh_gso",
+      });
+      const n = res?.data?.actualizados ?? 0;
+      toast.success(`Período cerrado (${n} vista(s) actualizadas).`);
+      await vista.cargar();
+    } catch (e) {
+      toast.error(e?.message || "No se pudo cerrar el período.");
+    } finally {
+      setCerrandoPeriodo(false);
+    }
+  };
 
   const handleAplicarCambios = async () => {
     if (!outbox.hasPending || aplicandoBatch) return;
@@ -112,7 +149,45 @@ export default function GrillaMesLicenciasPanel() {
     <div className="mt-6 border-t border-slate-200 pt-6">
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <h2 className="text-lg font-semibold text-slate-900">Calendario licencias</h2>
-        <p className="mt-1 text-sm text-slate-600">Seleccioná una tarjeta para abrir la grilla mensual.</p>
+        <p className="mt-1 text-sm text-slate-600">
+          {esVistaRrhh
+            ? "Vista sector: elegí grupo y período, o abrí una tarjeta rápida."
+            : "Seleccioná una tarjeta para abrir la grilla mensual."}
+        </p>
+        {esVistaRrhh ? (
+          <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/50 p-3">
+            <GrillaMesSelector
+              periodo={vista.periodo}
+              onPeriodoChange={vista.setPeriodo}
+              modo={vista.modo}
+              onModoChange={vista.onModoChange}
+              grupoId={vista.grupoId}
+              onGrupoIdChange={vista.setGrupoId}
+              gruposEquipo={vista.gruposEquipo}
+              gruposSector={vista.gruposSector}
+              resolverCargando={vista.resolverCargando}
+              sectorCargando={vista.sectorCargando}
+              esRrhh={esRrhh}
+              onCargar={() =>
+                seleccionarTarjeta({
+                  periodo: vista.periodo,
+                  modo: vista.modo,
+                  grupoId: vista.grupoId,
+                  titulo: `Sector · ${labelPeriodo(vista.periodo)}`,
+                })
+              }
+              cargandoDatos={cargandoTarjeta}
+            />
+            <button
+              type="button"
+              disabled={cerrandoPeriodo || !RX_GDT.test(String(vista.grupoId || ""))}
+              onClick={() => void handleCerrarPeriodoLiquidacion()}
+              className="mt-3 min-h-11 w-full rounded-xl border border-amber-400 bg-amber-50 px-3 text-sm font-semibold text-amber-950 active:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {cerrandoPeriodo ? "Cerrando período…" : "Cerrar período de liquidación (sector)"}
+            </button>
+          </div>
+        ) : null}
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
           {periodos.map((periodo, idx) => {
             const titulo = idx === 0 ? "Mes anterior" : idx === 1 ? "Mes actual" : "Mes próximo";

@@ -290,6 +290,16 @@ export function callListarVistaGrillaMesPorGrupo(data) {
   return httpsCallable(getFunctionsV2(), "listarVistaGrillaMesPorGrupo")(data);
 }
 
+/** RRHH: cierra liquidación del mes en todas las vis_* del grupo (freeze). */
+export function callCerrarPeriodoLiquidacion(data) {
+  return httpsCallable(getFunctionsV2(), "cerrarPeriodoLiquidacion")(data);
+}
+
+/** RRHH: reabre período cerrado (motivo obligatorio). */
+export function callReabrirPeriodoLiquidacion(data) {
+  return httpsCallable(getFunctionsV2(), "reabrirPeriodoLiquidacion")(data);
+}
+
 /** RRHH: crear o actualizar un régimen horario (cfg_regimen_horario). */
 export function callGuardarRegimenHorario(data) {
   return httpsCallable(getFunctionsV2(), "guardarRegimenHorario")(data);

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import toast from "react-hot-toast";
 
 import {
   callListarVistaGrillaMesPorGrupo,
@@ -26,15 +27,17 @@ function etiquetaGrupoSector(row) {
 /**
  * Estado y carga unificados calendario GSO (C2c + C2d).
  * Titular y equipo operan sobre un bounded context (gdt) activo.
- * @param {{ personaId: string; claims: Record<string, unknown> | null | undefined; esRrhh: boolean }} ctx
+ * @param {{ personaId: string; claims: Record<string, unknown> | null | undefined; esRrhh: boolean; preferSector?: boolean }} ctx
  */
-export function useGrillaMesVista({ personaId, claims, esRrhh }) {
+export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = false }) {
   const esJefe = claimsIncludeJefe(claims);
   const hoy = new Date();
   const [periodo, setPeriodo] = useState(
     () => `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`,
   );
-  const [modo, setModo] = useState(GRILLA_MES_MODO.EQUIPO);
+  const [modo, setModo] = useState(() =>
+    preferSector && esRrhh ? GRILLA_MES_MODO.SECTOR : GRILLA_MES_MODO.EQUIPO,
+  );
   const [grupoId, setGrupoId] = useState("");
   const [gruposEquipo, setGruposEquipo] = useState([]);
   const [gruposSector, setGruposSector] = useState([]);
@@ -46,6 +49,7 @@ export function useGrillaMesVista({ personaId, claims, esRrhh }) {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [titularCalendarios, setTitularCalendarios] = useState([]);
+  const ultimoAvisoMatRef = useRef("");
 
   const { anio, mes } = anioMesDesdePeriodo(periodo);
 
@@ -172,14 +176,19 @@ export function useGrillaMesVista({ personaId, claims, esRrhh }) {
                 mes,
               });
               const vista = res?.data || {};
+              if (vista.materializado_lazy) {
+                toast("Turno teórico recalculado al vuelo para este cargo.", { id: `lazy-${gdt}-${periodo}` });
+              }
               return {
                 grupo_trabajo_id: gdt,
                 grupo_label,
                 vis_id: vista.vis_id || null,
                 existe: vista.existe === true,
                 dias: vista.dias && typeof vista.dias === "object" ? vista.dias : {},
+                materializado_lazy: vista.materializado_lazy === true,
               };
             } catch {
+              toast.error(`No se pudo cargar la grilla de ${grupo_label}.`);
               return {
                 grupo_trabajo_id: gdt,
                 grupo_label,
@@ -225,6 +234,19 @@ export function useGrillaMesVista({ personaId, claims, esRrhh }) {
         mes,
       });
       const payload = res?.data || null;
+      if (payload?.truncado) {
+        const key = `truncado-${periodo}-${gdt}`;
+        if (ultimoAvisoMatRef.current !== key) {
+          ultimoAvisoMatRef.current = key;
+          toast("Listado acotado a 60 personas. Refiná el sector si hace falta.", { icon: "⚠️" });
+        }
+      }
+      const matGrupo = payload?.materializacion_grupo;
+      if (matGrupo && matGrupo.ok === false && (matGrupo.fallos || 0) > 0) {
+        toast.error(
+          `Materialización del sector incompleta (${matGrupo.fallos} agente(s)). Revisá turnos teóricos.`,
+        );
+      }
       setData(payload ? { ...payload, modo } : null);
     } catch (e) {
       setData(null);

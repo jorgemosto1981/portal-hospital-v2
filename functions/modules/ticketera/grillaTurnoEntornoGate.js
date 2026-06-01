@@ -1,6 +1,6 @@
 "use strict";
 
-const { buildAsiDocumentId, iterarYmdInclusive } = require("../shared/mdcRdaDocumentIds");
+const { buildAsiDocumentId } = require("../shared/mdcRdaDocumentIds");
 const { resolverCapaTeoricaGrupo } = require("../shared/capaTeoricaPorGrupoCore");
 const { COL_ASISTENCIA_DIARIA } = require("../shared/mdcComandosConstants");
 
@@ -104,8 +104,9 @@ async function evaluarGrillaTurnoEntorno(db, input) {
     };
   }
 
-  // E11: sin plan autorizado — capa teórica scoped al gdt ancla (no capa_teorica raíz)
-  const dias = iterarYmdInclusive(desde, hasta);
+  // E11: sin plan autorizado — validar solo anclas (fecha_desde / fecha_hasta), no todo el tramo
+  const anchorSet = new Set([desde, hasta].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)));
+  const dias = [...anchorSet];
   for (const ymd of dias) {
     const asiId = buildAsiDocumentId(personaId, ymd);
     if (!asiId) continue;

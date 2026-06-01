@@ -284,6 +284,33 @@ describe("evaluarGrillaTurnoEntorno", () => {
     assert.equal(r.codigo, "TURNO_NO_PLANIFICADO");
   });
 
+  it("depende_rda: tramo largo OK validando solo anclas desde/hasta", async () => {
+    const fechaHasta = "2027-05-28";
+    const asiHasta = buildAsiDocumentId(PER, fechaHasta);
+    const r = await evaluarGrillaTurnoEntorno(mockDb({
+      dependeRda: true,
+      asi: {
+        [ASI_FECHA]: {
+          capa_teorica_por_grupo: {
+            [GDT]: { tipo_dia: "laborable", ingreso_teorico: "08:00" },
+          },
+        },
+        [asiHasta]: {
+          capa_teorica_por_grupo: {
+            [GDT]: { tipo_dia: "laborable", ingreso_teorico: "08:00" },
+          },
+        },
+      },
+    }), {
+      depende_rda: true,
+      persona_id: PER,
+      fecha_desde: FECHA,
+      fecha_hasta: fechaHasta,
+      grupo_trabajo_id: GDT,
+    });
+    assert.equal(r.ok, true);
+  });
+
   it("E11: capa_teorica_por_grupo[gdt] presente → OK sin plan", async () => {
     const r = await evaluarGrillaTurnoEntorno(mockDb({
       asi: {

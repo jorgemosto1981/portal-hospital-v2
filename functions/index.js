@@ -43,6 +43,8 @@ const reprocesarMdcSolicitudPatronB = require("./onCall/solicitudes/reprocesarMd
 const obtenerVistaGrillaMesAgente = require("./onCall/grilla/obtenerVistaGrillaMesAgente");
 const obtenerResumenSolicitudArticuloGrilla = require("./onCall/grilla/obtenerResumenSolicitudArticuloGrilla");
 const listarVistaGrillaMesPorGrupo = require("./onCall/grilla/listarVistaGrillaMesPorGrupo");
+const cerrarPeriodoLiquidacion = require("./onCall/grilla/cerrarPeriodoLiquidacion");
+const reabrirPeriodoLiquidacion = require("./onCall/grilla/reabrirPeriodoLiquidacion");
 const planesTurnoServicio = require("./modules/asistencia/planesTurnoServicio");
 const cambiosTurno = require("./modules/asistencia/cambiosTurno");
 const rematerializacion = require("./modules/asistencia/rematerializacion");
@@ -81,6 +83,8 @@ module.exports = {
   ...obtenerVistaGrillaMesAgente,
   ...obtenerResumenSolicitudArticuloGrilla,
   ...listarVistaGrillaMesPorGrupo,
+  ...cerrarPeriodoLiquidacion,
+  ...reabrirPeriodoLiquidacion,
   ...planesTurnoServicio,
   ...cambiosTurno,
   ...rematerializacion,

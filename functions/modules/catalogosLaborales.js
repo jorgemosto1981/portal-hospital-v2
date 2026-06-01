@@ -925,6 +925,32 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
     if (personaHlg) await refreshClaimsLaboralPersona(personaHlg);
 
     const grupoHlgDes = toNullableTrimmedString(hlg.grupo_de_trabajo_id);
+    let purgeResumen = null;
+    if (personaHlg && grupoHlgDes && fechaFin) {
+      const { purgeCapaTeoricaGdtRango, ymdAddDays, ymdFinMesSiguiente } = require("./asistencia/purgeCapaTeoricaGdtRango");
+      const desdePurge = ymdAddDays(fechaFin, 1);
+      const hastaPurge = ymdFinMesSiguiente(fechaCorte);
+      if (desdePurge <= hastaPurge) {
+        try {
+          purgeResumen = await purgeCapaTeoricaGdtRango(db, {
+            personaId: personaHlg,
+            gdt: grupoHlgDes,
+            desdeYmd: desdePurge,
+            hastaYmd: hastaPurge,
+            motivo: motivo || "deshabilitar_hlg",
+          });
+        } catch (purgeErr) {
+          console.error("rrhhDeshabilitarHlg: purgeCapaTeoricaGdtRango", purgeErr);
+          pushWarning(
+            warnings,
+            "VAL-HLG-DES-W003",
+            "HLg deshabilitada, pero no se pudo purgar la capa teórica futura. Reintentá rematerializar el sector.",
+            { hlg_id: hlgId, desde: desdePurge, hasta: hastaPurge },
+          );
+        }
+      }
+    }
+
     if (personaHlg && grupoHlgDes) {
       const { materializarTurnoMesBatch } = require("./asistencia/rdaTurnoTeoricoWorker");
       const hoy = new Date();
@@ -947,6 +973,7 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
       fecha_corte_aplicada: fechaCorte,
       warnings,
       evento_id: eventoId,
+      purge_capa_teorica: purgeResumen,
     };
   } catch (err) {
     if (err instanceof HttpsError) throw err;

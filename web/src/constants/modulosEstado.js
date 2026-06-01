@@ -139,10 +139,10 @@ export const MODULOS_PORTAL = [
   },
   {
     id: "grilla",
-    label: "Grilla Operativa",
-    path: "/portal/grilla",
+    label: "Grilla operativa",
+    path: "/portal/rrhh/grilla-operativa",
     estado: ESTADOS_MODULO.MVP,
-    grupo: "jefe",
+    grupo: "rrhh",
   },
   {
     id: "planes-turno-jefe",
@@ -234,6 +234,7 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh/bandeja-turnos")) return "bandeja-turnos-evaluador-rrhh";
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
+  if (pathname.startsWith("/portal/rrhh/grilla-operativa")) return "grilla";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla";
   if (pathname.startsWith("/portal/jefe/planes-turno")) return "planes-turno-jefe";
   if (pathname.startsWith("/portal/jefe/solicitudes")) return "bandeja-solicitudes-jefe";
