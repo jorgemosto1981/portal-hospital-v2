@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Card from "../../components/ui/Card.jsx";
 import { callListarRegimenesHorarios, callGuardarRegimenHorario } from "../../services/callables.js";
+import { ofrecerRematerializarPostRegimen } from "../../features/grilla/rematerializarRrhhUi.js";
 import RegimenHorarioForm from "./regimenes/RegimenHorarioForm.jsx";
 import RegimenHorarioDetalle from "./regimenes/RegimenHorarioDetalle.jsx";
 
@@ -46,6 +47,12 @@ export default function RegimenesHorariosPage() {
   const [modal, setModal] = useState(null);
   const [detalleItem, setDetalleItem] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  const [feedback, setFeedback] = useState("");
+
+  const showFeedback = useCallback((msg) => {
+    setFeedback(msg);
+    window.setTimeout(() => setFeedback(""), 6000);
+  }, []);
 
   const cargarItems = useCallback(async () => {
     setLoading(true);
@@ -91,16 +98,28 @@ export default function RegimenesHorariosPage() {
     async (datos, id) => {
       setGuardando(true);
       try {
-        await callGuardarRegimenHorario({ datos, id: id || undefined });
+        const res = await callGuardarRegimenHorario({ datos, id: id || undefined });
+        const regimenId = res.data?.id || id;
         setModal(null);
         await cargarItems();
+        showFeedback(`Régimen ${res.data?.modo === "creado" ? "creado" : "actualizado"}.`);
+        if (
+          regimenId &&
+          (datos.tipo_patron === "fijo" || datos.tipo_patron === "rotativo")
+        ) {
+          await ofrecerRematerializarPostRegimen({
+            regimenId,
+            regimenNombre: datos.nombre,
+            onFeedback: showFeedback,
+          });
+        }
       } catch (e) {
         throw e;
       } finally {
         setGuardando(false);
       }
     },
-    [cargarItems],
+    [cargarItems, showFeedback],
   );
 
   return (
@@ -129,6 +148,12 @@ export default function RegimenesHorariosPage() {
           </button>
         </div>
       </header>
+
+      {feedback ? (
+        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          {feedback}
+        </div>
+      ) : null}
 
       {/* Indicadores */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

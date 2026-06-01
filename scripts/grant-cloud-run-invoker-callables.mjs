@@ -58,6 +58,7 @@ const CALLABLE_EXPORT_IDS = [
   "listarVistaGrillaMesPorGrupo",
   "cerrarPeriodoLiquidacion",
   "reabrirPeriodoLiquidacion",
+  "consultarEstadosPeriodoLiquidacionGrupo",
   "rematerializarPostCalendario",
   "rematerializarPostRegimen",
 ];

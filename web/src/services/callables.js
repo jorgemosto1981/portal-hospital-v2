@@ -300,6 +300,11 @@ export function callReabrirPeriodoLiquidacion(data) {
   return httpsCallable(getFunctionsV2(), "reabrirPeriodoLiquidacion")(data);
 }
 
+/** RRHH: consulta si el período está cerrado por grupo/mes (tarjetas GSO). */
+export function callConsultarEstadosPeriodoLiquidacionGrupo(data) {
+  return httpsCallable(getFunctionsV2(), "consultarEstadosPeriodoLiquidacionGrupo")(data);
+}
+
 /** RRHH: crear o actualizar un régimen horario (cfg_regimen_horario). */
 export function callGuardarRegimenHorario(data) {
   return httpsCallable(getFunctionsV2(), "guardarRegimenHorario")(data);

@@ -23,7 +23,15 @@ const { COL_VISTAS_GRILLA_MES } = require("../shared/mdcComandosConstants");
 const { getInfoDia } = require("../shared/calendarService");
 const { enriquecerAgentesDiasPlan } = require("./planEnriquecimientoDias");
 const { buildPersonaLabel } = require("../shared/eventosV2");
+const {
+  personaIdsEnPlan,
+  elegirPlanMensualCanonico,
+  detectarAgentesNuevosPlanificados,
+  mergeAgentesIncorporacionPlanMensual,
+} = require("./planGrupoAgentesNuevos");
 const crypto = require("crypto");
+
+const ESTADOS_PLAN_INCORPORACION_AGENTES = ["HABILITADO", "ENVIADO", "EN_REVISION", "BORRADOR"];
 
 const COL_PLANES = "planes_turno_servicio";
 const COL_PERSONAS = "personas";
@@ -217,6 +225,8 @@ function validarPlanPerpetuo(datos) {
  */
 const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) => {
   const datos = request.data && request.data.datos;
+  const modoIncorporacionAgentesNuevos =
+    request.data && request.data.modo_incorporacion_agentes_nuevos === true;
   const { grupoId, tipoPlan } = validarDatosBase(datos);
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, grupoId, "guardar");
 
@@ -269,21 +279,75 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
     id = `plt_${ulid()}`;
   }
 
+  let estadoTrasGuardar = "BORRADOR";
+
   if (tipoPlan === "mensual") {
-    if (!exists) {
+    if (modoIncorporacionAgentesNuevos) {
+      if (!exists) {
+        err("failed-precondition", "[PLT-INC-002] Incorporación requiere un plan mensual existente.");
+      }
+    } else if (!exists) {
       await assertPlanMensualConAgentesPlanificados(grupoId, especificos.periodo);
     }
-    await assertSinPlanMensualVigente({
-      grupoId,
-      periodo: especificos.periodo,
-      excludePlanId: exists ? id : null,
-    });
+    if (!exists) {
+      await assertSinPlanMensualVigente({
+        grupoId,
+        periodo: especificos.periodo,
+        excludePlanId: null,
+      });
+    }
+    let agentesParaEnriquecer = datos.agentes;
+    if (modoIncorporacionAgentesNuevos && exists) {
+      const planSnap = await db.collection(COL_PLANES).doc(id).get();
+      if (!planSnap.exists) err("not-found", "[PLT-SAV-001] Plan no encontrado.");
+      const planActual = planSnap.data();
+      assertEstados(planActual, ESTADOS_PLAN_INCORPORACION_AGENTES);
+      const { personasGrupo, regimenes } = await cargarPersonasYRegimenesPlanGrupo(
+        grupoId,
+        especificos.periodo,
+      );
+      const agentesNuevos = detectarAgentesNuevosPlanificados({
+        personasGrupo,
+        regimenes,
+        personaIdsEnPlanMensual: personaIdsEnPlan(planActual),
+      });
+      if (agentesNuevos.length === 0) {
+        err(
+          "failed-precondition",
+          "[PLT-INC-003] No hay agentes nuevos planificados para incorporar en este período.",
+        );
+      }
+      const idsPermitidos = new Set(agentesNuevos.map((a) => a.persona_id));
+      const merged = mergeAgentesIncorporacionPlanMensual(
+        planActual.agentes || [],
+        datos.agentes,
+        idsPermitidos,
+      );
+      if (!merged.ok) {
+        err(
+          "permission-denied",
+          `[${merged.code}] No se puede modificar agentes ya incluidos en el plan; solo incorporación de nuevos.`,
+        );
+      }
+      const incorporados = new Set(
+        (datos.agentes || []).map((a) => String(a.persona_id || "").trim()).filter(Boolean),
+      );
+      if (![...idsPermitidos].some((pid) => incorporados.has(pid))) {
+        err("invalid-argument", "[PLT-INC-004] Debe guardar al menos un agente nuevo en la grilla.");
+      }
+      agentesParaEnriquecer = merged.agentes;
+      if (planActual.estado === "HABILITADO" || planActual.estado === "ENVIADO") {
+        estadoTrasGuardar = "EN_REVISION";
+      } else {
+        estadoTrasGuardar = planActual.estado === "EN_REVISION" ? "EN_REVISION" : "BORRADOR";
+      }
+    }
     const agentesEnriquecidos = await enriquecerAgentesDiasPlan({
       periodo: especificos.periodo,
       planId: id,
-      agentes: datos.agentes,
+      agentes: agentesParaEnriquecer,
     });
-    assertAgentesEnriquecidos(datos.agentes, agentesEnriquecidos);
+    assertAgentesEnriquecidos(agentesParaEnriquecer, agentesEnriquecidos);
     especificos.agentes = agentesEnriquecidos;
   }
 
@@ -293,7 +357,7 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
   const payloadBase = {
     id,
     grupo_id: grupoId,
-    estado: "BORRADOR",
+    estado: estadoTrasGuardar,
     ...especificos,
     comentarios_jefe: comentariosJefe,
     plan_version_token: planVersionToken,
@@ -325,7 +389,10 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
       err("not-found", "[PLT-SAV-001] Plan no encontrado.");
     }
     const actual = snap.data();
-    assertEstados(actual, ["BORRADOR", "EN_REVISION"]);
+    const estadosPermitidos = modoIncorporacionAgentesNuevos
+      ? ESTADOS_PLAN_INCORPORACION_AGENTES
+      : ["BORRADOR", "EN_REVISION"];
+    assertEstados(actual, estadosPermitidos);
     const almacenado = String(actual.plan_version_token || "").trim();
     if (almacenado) {
       if (!tokenEnviado || tokenEnviado !== almacenado) {
@@ -341,8 +408,8 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
   return {
     ok: true,
     id,
-    estado: "BORRADOR",
-    modo: "actualizado",
+    estado: estadoTrasGuardar,
+    modo: modoIncorporacionAgentesNuevos ? "incorporacion_agentes_nuevos" : "actualizado",
     plan_version_token: planVersionToken,
   };
 });
@@ -1141,17 +1208,8 @@ async function invalidarOverridesFantasma(overridesEncontrados) {
   return count;
 }
 
-/**
- * Retorna contexto enriquecido para la grilla del jefe:
- * personas del grupo con HLG vigente + regímenes deduplicados.
- * ~43 reads para 20 agentes con 3 regímenes.
- */
-const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) => {
-  const grupoId = request.data && request.data.grupo_id;
-  const periodo = request.data && request.data.periodo;
-  if (!grupoId) err("invalid-argument", "[CTX-001] grupo_id requerido.");
-  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, grupoId, "leer");
-
+/** Personas HLg vigentes en el mes + regímenes (sin licencias ni calendario). */
+async function cargarPersonasYRegimenesPlanGrupo(grupoId, periodo) {
   const { periodo: periodoNorm, primerDia, ultimoDia } = rangoPeriodoMensual(periodo);
 
   const hlgSnap = await db.collection("historial_laboral_grupos")
@@ -1160,12 +1218,7 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
     .get();
 
   if (hlgSnap.empty) {
-    return {
-      personas_grupo: [],
-      regimenes: {},
-      periodo: periodoNorm,
-      hay_agentes_planificados: false,
-    };
+    return { periodo: periodoNorm, personasGrupo: [], regimenes: {} };
   }
 
   const hlgFilas = [];
@@ -1193,7 +1246,6 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
     if (pg.persona_id) personaIds.add(pg.persona_id);
   }
 
-  // Enriquecer con nombre de persona
   const personaDocs = {};
   if (personaIds.size > 0) {
     const personaChunks = [...personaIds];
@@ -1220,17 +1272,44 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
     String(a.persona_label || a.persona_id).localeCompare(String(b.persona_label || b.persona_id), "es"),
   );
 
-  // Cargar regímenes deduplicados
   const regimenes = {};
   for (const rid of regimenIds) {
     const rsnap = await db.collection("cfg_regimen_horario").doc(rid).get();
     if (rsnap.exists) {
-      const rd = rsnap.data();
-      regimenes[rid] = {
-        id: rid,
-        ...rd,
-      };
+      regimenes[rid] = { id: rid, ...rsnap.data() };
     }
+  }
+
+  return { periodo: periodoNorm, personasGrupo, regimenes };
+}
+
+/**
+ * Retorna contexto enriquecido para la grilla del jefe:
+ * personas del grupo con HLG vigente + regímenes deduplicados.
+ * ~43 reads para 20 agentes con 3 regímenes.
+ */
+const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) => {
+  const grupoId = request.data && request.data.grupo_id;
+  const periodo = request.data && request.data.periodo;
+  if (!grupoId) err("invalid-argument", "[CTX-001] grupo_id requerido.");
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, grupoId, "leer");
+
+  const { periodo: periodoNorm, personasGrupo, regimenes } = await cargarPersonasYRegimenesPlanGrupo(
+    grupoId,
+    periodo,
+  );
+
+  if (!personasGrupo.length) {
+    return {
+      personas_grupo: [],
+      regimenes: {},
+      periodo: periodoNorm,
+      hay_agentes_planificados: false,
+      requiere_plan_individual: false,
+      agentes_nuevos: [],
+      plan_mensual_id: null,
+      plan_mensual_estado: null,
+    };
   }
 
   // Cargar eventos/licencias proyectados del mes desde vis_* (sin nueva llamada frontend).
@@ -1279,11 +1358,39 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
 
   const hayAgentesPlanificados = Object.values(regimenes).some((reg) => regimenDocEsPlanificado(reg));
 
+  let planMensualCanonico = null;
+  const planesSnap = await db
+    .collection(COL_PLANES)
+    .where("grupo_id", "==", grupoId)
+    .where("periodo", "==", periodoNorm)
+    .where("tipo_plan", "==", "mensual")
+    .limit(20)
+    .get();
+  const planesActivos = planesSnap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((p) => p.eliminado !== true);
+  if (planesActivos.length > 0) {
+    planMensualCanonico = elegirPlanMensualCanonico(planesActivos);
+  }
+
+  const agentesNuevos =
+    planMensualCanonico && planMensualCanonico.estado !== "CERRADO"
+      ? detectarAgentesNuevosPlanificados({
+          personasGrupo,
+          regimenes,
+          personaIdsEnPlanMensual: personaIdsEnPlan(planMensualCanonico),
+        })
+      : [];
+
   return {
     personas_grupo: personasGrupo,
     regimenes,
     periodo: periodoNorm,
     hay_agentes_planificados: hayAgentesPlanificados,
+    requiere_plan_individual: agentesNuevos.length > 0,
+    agentes_nuevos: agentesNuevos,
+    plan_mensual_id: planMensualCanonico?.id || null,
+    plan_mensual_estado: planMensualCanonico?.estado || null,
     licencias_por_persona_ymd: licenciasPorPersonaYmd,
     calendario_institucional_mes: calendarioInstitucionalMes,
   };

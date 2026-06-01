@@ -6,6 +6,8 @@ const { assertAgenteConPersonaId } = require("../../modules/shared/helpers");
 const { tokenHasRrhhLaborAccess } = require("../../modules/shared/laborProfile");
 const { isPortalRoleUsuario } = require("../../modules/shared/solicitudElegibilidadLaboral");
 const { obtenerVistaGrillaMesAgente } = require("../../modules/shared/grillaMesAgenteCore");
+const { evaluarPoliticaGsoAnioMes } = require("../../modules/asistencia/grillaGsoSoloLectura");
+const { CFG_EPL_LIQUIDADO_CERRADO } = require("../../modules/shared/cfgAsistenciaTurnosIds");
 
 const obtenerVistaGrillaMesAgenteCallable = onCall(async (request) => {
   if (!request.auth) {
@@ -49,7 +51,19 @@ const obtenerVistaGrillaMesAgenteCallable = onCall(async (request) => {
     throw new HttpsError("invalid-argument", result.mensaje || "Consulta inválida.");
   }
 
-  return result;
+  const esRrhhLabor = tokenHasRrhhLaborAccess(token);
+  const politica = evaluarPoliticaGsoAnioMes({ anio, mes, esRrhhLabor });
+  const periodoCerrado = result.estado_periodo_liquidacion_id === CFG_EPL_LIQUIDADO_CERRADO;
+
+  return {
+    ...result,
+    gso_politica_mes: politica,
+    gso_solo_lectura: !esRrhhLabor && (politica.solo_lectura || periodoCerrado),
+    gso_solo_lectura_motivo: periodoCerrado
+      ? "periodo_cerrado"
+      : (politica.motivo || null),
+    metadata: result.metadata || null,
+  };
 });
 
 module.exports = { obtenerVistaGrillaMesAgente: obtenerVistaGrillaMesAgenteCallable };

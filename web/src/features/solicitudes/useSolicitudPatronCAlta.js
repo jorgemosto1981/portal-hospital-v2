@@ -10,6 +10,7 @@ import {
   crearSolicitudArticuloPatronCBorrador,
   esperarValidacionMotorPatronC,
 } from "../../services/solicitudesArticuloV2Service.js";
+import { formatearMensajesEntorno } from "./formatearMensajeEntorno.js";
 
 const RX_YMD = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -164,10 +165,17 @@ export function useSolicitudPatronCAlta({ personaId, fechaDesdeInicial, articulo
         setEntornoOk(true);
         return { success: true, data };
       }
-      const mensajes = Array.isArray(data?.mensajes)
+      const raw = Array.isArray(data?.mensajes)
         ? data.mensajes.map((m) => String(m || "").trim()).filter(Boolean)
         : [];
-      setEntornoMensajes(mensajes.length ? mensajes : ["No podés continuar: revisá fecha, grupo o turno."]);
+      const vigentes = Array.isArray(data?.grupos_trabajo_vigentes)
+        ? data.grupos_trabajo_vigentes
+        : gruposVigentes;
+      const mensajes = formatearMensajesEntorno(
+        raw.length ? raw : ["No podés continuar: revisá fecha, grupo o turno."],
+        vigentes,
+      );
+      setEntornoMensajes(mensajes);
       setEntornoOk(false);
       return { success: false, data };
     } catch (e) {
@@ -177,7 +185,7 @@ export function useSolicitudPatronCAlta({ personaId, fechaDesdeInicial, articulo
     } finally {
       setValidandoEntorno(false);
     }
-  }, [articuloSel, fechaDesde, fechasCompletas, grupoAnclaId, horasOk, personaId, validandoEntorno]);
+  }, [articuloSel, fechaDesde, fechasCompletas, grupoAnclaId, gruposVigentes, horasOk, personaId, validandoEntorno]);
 
   const previsualizar = useCallback(async (opts = {}) => {
     const forzarTrasEntorno = opts?.forzarTrasEntorno === true;

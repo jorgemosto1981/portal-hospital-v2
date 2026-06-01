@@ -6,6 +6,7 @@ const { assertAgenteConPersonaId } = require("../../modules/shared/helpers");
 const { tokenHasRrhhLaborAccess } = require("../../modules/shared/laborProfile");
 const { isPortalRoleUsuario } = require("../../modules/shared/solicitudElegibilidadLaboral");
 const { listarVistaGrillaMesPorGrupo } = require("../../modules/shared/grillaMesAgenteCore");
+const { evaluarPoliticaGsoAnioMes } = require("../../modules/asistencia/grillaGsoSoloLectura");
 
 const listarVistaGrillaMesPorGrupoCallable = onCall(async (request) => {
   if (!request.auth) {
@@ -42,7 +43,15 @@ const listarVistaGrillaMesPorGrupoCallable = onCall(async (request) => {
       throw new HttpsError("invalid-argument", result.mensaje || "Consulta inválida.");
     }
 
-    return result;
+    const esRrhhLabor = tokenHasRrhhLaborAccess(token);
+    const politica = evaluarPoliticaGsoAnioMes({ anio, mes, esRrhhLabor });
+
+    return {
+      ...result,
+      gso_politica_mes: politica,
+      gso_solo_lectura: !esRrhhLabor && politica.solo_lectura,
+      gso_solo_lectura_motivo: politica.motivo || null,
+    };
   } catch (err) {
     if (err instanceof HttpsError) throw err;
     console.error("listarVistaGrillaMesPorGrupo", err);

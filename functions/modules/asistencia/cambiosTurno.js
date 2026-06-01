@@ -15,7 +15,7 @@ const { db, FieldValue } = require("../shared/context");
 const runtimeFlags = require("../shared/runtimeFlags.json");
 const { assertOverrideAuth } = require("../shared/helpers");
 const { materializarTurnoTeoricoDia } = require("./rdaTurnoTeoricoWorker");
-const { assertPeriodoNoCerrado } = require("./asistenciaPeriodoLiquidacion");
+const { assertGrillaGsoEscrituraEnFecha } = require("./grillaGsoSoloLectura");
 const { buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
 const { obtenerCapaTeoricaDia } = require("./obtenerCapaTeoricaDia");
 const {
@@ -156,12 +156,12 @@ async function assertConcurrenciaVis(personaId, fecha, tokenEsperado, grupoId) {
   }
 }
 
-async function assertPeriodoEditable(personaId, fecha, grupoId) {
+async function assertPeriodoEditable(personaId, fecha, grupoId, token) {
   try {
-    await assertPeriodoNoCerrado(db, personaId, fecha, grupoId);
+    await assertGrillaGsoEscrituraEnFecha(db, personaId, fecha, grupoId, token);
   } catch (e) {
     const code = e && e.code === "failed-precondition" ? "failed-precondition" : "internal";
-    err(code, (e && e.message) || "[ASI-PER-001] Período cerrado.");
+    err(code, (e && e.message) || "[ASI-PER-001] Período no editable.");
   }
 }
 
@@ -268,11 +268,12 @@ const registrarCambioTurno = onCall({
     "[OVR-031] grupo_trabajo_id (gdt_*) requerido.",
   );
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
-  await assertPeriodoEditable(personaId, fecha, grupoTrabajoId);
+  const token = (request.auth && request.auth.token) || {};
+  await assertPeriodoEditable(personaId, fecha, grupoTrabajoId, token);
   const override = validarOverride(data.override);
   if (override.tipo === "cobertura_parcial") {
-    await assertPeriodoEditable(override.persona_origen_id, fecha, grupoTrabajoId);
-    await assertPeriodoEditable(override.persona_cobertura_id, fecha, grupoTrabajoId);
+    await assertPeriodoEditable(override.persona_origen_id, fecha, grupoTrabajoId, token);
+    await assertPeriodoEditable(override.persona_cobertura_id, fecha, grupoTrabajoId, token);
     const tokenConc = typeof data.expected_version_token === "string"
       ? data.expected_version_token.trim()
       : (typeof data.concurrencia_vis_sync === "string" ? data.concurrencia_vis_sync.trim() : "");
@@ -280,7 +281,6 @@ const registrarCambioTurno = onCall({
   }
 
   const uid = (request.auth && request.auth.uid) || "system";
-  const token = (request.auth && request.auth.token) || {};
 
   const entry = {
     ...override,
@@ -341,7 +341,8 @@ const eliminarCambioTurno = onCall({
     "[OVR-031] grupo_trabajo_id (gdt_*) requerido.",
   );
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
-  await assertPeriodoEditable(personaId, fecha, grupoTrabajoId);
+  const tokenDel = (request.auth && request.auth.token) || {};
+  await assertPeriodoEditable(personaId, fecha, grupoTrabajoId, tokenDel);
 
   const idx = typeof data.override_index === "number" ? data.override_index : -1;
   if (idx < 0) err("invalid-argument", "[OVR-DEL-001] override_index (>=0) requerido.");
@@ -350,7 +351,6 @@ const eliminarCambioTurno = onCall({
   if (motivo.length < 3) err("invalid-argument", "[OVR-DEL-002] motivo_eliminacion requerido (mín. 3 caracteres).");
 
   const uid = (request.auth && request.auth.uid) || "system";
-  const token = (request.auth && request.auth.token) || {};
 
   const docId = docIdAsistencia(personaId, fecha);
   const ref = db.collection(COL_ASISTENCIA).doc(docId);
@@ -365,7 +365,7 @@ const eliminarCambioTurno = onCall({
     eliminado: true,
     eliminado_en: new Date().toISOString(),
     eliminado_por_uid: uid,
-    eliminado_por_persona_id: token.persona_id || null,
+    eliminado_por_persona_id: tokenDel.persona_id || null,
     motivo_eliminacion: motivo,
   };
 
@@ -436,14 +436,14 @@ const aplicarBatchAsistencia = onCall({
     }
   }
 
-  // Pre-flight check (rápido antes de abrir transacción)
+  const token = (request.auth && request.auth.token) || {};
+
   for (const it of items) {
-    await assertPeriodoEditable(it.persona_origen_id, it.fecha, it.grupo_trabajo_id);
-    await assertPeriodoEditable(it.persona_cobertura_id, it.fecha, it.grupo_trabajo_id);
+    await assertPeriodoEditable(it.persona_origen_id, it.fecha, it.grupo_trabajo_id, token);
+    await assertPeriodoEditable(it.persona_cobertura_id, it.fecha, it.grupo_trabajo_id, token);
   }
 
   const uid = (request.auth && request.auth.uid) || "system";
-  const token = (request.auth && request.auth.token) || {};
   const nowIso = new Date().toISOString();
 
   const txResult = await db.runTransaction(async (tx) => {

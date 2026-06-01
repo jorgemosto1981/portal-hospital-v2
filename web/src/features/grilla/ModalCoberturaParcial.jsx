@@ -65,7 +65,7 @@ export default function ModalCoberturaParcial({
         callListarContextoPlanGrupo({ grupo_id: grupoId, periodo: `${anio}-${String(mes).padStart(2, "0")}` }),
       ]);
       setExpectedVersionToken(capaRes.concurrencia?.expected_version_token || capaRes.concurrencia?.vis_ultima_sync || "");
-      setPeriodoCerrado(capaRes.periodo_liquidacion?.cerrado === true);
+      setPeriodoCerrado(capaRes.gso_escritura?.escritura_habilitada === false);
       const regimenes = ctx?.data?.regimenes || {};
       const hlg = (ctx?.data?.personas_grupo || []).find((p) => p.persona_id === personaOrigenId);
       const turnosMap = turnosDisponiblesDesdeRegimen(regimenes, hlg?.regimen_horario_id);
@@ -194,7 +194,7 @@ export default function ModalCoberturaParcial({
 
         {periodoCerrado ? (
           <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            El período de liquidación está cerrado; no se pueden registrar coberturas en esta fecha.
+            No se pueden registrar coberturas en esta fecha (mes en solo lectura o período cerrado).
           </p>
         ) : null}
 

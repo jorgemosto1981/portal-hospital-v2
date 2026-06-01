@@ -17,10 +17,20 @@ function primerDiaSemana(anio, mes) {
  *   mes: number;
  *   diasMap: Record<string, object> | null;
  *   grupoLabel?: string;
+ *   grupoVistaId?: string;
+ *   etiquetasGrupo?: Record<string, string>;
  *   onDiaClick: (payload: { dia: string; eventos: unknown[]; grupoLabel?: string }) => void;
  * }} props
  */
-export default function GrillaMesTitularCalendario({ anio, mes, diasMap, grupoLabel, onDiaClick }) {
+export default function GrillaMesTitularCalendario({
+  anio,
+  mes,
+  diasMap,
+  grupoLabel,
+  grupoVistaId,
+  etiquetasGrupo = {},
+  onDiaClick,
+}) {
   const map = diasMap && typeof diasMap === "object" ? diasMap : {};
   const totalDias = diasEnMes(anio, mes);
   const offset = primerDiaSemana(anio, mes) - 1;
@@ -88,6 +98,8 @@ export default function GrillaMesTitularCalendario({ anio, mes, diasMap, grupoLa
               key={dia}
               eventos={Array.isArray(eventos) ? eventos : []}
               dia={dia}
+              grupoVistaId={grupoVistaId}
+              etiquetasGrupo={etiquetasGrupo}
               disabled={!tieneDatos}
               onClick={() => tieneDatos && onDiaClick({
                 dia,

@@ -25,10 +25,11 @@ function labelEstado(id) {
  *   personaId?: string;
  *   fechaYmd?: string;
  *   onAbrirCobertura?: () => void;
+ *   soloLectura?: boolean;
  * }} props
  */
 export default function DiaGrillaDetalleModal({
-  open, onClose, dia, eventos, bandejaPath, subtitulo, turnoTeorico, grupoLabel, personaId, fechaYmd, onAbrirCobertura,
+  open, onClose, dia, eventos, bandejaPath, subtitulo, turnoTeorico, grupoLabel, personaId, fechaYmd, onAbrirCobertura, soloLectura = false,
 }) {
   const [solFocus, setSolFocus] = useState("");
   const [resumen, setResumen] = useState(null);
@@ -215,7 +216,12 @@ export default function DiaGrillaDetalleModal({
           </dl>
         ) : null}
 
-        {personaId && fechaYmd && onAbrirCobertura ? (
+        {soloLectura ? (
+          <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            Este mes está en solo lectura. Los cambios de turno los gestiona RRHH.
+          </p>
+        ) : null}
+        {personaId && fechaYmd && onAbrirCobertura && !soloLectura ? (
           <button
             type="button"
             onClick={() => {

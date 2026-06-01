@@ -132,6 +132,22 @@ describe("resolverFijo", () => {
     assert.equal(r.tipo_dia, "franco");
     assert.equal(r.turno_teorico, null);
   });
+
+  it("dia_semana string en Firestore coincide con ISO weekday", () => {
+    const regStr = {
+      tipo_patron: "fijo",
+      dias: [{ dia_semana: "1", tipo_dia: "laborable", turno: { ingreso: "08:00", egreso: "14:00", horas_efectivas: 6 } }],
+    };
+    const r = resolverFijo(regStr, ymdToDate("2026-05-25"));
+    assert.equal(r.tipo_dia, "laborable");
+    assert.equal(r.turno_teorico.horas_efectivas, 6);
+  });
+
+  it("sin match de dia = franco (no no_laborable)", () => {
+    const regVacio = { tipo_patron: "fijo", dias: [] };
+    const r = resolverFijo(regVacio, ymdToDate("2026-05-25"));
+    assert.equal(r.tipo_dia, "franco");
+  });
 });
 
 describe("resolverRotativo", () => {
@@ -202,8 +218,8 @@ describe("resolverRotativo", () => {
     assert.equal(r.tipo_dia, "franco");
   });
 
-  it("sin fecha ancla = no_laborable", () => {
+  it("sin fecha ancla = franco (alineado a cliente)", () => {
     const r = resolverRotativo(regimen, ymdToDate("2026-06-01"), null);
-    assert.equal(r.tipo_dia, "no_laborable");
+    assert.equal(r.tipo_dia, "franco");
   });
 });

@@ -328,6 +328,8 @@ export default function PlanTurnoServicioPage() {
                 cantidad: items.length,
                 items,
                 hay_planificados: resCtx?.data?.hay_agentes_planificados === true,
+                requiere_plan_individual: resCtx?.data?.requiere_plan_individual === true,
+                agentes_nuevos: resCtx?.data?.agentes_nuevos || [],
               },
             ];
           } catch {
@@ -367,7 +369,7 @@ export default function PlanTurnoServicioPage() {
     setTimeout(() => setFeedback(""), 4000);
   };
 
-  const handleGuardarBorrador = useCallback(async (datos, existingId) => {
+  const handleGuardarBorrador = useCallback(async (datos, existingId, opciones = {}) => {
     setOperando(true);
     setError("");
     try {
@@ -379,8 +381,16 @@ export default function PlanTurnoServicioPage() {
         setError(msg);
         return { ok: false, error: msg };
       }
-      const res = await callGuardarPlanTurnoServicio({ datos: parsed.data, id: existingId || undefined });
-      showFeedback(`Plan ${res.data?.modo || "guardado"} (${res.data?.id}).`);
+      const res = await callGuardarPlanTurnoServicio({
+        datos: parsed.data,
+        id: existingId || undefined,
+        modo_incorporacion_agentes_nuevos: opciones.modoIncorporacion === true,
+      });
+      const modoMsg =
+        res.data?.modo === "incorporacion_agentes_nuevos"
+          ? "incorporación guardada (plan en revisión)"
+          : res.data?.modo || "guardado";
+      showFeedback(`Plan ${modoMsg} (${res.data?.id}).`);
       setPlanEdicion(null);
       await cargar();
       await cargarResumenGrupos();
@@ -658,6 +668,27 @@ export default function PlanTurnoServicioPage() {
       ) : null}
 
       {/* Feedback */}
+      {grupoId && periodo && resumenGrupoPeriodo[periodo]?.[grupoId]?.requiere_plan_individual ? (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="status"
+        >
+          <p className="font-medium">Requiere plan individual para agente(s) nuevo(s)</p>
+          <p className="mt-1 text-xs text-amber-800">
+            Hay personal planificado en el grupo que no figura en el turno mensual vigente. Incorporá solo a
+            los agentes nuevos; quienes ya estaban en el plan no se modifican.
+          </p>
+          <ul className="mt-2 list-inside list-disc text-xs text-amber-900">
+            {(resumenGrupoPeriodo[periodo][grupoId].agentes_nuevos || []).slice(0, 5).map((a) => (
+              <li key={a.persona_id}>
+                {a.persona_label || a.persona_id}
+                {a.persona_dni ? ` · DNI ${a.persona_dni}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {feedback && (
         <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
           {feedback}
@@ -682,6 +713,10 @@ export default function PlanTurnoServicioPage() {
         <GrillaMensualEditor
           plan={planEdicion.nuevo || planEdicion.modoVistaEquipo ? null : planEdicion}
           modoVistaEquipo={Boolean(planEdicion.modoVistaEquipo)}
+          modoIncorporacionAgentesNuevos={Boolean(planEdicion.modoIncorporacion)}
+          agentesNuevosPermitidos={
+            planEdicion.modoIncorporacion ? planEdicion.agentesNuevos || [] : []
+          }
           grupoId={grupoId}
           grupoLabel={grupoLabel}
           periodo={periodo}
@@ -721,6 +756,24 @@ export default function PlanTurnoServicioPage() {
                   Editar
                 </button>
               )}
+              {resumenGrupoPeriodo[planOpciones.periodo]?.[grupoId]?.requiere_plan_individual &&
+              ["HABILITADO", "ENVIADO", "EN_REVISION", "BORRADOR"].includes(planOpciones.plan.estado) ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlanEdicion({
+                      ...planOpciones.plan,
+                      modoIncorporacion: true,
+                      agentesNuevos:
+                        resumenGrupoPeriodo[planOpciones.periodo]?.[grupoId]?.agentes_nuevos || [],
+                    });
+                    setPlanOpciones(null);
+                  }}
+                  className="rounded-lg border border-amber-300 px-3 py-2 text-sm text-amber-800 hover:bg-amber-50"
+                >
+                  Incorporar agente(s) nuevo(s)
+                </button>
+              ) : null}
               {(planOpciones.plan.estado === "BORRADOR" || planOpciones.plan.estado === "EN_REVISION") && (
                 <button
                   type="button"

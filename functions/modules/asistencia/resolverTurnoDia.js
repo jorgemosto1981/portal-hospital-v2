@@ -13,6 +13,7 @@
  */
 
 const { db } = require("../shared/context");
+const { planHabilitadoDesdeQuerySnapshot } = require("./planGrupoAgentesNuevos");
 
 const COL_HLG = "historial_laboral_grupos";
 const COL_REGIMEN = "cfg_regimen_horario";
@@ -50,6 +51,12 @@ function isoWeekday(date) {
  */
 function diffDays(from, to) {
   return Math.round((to.getTime() - from.getTime()) / 86400000);
+}
+
+/** Coerce Firestore / JSON día de semana (1–7 ISO) o posición de ciclo. */
+function numeroEntero(val) {
+  const n = Number(val);
+  return Number.isFinite(n) ? n : null;
 }
 
 /**
@@ -92,8 +99,8 @@ function buildTurnoResponse(turno) {
  */
 function resolverFijo(regimen, fechaDate) {
   const weekday = isoWeekday(fechaDate);
-  const diaConf = (regimen.dias || []).find((d) => d.dia_semana === weekday);
-  if (!diaConf) return { tipo_dia: "no_laborable", turno_teorico: null };
+  const diaConf = (regimen.dias || []).find((d) => numeroEntero(d.dia_semana) === weekday);
+  if (!diaConf) return { tipo_dia: "franco", turno_teorico: null };
   return {
     tipo_dia: diaConf.tipo_dia,
     turno_teorico: buildTurnoResponse(diaConf.turno),
@@ -109,7 +116,7 @@ function resolverFijo(regimen, fechaDate) {
  */
 function resolverRotativo(regimen, fechaDate, fechaAnclaYmd) {
   if (!fechaAnclaYmd) {
-    return { tipo_dia: "no_laborable", turno_teorico: null, posicion_ciclo: 0 };
+    return { tipo_dia: "franco", turno_teorico: null, posicion_ciclo: 0 };
   }
   const ancla = ymdToDate(fechaAnclaYmd);
   const diff = diffDays(ancla, fechaDate);
@@ -117,8 +124,8 @@ function resolverRotativo(regimen, fechaDate, fechaAnclaYmd) {
   const posRaw = ((diff % cicloTotal) + cicloTotal) % cicloTotal;
   const posicion = posRaw + 1;
 
-  const posConf = (regimen.ciclo || []).find((p) => p.posicion === posicion);
-  if (!posConf) return { tipo_dia: "no_laborable", turno_teorico: null, posicion_ciclo: posicion };
+  const posConf = (regimen.ciclo || []).find((p) => numeroEntero(p.posicion) === posicion);
+  if (!posConf) return { tipo_dia: "franco", turno_teorico: null, posicion_ciclo: posicion };
   return {
     tipo_dia: posConf.tipo_dia,
     turno_teorico: buildTurnoResponse(posConf.turno),
@@ -145,13 +152,14 @@ async function resolverPlanificado(regimen, fechaYmd, grupoId, personaId) {
     .where("grupo_id", "==", grupoId)
     .where("periodo", "==", periodoId)
     .where("estado", "==", "HABILITADO")
-    .limit(1)
+    .limit(20)
     .get();
 
-  if (planSnap.empty) return { tipo_dia: "no_laborable", turno_teorico: null, plan_id: null };
+  const planBundle = planHabilitadoDesdeQuerySnapshot(planSnap);
+  if (!planBundle) return { tipo_dia: "no_laborable", turno_teorico: null, plan_id: null };
 
-  const plan = planSnap.docs[0].data();
-  const planId = planSnap.docs[0].id;
+  const plan = planBundle.plan;
+  const planId = planBundle.planId;
   const agentePlan = (plan.agentes || []).find((a) => a.persona_id === personaId);
   const asignacionDia = agentePlan?.dias?.[fechaYmd];
 

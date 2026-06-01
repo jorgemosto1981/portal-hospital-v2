@@ -1,23 +1,24 @@
 # Punto de Continuación — Próxima Sesión
 
-> **PAUSA IMPLEMENTACIÓN — 2026-06-01**  
-> Detenido exactamente tras **metadata `vis_*`** (commit `e349412`). Handoff: [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md).
+> **Última sesión — 2026-06-01 (tarde)** · GSO RRHH cierre/reapertura período + tarjetas + sin dotación — **validado OK prod**.  
+> Handoff detallado: [`HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md`](./HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md) · F2 previo: [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md).
 
 ## PAUSA — retomar aquí
 
 | Qué | Dónde |
 |-----|--------|
-| **Siguiente tarea código** | **F2 O-P1-1** — job día 5 materialización M+1 (Scheduler + callable idempotente, plan §17.2.1) |
-| **Verificación opcional al abrir** | Prod: `vis_*.metadata.ultimo_motivo` / `ultimo_rango_materializado` tras HLg o GSO sector |
-| **Deuda F1 paralela** | Paso 4 QA formal §4.2 [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) |
-| **Git** | Rama `feat/epic-multi-hlg-fase1-execution` @ **`e349412`** (push OK) |
-| **Contexto épica / orquestación** | [`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md) · [`HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md`](./HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md) |
+| **Handoff sesión GSO** | [`HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md`](./HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md) — checklist A1–E3 |
+| **Siguiente tarea código** | **F1** §4.2 manual (#2,3,6,8,9) → luego **F3** turnos compuestos |
+| **Regresión GSO (5 min)** | B1–B5 en handoff GSO · prod https://portal-hospital-v2.web.app |
+| **Smokes opcionales** | `smoke-f1-qa-4-2-prod.mjs` · `smoke-f2-orquestacion-prod.mjs` |
+| **Git** | `feat/epic-multi-hlg-fase1-execution` — **pull** tras commit pausa GSO (ver log) |
+| **Otra PC mañana** | `git pull` + `.env.v2.local` manual · `npm install` |
 
-**Última actualización:** Pausa F2 — 2026-06-01 · `e349412`
+**Última actualización:** Pausa GSO cierre período — 2026-06-01
 
 | Campo | Valor |
 |-------|--------|
-| **Branch trabajo** | `feat/epic-multi-hlg-fase1-execution` @ **`e349412`** |
+| **Branch trabajo** | `feat/epic-multi-hlg-fase1-execution` (commit pausa GSO pendiente de tag) |
 | **master** | `25bc00c` — merge épica Multi-HLG + checkpoint grilla RRHH |
 | **Tag pre-ejecución** | `pre-ejecucion-v2` (docs); código funcional posterior en `942adcf` |
 | **Biblia** | [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) |
@@ -29,6 +30,7 @@
 | **Manual borrador** | [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](./MANUAL_CAPAS_ORQUESTACION_BORRADOR.md) |
 | **Coherencia doc ↔ código** | [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](./ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md) |
 | **Roadmap sucesivo F0–F4** | [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md) |
+| **Handoff agente implementador** | [`HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md`](./HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md) |
 
 ---
 
@@ -61,15 +63,39 @@
 | **F-UX.1** | ✅ Código | Menú RRHH, `/portal/rrhh/grilla-operativa`, selector sector |
 | **F0** (O-P0-4,1,7,5) | ✅ Código | Purge HLg, gate anclas, bulk sector, toasts |
 | **F1.1** Multi-HLG → master | ✅ Merge | `25bc00c` en `origin/master` |
-| **F1.3** cierre período | ✅ Código | `cerrarPeriodoLiquidacion` + botón GSO RRHH |
+| **F1.3** cierre período | ✅ Prod | `cerrarPeriodoLiquidacion` + `reabrirPeriodoLiquidacion` |
+| **F1.4** UI cierre GSO | ✅ Prod | Tarjetas cerrado/sin dotación; modal compacto; sin selector RRHH |
 | **F1** núcleo prod | ✅ Smoke | Cierre período (3 `vis_*`) + purge HLg Sala; ver acta abajo |
-| **F1** restante | ⏳ | Paso 4 QA formal en prod |
+| **F1** restante | ⏳ | §4.2 manual #2,3,6,8,9 (checklist A1–A5 en handoff GSO) |
 | **Ticketera / HLg vigencia** | ✅ Prod | `a44b83f` — corte inclusivo (acta ticketera § abajo) |
 | **F2 O-P1-2** `materializarRango` | ✅ Código + wire HLg | `6a4db61` — alta M+M+1; deshabilitar inicio→corte |
 | **F2 2.1** metadata `vis_*` | ✅ Código + deploy parcial | `e349412` — laboral + GSO listado; ver handoff pausa |
-| **F2 O-P1-1 / O-P1-3** | ⏸️ **Siguiente** | Job día 5 · GSO M-1 solo lectura |
+| **F2 O-P1-1** job día 5 | ✅ Prod | Scheduler + callable; smoke julio OK |
+| **F2 O-P1-2** feriado + toasts | ✅ Deploy | `rematerializarPostCalendario({ fecha_ymd })` + `grillaMaterializacionToast.js` |
+| **F2 O-P1-3** GSO M-1 solo lectura | ✅ Deploy | `grillaGsoSoloLectura.js` + hosting |
+| **F2 O-P1-4** plan usuario nuevo §19.6 | ✅ Deploy | banner + incorporación agentes |
+| **F2.6** resolverFijo D2 | ✅ Código | `Number(dia_semana)` + franco sin match |
+| **F2.7** rematerializar UI RRHH | ✅ Código | `RegimenesHorariosPage` + `CalendarioConfig` |
 | **Deploy producción** | ✅ Sesión 01/06 | Ver tabla deploy en [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md) |
 | **F3–F4** | ➡️ Después F2 | Segmentos · Outbox |
+
+---
+
+## Acta smoke F1 §4.2 + D2 (2026-06-01)
+
+**Script:** `node scripts/smoke-f1-qa-4-2-prod.mjs` · **F2:** `smoke-f2-orquestacion-prod.mjs` (3/3 OK).
+
+| Prueba | Resultado |
+|--------|-----------|
+| D2 MOSTO mayo Portería | ✅ 12 turnos (no mes todo NL) |
+| MOSTO jun Oficina (multicargo) | ✅ 13 turnos |
+| LOKITO jun/jul Oficina | ✅ 14 + 25 turnos |
+| CHAPARRO may Sala | ✅ 9 turnos |
+| CHAPARRO jun Sala | SKIP — HLg inactiva desde 01/06 (purge F0) |
+
+**Incidente LOKITO (plan `eliminado` + HABILITADO):** fix `planHabilitadoDesdeQuerySnapshot` deployado; jun/jul OK en UI.
+
+**Pendiente sign-off manual:** §4.2 #2 LAO/GS-A · #6 rehabilitar plan · #8 grilla jefe · #9 override scoped.
 
 ---
 
@@ -149,10 +175,10 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 
 | ID | Entrega | Notas |
 |----|---------|--------|
-| O-P1-1 | Job día 5 **materialización** M+1 (fijo/rotativo), idempotente §17.2.1 | Cloud Scheduler + callable |
-| O-P1-2 | `materializarRango(desde, hasta, motivo)` unificado | ✅ **Pausa aquí** — `materializarRango.js`, wire HLg, metadata vis (`e349412`). Pendiente: feriado masivo, toasts unificados (2.1 UI), deploy `planesTurnoServicio`/`rematerializacion` si se usa metadata en esos flujos |
-| O-P1-3 | GSO: M-1 **solo lectura** usuario/jefe desde día 1 | callables grilla |
-| O-P1-4 | Turnos mensuales: warning + flujo plan paralelo usuario nuevo §19.6 | `planesTurnoServicio` + UI |
+| O-P1-1 | Job día 5 **materialización** M+1 (fijo/rotativo), idempotente §17.2.1 | ✅ Código — deploy `materializacionVentanaDia5Scheduled` + `ejecutarMaterializacionVentanaDia5` |
+| O-P1-2 | `materializarRango` + feriado puntual | ✅ Código + deploy — `rematerializarPostCalendario({ fecha_ymd })` vía rango; toasts F2.1 en GSO |
+| O-P1-3 | GSO: M-1 **solo lectura** usuario/jefe desde día 1 | ✅ Código + deploy — `ASI-GSO-001` + banner UI |
+| O-P1-4 | Turnos mensuales: warning + flujo plan paralelo usuario nuevo §19.6 | ✅ Código — `listarContextoPlanGrupo` + incorporación en `guardarPlan`; deploy pendiente |
 
 ### P2 — diferido / excepciones
 

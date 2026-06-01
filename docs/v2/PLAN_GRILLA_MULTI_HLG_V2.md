@@ -264,11 +264,11 @@ Ejecutar antes de merge a `main`.
 
 | # | Caso | Verificar | Estado piloto |
 |---|------|-----------|---------------|
-| 1 | CHAPARRO junio Internación | `grilla_aprobada` = `vis_*` scoped = slice `asi_*` (NL / 08–14 / F) | ✅ junio; mayo 31/31 slice scoped |
-| 2 | MOSTO LAO + GS-A en días distintos | Eventos MDC en `vis_*` del `gdt` correcto | ⚠️ parcial |
-| 3 | LOKITO régimen planificado / compuesto | Sin regresión turnos compuestos | ⚠️ pendiente doc |
+| 1 | CHAPARRO junio Internación | `grilla_aprobada` = `vis_*` scoped = slice `asi_*` (NL / 08–14 / F) | ✅ mayo Sala (9 turnos); jun SKIP — HLg Sala inactiva 01/06 |
+| 2 | MOSTO LAO + GS-A en días distintos | Eventos MDC en `vis_*` del `gdt` correcto | ⚠️ manual UI |
+| 3 | LOKITO régimen planificado / compuesto | Sin regresión turnos compuestos | ✅ Oficina jun/jul prod; compuesto F3 |
 | 4 | Outbox cobertura parcial | Token concurrencia + remat con `gdt` | ✅ smoke dev |
-| 5 | Titular multicargo | Cambiar `gdt` recarga otro calendario; Oficina vacío si sin plan | ✅ MOSTO jun 2026 |
+| 5 | Titular multicargo | Cambiar `gdt` recarga otro calendario; Oficina vacío si sin plan | ✅ smoke `D2-MOSTO-mayo-Porteria` + jun Oficina 2026-06-01 |
 | 6 | Rehabilitar / eliminar plan | No pisa `vis_*` de otro `gdt` | ⚠️ pendiente |
 | 7 | Solicitud `depende_rda` | Gate OK con capa en `gdt` ancla o plan HABILITADO | ✅ gate E11 deploy `fc54e8b` |
 | 8 | Grilla equipo jefe | `listarVistaGrillaMesPorGrupo` coherente con materialización | ⚠️ pendiente |
@@ -307,6 +307,7 @@ Documentados explícitamente para evitar tickets “bug” futuros.
 |--------|-----|
 | [`materializar-grupo-mes.mjs`](../../scripts/materializar-grupo-mes.mjs) | `--gdt=gdt_* --periodo=YYYY-MM` — rematerialización batch |
 | [`verificar-vis-mes-agente.mjs`](../../scripts/verificar-vis-mes-agente.mjs) | Auditoría post-mat por persona/`gdt`/mes |
+| [`smoke-f1-qa-4-2-prod.mjs`](../../scripts/smoke-f1-qa-4-2-prod.mjs) | Matriz §4.2 — checks BD (D2, MOSTO, LOKITO, CHAPARRO) |
 | [`purge-vis-legacy.mjs`](../../scripts/purge-vis-legacy.mjs) | Purga `vis_*` sin `_gdt_` (`--dry-run` default) |
 | [`strip-capa-teorica-legacy.mjs`](../../scripts/strip-capa-teorica-legacy.mjs) | Delete campo `capa_teorica` raíz — **aplicado 29/05** (244 docs) |
 
@@ -329,7 +330,7 @@ Documentados explícitamente para evitar tickets “bug” futuros.
 | ID | Prioridad | Resumen |
 |----|-----------|---------|
 | **DEUDA-CT-001** | **MUY IMPORTANTE — A DEFINIR** | Orquestador único + materialización proactiva por tiempo (no solo post-HLg/plan) |
-| **DEUDA-GO-001** | ALTA — A INVESTIGAR | Calendario licencias: Titular, Oficina PERSONAL, Portería — turno vacío |
+| **DEUDA-GO-001** | Parcial 2026-06-01 | Portería **jun+** sin dotación HLg (esperado); mayo con turnos si HLg vigente. UI: tarjetas «Sin dotación» + modal. Ver [`HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md`](./HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md) |
 | **DEUDA-GO-002** | MEDIA — A DEFINIR | Sala Internación visible pero sin paridad visual con Turnos Mensuales |
 
 Detalle: [`REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md`](./REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md).

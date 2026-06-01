@@ -44,6 +44,7 @@ function contenidoCeldaOperativa({
  *   mes: number;
  *   filas: Array<Record<string, unknown>>;
  *   grupoSeleccionado?: string;
+ *   etiquetasGrupo?: Record<string, string>;
  *   onCeldaClick: (payload: {
  *     dia: string; fechaYmd: string; personaId: string; eventos: unknown[];
  *     personaLabel?: string; grupoLabel?: string;
@@ -51,7 +52,14 @@ function contenidoCeldaOperativa({
  *   }) => void;
  * }} props
  */
-export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSeleccionado, onCeldaClick }) {
+export default function GrillaMesEquipoTabla({
+  anio,
+  mes,
+  filas,
+  grupoSeleccionado,
+  etiquetasGrupo = {},
+  onCeldaClick,
+}) {
   const totalDias = diasEnMes(anio, mes);
   const columnas = columnasCalendario(anio, mes);
   const institucionalPorDia = institucionalPorDiaEnFilas(filas, totalDias);
@@ -190,6 +198,8 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSelecciona
                           eventos={Array.isArray(eventos) ? eventos : []}
                           personaLabel={personaLabel}
                           dia={dia}
+                          grupoVistaId={grupoSeleccionado || undefined}
+                          etiquetasGrupo={etiquetasGrupo}
                           disabled={!tieneDatos}
                           onClick={() =>
                             tieneDatos &&

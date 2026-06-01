@@ -23,6 +23,7 @@ const {
   patchVisMetadataMaterializacionDot,
 } = require("./visMaterializacionMetadata");
 const { logger } = require("firebase-functions/v2");
+const { planHabilitadoDesdeQuerySnapshot } = require("./planGrupoAgentesNuevos");
 
 const COL_HLG = "historial_laboral_grupos";
 const COL_GDT = "grupos_de_trabajo";
@@ -106,10 +107,9 @@ async function obtenerPlanHabilitado(grupoId, periodoId) {
     .where("grupo_id", "==", grupoId)
     .where("periodo", "==", periodoId)
     .where("estado", "==", "HABILITADO")
-    .limit(1)
+    .limit(20)
     .get();
-  if (snap.empty) return null;
-  return { planId: snap.docs[0].id, plan: snap.docs[0].data() };
+  return planHabilitadoDesdeQuerySnapshot(snap);
 }
 
 function esOverrideActivo(ov) {
@@ -831,7 +831,7 @@ async function materializarTurnoMesBatch({
  * @param {number} params.mes
  * @returns {Promise<{ ok: boolean, procesados: number, fallos: Array<{ personaId: string, error: string }> }>}
  */
-async function materializarGrupoMes({ grupoId, anio, mes, planCache: planCacheIn }) {
+async function materializarGrupoMes({ grupoId, anio, mes, planCache: planCacheIn, materializacionMotivo }) {
   const periodoId = `${anio}-${String(mes).padStart(2, "0")}`;
   const primerDia = `${periodoId}-01`;
   const ultimoDia = diasDelMes(anio, mes).pop() || primerDia;
@@ -897,7 +897,7 @@ async function materializarGrupoMes({ grupoId, anio, mes, planCache: planCacheIn
           regimenCache,
           planCache,
           etiquetaGrupoCache,
-          materializacionMotivo: "materializar_grupo_mes",
+          materializacionMotivo: materializacionMotivo || "materializar_grupo_mes",
           materializacionRangoDesde: primerDia,
           materializacionRangoHasta: ultimoDia,
         })

@@ -171,8 +171,8 @@ Integrar en **`master`** la épica scoped (Opción A) y entregar **cierre de per
 |----|------------|--------|-----|
 | 1.1 | PR Multi-HLG | Review, resolver comentarios, merge `master`; tag si aplica | CI verde; biblia al día |
 | 1.2 | QA Paso 4 | Ítems 2–3, 6, 8–9 matriz §4.2; pilotos MOSTO/CHAPARRO mayo-jun | Evidencia en doc sesión |
-| 1.3 | `cerrarPeriodoLiquidacion` | Callable RRHH; set `CFG_EPL_LIQUIDADO_CERRADO`; campos auditoría | RRHH cierra mayo desde GSO |
-| 1.4 | UI cierre | Botón + estado badge en grilla / detalle mes | Mensaje claro en español |
+| 1.3 | `cerrarPeriodoLiquidacion` | Callable RRHH; set `CFG_EPL_LIQUIDADO_CERRADO`; campos auditoría | ✅ Prod |
+| 1.4 | UI cierre | Tarjetas cerrado/sin dotación; reabrir en modal; consulta batch `personas_vigentes` | ✅ Prod 2026-06-01 |
 | 1.5 | Gates MDC trámite | `assertPeriodoNoCerrado` con excepción solicitud abierta pre-cierre | Licencia en trámite mayo completa workflow tras cierre |
 | 1.6 | Strip legacy | Verificar 0 `capa_teorica` raíz en entorno objetivo | Script verificación PASS |
 
@@ -184,7 +184,7 @@ Integrar en **`master`** la épica scoped (Opción A) y entregar **cierre de per
 
 ## Etapa F2 — Orquestación HLg
 
-**Estado al pausar (2026-06-01):** rama `feat/epic-multi-hlg-fase1-execution` @ `e349412`. Hecho: 2.1 metadata (código+deploy parcial), 2.2 purge (F0), 2.3 `materializarRango` + wire HLg. **Siguiente:** 2.4 job día 5. Detalle: [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md).
+**Estado (2026-06-01):** 2.1–2.7 y O-P1-1/2/3/4 en prod. **F1.4 GSO** (cierre/reapertura UI) cerrado en sesión tarde. **Siguiente:** F1 QA manual §4.2 → **F3** turnos compuestos.
 
 ### Objetivo
 
@@ -197,10 +197,10 @@ Código alineado al **manual de capas** y §15–22 del plan: ventana M+M+1, pur
 | 2.1 | Trazabilidad materializar | Motivo en metadata; toasts/callables unificados (extiende O-P0-5) | ✅ metadata `vis_*` en prod (laboral/GSO); ⏳ toasts UI |
 | 2.2 | Purge productivo | Si no en F0: cerrar F0; wire definitivo alta/cierre/eliminar HLg | ✅ F0 + metadata purge |
 | 2.3 | `materializarRango` | API interna; feriado 1 día; HLg mid-mes; respeta período cerrado | ✅ API + HLg; ⏳ feriado masivo |
-| 2.4 | Job día 5 **materialización** | Scheduler + callable idempotente M+1 (§17.2.1); logs; **distinto** de cierre liquidación | ⏸️ **Retomar aquí** |
-| 2.5 | Plan usuario nuevo | Banner en turnos mensuales + flujo paralelo MVP §19.6 | Caso CHAPARRO documentado |
-| 2.6 | Piloto resolverFijo | GSO capa 2; rematerializar post-régimen UI | D2/D11 PASS en piloto |
-| 2.7 | Rematerializar post-régimen/feriado | Wire `RegimenesHorariosPage` / calendario → callables existentes | RRHH un clic tras cambio |
+| 2.4 | Job día 5 **materialización** | Scheduler + callable idempotente M+1 (§17.2.1); logs; **distinto** de cierre liquidación | ✅ Código — deploy + smoke pendiente |
+| 2.5 | Plan usuario nuevo | Banner en turnos mensuales + flujo paralelo MVP §19.6 | ✅ O-P1-4 deploy |
+| 2.6 | Piloto resolverFijo | GSO capa 2; `Number(dia_semana)` + franco sin match | ✅ Código — deploy + smoke MOSTO |
+| 2.7 | Rematerializar post-régimen/feriado | Wire `RegimenesHorariosPage` / calendario → callables | ✅ UI confirmación RRHH |
 
 **Avance esperado:** reglas documentadas **~90%** en código (auto-cierre liquidación = opcional P2).
 
@@ -287,6 +287,7 @@ Edición offline en grilla con **envío batch** append-only; acciones granulares
 | Uso | Archivo |
 |-----|---------|
 | Tareas del día | [`PENDIENTES_PROXIMA_SESION.md`](PENDIENTES_PROXIMA_SESION.md) |
+| **Handoff agente implementador** | [`HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md`](HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md) |
 | Reglas negocio | [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](MANUAL_CAPAS_ORQUESTACION_BORRADOR.md) |
 | Gaps código | [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md) |
 

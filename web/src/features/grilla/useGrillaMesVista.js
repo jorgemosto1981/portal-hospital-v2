@@ -18,6 +18,8 @@ import {
   resolverGrupoIdInicial,
   RX_GDT,
 } from "./grillaGrupoUtils.js";
+import { gsoPermiteEscritura } from "./grillaGsoSoloLectura.js";
+import { mensajeToastMaterializacionLazy } from "./grillaMaterializacionToast.js";
 
 function etiquetaGrupoSector(row) {
   const nombre = String(row.nombre || row.codigo || row.titulo || "").trim();
@@ -77,21 +79,26 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
       const vigentes = Array.isArray(list) ? list : [];
       setGruposEquipo(vigentes);
       const sugerido = String(res?.data?.grupo_trabajo_id_ancla_sugerido || "").trim();
-      setGrupoId((prev) => resolverGrupoIdInicial(vigentes, prev, sugerido));
+      setGrupoId((prev) => {
+        const p = normalizeGrupoTrabajoId(prev);
+        // Vista sector (catálogo): no pisar con HLg propia del operador RRHH.
+        if (modo === GRILLA_MES_MODO.SECTOR && RX_GDT.test(p)) return p;
+        return resolverGrupoIdInicial(vigentes, prev, sugerido);
+      });
     } catch (e) {
       setGruposEquipo([]);
       setResolverError(e?.message || "No se pudo resolver grupos vigentes.");
     } finally {
       setResolverCargando(false);
     }
-  }, [periodo, personaId]);
+  }, [periodo, personaId, modo]);
 
   useEffect(() => {
     void recargarGruposEquipo();
   }, [recargarGruposEquipo]);
 
   useEffect(() => {
-    if (!esRrhh || modo !== GRILLA_MES_MODO.SECTOR) return;
+    if (!esRrhh) return;
     let cancelled = false;
     (async () => {
       setSectorCargando(true);
@@ -110,7 +117,7 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
     return () => {
       cancelled = true;
     };
-  }, [esRrhh, modo]);
+  }, [esRrhh]);
 
   const onModoChange = useCallback(
     (next) => {
@@ -127,23 +134,58 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
     [recargarGruposEquipo],
   );
 
+  /** Tarjeta rápida: no dispara recarga de HLg que pisa el grupo elegido. */
+  const aplicarSeleccionDesdeTarjeta = useCallback(({ periodo: p, modo: m, grupoId: gdt = "" }) => {
+    setPeriodo(p);
+    setModo(m);
+    setData(null);
+    setTitularCalendarios([]);
+    setError("");
+    if (m === GRILLA_MES_MODO.TITULAR) {
+      setGrupoId("");
+      return;
+    }
+    setGrupoId(normalizeGrupoTrabajoId(gdt));
+  }, []);
+
   const requiereSeleccionGrupo =
     (modo === GRILLA_MES_MODO.EQUIPO && !RX_GDT.test(grupoId))
     || (modo === GRILLA_MES_MODO.SECTOR && !RX_GDT.test(grupoId));
 
-  const grupoActivoLabel = useMemo(
-    () => etiquetaGrupoDesdeLista(gruposEquipo, grupoId),
-    [gruposEquipo, grupoId],
-  );
+  const grupoActivoLabel = useMemo(() => {
+    const id = normalizeGrupoTrabajoId(grupoId);
+    if (modo === GRILLA_MES_MODO.SECTOR) {
+      const row = gruposSector.find((g) => String(g.id || "").trim() === id);
+      if (row) return etiquetaGrupoSector(row);
+    }
+    return etiquetaGrupoDesdeLista(gruposEquipo, grupoId);
+  }, [modo, gruposEquipo, gruposSector, grupoId]);
 
-  const cargar = useCallback(async () => {
-    if (!anio || !mes) return;
+  /**
+   * @param {{ periodo?: string; modo?: string; grupoId?: string } | void} override
+   */
+  const cargar = useCallback(async (override) => {
+    const periodoEff = override?.periodo ?? periodo;
+    const modoEff = override?.modo ?? modo;
+    const grupoEff =
+      override?.grupoId != null
+        ? normalizeGrupoTrabajoId(override.grupoId)
+        : normalizeGrupoTrabajoId(grupoId);
+    const { anio: anioEff, mes: mesEff } = anioMesDesdePeriodo(periodoEff);
+    if (!anioEff || !mesEff) return;
+
+    if (override?.periodo && override.periodo !== periodo) setPeriodo(override.periodo);
+    if (override?.modo && override.modo !== modo) setModo(override.modo);
+    if (override?.grupoId != null && grupoEff !== normalizeGrupoTrabajoId(grupoId)) {
+      setGrupoId(grupoEff);
+    }
+
     setLoading(true);
     setError("");
     setData(null);
     setTitularCalendarios([]);
     try {
-      if (modo === GRILLA_MES_MODO.TITULAR) {
+      if (modoEff === GRILLA_MES_MODO.TITULAR) {
         if (!/^per_/i.test(personaId)) {
           setError("Sin persona en sesión.");
           return;
@@ -172,12 +214,13 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
               const res = await callObtenerVistaGrillaMesAgente({
                 persona_id: personaId,
                 grupo_trabajo_id: gdt,
-                anio,
-                mes,
+                anio: anioEff,
+                mes: mesEff,
               });
               const vista = res?.data || {};
-              if (vista.materializado_lazy) {
-                toast("Turno teórico recalculado al vuelo para este cargo.", { id: `lazy-${gdt}-${periodo}` });
+              const msgLazy = mensajeToastMaterializacionLazy(vista);
+              if (msgLazy) {
+                toast(msgLazy, { id: `lazy-${gdt}-${periodoEff}` });
               }
               return {
                 grupo_trabajo_id: gdt,
@@ -186,6 +229,8 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
                 existe: vista.existe === true,
                 dias: vista.dias && typeof vista.dias === "object" ? vista.dias : {},
                 materializado_lazy: vista.materializado_lazy === true,
+                gso_solo_lectura: vista.gso_solo_lectura === true,
+                estado_periodo_liquidacion_id: vista.estado_periodo_liquidacion_id || null,
               };
             } catch {
               toast.error(`No se pudo cargar la grilla de ${grupo_label}.`);
@@ -202,13 +247,16 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
         );
 
         setTitularCalendarios(resultados);
+        const algunoSoloLectura = resultados.some((cal) => cal.gso_solo_lectura === true);
         setData({
           ok: true,
           modo: GRILLA_MES_MODO.TITULAR,
-          fecha_corte: fechaCorteFinMesDesdePeriodo(periodo),
+          fecha_corte: fechaCorteFinMesDesdePeriodo(periodoEff),
           total_personas: 1,
           total_cargos: resultados.length,
           truncado: false,
+          gso_solo_lectura: algunoSoloLectura,
+          gso_solo_lectura_motivo: algunoSoloLectura ? "ventana_mes_anterior_dia1" : null,
           filas: resultados.map((cal) => ({
             persona_id: personaId,
             persona_label: label,
@@ -223,31 +271,36 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
       }
 
       const gdt = assertGrupoTrabajoId(
-        grupoId,
-        modo === GRILLA_MES_MODO.SECTOR
+        grupoEff,
+        modoEff === GRILLA_MES_MODO.SECTOR
           ? "Elegí un sector / grupo de trabajo."
           : "Elegí un grupo de trabajo vigente.",
       );
       const res = await callListarVistaGrillaMesPorGrupo({
         grupo_trabajo_id: gdt,
-        anio,
-        mes,
+        anio: anioEff,
+        mes: mesEff,
       });
       const payload = res?.data || null;
       if (payload?.truncado) {
-        const key = `truncado-${periodo}-${gdt}`;
+        const key = `truncado-${periodoEff}-${gdt}`;
         if (ultimoAvisoMatRef.current !== key) {
           ultimoAvisoMatRef.current = key;
           toast("Listado acotado a 60 personas. Refiná el sector si hace falta.", { icon: "⚠️" });
         }
       }
       const matGrupo = payload?.materializacion_grupo;
+      if (matGrupo?.ok === true && (matGrupo.procesados || 0) > 0) {
+        toast.success(`Sector sincronizado (${matGrupo.procesados} agente-mes).`, {
+          id: `mat-ok-${periodoEff}-${gdt}`,
+        });
+      }
       if (matGrupo && matGrupo.ok === false && (matGrupo.fallos || 0) > 0) {
         toast.error(
           `Materialización del sector incompleta (${matGrupo.fallos} agente(s)). Revisá turnos teóricos.`,
         );
       }
-      setData(payload ? { ...payload, modo } : null);
+      setData(payload ? { ...payload, modo: modoEff, periodo: periodoEff } : null);
     } catch (e) {
       setData(null);
       setError(e?.message || "No se pudo cargar la grilla.");
@@ -272,6 +325,17 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
         ? "Tabla equipo: HLg vigente al cierre del mes (máx. 60 personas)."
         : "Tabla sector RRHH según grupo elegido en catálogo.";
 
+  const gsoEscrituraApi = data?.gso_solo_lectura === true
+    ? { permite: false, mensaje: data.gso_solo_lectura_motivo === "periodo_cerrado"
+        ? "Período de liquidación cerrado para este sector."
+        : "El mes anterior está en solo lectura desde el día 1." }
+    : null;
+  const gsoEscrituraLocal = gsoPermiteEscritura(periodo, {
+    esRrhh,
+    periodoCerrado: data?.gso_solo_lectura_motivo === "periodo_cerrado",
+  });
+  const gsoEscritura = gsoEscrituraApi || gsoEscrituraLocal;
+
   const filas = Array.isArray(data?.filas) ? data.filas : [];
   const titularDias =
     modo === GRILLA_MES_MODO.TITULAR && titularCalendarios[0]?.dias
@@ -283,6 +347,7 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
     setPeriodo,
     modo,
     onModoChange,
+    aplicarSeleccionDesdeTarjeta,
     grupoId,
     setGrupoId,
     gruposEquipo,
@@ -305,5 +370,7 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
     requiereSeleccionGrupo,
     grupoActivoLabel,
     grupoActivoId: normalizeGrupoTrabajoId(grupoId),
+    gsoPermiteEscritura: gsoEscritura.permite,
+    gsoSoloLecturaMensaje: gsoEscritura.permite ? null : gsoEscritura.mensaje,
   };
 }

@@ -19,7 +19,7 @@ function normalizarTipoDia(tipoDiaRaw) {
 
 function celdaDesdeRegimenFijo(regimen, ymd) {
   const isoWeekday = isoWeekdayFromYmd(ymd);
-  const diaConf = (regimen.dias || []).find((d) => d.dia_semana === isoWeekday);
+  const diaConf = (regimen.dias || []).find((d) => Number(d.dia_semana) === isoWeekday);
   if (!diaConf) {
     return { tipo_dia: "franco", turno_id: null };
   }
@@ -41,7 +41,7 @@ function celdaDesdeRegimenRotativo(regimen, ymd, fechaAncla) {
   const cicloTotal = regimen.ciclo_total || regimen.ciclo.length;
   const posRaw = ((diff % cicloTotal) + cicloTotal) % cicloTotal;
   const posicion = posRaw + 1;
-  const posConf = regimen.ciclo.find((p) => p.posicion === posicion);
+  const posConf = regimen.ciclo.find((p) => Number(p.posicion) === posicion);
   if (!posConf) {
     return { tipo_dia: "franco", turno_id: null };
   }
