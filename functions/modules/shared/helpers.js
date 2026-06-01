@@ -27,6 +27,11 @@ function validEmail(s) {
 }
 
 const { tokenHasRrhhLaborAccess } = require("./laborProfile");
+const {
+  loadHlgRowsPorPersona,
+  filterHlgVigentesEnFecha,
+  nivelTitularEnGrupo,
+} = require("./solicitudHlgVigencia");
 
 /**
  * RRHH: `CFG_RRHH` ∈ `roles_hlc_vigentes` o legacy dev (`portal_role`).
@@ -67,6 +72,107 @@ function assertEscrituraLaboral(request, payloadPersonaId) {
     return;
   }
   throw new HttpsError("permission-denied", "No tenés permisos para modificar este perfil laboral.");
+}
+
+/**
+ * Extrae persona_id del token. Retorna string o "".
+ * @param {import("firebase-functions/v2/https").CallableRequest} request
+ */
+function _actorPersonaId(request) {
+  const t = request.auth && request.auth.token;
+  return t && typeof t.persona_id === "string" ? t.persona_id.trim() : "";
+}
+
+function _hoyYmd() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * RBAC para planes de turno y operaciones sobre un grupo.
+ *
+ * - RRHH: pasa siempre.
+ * - Jefe (aprobar/rechazar): actor debe tener HLG vigente en el grupo con
+ *   nivel_jerarquico estrictamente mayor que al menos otro integrante.
+ * - Miembro (guardar/enviar/leer): actor debe tener HLG vigente en el grupo.
+ *
+ * @param {import("firebase-functions/v2/https").CallableRequest} request
+ * @param {string} grupoId - grupo_de_trabajo_id del plan
+ * @param {"leer"|"guardar"|"enviar"|"aprobar"|"rechazar"} accion
+ */
+async function assertPlanAuth(request, grupoId, accion) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Se requiere sesión.");
+  }
+  if (tokenHasRrhhAccess(request.auth.token)) return;
+
+  const actorPid = _actorPersonaId(request);
+  if (!actorPid) {
+    throw new HttpsError("permission-denied", "Sin persona vinculada.");
+  }
+
+  const hoy = _hoyYmd();
+  const hlgs = await loadHlgRowsPorPersona(db, actorPid);
+  const vigentes = filterHlgVigentesEnFecha(hlgs, hoy);
+  const enGrupo = vigentes.some(
+    (h) => String(h.grupo_de_trabajo_id || "").trim() === grupoId,
+  );
+
+  if (!enGrupo) {
+    throw new HttpsError("permission-denied", "No pertenecés al grupo de trabajo de este plan.");
+  }
+
+  if (accion === "aprobar" || accion === "rechazar") {
+    const nivel = nivelTitularEnGrupo(vigentes, grupoId);
+    if (nivel === null) {
+      throw new HttpsError("permission-denied", "No se pudo determinar tu nivel jerárquico en el grupo.");
+    }
+    const tiene = request.auth.token && request.auth.token.tiene_subordinados === true;
+    if (!tiene) {
+      throw new HttpsError("permission-denied", "Solo un superior jerárquico puede realizar esta acción.");
+    }
+  }
+}
+
+/**
+ * RBAC para overrides de turno: RRHH pasa; actor === target pasa;
+ * o actor es superior jerárquico del target en algún grupo común.
+ *
+ * @param {import("firebase-functions/v2/https").CallableRequest} request
+ * @param {string} targetPersonaId - persona_id del agente afectado
+ */
+async function assertOverrideAuth(request, targetPersonaId) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Se requiere sesión.");
+  }
+  if (tokenHasRrhhAccess(request.auth.token)) return;
+
+  const actorPid = _actorPersonaId(request);
+  if (!actorPid) {
+    throw new HttpsError("permission-denied", "Sin persona vinculada.");
+  }
+  if (actorPid === targetPersonaId) return;
+
+  const hoy = _hoyYmd();
+  const [actorHlgs, targetHlgs] = await Promise.all([
+    loadHlgRowsPorPersona(db, actorPid),
+    loadHlgRowsPorPersona(db, targetPersonaId),
+  ]);
+  const actorVigentes = filterHlgVigentesEnFecha(actorHlgs, hoy);
+  const targetVigentes = filterHlgVigentesEnFecha(targetHlgs, hoy);
+
+  const targetGrupos = new Set(
+    targetVigentes.map((h) => String(h.grupo_de_trabajo_id || "").trim()).filter(Boolean),
+  );
+
+  for (const gdt of targetGrupos) {
+    const nivelActor = nivelTitularEnGrupo(actorVigentes, gdt);
+    const nivelTarget = nivelTitularEnGrupo(targetVigentes, gdt);
+    if (nivelActor !== null && nivelTarget !== null && nivelActor > nivelTarget) {
+      return;
+    }
+  }
+
+  throw new HttpsError("permission-denied", "No tenés permisos sobre este agente.");
 }
 
 function assertAgenteConPersonaId(request) {
@@ -236,6 +342,8 @@ module.exports = {
   validEmail,
   tokenHasRrhhAccess,
   assertRrhh,
+  assertPlanAuth,
+  assertOverrideAuth,
   assertEscrituraLaboral,
   assertAgenteConPersonaId,
   resolvePersonaIdSolicitudFlujoAgente,

@@ -6,7 +6,99 @@ const { buildPersonaLabel } = require("./eventosV2");
 
 const COL_HLG = "historial_laboral_grupos";
 const COL_PERSONAS = "personas";
+const COL_PLANES = "planes_turno_servicio";
 const MAX_PERSONAS_GRUPO = 60;
+/** Mes casi completo con datos pero sin jornada ni francos (snapshot corrupto tipo Portería mayo). */
+const MIN_DIAS_EVALUAR_DEGENERADO = 20;
+
+function celdaTieneSenalTurno(c) {
+  if (!c || typeof c !== "object") return false;
+  return Boolean(
+    c.tipo_dia ||
+      c.rda_turno_id ||
+      c.rda_ingreso ||
+      c.rda_egreso ||
+      c.es_franco === true,
+  );
+}
+
+function celdaEsFranco(c) {
+  if (!c || typeof c !== "object") return false;
+  return c.es_franco === true || c.tipo_dia === "franco";
+}
+
+function celdaTieneHorarioTeorico(c) {
+  if (!c || typeof c !== "object") return false;
+  return Boolean(c.rda_ingreso || c.rda_egreso);
+}
+
+/**
+ * Snapshot relleno pero sin jornada teórica ni francos (p. ej. 31× no_laborable sin horarios).
+ */
+function visSnapshotDegenerado(dias) {
+  const keys = Object.keys(dias);
+  if (keys.length < MIN_DIAS_EVALUAR_DEGENERADO) return false;
+
+  let conHorario = 0;
+  let franco = 0;
+  let noLaborable = 0;
+
+  for (const k of keys) {
+    const c = dias[k];
+    if (!c || typeof c !== "object") continue;
+    if (celdaTieneHorarioTeorico(c)) conHorario += 1;
+    if (celdaEsFranco(c)) franco += 1;
+    if (c.tipo_dia === "no_laborable") noLaborable += 1;
+  }
+
+  const sinJornadaNiFranco = conHorario === 0 && franco === 0;
+  const todasNoLaborable = noLaborable === keys.length;
+  return sinJornadaNiFranco || todasNoLaborable;
+}
+
+function visRequiereMaterializacion(vista) {
+  if (!vista || vista.existe !== true) return true;
+  const dias = vista.dias && typeof vista.dias === "object" ? vista.dias : {};
+  const keys = Object.keys(dias);
+  if (keys.length === 0) return true;
+  if (visSnapshotDegenerado(dias)) return true;
+  const conTurno = keys.filter((k) => celdaTieneSenalTurno(dias[k]));
+  return conTurno.length === 0;
+}
+
+async function obtenerPlanHabilitadoCache(db, grupoId, periodoId) {
+  const snap = await db.collection(COL_PLANES)
+    .where("grupo_id", "==", grupoId)
+    .where("periodo", "==", periodoId)
+    .where("estado", "==", "HABILITADO")
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  return { planId: snap.docs[0].id, plan: snap.docs[0].data() };
+}
+
+/**
+ * Si no hay vis_* con turno teórico, materializa mes persona+gdt y re-lee.
+ */
+async function ensureMaterializacionVisMes(db, { personaId, grupoTrabajoId, anio, mes }) {
+  let vista = await leerVistaGrillaMesAgente(db, { personaId, grupoTrabajoId, anio, mes });
+  if (!visRequiereMaterializacion(vista)) {
+    return { vista, materializado: false };
+  }
+
+  const periodoId = `${anio}-${String(mes).padStart(2, "0")}`;
+  const planCache = await obtenerPlanHabilitadoCache(db, grupoTrabajoId, periodoId);
+  const { materializarTurnoMesBatch } = require("../asistencia/rdaTurnoTeoricoWorker");
+  await materializarTurnoMesBatch({
+    personaId,
+    grupoId: grupoTrabajoId,
+    anio,
+    mes,
+    planCache,
+  });
+  vista = await leerVistaGrillaMesAgente(db, { personaId, grupoTrabajoId, anio, mes });
+  return { vista, materializado: true };
+}
 
 function diasEnMes(anio, mes) {
   return new Date(anio, mes, 0).getDate();
@@ -46,21 +138,24 @@ async function resolvePersonaLabel(db, personaId, cache) {
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
- * @param {{ personaId: string, anio: number, mes: number }} opts
+ * @param {{ personaId: string, grupoTrabajoId: string, anio: number, mes: number }} opts
  */
-async function obtenerVistaGrillaMesAgente(db, { personaId, anio, mes }) {
+async function leerVistaGrillaMesAgente(db, { personaId, grupoTrabajoId, anio, mes }) {
   const pid = String(personaId || "").trim();
+  const gdt = String(grupoTrabajoId || "").trim();
   const y = Number(anio);
   const m = Number(mes);
-  if (!/^per_/i.test(pid) || !Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
-    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "persona_id, anio o mes inválidos." };
+  if (!/^per_/i.test(pid) || !/^gdt_/i.test(gdt) || !Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
+    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "persona_id, grupo_trabajo_id (gdt_*), anio o mes inválidos." };
   }
 
   const mm = String(m).padStart(2, "0");
   const fechaRef = `${y}-${mm}-01`;
-  const visId = buildVisDocumentId(pid, fechaRef);
-  if (!visId) {
-    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "No se pudo resolver id de vista." };
+  let visId;
+  try {
+    visId = buildVisDocumentId(pid, fechaRef, gdt);
+  } catch (e) {
+    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: e.message || "No se pudo resolver id de vista." };
   }
 
   const snap = await db.collection(COL_VISTAS_GRILLA_MES).doc(visId).get();
@@ -70,6 +165,7 @@ async function obtenerVistaGrillaMesAgente(db, { personaId, anio, mes }) {
       existe: false,
       vis_id: visId,
       persona_id: pid,
+      grupo_trabajo_id: gdt,
       anio: y,
       mes: m,
       dias: {},
@@ -82,11 +178,18 @@ async function obtenerVistaGrillaMesAgente(db, { personaId, anio, mes }) {
     existe: true,
     vis_id: visId,
     persona_id: String(data.persona_id || pid),
+    grupo_trabajo_id: String(data.grupo_de_trabajo_id || gdt),
     anio: data.anio ?? y,
     mes: data.mes ?? m,
     dias: data.dias && typeof data.dias === "object" ? data.dias : {},
     metadata: data.metadata || null,
   };
+}
+
+async function obtenerVistaGrillaMesAgente(db, opts) {
+  const { vista, materializado } = await ensureMaterializacionVisMes(db, opts);
+  if (vista.ok === false) return vista;
+  return { ...vista, materializado_lazy: materializado };
 }
 
 /**
@@ -146,8 +249,23 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
   const personaCache = new Map();
   const filas = [];
 
+  const periodoId = `${y}-${mm}`;
+  const planCache = await obtenerPlanHabilitadoCache(db, gdt, periodoId);
+  const { materializarGrupoMes } = require("../asistencia/rdaTurnoTeoricoWorker");
+  const matGrupo = await materializarGrupoMes({
+    grupoId: gdt,
+    anio: y,
+    mes: m,
+    planCache,
+  });
+
   for (const pid of limited) {
-    const vista = await obtenerVistaGrillaMesAgente(db, { personaId: pid, anio: y, mes: m });
+    const vista = await leerVistaGrillaMesAgente(db, {
+      personaId: pid,
+      grupoTrabajoId: gdt,
+      anio: y,
+      mes: m,
+    });
     const persona_label = await resolvePersonaLabel(db, pid, personaCache);
     filas.push({
       persona_id: pid,
@@ -155,6 +273,7 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
       vis_id: vista.vis_id || null,
       existe: vista.existe === true,
       dias: vista.ok !== false && vista.dias ? vista.dias : {},
+      materializado_lazy: false,
     });
   }
 
@@ -168,8 +287,19 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
     fecha_corte: fechaCorte,
     total_personas: filas.length,
     truncado,
+    materializacion_grupo: {
+      ok: matGrupo.ok === true,
+      procesados: matGrupo.procesados ?? 0,
+      fallos: Array.isArray(matGrupo.fallos) ? matGrupo.fallos.length : 0,
+    },
     filas,
   };
 }
 
-module.exports = { obtenerVistaGrillaMesAgente, listarVistaGrillaMesPorGrupo };
+module.exports = {
+  obtenerVistaGrillaMesAgente,
+  listarVistaGrillaMesPorGrupo,
+  ensureMaterializacionVisMes,
+  visRequiereMaterializacion,
+  visSnapshotDegenerado,
+};

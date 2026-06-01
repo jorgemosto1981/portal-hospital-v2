@@ -78,7 +78,7 @@ const PAIRS = [
   ["cfg_estado_asignacion_laboral", "CFG_EST_LAB_VIG"],
   ["cfg_causal_fin_asignacion_laboral", "CFG_CAU_FIN_FIN"],
   ["cfg_tipo_acto_designacion", "CFG_ACT_DEC"],
-  ["cfg_regimen_horario", "CFG_REG_HOR_48"],
+  ["cfg_regimen_horario", "CFG_REG_HOR_ADMIN_7H_LV"],
   ["cfg_centro_costo", "CFG_CEN_COST_CTE"],
   ["grupos_de_trabajo", "gdt_seed_demo_cfg"],
   ["cfg_efectores", "CFG_EFE_HOSP"],

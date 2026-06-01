@@ -41,6 +41,18 @@ const CALLABLE_EXPORT_IDS = [
   "onboardingMvpDdjjFamiliar",
   "onboardingMvpOmitirDdjjFamiliar",
   "onboardingMvpCompletar",
+  "guardarRegimenHorario",
+  "listarRegimenesHorarios",
+  "guardarPlanTurnoServicio",
+  "enviarPlanTurnoServicio",
+  "aprobarPlanTurnoServicio",
+  "rechazarPlanTurnoServicio",
+  "habilitarPlanTurnoServicio",
+  "cerrarPlanPerpetuo",
+  "listarPlanesTurnoServicio",
+  "registrarCambioTurno",
+  "eliminarCambioTurno",
+  "listarOverridesTurno",
 ];
 
 function gcloudInstalled() {

@@ -1,7 +1,8 @@
 "use strict";
 
 /**
- * Trigger: alta solicitud Patrón B en BORRADOR → valida y descuenta saldo ciclo.
+ * Trigger: alta solicitud Patron B en BORRADOR -> valida via motor V2 y descuenta saldo ciclo.
+ * Motor V2: orquestador generico + snapshot + config_usada + cableado total 7 bloques.
  */
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { logger } = require("firebase-functions");
@@ -14,7 +15,7 @@ const {
   ESTADO_SOLICITUD_RECHAZADA,
   ESTADO_SOLICITUD_EN_REVISION_JEFE,
 } = require("../modules/shared/solicitudesArticuloEstados");
-const { runPatronBAltaMotor } = require("../modules/shared/solicitudPatronBAltaMotor");
+const { runPatronBAltaMotorV2 } = require("../modules/shared/patronBAltaMotorV2");
 const {
   resolverCadenaAutorizacion,
   buildAutorizacionSnapshotFields,
@@ -52,23 +53,43 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
 
     const solRef = db.collection("solicitudes_articulo").doc(solId);
 
+    const articuloId = String(d.articulo_id || "").trim();
+    const versionId = String(d.version_id_aplicada || d.version_aplicada_id || "").trim();
+    const versionSnap = await db
+      .collection("cfg_articulos").doc(articuloId)
+      .collection("versiones").doc(versionId)
+      .get();
+    if (!versionSnap.exists) {
+      await solRef.update({
+        estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+        motor_codigos: ["VERSION_NO_ENCONTRADA"],
+        motor_mensajes: ["No se encontro la version del articulo."],
+        motor_validado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+    const versionData = versionSnap.data() || {};
+
     let motor;
     try {
-      motor = await runPatronBAltaMotor({
+      motor = await runPatronBAltaMotorV2({
         db,
         solicitud: d,
         excludeSolId: solId,
         authToken: null,
+        versionData,
+        versionId,
       });
     } catch (err) {
-      logger.error("solicitud_patron_b_motor_error", {
+      logger.error("solicitud_patron_b_motor_v2_error", {
         solId,
         message: err instanceof Error ? err.message : String(err),
       });
       await solRef.update({
         estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
         motor_codigos: ["MOTOR_ERROR"],
-        motor_mensajes: ["Error al validar la solicitud."],
+        motor_mensajes: ["Error al validar la solicitud (motor V2)."],
         motor_validado_en: FieldValue.serverTimestamp(),
         actualizado_en: FieldValue.serverTimestamp(),
       });
@@ -80,6 +101,7 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
         estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
         motor_codigos: motor.codigos || [],
         motor_mensajes: motor.mensajes || [],
+        motor_snapshot: motor.motor_snapshot || null,
         motor_validado_en: FieldValue.serverTimestamp(),
         actualizado_en: FieldValue.serverTimestamp(),
       });
@@ -237,6 +259,8 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
           motor_descuento_aplicado: true,
           motor_bolsa_id: match.bolsaId,
           motor_dias_descontados: diasConsumo,
+          motor_snapshot: motor.motor_snapshot || null,
+          config_usada: motor.config_usada || null,
           grupo_trabajo_id_ancla: grupoTrabajoIdAncla || null,
           grupos_trabajo_involucrados_ids: gruposTrabajoInvolucradosIds,
           _debito_origen: [debito],

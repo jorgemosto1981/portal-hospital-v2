@@ -39,7 +39,6 @@ export function buildHldPayload({ formData, modoEdicion, registroEditId }) {
   const payload = {
     persona_id: formData.persona_id,
     cargo_id: formData.cargo_id,
-    regimen_horario_id: toNull(formData.regimen_horario_id),
     centro_costo_id: toNull(formData.centro_costo_id),
     funcion_real_id: toNull(formData.funcion_real_id),
     nivel_jerarquico: toNull(formData.nivel_jerarquico),
@@ -53,20 +52,14 @@ export function buildHldPayload({ formData, modoEdicion, registroEditId }) {
   return payload;
 }
 
-export function buildHlgPayload({ formData, hldId, cargaPorDiaRows, modoEdicion, registroEditId }) {
+export function buildHlgPayload({ formData, hldId, modoEdicion, registroEditId }) {
   const payload = {
     persona_id: formData.persona_id,
     dato_laboral_id: hldId,
     grupo_de_trabajo_id: formData.grupo_de_trabajo_id,
     nivel_jerarquico: toNull(formData.nivel_jerarquico),
-    carga_por_dia_semana: (cargaPorDiaRows || [])
-      .map((row) => {
-        const diaId = String(row.dia_semana_id || "").trim();
-        const horasRaw = row.horas === "" || row.horas == null ? 0 : Number(row.horas);
-        const horas = Number.isFinite(horasRaw) ? horasRaw : 0;
-        return { dia_semana_id: diaId || null, horas };
-      })
-      .filter((row) => row.dia_semana_id),
+    regimen_horario_id: toNull(formData.regimen_horario_id),
+    regimen_fecha_ancla: toNull(formData.regimen_fecha_ancla),
     fecha_inicio: toNull(formData.fecha_desde),
     fecha_fin: toNull(formData.fecha_hasta),
   };

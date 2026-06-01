@@ -1,4 +1,4 @@
-import { rolesHlcFromClaims } from "../../features/routing/portalRole.js";
+import { rolesHlcFromClaims, claimsIncludeRrhh } from "../../features/routing/portalRole.js";
 
 /**
  * @param {string} grupoId
@@ -11,6 +11,8 @@ export function grupoAccesiblePorClaims(grupoId, claims, hasPortalRoles) {
     case "usuario":
       return true;
     case "jefe":
+      if (claimsIncludeRrhh(claims)) return true;
+      if (claims && claims.tiene_subordinados === true) return true;
       return hasPortalRoles(["jefe"]) || hlc.includes("CFG_JEFE");
     case "rrhh":
       return hasPortalRoles(["rrhh", "admin"]) || hlc.includes("CFG_RRHH");

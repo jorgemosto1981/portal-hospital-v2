@@ -29,12 +29,18 @@ const obtenerVistaGrillaMesAgenteCallable = onCall(async (request) => {
 
   const anio = Number(d.anio);
   const mes = Number(d.mes);
+  const grupoTrabajoId = typeof d.grupo_trabajo_id === "string" ? d.grupo_trabajo_id.trim()
+    : (typeof d.grupo_id === "string" ? d.grupo_id.trim() : "");
   if (!Number.isFinite(anio) || !Number.isFinite(mes)) {
     throw new HttpsError("invalid-argument", "anio y mes son obligatorios.");
+  }
+  if (!/^gdt_/i.test(grupoTrabajoId)) {
+    throw new HttpsError("invalid-argument", "grupo_trabajo_id (gdt_*) es obligatorio.");
   }
 
   const result = await obtenerVistaGrillaMesAgente(db, {
     personaId: titular,
+    grupoTrabajoId,
     anio,
     mes,
   });

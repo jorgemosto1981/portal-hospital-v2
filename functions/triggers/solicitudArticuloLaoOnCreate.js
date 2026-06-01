@@ -349,7 +349,7 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
 
     let resultado;
     try {
-      resultado = runLaoAltaMotorCompleto(motorBase);
+      resultado = await runLaoAltaMotorCompleto(motorBase);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       await solRef.update({
@@ -374,7 +374,7 @@ const onSolicitudArticuloLaoMotorValidate = onDocumentCreated(
     });
 
     try {
-      resultado = runLaoAltaMotorCompleto({
+      resultado = await runLaoAltaMotorCompleto({
         ...motorBase,
         diasSolicitados: diasParaSaldo ?? undefined,
         disponibleBolsa: Number.isFinite(Number(saldoValPre.disponible)) ? Number(saldoValPre.disponible) : 0,

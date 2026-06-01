@@ -1,13 +1,15 @@
 import {
-  buildPlanillaCargaSemanal,
-  cargaSemanalTieneHorasPositivas,
   formatDateDdMmAaaa,
   hlcFechaDesdeYmd,
   hlcFechaHastaYmd,
+  hldHlgFechaFinYmd,
+  hldHlgFechaInicioYmd,
   isoToDateInput,
+  rangoSolapadoInclusivo,
+  registroLaboralActivo,
 } from "./utils.js";
 
-export function buildFormDataFromRecord({ record, idxHld, prevFormData, opcionesDiaSemana }) {
+export function buildFormDataFromRecord({ record, idxHld, prevFormData }) {
   if (!record || typeof record !== "object") return null;
   const datoRef = idxHld.get(String(record.dato_laboral_id || ""));
   const nextFormData = {
@@ -60,20 +62,15 @@ export function buildFormDataFromRecord({ record, idxHld, prevFormData, opciones
     categoria_id: String(record.categoria_id || ""),
     rol_id: String(record.rol_id || (datoRef && datoRef.rol_id) || ""),
     regimen_horario_id: String(record.regimen_horario_id || (datoRef && datoRef.regimen_horario_id) || ""),
+    regimen_fecha_ancla: String(record.regimen_fecha_ancla || ""),
     centro_costo_id: String(record.centro_costo_id || (datoRef && datoRef.centro_costo_id) || ""),
     escalafon_id: String(record.escalafon_id || ""),
     agrupamiento_id: String(record.agrupamiento_id || ""),
     funcion_real_id: String(record.funcion_real_id || (datoRef && datoRef.funcion_real_id) || ""),
     nivel_jerarquico: record.nivel_jerarquico == null ? "" : String(record.nivel_jerarquico),
     dato_laboral_id: String(record.dato_laboral_id || ""),
-    carga_por_dia_semana: Array.isArray(record.carga_por_dia_semana)
-      ? record.carga_por_dia_semana.join(",")
-      : "",
   };
-  return {
-    formData: nextFormData,
-    cargaPorDiaRows: buildPlanillaCargaSemanal(opcionesDiaSemana, record.carga_por_dia_semana),
-  };
+  return { formData: nextFormData };
 }
 
 export function requiredFieldsByTipo(tipoAlta) {
@@ -104,7 +101,16 @@ export function requiredFieldsByTipo(tipoAlta) {
   ];
 }
 
-export function validateLaboralForm({ tipoAlta, formData, cargaPorDiaRows, idxHlc }) {
+export function validateLaboralForm({
+  tipoAlta,
+  formData,
+  idxHlc,
+  idxRegimenes,
+  modoEdicion,
+  registroEditId,
+  regimenHorarioOriginalId,
+  hlgRows,
+}) {
   const faltantes = requiredFieldsByTipo(tipoAlta).filter((k) => !String(formData[k] || "").trim());
   if (faltantes.length > 0) return `Completá los campos obligatorios: ${faltantes.join(", ")}`;
   if (formData.persona_id && !/^per_/i.test(formData.persona_id.trim())) {
@@ -144,6 +150,40 @@ export function validateLaboralForm({ tipoAlta, formData, cargaPorDiaRows, idxHl
     }
   }
   if (tipoAlta === "historial_laboral_grupos") {
+    const regId = String(formData.regimen_horario_id || "").trim();
+    if (!regId) {
+      return "El régimen horario es obligatorio para la asignación a grupo.";
+    }
+    const reg = idxRegimenes ? idxRegimenes.get(regId) : null;
+    if (reg && reg.activo === false) {
+      return "El régimen horario seleccionado está inactivo en catálogo.";
+    }
+    const regimenOriginal = String(regimenHorarioOriginalId || "").trim();
+    if (modoEdicion && regimenOriginal && regId !== regimenOriginal) {
+      return "No podés cambiar el régimen horario en una asignación existente. Cerrá este grupo (fecha de fin) y creá una nueva asignación desde la fecha del cambio.";
+    }
+    const personaId = String(formData.persona_id || "").trim();
+    const grupoId = String(formData.grupo_de_trabajo_id || "").trim();
+    const fechaDesde = String(formData.fecha_desde || "").trim();
+    const fechaHasta = String(formData.fecha_hasta || "").trim();
+    const editId = modoEdicion ? String(registroEditId || "").trim() : "";
+    if (personaId && grupoId && fechaDesde && Array.isArray(hlgRows)) {
+      const solape = hlgRows.find((other) => {
+        if (editId && String(other.id || "") === editId) return false;
+        if (!registroLaboralActivo(other)) return false;
+        if (String(other.persona_id || "") !== personaId) return false;
+        if (String(other.grupo_de_trabajo_id || "") !== grupoId) return false;
+        return rangoSolapadoInclusivo(
+          fechaDesde,
+          fechaHasta,
+          hldHlgFechaInicioYmd(other),
+          hldHlgFechaFinYmd(other),
+        );
+      });
+      if (solape) {
+        return `Ya existe otra asignación al mismo grupo con fechas superpuestas (${String(solape.id || "—")}). Ajustá el período o cerrá la asignación anterior.`;
+      }
+    }
     const cargoRef = idxHlc && formData.cargo_id ? idxHlc.get(String(formData.cargo_id || "")) : null;
     if (cargoRef) {
       const cargoDesde = hlcFechaDesdeYmd(cargoRef);
@@ -159,18 +199,6 @@ export function validateLaboralForm({ tipoAlta, formData, cargaPorDiaRows, idxHl
       if (cargoHasta && fechaHasta && fechaHasta > cargoHasta) {
         return `La fecha de fin no puede superar la del cargo (${formatDateDdMmAaaa(cargoHasta)}).`;
       }
-    }
-    const rows = cargaPorDiaRows || [];
-    for (const row of rows) {
-      const horasStr = String(row.horas ?? "").trim();
-      if (!horasStr) continue;
-      const n = Number(horasStr);
-      if (!Number.isFinite(n) || n < 0 || n > 24) {
-        return "Cada día debe tener horas entre 0 y 24.";
-      }
-    }
-    if (!cargaSemanalTieneHorasPositivas(rows)) {
-      return 'Un grupo debe tener al menos un día con carga horaria asignada. Si el grupo ya no opera, utilice la opción "Deshabilitar asignación".';
     }
   }
   return "";

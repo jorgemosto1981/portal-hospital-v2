@@ -3,16 +3,19 @@ import LabeledTextField from "../components/LabeledTextField.jsx";
 
 export default function LaboralFormHlgFields({
   modoAvanzado,
+  modoEdicion,
   formData,
   onChangeField,
   opcionesRegimenHorario,
   opcionesCentroCosto,
   opcionesFuncion,
-  cargaPorDiaRows,
-  onChangeCargaRow,
-  opcionesDiaSemana,
   ayudaCampos,
 }) {
+  const regimenBloqueadoEnEdicion = modoEdicion && !!String(formData.regimen_horario_id || "").trim();
+  const ayudaRegimen = regimenBloqueadoEnEdicion
+    ? `${ayudaCampos.regimen_horario_id} En edición el régimen no se modifica: cerrá el período y creá una nueva asignación desde la fecha del cambio.`
+    : ayudaCampos.regimen_horario_id;
+
   return (
     <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
       <LabeledSelect
@@ -21,8 +24,20 @@ export default function LaboralFormHlgFields({
         onValueChange={(v) => onChangeField("regimen_horario_id", v)}
         options={opcionesRegimenHorario}
         placeholder="Seleccionar régimen..."
-        helpText={ayudaCampos.regimen_horario_id}
+        helpText={ayudaRegimen}
         technicalName="regimen_horario_id"
+        showTechnicalName={modoAvanzado}
+        disabled={regimenBloqueadoEnEdicion}
+        required
+      />
+      <LabeledTextField
+        label="Fecha ancla (rotativos)"
+        value={formData.regimen_fecha_ancla}
+        onValueChange={(v) => onChangeField("regimen_fecha_ancla", v)}
+        placeholder="YYYY-MM-DD"
+        type="date"
+        helpText={ayudaCampos.regimen_fecha_ancla}
+        technicalName="regimen_fecha_ancla"
         showTechnicalName={modoAvanzado}
       />
       <LabeledSelect
@@ -55,35 +70,6 @@ export default function LaboralFormHlgFields({
         technicalName="nivel_jerarquico"
         showTechnicalName={modoAvanzado}
       />
-      <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white p-3">
-        <label className="mb-2 block text-sm font-medium text-slate-700">
-          Carga por día de semana (7 días)
-          {modoAvanzado ? (
-            <span className="block text-xs font-normal text-slate-500">Campo técnico: carga_por_dia_semana</span>
-          ) : null}
-        </label>
-        <p className="mb-2 text-xs text-slate-500">{ayudaCampos.carga_por_dia_semana}</p>
-        <div className="space-y-2">
-          {cargaPorDiaRows.map((row, idx) => {
-            const diaOpt = (opcionesDiaSemana || []).find((o) => String(o.id) === String(row.dia_semana_id));
-            const diaLabel = diaOpt && diaOpt.nombre ? String(diaOpt.nombre) : row.dia_semana_id || `Día ${idx + 1}`;
-            return (
-              <div key={`carga-dia-${row.dia_semana_id || idx}`} className="grid gap-2 md:grid-cols-[1fr_140px]">
-                <p className="flex h-11 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800">
-                  {diaLabel}
-                </p>
-                <LabeledTextField
-                  bare
-                  value={row.horas}
-                  onValueChange={(v) => onChangeCargaRow(idx, "horas", v)}
-                  placeholder="0..24"
-                  inputMode="decimal"
-                />
-              </div>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }

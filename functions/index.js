@@ -28,9 +28,11 @@ const persistirCheckinSaldoEstandarLote = require("./onCall/solicitudes/persisti
 const acreditarLaoBolsaAgente = require("./onCall/solicitudes/acreditarLaoBolsaAgente");
 const solicitudArticuloTriggers = require("./triggers/solicitudArticuloLaoOnCreate");
 const solicitudPatronBTriggers = require("./triggers/solicitudArticuloPatronBOnCreate");
+const solicitudPatronCTriggers = require("./triggers/solicitudArticuloPatronCOnCreate");
 const resolverContextoLaboralSolicitud = require("./onCall/solicitudes/resolverContextoLaboralSolicitud");
 const listarArticulosIngresoAgente = require("./onCall/solicitudes/listarArticulosIngresoAgente");
 const previsualizarSolicitudPatronB = require("./onCall/solicitudes/previsualizarSolicitudPatronB");
+const previsualizarSolicitudPatronC = require("./onCall/solicitudes/previsualizarSolicitudPatronC");
 const validarEntornoOperativoSolicitud = require("./onCall/solicitudes/validarEntornoOperativoSolicitud");
 const listarSolicitudesBandejaJefe = require("./onCall/solicitudes/listarSolicitudesBandejaJefe");
 const resolverDecisionJefeSolicitud = require("./onCall/solicitudes/resolverDecisionJefeSolicitud");
@@ -41,6 +43,11 @@ const reprocesarMdcSolicitudPatronB = require("./onCall/solicitudes/reprocesarMd
 const obtenerVistaGrillaMesAgente = require("./onCall/grilla/obtenerVistaGrillaMesAgente");
 const obtenerResumenSolicitudArticuloGrilla = require("./onCall/grilla/obtenerResumenSolicitudArticuloGrilla");
 const listarVistaGrillaMesPorGrupo = require("./onCall/grilla/listarVistaGrillaMesPorGrupo");
+const cerrarPeriodoLiquidacion = require("./onCall/grilla/cerrarPeriodoLiquidacion");
+const reabrirPeriodoLiquidacion = require("./onCall/grilla/reabrirPeriodoLiquidacion");
+const planesTurnoServicio = require("./modules/asistencia/planesTurnoServicio");
+const cambiosTurno = require("./modules/asistencia/cambiosTurno");
+const rematerializacion = require("./modules/asistencia/rematerializacion");
 
 module.exports = {
   ...login,
@@ -61,9 +68,11 @@ module.exports = {
   ...acreditarLaoBolsaAgente,
   ...solicitudArticuloTriggers,
   ...solicitudPatronBTriggers,
+  ...solicitudPatronCTriggers,
   ...resolverContextoLaboralSolicitud,
   ...listarArticulosIngresoAgente,
   ...previsualizarSolicitudPatronB,
+  ...previsualizarSolicitudPatronC,
   ...validarEntornoOperativoSolicitud,
   ...listarSolicitudesBandejaJefe,
   ...resolverDecisionJefeSolicitud,
@@ -74,4 +83,9 @@ module.exports = {
   ...obtenerVistaGrillaMesAgente,
   ...obtenerResumenSolicitudArticuloGrilla,
   ...listarVistaGrillaMesPorGrupo,
+  ...cerrarPeriodoLiquidacion,
+  ...reabrirPeriodoLiquidacion,
+  ...planesTurnoServicio,
+  ...cambiosTurno,
+  ...rematerializacion,
 };

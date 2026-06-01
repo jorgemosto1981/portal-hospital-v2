@@ -38,6 +38,7 @@ export default function GrillaMesSelector({
   cargandoDatos,
 }) {
   const muestraGrupoEquipo = modo === GRILLA_MES_MODO.EQUIPO;
+  const muestraGrupoTitular = modo === GRILLA_MES_MODO.TITULAR && gruposEquipo.length >= 2;
   const muestraGrupoSector = modo === GRILLA_MES_MODO.SECTOR && esRrhh;
 
   return (
@@ -64,6 +65,34 @@ export default function GrillaMesSelector({
           {esRrhh ? <option value={GRILLA_MES_MODO.SECTOR}>Sector (RRHH)</option> : null}
         </select>
       </label>
+
+      {muestraGrupoTitular ? (
+        <label className="flex min-w-[14rem] flex-1 flex-col gap-1 text-xs font-medium text-slate-600">
+          Cargo / grupo de trabajo
+          {resolverCargando ? (
+            <span className="text-sm text-slate-500">Cargando cargos vigentes…</span>
+          ) : gruposEquipo.length === 0 ? (
+            <span className="text-sm text-amber-700">Sin HLg vigente al cierre del mes.</span>
+          ) : (
+            <select
+              value={grupoId}
+              onChange={(e) => onGrupoIdChange(e.target.value)}
+              className="h-11 rounded-xl border border-violet-200 bg-violet-50 px-3 text-sm"
+            >
+              <option value="">Elegir cargo…</option>
+              {gruposEquipo.map((g) => {
+                const id = String(g.grupo_de_trabajo_id || "");
+                const label = String(g.etiqueta_ui || id);
+                return (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+          )}
+        </label>
+      ) : null}
 
       {muestraGrupoEquipo ? (
         <label className="flex min-w-[14rem] flex-1 flex-col gap-1 text-xs font-medium text-slate-600">
@@ -125,6 +154,7 @@ export default function GrillaMesSelector({
         disabled={
           cargandoDatos ||
           resolverCargando ||
+          (muestraGrupoTitular && (!grupoId || gruposEquipo.length === 0)) ||
           (muestraGrupoEquipo && (!grupoId || gruposEquipo.length === 0)) ||
           (muestraGrupoSector && (!grupoId || sectorCargando))
         }

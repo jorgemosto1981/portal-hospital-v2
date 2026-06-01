@@ -3,6 +3,11 @@
 const { HttpsError } = require("firebase-functions/v2/https");
 const { db } = require("./shared/context");
 const { ymdDesdeValorLaboral } = require("./shared/fechaLaboralYmd");
+const {
+  hasRangoSolapado,
+  isRegimenHorarioActivo,
+  hlgCuentaParaSolapeOperativo,
+} = require("./laboral/hlgValidacionesCore");
 
 const COLECCIONES_PUBLICAS_TEMPORALES = new Set([
   "grupos_de_trabajo",
@@ -34,6 +39,10 @@ const COLECCIONES_PUBLICAS_TEMPORALES = new Set([
   "cfg_tipo_vinculo_laboral",
   "cfg_modalidad_jornada",
   "cfg_regimen_horario",
+  "cfg_tipo_compensacion_cobertura",
+  "cfg_estado_periodo_liquidacion",
+  "cfg_clasificacion_dia_calendario",
+  "cfg_tipo_override_turno",
   "cfg_centro_costo",
   "cfg_causal_fin_asignacion_laboral",
   "cfg_motivo_deshabilitacion_hlc",
@@ -90,15 +99,6 @@ function ymdLaboralOrNull(v) {
   return y || null;
 }
 
-function hasRangoSolapado({ desdeA, hastaA, desdeB, hastaB }) {
-  const inicioA = ymdLaboralOrNull(desdeA);
-  const finA = ymdLaboralOrNull(hastaA) || "9999-12-31";
-  const inicioB = ymdLaboralOrNull(desdeB);
-  const finB = ymdLaboralOrNull(hastaB) || "9999-12-31";
-  if (!inicioA || !inicioB) return false;
-  return inicioA <= finB && inicioB <= finA;
-}
-
 function isRangoInvalido(desde, hasta) {
   const inicio = ymdLaboralOrNull(desde);
   const fin = ymdLaboralOrNull(hasta);
@@ -106,17 +106,31 @@ function isRangoInvalido(desde, hasta) {
   return inicio > fin;
 }
 
-function sumCargaHorasSemanales(cargaPorDiaSemana) {
-  if (!Array.isArray(cargaPorDiaSemana)) return 0;
-  return cargaPorDiaSemana.reduce((acc, item) => {
-    if (typeof item === "number") return acc + (Number.isFinite(item) ? item : 0);
-    if (item && typeof item === "object") {
-      const horas = toNumberOrNull(item.horas);
-      return acc + (horas != null ? horas : 0);
-    }
-    const n = toNumberOrNull(item);
-    return acc + (n != null ? n : 0);
-  }, 0);
+function derivarCargaSemanalDesdeRegimen(regimenDoc) {
+  if (!regimenDoc || typeof regimenDoc !== "object") return null;
+  const tipo = regimenDoc.tipo_patron;
+  if (tipo === "fijo") {
+    const dias = regimenDoc.dias;
+    if (!Array.isArray(dias)) return null;
+    return dias.reduce((acc, d) => {
+      const h = d && d.turno && typeof d.turno.horas_efectivas === "number" ? d.turno.horas_efectivas : 0;
+      return acc + h;
+    }, 0);
+  }
+  if (tipo === "rotativo") {
+    const ciclo = regimenDoc.ciclo;
+    if (!Array.isArray(ciclo) || ciclo.length === 0) return null;
+    const sumaCiclo = ciclo.reduce((acc, pos) => {
+      const h = pos && pos.turno && typeof pos.turno.horas_efectivas === "number" ? pos.turno.horas_efectivas : 0;
+      return acc + h;
+    }, 0);
+    return (sumaCiclo / ciclo.length) * 7;
+  }
+  if (tipo === "planificado") {
+    const v = regimenDoc.carga_horaria_semanal_teorica;
+    return typeof v === "number" && Number.isFinite(v) ? v : null;
+  }
+  return null;
 }
 
 function pushWarning(warnings, code, message, details) {
@@ -126,43 +140,6 @@ function pushWarning(warnings, code, message, details) {
   warnings.push(payload);
 }
 
-function validarCargaPorDiaSemana(cargaPorDiaSemana) {
-  if (!Array.isArray(cargaPorDiaSemana)) {
-    throw new HttpsError("invalid-argument", "[VAL-HLG-011] La carga horaria por dia debe enviarse como una lista.");
-  }
-  const seenDias = new Set();
-  for (const item of cargaPorDiaSemana) {
-    if (item && typeof item === "object" && !Array.isArray(item)) {
-      const dia = toNullableTrimmedString(item.dia_semana_id);
-      const horas = toNumberOrNull(item.horas);
-      if (!dia) {
-        throw new HttpsError("invalid-argument", "[VAL-HLG-011] Cada fila de carga horaria debe incluir el dia de semana.");
-      }
-      if (seenDias.has(dia)) {
-        throw new HttpsError(
-          "invalid-argument",
-          `[VAL-HLG-012] El dia ${dia} esta repetido en la carga horaria semanal.`,
-        );
-      }
-      seenDias.add(dia);
-      if (horas == null || horas < 0 || horas > 24) {
-        throw new HttpsError(
-          "invalid-argument",
-          `[VAL-HLG-011] Las horas del dia ${dia} son invalidas. Deben estar entre 0 y 24.`,
-        );
-      }
-      continue;
-    }
-    const horas = toNumberOrNull(item);
-    if (horas == null || horas < 0 || horas > 24) {
-      throw new HttpsError(
-        "invalid-argument",
-        "[VAL-HLG-011] Cada valor de horas debe estar entre 0 y 24.",
-      );
-    }
-  }
-  return true;
-}
 
 function normalizeGrupoTrabajoIdV2(id) {
   const raw = toNullableTrimmedString(id);
@@ -221,13 +198,6 @@ async function findSolapeHlc({ id, personaId, fechaDesde, fechaHasta }) {
   );
 }
 
-function cargaSemanalTieneHorasPositivas(cargaPorDiaSemana) {
-  if (!Array.isArray(cargaPorDiaSemana)) return false;
-  return cargaPorDiaSemana.some((item) => {
-    const horas = item && typeof item === "object" && !Array.isArray(item) ? Number(item.horas) : Number(item);
-    return Number.isFinite(horas) && horas > 0;
-  });
-}
 
 async function findSolapeHlgMismoCargo({ id, grupoId, cargoId, fechaInicio, fechaFin }) {
   if (!grupoId || !cargoId) return null;
@@ -238,6 +208,7 @@ async function findSolapeHlgMismoCargo({ id, grupoId, cargoId, fechaInicio, fech
   return (
     snap.docs.find((doc) => {
       if (doc.id === id) return false;
+      if (!hlgCuentaParaSolapeOperativo(doc.data())) return false;
       const datoLaboralId = toNullableTrimmedString(doc.get("dato_laboral_id"));
       if (!datoLaboralId || !hldIds.includes(datoLaboralId)) return false;
       return hasRangoSolapado({
@@ -247,6 +218,49 @@ async function findSolapeHlgMismoCargo({ id, grupoId, cargoId, fechaInicio, fech
         hastaB: doc.get("fecha_fin"),
       });
     }) || null
+  );
+}
+
+/** Misma persona + mismo grupo_de_trabajo con fechas superpuestas (bloqueo operativo). */
+async function findSolapeHlgMismoGrupo({ id, personaId, grupoId, fechaInicio, fechaFin }) {
+  if (!personaId || !grupoId) return null;
+  const snap = await db
+    .collection("historial_laboral_grupos")
+    .where("persona_id", "==", personaId)
+    .where("grupo_de_trabajo_id", "==", grupoId)
+    .get();
+  return (
+    snap.docs.find((doc) => {
+      if (doc.id === id) return false;
+      if (!hlgCuentaParaSolapeOperativo(doc.data())) return false;
+      return hasRangoSolapado({
+        desdeA: fechaInicio,
+        hastaA: fechaFin,
+        desdeB: doc.get("fecha_inicio"),
+        hastaB: doc.get("fecha_fin"),
+      });
+    }) || null
+  );
+}
+
+function assertRegimenHorarioActivo(regimenSnap, regimenHorarioId) {
+  if (!regimenSnap.exists) return;
+  if (!isRegimenHorarioActivo(regimenSnap.data())) {
+    throw new HttpsError(
+      "failed-precondition",
+      `[VAL-HLG-017] El régimen horario (${regimenHorarioId}) está inactivo en catálogo. Seleccioná un régimen activo o reactivá el catálogo.`,
+    );
+  }
+}
+
+function assertHlgRegimenNoModificadoEnEdicion(existingSnap, nuevoRegimenId) {
+  if (!existingSnap || !existingSnap.exists) return;
+  const prev = toNullableTrimmedString(existingSnap.get("regimen_horario_id"));
+  const next = toNullableTrimmedString(nuevoRegimenId);
+  if (!prev || !next || prev === next) return;
+  throw new HttpsError(
+    "failed-precondition",
+    "[VAL-HLG-018] No se puede modificar el régimen horario de una asignación a grupo existente. Cerrá la asignación actual (fecha de fin) y creá una nueva desde la fecha del cambio de régimen.",
   );
 }
 
@@ -307,7 +321,7 @@ async function assertHldDentroDeHlc({ fechaInicioHld, fechaFinHld, fechaDesdeHlc
 async function buildWarningReconciliacionCarga({
   id,
   cargoId,
-  cargaPorDiaSemanaActual,
+  cargaSemanalActual,
   cargaHorariaTotalHlc,
   epsilon = 0.01,
 }) {
@@ -317,14 +331,28 @@ async function buildWarningReconciliacionCarga({
   const hldSnap = await db.collection("historial_laboral_datos").where("cargo_id", "==", cargoId).get();
   if (hldSnap.empty) return null;
   const hldIds = hldSnap.docs.map((doc) => String(doc.id));
-  const snap = await db.collection("historial_laboral_grupos").get();
-  const acumuladoExistente = snap.docs.reduce((acc, doc) => {
-    if (doc.id === id) return acc;
+  const hlgSnap = await db.collection("historial_laboral_grupos").get();
+  const otrosHlg = hlgSnap.docs.filter((doc) => {
+    if (doc.id === id) return false;
+    if (!hlgCuentaParaSolapeOperativo(doc.data())) return false;
     const datoLaboralId = toNullableTrimmedString(doc.get("dato_laboral_id"));
-    if (!datoLaboralId || !hldIds.includes(datoLaboralId)) return acc;
-    return acc + sumCargaHorasSemanales(doc.get("carga_por_dia_semana"));
+    return datoLaboralId && hldIds.includes(datoLaboralId);
+  });
+  const regimenIds = [...new Set(otrosHlg.map((doc) => toNullableTrimmedString(doc.get("regimen_horario_id"))).filter(Boolean))];
+  const regimenesMap = new Map();
+  if (regimenIds.length > 0) {
+    const refs = regimenIds.map((rid) => db.collection("cfg_regimen_horario").doc(rid));
+    const snaps = await db.getAll(...refs);
+    snaps.forEach((s) => { if (s.exists) regimenesMap.set(s.id, s.data()); });
+  }
+  const acumuladoExistente = otrosHlg.reduce((acc, doc) => {
+    const rid = toNullableTrimmedString(doc.get("regimen_horario_id"));
+    const reg = rid ? regimenesMap.get(rid) : null;
+    const h = derivarCargaSemanalDesdeRegimen(reg);
+    return acc + (h != null ? h : 0);
   }, 0);
-  const total = acumuladoExistente + sumCargaHorasSemanales(cargaPorDiaSemanaActual);
+  const actual = cargaSemanalActual != null ? cargaSemanalActual : 0;
+  const total = acumuladoExistente + actual;
   if (Math.abs(total - objetivo) <= epsilon) return null;
   return {
     code: "VAL-HLG-W003",
@@ -372,17 +400,20 @@ module.exports = {
   toNullableTrimmedString,
   toNumberOrNull,
   isRangoInvalido,
-  sumCargaHorasSemanales,
+  derivarCargaSemanalDesdeRegimen,
   assertDocExistsOrNull,
   resolveEstadoPerfilDatosIdDefault,
   findSolapeHlc,
   findSolapeHlgMismoCargo,
+  findSolapeHlgMismoGrupo,
+  isRegimenHorarioActivo,
+  assertRegimenHorarioActivo,
+  assertHlgRegimenNoModificadoEnEdicion,
+  hasRangoSolapado,
   assertHlgDentroDeHlc,
   assertHldDentroDeHlc,
   buildWarningReconciliacionCarga,
   assertConsistenciaEstadoPerfilCuenta,
   pushWarning,
   hasFamiliarIncompleto,
-  validarCargaPorDiaSemana,
-  cargaSemanalTieneHorasPositivas,
 };

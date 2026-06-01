@@ -21,9 +21,15 @@ function labelEstado(id) {
  *   eventos: Array<Record<string, unknown>>;
  *   bandejaPath: string;
  *   subtitulo?: string;
+ *   turnoTeorico?: { rda_turno_id?: string; es_franco?: boolean; capa_teorica?: Record<string, unknown> } | null;
+ *   personaId?: string;
+ *   fechaYmd?: string;
+ *   onAbrirCobertura?: () => void;
  * }} props
  */
-export default function DiaGrillaDetalleModal({ open, onClose, dia, eventos, bandejaPath, subtitulo }) {
+export default function DiaGrillaDetalleModal({
+  open, onClose, dia, eventos, bandejaPath, subtitulo, turnoTeorico, grupoLabel, personaId, fechaYmd, onAbrirCobertura,
+}) {
   const [solFocus, setSolFocus] = useState("");
   const [resumen, setResumen] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -79,6 +85,9 @@ export default function DiaGrillaDetalleModal({ open, onClose, dia, eventos, ban
             {subtitulo ? (
               <span className="mt-0.5 block text-sm font-normal text-slate-600">{subtitulo}</span>
             ) : null}
+            {grupoLabel ? (
+              <span className="mt-0.5 block text-xs font-normal text-violet-600">{grupoLabel}</span>
+            ) : null}
           </h3>
           <button
             type="button"
@@ -88,6 +97,54 @@ export default function DiaGrillaDetalleModal({ open, onClose, dia, eventos, ban
             Cerrar
           </button>
         </div>
+
+        {turnoTeorico && (turnoTeorico.rda_turno_id || turnoTeorico.es_franco || turnoTeorico.capa_teorica) ? (
+          <div className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 p-3">
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600">Turno teorico</h4>
+            <dl className="space-y-1 text-xs">
+              {turnoTeorico.rda_turno_id ? (
+                <div className="flex gap-2">
+                  <dt className="font-medium text-slate-500">Turno:</dt>
+                  <dd className="font-bold text-indigo-700">{turnoTeorico.rda_turno_id}</dd>
+                </div>
+              ) : null}
+              {turnoTeorico.es_franco ? (
+                <div className="flex gap-2">
+                  <dt className="font-medium text-slate-500">Tipo:</dt>
+                  <dd className="text-slate-600">Franco / No laborable</dd>
+                </div>
+              ) : null}
+              {turnoTeorico.capa_teorica ? (
+                <>
+                  {turnoTeorico.capa_teorica.tipo_dia ? (
+                    <div className="flex gap-2">
+                      <dt className="font-medium text-slate-500">Tipo dia:</dt>
+                      <dd className="capitalize text-slate-700">{turnoTeorico.capa_teorica.tipo_dia}</dd>
+                    </div>
+                  ) : null}
+                  {turnoTeorico.capa_teorica.ingreso && turnoTeorico.capa_teorica.egreso ? (
+                    <div className="flex gap-2">
+                      <dt className="font-medium text-slate-500">Horario:</dt>
+                      <dd className="text-slate-700">{turnoTeorico.capa_teorica.ingreso} — {turnoTeorico.capa_teorica.egreso}</dd>
+                    </div>
+                  ) : null}
+                  {turnoTeorico.capa_teorica.horas_efectivas != null ? (
+                    <div className="flex gap-2">
+                      <dt className="font-medium text-slate-500">Horas efectivas:</dt>
+                      <dd className="text-slate-700">{turnoTeorico.capa_teorica.horas_efectivas}hs</dd>
+                    </div>
+                  ) : null}
+                  {turnoTeorico.capa_teorica.origen ? (
+                    <div className="flex gap-2">
+                      <dt className="font-medium text-slate-500">Origen:</dt>
+                      <dd className="text-slate-600">{turnoTeorico.capa_teorica.origen}</dd>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+            </dl>
+          </div>
+        ) : null}
 
         {lista.length > 1 ? (
           <ul className="mt-3 space-y-1">
@@ -156,6 +213,19 @@ export default function DiaGrillaDetalleModal({ open, onClose, dia, eventos, ban
               </div>
             ) : null}
           </dl>
+        ) : null}
+
+        {personaId && fechaYmd && onAbrirCobertura ? (
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onAbrirCobertura();
+            }}
+            className="mt-4 flex min-h-11 w-full items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 text-sm font-semibold text-indigo-800 active:bg-indigo-100"
+          >
+            Cobertura parcial por tramos
+          </button>
         ) : null}
 
         {resumen?.solicitud_id && bandejaPath ? (

@@ -1,4 +1,5 @@
 import {
+  cargaSemanalDesdeHlg,
   formatDateDdMmAaaa,
   formatVigenciaHldPantalla,
   hlcFechaDesdeYmd,
@@ -11,7 +12,6 @@ import {
   isHlgAsignacionDeshabilitada,
   isHlgOHldVigenteEnHoy,
   labelDesdeIndice,
-  sumarHorasSemana,
 } from "./utils.js";
 
 function formatFechaVisible(value, fallback = "—") {
@@ -32,6 +32,7 @@ export function buildLaboralSnapshotActual({
   idxEscalafon,
   idxAgrupamiento,
   idxCategorias,
+  idxRegimenes,
 }) {
   const pid = String(personaId || "").trim();
   if (!pid) {
@@ -90,9 +91,9 @@ export function buildLaboralSnapshotActual({
       )}`;
       const mapHlg = (r) => {
         const hldRef = idxHld.get(String(r.dato_laboral_id || "")) || null;
-        const cargaHorariaGrupo = sumarHorasSemana(r.carga_por_dia_semana);
+        const cargaHorariaGrupo = cargaSemanalDesdeHlg(r, idxRegimenes) ?? 0;
         const warningHlg = [];
-        if (cargaHorariaGrupo <= 0) warningHlg.push("Sin carga horaria asignada al grupo.");
+        if (cargaHorariaGrupo <= 0) warningHlg.push("Sin carga horaria derivada del régimen.");
         if (!hldRef || !hldRef.funcion_real_id) warningHlg.push("Sin función real asociada.");
         const deshabilitado = isHlgAsignacionDeshabilitada(r);
         const finYmd = hldHlgFechaFinYmd(r);
@@ -105,7 +106,7 @@ export function buildLaboralSnapshotActual({
           funcion: labelDesdeIndice(idxFunciones, hldRef && hldRef.funcion_real_id),
           periodo,
           deshabilitado,
-          cargaHorariaGrupo: cargaHorariaGrupo > 0 ? cargaHorariaGrupo : 0,
+          cargaHorariaGrupo,
           warningHlg,
         };
       };
@@ -114,7 +115,7 @@ export function buildLaboralSnapshotActual({
       }`;
       const hldVigenciaPantalla = formatVigenciaHldPantalla(hldRelacionado);
       const hldId = hldRelacionado ? String(hldRelacionado.id || "") : "";
-      const totalCargaHlg = hlgVigDelHlc.reduce((acc, row) => acc + sumarHorasSemana(row.carga_por_dia_semana), 0);
+      const totalCargaHlg = hlgVigDelHlc.reduce((acc, row) => acc + (cargaSemanalDesdeHlg(row, idxRegimenes) ?? 0), 0);
       const warningsHlc = [];
       const cargaHlcNum = Number(hlc.carga_horaria_total);
       if (hlgVigDelHlc.length === 0) warningsHlc.push("Cargo vigente sin asignación vigente a grupo de trabajo.");
@@ -164,6 +165,7 @@ export function buildLaboralSnapshotHistorico({
   idxEscalafon,
   idxAgrupamiento,
   idxCategorias,
+  idxRegimenes,
 }) {
   const pid = String(personaId || "").trim();
   if (!pid) return [];
@@ -184,7 +186,7 @@ export function buildLaboralSnapshotHistorico({
     const hlgHistDelHlc = hlgDelPeriodo.filter((r) => !isHlgOHldVigenteEnHoy(r));
     const mapHlg = (r) => {
       const hldRef = idxHld.get(String(r.dato_laboral_id || "")) || null;
-      const cargaHorariaGrupo = sumarHorasSemana(r.carga_por_dia_semana);
+      const cargaHorariaGrupo = cargaSemanalDesdeHlg(r, idxRegimenes) ?? 0;
       const deshabilitado = isHlgAsignacionDeshabilitada(r);
       const finYmd = hldHlgFechaFinYmd(r);
       const periodo = deshabilitado

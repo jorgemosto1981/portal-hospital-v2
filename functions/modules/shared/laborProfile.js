@@ -44,6 +44,7 @@ async function computeLaborProfileForPersona(personaId) {
       roles_hlc_vigentes: [],
       cargo_activo: false,
       rol_conflicto: false,
+      tiene_subordinados: false,
       fecha_referencia: fechaRef,
     };
   }
@@ -77,6 +78,7 @@ async function computeLaborProfileForPersona(personaId) {
 
   const rolesInChains = new Set();
   let cargoActivo = false;
+  const gruposConNivel = new Map();
   for (const hlc of hlcVig) {
     const listHld = hldByCargo.get(hlc.id) || [];
     for (const hld of listHld) {
@@ -85,6 +87,14 @@ async function computeLaborProfileForPersona(personaId) {
       cargoActivo = true;
       const rid = String(hlc.rol_id || "").trim();
       if (rid) rolesInChains.add(rid);
+      for (const hlg of listHlg) {
+        const gdt = String(hlg.grupo_de_trabajo_id || "").trim();
+        const n = Number(hlg.nivel_jerarquico);
+        if (gdt && Number.isFinite(n)) {
+          const prev = gruposConNivel.get(gdt);
+          if (prev === undefined || n > prev) gruposConNivel.set(gdt, n);
+        }
+      }
     }
   }
 
@@ -98,12 +108,45 @@ async function computeLaborProfileForPersona(personaId) {
     rol_conflicto = true;
   }
 
+  const tiene_subordinados = await detectarSubordinados(pid, gruposConNivel, fechaRef);
+
   return {
     roles_hlc_vigentes,
     cargo_activo: cargoActivo,
     rol_conflicto,
+    tiene_subordinados,
     fecha_referencia: fechaRef,
   };
+}
+
+/**
+ * Verifica si la persona tiene al menos un integrante con nivel_jerarquico
+ * estrictamente menor en alguno de sus grupos vigentes.
+ * @param {string} personaId
+ * @param {Map<string, number>} gruposConNivel gdt_id → nivel máximo del titular
+ * @param {string} fechaRef YYYY-MM-DD
+ */
+async function detectarSubordinados(personaId, gruposConNivel, fechaRef) {
+  if (gruposConNivel.size === 0) return false;
+  const queries = [];
+  for (const [gdtId] of gruposConNivel) {
+    queries.push(db.collection(COL_HLG).where("grupo_de_trabajo_id", "==", gdtId).get());
+  }
+  const snaps = await Promise.all(queries);
+  let idx = 0;
+  for (const [gdtId, nivelTitular] of gruposConNivel) {
+    const snap = snaps[idx++];
+    for (const doc of snap.docs) {
+      const row = doc.data() || {};
+      if (row.activo === false) continue;
+      const pid = String(row.persona_id || "").trim();
+      if (pid === personaId) continue;
+      if (!vigenteEnFechaInclusivaYmd(hldHlgFechaInicioYmd(row), hldHlgFechaFinYmd(row) || null, fechaRef)) continue;
+      const n = Number(row.nivel_jerarquico);
+      if (Number.isFinite(n) && n < nivelTitular) return true;
+    }
+  }
+  return false;
 }
 
 /** @param {unknown} token */

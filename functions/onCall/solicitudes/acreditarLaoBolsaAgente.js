@@ -156,13 +156,10 @@ const acreditarLaoBolsaAgente = onCall(async (request) => {
   bolsa.ultima_actualizacion = FieldValue.serverTimestamp();
 
   if (salSnap.exists) {
-    await salRef.set(
-      {
-        [`bolsas.${bolsaId}`]: bolsa,
-        "metadata.ultima_sincronizacion": FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
+    await salRef.update({
+      [`bolsas.${bolsaId}`]: bolsa,
+      "metadata.ultima_sincronizacion": FieldValue.serverTimestamp(),
+    });
   } else {
     await salRef.set({
       persona_id: personaId,

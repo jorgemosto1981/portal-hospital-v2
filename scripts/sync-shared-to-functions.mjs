@@ -31,6 +31,7 @@ const FILES_TO_SYNC = [
   "calendarInstitucionalCore.js",
   "validarFechasArticulo.js",
   "modoComputoCalendario.js",
+  "horarioInstitucionalDisplay.js",
 ];
 
 function esmToCjs(source, filename) {

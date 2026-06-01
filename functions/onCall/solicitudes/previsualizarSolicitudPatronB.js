@@ -5,7 +5,7 @@ const { db } = require("../../modules/shared/context");
 const { assertAgenteConPersonaId } = require("../../modules/shared/helpers");
 const { parseYmd } = require("../../modules/shared/laoPreviewDateUtils");
 const { isPortalRoleUsuario } = require("../../modules/shared/solicitudElegibilidadLaboral");
-const { runPatronBAltaMotor } = require("../../modules/shared/solicitudPatronBAltaMotor");
+const { runPatronBAltaMotorV2 } = require("../../modules/shared/patronBAltaMotorV2");
 const {
   diasSolicitadosDesdeVersion,
   fechaHastaDesdeVersionPatronB,
@@ -65,7 +65,7 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
     Number.isFinite(diasRaw) && diasRaw > 0 ? Math.floor(diasRaw) : diasVersion;
   const fechaHasta = fechaHastaDesdeVersionPatronB(fechaDesde, diasSolicitados);
 
-  const motor = await runPatronBAltaMotor({
+  const motor = await runPatronBAltaMotorV2({
     db,
     solicitud: {
       titular_persona_id: personaId,
@@ -78,32 +78,13 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
       grupo_trabajo_id_ancla: grupoTrabajoId || null,
     },
     authToken: request.auth.token,
+    versionData,
+    versionId,
   });
 
-  if (!motor.ok) {
-    return {
-      ok: false,
-      eligible: false,
-      codigos: Array.isArray(motor.codigos) ? motor.codigos : [],
-      mensajes: Array.isArray(motor.mensajes) ? motor.mensajes : [],
-      grupo_trabajo_id_ancla: motor.grupo_trabajo_id_ancla || null,
-      grupos_trabajo_vigentes: Array.isArray(motor.grupos_trabajo_vigentes)
-        ? motor.grupos_trabajo_vigentes
-        : [],
-      requiere_seleccion_grupo: motor.requiere_seleccion_grupo === true,
-      fecha_desde: fechaDesde,
-      fecha_hasta: fechaHasta,
-      dias_solicitados: diasSolicitados,
-      persona_id: personaId,
-      articulo_id: articuloId,
-      version_id: versionId,
-      hlc_id: motor.hlc_id || null,
-    };
-  }
-
-  return {
-    ok: motor.ok === true,
-    eligible: motor.ok === true,
+  const base = {
+    ok: motor.eligible === true,
+    eligible: motor.eligible === true,
     codigos: Array.isArray(motor.codigos) ? motor.codigos : [],
     mensajes: Array.isArray(motor.mensajes) ? motor.mensajes : [],
     grupo_trabajo_id_ancla: motor.grupo_trabajo_id_ancla || null,
@@ -112,29 +93,33 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
       : [],
     requiere_seleccion_grupo: motor.requiere_seleccion_grupo === true,
     fecha_desde: fechaDesde,
-    fecha_hasta: fechaHasta,
+    fecha_hasta: motor.fecha_hasta || fechaHasta,
     dias_solicitados: diasSolicitados,
     persona_id: personaId,
     articulo_id: articuloId,
     version_id: versionId,
     hlc_id: motor.hlc_id || null,
-    ...(motor.ok
-      ? {
-          saldo_ciclo: {
-            anio_ciclo_consumo: motor.anio_ciclo_consumo,
-            dias_consumo: motor.dias_consumo,
-            saldo_disponible: motor.saldo_disponible,
-            saldo_restante_preview: motor.saldo_restante_preview,
-            bolsa_id: motor.bolsa_id || null,
-          },
-          frecuencia_mes: motor.frecuencia_mes || null,
-          calendario_resumen: motor.calendario_resumen || null,
-          modo_computo: motor.modo_computo || null,
-          usa_calendario_institucional: motor.usa_calendario_institucional === true,
-          incluye_feriados_institucionales: motor.incluye_feriados_institucionales === true,
-          fecha_hasta: motor.fecha_hasta || fechaHasta,
-        }
-      : {}),
+    motor_snapshot: motor.motor_snapshot || null,
+    checks: motor.checks || [],
+    warnings: motor.warnings || [],
+  };
+
+  if (!motor.eligible) return base;
+
+  return {
+    ...base,
+    saldo_ciclo: {
+      anio_ciclo_consumo: motor.anio_ciclo_consumo,
+      dias_consumo: motor.dias_consumo,
+      saldo_disponible: motor.saldo_disponible,
+      saldo_restante_preview: motor.saldo_restante_preview,
+      bolsa_id: motor.bolsa_id || null,
+    },
+    frecuencia_mes: motor.frecuencia_mes || null,
+    calendario_resumen: motor.calendario_resumen || null,
+    modo_computo: motor.modo_computo || null,
+    usa_calendario_institucional: motor.usa_calendario_institucional === true,
+    incluye_feriados_institucionales: motor.incluye_feriados_institucionales === true,
   };
 });
 

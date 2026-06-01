@@ -1,28 +1,92 @@
 import { diasEnMes, etiquetaCelda } from "./grillaMesCellUtils.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
+import {
+  columnasCalendario,
+  institucionalPorDiaEnFilas,
+  textoHorarioTurno,
+  celdaTieneJornadaVis,
+  claseFondoColumna,
+  claseFondoCelda,
+  varianteCeldaOperativa,
+} from "./grillaMesEquipoDisplay.js";
+import {
+  claseHeaderAgenteSticky,
+  claseCeldaAgenteSticky,
+  clasesTextoCelda,
+} from "./grillaTurnosVisual.js";
+import GrillaTurnosCeldaChip from "./GrillaTurnosCeldaChip.jsx";
+
+function contenidoCeldaOperativa({
+  tieneLicencia,
+  licenciaCod,
+  tieneTurno,
+  esFranco,
+  esNoLaborable,
+  turnoText,
+}) {
+  if (tieneLicencia && (tieneTurno || esFranco || esNoLaborable)) {
+    return (
+      <span className="flex w-full flex-col items-center justify-center leading-none">
+        <span className={clasesTextoCelda(turnoText || (esNoLaborable ? "NL" : "F"))}>{turnoText || (esNoLaborable ? "NL" : "F")}</span>
+        <span className="mt-0.5 text-[7px] font-bold text-fuchsia-950">{licenciaCod.slice(0, 4)}</span>
+      </span>
+    );
+  }
+  if (tieneLicencia) {
+    return <span className={clasesTextoCelda(licenciaCod)}>{licenciaCod.slice(0, 4)}</span>;
+  }
+  return <span className={clasesTextoCelda(turnoText)}>{turnoText}</span>;
+}
 
 /**
  * @param {{
  *   anio: number;
  *   mes: number;
  *   filas: Array<Record<string, unknown>>;
- *   onCeldaClick: (payload: { dia: string; eventos: unknown[]; personaLabel?: string }) => void;
+ *   grupoSeleccionado?: string;
+ *   onCeldaClick: (payload: {
+ *     dia: string; fechaYmd: string; personaId: string; eventos: unknown[];
+ *     personaLabel?: string; grupoLabel?: string;
+ *     turnoTeorico?: { rda_turno_id?: string; es_franco?: boolean; capa_teorica?: Record<string, unknown> };
+ *   }) => void;
  * }} props
  */
-export default function GrillaMesEquipoTabla({ anio, mes, filas, onCeldaClick }) {
+export default function GrillaMesEquipoTabla({ anio, mes, filas, grupoSeleccionado, onCeldaClick }) {
   const totalDias = diasEnMes(anio, mes);
+  const columnas = columnasCalendario(anio, mes);
+  const institucionalPorDia = institucionalPorDiaEnFilas(filas, totalDias);
 
   return (
-    <div className="mt-4 overflow-x-auto">
-      <table className="min-w-full border-collapse text-[10px]">
+    <div className="mt-4 overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm">
+      <table className="min-w-max border-separate border-spacing-0 text-[10px]">
         <thead>
-          <tr className="bg-slate-50 text-slate-600">
-            <th className="sticky left-0 z-10 min-w-[10rem] border border-slate-200 bg-slate-50 px-2 py-1 text-left">
+          <tr>
+            <th className={`${claseHeaderAgenteSticky()} h-9 border-b`} />
+            {columnas.map((c) => (
+              <th
+                key={`ds-${c.dia}`}
+                className={`min-w-[2.5rem] h-9 ${claseFondoColumna({
+                  esFinde: c.esFinde,
+                  esFeriado: Boolean(institucionalPorDia[c.dia]),
+                })}`}
+              >
+                {c.letra}
+              </th>
+            ))}
+          </tr>
+          <tr>
+            <th className={`${claseHeaderAgenteSticky()} h-9 border-b`}>
               Persona
             </th>
-            {Array.from({ length: totalDias }, (_, i) => (
-              <th key={i + 1} className="border border-slate-200 px-0.5 py-1 font-normal">
-                {i + 1}
+            {columnas.map((c) => (
+              <th
+                key={c.dia}
+                className={`min-w-[2.5rem] h-9 ${claseFondoColumna({
+                  esFinde: c.esFinde,
+                  esFeriado: Boolean(institucionalPorDia[c.dia]),
+                })}`}
+              >
+                <span className="text-[10px] font-bold">{c.num}</span>
               </th>
             ))}
           </tr>
@@ -32,7 +96,7 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, onCeldaClick })
             <tr>
               <td
                 colSpan={totalDias + 1}
-                className="border border-slate-200 px-3 py-6 text-center text-sm text-slate-500"
+                className="border border-slate-300 px-3 py-6 text-center text-sm text-slate-500"
               >
                 Sin datos. Elegí vista y período y pulsá Cargar.
               </td>
@@ -41,35 +105,133 @@ export default function GrillaMesEquipoTabla({ anio, mes, filas, onCeldaClick })
             filas.map((fila) => {
               const personaLabel = String(fila.persona_label || fila.persona_id || "");
               return (
-                <tr key={String(fila.persona_id)}>
-                  <td className="sticky left-0 z-10 max-w-[12rem] truncate border border-slate-200 bg-white px-2 py-1 text-left text-xs font-medium text-slate-800">
-                    {personaLabel}
+                <tr key={String(fila.persona_id)} className="h-16 align-middle">
+                  <td className={claseCeldaAgenteSticky()}>
+                    <span className="block truncate text-[11px] font-semibold leading-snug text-slate-800">
+                      {personaLabel}
+                    </span>
                   </td>
-                  {Array.from({ length: totalDias }, (_, i) => {
-                    const dia = String(i + 1).padStart(2, "0");
+                  {columnas.map((col) => {
+                    const dia = col.dia;
                     const dias = fila.dias && typeof fila.dias === "object" ? fila.dias : {};
                     const cell = dias[dia] || {};
+                    const cellGdt = cell.grupo_de_trabajo_id || null;
+                    const esOtroGrupo = grupoSeleccionado && cellGdt && cellGdt !== grupoSeleccionado;
+
+                    if (esOtroGrupo) {
+                      const otroLabel = cell.etiqueta_grupo_corta || cellGdt;
+                      const corta = otroLabel.length > 5 ? otroLabel.slice(0, 4) + "…" : otroLabel;
+                      return (
+                        <td key={dia} className="border border-slate-300 bg-slate-100 p-0 align-middle">
+                          <div
+                            className="mx-auto flex h-12 w-14 items-center justify-center"
+                            title={`Asignado a ${otroLabel}`}
+                          >
+                            <span className="text-[7px] text-slate-400">{corta}</span>
+                          </div>
+                        </td>
+                      );
+                    }
+
                     const eventos = cell.eventos;
-                    const label = etiquetaCelda(eventos);
-                    const tiene = Array.isArray(eventos) && eventos.length > 0;
+                    const licenciaCod = etiquetaCelda(eventos);
+                    const tieneLicencia = Boolean(licenciaCod);
+                    const turnoText = textoHorarioTurno(cell);
+                    const jornadaVis = celdaTieneJornadaVis(cell);
+                    const tipoDiaVis = String(cell.tipo_dia || "")
+                      .trim()
+                      .toLowerCase()
+                      .replace(/\s+/g, "_");
+                    const esNoLaborable =
+                      !jornadaVis &&
+                      (tipoDiaVis === "no_laborable" ||
+                        tipoDiaVis === "no-laborable" ||
+                        turnoText === "NL");
+                    const tieneTurno = Boolean(turnoText && turnoText !== "F" && turnoText !== "NL");
+                    const esFranco = (cell.es_franco === true || turnoText === "F") && !esNoLaborable;
+                    const tipoInstCol = institucionalPorDia[dia];
+                    const tipoInstCel = cell.tipo_evento_institucional || tipoInstCol;
+                    const esInstitucional = Boolean(
+                      tipoInstCol || cell.es_feriado === true || tipoInstCel === "feriado" || tipoInstCel === "asueto",
+                    );
+
+                    const tieneDatos =
+                      tieneLicencia || tieneTurno || esFranco || esNoLaborable || esInstitucional;
+                    const ingreso = cell.rda_ingreso || null;
+                    const egreso = cell.rda_egreso || null;
+                    const turnoId = cell.rda_turno_id || null;
+                    const grupoLabel = cell.etiqueta_grupo_corta || null;
+
+                    const titleParts = [];
+                    if (esInstitucional && tipoInstCel) {
+                      titleParts.push(
+                        tipoInstCel === "feriado" ? "Feriado" : tipoInstCel === "asueto" ? "Asueto" : "Día institucional",
+                      );
+                    }
+                    if (turnoText) titleParts.push(turnoText);
+                    if (licenciaCod) titleParts.push(`Licencia: ${licenciaCod}`);
+
+                    const variant = varianteCeldaOperativa({
+                      tieneLicencia,
+                      esNoLaborable,
+                      esFranco,
+                      tieneTurno: tieneTurno || jornadaVis,
+                    });
+
                     return (
-                      <td key={dia} className="h-8 border border-slate-100 p-0">
+                      <td
+                        key={dia}
+                        className={claseFondoCelda({
+                          esFinde: col.esFinde,
+                          esFeriado: Boolean(tipoInstCol),
+                        })}
+                      >
                         <GrillaMesCeldaLicencia
                           eventos={Array.isArray(eventos) ? eventos : []}
                           personaLabel={personaLabel}
                           dia={dia}
-                          disabled={!tiene}
+                          disabled={!tieneDatos}
                           onClick={() =>
-                            tiene &&
+                            tieneDatos &&
                             onCeldaClick({
                               dia,
-                              eventos,
+                              fechaYmd: `${anio}-${String(mes).padStart(2, "0")}-${dia}`,
+                              personaId: String(fila.persona_id || ""),
+                              eventos: Array.isArray(eventos) ? eventos : [],
                               personaLabel,
+                              grupoLabel,
+                              turnoTeorico: {
+                                rda_turno_id: turnoId || undefined,
+                                es_franco: esFranco,
+                                capa_teorica: {
+                                  tipo_dia: jornadaVis
+                                    ? "laborable"
+                                    : esNoLaborable
+                                      ? "no_laborable"
+                                      : esFranco
+                                        ? "franco"
+                                        : cell.tipo_dia || "laborable",
+                                  ingreso,
+                                  egreso,
+                                  es_feriado: esInstitucional,
+                                  tipo_evento_institucional: tipoInstCel || undefined,
+                                },
+                              },
                             })
                           }
-                          className="flex min-h-8 min-w-[1.75rem] items-center justify-center font-semibold"
+                          className="flex w-full items-center justify-center py-0.5"
+                          title={titleParts.join(" · ") || undefined}
                         >
-                          {label ? label.slice(0, 4) : ""}
+                          <GrillaTurnosCeldaChip variant={variant}>
+                            {contenidoCeldaOperativa({
+                              tieneLicencia,
+                              licenciaCod,
+                              tieneTurno,
+                              esFranco,
+                              esNoLaborable,
+                              turnoText,
+                            })}
+                          </GrillaTurnosCeldaChip>
                         </GrillaMesCeldaLicencia>
                       </td>
                     );
