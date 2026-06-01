@@ -1,12 +1,14 @@
 # Punto de Continuación — Próxima Sesión
 
-**Última actualización:** Repaso orquestación HLG→grilla (documentación cerrada Bloques 1–6) + pendiente PR Multi-HLG  
+**Última actualización:** Checkpoint F-UX.1 + F0 + núcleo F1 — commit `942adcf`, merge `master` @ `25bc00c` (2026-06-01)  
 **RETOMAR AQUÍ (épica scoped):** [`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md)  
 **RETOMAR AQUÍ (reglas orquestación):** [`HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md`](./HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md)
 
 | Campo | Valor |
 |-------|--------|
-| **Branch** | `feat/epic-multi-hlg-fase1-execution` (pusheada a `origin`) |
+| **Branch trabajo** | `feat/epic-multi-hlg-fase1-execution` @ `942adcf` (origin) |
+| **master** | `25bc00c` — merge épica Multi-HLG + checkpoint grilla RRHH |
+| **Tag pre-ejecución** | `pre-ejecucion-v2` (docs); código funcional posterior en `942adcf` |
 | **Biblia** | [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) |
 | **Handoff incidente Z** | [`HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md`](./HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md) |
 | **Producción** | https://portal-hospital-v2.web.app |
@@ -29,7 +31,7 @@
 |------|------------------|
 | Ventana teórica fijo/rotativo | **Mes actual + mes siguiente**; día **5**: M+1 idempotente; días **1–4** altas HLg pueden adelantar M+1 |
 | Licencias — `fecha_desde` | Fin del **mes siguiente** (alineado a M+M+1) |
-| Licencias — `depende_rda` | Hábiles/corridos/calendario: OK. RDA: bloqueo si falta en **anclas** (`fecha_desde` / `fecha_hasta`); gate hoy itera todo el tramo → **cambiar** |
+| Licencias — `depende_rda` | Hábiles/corridos/calendario: OK. RDA: bloqueo si falta en **anclas** (`fecha_desde` / `fecha_hasta`) — **implementado** en gate (`942adcf`) |
 | LAO + cambio HLg | **Rodante:** solo capa 1; LAO intacta; reintegro con `gdt` vigente |
 | `vis` mínimo | MDC crea/merge; materialización añade `rda_*` en el **mismo** `vis_*` |
 | Cierre período | **Manual RRHH** (botón + callable) fase 1; Scheduler día 5 liquidación **diferido** |
@@ -41,13 +43,34 @@
 
 ---
 
+## Checkpoint implementación (2026-06-01)
+
+| Etapa | Estado | Notas |
+|-------|--------|--------|
+| **F-UX.1** | ✅ Código | Menú RRHH, `/portal/rrhh/grilla-operativa`, selector sector |
+| **F0** (O-P0-4,1,7,5) | ✅ Código | Purge HLg, gate anclas, bulk sector, toasts |
+| **F1.1** Multi-HLG → master | ✅ Merge | `25bc00c` en `origin/master` |
+| **F1.3** cierre período | ✅ Código | `cerrarPeriodoLiquidacion` + botón GSO RRHH |
+| **F1** restante | ⏳ | O-P0-3 MDC trámite; Paso 4 QA; deploy functions/hosting |
+| **F2–F4** | ⏳ | No iniciar hasta validar smoke en dev/staging |
+
+**Smoke manual post-deploy:**
+
+1. RRHH → **Grilla operativa** → modo Sector → grupo piloto `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` (o prueba).
+2. Cargar mes → **Cerrar período de liquidación** → en Firestore `vis_*` del mes: `estado_periodo_liquidacion_id` = `cfg_epl_01KSN4ZJPVJE8C6X1VS2HQSR20` (`CFG_EPL_LIQUIDADO_CERRADO`).
+3. Deshabilitar HLg de prueba → verificar purge forward (sin `rda_*` fantasmas en días posteriores en ese `gdt`).
+
+**Índice Firestore:** si el cierre falla en consola, crear compuesto en `vistas_grilla_mes_agente`: `grupo_de_trabajo_id` + `anio` + `mes`.
+
+---
+
 ## Prioridad producto — Grilla operativa → menú RRHH
 
-| Paso | Qué | Archivos |
-|------|-----|----------|
-| 1 | Mover ítem `grilla` de `grupo: "jefe"` a `grupo: "rrhh"` en `web/src/constants/modulosEstado.js` | + ruta `App.jsx` `/portal/rrhh/grilla-operativa` |
-| 2 | RRHH trabaja GSO (calendario MDC + sector); validar con F0 bulk/observabilidad | `GrillaMesLicenciasPanel.jsx` |
-| 3 | **Después de OK RRHH:** entrada jefe con vista sin fichadas reales; solo auditoría + `fichadas_esperadas` | props rol + filtros API |
+| Paso | Qué | Estado |
+|------|-----|--------|
+| 1 | Menú RRHH + ruta grilla-operativa | ✅ |
+| 2 | Validación operativa RRHH en dev (acta UX-4) | ⏳ Tras deploy |
+| 3 | Vista jefe acotada (F-UX.2) | ⏳ Tras F3 parcial |
 
 Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md) § F-UX.
 
@@ -55,19 +78,15 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 
 ## Backlog implementación — orquestación (post-repaso)
 
-Orden sugerido **después** de cerrar PR Multi-HLG o en paralelo si el equipo lo prioriza. Sin código hasta pedido explícito de ejecución.
+### P0 — contención (ver [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](./ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md) §5)
 
-### P0 — contención inmediata (3 riesgos críticos — ver [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](./ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md) §5)
-
-**No llevar a producción sin mitigar:** fuga teórica post-HLg, N+1 en gate/listado sector, UI silenciosa ante fallo de materialización.
-
-| ID | Riesgo | Entrega | Archivos / notas |
-|----|--------|---------|------------------|
-| **O-P0-4** | **P0-A Fuga datos** | Purge **delete forward** desde `fecha_fin+1` / `fecha_inicio` (solo capa 1); doble OK | `catalogosLaborales.js`, helper `purgeCapaTeoricaGdtRango` |
-| **O-P0-1** | **P0-B Gate** | `depende_rda`: solo anclas `fecha_desde` + `fecha_hasta` | `grillaTurnoEntornoGate.js` |
-| **O-P0-7** | **P0-B Listado** | Sector/jefe: **bulk** `materializarGrupoMes` (o batch) por mes+gdt; **no** 60× lazy secuencial | `grillaMesAgenteCore.js` `listarVistaGrillaMesPorGrupo` |
-| **O-P0-5** | **P0-C UI** | Toasts/badges: `materializado_lazy`, fallo batch, “forzar rematerializar”; por fila en sector | `useGrillaMesVista.js`, `GrillaMesLicenciasPanel.jsx` |
-| O-P0-2 | Cierre período manual + botón GSO | RFC, `asistenciaPeriodoLiquidacion.js` |
+| ID | Riesgo | Estado | Notas |
+|----|--------|--------|--------|
+| **O-P0-4** | Fuga post-HLg | ✅ Código | `purgeCapaTeoricaGdtRango` + `rrhhDeshabilitarHlg`; UX doble OK UI pendiente |
+| **O-P0-1** | Gate LAO | ✅ Código | Anclas desde/hasta |
+| **O-P0-7** | Listado sector | ✅ Código | `materializarGrupoMes` previo |
+| **O-P0-5** | UI ciega | ✅ Código | Toasts en `useGrillaMesVista` |
+| O-P0-2 | Cierre período | ✅ Código | Callables + botón GSO; validar en dev |
 | O-P0-3 | MDC en trámite vs M-1 cerrado | MDC + gates |
 | O-P0-6 | Piloto `resolverFijo` / rematerializar UI (D2/D11) | plan § pilotos |
 
@@ -106,8 +125,9 @@ Orden sugerido **después** de cerrar PR Multi-HLG o en paralelo si el equipo lo
 | Paso 3 — Materialización mayo Sala | ✅ 93 agentes |
 | Paso C — Strip `capa_teorica` raíz | ✅ 244 docs → **0** legacy |
 | Documentación biblia/handoff | ✅ `c07cea3` |
-| **PR → `master`** | ⏳ **Pendiente (Jorge)** |
-| **Merge + Paso 4 QA** | ⏳ Tras sign-off PR |
+| **PR → `master`** | ✅ Merge `25bc00c` (2026-06-01) |
+| **Deploy functions + hosting** | ⏳ Validar smoke en dev antes de prod |
+| **Paso 4 QA** | ⏳ Matriz §4.2 biblia Multi-HLG |
 
 ---
 
