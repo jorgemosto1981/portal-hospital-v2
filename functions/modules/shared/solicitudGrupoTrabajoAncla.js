@@ -1,28 +1,15 @@
 "use strict";
 
-const { hldHlgFechaInicioYmd, hldHlgFechaFinYmd, vigenteEnFechaInclusivaYmd } = require("./fechaLaboralYmd");
 const {
   CODIGO_GRUPO_ANCLA_REQUERIDO,
   CODIGO_GRUPO_ANCLA_INVALIDO,
   CODIGO_SIN_GRUPO_VIGENTE,
   mensajeParaCodigo,
 } = require("./solicitudElegibilidadLaboral");
+const { hlgVigenteEnFecha } = require("./solicitudHlgVigencia");
 
 const COL_HLG = "historial_laboral_grupos";
 const COL_GDT = "grupos_de_trabajo";
-
-/**
- * @param {Record<string, unknown>} hlg
- * @param {string} fechaRefYmd
- */
-function hlgVigenteEnFecha(hlg, fechaRefYmd) {
-  if (!hlg || hlg.activo === false) return false;
-  return vigenteEnFechaInclusivaYmd(
-    hldHlgFechaInicioYmd(hlg),
-    hldHlgFechaFinYmd(hlg) || null,
-    fechaRefYmd,
-  );
-}
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
