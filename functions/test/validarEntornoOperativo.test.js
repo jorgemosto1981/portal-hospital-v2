@@ -157,6 +157,13 @@ function mockDb(cfg = {}) {
           }),
         };
       }
+      if (name === "vistas_grilla_mes_agente") {
+        return {
+          doc: () => ({
+            get: async () => snap(false),
+          }),
+        };
+      }
       const emptyChainable = () => ({
         where: emptyChainable,
         get: async () => ({ docs: [], empty: true }),

@@ -1,7 +1,6 @@
 "use strict";
 
 const { FieldValue } = require("firebase-admin/firestore");
-const { db } = require("../shared/context");
 const { buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
 const {
   CFG_EPL_ABIERTO,
@@ -10,15 +9,25 @@ const {
 
 const COL_VIS = "vistas_grilla_mes_agente";
 
+const CODIGO_PERIODO_CERRADO = "ASI-PER-001";
+const MSG_PERIODO_CERRADO =
+  "El período de liquidación está cerrado para este sector. No se permiten nuevas solicitudes en ese mes.";
+
+const { iterarYmdInclusive } = require("../shared/mdcRdaDocumentIds");
+const {
+  ESTADO_SOLICITUD_EN_REVISION_JEFE,
+  ESTADO_SOLICITUD_EN_REVISION_RRHH,
+} = require("../shared/solicitudesArticuloEstados");
+
 /**
  * @param {string} personaId
  * @param {string} fechaYmd
  * @param {string} grupoTrabajoId gdt_* — obligatorio (vis scoped)
  * @returns {Promise<{ cerrado: boolean, estado_periodo_liquidacion_id: string|null }>}
  */
-async function consultarEstadoPeriodoLiquidacion(personaId, fechaYmd, grupoTrabajoId) {
+async function consultarEstadoPeriodoLiquidacion(firestore, personaId, fechaYmd, grupoTrabajoId) {
   const visId = buildVisDocumentId(personaId, fechaYmd, grupoTrabajoId);
-  const snap = await db.collection(COL_VIS).doc(visId).get();
+  const snap = await firestore.collection(COL_VIS).doc(visId).get();
   if (!snap.exists) return { cerrado: false, estado_periodo_liquidacion_id: null };
   const id = snap.data()?.estado_periodo_liquidacion_id || null;
   return {
@@ -33,12 +42,42 @@ async function consultarEstadoPeriodoLiquidacion(personaId, fechaYmd, grupoTraba
  * @param {string} grupoTrabajoId gdt_*
  * @returns {Promise<void>}
  */
-async function assertPeriodoNoCerrado(personaId, fechaYmd, grupoTrabajoId) {
-  const { cerrado } = await consultarEstadoPeriodoLiquidacion(personaId, fechaYmd, grupoTrabajoId);
+function periodoCerradoError() {
+  const err = new Error(`[${CODIGO_PERIODO_CERRADO}] ${MSG_PERIODO_CERRADO}`);
+  err.code = "failed-precondition";
+  return err;
+}
+
+async function assertPeriodoNoCerrado(firestore, personaId, fechaYmd, grupoTrabajoId) {
+  const { cerrado } = await consultarEstadoPeriodoLiquidacion(firestore, personaId, fechaYmd, grupoTrabajoId);
   if (cerrado) {
-    const err = new Error("[ASI-PER-001] El período está liquidado y cerrado. No se permiten cambios.");
-    err.code = "failed-precondition";
-    throw err;
+    throw periodoCerradoError();
+  }
+}
+
+function esEstadoSolicitudEnTramite(estadoSolicitudId) {
+  const est = String(estadoSolicitudId || "").trim();
+  return (
+    est === ESTADO_SOLICITUD_EN_REVISION_JEFE || est === ESTADO_SOLICITUD_EN_REVISION_RRHH
+  );
+}
+
+/**
+ * Bloquea altas nuevas (validar entorno / proyección inicial) si algún mes del rango está cerrado en el gdt.
+ */
+async function assertNuevaSolicitudNoEnPeriodoCerrado(firestore, personaId, fechaDesde, fechaHasta, grupoTrabajoId) {
+  const gdt = String(grupoTrabajoId || "").trim();
+  if (!/^gdt_/i.test(gdt)) return;
+  const desde = String(fechaDesde || "").slice(0, 10);
+  const hasta = String(fechaHasta || desde).slice(0, 10);
+  const meses = new Set();
+  for (const ymd of iterarYmdInclusive(desde, hasta)) {
+    meses.add(ymd.slice(0, 7));
+  }
+  for (const _mes of meses) {
+    const probe = `${_mes}-01`;
+    const { cerrado } = await consultarEstadoPeriodoLiquidacion(firestore, personaId, probe, gdt);
+    if (cerrado) throw periodoCerradoError();
   }
 }
 
@@ -150,6 +189,10 @@ async function reabrirPeriodoLiquidacionCore(
 module.exports = {
   consultarEstadoPeriodoLiquidacion,
   assertPeriodoNoCerrado,
+  assertNuevaSolicitudNoEnPeriodoCerrado,
+  esEstadoSolicitudEnTramite,
+  CODIGO_PERIODO_CERRADO,
+  MSG_PERIODO_CERRADO,
   cerrarPeriodoLiquidacionCore,
   reabrirPeriodoLiquidacionCore,
   COL_VIS,

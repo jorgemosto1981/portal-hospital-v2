@@ -52,7 +52,7 @@
 | **F1.1** Multi-HLG → master | ✅ Merge | `25bc00c` en `origin/master` |
 | **F1.3** cierre período | ✅ Código | `cerrarPeriodoLiquidacion` + botón GSO RRHH |
 | **F1** núcleo prod | ✅ Smoke | Cierre período (3 `vis_*`) + purge HLg Sala; ver acta abajo |
-| **F1** restante | ⏳ | O-P0-3 MDC trámite; Paso 4 QA formal; UX doble OK purge en UI |
+| **F1** restante | ⏳ | Paso 4 QA formal en prod; desplegar gates O-P0-3 + UX HLg |
 | **Deploy producción** | ✅ Piloto | Hosting + callables grilla/cierre/purge desplegadas; IAM invoker en callables nuevas vía `grant-run-invoker-firebase-token.mjs` si 403 OPTIONS |
 | **F2–F4** | ➡️ Siguiente | **F2** orquestación (materializarRango, job día 5) tras merge/push de fixes de sesión |
 
@@ -104,12 +104,12 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 
 | ID | Riesgo | Estado | Notas |
 |----|--------|--------|--------|
-| **O-P0-4** | Fuga post-HLg | ✅ Prod | Purge validado CHAPARRO/Sala; UX doble OK UI pendiente |
+| **O-P0-4** | Fuga post-HLg | ✅ Prod + UX | Purge validado; modal HLg paso 2 (confirmar + confirmar_purge) |
 | **O-P0-1** | Gate LAO | ✅ Código | Anclas desde/hasta |
 | **O-P0-7** | Listado sector | ✅ Código | `materializarGrupoMes` previo |
 | **O-P0-5** | UI ciega | ✅ Código | Toasts en `useGrillaMesVista` |
 | O-P0-2 | Cierre período | ✅ Prod | Callable + 3 vis actualizadas en smoke |
-| O-P0-3 | MDC en trámite vs M-1 cerrado | MDC + gates |
+| O-P0-3 | MDC en trámite vs M-1 cerrado | ✅ Código | `assertNuevaSolicitudNoEnPeriodoCerrado` en validar entorno + MDC; excepción trámite/consolidar |
 | O-P0-6 | Piloto `resolverFijo` / rematerializar UI (D2/D11) | plan § pilotos |
 
 ### P1 — orquestación temporal
@@ -165,10 +165,10 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 
 | Ítem | Acción |
 |------|--------|
-| **O-P0-3** | MDC en trámite vs mes M-1 cerrado — gates + prueba con solicitud abierta |
-| **Paso 4 QA** | Matriz §4.2 [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) ítems 2–3, 6, 8–9 |
-| **O-P0-4 UX** | Modal doble confirmación al deshabilitar HLg (purge_desde) |
-| **MOSTO** | Repetir smoke ligero en Sala si hace falta acta segundo agente |
+| **O-P0-3** | ✅ Código en rama — **deploy** + prueba: solicitud en revisión en mes cerrado puede aprobarse; alta nueva en mes cerrado bloqueada (`ASI-PER-001`) |
+| **O-P0-4 UX** | ✅ Modal HLg 2 pasos — **deploy** hosting |
+| **Paso 4 QA** | Matriz §4.2 [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md): ítems **2–3** overrides E2, **6** materialización, **8–9** vis scoped (evidencia scripts + smoke Chaparro) |
+| **MOSTO** | Opcional: repetir smoke Sala |
 
 ### 3. Abrir **F2 — Orquestación HLg** ([`ROADMAP`](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md) § F2)
 

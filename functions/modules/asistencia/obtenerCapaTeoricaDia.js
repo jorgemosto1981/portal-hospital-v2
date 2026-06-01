@@ -45,7 +45,7 @@ const obtenerCapaTeoricaDia = onCall({
 
   const asiData = asiSnap.exists ? asiSnap.data() : null;
   const capaGrupo = resolverCapaTeoricaGrupo(asiData, grupoTrabajoId);
-  const periodo = await consultarEstadoPeriodoLiquidacion(personaId, fecha, grupoTrabajoId);
+  const periodo = await consultarEstadoPeriodoLiquidacion(db, personaId, fecha, grupoTrabajoId);
   const diaKey = fecha.slice(8, 10);
   const diaVis = visSnap?.exists && visSnap.data()?.dias?.[diaKey] ? visSnap.data().dias[diaKey] : null;
   const versionToken = tsToIso(visSnap?.data()?.metadata?.version_token)

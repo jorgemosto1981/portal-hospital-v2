@@ -158,7 +158,7 @@ async function assertConcurrenciaVis(personaId, fecha, tokenEsperado, grupoId) {
 
 async function assertPeriodoEditable(personaId, fecha, grupoId) {
   try {
-    await assertPeriodoNoCerrado(personaId, fecha, grupoId);
+    await assertPeriodoNoCerrado(db, personaId, fecha, grupoId);
   } catch (e) {
     const code = e && e.code === "failed-precondition" ? "failed-precondition" : "internal";
     err(code, (e && e.message) || "[ASI-PER-001] Período cerrado.");

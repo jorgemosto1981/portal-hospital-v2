@@ -22,6 +22,11 @@ const {
 const { evaluarGrillaTurnoEntorno } = require("./grillaTurnoEntornoGate");
 const { tokenHasRrhhLaborAccess } = require("../shared/laborProfile");
 const { validarFechasArticuloEnMotor } = require("../shared/validarFechasArticuloRuntime");
+const {
+  assertNuevaSolicitudNoEnPeriodoCerrado,
+  CODIGO_PERIODO_CERRADO,
+  MSG_PERIODO_CERRADO,
+} = require("../asistencia/asistenciaPeriodoLiquidacion");
 
 const CFG_EST_VER_PUBLICADA = "cfg_est_ver_publicada";
 
@@ -249,6 +254,31 @@ async function validarEntornoOperativoSolicitud(params) {
       hlcId: eleg.hlc_id,
       gruposVigentes,
       requiereSeleccionGrupo: grupoAncla.requiere_seleccion === true,
+    });
+  }
+
+  const gdtAncla = grupoAncla.grupo_trabajo_id_ancla || "";
+  try {
+    await assertNuevaSolicitudNoEnPeriodoCerrado(
+      db,
+      ctx.personaId,
+      ctx.fechaDesde,
+      ctx.fechaHasta,
+      gdtAncla,
+    );
+  } catch (err) {
+    const code = err && err.code === "failed-precondition" ? CODIGO_PERIODO_CERRADO : "PERIODO_CERRADO";
+    return failBase(ctx, [code], [err instanceof Error ? err.message : MSG_PERIODO_CERRADO], {
+      checks: buildChecks({
+        hlc_vigente: true,
+        elegibilidad_articulo: true,
+        circuito_ingreso: true,
+        grupo_trabajo_vigente: true,
+        grupo_ancla_resuelto: true,
+      }),
+      hlcId: eleg.hlc_id,
+      grupoAnclaId: gdtAncla,
+      gruposVigentes,
     });
   }
 

@@ -13,6 +13,8 @@ export default function LaboralModalesOperativos({
   deshabilitarHlgForm,
   setDeshabilitarHlgForm,
   deshabilitarHlgError,
+  deshabilitarHlgPaso,
+  deshabilitarHlgResumen,
   cerrarModalDeshabilitarHlg,
   confirmarDeshabilitacionHlg,
   resultadoModalAbierto,
@@ -110,34 +112,65 @@ export default function LaboralModalesOperativos({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 px-4">
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:p-5">
             <p className="text-base font-semibold text-slate-900">Deshabilitar asignación a grupo (HLg)</p>
-            <p className="mt-1 text-sm text-slate-600">
-              La asignación quedará inactiva y cerrada en la fecha de corte (vigencia inclusiva).
-            </p>
-            <div className="mt-4 space-y-3">
-              <LabeledTextField
-                label="Fecha de corte"
-                value={deshabilitarHlgForm.fecha_corte}
-                onValueChange={(v) => setDeshabilitarHlgForm((prev) => ({ ...prev, fecha_corte: v }))}
-                placeholder="AAAA-MM-DD"
-              />
-              <LabeledTextField
-                label="Motivo (opcional, auditoría)"
-                value={deshabilitarHlgForm.motivo}
-                onValueChange={(v) =>
-                  setDeshabilitarHlgForm((prev) => ({ ...prev, motivo: String(v || "").slice(0, 100) }))
-                }
-                placeholder="Hasta 100 caracteres"
-              />
-              <label className="flex items-start gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={deshabilitarHlgForm.confirmar}
-                  onChange={(e) => setDeshabilitarHlgForm((prev) => ({ ...prev, confirmar: e.target.checked }))}
-                  className="mt-1"
-                />
-                Confirmo deshabilitar esta asignación HLg.
-              </label>
-            </div>
+            {deshabilitarHlgPaso === 1 ? (
+              <>
+                <p className="mt-1 text-sm text-slate-600">
+                  La asignación quedará inactiva y cerrada en la fecha de corte (vigencia inclusiva).
+                </p>
+                <div className="mt-4 space-y-3">
+                  <LabeledTextField
+                    label="Fecha de corte"
+                    value={deshabilitarHlgForm.fecha_corte}
+                    onValueChange={(v) => setDeshabilitarHlgForm((prev) => ({ ...prev, fecha_corte: v }))}
+                    placeholder="AAAA-MM-DD"
+                  />
+                  <LabeledTextField
+                    label="Motivo (opcional, auditoría)"
+                    value={deshabilitarHlgForm.motivo}
+                    onValueChange={(v) =>
+                      setDeshabilitarHlgForm((prev) => ({ ...prev, motivo: String(v || "").slice(0, 100) }))
+                    }
+                    placeholder="Hasta 100 caracteres"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  Tras el corte se purgará la <strong>capa teórica</strong> (turnos RDA) en{" "}
+                  <strong>{deshabilitarHlgResumen?.grupoLabel || "este grupo"}</strong>, desde el día siguiente a la
+                  fecha de fin hasta el fin del mes siguiente (ventana operativa M+M+1). No se modifican licencias ni
+                  eventos MDC ya registrados.
+                </p>
+                <p className="mt-2 text-xs text-slate-500">
+                  Fecha de corte indicada: {deshabilitarHlgForm.fecha_corte || deshabilitarHlgResumen?.fechaCorte || "—"}
+                </p>
+                <div className="mt-4 space-y-3">
+                  <label className="flex items-start gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={deshabilitarHlgForm.confirmar}
+                      onChange={(e) =>
+                        setDeshabilitarHlgForm((prev) => ({ ...prev, confirmar: e.target.checked }))
+                      }
+                      className="mt-1"
+                    />
+                    Confirmo deshabilitar esta asignación HLg.
+                  </label>
+                  <label className="flex items-start gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={deshabilitarHlgForm.confirmar_purge}
+                      onChange={(e) =>
+                        setDeshabilitarHlgForm((prev) => ({ ...prev, confirmar_purge: e.target.checked }))
+                      }
+                      className="mt-1"
+                    />
+                    Confirmo la purga de turnos teóricos (RDA) en días posteriores al corte en ese grupo.
+                  </label>
+                </div>
+              </>
+            )}
             {deshabilitarHlgError ? (
               <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{deshabilitarHlgError}</p>
             ) : null}
@@ -156,7 +189,11 @@ export default function LaboralModalesOperativos({
                 disabled={deshabilitando}
                 className="h-10 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
               >
-                {deshabilitando ? "Deshabilitando..." : "Deshabilitar asignación"}
+                {deshabilitando
+                  ? "Deshabilitando..."
+                  : deshabilitarHlgPaso === 1
+                    ? "Continuar"
+                    : "Deshabilitar asignación"}
               </button>
             </div>
           </div>
