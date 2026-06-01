@@ -184,6 +184,8 @@ Integrar en **`master`** la épica scoped (Opción A) y entregar **cierre de per
 
 ## Etapa F2 — Orquestación HLg
 
+**Estado al pausar (2026-06-01):** rama `feat/epic-multi-hlg-fase1-execution` @ `e349412`. Hecho: 2.1 metadata (código+deploy parcial), 2.2 purge (F0), 2.3 `materializarRango` + wire HLg. **Siguiente:** 2.4 job día 5. Detalle: [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md).
+
 ### Objetivo
 
 Código alineado al **manual de capas** y §15–22 del plan: ventana M+M+1, purge en UX HLg, materialización informada, día 5 (mat), rangos parciales.
@@ -192,10 +194,10 @@ Código alineado al **manual de capas** y §15–22 del plan: ventana M+M+1, pur
 
 | ID | Entregable | Tareas | DoD |
 |----|------------|--------|-----|
-| 2.1 | Trazabilidad materializar | Motivo en metadata; toasts/callables unificados (extiende O-P0-5) | Cada mat batch deja `ultimo_motivo` |
-| 2.2 | Purge productivo | Si no en F0: cerrar F0; wire definitivo alta/cierre/eliminar HLg | Misma DoD purge |
-| 2.3 | `materializarRango` | API interna; feriado 1 día; HLg mid-mes; respeta período cerrado | No rematerializa mes entero por un feriado |
-| 2.4 | Job día 5 **materialización** | Scheduler + callable idempotente M+1 (§17.2.1); logs; **distinto** de cierre liquidación | 5/jun: julio creado solo si falta |
+| 2.1 | Trazabilidad materializar | Motivo en metadata; toasts/callables unificados (extiende O-P0-5) | ✅ metadata `vis_*` en prod (laboral/GSO); ⏳ toasts UI |
+| 2.2 | Purge productivo | Si no en F0: cerrar F0; wire definitivo alta/cierre/eliminar HLg | ✅ F0 + metadata purge |
+| 2.3 | `materializarRango` | API interna; feriado 1 día; HLg mid-mes; respeta período cerrado | ✅ API + HLg; ⏳ feriado masivo |
+| 2.4 | Job día 5 **materialización** | Scheduler + callable idempotente M+1 (§17.2.1); logs; **distinto** de cierre liquidación | ⏸️ **Retomar aquí** |
 | 2.5 | Plan usuario nuevo | Banner en turnos mensuales + flujo paralelo MVP §19.6 | Caso CHAPARRO documentado |
 | 2.6 | Piloto resolverFijo | GSO capa 2; rematerializar post-régimen UI | D2/D11 PASS en piloto |
 | 2.7 | Rematerializar post-régimen/feriado | Wire `RegimenesHorariosPage` / calendario → callables existentes | RRHH un clic tras cambio |
