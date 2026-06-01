@@ -598,20 +598,22 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   await refreshClaimsLaboralPersona(personaId);
 
   if (regimenHorarioId && payload.activo) {
-    const { materializarTurnoMesBatch } = require("./asistencia/rdaTurnoTeoricoWorker");
-    const hoy = new Date();
-    const anioActual = hoy.getFullYear();
-    const mesActual = hoy.getMonth() + 1;
-    const mesSiguiente = mesActual === 12 ? 1 : mesActual + 1;
-    const anioSiguiente = mesActual === 12 ? anioActual + 1 : anioActual;
+    const { materializarRango } = require("./asistencia/materializarRango");
+    const { ymdFinMesSiguiente } = require("./asistencia/purgeCapaTeoricaGdtRango");
+    const fi = laboralYmdOrNull(payload.fecha_inicio) || obtenerYmdHoyInstitucional();
+    const hastaVentana = ymdFinMesSiguiente(fi);
     try {
-      const results = await Promise.allSettled([
-        materializarTurnoMesBatch({ personaId, grupoId, anio: anioActual, mes: mesActual }),
-        materializarTurnoMesBatch({ personaId, grupoId, anio: anioSiguiente, mes: mesSiguiente }),
-      ]);
-      console.log("materializarTurnoMesBatch_post_hlg OK", JSON.stringify(results.map(r => r.status)));
+      const mat = await materializarRango(db, {
+        personaId,
+        grupoId,
+        fechaDesdeYmd: fi,
+        fechaHastaYmd: hastaVentana,
+        motivo: exists ? "actualizar_hlg" : "alta_hlg",
+        origenEventoId: id,
+      });
+      console.log("materializarRango_post_hlg OK", JSON.stringify({ ok: mat.ok, dias: mat.diasProcesados }));
     } catch (e) {
-      console.error("materializarTurnoMesBatch_post_hlg ERROR", e);
+      console.error("materializarRango_post_hlg ERROR", e);
     }
   }
 
@@ -951,19 +953,21 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
       }
     }
 
-    if (personaHlg && grupoHlgDes) {
-      const { materializarTurnoMesBatch } = require("./asistencia/rdaTurnoTeoricoWorker");
-      const hoy = new Date();
+    if (personaHlg && grupoHlgDes && fechaFin) {
+      const { materializarRango } = require("./asistencia/materializarRango");
+      const desdeMat = fechaInicioHlg || fechaCorte;
       try {
-        await materializarTurnoMesBatch({
+        const mat = await materializarRango(db, {
           personaId: personaHlg,
           grupoId: grupoHlgDes,
-          anio: hoy.getFullYear(),
-          mes: hoy.getMonth() + 1,
+          fechaDesdeYmd: desdeMat,
+          fechaHastaYmd: fechaFin,
+          motivo: "deshabilitar_hlg",
+          origenEventoId: hlgId,
         });
-        console.log("materializarTurnoMesBatch_post_deshabilitar_hlg OK");
+        console.log("materializarRango_post_deshabilitar_hlg OK", JSON.stringify({ ok: mat.ok, dias: mat.diasProcesados }));
       } catch (e) {
-        console.error("materializarTurnoMesBatch_post_deshabilitar_hlg ERROR", e);
+        console.error("materializarRango_post_deshabilitar_hlg ERROR", e);
       }
     }
 

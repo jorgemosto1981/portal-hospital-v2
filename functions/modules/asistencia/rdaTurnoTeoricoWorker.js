@@ -527,17 +527,38 @@ function resolverDiaConPreCarga(regimen, fechaYmd, hlg, planData, personaId, ind
  * @param {number} params.mes
  * @param {object} [params.regimenCache] - Map<regimenId, regimenDoc> para dedup
  * @param {object} [params.planCache] - { planId, plan } pre-cargado del grupo
+ * @param {string} [params.fechaDesdeYmd] - recorte inclusive dentro del mes
+ * @param {string} [params.fechaHastaYmd] - recorte inclusive dentro del mes
  * @returns {Promise<{ ok: boolean, diasProcesados: number, error?: string }>}
  */
-async function materializarTurnoMesBatch({ personaId, grupoId: _grupoId, anio, mes, regimenCache, planCache, etiquetaGrupoCache }) {
+async function materializarTurnoMesBatch({
+  personaId,
+  grupoId: _grupoId,
+  anio,
+  mes,
+  regimenCache,
+  planCache,
+  etiquetaGrupoCache,
+  fechaDesdeYmd,
+  fechaHastaYmd,
+}) {
   const gdt = String(_grupoId || "").trim();
   if (!/^gdt_/i.test(gdt)) {
     return { ok: false, diasProcesados: 0, error: "grupoId (gdt_*) requerido" };
   }
 
   const periodoId = `${anio}-${String(mes).padStart(2, "0")}`;
-  const dias = diasDelMes(anio, mes);
-  if (dias.length === 0) return { ok: false, diasProcesados: 0, error: "Mes inválido" };
+  let dias = diasDelMes(anio, mes);
+  const clipDesde = fechaDesdeYmd ? String(fechaDesdeYmd).slice(0, 10) : "";
+  const clipHasta = fechaHastaYmd ? String(fechaHastaYmd).slice(0, 10) : "";
+  if (clipDesde || clipHasta) {
+    dias = dias.filter((d) => {
+      if (clipDesde && d < clipDesde) return false;
+      if (clipHasta && d > clipHasta) return false;
+      return true;
+    });
+  }
+  if (dias.length === 0) return { ok: true, diasProcesados: 0, error: "Sin días en rango para el mes" };
 
   const primerDia = dias[0];
   const ultimoDia = dias[dias.length - 1];

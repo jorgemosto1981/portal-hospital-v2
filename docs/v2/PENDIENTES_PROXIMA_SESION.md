@@ -1,6 +1,6 @@
 # Punto de Continuación — Próxima Sesión
 
-**Última actualización:** Smoke prod F0/F1 — 2026-06-01 · rama `feat/epic-multi-hlg-fase1-execution` @ `4bcdb60` (+ cambios locales invoker/IAM/scripts sin push)  
+**Última actualización:** Smoke ticketera HLg corte inclusivo + Patrón C — 2026-06-01 (tarde) · rama `feat/epic-multi-hlg-fase1-execution` · fix `solicitudHlgVigencia` **deploy prod** (9 callables)  
 **RETOMAR AQUÍ (épica scoped):** [`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md)  
 **RETOMAR AQUÍ (reglas orquestación):** [`HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md`](./HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md)
 
@@ -52,9 +52,10 @@
 | **F1.1** Multi-HLG → master | ✅ Merge | `25bc00c` en `origin/master` |
 | **F1.3** cierre período | ✅ Código | `cerrarPeriodoLiquidacion` + botón GSO RRHH |
 | **F1** núcleo prod | ✅ Smoke | Cierre período (3 `vis_*`) + purge HLg Sala; ver acta abajo |
-| **F1** restante | ⏳ | Paso 4 QA formal en prod; desplegar gates O-P0-3 + UX HLg |
-| **Deploy producción** | ✅ Piloto | Hosting + callables grilla/cierre/purge desplegadas; IAM invoker en callables nuevas vía `grant-run-invoker-firebase-token.mjs` si 403 OPTIONS |
-| **F2–F4** | ➡️ Siguiente | **F2** orquestación (materializarRango, job día 5) tras merge/push de fixes de sesión |
+| **F1** restante | ⏳ | Paso 4 QA formal en prod |
+| **Ticketera / HLg vigencia** | ✅ Prod | Corte inclusivo deshabilitar HLg → selector grupo + Patrón C (acta § abajo); **commit pendiente** en rama |
+| **Deploy producción** | ✅ Piloto | Hosting + callables grilla/cierre/purge + **resolverContextoLaboralSolicitud** y ticketera (2026-06-01 tarde) |
+| **F2–F4** | ➡️ **En curso** | **F2** — iniciar **O-P1-2** `materializarRango` (plan §16.4) |
 
 ---
 
@@ -83,6 +84,24 @@
 2. CORS/403 OPTIONS: `invoker: "public"` en callables + IAM `allUsers` → `roles/run.invoker` (`npm run firebase:grant-callables-invoker:firebase-login`).
 
 **Índice Firestore:** compuesto `vistas_grilla_mes_agente` desplegado en prod (`firebase-v2/firestore.indexes.json` en `4bcdb60`).
+
+### Acta ticketera — HLg corte inclusivo (2026-06-01, tarde)
+
+**Contexto:** deshabilitar HLg Portería para piloto **DNI 28914247** (`per_01KQN9WXFXF69Z9DCT5YNJ3TFZ`) con corte **01/06/2026**. Modal RRHH: *«inactiva y cerrada en la fecha de corte (vigencia inclusiva)»*.
+
+| Prueba | Resultado | Evidencia |
+|--------|-----------|-----------|
+| Selector grupo `fecha_desde` **01/06/2026** | ✅ | UI: Oficina PERSONAL, **Portería**, Sala Internación 1 |
+| Selector grupo `fecha_desde` **02/06/2026** | ✅ | UI: sin Portería (post-corte) |
+| Fix motor | ✅ Código | `solicitudHlgVigencia.js`: `activo:false` + `fecha_fin` → vigencia por rango inclusivo |
+| Deploy callables ticketera | ✅ Prod | 9 functions (`resolverContextoLaboralSolicitud`, validar/preview B·C, triggers, `simularLaoPreview`, `listarArticulosIngresoAgente`) |
+| Patrón C compensatorio (Art 68 Inc B) | ✅ | `sol_01KT1QEX2A6NP624ZC8TBMH24A` · 6 hs · huérfana · checks 9/9 (warning preaviso `[W] PREAVISO_FUERA_NORMA`) |
+
+**BD referencia (Portería):** `hlg_01KSXC395J2ACV5W4HWW7YTCTM` · `gdt_01KQA9FVEW53JSNTPGX32NWQ5B` · `activo:false` · `fecha_fin:2026-06-01`.
+
+**Script:** `node scripts/audit-persona-grupos-fecha.mjs --dni=28914247 --fecha=YYYY-MM-DD`
+
+**Pendiente git:** commit `solicitudHlgVigencia.js`, `solicitudGrupoTrabajoAncla.js`, `functions/test/solicitudHlgVigencia.test.js`, script audit (no commitear artefactos sync-shared salvo fuente en `shared/`).
 
 ---
 
@@ -117,7 +136,7 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 | ID | Entrega | Notas |
 |----|---------|--------|
 | O-P1-1 | Job día 5 **materialización** M+1 (fijo/rotativo), idempotente §17.2.1 | Cloud Scheduler + callable |
-| O-P1-2 | `materializarRango(desde, hasta, motivo)` unificado | plan §16.4 |
+| O-P1-2 | `materializarRango(desde, hasta, motivo)` unificado | plan §16.4 — **en curso:** `functions/modules/asistencia/materializarRango.js` + clip en `materializarTurnoMesBatch`; falta wire alta/cierre HLg + metadata `ultimo_motivo` |
 | O-P1-3 | GSO: M-1 **solo lectura** usuario/jefe desde día 1 | callables grilla |
 | O-P1-4 | Turnos mensuales: warning + flujo plan paralelo usuario nuevo §19.6 | `planesTurnoServicio` + UI |
 
@@ -226,12 +245,15 @@ Orden sugerido:
 |------|---------|
 | Biblia | `docs/v2/PLAN_GRILLA_MULTI_HLG_V2.md` |
 | Worker | `functions/modules/asistencia/rdaTurnoTeoricoWorker.js` |
+| Materializar rango (F2) | `functions/modules/asistencia/materializarRango.js` |
 | Gate E11 | `functions/modules/ticketera/grillaTurnoEntornoGate.js` |
 | Lectura capa | `functions/modules/shared/capaTeoricaPorGrupoCore.js` |
 | Strip (ops) | `scripts/strip-capa-teorica-legacy.mjs` |
 | Materializar mes | `scripts/materializar-grupo-mes.mjs` |
 | Smoke purge HLg | `scripts/audit-purge-hlg-post-corte.mjs` |
 | HLg por persona/gdt | `scripts/audit-hlg-persona-gdts.mjs` |
+| Grupos vigentes solicitud (fecha) | `scripts/audit-persona-grupos-fecha.mjs` |
+| Vigencia HLg solicitud | `functions/modules/shared/solicitudHlgVigencia.js` |
 | IAM callables nuevas | `scripts/grant-run-invoker-firebase-token.mjs` → `npm run firebase:grant-callables-invoker:firebase-login` |
 
 ---
@@ -241,7 +263,7 @@ Orden sugerido:
 | Fecha | Documento |
 |-------|-----------|
 | 29/05 | [`HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md`](./HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md) — **repaso orquestación §15–22** |
-| 01/06 | **Smoke prod** — acta en § «Acta smoke producción» (este doc) |
+| 01/06 | **Smoke prod** — acta § «Acta smoke producción» + § «Acta ticketera HLg corte inclusivo» |
 | 29/05 | [`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md) — **cierre hito** |
 | 29/05 | [`HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md`](./HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md) — incidente Z |
 | 28/05 | [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) |
