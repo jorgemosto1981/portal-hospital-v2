@@ -101,7 +101,7 @@
 
 **Script:** `node scripts/audit-persona-grupos-fecha.mjs --dni=28914247 --fecha=YYYY-MM-DD`
 
-**Pendiente git:** commit `solicitudHlgVigencia.js`, `solicitudGrupoTrabajoAncla.js`, `functions/test/solicitudHlgVigencia.test.js`, script audit (no commitear artefactos sync-shared salvo fuente en `shared/`).
+**Git:** `a44b83f` fix vigencia · `6a4db61` materializarRango — push rama `feat/epic-multi-hlg-fase1-execution`.
 
 ---
 
@@ -136,7 +136,7 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 | ID | Entrega | Notas |
 |----|---------|--------|
 | O-P1-1 | Job día 5 **materialización** M+1 (fijo/rotativo), idempotente §17.2.1 | Cloud Scheduler + callable |
-| O-P1-2 | `materializarRango(desde, hasta, motivo)` unificado | plan §16.4 — **en curso:** `functions/modules/asistencia/materializarRango.js` + clip en `materializarTurnoMesBatch`; falta wire alta/cierre HLg + metadata `ultimo_motivo` |
+| O-P1-2 | `materializarRango(desde, hasta, motivo)` unificado | plan §16.4 — **código** `materializarRango.js` + wire `catalogosLaborales` alta/deshabilitar (`6a4db61`); falta metadata `ultimo_motivo` + deploy functions catálogo |
 | O-P1-3 | GSO: M-1 **solo lectura** usuario/jefe desde día 1 | callables grilla |
 | O-P1-4 | Turnos mensuales: warning + flujo plan paralelo usuario nuevo §19.6 | `planesTurnoServicio` + UI |
 
