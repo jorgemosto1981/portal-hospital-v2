@@ -118,6 +118,9 @@ async function purgeCapaTeoricaGdtRango(db, { personaId, gdt, desdeYmd, hastaYmd
     batch.update(visRef, {
       ...patch,
       "metadata.ultima_sync_teorica": FieldValue.serverTimestamp(),
+      "metadata.ultimo_purge_motivo": motivo || "purge_capa_teorica_gdt",
+      "metadata.ultimo_purge_en": FieldValue.serverTimestamp(),
+      "metadata.ultimo_rango_purged": { desde, hasta },
     });
     ops += 1;
     if (ops >= MAX_BATCH_OPS) {

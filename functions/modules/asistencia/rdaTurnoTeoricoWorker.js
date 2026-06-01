@@ -18,6 +18,10 @@ const { resolverFijo, resolverRotativo, buildTurnoResponse, ymdToDate, diffDays,
 const { buildCapaTeoricaSegmentada } = require("./capaTeoricaSegmentosCore");
 const { toHhmmInstitucionalDisplay } = require("../shared/horarioInstitucionalDisplay");
 const { CFG_EPL_ABIERTO } = require("../shared/cfgAsistenciaTurnosIds");
+const {
+  buildVisMetadataMaterializacionFields,
+  patchVisMetadataMaterializacionDot,
+} = require("./visMaterializacionMetadata");
 const { logger } = require("firebase-functions/v2");
 
 const COL_HLG = "historial_laboral_grupos";
@@ -529,6 +533,10 @@ function resolverDiaConPreCarga(regimen, fechaYmd, hlg, planData, personaId, ind
  * @param {object} [params.planCache] - { planId, plan } pre-cargado del grupo
  * @param {string} [params.fechaDesdeYmd] - recorte inclusive dentro del mes
  * @param {string} [params.fechaHastaYmd] - recorte inclusive dentro del mes
+ * @param {string} [params.materializacionMotivo]
+ * @param {string} [params.materializacionRangoDesde]
+ * @param {string} [params.materializacionRangoHasta]
+ * @param {string} [params.materializacionOrigenEventoId]
  * @returns {Promise<{ ok: boolean, diasProcesados: number, error?: string }>}
  */
 async function materializarTurnoMesBatch({
@@ -541,6 +549,10 @@ async function materializarTurnoMesBatch({
   etiquetaGrupoCache,
   fechaDesdeYmd,
   fechaHastaYmd,
+  materializacionMotivo,
+  materializacionRangoDesde,
+  materializacionRangoHasta,
+  materializacionOrigenEventoId,
 }) {
   const gdt = String(_grupoId || "").trim();
   if (!/^gdt_/i.test(gdt)) {
@@ -760,14 +772,19 @@ async function materializarTurnoMesBatch({
   const visDocId = buildVisDocumentId(personaId, `${anio}-${String(mes).padStart(2, "0")}-01`, gdt);
   if (visDocId) {
     const visRef = db.collection(COL_VIS).doc(visDocId);
+    const metaOpts = {
+      motivo: materializacionMotivo,
+      rangoDesde: materializacionRangoDesde || dias[0],
+      rangoHasta: materializacionRangoHasta || dias[dias.length - 1],
+      origenEventoId: materializacionOrigenEventoId,
+    };
     const visUpdateData = {
       ...visDias,
       persona_id: personaId,
       anio,
       mes,
       grupo_de_trabajo_id: gdt,
-      "metadata.ultima_sync_teorica": FieldValue.serverTimestamp(),
-      "metadata.version_token": FieldValue.serverTimestamp(),
+      ...patchVisMetadataMaterializacionDot(metaOpts),
     };
     try {
       await visRef.update(visUpdateData);
@@ -787,10 +804,7 @@ async function materializarTurnoMesBatch({
           grupo_de_trabajo_id: gdt,
           dias: nestedDias,
           estado_periodo_liquidacion_id: CFG_EPL_ABIERTO,
-          metadata: {
-            ultima_sync_teorica: FieldValue.serverTimestamp(),
-            version_token: FieldValue.serverTimestamp(),
-          },
+          metadata: buildVisMetadataMaterializacionFields(metaOpts),
         }, { merge: true });
         await ensureEstadoPeriodoLiquidacionAbierto(visRef);
       } else {
@@ -883,6 +897,9 @@ async function materializarGrupoMes({ grupoId, anio, mes, planCache: planCacheIn
           regimenCache,
           planCache,
           etiquetaGrupoCache,
+          materializacionMotivo: "materializar_grupo_mes",
+          materializacionRangoDesde: primerDia,
+          materializacionRangoHasta: ultimoDia,
         })
       )
     );
@@ -1030,6 +1047,11 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
       tipoDiaVis = "no_laborable";
     }
     const visRef = db.collection(COL_VIS).doc(visDocId);
+    const metaOpts = {
+      motivo: "materializar_dia",
+      rangoDesde: fechaYmd,
+      rangoHasta: fechaYmd,
+    };
     const visUpdate = {
       [`dias.${diaKey}.rda_turno_id`]: pickRdaTurnoId(capaEscrita, sinTurnoLaboral),
       [`dias.${diaKey}.rda_ingreso`]: rdaIngreso,
@@ -1045,8 +1067,7 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
       anio,
       mes,
       grupo_de_trabajo_id: gdt,
-      "metadata.ultima_sync_teorica": FieldValue.serverTimestamp(),
-      "metadata.version_token": FieldValue.serverTimestamp(),
+      ...patchVisMetadataMaterializacionDot(metaOpts),
     };
     try {
       await visRef.update(visUpdate);
@@ -1073,10 +1094,7 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
           grupo_de_trabajo_id: gdt,
           dias: dia,
           estado_periodo_liquidacion_id: CFG_EPL_ABIERTO,
-          metadata: {
-            ultima_sync_teorica: FieldValue.serverTimestamp(),
-            version_token: FieldValue.serverTimestamp(),
-          },
+          metadata: buildVisMetadataMaterializacionFields(metaOpts),
         }, { merge: true });
         await ensureEstadoPeriodoLiquidacionAbierto(visRef);
       } else {

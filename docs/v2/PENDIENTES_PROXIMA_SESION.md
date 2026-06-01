@@ -136,7 +136,7 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 | ID | Entrega | Notas |
 |----|---------|--------|
 | O-P1-1 | Job día 5 **materialización** M+1 (fijo/rotativo), idempotente §17.2.1 | Cloud Scheduler + callable |
-| O-P1-2 | `materializarRango(desde, hasta, motivo)` unificado | plan §16.4 — **código** `materializarRango.js` + wire `catalogosLaborales` alta/deshabilitar (`6a4db61`); falta metadata `ultimo_motivo` + deploy functions catálogo |
+| O-P1-2 | `materializarRango(desde, hasta, motivo)` unificado | plan §16.4 — `materializarRango` + wire HLg + **`visMaterializacionMetadata.js`** (`ultimo_motivo`, `ultimo_rango_materializado`, `ultimo_origen_evento_id`; purge: `ultimo_rango_purged`) — **deploy pendiente** |
 | O-P1-3 | GSO: M-1 **solo lectura** usuario/jefe desde día 1 | callables grilla |
 | O-P1-4 | Turnos mensuales: warning + flujo plan paralelo usuario nuevo §19.6 | `planesTurnoServicio` + UI |
 
@@ -246,6 +246,7 @@ Orden sugerido:
 | Biblia | `docs/v2/PLAN_GRILLA_MULTI_HLG_V2.md` |
 | Worker | `functions/modules/asistencia/rdaTurnoTeoricoWorker.js` |
 | Materializar rango (F2) | `functions/modules/asistencia/materializarRango.js` |
+| Metadata `vis_*` materialización | `functions/modules/asistencia/visMaterializacionMetadata.js` |
 | Gate E11 | `functions/modules/ticketera/grillaTurnoEntornoGate.js` |
 | Lectura capa | `functions/modules/shared/capaTeoricaPorGrupoCore.js` |
 | Strip (ops) | `scripts/strip-capa-teorica-legacy.mjs` |

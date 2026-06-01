@@ -78,6 +78,10 @@ async function materializarRango(db, params) {
       mes: entry.mes,
       fechaDesdeYmd: entry.desde,
       fechaHastaYmd: entry.hasta,
+      materializacionMotivo: motivo,
+      materializacionRangoDesde: entry.desde,
+      materializacionRangoHasta: entry.hasta,
+      materializacionOrigenEventoId: params.origenEventoId || null,
     });
     meses.push({
       periodo: `${entry.anio}-${String(entry.mes).padStart(2, "0")}`,
