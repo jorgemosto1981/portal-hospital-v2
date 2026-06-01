@@ -11,7 +11,7 @@ function actorPersonaIdFromRequest(request) {
   return typeof t.persona_id === "string" ? t.persona_id.trim() : "";
 }
 
-const reabrirPeriodoLiquidacion = onCall(async (request) => {
+const reabrirPeriodoLiquidacion = onCall({ invoker: "public" }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Se requiere sesión.");
   }

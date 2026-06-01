@@ -1,12 +1,12 @@
 # Punto de Continuación — Próxima Sesión
 
-**Última actualización:** Cierre sesión deploy — docs `397f600`; código `942adcf` / merge `master` @ `25bc00c` (2026-06-01)  
+**Última actualización:** Smoke prod F0/F1 — 2026-06-01 · rama `feat/epic-multi-hlg-fase1-execution` @ `4bcdb60` (+ cambios locales invoker/IAM/scripts sin push)  
 **RETOMAR AQUÍ (épica scoped):** [`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md)  
 **RETOMAR AQUÍ (reglas orquestación):** [`HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md`](./HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md)
 
 | Campo | Valor |
 |-------|--------|
-| **Branch trabajo** | `feat/epic-multi-hlg-fase1-execution` @ `942adcf` (origin) |
+| **Branch trabajo** | `feat/epic-multi-hlg-fase1-execution` @ `4bcdb60` (local ahead; push pendiente) |
 | **master** | `25bc00c` — merge épica Multi-HLG + checkpoint grilla RRHH |
 | **Tag pre-ejecución** | `pre-ejecucion-v2` (docs); código funcional posterior en `942adcf` |
 | **Biblia** | [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) |
@@ -51,19 +51,38 @@
 | **F0** (O-P0-4,1,7,5) | ✅ Código | Purge HLg, gate anclas, bulk sector, toasts |
 | **F1.1** Multi-HLG → master | ✅ Merge | `25bc00c` en `origin/master` |
 | **F1.3** cierre período | ✅ Código | `cerrarPeriodoLiquidacion` + botón GSO RRHH |
-| **F1** restante | ⏳ | O-P0-3 MDC trámite; Paso 4 QA |
-| **Deploy producción** | ✅ Checkpoint | **Hosting** OK. **Functions** grilla/cierre/purge: deploy OK tras fix `runtimeFlags.json` en `onCall/grilla/*`. Resto del bundle: redeploy masivo opcional |
-| **F2–F4** | ⏳ | Tras smoke F1 en prod |
+| **F1** núcleo prod | ✅ Smoke | Cierre período (3 `vis_*`) + purge HLg Sala; ver acta abajo |
+| **F1** restante | ⏳ | O-P0-3 MDC trámite; Paso 4 QA formal; UX doble OK purge en UI |
+| **Deploy producción** | ✅ Piloto | Hosting + callables grilla/cierre/purge desplegadas; IAM invoker en callables nuevas vía `grant-run-invoker-firebase-token.mjs` si 403 OPTIONS |
+| **F2–F4** | ➡️ Siguiente | **F2** orquestación (materializarRango, job día 5) tras merge/push de fixes de sesión |
 
-**Smoke manual post-deploy:**
+---
 
-1. RRHH → **Grilla operativa** → modo Sector → grupo piloto `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` (o prueba).
-2. Cargar mes → **Cerrar período de liquidación** → en Firestore `vis_*` del mes: `estado_periodo_liquidacion_id` = `cfg_epl_01KSN4ZJPVJE8C6X1VS2HQSR20` (`CFG_EPL_LIQUIDADO_CERRADO`).
-3. Deshabilitar HLg de prueba → verificar purge forward (sin `rda_*` fantasmas en días posteriores en ese `gdt`).
+## Acta smoke producción (2026-06-01)
 
-**Índice Firestore:** compuesto `vistas_grilla_mes_agente` (`grupo_de_trabajo_id` + `anio` + `mes`) en `firebase-v2/firestore.indexes.json` — desplegar reglas/índices si aún no está en prod; commitear el JSON si queda solo local.
+**Entorno:** https://portal-hospital-v2.web.app · RRHH → Grilla operativa.
 
-**Causa healthcheck (resuelta):** `cerrarPeriodoLiquidacion` / `reabrirPeriodoLiquidacion` requerían `../../../shared/runtimeFlags.json` (inexistente en Cloud Run); correcto: `../../modules/shared/runtimeFlags.json`. Tras el fix: `npm run firebase:grant-callables-invoker` si hay 403 CORS en callables nuevas.
+| Prueba | Resultado | Evidencia |
+|--------|-----------|-----------|
+| Cierre período (sector piloto Sala) | ✅ | UI: «Período cerrado (3 vista(s) actualizadas)» · `estado_periodo_liquidacion_id` cerrado en `vis_*` |
+| Deshabilitar HLg (CHAPARRO · DNI 27667499) | ✅ | Corte **01/06/2026** · `hlg_01KS50551PFWPXTCZ90KGJ07B6` · Sala `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` |
+| Purge capa teórica post-corte (Sala) | ✅ BD | Jun–jul 2026: **0** `rda_*` en burbuja Sala (`purge_ok`) |
+| Multicargo (no regresión) | ✅ BD | Oficina `gdt_01KR3H81ENQK84ZK21EQWEQQXG` · HLg `hlg_01KR3HZ1XN…` **activa** · jun 2026: 21 días con turno (esperado, otra burbuja) |
+
+**Agente piloto purge:** `per_01KR3HD24AMJ6YX3N7B3GPAZJ4` · mayo Sala: 9 días con turno antes del corte; junio Sala: 0 turnos.
+
+**Scripts reproducibles (Admin SDK, `.env.v2.local`):**
+
+- `node scripts/audit-purge-hlg-post-corte.mjs --dni=27667499 --gdt=gdt_01KQA6QCA8TDQK9YBTHKYA4R2V --desde=2026-06-01`
+- `node scripts/audit-hlg-persona-gdts.mjs --dni=27667499 --periodo=2026-06`
+- `node scripts/verificar-vis-mes-agente.mjs --dni=27667499 --gdt=… --periodo=YYYY-MM`
+
+**Incidentes deploy resueltos en sesión:**
+
+1. Healthcheck: path `runtimeFlags.json` en `onCall/grilla/*` → `../../modules/shared/runtimeFlags.json` (`4bcdb60`).
+2. CORS/403 OPTIONS: `invoker: "public"` en callables + IAM `allUsers` → `roles/run.invoker` (`npm run firebase:grant-callables-invoker:firebase-login`).
+
+**Índice Firestore:** compuesto `vistas_grilla_mes_agente` desplegado en prod (`firebase-v2/firestore.indexes.json` en `4bcdb60`).
 
 ---
 
@@ -72,7 +91,7 @@
 | Paso | Qué | Estado |
 |------|-----|--------|
 | 1 | Menú RRHH + ruta grilla-operativa | ✅ |
-| 2 | Validación operativa RRHH en dev (acta UX-4) | ⏳ Tras deploy |
+| 2 | Validación operativa RRHH (acta UX-4) | ✅ Smoke prod 2026-06-01 (cierre + purge); formalizar acta RRHH si hace falta |
 | 3 | Vista jefe acotada (F-UX.2) | ⏳ Tras F3 parcial |
 
 Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md) § F-UX.
@@ -85,11 +104,11 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 
 | ID | Riesgo | Estado | Notas |
 |----|--------|--------|--------|
-| **O-P0-4** | Fuga post-HLg | ✅ Código | `purgeCapaTeoricaGdtRango` + `rrhhDeshabilitarHlg`; UX doble OK UI pendiente |
+| **O-P0-4** | Fuga post-HLg | ✅ Prod | Purge validado CHAPARRO/Sala; UX doble OK UI pendiente |
 | **O-P0-1** | Gate LAO | ✅ Código | Anclas desde/hasta |
 | **O-P0-7** | Listado sector | ✅ Código | `materializarGrupoMes` previo |
 | **O-P0-5** | UI ciega | ✅ Código | Toasts en `useGrillaMesVista` |
-| O-P0-2 | Cierre período | ✅ Código | Callables + botón GSO; validar en dev |
+| O-P0-2 | Cierre período | ✅ Prod | Callable + 3 vis actualizadas en smoke |
 | O-P0-3 | MDC en trámite vs M-1 cerrado | MDC + gates |
 | O-P0-6 | Piloto `resolverFijo` / rematerializar UI (D2/D11) | plan § pilotos |
 
@@ -129,26 +148,43 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 | Paso C — Strip `capa_teorica` raíz | ✅ 244 docs → **0** legacy |
 | Documentación biblia/handoff | ✅ `c07cea3` |
 | **PR → `master`** | ✅ Merge `25bc00c` (2026-06-01) |
-| **Deploy functions + hosting** | ⏳ Validar smoke en dev antes de prod |
+| **Smoke prod F0/F1** | ✅ 2026-06-01 (acta arriba) |
 | **Paso 4 QA** | ⏳ Matriz §4.2 biblia Multi-HLG |
 
 ---
 
-## Objetivo principal — próxima sesión
+## Cómo seguimos — próxima sesión
 
-1. **Abrir Pull Request** `master` ← `feat/epic-multi-hlg-fase1-execution` (equipo valida biblia vs código).
-2. Tras review: **merge a `master`**.
-3. **Paso 4** — completar matriz QA §4.2 en [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) (ítems 2–3, 6, 8–9).
-4. Validación visual UI: MOSTO/CHAPARRO — mayo y junio (Sala completo; Oficina vacío si multicargo).
+### 1. Cerrar git (esta semana)
 
-### Abrir PR (recordatorio)
+- **Commit + push** en `feat/epic-multi-hlg-fase1-execution`: `invoker: "public"`, scripts `audit-*`, `grant-run-invoker-firebase-token.mjs`, `PENDIENTES` actualizado.
+- **Merge a `master`** (o PR) si el equipo ya validó `25bc00c` + fixes post-smoke.
+- Opcional: `npm run firebase:deploy:functions` completo para alinear todas las revisiones Cloud Run.
 
-- **Web:** https://github.com/jorgemosto1981/portal-hospital-v2/compare/master...feat/epic-multi-hlg-fase1-execution?expand=1
-- **CLI:** `gh auth login` → `gh pr create --base master --head feat/epic-multi-hlg-fase1-execution`
+### 2. Cerrar F1 (deuda acotada, sin F2)
 
-**Título sugerido:** `feat(asistencia): épica Multi-HLG Opción A + limpieza quirúrgica asi_*`
+| Ítem | Acción |
+|------|--------|
+| **O-P0-3** | MDC en trámite vs mes M-1 cerrado — gates + prueba con solicitud abierta |
+| **Paso 4 QA** | Matriz §4.2 [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) ítems 2–3, 6, 8–9 |
+| **O-P0-4 UX** | Modal doble confirmación al deshabilitar HLg (purge_desde) |
+| **MOSTO** | Repetir smoke ligero en Sala si hace falta acta segundo agente |
 
-**No re-ejecutar** `strip-capa-teorica-legacy.mjs --apply` (ya aplicado en pre-prod).
+### 3. Abrir **F2 — Orquestación HLg** ([`ROADMAP`](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md) § F2)
+
+Orden sugerido:
+
+1. **O-P1-2** `materializarRango(desde, hasta, motivo)` unificado (plan §16.4).
+2. **O-P1-1** Job día 5 materialización M+1 (Scheduler + callable idempotente).
+3. **O-P1-3** GSO M-1 solo lectura desde día 1.
+4. Wire `rematerializarPostRegimen` / calendario según manual §15–22.
+
+**No mezclar** rama `feat/epic-turno-mensual-fase2-pr3` sin decisión explícita.
+
+### 4. Producto posterior
+
+- **F-UX.2** vista jefe acotada (tras avance F3 parcial si aplica).
+- Revisar HLg larga Oficina CHAPARRO (`hlg_01KR3HZ1XN…`) solo si RRHH pide limpieza de cargos — **no bloquea F2**.
 
 ---
 
@@ -167,9 +203,9 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 
 ### Alta (próxima sesión)
 
-1. Crear y compartir **PR** con el equipo.
-2. QA visual mayo/junio en app (piloto MOSTO/CHAPARRO).
-3. `audit-vis-junio-2026.mjs` — confirmación formal plan vs `vis_*` vs `asi_*`.
+1. Push/merge fixes post-smoke (`4bcdb60` + invoker/IAM/scripts).
+2. **F2** — `materializarRango` + diseño job día 5.
+3. O-P0-3 + Paso 4 QA formal.
 
 ### Media
 
@@ -194,6 +230,9 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 | Lectura capa | `functions/modules/shared/capaTeoricaPorGrupoCore.js` |
 | Strip (ops) | `scripts/strip-capa-teorica-legacy.mjs` |
 | Materializar mes | `scripts/materializar-grupo-mes.mjs` |
+| Smoke purge HLg | `scripts/audit-purge-hlg-post-corte.mjs` |
+| HLg por persona/gdt | `scripts/audit-hlg-persona-gdts.mjs` |
+| IAM callables nuevas | `scripts/grant-run-invoker-firebase-token.mjs` → `npm run firebase:grant-callables-invoker:firebase-login` |
 
 ---
 
@@ -202,6 +241,7 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 | Fecha | Documento |
 |-------|-----------|
 | 29/05 | [`HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md`](./HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md) — **repaso orquestación §15–22** |
+| 01/06 | **Smoke prod** — acta en § «Acta smoke producción» (este doc) |
 | 29/05 | [`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md) — **cierre hito** |
 | 29/05 | [`HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md`](./HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md) — incidente Z |
 | 28/05 | [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) |

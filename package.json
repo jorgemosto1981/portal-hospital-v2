@@ -11,6 +11,7 @@
     "firebase:deploy:firestore": "firebase deploy --project portal-hospital-v2 --only firestore:rules,firestore:indexes",
     "firebase:deploy:functions": "node scripts/firebase-deploy-functions.mjs",
     "firebase:grant-callables-invoker": "node scripts/grant-cloud-run-invoker-callables.mjs",
+    "firebase:grant-callables-invoker:firebase-login": "node scripts/grant-run-invoker-firebase-token.mjs",
     "dev:set-rrhh-claims": "node scripts/dev-set-portal-role-rrhh.mjs",
     "dev:set-roles-hlc": "node scripts/dev-set-roles-hlc.mjs",
     "dev:grant-jefe-hlc": "node scripts/dev-grant-jefe-hlc-chain.mjs",
