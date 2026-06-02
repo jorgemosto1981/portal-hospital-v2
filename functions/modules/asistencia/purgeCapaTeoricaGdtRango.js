@@ -1,6 +1,8 @@
 "use strict";
 
-const { FieldValue } = require("firebase-admin/firestore");
+function purgeMetadataNow() {
+  return new Date().toISOString();
+}
 const {
   buildAsiDocumentId,
   buildVisDocumentId,
@@ -10,6 +12,7 @@ const {
 
 const COL_ASISTENCIA = "asistencia_diaria";
 const COL_VIS = "vistas_grilla_mes_agente";
+const COL_HLG = "historial_laboral_grupos";
 const MAX_BATCH_OPS = 450;
 
 /**
@@ -46,6 +49,46 @@ function ymdFinMesSiguiente(refYmd) {
 }
 
 /**
+ * Tope de purge tras deshabilitar HLg: ventana M+M+1, sin pisar otra HLg activa del mismo gdt.
+ *
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {{ personaId: string; gdt: string; desdeCorteYmd: string; excludeHlgId?: string }} opts
+ * @returns {Promise<string>}
+ */
+async function resolveHastaPurgeTrasDeshabilitarHlg(db, { personaId, gdt, desdeCorteYmd, excludeHlgId }) {
+  const pid = String(personaId || "").trim();
+  const gdtId = String(gdt || "").trim();
+  const desde = String(desdeCorteYmd || "").slice(0, 10);
+  let hasta = ymdFinMesSiguiente(desde);
+  if (!/^per_/i.test(pid) || !/^gdt_/i.test(gdtId) || !/^\d{4}-\d{2}-\d{2}$/.test(desde)) {
+    return hasta;
+  }
+
+  const snap = await db
+    .collection(COL_HLG)
+    .where("persona_id", "==", pid)
+    .where("grupo_de_trabajo_id", "==", gdtId)
+    .get();
+
+  let siguienteInicio = null;
+  for (const doc of snap.docs) {
+    if (excludeHlgId && doc.id === excludeHlgId) continue;
+    const row = doc.data() || {};
+    if (row.activo === false) continue;
+    const ini = String(row.fecha_inicio || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ini) || ini <= desde) continue;
+    if (!siguienteInicio || ini < siguienteInicio) siguienteInicio = ini;
+  }
+
+  if (siguienteInicio) {
+    const hastaAntesSucesor = ymdAddDays(siguienteInicio, -1);
+    if (hastaAntesSucesor < hasta) hasta = hastaAntesSucesor;
+  }
+  if (hasta < desde) return desde;
+  return hasta;
+}
+
+/**
  * Elimina capa teórica scoped (solo capa 1) desde `desdeYmd` hasta `hastaYmd` inclusive.
  * No toca overrides ni eventos MDC en vis_*.
  *
@@ -77,13 +120,17 @@ async function purgeCapaTeoricaGdtRango(db, { personaId, gdt, desdeYmd, hastaYmd
       const asiRef = db.collection(COL_ASISTENCIA).doc(asiId);
       const asiSnap = await asiRef.get();
       if (asiSnap.exists) {
-        batch.update(asiRef, {
-          [`capa_teorica_por_grupo.${gdtId}`]: FieldValue.delete(),
-          "metadata.ultimo_purge_teorico": FieldValue.serverTimestamp(),
-          "metadata.ultimo_purge_motivo": motivo || "purge_capa_teorica_gdt",
-        });
-        ops += 1;
-        diasPurge += 1;
+        const capaPorGrupo = { ...(asiSnap.data().capa_teorica_por_grupo || {}) };
+        if (Object.hasOwn(capaPorGrupo, gdtId)) {
+          delete capaPorGrupo[gdtId];
+          batch.update(asiRef, {
+            capa_teorica_por_grupo: capaPorGrupo,
+            "metadata.ultimo_purge_teorico": purgeMetadataNow(),
+            "metadata.ultimo_purge_motivo": motivo || "purge_capa_teorica_gdt",
+          });
+          ops += 1;
+          diasPurge += 1;
+        }
       }
     }
 
@@ -102,6 +149,7 @@ async function purgeCapaTeoricaGdtRango(db, { personaId, gdt, desdeYmd, hastaYmd
       patch[`dias.${diaKey}.rda_egreso`] = null;
       patch[`dias.${diaKey}.tipo_dia`] = "no_laborable";
       patch[`dias.${diaKey}.es_franco`] = false;
+      patch[`dias.${diaKey}.segmentos`] = null;
     }
 
     if (ops >= MAX_BATCH_OPS) {
@@ -117,9 +165,9 @@ async function purgeCapaTeoricaGdtRango(db, { personaId, gdt, desdeYmd, hastaYmd
     if (!visSnap.exists) continue;
     batch.update(visRef, {
       ...patch,
-      "metadata.ultima_sync_teorica": FieldValue.serverTimestamp(),
+      "metadata.ultima_sync_teorica": purgeMetadataNow(),
       "metadata.ultimo_purge_motivo": motivo || "purge_capa_teorica_gdt",
-      "metadata.ultimo_purge_en": FieldValue.serverTimestamp(),
+      "metadata.ultimo_purge_en": purgeMetadataNow(),
       "metadata.ultimo_rango_purged": { desde, hasta },
     });
     ops += 1;
@@ -137,6 +185,7 @@ async function purgeCapaTeoricaGdtRango(db, { personaId, gdt, desdeYmd, hastaYmd
 
 module.exports = {
   purgeCapaTeoricaGdtRango,
+  resolveHastaPurgeTrasDeshabilitarHlg,
   ymdAddDays,
   ymdFinMesSiguiente,
 };

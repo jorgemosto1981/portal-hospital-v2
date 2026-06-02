@@ -279,6 +279,7 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
   const personaCache = new Map();
   const filas = [];
 
+  const mm = String(m).padStart(2, "0");
   const periodoId = `${y}-${mm}`;
   const planCache = await obtenerPlanHabilitadoCache(db, gdt, periodoId);
   const { materializarGrupoMes } = require("../asistencia/rdaTurnoTeoricoWorker");

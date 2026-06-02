@@ -135,6 +135,12 @@ export default function DiaGrillaDetalleModal({
                       <dd className="text-slate-700">{turnoTeorico.capa_teorica.horas_efectivas}hs</dd>
                     </div>
                   ) : null}
+                  {turnoTeorico.capa_teorica.fichadas_esperadas != null ? (
+                    <div className="flex gap-2">
+                      <dt className="font-medium text-slate-500">Fichadas esperadas:</dt>
+                      <dd className="font-bold text-indigo-800">{turnoTeorico.capa_teorica.fichadas_esperadas}</dd>
+                    </div>
+                  ) : null}
                   {turnoTeorico.capa_teorica.origen ? (
                     <div className="flex gap-2">
                       <dt className="font-medium text-slate-500">Origen:</dt>

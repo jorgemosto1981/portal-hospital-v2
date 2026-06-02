@@ -71,9 +71,38 @@ async function statsVis(pid, gdt, periodo) {
   return { vis_exists: visSnap.exists, dias_mes: diasMes, turnos, francos, nl };
 }
 
-// §4.2 #5 + D2: MOSTO multicargo — mayo Portería con turnos (no mes todo NL)
+function enRango(ymd, desde, hasta) {
+  const d = String(ymd || "").slice(0, 10);
+  const i = String(desde || "").slice(0, 10);
+  const f = hasta ? String(hasta).slice(0, 10) : "9999-12-31";
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) && /^\d{4}-\d{2}-\d{2}$/.test(i) && i <= d && d <= f;
+}
+
+async function existeHlgActivoEnMes(personaId, grupoId, periodo) {
+  const [anio, mes] = periodo.split("-").map(Number);
+  const corte = `${anio}-${String(mes).padStart(2, "0")}-${String(new Date(anio, mes, 0).getDate()).padStart(2, "0")}`;
+  const snap = await db
+    .collection("historial_laboral_grupos")
+    .where("persona_id", "==", personaId)
+    .where("grupo_de_trabajo_id", "==", grupoId)
+    .get();
+  return snap.docs.some((d) => {
+    const h = d.data() || {};
+    if (h.activo !== true) return false;
+    return enRango(corte, h.fecha_inicio, h.fecha_fin);
+  });
+}
+
+// §4.2 #5 + D2: MOSTO multicargo — mayo Portería.
+// Si no hay HLG activo para ese mes, el caso en grilla de equipo es "sin dotación" (SKIP).
 const mostoMayP = await statsVis(PER_MOSTO, GDT_PORTERIA, "2026-05");
-if (mostoMayP.vis_exists && mostoMayP.turnos >= 8 && mostoMayP.nl < 20) {
+const mostoMayPorteriaActiva = await existeHlgActivoEnMes(PER_MOSTO, GDT_PORTERIA, "2026-05");
+if (!mostoMayPorteriaActiva) {
+  push("D2-MOSTO-mayo-Porteria", "SKIP", {
+    motivo: "Sin HLG activa en Portería para mayo (grilla sector puede quedar sin dotación por regla activo=true).",
+    ...mostoMayP,
+  });
+} else if (mostoMayP.vis_exists && mostoMayP.turnos >= 8 && mostoMayP.nl < 20) {
   push("D2-MOSTO-mayo-Porteria", "OK", mostoMayP);
 } else {
   push("D2-MOSTO-mayo-Porteria", "FAIL", mostoMayP);

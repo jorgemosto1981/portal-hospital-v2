@@ -469,6 +469,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                           diasMap={cal.dias}
                           grupoLabel={cal.grupo_label}
                           grupoVistaId={cal.grupo_trabajo_id}
+                          hlgRows={vista.titularHlgRows}
+                          hlgListo={vista.titularHlgListo}
                           etiquetasGrupo={etiquetasGrupo}
                           onDiaClick={({ dia, eventos, grupoLabel }) => {
                             const cell = cal.dias?.[dia] || {};
@@ -489,6 +491,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                                     || (cell.es_franco ? "franco" : "laborable"),
                                   ingreso: cell.rda_ingreso,
                                   egreso: cell.rda_egreso,
+                                  fichadas_esperadas:
+                                    cell.fichadas_esperadas != null ? cell.fichadas_esperadas : undefined,
                                   es_feriado: cell.es_feriado,
                                   tipo_evento_institucional: cell.tipo_evento_institucional,
                                 },
@@ -521,7 +525,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
               )}
             </div>
             <div className="mt-2 border-t border-slate-200 pt-2 text-xs text-slate-700">
-              <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <span>
                   <span className="mr-1 inline-block h-3 w-5 rounded border border-blue-900/25 bg-[#3B82F6] align-middle" />
                   Consolidado / aprobado
@@ -531,12 +535,32 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   En revisión
                 </span>
                 <span>
-                  <span className="mr-1 inline-block h-3 w-5 rounded bg-amber-100 ring-1 ring-amber-300 align-middle" />
+                  <span className="mr-1 inline-block h-3 w-5 rounded bg-emerald-100 ring-1 ring-emerald-300 align-middle" />
+                  Día laborable (turno)
+                </span>
+                <span>
+                  <span className="mr-1 inline-block h-3 w-5 rounded bg-slate-400 align-middle" />
+                  No laborable (régimen)
+                </span>
+                <span>
+                  <span className="mr-1 inline-block h-3 w-5 rounded bg-amber-100 ring-1 ring-amber-400 align-middle" />
                   Feriado / asueto
                 </span>
                 <span>
                   <span className="mr-1 inline-block h-3 w-5 rounded bg-rose-100 align-middle" />
                   Fin de semana
+                </span>
+                <span>
+                  <span className="mr-1 inline-flex h-3 w-5 items-center justify-center rounded bg-slate-200 text-[10px] leading-none text-slate-500 align-middle">
+                    ×
+                  </span>
+                  Sin asignación al grupo en esa fecha
+                </span>
+                <span>
+                  <span className="mr-1 inline-flex h-3 min-w-[1.1rem] items-center justify-center rounded bg-indigo-900 px-0.5 text-[8px] font-bold text-white align-middle">
+                    F:n
+                  </span>
+                  Fichadas esperadas (jornada)
                 </span>
                 <span>Clic = detalles</span>
               </div>

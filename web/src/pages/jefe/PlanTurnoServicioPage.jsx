@@ -848,6 +848,13 @@ export default function PlanTurnoServicioPage() {
                       }}
                     />
                   )}
+                  <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    <p className="font-semibold">Referencia de lectura</p>
+                    <p>
+                      Foto histórica del plan. Si después se deshabilita una asignación, puede no coincidir
+                      con la grilla operativa vigente.
+                    </p>
+                  </div>
                 </div>
               )}
               {planDetalle.historial_aprobaciones?.length > 0 && (

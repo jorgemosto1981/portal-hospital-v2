@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { cargarHlgRowsParaTitular } from "./grillaTitularHlgLoad.js";
 
 import {
   callListarVistaGrillaMesPorGrupo,
@@ -51,6 +52,9 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [titularCalendarios, setTitularCalendarios] = useState([]);
+  /** HLg del titular (solo lectura UI: cruz en días fuera del grupo en cada calendario). */
+  const [titularHlgRows, setTitularHlgRows] = useState([]);
+  const [titularHlgListo, setTitularHlgListo] = useState(false);
   const ultimoAvisoMatRef = useRef("");
 
   const { anio, mes } = anioMesDesdePeriodo(periodo);
@@ -184,6 +188,7 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
     setError("");
     setData(null);
     setTitularCalendarios([]);
+    setTitularHlgListo(false);
     try {
       if (modoEff === GRILLA_MES_MODO.TITULAR) {
         if (!/^per_/i.test(personaId)) {
@@ -207,6 +212,17 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
           })
           .filter(Boolean)
           .sort((a, b) => a.grupo_label.localeCompare(b.grupo_label, "es"));
+
+        let hlgRows = [];
+        try {
+          hlgRows = await cargarHlgRowsParaTitular(personaId);
+          setTitularHlgRows(hlgRows);
+        } catch {
+          setTitularHlgRows([]);
+          hlgRows = [];
+        } finally {
+          setTitularHlgListo(true);
+        }
 
         const resultados = await Promise.all(
           cargos.map(async ({ gdt, grupo_label }) => {
@@ -365,6 +381,8 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
     filas,
     titularDias,
     titularCalendarios,
+    titularHlgRows,
+    titularHlgListo,
     esModoTitular: modo === GRILLA_MES_MODO.TITULAR,
     esMultiGrupo: gruposEquipo.length >= 2,
     requiereSeleccionGrupo,

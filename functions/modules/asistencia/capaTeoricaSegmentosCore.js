@@ -298,4 +298,5 @@ module.exports = {
   computeResumenDesdeSegmentos,
   resolveClasificacionDiaCalendario,
   buildCapaTeoricaSegmentada,
+  calcularFichadasEsperadas,
 };

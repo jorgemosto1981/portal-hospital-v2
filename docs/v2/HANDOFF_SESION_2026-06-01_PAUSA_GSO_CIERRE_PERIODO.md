@@ -96,25 +96,51 @@ npm run firebase:deploy:functions -- --only "functions:consultarEstadosPeriodoLi
 
 ## Puntos de control — próxima sesión (enumerados)
 
+### Actualización QA manual (2026-06-02)
+
+| Control | Estado | Nota de cierre |
+|---------|--------|----------------|
+| A2 | ✅ OK | LOKITO compuesto validado en UI. |
+| A4 | ✅ OK (con criterio) | `jefe/planes-turno` muestra **foto histórica** del plan (incluye CHAPARRO en Sala junio); `rrhh/grilla-operativa` refleja estado vigente/materializado (sin CHAPARRO tras deshabilitar HLg). Se agregó aviso UI en detalle histórico para evitar ambigüedad. |
+| A5 | ✅ OK | Override jefe scoped validado con mutación real en Sala julio (`guardarPlanTurnoServicio` 200), luego rollback inmediato y guardado de reversión (sin residuo funcional). |
+| A3 | ✅ OK | §4.2 **#6**: en Explorador RRHH se revirtió a revisión el plan **Oficina PERSONAL** jun-2026 (`plt_01KT2BWXXAFPTYEG77Y0KWFS74`); **Sala Internación 1** siguió HABILITADO (3 agentes, acción «Revertir» disponible). Rehabilitación desde Bandeja Evaluador sin afectar Sala. |
+| A1 | ✅ OK | §4.2 **#2**: **64-A** `sol_01KT3ZG4VPY2SNRWW3Z09DV73S` (2026-06-11, ancla Oficina) → `64-A` en `vis_2026_06` día 11 Oficina+Sala. **LAO** `sol_01KT402WR9SVN46JESKAS6KE1E` (2026-06-03…09, 5 hábiles, ancla **Sala** `gdt_01KQA6Q…`) → `cfg_esa_en_revision_jefe`; `LAO-2026` en días 03–05 y 08–09 en ambos `gdt`. Wizard: esperar fin de `simularLaoPreview` en paso 3 (falso negativo «No podés continuar» mientras carga). |
+
+**Cambio UI aplicado para trazabilidad:**  
+`web/src/pages/jefe/PlanTurnoServicioPage.jsx` — aviso simple al pie de “Grilla aprobada (histórico)”:  
+“Foto histórica del plan. Si después se deshabilita una asignación, puede no coincidir con la grilla operativa vigente.”
+
 ### Prioridad A — Cierre F1 (manual QA)
 
 | # | Control | Cómo validar | Piloto / dato |
 |---|---------|--------------|---------------|
-| A1 | §4.2 **#2** LAO + GS-A en `gdt` correcto | Ticketera + grilla | MOSTO multicargo |
+| A1 | §4.2 **#2** LAO + GS-A en `gdt` correcto | ✅ Cerrado | MOSTO · `sol_01KT3ZG4…` + `sol_01KT402WR9SVN46JESKAS6KE1E` |
 | A2 | §4.2 **#3** LOKITO turno compuesto UI | Grilla julio Oficina | `per_01KQQJA5Q1VKBTJ74RHQ0HSHSB` |
-| A3 | §4.2 **#6** Rehabilitar/eliminar plan sin pisar otro `gdt` | Plan turnos RRHH | Oficina vs Sala |
-| A4 | §4.2 **#8** Grilla equipo jefe vs materialización | Vista jefe GSO | CHAPARRO |
-| A5 | §4.2 **#9** Override jefe scoped | Cambio turno otro grupo | ASI scope |
+| A3 | §4.2 **#6** Rehabilitar/eliminar plan sin pisar otro `gdt` | ✅ Cerrado (revertir + rehabilitar; Sala intacta) | Oficina `gdt_01KR3H81…` vs Sala `gdt_01KQA6Q…` |
+| A4 | §4.2 **#8** Grilla equipo jefe vs materialización | ✅ Cerrado con criterio histórico vs vigente | CHAPARRO |
+| A5 | §4.2 **#9** Override jefe scoped | ✅ Cerrado (mutación + rollback) | ASI scope |
 
-### Prioridad B — GSO RRHH (regresión rápida)
+### Actualización QA manual B — GSO RRHH (2026-06-02)
+
+| Control | Estado | Nota de cierre |
+|---------|--------|----------------|
+| B1 | ✅ OK | Cerrar mayo Oficina → tarjeta «Cerrado» + modal solo lectura con grilla equipo. |
+| B2 | ✅ OK | Reapertura motivo ≥3 → sin badge cerrado; «Cerrar período» visible de nuevo. |
+| B3 | ✅ OK | Sala junio: tabla LOKITO + MOSTO (LAO en revisión en celdas). |
+| B4 | ✅ OK (criterio vigente) | Junio Portería: sin dotación **01–13/06**; desde **14/06** HLg activa `hlg_01KT3V26…` — grilla con MOSTO solo días con HLg operativa (usuario validó post-purge). |
+| B5 | ✅ OK (criterio vigente) | Mayo Portería: **sin dotación** (ninguna HLg `activo:true` al cierre 31/05). Coherente con grilla = verdad operativa. |
+
+**Purge fantasmas Portería (MOSTO):** `audit-purge-hlg-post-corte.mjs --apply` · 2026-06-01…2026-06-13 · `purge_ok: true`. Código: purge desde corte + `resolveHastaPurgeTrasDeshabilitarHlg` en `rrhhDeshabilitarHlg` (deploy functions pendiente).
+
+### Prioridad B — GSO RRHH (regresión rápida) — checklist original
 
 | # | Control | Esperado |
 |---|---------|----------|
-| B1 | Cerrar mayo Oficina → tarjetas gris “Cerrado” | Batch + UI |
-| B2 | Reabrir con motivo ≥3 → tarjetas normales + edición | `reabrirPeriodoLiquidacion` |
-| B3 | Sala junio con agentes → tabla con filas | `listarVistaGrillaMesPorGrupo` |
-| B4 | Portería junio → “Sin dotación” tarjeta + modal | `personas_vigentes: 0` |
-| B5 | Portería mayo → grilla con turnos (si HLg vigente) | MOSTO |
+| B1 | Cerrar mayo Oficina → tarjetas gris “Cerrado” | ✅ |
+| B2 | Reabrir con motivo ≥3 → tarjetas normales + edición | ✅ |
+| B3 | Sala junio con agentes → tabla con filas | ✅ |
+| B4 | Portería junio | Sin dotación si `personas_vigentes:0` al cierre; si hay HLg activa en el mes, tabla con filas |
+| B5 | Portería mayo | Sin dotación si no hay HLg activa al cierre; no exigir turnos con HLg solo deshabilitada |
 
 ### Prioridad C — Automatizado (opcional al abrir)
 

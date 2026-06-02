@@ -39,7 +39,7 @@ Referencias: [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](./MANUAL_CAPAS_ORQUESTACI
 | Etapa | Avance | Notas |
 |-------|--------|-------|
 | **F-UX.1** | ✅ ~100% | Menú RRHH, `/portal/rrhh/grilla-operativa`, sector por defecto |
-| **F-UX.2** | ⏳ | Después de F3 parcial (`fichadas_esperadas`) |
+| **F-UX.2** | ✅ Parcial | Badge **F:n** + modal; validado F:2 prod 2026-06-02 · UX-6 API pendiente |
 | **F0** | ✅ Código + smoke prod | O-P0-1,4,5,7; purge HLg validado CHAPARRO |
 | **F1** | ✅ ~90% | Merge Multi-HLG en `master` (`25bc00c`); cierre manual RRHH OK |
 | **F1.2 QA formal** | ⏳ | Matriz §4.2 [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) |
@@ -229,7 +229,7 @@ Actualizá PENDIENTES y actas smoke al cerrar cada entregable.
 |-------|----------|-------------|
 | **F3** | Segmentos, cobertura, `fichadas_esperadas` (T-02…T-08) | F2 estable |
 | **F4** | Outbox + `enviarAccionesAsistencia` | **F3 cerrada** |
-| **F-UX.2** | Vista jefe acotada | F3 parcial + aprobación RRHH |
+| **F-UX.2** | Vista jefe acotada | Fichadas esperadas en UI ✅; auditoría sin fichadas reales ⏳ |
 | **P2** | Auto-cierre día 5 liquidación, lazy acotado, manual normativo | Tras F2 |
 
 Calendario sugerido: ver § Calendario en [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md).

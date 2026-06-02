@@ -6,15 +6,17 @@ import {
   textoHorarioTurno,
   celdaTieneJornadaVis,
   claseFondoColumna,
-  claseFondoCelda,
   varianteCeldaOperativa,
 } from "./grillaMesEquipoDisplay.js";
 import {
   claseHeaderAgenteSticky,
   claseCeldaAgenteSticky,
   clasesTextoCelda,
+  claseFondoCeldaCalendarioTitular,
 } from "./grillaTurnosVisual.js";
 import GrillaTurnosCeldaChip from "./GrillaTurnosCeldaChip.jsx";
+import GrillaFichadasEsperadasBadge from "./GrillaFichadasEsperadasBadge.jsx";
+import { fichadasEsperadasDesdeCeldaVis, titleFichadasEsperadas } from "./grillaFichadasEsperadasDisplay.js";
 
 function contenidoCeldaOperativa({
   tieneLicencia,
@@ -23,19 +25,34 @@ function contenidoCeldaOperativa({
   esFranco,
   esNoLaborable,
   turnoText,
+  fichadasN,
 }) {
+  const badge = <GrillaFichadasEsperadasBadge valor={fichadasN} className="mt-px" />;
   if (tieneLicencia && (tieneTurno || esFranco || esNoLaborable)) {
     return (
       <span className="flex w-full flex-col items-center justify-center leading-none">
         <span className={clasesTextoCelda(turnoText || (esNoLaborable ? "NL" : "F"))}>{turnoText || (esNoLaborable ? "NL" : "F")}</span>
-        <span className="mt-0.5 text-[7px] font-bold text-fuchsia-950">{licenciaCod.slice(0, 4)}</span>
+        <span className="mt-0.5 flex flex-col items-center gap-px">
+          {badge}
+          <span className="text-[7px] font-bold text-fuchsia-950">{licenciaCod.slice(0, 4)}</span>
+        </span>
       </span>
     );
   }
   if (tieneLicencia) {
-    return <span className={clasesTextoCelda(licenciaCod)}>{licenciaCod.slice(0, 4)}</span>;
+    return (
+      <span className="flex flex-col items-center">
+        <span className={clasesTextoCelda(licenciaCod)}>{licenciaCod.slice(0, 4)}</span>
+        {badge}
+      </span>
+    );
   }
-  return <span className={clasesTextoCelda(turnoText)}>{turnoText}</span>;
+  return (
+    <span className="flex flex-col items-center justify-center leading-none">
+      <span className={clasesTextoCelda(turnoText)}>{turnoText}</span>
+      {badge}
+    </span>
+  );
 }
 
 /**
@@ -178,6 +195,9 @@ export default function GrillaMesEquipoTabla({
                     }
                     if (turnoText) titleParts.push(turnoText);
                     if (licenciaCod) titleParts.push(`Licencia: ${licenciaCod}`);
+                    const fichadasN = fichadasEsperadasDesdeCeldaVis(cell);
+                    const fichadasTitle = titleFichadasEsperadas(fichadasN);
+                    if (fichadasTitle) titleParts.push(fichadasTitle);
 
                     const variant = varianteCeldaOperativa({
                       tieneLicencia,
@@ -189,10 +209,12 @@ export default function GrillaMesEquipoTabla({
                     return (
                       <td
                         key={dia}
-                        className={claseFondoCelda({
+                        className={`${claseFondoCeldaCalendarioTitular({
                           esFinde: col.esFinde,
                           esFeriado: Boolean(tipoInstCol),
-                        })}
+                          esNoLaborable,
+                          esLaborable: jornadaVis || tieneTurno,
+                        })} px-0.5 py-0.5 align-middle`}
                       >
                         <GrillaMesCeldaLicencia
                           eventos={Array.isArray(eventos) ? eventos : []}
@@ -223,6 +245,7 @@ export default function GrillaMesEquipoTabla({
                                         : cell.tipo_dia || "laborable",
                                   ingreso,
                                   egreso,
+                                  fichadas_esperadas: fichadasN ?? undefined,
                                   es_feriado: esInstitucional,
                                   tipo_evento_institucional: tipoInstCel || undefined,
                                 },
@@ -240,6 +263,7 @@ export default function GrillaMesEquipoTabla({
                               esFranco,
                               esNoLaborable,
                               turnoText,
+                              fichadasN,
                             })}
                           </GrillaTurnosCeldaChip>
                         </GrillaMesCeldaLicencia>

@@ -15,7 +15,7 @@ const { resolverCapaTeoricaGrupo } = require("../shared/capaTeoricaPorGrupoCore"
 const { getIndiceCalendario } = require("../shared/calendarService");
 const { resolverEventoEnIndice } = require("../shared/calendarInstitucionalCore");
 const { resolverFijo, resolverRotativo, buildTurnoResponse, ymdToDate, diffDays, isoWeekday } = require("./resolverTurnoDia");
-const { buildCapaTeoricaSegmentada } = require("./capaTeoricaSegmentosCore");
+const { buildCapaTeoricaSegmentada, ymdHoraToIso } = require("./capaTeoricaSegmentosCore");
 const { toHhmmInstitucionalDisplay } = require("../shared/horarioInstitucionalDisplay");
 const { CFG_EPL_ABIERTO } = require("../shared/cfgAsistenciaTurnosIds");
 const {
@@ -31,6 +31,7 @@ const COL_REGIMEN = "cfg_regimen_horario";
 const COL_ASISTENCIA = "asistencia_diaria";
 const COL_PLANES = "planes_turno_servicio";
 const COL_VIS = "vistas_grilla_mes_agente";
+const TURNO_FALLBACK_SEGMENT_ID = "__horario__";
 
 /**
  * Genera array de "YYYY-MM-DD" para todos los días de un mes.
@@ -163,6 +164,51 @@ function horariosVisDesdeCapaYTurno({ sinTurnoLaboral, capaTeorica, turnoFinal }
     || turnoFinal?.egreso
     || null;
   return { ingreso, egreso };
+}
+
+function buildSegmentosHorarioFallback({ fechaYmd, personaId, turno, origenSegmento }) {
+  const ingreso = String(turno?.ingreso || "").trim();
+  const egreso = String(turno?.egreso || "").trim();
+  if (!ingreso || !egreso) return [];
+  const cruza = egreso <= ingreso;
+  const egresoOffset = cruza ? 1 : 0;
+  const fechaFinReal = (() => {
+    if (!cruza) return fechaYmd;
+    const d = new Date(`${fechaYmd}T00:00:00.000Z`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  })();
+  return [
+    {
+      segmento_id: String(turno?.turno_id || TURNO_FALLBACK_SEGMENT_ID),
+      ingreso_iso: ymdHoraToIso(fechaYmd, ingreso, 0),
+      egreso_iso: ymdHoraToIso(fechaYmd, egreso, egresoOffset),
+      fecha_base: fechaYmd,
+      fecha_fin_real: fechaFinReal,
+      cruza_medianoche: cruza,
+      persona_titular_id: personaId,
+      persona_ejecutante_id: personaId,
+      origen_segmento: origenSegmento || "plan_base",
+      tipo_compensacion_id: null,
+      flags_liquidacion: null,
+    },
+  ];
+}
+
+function normalizarCapaTurnoFallback(capa) {
+  if (!capa || typeof capa !== "object") return capa;
+  if (capa.turno_compuesto_id !== TURNO_FALLBACK_SEGMENT_ID) return capa;
+  return {
+    ...capa,
+    turno_compuesto_id: null,
+    turno_id: null,
+  };
+}
+
+function fichadasEsperadasVisDesdeCapa(capaTeorica) {
+  const n = Number(capaTeorica?.fichadas_esperadas);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.trunc(n);
 }
 
 /**
@@ -341,7 +387,17 @@ async function resolverBaseDiaPersona({ personaId, fechaYmd, indiceCalendario, g
     turnoFinal = merged.turnoFinal;
   }
 
-  const capaBase = buildCapaTeoricaSegmentada({
+  const segmentosFallbackBase =
+    !esDiaSinTurnoLaboral(tipoDiaFinal) && !turnoFinal?.turno_id
+      ? buildSegmentosHorarioFallback({
+        fechaYmd,
+        personaId,
+        turno: turnoFinal,
+        origenSegmento: "plan_base",
+      })
+      : [];
+
+  let capaBase = normalizarCapaTurnoFallback(buildCapaTeoricaSegmentada({
     fechaYmd,
     personaId,
     regimen: regimenDoc,
@@ -349,7 +405,31 @@ async function resolverBaseDiaPersona({ personaId, fechaYmd, indiceCalendario, g
     turnoCompuestoId: turnoFinal?.turno_id || turnoCompuestoId,
     origen_segmento: "plan_base",
     indiceCalendario,
-  });
+    segmentosOverride: segmentosFallbackBase.length ? segmentosFallbackBase : undefined,
+  }));
+  if (
+    !esDiaSinTurnoLaboral(tipoDiaFinal)
+    && (!Array.isArray(capaBase.segmentos) || capaBase.segmentos.length === 0)
+  ) {
+    const fallbackDesdeHorario = buildSegmentosHorarioFallback({
+      fechaYmd,
+      personaId,
+      turno: turnoFinal,
+      origenSegmento: "plan_base",
+    });
+    if (fallbackDesdeHorario.length) {
+      capaBase = normalizarCapaTurnoFallback(buildCapaTeoricaSegmentada({
+        fechaYmd,
+        personaId,
+        regimen: regimenDoc,
+        tipo_dia: tipoDiaFinal,
+        turnoCompuestoId: null,
+        origen_segmento: "plan_base",
+        indiceCalendario,
+        segmentosOverride: fallbackDesdeHorario,
+      }));
+    }
+  }
 
   return {
     capaBase,
@@ -488,9 +568,12 @@ function resolverDiaConPreCarga(regimen, fechaYmd, hlg, planData, personaId, ind
       } else {
         const turnoId = asignacionDia.turno_id;
         const turnoDisp = (regimen.turnos_disponibles || []).find((t) => t.turno_id === turnoId);
+        const turnoRaw = turnoDisp || (turnoId ? { turno_id: turnoId } : null);
         resolucion = {
           tipo_dia: asignacionDia.tipo_dia || "laborable",
-          turno_teorico: turnoDisp ? buildTurnoResponse(turnoDisp) : null,
+          // Para turnos compuestos (A+B+C) no hay match directo en turnos_disponibles;
+          // el worker necesita conservar el turno_id raw para segmentar en buildCapaTeoricaSegmentada.
+          turno_teorico: turnoRaw ? buildTurnoResponse(turnoRaw) : null,
           origen: "plan_mensual",
           plan_id: planData.planId,
           posicion_ciclo: null,
@@ -687,10 +770,16 @@ async function materializarTurnoMesBatch({
     if (!turnoCompuestoId && fotoDiaPlan?.turno_id) {
       turnoCompuestoId = String(fotoDiaPlan.turno_id).trim();
     }
-    if (!turnoCompuestoId && (turnoFinal?.ingreso || turnoFinal?.egreso)) {
-      turnoCompuestoId = "plan_horario";
-    }
-    const capaSegmentada = buildCapaTeoricaSegmentada({
+    const segmentosFallbackMes =
+      !esDiaSinTurnoLaboral(tipoDiaFinal) && !turnoCompuestoId
+        ? buildSegmentosHorarioFallback({
+          fechaYmd,
+          personaId,
+          turno: turnoFinal,
+          origenSegmento: origenFinal === "override" ? "override_cobertura" : "plan_base",
+        })
+        : [];
+    let capaSegmentada = normalizarCapaTurnoFallback(buildCapaTeoricaSegmentada({
       fechaYmd,
       personaId,
       regimen: regimenDoc,
@@ -698,7 +787,31 @@ async function materializarTurnoMesBatch({
       turnoCompuestoId,
       origen_segmento: origenFinal === "override" ? "override_cobertura" : "plan_base",
       indiceCalendario,
-    });
+      segmentosOverride: segmentosFallbackMes.length ? segmentosFallbackMes : undefined,
+    }));
+    if (
+      !esDiaSinTurnoLaboral(tipoDiaFinal)
+      && (!Array.isArray(capaSegmentada.segmentos) || capaSegmentada.segmentos.length === 0)
+    ) {
+      const fallbackDesdeHorario = buildSegmentosHorarioFallback({
+        fechaYmd,
+        personaId,
+        turno: turnoFinal,
+        origenSegmento: origenFinal === "override" ? "override_cobertura" : "plan_base",
+      });
+      if (fallbackDesdeHorario.length) {
+        capaSegmentada = normalizarCapaTurnoFallback(buildCapaTeoricaSegmentada({
+          fechaYmd,
+          personaId,
+          regimen: regimenDoc,
+          tipo_dia: tipoDiaFinal,
+          turnoCompuestoId: null,
+          origen_segmento: origenFinal === "override" ? "override_cobertura" : "plan_base",
+          indiceCalendario,
+          segmentosOverride: fallbackDesdeHorario,
+        }));
+      }
+    }
 
     const gdtOperativo = gdt;
 
@@ -754,6 +867,7 @@ async function materializarTurnoMesBatch({
     visDias[`dias.${diaKey}.rda_turno_id`] = pickRdaTurnoId(capaSlice, sinTurnoLaboral);
     visDias[`dias.${diaKey}.rda_ingreso`] = rdaIngreso;
     visDias[`dias.${diaKey}.rda_egreso`] = rdaEgreso;
+    visDias[`dias.${diaKey}.fichadas_esperadas`] = fichadasEsperadasVisDesdeCapa(capaSlice);
     visDias[`dias.${diaKey}.tipo_dia`] = tipoDiaVis;
     visDias[`dias.${diaKey}.es_franco`] = tipoDiaVis === "franco";
     visDias[`dias.${diaKey}.es_feriado`] = capaSlice.es_feriado || false;
@@ -957,17 +1071,40 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
   }
 
   let segmentos = [];
-  if (turnoCompuestoId && !esDiaSinTurnoLaboral(tipoDiaFinal)) {
-    const capaPre = buildCapaTeoricaSegmentada({
-      fechaYmd,
-      personaId,
-      regimen: base.regimenDoc,
-      tipo_dia: tipoDiaFinal,
-      turnoCompuestoId,
-      origen_segmento: reemplazos.length > 0 ? "override_cobertura" : "plan_base",
-      indiceCalendario,
-    });
-    segmentos = capaPre.segmentos || [];
+  if (!esDiaSinTurnoLaboral(tipoDiaFinal)) {
+    if (turnoCompuestoId) {
+      const capaPre = buildCapaTeoricaSegmentada({
+        fechaYmd,
+        personaId,
+        regimen: base.regimenDoc,
+        tipo_dia: tipoDiaFinal,
+        turnoCompuestoId,
+        origen_segmento: reemplazos.length > 0 ? "override_cobertura" : "plan_base",
+        indiceCalendario,
+      });
+      segmentos = capaPre.segmentos || [];
+      if (!segmentos.length) {
+        const turnoFallback = reemplazos.length > 0
+          ? buildTurnoResponse(reemplazos[reemplazos.length - 1].turno || reemplazos[reemplazos.length - 1])
+          : base.mejorResolucion.turno_teorico;
+        segmentos = buildSegmentosHorarioFallback({
+          fechaYmd,
+          personaId,
+          turno: turnoFallback,
+          origenSegmento: reemplazos.length > 0 ? "override_cobertura" : "plan_base",
+        });
+      }
+    } else {
+      const turnoFallback = reemplazos.length > 0
+        ? buildTurnoResponse(reemplazos[reemplazos.length - 1].turno || reemplazos[reemplazos.length - 1])
+        : base.mejorResolucion.turno_teorico;
+      segmentos = buildSegmentosHorarioFallback({
+        fechaYmd,
+        personaId,
+        turno: turnoFallback,
+        origenSegmento: reemplazos.length > 0 ? "override_cobertura" : "plan_base",
+      });
+    }
   }
 
   for (const adicional of adicionales) {
@@ -996,7 +1133,7 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
   });
 
   const tipoDiaDerivado = segmentos.length > 0 ? "laborable" : tipoDiaFinal;
-  const capaSegmentada = buildCapaTeoricaSegmentada({
+  const capaSegmentada = normalizarCapaTurnoFallback(buildCapaTeoricaSegmentada({
     fechaYmd,
     personaId,
     regimen: base.regimenDoc,
@@ -1005,7 +1142,7 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
     origen_segmento: "plan_base",
     indiceCalendario,
     segmentosOverride: segmentos,
-  });
+  }));
 
   const planEntry = base.planCache;
   const capaSlice = {
@@ -1056,6 +1193,7 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
       [`dias.${diaKey}.rda_turno_id`]: pickRdaTurnoId(capaEscrita, sinTurnoLaboral),
       [`dias.${diaKey}.rda_ingreso`]: rdaIngreso,
       [`dias.${diaKey}.rda_egreso`]: rdaEgreso,
+      [`dias.${diaKey}.fichadas_esperadas`]: fichadasEsperadasVisDesdeCapa(capaEscrita),
       [`dias.${diaKey}.tipo_dia`]: tipoDiaVis,
       [`dias.${diaKey}.es_franco`]: tipoDiaVis === "franco",
       [`dias.${diaKey}.es_feriado`]: capaEscrita.es_feriado || false,
@@ -1079,6 +1217,7 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
           rda_turno_id: pickRdaTurnoId(capaEscrita, sinTurnoLaboral),
           rda_ingreso: rdaIngreso,
           rda_egreso: rdaEgreso,
+          fichadas_esperadas: fichadasEsperadasVisDesdeCapa(capaEscrita),
           tipo_dia: tipoDiaVis,
           es_franco: tipoDiaVis === "franco",
           es_feriado: capaEscrita.es_feriado || false,

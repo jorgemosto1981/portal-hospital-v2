@@ -929,9 +929,19 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
     const grupoHlgDes = toNullableTrimmedString(hlg.grupo_de_trabajo_id);
     let purgeResumen = null;
     if (personaHlg && grupoHlgDes && fechaFin) {
-      const { purgeCapaTeoricaGdtRango, ymdAddDays, ymdFinMesSiguiente } = require("./asistencia/purgeCapaTeoricaGdtRango");
-      const desdePurge = ymdAddDays(fechaFin, 1);
-      const hastaPurge = ymdFinMesSiguiente(fechaCorte);
+      const {
+        purgeCapaTeoricaGdtRango,
+        resolveHastaPurgeTrasDeshabilitarHlg,
+        ymdAddDays,
+      } = require("./asistencia/purgeCapaTeoricaGdtRango");
+      // Desde el día de corte: sin capa teórica operativa (fecha_fin = primer día sin incorporación).
+      const desdePurge = fechaCorte;
+      const hastaPurge = await resolveHastaPurgeTrasDeshabilitarHlg(db, {
+        personaId: personaHlg,
+        gdt: grupoHlgDes,
+        desdeCorteYmd: fechaCorte,
+        excludeHlgId: hlgId,
+      });
       if (desdePurge <= hastaPurge) {
         try {
           purgeResumen = await purgeCapaTeoricaGdtRango(db, {
@@ -955,17 +965,21 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
 
     if (personaHlg && grupoHlgDes && fechaFin) {
       const { materializarRango } = require("./asistencia/materializarRango");
+      const { ymdAddDays } = require("./asistencia/purgeCapaTeoricaGdtRango");
       const desdeMat = fechaInicioHlg || fechaCorte;
+      const hastaMat = ymdAddDays(fechaCorte, -1);
       try {
+        if (desdeMat && hastaMat && desdeMat <= hastaMat) {
         const mat = await materializarRango(db, {
           personaId: personaHlg,
           grupoId: grupoHlgDes,
           fechaDesdeYmd: desdeMat,
-          fechaHastaYmd: fechaFin,
+          fechaHastaYmd: hastaMat,
           motivo: "deshabilitar_hlg",
           origenEventoId: hlgId,
         });
         console.log("materializarRango_post_deshabilitar_hlg OK", JSON.stringify({ ok: mat.ok, dias: mat.diasProcesados }));
+        }
       } catch (e) {
         console.error("materializarRango_post_deshabilitar_hlg ERROR", e);
       }

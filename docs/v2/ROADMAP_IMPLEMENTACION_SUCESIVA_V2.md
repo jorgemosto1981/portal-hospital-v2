@@ -28,7 +28,7 @@
 | **F0** | Purge HLg, gate anclas, listado bulk, toasts GSO | 100% P0-A/B/C |
 | **F1** | Merge Multi-HLG + cierre período manual RRHH | master + freeze usable |
 | **F2** | Manual §15–22 en código (M+M+1, día 5, purge UX, rango) | ~90% reglas orquestación |
-| **F3** | Segmentos, cobertura día, fichadas esperadas | T-08 probado |
+| **F3** | Segmentos, cobertura día, fichadas esperadas | T-08 ✅ smoke + unit |
 | **F4** | Outbox + `enviarAccionesAsistencia` | RFC + batch estable |
 
 ```mermaid
@@ -218,16 +218,16 @@ Motor **solo tiempo**; `segmentos[]` SoT en `asi_*`; proyección `vis_*`; cobert
 
 | Ticket | Entregable | DoD |
 |--------|------------|-----|
-| T-02 | Zod + contrato segmentos | Schemas en repo; tests contrato |
-| T-03 | Worker segmentos + ISO | Medianoche, multi-segmento, Plan > HLG estable |
-| T-04 | Cobertura + `materializarDiaAfectado` | Reasignar segmento; freeze respetado |
-| T-08 | `fichadas_esperadas` + extras | Cálculo según EXPECTATIVAS doc |
+| T-02 | Zod + contrato segmentos | ✅ `capaTeoricaSegmentos.schema.js` + `npm run test:segmentos-contract` |
+| T-03 | Worker segmentos + ISO | ✅ Smoke `smoke-materializar-turno-dia-dev.mjs` (modo seguro régimen) |
+| T-04 | Cobertura + `materializarDiaAfectado` | ✅ Código + freeze `ASI-PER-001`; piloto nocturno pendiente |
+| T-08 | `fichadas_esperadas` + extras | ✅ `calcularFichadasEsperadas` + `npm run test:fichadas-esperadas` + `npm run smoke:fichadas-esperadas` |
 | T-05/06 | UI plan / grilla | Editor segmentos; sin legacy monolítico |
 
 ### Checklist cierre F3
 
 - [ ] Piloto nocturno/compuesto en un `gdt`.
-- [ ] F-UX.2 puede mostrar `fichadas_esperadas` en celda (UI).
+- [x] F-UX.2 puede mostrar `fichadas_esperadas` en celda (UI).
 - [ ] Release notes + tag épica turnos compuestos.
 
 **Dependencias:** F1 scoped estable; F2 recomendado para HLg coherente.

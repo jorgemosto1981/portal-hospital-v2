@@ -1,20 +1,20 @@
 # Punto de Continuación — Próxima Sesión
 
-> **Última sesión — 2026-06-01 (tarde)** · GSO RRHH cierre/reapertura período + tarjetas + sin dotación — **validado OK prod**.  
-> Handoff detallado: [`HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md`](./HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md) · F2 previo: [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md).
+> **Última sesión — 2026-06-02** · F3 T-02/T-03/T-04/T-08 + **F-UX.2** fichadas en grilla — **validado F:2 prod**.  
+> Handoff pausa: [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) · GSO: [`HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md`](./HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md).
 
 ## PAUSA — retomar aquí
 
 | Qué | Dónde |
 |-----|--------|
-| **Handoff sesión GSO** | [`HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md`](./HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md) — checklist A1–E3 |
-| **Siguiente tarea código** | **F1** §4.2 manual (#2,3,6,8,9) → luego **F3** turnos compuestos |
-| **Regresión GSO (5 min)** | B1–B5 en handoff GSO · prod https://portal-hospital-v2.web.app |
-| **Smokes opcionales** | `smoke-f1-qa-4-2-prod.mjs` · `smoke-f2-orquestacion-prod.mjs` |
-| **Git** | `feat/epic-multi-hlg-fase1-execution` — **pull** tras commit pausa GSO (ver log) |
-| **Otra PC mañana** | `git pull` + `.env.v2.local` manual · `npm install` |
+| **Handoff sesión (completo)** | [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) — realizado / pendiente / comandos otra PC |
+| **Siguiente tarea código** | **F3 cierre:** piloto nocturno/compuesto + release notes + tag · **UX-6** API jefe sin fichadas reales |
+| **F-UX.2 fichadas** | ✅ Validado usuario **F:2** · deploy functions + hosting hecho 2026-06-02 |
+| **Rematerialización** | Solo si modal muestra 0 con jornada visible → script `scripts/_tmp-materializar-dia-y-leer-vis.mjs` |
+| **Git** | `feat/epic-multi-hlg-fase1-execution` — **pull** tras push pausa 2026-06-02 |
+| **Otra PC** | `git pull` + `.env.v2.local` manual · `npm install` · no commitear secretos |
 
-**Última actualización:** Pausa GSO cierre período — 2026-06-01
+**Última actualización:** Pausa F3 + F-UX.2 — 2026-06-02
 
 | Campo | Valor |
 |-------|--------|
@@ -66,7 +66,13 @@
 | **F1.3** cierre período | ✅ Prod | `cerrarPeriodoLiquidacion` + `reabrirPeriodoLiquidacion` |
 | **F1.4** UI cierre GSO | ✅ Prod | Tarjetas cerrado/sin dotación; modal compacto; sin selector RRHH |
 | **F1** núcleo prod | ✅ Smoke | Cierre período (3 `vis_*`) + purge HLg Sala; ver acta abajo |
-| **F1** restante | ⏳ | §4.2 manual #2,3,6,8,9 (checklist A1–A5 en handoff GSO) |
+| **F1** manual QA | ✅ | A1–A5 + **B1–B5** GSO RRHH cerrados 2026-06-02 — handoff GSO |
+| **F1** deploy functions | ✅ | 2026-06-02 — `rrhhDeshabilitarHlg` + purge HLg (`resolveHastaPurgeTrasDeshabilitarHlg`) |
+| **F3 T-02** | ✅ Código | Zod + golden tests `npm run test:segmentos-contract` |
+| **F3 T-03** | ✅ Validado | Smoke seguro `smoke-materializar-turno-dia-dev.mjs` sin mutar régimen fijo |
+| **F3 T-04** | ✅ Parcial validado | `materializarDiaAfectado` en `cambiosTurno.js` + freeze `smoke-outbox-freeze-dev.mjs` (`ASI-PER-001`) |
+| **F3 T-08** | ✅ Validado | `fichadas_esperadas` bloques×2 + extras; `test:fichadas-esperadas` + `smoke:fichadas-esperadas` |
+| **F-UX.2** | ✅ Validado UI | Badge **F:2** en grilla/modal (planificado, fijo, rotativo); fix fallback horario sin `turno_id` en prod |
 | **Ticketera / HLg vigencia** | ✅ Prod | `a44b83f` — corte inclusivo (acta ticketera § abajo) |
 | **F2 O-P1-2** `materializarRango` | ✅ Código + wire HLg | `6a4db61` — alta M+M+1; deshabilitar inicio→corte |
 | **F2 2.1** metadata `vis_*` | ✅ Código + deploy parcial | `e349412` — laboral + GSO listado; ver handoff pausa |
@@ -77,7 +83,41 @@
 | **F2.6** resolverFijo D2 | ✅ Código | `Number(dia_semana)` + franco sin match |
 | **F2.7** rematerializar UI RRHH | ✅ Código | `RegimenesHorariosPage` + `CalendarioConfig` |
 | **Deploy producción** | ✅ Sesión 01/06 | Ver tabla deploy en [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md) |
-| **F3–F4** | ➡️ Después F2 | Segmentos · Outbox |
+| **F3 T-05..T-07, T-09** | ⏳ Pendiente | UI editor segmentos, help, caché — ver handoff 2026-06-02 |
+| **F3 cierre épica** | ⏳ Pendiente | Piloto nocturno + release notes + tag |
+| **F4 Outbox** | ➡️ Después F3 | Epic batch grilla |
+
+---
+
+## Registro sesión (2026-06-02) — pausa F3 / F-UX.2
+
+| Tema | Resultado | Nota |
+|------|-----------|------|
+| T-08 + tests/smokes | ✅ | `test:fichadas-esperadas`, `smoke:fichadas-esperadas` |
+| F-UX.2 UI + `vis_*.fichadas_esperadas` | ✅ | Deploy functions ×2 + hosting; validación **F:2** usuario |
+| Fix fijo/rotativo sin `turno_id` | ✅ | Fallback segmento horario → fichadas 2 en día laborable |
+| Handoff pausa | ✅ | `HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md` |
+
+**Siguiente sesión:** F3 cierre (piloto nocturno, release, tag) · UX-6 · ver handoff §7.
+
+---
+
+## Registro sesión (2026-06-02) — GSO / F1
+
+| Tema | Resultado | Nota |
+|------|-----------|------|
+| Validación HLG `activo:false` en alta/solape | ✅ Confirmado | Backend y frontend ya excluyen HLG deshabilitada en control `VAL-HLG-014`. |
+| Smoke F1 D2 Portería mayo | ✅ Ajustado | `scripts/smoke-f1-qa-4-2-prod.mjs` ahora marca `SKIP` si no hay HLG activa para el mes/grupo. |
+| Datos laborales (card HLg) | ✅ Corregido | Clasificación interna HLG por HLC: “vigente interna” = abierta/no cerrada; “histórica” = cerrada o deshabilitada. Evita mostrar HLG futura vigente dentro de históricos. |
+| QA manual A4/A5 | ✅ Cerrado | A4: coherencia por semántica (histórico vs vigente). A5: override scoped validado con mutación real + rollback. |
+| QA manual A3 | ✅ Cerrado | §4.2 #6: revertir plan Oficina jun-2026 en Explorador; Sala jun-2026 sin cambio; rehabilitar plan Oficina en Bandeja Evaluador. |
+| QA manual A1 | ✅ Cerrado | 64-A `sol_01KT3ZG4VPY2SNRWW3Z09DV73S` día 11 fan-out Oficina+Sala. LAO `sol_01KT402WR9SVN46JESKAS6KE1E` 03–09/06 ancla **Sala**, `LAO-2026` en `vis_2026_06` días 03–05 y 08–09 en ambos `gdt`. |
+| UX aclaratoria A4 | ✅ Implementado | `web/src/pages/jefe/PlanTurnoServicioPage.jsx`: aviso simple al pie de grilla histórica (“foto histórica del plan…”). |
+| Deploy | ✅ Hosting | Publicado en `https://portal-hospital-v2.web.app` para validación visual. |
+| QA B1–B5 GSO RRHH | ✅ Cerrado | UI + purge Portería MOSTO; criterio dotación = HLg activa al cierre de mes. |
+| Purge HLg Portería | ✅ Prod | `--apply` 01/06–13/06; fix purge `asi`/`vis` en código. |
+
+**Siguiente:** deploy functions (purge deshabilitar) · smokes C · **F3** o deuda E.
 
 ---
 
@@ -95,7 +135,7 @@
 
 **Incidente LOKITO (plan `eliminado` + HABILITADO):** fix `planHabilitadoDesdeQuerySnapshot` deployado; jun/jul OK en UI.
 
-**Pendiente sign-off manual:** §4.2 #2 LAO/GS-A · #6 rehabilitar plan · #8 grilla jefe · #9 override scoped.
+**Sign-off §4.2 #2 LAO/GS-A:** cerrado 2026-06-02 (evidencia arriba). Siguiente F1: prioridad **B** GSO RRHH.
 
 ---
 
@@ -139,6 +179,10 @@
 
 **BD referencia (Portería):** `hlg_01KSXC395J2ACV5W4HWW7YTCTM` · `gdt_01KQA9FVEW53JSNTPGX32NWQ5B` · `activo:false` · `fecha_fin:2026-06-01`.
 
+**Corrección grilla (2026-06-02):** al deshabilitar HLg, `materializarRango` ya no escribe turno el día de corte; purge capa teórica desde el corte inclusive; tope `resolveHastaPurgeTrasDeshabilitarHlg` (no pisa HLg activa posterior, ej. Portería desde 14/06). Grilla/titular: corte exclusivo operativo; solicitudes: inclusivo. **Purge prod ejecutado:** `audit-purge-hlg-post-corte.mjs --apply` 01/06–13/06 Portería MOSTO → `purge_ok: true`. Script: `--apply` aplica purge; sin flag solo audita.
+
+**QA manual — horizonte solicitudes:** no usar artículo 64 con `fecha_desde` más allá del **fin del mes siguiente** (regla M+M+1 en código; la ventana “45 días corridos” quedó archivada en el plan).
+
 **Script:** `node scripts/audit-persona-grupos-fecha.mjs --dni=28914247 --fecha=YYYY-MM-DD`
 
 **Git:** `a44b83f` fix vigencia · `6a4db61` materializarRango — push rama `feat/epic-multi-hlg-fase1-execution`.
@@ -151,7 +195,7 @@
 |------|-----|--------|
 | 1 | Menú RRHH + ruta grilla-operativa | ✅ |
 | 2 | Validación operativa RRHH (acta UX-4) | ✅ Smoke prod 2026-06-01 (cierre + purge); formalizar acta RRHH si hace falta |
-| 3 | Vista jefe acotada (F-UX.2) | ⏳ Tras F3 parcial |
+| 3 | Vista jefe acotada (F-UX.2) | ✅ Validación final usuario: **F:2** OK |
 
 Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md) § F-UX.
 
@@ -212,22 +256,29 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 
 ---
 
-## Cómo seguimos — próxima sesión (post-pausa)
+## Cómo seguimos — próxima sesión (post-pausa 2026-06-02)
 
-### 1. Retomar F2 donde se pausó
+### 1. Arranque otra PC
 
-1. **Smoke metadata (opcional, 5 min)** — Firestore `vis_*` tras HLg o GSO: `metadata.ultimo_motivo`, `ultimo_rango_materializado`.
-2. **O-P1-1** — Callable + Cloud Scheduler materialización M+1 día 5 (plan §17.2.1; distinto de cierre liquidación).
-3. **O-P1-3** — GSO: mes M-1 solo lectura usuario/jefe desde día 1.
-4. Completar **O-P1-2** restante: feriado 1 día × N agentes; toasts motivo en UI (F2.1); deploy callables plan/rematerialización si aplica.
+1. `git pull origin feat/epic-multi-hlg-fase1-execution`
+2. Copiar `.env.v2.local` (raíz repo).
+3. `npm install`
+4. Leer [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) §7.
 
-### 2. F1 / git / producto
+### 2. F3 — cierre épica turnos compuestos
 
-| Ítem | Acción |
+| Paso | Acción |
 |------|--------|
-| **Paso 4 QA** | Matriz §4.2 biblia Multi-HLG (ítems 2–3, 6, 8–9) |
-| **Merge épica** | PR `feat/epic-multi-hlg-fase1-execution` → `master` cuando equipo apruebe (`25bc00c` + `a44b83f`…`e349412`) |
-| **Workspace** | Descartar diff sync-shared si aparece tras deploy (comando en handoff pausa) |
+| Piloto | Nocturno/compuesto (M+T+N o régimen real) en un `gdt`; validar grilla mes + **F:n** |
+| T-05/06 | Editor plan / ayuda (si entra en alcance) |
+| Docs | Release notes + tag (`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`) |
+
+### 3. F-UX.2 restante + F1
+
+| Paso | Acción |
+|------|--------|
+| UX-6 | Auditar callables listado grilla: jefe sin `fichadas_reales` |
+| F1 | Paso 4 QA formal; PR merge épica cuando aprueben |
 
 **No mezclar** rama `feat/epic-turno-mensual-fase2-pr3` sin decisión explícita.
 
@@ -278,6 +329,9 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 | Strip (ops) | `scripts/strip-capa-teorica-legacy.mjs` |
 | Materializar mes | `scripts/materializar-grupo-mes.mjs` |
 | Smoke purge HLg | `scripts/audit-purge-hlg-post-corte.mjs` |
+| Smoke fichadas / materializar día | `scripts/smoke-fichadas-esperadas-dev.mjs`, `smoke-materializar-turno-dia-dev.mjs` |
+| Rematerializar 1 día + leer vis | `scripts/_tmp-materializar-dia-y-leer-vis.mjs` |
+| Handoff pausa F3 | `docs/v2/HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md` |
 | HLg por persona/gdt | `scripts/audit-hlg-persona-gdts.mjs` |
 | Grupos vigentes solicitud (fecha) | `scripts/audit-persona-grupos-fecha.mjs` |
 | Vigencia HLg solicitud | `functions/modules/shared/solicitudHlgVigencia.js` |
@@ -290,6 +344,7 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 | Fecha | Documento |
 |-------|-----------|
 | 29/05 | [`HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md`](./HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md) — **repaso orquestación §15–22** |
+| 02/06 | [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) — **pausa F3 + F-UX.2 @ validación F:2** |
 | 01/06 | [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md) — **pausa F2 @ e349412** |
 | 01/06 | Smoke prod + acta ticketera (este doc) |
 | 29/05 | [`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md) — **cierre hito** |

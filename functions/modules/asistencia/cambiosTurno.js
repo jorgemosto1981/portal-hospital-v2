@@ -165,19 +165,26 @@ async function assertPeriodoEditable(personaId, fecha, grupoId, token) {
   }
 }
 
-async function rematerializarTrasOverride(override, personaId, fecha, grupoId) {
+/**
+ * T-04: rematerializa solo el día afectado (origen + cobertura) en el gdt.
+ * Evita recalcular el mes completo por cada operación puntual.
+ */
+async function materializarDiaAfectado({ override, personaId, fechaYmd, grupoId, logTag = "post_override" }) {
   const gdt = requireGrupoTrabajoId(grupoId, "[OVR-031] grupo_trabajo_id (gdt_*) requerido para rematerializar.");
   const personas = new Set([personaId]);
-  if (override.persona_origen_id) personas.add(override.persona_origen_id);
-  if (override.persona_cobertura_id) personas.add(override.persona_cobertura_id);
+  const ov = override && typeof override === "object" ? override : {};
+  if (ov.persona_origen_id) personas.add(String(ov.persona_origen_id));
+  if (ov.persona_cobertura_id) personas.add(String(ov.persona_cobertura_id));
 
   for (const pid of personas) {
     try {
-      await materializarTurnoTeoricoDia({ personaId: pid, grupoId: gdt, fechaYmd: fecha });
-      logger.info("materializarTurnoTeoricoDia_post_override OK", { personaId: pid, fecha, grupoId: gdt });
+      await materializarTurnoTeoricoDia({ personaId: pid, grupoId: gdt, fechaYmd });
+      logger.info(`materializarTurnoTeoricoDia_${logTag} OK`, {
+        personaId: pid, fecha: fechaYmd, grupoId: gdt,
+      });
     } catch (e) {
-      logger.error("materializarTurnoTeoricoDia_post_override ERROR", {
-        personaId: pid, fecha, grupoId: gdt, error: String(e),
+      logger.error(`materializarTurnoTeoricoDia_${logTag} ERROR`, {
+        personaId: pid, fecha: fechaYmd, grupoId: gdt, error: String(e),
       });
     }
   }
@@ -235,20 +242,14 @@ function visClosedByData(data) {
 }
 
 async function rematerializarBatchOps(items) {
-  const unique = new Map();
   for (const it of items) {
-    const fecha = it.fecha;
-    const gdt = it.grupo_trabajo_id;
-    unique.set(`${it.persona_origen_id}|${fecha}|${gdt}`, { personaId: it.persona_origen_id, fechaYmd: fecha, grupoId: gdt });
-    unique.set(`${it.persona_cobertura_id}|${fecha}|${gdt}`, { personaId: it.persona_cobertura_id, fechaYmd: fecha, grupoId: gdt });
-  }
-  for (const obj of unique.values()) {
-    try {
-      await materializarTurnoTeoricoDia({ personaId: obj.personaId, grupoId: obj.grupoId, fechaYmd: obj.fechaYmd });
-      logger.info("materializarTurnoTeoricoDia_post_batch OK", obj);
-    } catch (e) {
-      logger.error("materializarTurnoTeoricoDia_post_batch ERROR", { ...obj, error: String(e) });
-    }
+    await materializarDiaAfectado({
+      override: it.override,
+      personaId: it.persona_origen_id,
+      fechaYmd: it.fecha,
+      grupoId: it.grupo_trabajo_id,
+      logTag: "post_batch",
+    });
   }
 }
 
@@ -315,7 +316,13 @@ const registrarCambioTurno = onCall({
   const overrides = updated.exists && Array.isArray(updated.data().overrides_turno)
     ? updated.data().overrides_turno : [];
 
-  await rematerializarTrasOverride(override, personaId, fecha, grupoTrabajoId);
+  await materializarDiaAfectado({
+    override,
+    personaId,
+    fechaYmd: fecha,
+    grupoId: grupoTrabajoId,
+    logTag: "post_override",
+  });
 
   return {
     ok: true,
@@ -375,7 +382,13 @@ const eliminarCambioTurno = onCall({
   });
 
   const eliminado = overrides[idx];
-  await rematerializarTrasOverride(eliminado || {}, personaId, fecha, grupoTrabajoId);
+  await materializarDiaAfectado({
+    override: eliminado || {},
+    personaId,
+    fechaYmd: fecha,
+    grupoId: grupoTrabajoId,
+    logTag: "post_override",
+  });
 
   return { ok: true, doc_id: docId, override_eliminado_index: idx };
 });

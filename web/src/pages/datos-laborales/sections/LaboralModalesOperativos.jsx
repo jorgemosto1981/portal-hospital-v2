@@ -115,7 +115,8 @@ export default function LaboralModalesOperativos({
             {deshabilitarHlgPaso === 1 ? (
               <>
                 <p className="mt-1 text-sm text-slate-600">
-                  La asignación quedará inactiva y cerrada en la fecha de corte (vigencia inclusiva).
+                  La asignación quedará inactiva y cerrada en la fecha de corte. Ese día sigue vigente solo para
+                  solicitudes/imputación de períodos; en la grilla operativa deja de incorporarse desde el corte.
                 </p>
                 <div className="mt-4 space-y-3">
                   <LabeledTextField
@@ -138,9 +139,9 @@ export default function LaboralModalesOperativos({
               <>
                 <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
                   Tras el corte se purgará la <strong>capa teórica</strong> (turnos RDA) en{" "}
-                  <strong>{deshabilitarHlgResumen?.grupoLabel || "este grupo"}</strong>, desde el día siguiente a la
-                  fecha de fin hasta el fin del mes siguiente (ventana operativa M+M+1). No se modifican licencias ni
-                  eventos MDC ya registrados.
+                  <strong>{deshabilitarHlgResumen?.grupoLabel || "este grupo"}</strong>, desde la fecha de corte inclusive
+                  hasta el fin del mes siguiente (ventana operativa M+M+1). No se modifican licencias ni eventos MDC ya
+                  registrados.
                 </p>
                 <p className="mt-2 text-xs text-slate-500">
                   Fecha de corte indicada: {deshabilitarHlgForm.fecha_corte || deshabilitarHlgResumen?.fechaCorte || "—"}

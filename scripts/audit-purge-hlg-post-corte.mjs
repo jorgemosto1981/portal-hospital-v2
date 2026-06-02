@@ -1,6 +1,8 @@
 /**
- * Audita ausencia de rda_* y capa teórica en gdt tras deshabilitar HLg (post fecha corte).
- * Uso: node scripts/audit-purge-hlg-post-corte.mjs --dni=27667499 --gdt=gdt_... --desde=2026-06-01
+ * Audita (y opcionalmente purga) capa teórica en gdt tras deshabilitar HLg (post fecha corte).
+ * Uso:
+ *   node scripts/audit-purge-hlg-post-corte.mjs --dni=28914247 --gdt=gdt_... --desde=2026-06-01
+ *   node scripts/audit-purge-hlg-post-corte.mjs --dni=28914247 --gdt=gdt_... --desde=2026-06-01 --apply
  */
 import "./load-env-v2.mjs";
 import { existsSync, readFileSync } from "node:fs";
@@ -15,6 +17,10 @@ const require = createRequire(import.meta.url);
 const { buildVisDocumentId, buildAsiDocumentId } = require(
   join(repoRoot, "functions/modules/shared/mdcRdaDocumentIds.js"),
 );
+const {
+  purgeCapaTeoricaGdtRango,
+  resolveHastaPurgeTrasDeshabilitarHlg,
+} = require(join(repoRoot, "functions/modules/asistencia/purgeCapaTeoricaGdtRango.js"));
 
 function loadGacPath() {
   const envFile = join(repoRoot, ".env.v2.local");
@@ -31,12 +37,14 @@ function loadGacPath() {
 }
 
 function parseArgs(argv) {
-  const out = { dni: "", gdt: "", desde: "2026-06-01", hasta: "2026-07-31" };
+  const out = { dni: "", gdt: "", desde: "2026-06-01", hasta: "", apply: false, excludeHlgId: "" };
   for (const arg of argv.slice(2)) {
     if (arg.startsWith("--dni=")) out.dni = arg.slice(6).trim();
     if (arg.startsWith("--gdt=")) out.gdt = arg.slice(6).trim();
     if (arg.startsWith("--desde=")) out.desde = arg.slice(8).trim();
     if (arg.startsWith("--hasta=")) out.hasta = arg.slice(8).trim();
+    if (arg === "--apply") out.apply = true;
+    if (arg.startsWith("--exclude-hlg=")) out.excludeHlgId = arg.slice(14).trim();
   }
   return out;
 }
@@ -73,7 +81,26 @@ if (psn.empty) {
 const pid = psn.docs[0].id;
 const gdt = args.gdt;
 const desde = args.desde.slice(0, 10);
-const hasta = args.hasta.slice(0, 10);
+let hasta = args.hasta ? args.hasta.slice(0, 10) : "";
+if (!hasta) {
+  hasta = await resolveHastaPurgeTrasDeshabilitarHlg(db, {
+    personaId: pid,
+    gdt,
+    desdeCorteYmd: desde,
+    excludeHlgId: args.excludeHlgId || undefined,
+  });
+}
+
+let purgeEjecutado = null;
+if (args.apply) {
+  purgeEjecutado = await purgeCapaTeoricaGdtRango(db, {
+    personaId: pid,
+    gdt,
+    desdeYmd: desde,
+    hastaYmd: hasta,
+    motivo: "audit_purge_hlg_post_corte",
+  });
+}
 
 const fantasmas = [];
 const muestraOk = [];
@@ -137,6 +164,7 @@ console.log(
       dni: args.dni,
       gdt,
       ventana_auditada: { desde, hasta },
+      purge_aplicado: args.apply ? purgeEjecutado : null,
       hlgs_en_gdt: hlgs,
       fantasmas_rda_o_capa_laborable: fantasmas,
       muestra_celdas_sin_rda: muestraOk,

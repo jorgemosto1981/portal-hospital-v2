@@ -12,6 +12,11 @@ import {
 } from "../grilla/grillaTurnosVisual.js";
 import GrillaTurnosCeldaChip from "../grilla/GrillaTurnosCeldaChip.jsx";
 import GrillaTurnosLeyenda from "../grilla/GrillaTurnosLeyenda.jsx";
+import GrillaFichadasEsperadasBadge from "../grilla/GrillaFichadasEsperadasBadge.jsx";
+import {
+  fichadasEsperadasDesdeCeldaVis,
+  titleFichadasEsperadas,
+} from "../grilla/grillaFichadasEsperadasDisplay.js";
 
 function labelAgente(ag) {
   const nombre = String(
@@ -92,6 +97,9 @@ export default function PlanGrillaAprobadaTable({ grillaAprobada, labelsPorPerso
                     null;
                   const etiqueta = etiquetaCeldaAprobada(cel);
                   const variant = varianteCeldaAprobada(cel);
+                  const fichadasN = fichadasEsperadasDesdeCeldaVis(cel);
+                  const titleCel =
+                    [col.diaKey, titleFichadasEsperadas(fichadasN)].filter(Boolean).join(" · ") || col.diaKey;
                   return (
                     <td
                       key={`${ag.persona_id}-${col.diaKey}`}
@@ -99,10 +107,13 @@ export default function PlanGrillaAprobadaTable({ grillaAprobada, labelsPorPerso
                         esFinde: col.esFinde,
                         esFeriado: col.esFeriadoCol,
                       })}
-                      title={cel?.fichadas_esperadas != null ? `Fichadas esp.: ${cel.fichadas_esperadas}` : col.diaKey}
+                      title={titleCel}
                     >
                       <GrillaTurnosCeldaChip variant={variant} title={col.diaKey}>
-                        <span className={clasesTextoCelda(etiqueta)}>{etiqueta || "—"}</span>
+                        <span className="flex flex-col items-center leading-none">
+                          <span className={clasesTextoCelda(etiqueta)}>{etiqueta || "—"}</span>
+                          <GrillaFichadasEsperadasBadge valor={fichadasN} />
+                        </span>
                       </GrillaTurnosCeldaChip>
                     </td>
                   );
