@@ -9,10 +9,9 @@
 |-----|--------|
 | **Handoff sesión (completo)** | [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) |
 | **Release notes F3** | [`RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md`](./RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md) |
-| **Siguiente tarea** | Tag `v2.3.0-f3-turnos-compuestos` + deploy hosting (tip régimen `+`) + deploy functions (UX-6) · PR merge épica |
-| **F3 piloto Sala** | ✅ Validado grilla 2026-06-02 — `M+T` F:2, migración ids `+`, rematerializado |
-| **F-UX.2 fichadas** | ✅ Validado **F:2** prod |
-| **UX-6 API jefe** | ✅ Código filtro defensivo `grillaVisSanitizeGso.js` — deploy functions pendiente |
+| **Siguiente tarea** | **PR merge** épica → `master` · F3 T-05/06 opcional · F4 Outbox |
+| **Tag F3** | ✅ `v2.3.0-f3-turnos-compuestos` @ `925f214` — push remoto |
+| **Deploy prod** | ✅ Functions + hosting 2026-06-02 (UX-6 + tip régimen `+`) |
 | **Git** | `feat/epic-multi-hlg-fase1-execution` |
 
 **Última actualización:** Continuación F3 — piloto Sala validado + migración `+` — 2026-06-02

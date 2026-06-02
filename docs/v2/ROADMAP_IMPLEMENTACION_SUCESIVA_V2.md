@@ -229,7 +229,7 @@ Motor **solo tiempo**; `segmentos[]` SoT en `asi_*`; proyección `vis_*`; cobert
 - [x] Piloto nocturno/compuesto en un `gdt` (Sala `1779788226715`, validado grilla 2026-06-02).
 - [x] F-UX.2 puede mostrar `fichadas_esperadas` en celda (UI).
 - [x] Release notes — [`RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md`](./RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md).
-- [ ] Tag `v2.3.0-f3-turnos-compuestos` (tras commit + push).
+- [x] Tag `v2.3.0-f3-turnos-compuestos` @ `925f214` — push remoto 2026-06-02.
 
 **Dependencias:** F1 scoped estable; F2 recomendado para HLg coherente.
 
