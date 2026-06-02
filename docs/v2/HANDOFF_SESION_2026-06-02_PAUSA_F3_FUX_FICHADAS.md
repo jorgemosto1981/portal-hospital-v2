@@ -210,3 +210,17 @@ npx firebase deploy --project portal-hospital-v2 --only hosting
 ---
 
 *Documento generado al pausar implementación post-validación F:2.*
+
+---
+
+## 8. Cierre de sesión (checklist)
+
+| Ítem | Estado |
+|------|--------|
+| Código F3 T-02/03/04/08 + F-UX.2 | ✅ Commit `3b6dd4b` |
+| Git remoto | ✅ `origin/feat/epic-multi-hlg-fase1-execution` |
+| Deploy **functions** (prod) | ✅ Sesión 2026-06-02 (incl. fallback fijo/rotativo) |
+| Deploy **hosting** (prod) | ✅ Sesión 2026-06-02 — https://portal-hospital-v2.web.app |
+| Validación usuario **F:2** | ✅ |
+| Documentación pausa | ✅ Este archivo + `PENDIENTES_PROXIMA_SESION.md` |
+| **Sesión cerrada** | 2026-06-02 — retomar §7 |
