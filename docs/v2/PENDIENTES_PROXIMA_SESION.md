@@ -3,18 +3,25 @@
 > **Última sesión — 2026-06-02** · F3 T-02/T-03/T-04/T-08 + **F-UX.2** fichadas en grilla — **validado F:2 prod**.  
 > Handoff pausa: [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) · GSO: [`HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md`](./HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md).
 
-## PAUSA — retomar aquí
+## PAUSA — retomar aquí (F-UX Gestión turno del día A/B/C)
 
 | Qué | Dónde |
 |-----|--------|
-| **Handoff sesión (completo)** | [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) |
-| **Release notes F3** | [`RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md`](./RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md) |
-| **Siguiente tarea** | **PR merge** épica → `master` · F3 T-05/06 opcional · F4 Outbox |
-| **Tag F3** | ✅ `v2.3.0-f3-turnos-compuestos` @ `925f214` — push remoto |
-| **Deploy prod** | ✅ Functions + hosting 2026-06-02 (UX-6 + tip régimen `+`) |
-| **Git** | `feat/epic-multi-hlg-fase1-execution` |
+| **Handoff completo (propuesta textual)** | [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) |
+| **Estado** | Sesión **cerrada** 2026-06-02 — propuesta acordada · **sin wizard A/B/C** · retomar §4 handoff |
+| **RFC F4 (outbox)** | [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) |
+| **PR merge épica** | `master` ← `feat/epic-multi-hlg-fase1-execution` · `gh auth login` pendiente |
+| **F4 backend** | ✅ batch `cobertura_parcial` + `reemplazo` + `adicional` (rama, deploy pendiente) |
+| **UI actual** | Modales legacy — **reemplazar** por wizard A/B/C del handoff |
 
-**Última actualización:** Continuación F3 — piloto Sala validado + migración `+` — 2026-06-02
+**Última actualización:** Pausa F-UX gestión turno — propuesta registrada — 2026-06-02
+
+## Contexto F4 (sesión previa mismo día)
+
+| Qué | Dónde |
+|-----|--------|
+| **Tag F3** | ✅ `v2.3.0-f3-turnos-compuestos` |
+| **Deploy prod F3** | ✅ Functions + hosting 2026-06-02 |
 
 | Campo | Valor |
 |-------|--------|
@@ -85,7 +92,7 @@
 | **Deploy producción** | ✅ Sesión 01/06 | Ver tabla deploy en [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md) |
 | **F3 T-05..T-07, T-09** | ⏳ Pendiente | UI editor segmentos, help, caché — ver handoff 2026-06-02 |
 | **F3 cierre épica** | ✅ Núcleo | Piloto Sala validado · release notes · tag pendiente commit |
-| **F4 Outbox** | ➡️ Después F3 | Epic batch grilla |
+| **F4 Outbox** | ⏳ En curso | RFC 4.1 ✅ · batch 4.2 parcial · UI 4.3 parcial |
 
 ---
 

@@ -6,6 +6,7 @@ import { useAuthSession } from "../auth/useAuthSession.js";
 import { claimsIncludeJefe, claimsIncludeRrhh } from "../routing/portalRole.js";
 import DiaGrillaDetalleModal from "./DiaGrillaDetalleModal.jsx";
 import ModalCoberturaParcial from "./ModalCoberturaParcial.jsx";
+import ModalCambioTurno from "./ModalCambioTurno.jsx";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
 import { GRILLA_MES_MODO } from "./GrillaMesSelector.jsx";
@@ -84,6 +85,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
   ]);
   const [diaModal, setDiaModal] = useState(null);
   const [coberturaModal, setCoberturaModal] = useState(null);
+  const [cambioTurnoModal, setCambioTurnoModal] = useState(null);
   const [aplicandoBatch, setAplicandoBatch] = useState(false);
   const [vistaModal, setVistaModal] = useState(null);
   const [cargaPendienteKey, setCargaPendienteKey] = useState("");
@@ -592,6 +594,18 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
               }
             : undefined
         }
+        onAbrirCambioTurno={
+          vista.gsoPermiteEscritura && diaModal?.personaId && diaModal?.fechaYmd
+            ? () => {
+                setCambioTurnoModal({
+                  personaId: diaModal.personaId,
+                  personaNombre: diaModal.personaLabel,
+                  fechaYmd: diaModal.fechaYmd,
+                  grupoId: diaModal.grupoTrabajoId || vista.grupoActivoId || "",
+                });
+              }
+            : undefined
+        }
       />
 
       {coberturaModal ? (
@@ -608,6 +622,24 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
             outbox.addOp({
               ...op,
               grupoId: diaModal?.grupoTrabajoId || vista.grupoActivoId || "",
+              periodo: vista.periodo,
+            })
+          }
+        />
+      ) : null}
+
+      {cambioTurnoModal ? (
+        <ModalCambioTurno
+          personaId={cambioTurnoModal.personaId}
+          fecha={cambioTurnoModal.fechaYmd}
+          personaNombre={cambioTurnoModal.personaNombre}
+          grupoId={cambioTurnoModal.grupoId}
+          onCerrar={() => setCambioTurnoModal(null)}
+          onRegistrado={() => {}}
+          onAgregarOutbox={(op) =>
+            outbox.addOp({
+              ...op,
+              grupoId: cambioTurnoModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId || "",
               periodo: vista.periodo,
             })
           }

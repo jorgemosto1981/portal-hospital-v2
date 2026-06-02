@@ -25,11 +25,12 @@ function labelEstado(id) {
  *   personaId?: string;
  *   fechaYmd?: string;
  *   onAbrirCobertura?: () => void;
+ *   onAbrirCambioTurno?: () => void;
  *   soloLectura?: boolean;
  * }} props
  */
 export default function DiaGrillaDetalleModal({
-  open, onClose, dia, eventos, bandejaPath, subtitulo, turnoTeorico, grupoLabel, personaId, fechaYmd, onAbrirCobertura, soloLectura = false,
+  open, onClose, dia, eventos, bandejaPath, subtitulo, turnoTeorico, grupoLabel, personaId, fechaYmd, onAbrirCobertura, onAbrirCambioTurno, soloLectura = false,
 }) {
   const [solFocus, setSolFocus] = useState("");
   const [resumen, setResumen] = useState(null);
@@ -237,6 +238,18 @@ export default function DiaGrillaDetalleModal({
             className="mt-4 flex min-h-11 w-full items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 text-sm font-semibold text-indigo-800 active:bg-indigo-100"
           >
             Cobertura parcial por tramos
+          </button>
+        ) : null}
+        {personaId && fechaYmd && onAbrirCambioTurno && !soloLectura ? (
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onAbrirCambioTurno();
+            }}
+            className="mt-2 flex min-h-11 w-full items-center justify-center rounded-xl border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-900 active:bg-amber-100"
+          >
+            Cambio de turno (reemplazo / adicional)
           </button>
         ) : null}
 

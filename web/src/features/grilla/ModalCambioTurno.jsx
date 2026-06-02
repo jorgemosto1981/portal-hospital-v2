@@ -1,17 +1,29 @@
 import { useCallback, useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 import {
   callRegistrarCambioTurno,
   callEliminarCambioTurno,
   callListarOverridesTurno,
 } from "../../services/callables.js";
+import { obtenerCapaTeoricaDiaValidada } from "../../services/coberturaParcialService.js";
 
 const TIPO_COLOR = {
   reemplazo: "bg-amber-100 text-amber-800",
   adicional: "bg-blue-100 text-blue-800",
 };
 
-export default function ModalCambioTurno({ personaId, fecha, personaNombre, onCerrar, onRegistrado }) {
+export default function ModalCambioTurno({
+  personaId,
+  fecha,
+  personaNombre,
+  grupoId = "",
+  onCerrar,
+  onRegistrado,
+  onAgregarOutbox,
+}) {
+  const usaOutbox = typeof onAgregarOutbox === "function";
+  const [expectedVersionToken, setExpectedVersionToken] = useState("");
   const [overrides, setOverrides] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [operando, setOperando] = useState(false);
@@ -44,6 +56,22 @@ export default function ModalCambioTurno({ personaId, fecha, personaNombre, onCe
     cargar();
   }, [cargar]);
 
+  useEffect(() => {
+    if (!usaOutbox || !/^gdt_/i.test(String(grupoId || "").trim())) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const capa = await obtenerCapaTeoricaDiaValidada(personaId, fecha, grupoId);
+        if (!cancelled) {
+          setExpectedVersionToken(capa.concurrencia?.expected_version_token || capa.concurrencia?.vis_ultima_sync || "");
+        }
+      } catch {
+        if (!cancelled) setExpectedVersionToken("");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [usaOutbox, personaId, fecha, grupoId]);
+
   const showFeedback = (msg) => {
     setFeedback(msg);
     setTimeout(() => setFeedback(""), 3500);
@@ -66,6 +94,29 @@ export default function ModalCambioTurno({ personaId, fecha, personaNombre, onCe
         motivo: form.motivo.trim(),
         es_override_manual: true,
       };
+      if (usaOutbox) {
+        if (!expectedVersionToken) {
+          setError("No se pudo leer la versión de grilla. Recargá e intentá de nuevo.");
+          return;
+        }
+        onAgregarOutbox({
+          tipo: form.tipo,
+          personaId,
+          fechaYmd: fecha,
+          grupoId,
+          turnoId: override.turno_id,
+          ingreso: override.ingreso,
+          egreso: override.egreso,
+          horasEfectivas: override.horas_efectivas,
+          motivo: override.motivo,
+          expectedVersionToken,
+        });
+        toast.success("Cambio agregado a pendientes.");
+        setForm({ tipo: "reemplazo", turno_id: "", ingreso: "", egreso: "", horas_efectivas: "", motivo: "" });
+        if (onRegistrado) onRegistrado();
+        onCerrar();
+        return;
+      }
       await callRegistrarCambioTurno({ persona_id: personaId, fecha, override });
       showFeedback("Override registrado.");
       setForm({ tipo: "reemplazo", turno_id: "", ingreso: "", egreso: "", horas_efectivas: "", motivo: "" });
@@ -76,7 +127,7 @@ export default function ModalCambioTurno({ personaId, fecha, personaNombre, onCe
     } finally {
       setOperando(false);
     }
-  }, [form, personaId, fecha, cargar, onRegistrado]);
+  }, [form, personaId, fecha, cargar, onRegistrado, usaOutbox, onAgregarOutbox, grupoId, expectedVersionToken, onCerrar]);
 
   const handleEliminar = useCallback(async (idx) => {
     const motivo = window.prompt("Motivo de eliminación (obligatorio):");
@@ -297,7 +348,7 @@ export default function ModalCambioTurno({ personaId, fecha, personaNombre, onCe
             onClick={handleRegistrar}
             className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
           >
-            {operando ? "Guardando…" : "Registrar override"}
+            {operando ? "Guardando…" : usaOutbox ? "Agregar a pendientes" : "Registrar override"}
           </button>
         </div>
       </div>

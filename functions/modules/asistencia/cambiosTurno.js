@@ -204,12 +204,60 @@ function payloadCoberturaDesdeOp(op) {
   };
 }
 
+function payloadSimpleOverrideDesdeOp(op) {
+  const src = op && typeof op === "object" ? (op.payload && typeof op.payload === "object" ? op.payload : op) : {};
+  return {
+    persona_id: src.persona_id,
+    fecha: src.fecha,
+    tipo: src.tipo,
+    ingreso: src.ingreso,
+    egreso: src.egreso,
+    horas_efectivas: src.horas_efectivas,
+    turno_id: src.turno_id,
+    motivo: src.motivo,
+  };
+}
+
+function normalizeBatchOpCobertura(op, idx, grupo_trabajo_id, expected) {
+  const payload = payloadCoberturaDesdeOp(op);
+  const fecha = typeof payload.fecha === "string" ? payload.fecha.trim() : "";
+  if (!YMD.test(fecha)) err("invalid-argument", `[BATCH-004] op[${idx}] fecha YYYY-MM-DD requerida.`);
+  const override = validarOverrideCobertura(payload);
+  return {
+    op_id: String(op.id || `op_${idx + 1}`),
+    tipo: "cobertura_parcial",
+    fecha,
+    grupo_trabajo_id,
+    expected_version_token: expected,
+    persona_id: override.persona_origen_id,
+    persona_origen_id: override.persona_origen_id,
+    persona_cobertura_id: override.persona_cobertura_id,
+    override,
+  };
+}
+
+function normalizeBatchOpSimple(op, idx, tipo, grupo_trabajo_id, expected) {
+  const payload = payloadSimpleOverrideDesdeOp(op);
+  payload.tipo = tipo;
+  const persona_id = typeof payload.persona_id === "string" ? payload.persona_id.trim() : "";
+  if (!PER_ID.test(persona_id)) err("invalid-argument", `[BATCH-008] op[${idx}] persona_id requerido.`);
+  const fecha = typeof payload.fecha === "string" ? payload.fecha.trim() : "";
+  if (!YMD.test(fecha)) err("invalid-argument", `[BATCH-004] op[${idx}] fecha YYYY-MM-DD requerida.`);
+  const override = validarOverride(payload);
+  return {
+    op_id: String(op.id || `op_${idx + 1}`),
+    tipo,
+    fecha,
+    grupo_trabajo_id,
+    expected_version_token: expected,
+    persona_id,
+    override,
+  };
+}
+
 function normalizeBatchOp(raw, idx) {
   const op = raw && typeof raw === "object" ? raw : {};
   const tipo = String(op.tipo || op.payload?.tipo || "cobertura_parcial").trim();
-  if (tipo !== "cobertura_parcial") {
-    err("invalid-argument", `[BATCH-002] op[${idx}] tipo no soportado: ${tipo}`);
-  }
   const ctx = op.context && typeof op.context === "object" ? op.context : {};
   const grupo_trabajo_id = requireGrupoTrabajoId(
     resolveGrupoTrabajoId(op, ctx),
@@ -221,19 +269,28 @@ function normalizeBatchOp(raw, idx) {
   if (!expected) {
     err("invalid-argument", `[BATCH-003] op[${idx}] expected_version_token requerido.`);
   }
-  const payload = payloadCoberturaDesdeOp(op);
-  const fecha = typeof payload.fecha === "string" ? payload.fecha.trim() : "";
-  if (!YMD.test(fecha)) err("invalid-argument", `[BATCH-004] op[${idx}] fecha YYYY-MM-DD requerida.`);
-  const override = validarOverrideCobertura(payload);
-  return {
-    op_id: String(op.id || `op_${idx + 1}`),
-    fecha,
-    grupo_trabajo_id,
-    expected_version_token: expected,
-    persona_origen_id: override.persona_origen_id,
-    persona_cobertura_id: override.persona_cobertura_id,
-    override,
-  };
+  if (tipo === "cobertura_parcial") {
+    return normalizeBatchOpCobertura(op, idx, grupo_trabajo_id, expected);
+  }
+  if (tipo === "reemplazo" || tipo === "adicional") {
+    return normalizeBatchOpSimple(op, idx, tipo, grupo_trabajo_id, expected);
+  }
+  err("invalid-argument", `[BATCH-002] op[${idx}] tipo no soportado: ${tipo}`);
+}
+
+function personaIdsAfectadosPorOp(it) {
+  if (it.tipo === "cobertura_parcial") {
+    return [it.persona_origen_id, it.persona_cobertura_id];
+  }
+  return [it.persona_id];
+}
+
+function personaIdDocAsi(it) {
+  return it.tipo === "cobertura_parcial" ? it.persona_origen_id : it.persona_id;
+}
+
+function personaIdConcurrencia(it) {
+  return it.tipo === "cobertura_parcial" ? it.persona_origen_id : it.persona_id;
 }
 
 function visClosedByData(data) {
@@ -245,7 +302,7 @@ async function rematerializarBatchOps(items) {
   for (const it of items) {
     await materializarDiaAfectado({
       override: it.override,
-      personaId: it.persona_origen_id,
+      personaId: personaIdDocAsi(it),
       fechaYmd: it.fecha,
       grupoId: it.grupo_trabajo_id,
       logTag: "post_batch",
@@ -422,7 +479,7 @@ const listarOverridesTurno = onCall({
 
 /**
  * Aplica un lote de cambios de asistencia en forma atómica.
- * MVP E2: soporta solo tipo cobertura_parcial.
+ * Tipos: cobertura_parcial, reemplazo, adicional.
  */
 const aplicarBatchAsistencia = onCall({
   invoker: "public",
@@ -440,8 +497,7 @@ const aplicarBatchAsistencia = onCall({
 
   const uniquePersonas = new Set();
   for (const it of items) {
-    uniquePersonas.add(it.persona_origen_id);
-    uniquePersonas.add(it.persona_cobertura_id);
+    for (const pid of personaIdsAfectadosPorOp(it)) uniquePersonas.add(pid);
   }
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
     for (const pid of uniquePersonas) {
@@ -452,8 +508,9 @@ const aplicarBatchAsistencia = onCall({
   const token = (request.auth && request.auth.token) || {};
 
   for (const it of items) {
-    await assertPeriodoEditable(it.persona_origen_id, it.fecha, it.grupo_trabajo_id, token);
-    await assertPeriodoEditable(it.persona_cobertura_id, it.fecha, it.grupo_trabajo_id, token);
+    for (const pid of personaIdsAfectadosPorOp(it)) {
+      await assertPeriodoEditable(pid, it.fecha, it.grupo_trabajo_id, token);
+    }
   }
 
   const uid = (request.auth && request.auth.uid) || "system";
@@ -464,8 +521,9 @@ const aplicarBatchAsistencia = onCall({
     const visRefMap = new Map();
     const visKeySet = new Set();
     for (const it of items) {
-      visKeySet.add(`${it.persona_origen_id}|${it.fecha}|${it.grupo_trabajo_id}`);
-      visKeySet.add(`${it.persona_cobertura_id}|${it.fecha}|${it.grupo_trabajo_id}`);
+      for (const pid of personaIdsAfectadosPorOp(it)) {
+        visKeySet.add(`${pid}|${it.fecha}|${it.grupo_trabajo_id}`);
+      }
     }
     for (const key of visKeySet) {
       const [pid, fecha, gdt] = key.split("|");
@@ -478,7 +536,7 @@ const aplicarBatchAsistencia = onCall({
 
     const asiMap = new Map();
     const asiRefMap = new Map();
-    const asiKeySet = new Set(items.map((it) => `${it.persona_origen_id}|${it.fecha}`));
+    const asiKeySet = new Set(items.map((it) => `${personaIdDocAsi(it)}|${it.fecha}`));
     for (const key of asiKeySet) {
       const [pid, fecha] = key.split("|");
       const docId = docIdAsistencia(pid, fecha);
@@ -490,7 +548,8 @@ const aplicarBatchAsistencia = onCall({
 
     // Validaciones transaccionales (token + freeze)
     for (const it of items) {
-      const visOrigen = visMap.get(`${it.persona_origen_id}|${it.fecha}|${it.grupo_trabajo_id}`);
+      const concPersona = personaIdConcurrencia(it);
+      const visOrigen = visMap.get(`${concPersona}|${it.fecha}|${it.grupo_trabajo_id}`);
       const actualToken = visOrigen?.exists ? readVisVersionToken(visOrigen.data()) : null;
       if (actualToken !== it.expected_version_token) {
         err(
@@ -499,9 +558,12 @@ const aplicarBatchAsistencia = onCall({
         );
       }
 
-      const visX = visMap.get(`${it.persona_origen_id}|${it.fecha}|${it.grupo_trabajo_id}`);
-      const visY = visMap.get(`${it.persona_cobertura_id}|${it.fecha}|${it.grupo_trabajo_id}`);
-      if (visClosedByData(visX?.data()) || visClosedByData(visY?.data())) {
+      if (it.tipo === "cobertura_parcial") {
+        const visY = visMap.get(`${it.persona_cobertura_id}|${it.fecha}|${it.grupo_trabajo_id}`);
+        if (visClosedByData(visOrigen?.data()) || visClosedByData(visY?.data())) {
+          err("failed-precondition", "[ASI-PER-001] El período está liquidado y cerrado. No se permiten cambios.");
+        }
+      } else if (visClosedByData(visOrigen?.data())) {
         err("failed-precondition", "[ASI-PER-001] El período está liquidado y cerrado. No se permiten cambios.");
       }
     }
@@ -509,7 +571,7 @@ const aplicarBatchAsistencia = onCall({
     // Escrituras asistencia_diaria
     const appendMap = new Map();
     for (const it of items) {
-      const key = `${it.persona_origen_id}|${it.fecha}`;
+      const key = `${personaIdDocAsi(it)}|${it.fecha}`;
       const list = appendMap.get(key) || [];
       list.push({
         ...it.override,
@@ -572,4 +634,5 @@ module.exports = {
   listarOverridesTurno,
   aplicarBatchAsistencia,
   obtenerCapaTeoricaDia,
+  normalizeBatchOp,
 };

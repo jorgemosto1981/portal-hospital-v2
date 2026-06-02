@@ -24,6 +24,7 @@
     "test:segmentos-contract": "node --test functions/test/capaTeoricaSegmentos.contract.test.mjs",
     "test:fichadas-esperadas": "node --test functions/test/fichadasEsperadas.test.js",
     "test:grilla-sanitize-gso": "node --test functions/test/grillaVisSanitizeGso.test.js",
+    "test:batch-asistencia-normalize": "node --test functions/test/batchAsistenciaNormalize.test.js",
     "smoke:fichadas-esperadas": "node scripts/smoke-fichadas-esperadas-dev.mjs",
     "db:migrar-regimen-plus": "node scripts/migrar-regimen-planificado-compuesto-plus.mjs",
     "test:firestore:v2": "node scripts/seed-v2/test-firestore-v2-connection.mjs",

@@ -107,6 +107,16 @@ Que **Recursos Humanos** sea el dueño de la **grilla operativa** (calendario MD
 
 **Dependencias:** F-UX.1 aprobado; recomendable F0 (observabilidad) antes de muchos jefes en prod.
 
+#### F-UX.3 — Gestión turno del día (wizard A/B/C) — **pausa 2026-06-02**
+
+| ID | Entregable | DoD |
+|----|------------|-----|
+| UX-8 | Wizard «Gestionar turno de este día» | Paso 1: A Intercambio de guardia · B Cambio turno propio · C Horas adicionales |
+| UX-9 | Formularios mobile-first | Selects régimen/YY/compensación; gate materializar; errores legibles |
+| UX-10 | Copy ayuda | Términos §2 handoff en `helpContent.js` |
+
+**Handoff (propuesta textual, sin codificar):** [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) — cerrar decisiones §4 antes de implementar.
+
 ---
 
 ## Etapa F0 — Contención P0
@@ -245,10 +255,10 @@ Edición offline en grilla con **envío batch** append-only; acciones granulares
 
 | ID | Entregable | DoD |
 |----|------------|-----|
-| 4.1 | `RFC_CACHE_LOCAL_ASISTENCIA_V2.md` | Idempotencia `temp_id`; tipos acción |
-| 4.2 | `enviarAccionesAsistencia` | Valida freeze; `arrayUnion`; no `set` full doc |
-| 4.3 | Outbox UI | Cola pendientes; Enviar; ASI-CONC / ASI-PER |
-| 4.4 | Integración | Sin rematerializar mes entero por cada cambio local |
+| 4.1 | `RFC_CACHE_LOCAL_ASISTENCIA_V2.md` | ✅ Idempotencia `temp_id`; tipos acción |
+| 4.2 | `enviarAccionesAsistencia` (= `aplicarBatchAsistencia`) | ✅ `cobertura_parcial`, `reemplazo`, `adicional`; freeze; append |
+| 4.3 | Outbox UI | ⏳ Grilla equipo RRHH/jefe; falta pantalla legacy |
+| 4.4 | Integración | ⏳ Sin rematerializar mes entero por cada cambio local |
 
 **Dependencias:** **F3 cerrada** (obligatorio).
 

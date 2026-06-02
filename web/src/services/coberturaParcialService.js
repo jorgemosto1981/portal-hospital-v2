@@ -134,37 +134,7 @@ function normalizeFechaYmd(value) {
  * @param {{ editorPersonaId?: string; periodo?: string }} [ctx]
  */
 export async function aplicarBatchAsistencia(opsOutbox, ctx = {}) {
-  const ops = (opsOutbox || []).map((op, idx) => {
-    const tipo = String(op?.tipo || "").trim();
-    if (tipo !== "cobertura_parcial") {
-      throw new Error(`Operación no soportada en batch (#${idx + 1}): ${tipo || "sin tipo"}.`);
-    }
-    const fecha = normalizeFechaYmd(op?.fechaYmd);
-    const gdt = assertGrupoTrabajoId(
-      op?.grupoId,
-      `[Batch #${idx + 1}] Falta grupo_trabajo_id en la operación pendiente.`,
-    );
-    return {
-      id: String(op?.id || `op_${idx + 1}`),
-      tipo,
-      creado_en: String(op?.creado_en || new Date().toISOString()),
-      payload: {
-        persona_origen_id: String(op?.personaOrigenId || "").trim(),
-        persona_cobertura_id: String(op?.personaCoberturaId || "").trim(),
-        fecha,
-        segmentos_cubiertos: Array.isArray(op?.segmentosCubiertos) ? op.segmentosCubiertos.map(String) : [],
-        tipo_compensacion_id: String(op?.tipoCompensacionId || "").trim(),
-        motivo: String(op?.motivo || "").trim(),
-      },
-      concurrencia: {
-        expected_version_token: String(op?.expectedVersionToken || "").trim(),
-      },
-      context: {
-        grupo_id: gdt,
-        periodo: String(op?.periodo || ctx?.periodo || fecha.slice(0, 7)).trim(),
-      },
-    };
-  });
+  const ops = (opsOutbox || []).map((op, idx) => mapOutboxOpToBatchPayload(op, idx, ctx));
 
   const payload = {
     editor_persona_id: String(ctx?.editorPersonaId || "").trim() || null,
@@ -173,4 +143,64 @@ export async function aplicarBatchAsistencia(opsOutbox, ctx = {}) {
   };
   const res = await callAplicarBatchAsistencia(payload);
   return res?.data ?? res;
+}
+
+/**
+ * @param {Record<string, unknown>} op
+ * @param {number} idx
+ * @param {{ editorPersonaId?: string; periodo?: string }} ctx
+ */
+function mapOutboxOpToBatchPayload(op, idx, ctx) {
+  const tipo = String(op?.tipo || "").trim();
+  const fecha = normalizeFechaYmd(op?.fechaYmd);
+  const gdt = assertGrupoTrabajoId(
+    op?.grupoId,
+    `[Batch #${idx + 1}] Falta grupo_trabajo_id en la operación pendiente.`,
+  );
+  const base = {
+    id: String(op?.id || `op_${idx + 1}`),
+    tipo,
+    creado_en: String(op?.creado_en || new Date().toISOString()),
+    concurrencia: {
+      expected_version_token: String(op?.expectedVersionToken || "").trim(),
+    },
+    context: {
+      grupo_id: gdt,
+      periodo: String(op?.periodo || ctx?.periodo || fecha.slice(0, 7)).trim(),
+    },
+  };
+
+  if (tipo === "cobertura_parcial") {
+    return {
+      ...base,
+      payload: {
+        persona_origen_id: String(op?.personaOrigenId || "").trim(),
+        persona_cobertura_id: String(op?.personaCoberturaId || "").trim(),
+        fecha,
+        segmentos_cubiertos: Array.isArray(op?.segmentosCubiertos) ? op.segmentosCubiertos.map(String) : [],
+        tipo_compensacion_id: String(op?.tipoCompensacionId || "").trim(),
+        motivo: String(op?.motivo || "").trim(),
+      },
+    };
+  }
+
+  if (tipo === "reemplazo" || tipo === "adicional") {
+    const horasRaw = op?.horasEfectivas;
+    const horas = horasRaw != null && horasRaw !== "" ? Number(horasRaw) : null;
+    return {
+      ...base,
+      payload: {
+        persona_id: String(op?.personaId || "").trim(),
+        fecha,
+        tipo,
+        turno_id: op?.turnoId ? String(op.turnoId).trim() : null,
+        ingreso: op?.ingreso ? String(op.ingreso) : null,
+        egreso: op?.egreso ? String(op.egreso) : null,
+        horas_efectivas: Number.isFinite(horas) ? horas : null,
+        motivo: String(op?.motivo || "").trim(),
+      },
+    };
+  }
+
+  throw new Error(`Operación no soportada en batch (#${idx + 1}): ${tipo || "sin tipo"}.`);
 }
