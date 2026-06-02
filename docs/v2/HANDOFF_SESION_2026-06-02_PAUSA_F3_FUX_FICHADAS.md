@@ -222,5 +222,9 @@ npx firebase deploy --project portal-hospital-v2 --only hosting
 | Deploy **functions** (prod) | ✅ Sesión 2026-06-02 (incl. fallback fijo/rotativo) |
 | Deploy **hosting** (prod) | ✅ Sesión 2026-06-02 — https://portal-hospital-v2.web.app |
 | Validación usuario **F:2** | ✅ |
+| Piloto Sala ids «+» (M+T, N+M) | ✅ Validado grilla 2026-06-02 |
+| Migración planes + rematerializar | ✅ Script `migrar-regimen-planificado-compuesto-plus.mjs` |
+| Release notes F3 | ✅ `RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md` |
+| UX-6 filtro API GSO | ✅ `grillaVisSanitizeGso.js` (deploy pendiente) |
 | Documentación pausa | ✅ Este archivo + `PENDIENTES_PROXIMA_SESION.md` |
 | **Sesión cerrada** | 2026-06-02 — retomar §7 |

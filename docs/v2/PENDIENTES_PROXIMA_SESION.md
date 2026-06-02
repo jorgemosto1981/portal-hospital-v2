@@ -7,14 +7,15 @@
 
 | Qué | Dónde |
 |-----|--------|
-| **Handoff sesión (completo)** | [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) — realizado / pendiente / comandos otra PC |
-| **Siguiente tarea código** | **F3 cierre:** piloto nocturno/compuesto + release notes + tag · **UX-6** API jefe sin fichadas reales |
-| **F-UX.2 fichadas** | ✅ Validado usuario **F:2** · deploy functions + hosting hecho 2026-06-02 |
-| **Rematerialización** | Solo si modal muestra 0 con jornada visible → script `scripts/_tmp-materializar-dia-y-leer-vis.mjs` |
-| **Git** | `feat/epic-multi-hlg-fase1-execution` — **pull** tras push pausa 2026-06-02 |
-| **Otra PC** | `git pull` + `.env.v2.local` manual · `npm install` · no commitear secretos |
+| **Handoff sesión (completo)** | [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) |
+| **Release notes F3** | [`RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md`](./RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md) |
+| **Siguiente tarea** | Tag `v2.3.0-f3-turnos-compuestos` + deploy hosting (tip régimen `+`) + deploy functions (UX-6) · PR merge épica |
+| **F3 piloto Sala** | ✅ Validado grilla 2026-06-02 — `M+T` F:2, migración ids `+`, rematerializado |
+| **F-UX.2 fichadas** | ✅ Validado **F:2** prod |
+| **UX-6 API jefe** | ✅ Código filtro defensivo `grillaVisSanitizeGso.js` — deploy functions pendiente |
+| **Git** | `feat/epic-multi-hlg-fase1-execution` |
 
-**Última actualización:** Pausa F3 + F-UX.2 — 2026-06-02
+**Última actualización:** Continuación F3 — piloto Sala validado + migración `+` — 2026-06-02
 
 | Campo | Valor |
 |-------|--------|
@@ -84,7 +85,7 @@
 | **F2.7** rematerializar UI RRHH | ✅ Código | `RegimenesHorariosPage` + `CalendarioConfig` |
 | **Deploy producción** | ✅ Sesión 01/06 | Ver tabla deploy en [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md) |
 | **F3 T-05..T-07, T-09** | ⏳ Pendiente | UI editor segmentos, help, caché — ver handoff 2026-06-02 |
-| **F3 cierre épica** | ⏳ Pendiente | Piloto nocturno + release notes + tag |
+| **F3 cierre épica** | ✅ Núcleo | Piloto Sala validado · release notes · tag pendiente commit |
 | **F4 Outbox** | ➡️ Después F3 | Epic batch grilla |
 
 ---
@@ -98,7 +99,21 @@
 | Fix fijo/rotativo sin `turno_id` | ✅ | Fallback segmento horario → fichadas 2 en día laborable |
 | Handoff pausa | ✅ | `HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md` |
 
-**Siguiente sesión:** F3 cierre (piloto nocturno, release, tag) · UX-6 · ver handoff §7.
+**Siguiente sesión:** Tag F3 + deploy hosting/functions · PR merge épica.
+
+---
+
+## Registro sesión (2026-06-02) — continuación F3 piloto Sala + ids «+»
+
+| Tema | Resultado | Nota |
+|------|-----------|------|
+| Piloto compuesto régimen `1779788226715` | ✅ Validado grilla | Usuario confirma **F:2**, horarios M+T / N+M coherentes |
+| Migración ids atómicos → `+` | ✅ Prod | `migrar-regimen-planificado-compuesto-plus.mjs --apply` — 21 días plan Sala + remat 4 meses |
+| Tip UI régimen «+» | ✅ Código | `RegimenTurnoCompuestoPlusTip.jsx` — deploy hosting pendiente |
+| Release notes F3 | ✅ Doc | `RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md` |
+| UX-6 filtro API jefe | ✅ Código | `grillaVisSanitizeGso.js` — sin `fichadas_reales` en respuesta GSO |
+
+**Siguiente:** tag `v2.3.0-f3-turnos-compuestos` · deploy · PR merge.
 
 ---
 

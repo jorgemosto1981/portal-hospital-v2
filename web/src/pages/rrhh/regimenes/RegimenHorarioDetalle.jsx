@@ -1,3 +1,5 @@
+import RegimenTurnoCompuestoPlusTip from "./RegimenTurnoCompuestoPlusTip.jsx";
+
 const DIAS_SEMANA = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
 const TIPO_DIA_LABEL = {
@@ -133,6 +135,7 @@ function SeccionRotativo({ ciclo, ciclo_total }) {
 function SeccionPlanificado({ turnos_disponibles, reglas_planificacion }) {
   return (
     <div className="space-y-4">
+      <RegimenTurnoCompuestoPlusTip />
       <div className="space-y-2">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Paleta de turnos</h4>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

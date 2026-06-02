@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 
 import { regimenHorarioSchema } from "../../../schemas/regimenHorario.schema.js";
+import RegimenTurnoCompuestoPlusTip from "./RegimenTurnoCompuestoPlusTip.jsx";
 
 const TIPOS_PATRON = [
   { key: "fijo", label: "Fijo / Semanal", desc: "Días fijos de la semana (admin, guardia, consultorio)" },
@@ -308,6 +309,7 @@ function EditorPlanificado({ turnos, reglas, onChangeTurnos, onChangeReglas }) {
 
   return (
     <div className="space-y-4">
+      <RegimenTurnoCompuestoPlusTip />
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Turnos disponibles</h4>
@@ -328,7 +330,7 @@ function EditorPlanificado({ turnos, reglas, onChangeTurnos, onChangeReglas }) {
                 value={t.turno_id}
                 onChange={(v) => updateTurno(i, { turno_id: v })}
                 className="w-16"
-                maxLength={10}
+                maxLength={15}
               />
               <InputField
                 label="Etiqueta"

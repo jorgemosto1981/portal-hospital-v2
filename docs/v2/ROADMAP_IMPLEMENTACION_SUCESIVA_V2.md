@@ -220,15 +220,16 @@ Motor **solo tiempo**; `segmentos[]` SoT en `asi_*`; proyección `vis_*`; cobert
 |--------|------------|-----|
 | T-02 | Zod + contrato segmentos | ✅ `capaTeoricaSegmentos.schema.js` + `npm run test:segmentos-contract` |
 | T-03 | Worker segmentos + ISO | ✅ Smoke `smoke-materializar-turno-dia-dev.mjs` (modo seguro régimen) |
-| T-04 | Cobertura + `materializarDiaAfectado` | ✅ Código + freeze `ASI-PER-001`; piloto nocturno pendiente |
+| T-04 | Cobertura + `materializarDiaAfectado` | ✅ Código + freeze; piloto Sala validado grilla |
 | T-08 | `fichadas_esperadas` + extras | ✅ `calcularFichadasEsperadas` + `npm run test:fichadas-esperadas` + `npm run smoke:fichadas-esperadas` |
 | T-05/06 | UI plan / grilla | Editor segmentos; sin legacy monolítico |
 
 ### Checklist cierre F3
 
-- [ ] Piloto nocturno/compuesto en un `gdt`.
+- [x] Piloto nocturno/compuesto en un `gdt` (Sala `1779788226715`, validado grilla 2026-06-02).
 - [x] F-UX.2 puede mostrar `fichadas_esperadas` en celda (UI).
-- [ ] Release notes + tag épica turnos compuestos.
+- [x] Release notes — [`RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md`](./RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md).
+- [ ] Tag `v2.3.0-f3-turnos-compuestos` (tras commit + push).
 
 **Dependencias:** F1 scoped estable; F2 recomendado para HLg coherente.
 

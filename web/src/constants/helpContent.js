@@ -11,6 +11,11 @@
 
 export const GLOSARIO_COMPLETO = [
   {
+    termino: "Turno compuesto con «+»",
+    definicion:
+      "En regímenes planificados, un id como M+T descompone la jornada en tramos M y T (horarios de la paleta). Si encadenan sin hueco, las fichadas esperadas siguen siendo 2; la descomposición habilita cobertura parcial por tramo. Tras cambiar ids, rematerialice el mes del grupo.",
+  },
+  {
     termino: "Régimen horario",
     definicion:
       "Molde o plantilla que define las reglas de horario de un agente: días laborables, turnos, horas efectivas, tolerancias y descansos. Se configura una vez y se asigna a múltiples personas.",
@@ -155,7 +160,7 @@ export const MANUALES_POR_RUTA = {
       {
         titulo: "Configurar paleta (Planificado)",
         contenido:
-          "Defina los turnos disponibles que el jefe podrá asignar (ej. M=Mañana 06-14, T=Tarde 14-22, N=Noche 22-06). Opcionalmente, configure reglas de planificación (máx. días trabajo, mín. francos).",
+          "Defina los turnos base (M, T, N) con ingreso/egreso. Para jornadas compuestas use ids con «+» (M+T, T+N, M+T+N): el motor descompone tramos y permite cobertura parcial. Evite ids atómicos MT/TN si necesita ceder un tramo. Tras cambios, rematerialice la grilla del grupo.",
       },
       {
         titulo: "Asignar régimen a un agente",
@@ -170,6 +175,8 @@ export const MANUALES_POR_RUTA = {
     ],
     glosarioRelevante: [
       "Régimen horario",
+      "Patrón Planificado",
+      "Turno compuesto con «+»",
       "Patrón Fijo",
       "Patrón Rotativo",
       "Patrón Planificado",

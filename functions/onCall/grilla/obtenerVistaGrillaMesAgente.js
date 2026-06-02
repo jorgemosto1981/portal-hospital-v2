@@ -7,6 +7,7 @@ const { tokenHasRrhhLaborAccess } = require("../../modules/shared/laborProfile")
 const { isPortalRoleUsuario } = require("../../modules/shared/solicitudElegibilidadLaboral");
 const { obtenerVistaGrillaMesAgente } = require("../../modules/shared/grillaMesAgenteCore");
 const { evaluarPoliticaGsoAnioMes } = require("../../modules/asistencia/grillaGsoSoloLectura");
+const { sanitizarVistaGrillaMesAgenteGso } = require("../../modules/asistencia/grillaVisSanitizeGso");
 const { CFG_EPL_LIQUIDADO_CERRADO } = require("../../modules/shared/cfgAsistenciaTurnosIds");
 
 const obtenerVistaGrillaMesAgenteCallable = onCall(async (request) => {
@@ -55,7 +56,7 @@ const obtenerVistaGrillaMesAgenteCallable = onCall(async (request) => {
   const politica = evaluarPoliticaGsoAnioMes({ anio, mes, esRrhhLabor });
   const periodoCerrado = result.estado_periodo_liquidacion_id === CFG_EPL_LIQUIDADO_CERRADO;
 
-  return {
+  const payload = {
     ...result,
     gso_politica_mes: politica,
     gso_solo_lectura: !esRrhhLabor && (politica.solo_lectura || periodoCerrado),
@@ -64,6 +65,8 @@ const obtenerVistaGrillaMesAgenteCallable = onCall(async (request) => {
       : (politica.motivo || null),
     metadata: result.metadata || null,
   };
+
+  return esRrhhLabor ? payload : sanitizarVistaGrillaMesAgenteGso(payload);
 });
 
 module.exports = { obtenerVistaGrillaMesAgente: obtenerVistaGrillaMesAgenteCallable };

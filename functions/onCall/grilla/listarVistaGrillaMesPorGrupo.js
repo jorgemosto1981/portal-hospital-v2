@@ -7,6 +7,7 @@ const { tokenHasRrhhLaborAccess } = require("../../modules/shared/laborProfile")
 const { isPortalRoleUsuario } = require("../../modules/shared/solicitudElegibilidadLaboral");
 const { listarVistaGrillaMesPorGrupo } = require("../../modules/shared/grillaMesAgenteCore");
 const { evaluarPoliticaGsoAnioMes } = require("../../modules/asistencia/grillaGsoSoloLectura");
+const { sanitizarListadoGrillaGrupoGso } = require("../../modules/asistencia/grillaVisSanitizeGso");
 
 const listarVistaGrillaMesPorGrupoCallable = onCall(async (request) => {
   if (!request.auth) {
@@ -46,12 +47,14 @@ const listarVistaGrillaMesPorGrupoCallable = onCall(async (request) => {
     const esRrhhLabor = tokenHasRrhhLaborAccess(token);
     const politica = evaluarPoliticaGsoAnioMes({ anio, mes, esRrhhLabor });
 
-    return {
+    const payload = {
       ...result,
       gso_politica_mes: politica,
       gso_solo_lectura: !esRrhhLabor && politica.solo_lectura,
       gso_solo_lectura_motivo: politica.motivo || null,
     };
+
+    return esRrhhLabor ? payload : sanitizarListadoGrillaGrupoGso(payload);
   } catch (err) {
     if (err instanceof HttpsError) throw err;
     console.error("listarVistaGrillaMesPorGrupo", err);
