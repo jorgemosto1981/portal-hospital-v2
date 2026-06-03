@@ -7,7 +7,9 @@ import { claimsIncludeJefe, claimsIncludeRrhh } from "../routing/portalRole.js";
 import DiaGrillaDetalleModal from "./DiaGrillaDetalleModal.jsx";
 import GestionTurnoDiaShell from "./GestionTurnoDiaShell.jsx";
 import ModalCoberturaParcial from "./ModalCoberturaParcial.jsx";
-import ModalCambioTurno from "./ModalCambioTurno.jsx";
+import ModalCambioTurnoPropio from "./ModalCambioTurnoPropio.jsx";
+import ModalTurnoAdicional from "./ModalTurnoAdicional.jsx";
+import GrillaOutboxPendientesBanner from "./GrillaOutboxPendientesBanner.jsx";
 import { puedeGestionarTurnoEnGrilla } from "./grillaGestionTurnoCapabilities.js";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
@@ -62,6 +64,15 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
   const personaId = String(claims?.persona_id || "").trim();
 
   const vista = useGrillaMesVista({ personaId, claims, esRrhh, preferSector: esVistaRrhh });
+  const etiquetasPersona = useMemo(() => {
+    const map = {};
+    for (const fila of vista.filas || []) {
+      const id = String(fila.persona_id || "").trim();
+      const label = String(fila.persona_label || "").trim();
+      if (id && label) map[id] = label;
+    }
+    return map;
+  }, [vista.filas]);
   const etiquetasGrupo = useMemo(() => {
     const map = {};
     for (const g of [...vista.gruposEquipo, ...vista.gruposSector]) {
@@ -88,7 +99,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
   const [diaModal, setDiaModal] = useState(null);
   const [gestionTurnoShell, setGestionTurnoShell] = useState(null);
   const [coberturaModal, setCoberturaModal] = useState(null);
-  const [cambioTurnoModal, setCambioTurnoModal] = useState(null);
+  const [turnoAdicionalModal, setTurnoAdicionalModal] = useState(null);
+  const [cambioTurnoPropioModal, setCambioTurnoPropioModal] = useState(null);
   const [aplicandoBatch, setAplicandoBatch] = useState(false);
   const [vistaModal, setVistaModal] = useState(null);
   const [cargaPendienteKey, setCargaPendienteKey] = useState("");
@@ -371,37 +383,14 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
       ) : null}
 
       {outbox.hasPending && vista.gsoPermiteEscritura ? (
-        <div className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-3 text-sm text-indigo-900">
-          <div className="flex items-center gap-2">
-            <p className="font-medium">Cambios pendientes: {outbox.count}</p>
-            <button
-              type="button"
-              onClick={() => abrirAyuda("Cambios Pendientes (Borrador)")}
-              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-indigo-300 bg-white text-xs font-bold text-indigo-700 active:bg-indigo-100"
-              title="¿Cómo funciona Aplicar cambios?"
-              aria-label="Ayuda sobre cambios pendientes"
-            >
-              ?
-            </button>
-          </div>
-          <div className="mt-2 flex gap-2">
-            <button
-              type="button"
-              onClick={() => void handleAplicarCambios()}
-              disabled={aplicandoBatch}
-              className="min-h-11 rounded-lg bg-indigo-700 px-3 text-sm font-semibold text-white active:bg-indigo-800 disabled:opacity-60"
-            >
-              {aplicandoBatch ? "Aplicando..." : "Aplicar cambios"}
-            </button>
-            <button
-              type="button"
-              onClick={outbox.clear}
-              className="min-h-11 rounded-lg border border-indigo-300 bg-white px-3 text-sm font-semibold text-indigo-700 active:bg-indigo-100"
-            >
-              Limpiar cola
-            </button>
-          </div>
-        </div>
+        <GrillaOutboxPendientesBanner
+          ops={outbox.ops}
+          aplicandoBatch={aplicandoBatch}
+          personaLabels={etiquetasPersona}
+          onAplicar={() => void handleAplicarCambios()}
+          onLimpiar={outbox.clear}
+          onAbrirAyuda={() => abrirAyuda("Cambios Pendientes (Borrador)")}
+        />
       ) : null}
 
       {vistaModal ? (
@@ -628,6 +617,41 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
           grupoLabel={gestionTurnoShell.grupoLabel}
           turnoVisInicial={gestionTurnoShell.turnoTeorico}
           onCapaActualizada={() => void vista.cargar()}
+          onAbrirAyuda={() => {
+            window.dispatchEvent(new CustomEvent("portal-help-open", {
+              detail: { termino: "Gestionar turno del día (A/B/C)" },
+            }));
+          }}
+          onElegirFlujo={(flujo) => {
+            const ctx = gestionTurnoShell;
+            setGestionTurnoShell(null);
+            if (flujo === "cobertura_parcial") {
+              setCoberturaModal({
+                personaOrigenId: ctx.personaId,
+                personaOrigenLabel: ctx.personaLabel || ctx.personaId,
+                fechaYmd: ctx.fechaYmd,
+              });
+              return;
+            }
+            if (flujo === "reemplazo") {
+              setCambioTurnoPropioModal({
+                personaId: ctx.personaId,
+                fechaOrigenYmd: ctx.fechaYmd,
+                personaNombre: ctx.personaLabel || "",
+                grupoId: ctx.grupoTrabajoId,
+              });
+              return;
+            }
+            if (flujo === "adicional") {
+              setTurnoAdicionalModal({
+                personaId: ctx.personaId,
+                fechaYmd: ctx.fechaYmd,
+                personaNombre: ctx.personaLabel || "",
+                grupoId: ctx.grupoTrabajoId,
+                turnoVisInicial: ctx.turnoTeorico ?? null,
+              });
+            }
+          }}
         />
       ) : null}
 
@@ -638,6 +662,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
           fechaYmd={coberturaModal.fechaYmd}
           grupoId={diaModal?.grupoTrabajoId || vista.grupoActivoId}
           periodo={vista.periodo}
+          opsPendientes={outbox.ops}
           onCerrar={() => setCoberturaModal(null)}
           onRegistrado={() => {}}
           onDesactualizado={() => void vista.cargar()}
@@ -651,18 +676,40 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
         />
       ) : null}
 
-      {cambioTurnoModal ? (
-        <ModalCambioTurno
-          personaId={cambioTurnoModal.personaId}
-          fecha={cambioTurnoModal.fechaYmd}
-          personaNombre={cambioTurnoModal.personaNombre}
-          grupoId={cambioTurnoModal.grupoId}
-          onCerrar={() => setCambioTurnoModal(null)}
+      {cambioTurnoPropioModal ? (
+        <ModalCambioTurnoPropio
+          personaId={cambioTurnoPropioModal.personaId}
+          fechaOrigenYmd={cambioTurnoPropioModal.fechaOrigenYmd}
+          personaNombre={cambioTurnoPropioModal.personaNombre}
+          grupoId={cambioTurnoPropioModal.grupoId}
+          periodo={vista.periodo}
+          opsPendientes={outbox.ops}
+          onCerrar={() => setCambioTurnoPropioModal(null)}
+          onAgregarOutbox={(op) =>
+            outbox.addOp({
+              ...op,
+              grupoId: cambioTurnoPropioModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId || "",
+              periodo: vista.periodo,
+            })
+          }
+        />
+      ) : null}
+
+      {turnoAdicionalModal ? (
+        <ModalTurnoAdicional
+          personaId={turnoAdicionalModal.personaId}
+          personaNombre={turnoAdicionalModal.personaNombre}
+          fechaYmd={turnoAdicionalModal.fechaYmd}
+          grupoId={turnoAdicionalModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId || ""}
+          periodo={vista.periodo}
+          opsPendientes={outbox.ops}
+          turnoVisInicial={turnoAdicionalModal.turnoVisInicial ?? null}
+          onCerrar={() => setTurnoAdicionalModal(null)}
           onRegistrado={() => {}}
           onAgregarOutbox={(op) =>
             outbox.addOp({
               ...op,
-              grupoId: cambioTurnoModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId || "",
+              grupoId: turnoAdicionalModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId || "",
               periodo: vista.periodo,
             })
           }

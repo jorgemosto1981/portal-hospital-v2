@@ -131,13 +131,84 @@ export const GLOSARIO_COMPLETO = [
       "Al editar la grilla, tus cambios quedan guardados como borrador en el navegador. Para confirmar y registrar todo en el sistema, debes presionar \"Aplicar cambios\". Si cierras por accidente, podrás recuperar el borrador al volver.",
   },
   {
+    termino: "Gestionar turno del día (A/B/C)",
+    definicion:
+      "Desde el detalle de una celda, abrís el asistente para registrar cambios operativos del mes: A) Intercambio de guardia entre dos agentes; B) Cambio de turno propio (traslado entre días); C) Horas adicionales (turno extra declarado, trámite RRHH → jefe superior). Si el día no tiene turno calculado, solo se ofrece C.",
+  },
+  {
+    termino: "Intercambio de guardia (Flujo A)",
+    definicion:
+      "Swap bilateral entre dos agentes del mismo cargo y mes: cada uno cede tramos equivalentes en días que pueden ser distintos (ej. XX 05/06 cede N ↔ YY 12/06 cede M). Requiere turno calculado en ambos días.",
+  },
+  {
+    termino: "Cambio de turno propio (Flujo B)",
+    definicion:
+      "Un agente traslada segmentos de un día origen a un día destino sin pisar lo ya presente en destino. El origen queda franco (total o parcial). Requiere turno calculado en origen y destino.",
+  },
+  {
+    termino: "Horas adicionales (Flujo C)",
+    definicion:
+      "Declaración de un turno extra + motivo. No se tipean horas: RRHH valida fichadas reales y luego el jefe superior autoriza. Aplica en franco, feriado, no laborable o con turno preasignado; no exige calcular el día antes.",
+  },
+  {
     termino: "Protección de Datos (Grilla Desactualizada)",
     definicion:
       "Si otra persona modifica el mismo período mientras preparas cambios, el sistema pausa el guardado para evitar sobrescribir información. Solo necesitas refrescar la grilla y volver a aplicar tus pendientes.",
   },
 ];
 
+const MANUAL_GRILLA_OPERATIVA = {
+  titulo: "Grilla operativa (licencias y turnos)",
+  rol: "Jefe / RRHH",
+  pasos: [
+    {
+      titulo: "Leer la grilla del mes",
+      contenido:
+        "Elegí período, vista (titular, equipo o sector) y grupo. Cada celda muestra turno teórico, licencias y feriados. Tocá una celda para ver el detalle del día.",
+    },
+    {
+      titulo: "Gestionar turno de este día",
+      contenido:
+        "En el detalle del día, «Gestionar turno de este día» abre el asistente A/B/C. Con turno calculado: Intercambio (A), Traslado propio (B) u Horas adicionales (C). Sin turno calculado (franco, feriado, etc.): solo C.",
+    },
+    {
+      titulo: "Flujo A — Intercambio de guardia",
+      contenido:
+        "Dos agentes del mismo cargo intercambian tramos de igual carga en días del mismo mes (pueden ser fechas distintas). Ambos días deben tener turno calculado.",
+    },
+    {
+      titulo: "Flujo B — Cambio de turno propio",
+      contenido:
+        "Trasladá segmentos de un día a otro del mismo mes. El destino suma sin pisar tramos existentes; el origen queda franco auditado.",
+    },
+    {
+      titulo: "Flujo C — Horas adicionales",
+      contenido:
+        "Declará turno extra del régimen + motivo. RRHH validará fichadas; el jefe superior autoriza después. Las horas no se cargan en este paso.",
+    },
+    {
+      titulo: "Cola de cambios y Aplicar",
+      contenido:
+        "Cada registro va al borrador local (outbox). Revisá la lista con etiquetas legibles y presioná «Aplicar cambios» para enviar el lote al servidor.",
+    },
+  ],
+  glosarioRelevante: [
+    "GSO (Grilla de Supervisión Operativa)",
+    "Gestionar turno del día (A/B/C)",
+    "Intercambio de guardia (Flujo A)",
+    "Cambio de turno propio (Flujo B)",
+    "Horas adicionales (Flujo C)",
+    "Cobertura Parcial (Tramos)",
+    "Cambios Pendientes (Borrador)",
+    "Capa teórica",
+  ],
+};
+
 export const MANUALES_POR_RUTA = {
+  "/portal/grilla": MANUAL_GRILLA_OPERATIVA,
+
+  "/portal/rrhh/grilla-operativa": MANUAL_GRILLA_OPERATIVA,
+
   "/portal/rrhh/regimenes-horarios": {
     titulo: "Catálogo de Regímenes Horarios",
     rol: "RRHH",
@@ -232,50 +303,6 @@ export const MANUALES_POR_RUTA = {
       "Override fantasma",
     ],
   },
-
-  "/portal/grilla": {
-    titulo: "Grilla de Supervisión Operativa (GSO)",
-    rol: "Jefe / RRHH",
-    pasos: [
-      {
-        titulo: "Consultar estado operativo",
-        contenido:
-          "Seleccione la fecha de corte y opcionalmente filtre por persona o grupo. La tabla muestra el estado laboral consolidado: persona, grupo, vigencia, carga horaria y warnings.",
-      },
-      {
-        titulo: "Interpretar warnings",
-        contenido:
-          "SOLAPE_CARGO_GRUPO indica superposición de asignaciones. DESVIO_CARGA_NORMATIVA indica que las horas asignadas no coinciden con la carga del cargo. Use el filtro de warnings para aislar casos.",
-      },
-      {
-        titulo: "Registrar cambio de turno",
-        contenido:
-          "Haga clic en «Cambio» en la fila del agente. Se abrirá un modal donde puede ver los overrides existentes del día y registrar uno nuevo. Seleccione tipo (Reemplazo o Adicional), horarios y motivo.",
-      },
-      {
-        titulo: "Tipos de override",
-        contenido:
-          "Reemplazo: sustituye el turno teórico (ej. de Mañana a Franco). Adicional: suma horas al turno existente (ej. doble guardia). Ambos requieren motivo obligatorio y quedan registrados con auditoría completa.",
-      },
-      {
-        titulo: "Exportar datos",
-        contenido:
-          "Use los botones «Exportar JSON» o «Exportar CSV» para descargar los datos filtrados. Útil para auditorías y reportes.",
-      },
-    ],
-    glosarioRelevante: [
-      "GSO (Grilla de Supervisión Operativa)",
-      "Capa teórica",
-      "Override (Reemplazo)",
-      "Override (Adicional)",
-      "Divergencia",
-      "Fichada",
-      "Cobertura Parcial (Tramos)",
-      "Turnos Compuestos",
-      "Cambios Pendientes (Borrador)",
-      "Protección de Datos (Grilla Desactualizada)",
-    ],
-  },
 };
 
 /**
@@ -285,8 +312,9 @@ export const MANUALES_POR_RUTA = {
  */
 export function resolverAyudaContextual(pathname) {
   let manualKey = null;
+  const rutas = Object.keys(MANUALES_POR_RUTA).sort((a, b) => b.length - a.length);
 
-  for (const ruta of Object.keys(MANUALES_POR_RUTA)) {
+  for (const ruta of rutas) {
     if (pathname.startsWith(ruta)) {
       manualKey = ruta;
       break;

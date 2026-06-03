@@ -1,15 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 import {
+  capaContextoParaFlujoC,
   diaMaterializadoParaGestion,
   mensajeErrorCapaTeorico,
-  resumenTeoricoCorta,
+  resumenTeoricoParaModal,
 } from "./grillaCeldaTeorico.js";
-import { materializarCeldaDia, leerCapaTeoricaCelda } from "../../services/grillaMaterializarCeldaService.js";
+import { regimenPermiteIntercambioGuardia } from "./grillaCoberturaParcialPreview.js";
+import { turnosDisponiblesDesdeRegimen } from "./enrichCapaTeoricaLabels.js";
+import { leerCapaTeoricaCelda } from "../../services/grillaMaterializarCeldaService.js";
+import { callListarContextoPlanGrupo } from "../../services/callables.js";
+import GestionTurnoWizardPaso1 from "./GestionTurnoWizardPaso1.jsx";
 
 /**
- * Shell F-UX.3 — gate materialización + cabecera. Wizard A/B/C en entregable 2.
+ * Shell F-UX.3 — gate materialización + wizard paso 1 (A/B/C).
  * @param {{
  *   open: boolean;
  *   onClose: () => void;
@@ -20,6 +25,8 @@ import { materializarCeldaDia, leerCapaTeoricaCelda } from "../../services/grill
  *   grupoLabel?: string;
  *   turnoVisInicial?: Record<string, unknown> | null;
  *   onCapaActualizada?: () => void;
+ *   onAbrirAyuda?: () => void;
+ *   onElegirFlujo?: (flujo: import("./gestionTurnoWizardOpciones.js").GestionTurnoFlujoId) => void;
  * }} props
  */
 export default function GestionTurnoDiaShell({
@@ -31,12 +38,27 @@ export default function GestionTurnoDiaShell({
   personaLabel,
   grupoLabel,
   turnoVisInicial,
-  onCapaActualizada,
+  onAbrirAyuda,
+  onElegirFlujo,
 }) {
   const [capaResp, setCapaResp] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [materializando, setMaterializando] = useState(false);
   const [error, setError] = useState("");
+  const [turnosPorId, setTurnosPorId] = useState(/** @type {Record<string, object>} */ ({}));
+  const [regimenHorarioId, setRegimenHorarioId] = useState("");
+  const [regimenesIdx, setRegimenesIdx] = useState(/** @type {Record<string, object>} */ ({}));
+  const [flujoSeleccionado, setFlujoSeleccionado] = useState(/** @type {string | null} */ (null));
+
+  const bloqueoIntercambio = useMemo(() => {
+    if (!regimenHorarioId) return null;
+    const r = regimenPermiteIntercambioGuardia(regimenHorarioId, regimenesIdx);
+    return r.ok ? null : r.error;
+  }, [regimenHorarioId, regimenesIdx]);
+
+  const opcionesBloqueadas = useMemo(
+    () => (bloqueoIntercambio ? { cobertura_parcial: bloqueoIntercambio } : {}),
+    [bloqueoIntercambio],
+  );
 
   const recargar = useCallback(async () => {
     if (!personaId || !fechaYmd || !grupoTrabajoId) return;
@@ -57,6 +79,7 @@ export default function GestionTurnoDiaShell({
     if (!open) {
       setCapaResp(null);
       setError("");
+      setFlujoSeleccionado(null);
       return;
     }
     void recargar();
@@ -64,24 +87,51 @@ export default function GestionTurnoDiaShell({
 
   const materializado = diaMaterializadoParaGestion(capaResp);
   const capa = capaResp?.capa_teorica ?? capaResp?.capa_teorica_grupo ?? null;
-  const resumen = materializado ? resumenTeoricoCorta(capa) : resumenTeoricoCorta(turnoVisInicial?.capa_teorica);
+  const resumen = resumenTeoricoParaModal({
+    capa: capaContextoParaFlujoC(capa, capaResp?.vis_dia, turnoVisInicial),
+    visDia: capaResp?.vis_dia,
+    turnoVis: turnoVisInicial,
+    turnosPorId,
+  });
 
-  const onMaterializar = async () => {
-    setMaterializando(true);
-    setError("");
-    try {
-      await materializarCeldaDia(personaId, fechaYmd, grupoTrabajoId);
-      toast.success("Turno del día calculado.");
-      await recargar();
-      onCapaActualizada?.();
-    } catch (e) {
-      const msg = mensajeErrorCapaTeorico(e);
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setMaterializando(false);
-    }
-  };
+  const opcionesBloqueadasFlujo = opcionesBloqueadas;
+
+  const listoWizard = !loading && capaResp != null && !error;
+  const soloFlujoC = listoWizard && !materializado;
+  const flujosPermitidos = soloFlujoC ? /** @type {const} */ (["adicional"]) : null;
+
+  useEffect(() => {
+    if (!open || !soloFlujoC) return;
+    setFlujoSeleccionado("adicional");
+  }, [open, soloFlujoC]);
+
+  useEffect(() => {
+    if (!open || !grupoTrabajoId || !fechaYmd) return;
+    const periodo = fechaYmd.slice(0, 7);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const ctx = await callListarContextoPlanGrupo({ grupo_id: grupoTrabajoId, periodo });
+        const regimenes = ctx?.data?.regimenes || {};
+        const hlg = (ctx?.data?.personas_grupo || []).find((p) => p.persona_id === personaId);
+        if (!cancelled) {
+          setRegimenesIdx(regimenes);
+          const regId = String(hlg?.regimen_horario_id || "").trim();
+          setRegimenHorarioId(regId);
+          setTurnosPorId(regId ? turnosDisponiblesDesdeRegimen(regimenes, regId) : {});
+        }
+      } catch {
+        if (!cancelled) {
+          setTurnosPorId({});
+          setRegimenHorarioId("");
+          setRegimenesIdx({});
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, grupoTrabajoId, fechaYmd, personaId]);
 
   if (!open) return null;
 
@@ -127,26 +177,23 @@ export default function GestionTurnoDiaShell({
           </p>
         ) : null}
 
-        {!materializado && !loading ? (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
-            <p className="text-sm text-amber-950">
-              Este día aún no tiene turno calculado para este cargo. Calculá el día antes de registrar cambios.
-            </p>
-            <button
-              type="button"
-              disabled={materializando}
-              onClick={() => void onMaterializar()}
-              className="mt-3 flex min-h-11 w-full items-center justify-center rounded-xl bg-violet-700 text-base font-semibold text-white active:bg-violet-800 disabled:opacity-60"
-            >
-              {materializando ? "Calculando…" : "Calcular turno de este día"}
-            </button>
-          </div>
-        ) : null}
-
-        {materializado && !loading ? (
-          <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-            Siguiente paso (entregable 2): elegir Intercambio de guardia, Cambio de turno propio u Horas adicionales.
-          </p>
+        {listoWizard ? (
+          <GestionTurnoWizardPaso1
+            seleccion={flujoSeleccionado}
+            onSeleccion={setFlujoSeleccionado}
+            opcionesBloqueadas={opcionesBloqueadasFlujo}
+            flujosPermitidos={flujosPermitidos}
+            onAbrirAyuda={onAbrirAyuda}
+            onCancelar={onClose}
+            onContinuar={() => {
+              if (!flujoSeleccionado) return;
+              if (onElegirFlujo) {
+                onElegirFlujo(/** @type {import("./gestionTurnoWizardOpciones.js").GestionTurnoFlujoId} */ (flujoSeleccionado));
+              } else {
+                toast("Flujo seleccionado. Conectá onElegirFlujo en el panel.", { icon: "ℹ️" });
+              }
+            }}
+          />
         ) : null}
       </div>
     </div>

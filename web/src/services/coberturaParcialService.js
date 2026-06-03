@@ -11,6 +11,9 @@ import {
 import { listarCatalogosAsistenciaTurnosValidado } from "./catalogosAsistenciaTurnosService.js";
 import { coberturaParcialOverrideSchema } from "../schemas/capaTeoricaSegmentos.schema.js";
 import { assertGrupoTrabajoId } from "../features/grilla/grillaGrupoUtils.js";
+import { esReemplazoPropioV2 } from "../features/grilla/grillaCambioTurnoPropioPreview.js";
+import { esIntercambioGuardiaV2 } from "../features/grilla/grillaCoberturaParcialPreview.js";
+import { esAdicionalV2 } from "../features/grilla/grillaAdicionalPreview.js";
 import seedIds from "../../../scripts/seed-v2/seed-ids-asistencia-turnos.v2.json" with { type: "json" };
 
 const CFG_TOV_COBERTURA_PARCIAL = seedIds.cfg_tipo_override_turno?.COBERTURA_PARCIAL;
@@ -152,11 +155,131 @@ export async function aplicarBatchAsistencia(opsOutbox, ctx = {}) {
  */
 function mapOutboxOpToBatchPayload(op, idx, ctx) {
   const tipo = String(op?.tipo || "").trim();
-  const fecha = normalizeFechaYmd(op?.fechaYmd);
   const gdt = assertGrupoTrabajoId(
     op?.grupoId,
     `[Batch #${idx + 1}] Falta grupo_trabajo_id en la operación pendiente.`,
   );
+
+  if (tipo === "reemplazo" && esReemplazoPropioV2(op)) {
+    const fechaOrigen = normalizeFechaYmd(op.fechaOrigenYmd);
+    const fechaDestino = normalizeFechaYmd(op.fechaDestinoYmd || op.fechaYmd);
+    const segmentos = Array.isArray(op.segmentosTrasladar) ? op.segmentosTrasladar.map(String) : [];
+    const incorporados = Array.isArray(op.segmentosIncorporadosDestino)
+      ? op.segmentosIncorporadosDestino.map(String).filter(Boolean)
+      : [];
+    const turnoDestino = String(
+      op.turnoIdDestino || incorporados[0] || segmentos[0] || "",
+    ).trim();
+    return {
+      id: String(op?.id || `op_${idx + 1}`),
+      tipo: "reemplazo",
+      creado_en: String(op?.creado_en || new Date().toISOString()),
+      concurrencia: {
+        expected_version_token: String(op?.expectedVersionToken || "").trim(),
+      },
+      context: {
+        grupo_id: gdt,
+        periodo: String(op?.periodo || ctx?.periodo || fechaDestino.slice(0, 7)).trim(),
+      },
+      payload: {
+        persona_id: String(op?.personaId || "").trim(),
+        fecha: fechaDestino,
+        fecha_origen: fechaOrigen,
+        fecha_destino: fechaDestino,
+        segmentos_a_trasladar: segmentos,
+        segmentos_incorporados_destino: incorporados.length ? incorporados : null,
+        turno_id_destino: turnoDestino || null,
+        turno_id: turnoDestino || null,
+        franco_en_origen: op.francoEnOrigen === true,
+        tipo: "reemplazo",
+        motivo: String(op?.motivo || "").trim(),
+        origen_op_ref: String(op?.id || "").trim() || null,
+      },
+    };
+  }
+
+  if (tipo === "cobertura_parcial" && esIntercambioGuardiaV2(op)) {
+    const fechaOrigen = normalizeFechaYmd(op.fechaOrigenYmd);
+    const fechaDestino = normalizeFechaYmd(op.fechaDestinoYmd);
+    const segsOrigen = Array.isArray(op.segmentosCedidosOrigen)
+      ? op.segmentosCedidosOrigen.map(String)
+      : [];
+    const segsDestino = Array.isArray(op.segmentosCedidosDestino)
+      ? op.segmentosCedidosDestino.map(String)
+      : [];
+    const tcc = String(op.tipoCompensacionId || seedIds.cfg_tipo_compensacion_cobertura?.CAMBIO_INTERNO || "").trim();
+    return {
+      id: String(op?.id || `op_${idx + 1}`),
+      tipo: "cobertura_parcial",
+      creado_en: String(op?.creado_en || new Date().toISOString()),
+      concurrencia: {
+        expected_version_token: String(op?.expectedVersionTokenOrigen || op?.expectedVersionToken || "").trim(),
+        expected_version_token_destino: String(op?.expectedVersionTokenDestino || "").trim(),
+      },
+      context: {
+        grupo_id: gdt,
+        periodo: String(op?.periodo || ctx?.periodo || fechaOrigen.slice(0, 7)).trim(),
+      },
+      payload: {
+        origen: {
+          persona_id: String(op?.personaOrigenId || "").trim(),
+          fecha: fechaOrigen,
+          segmentos_cedidos: segsOrigen,
+        },
+        destino: {
+          persona_id: String(op?.personaDestinoId || "").trim(),
+          fecha: fechaDestino,
+          segmentos_cedidos: segsDestino,
+        },
+        tipo_compensacion_id: tcc || null,
+        motivo: String(op?.motivo || "").trim(),
+        tipo: "cobertura_parcial",
+      },
+    };
+  }
+
+  if (tipo === "adicional" && esAdicionalV2(op)) {
+    const fecha = normalizeFechaYmd(op.fechaYmd);
+    const turnoId = String(op?.turnoId || op?.turno_id || "").trim();
+    const estadoPrevio = op.estadoPrevio && typeof op.estadoPrevio === "object"
+      ? op.estadoPrevio
+      : {};
+    return {
+      id: String(op?.id || `op_${idx + 1}`),
+      tipo: "adicional",
+      creado_en: String(op?.creado_en || new Date().toISOString()),
+      concurrencia: {
+        expected_version_token: String(op?.expectedVersionToken || "").trim(),
+      },
+      context: {
+        grupo_id: gdt,
+        periodo: String(op?.periodo || ctx?.periodo || fecha.slice(0, 7)).trim(),
+      },
+      payload: {
+        persona_id: String(op?.personaId || "").trim(),
+        fecha,
+        tipo: "adicional",
+        turno_id: turnoId,
+        turno_id_adicional: turnoId,
+        motivo: String(op?.motivo || "").trim(),
+        es_feriado: estadoPrevio.es_feriado === true,
+        estado_previo: {
+          es_franco: estadoPrevio.es_franco === true,
+          es_feriado: estadoPrevio.es_feriado === true,
+          es_no_laborable: estadoPrevio.es_no_laborable === true,
+          tipo_dia: estadoPrevio.tipo_dia || null,
+          turno_preasignado_id: estadoPrevio.turno_preasignado_id || null,
+          segmentos_preasignados: Array.isArray(estadoPrevio.segmentos_preasignados)
+            ? estadoPrevio.segmentos_preasignados.map(String)
+            : [],
+          etiqueta_preasignada: estadoPrevio.etiqueta_preasignada || null,
+          horas_preasignadas: Number(estadoPrevio.horas_preasignadas) || 0,
+        },
+      },
+    };
+  }
+
+  const fecha = normalizeFechaYmd(op?.fechaYmd);
   const base = {
     id: String(op?.id || `op_${idx + 1}`),
     tipo,

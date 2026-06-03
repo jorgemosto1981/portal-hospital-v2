@@ -26,7 +26,7 @@
 |--------------|-----------|---------|
 | `cobertura_parcial` | **Intercambio de guardia** | 2 agentes; swap segmentos equivalentes (pueden ser **días distintos**, mismo mes) |
 | `reemplazo` | **Cambio de turno propio** | 1 agente; traslada segmentos origen → destino sin pisar destino; origen → franco auditado |
-| `adicional` | **Horas adicionales** | 1 agente; **agrega** turno extra; trámite RRHH posterior |
+| `adicional` | **Horas adicionales** | 1 agente; **agrega** turno extra; trámite RRHH → jefe superior |
 
 **No confundir:** A ≠ B (dos personas vs uno). B ≠ C (incorpora/traslada vs **solo suma**). C no pisa teórico; B no borra segmentos inmutables en destino.
 
@@ -46,7 +46,7 @@
 |--------|------------------------|
 | **A** Intercambio | Turno **laborable** materializado + **fichada esperada**. **No** franco. **No** no laborable. Feriado: **solo si** cumple turno + fichada (guardia en feriado). |
 | **B** | Origen y destino materializables; destino franco/no lab = sin colisión de turnos previos |
-| **C** | Materialización según necesidad de leer base del día |
+| **C** | **No** exige turno calculado → wizard muestra **solo C**. Con turno calculado → A/B/C. |
 
 ### 3.3 Gate común
 
@@ -86,7 +86,7 @@
 - Ej.: XX **M+T**, YY **T** → en XX elegir **M o T** para emparejar con **T** de YY.
 - **Compensación:** default operativo `cfg_tcc_*` (ej. «Intercambio interno»); jefe no elige siempre.
 - **Materializar** día XX y día YY si falta.
-- Outbox → `cobertura_parcial` · **RFC pendiente:** dos fechas + swap (contrato actual una fecha).
+- Outbox → `cobertura_parcial` · **RFC:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) §3.1 (amendment 2026-06-03: A-N1…A-N5, A-REG, A-TIPO, A-BATCH). **UI + outbox + QA navegador ✅**; batch **A-BATCH** diferido (§3.1.4 RFC).
 
 ---
 
@@ -109,9 +109,14 @@
 
 ## 6. Flujo C — Horas adicionales
 
-- **Solo agrega** turno adicional; no pisa teórico (si hay teórico, turno adicional **≠** teórico).
-- **Campos jefe (C-N1):** **turno régimen obligatorio** + **motivo obligatorio**. **No** campo horas en registro (vendrán de **fichadas reales** para evaluación RRHH).
-- **Fase 1:** registro outbox/batch. **Fase 2:** burbujeo jefe superior → RRHH evalúa/imputa (módulo aparte).
+- **Solo agrega** turno adicional; aplica en franco, feriado, no laborable y laborable.
+- **Campos jefe (C-N1):** turno régimen + motivo. **Sin** horas tipeadas.
+- **C-SNAPSHOT:** outbox incluye `estado_previo` (foto del día). Sin horas extra declaradas por el jefe (**C-FICHADAS**).
+- **Etapa 1 (registro):** outbox/batch desde grilla (jefe).
+- **Etapa 2 (validación):** **RRHH primero** — cruza fichadas, valida turnos, fija/edita horas extra.
+- **Etapa 3 (autorización):** **jefe superior** — aprueba o rechaza sobre datos ya validados por RRHH.
+- **Etapa 4:** imputación a bolsa de horas (factor simple/doble según naturaleza del día).
+- **RFC:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) §3.3 (C-SNAPSHOT, C-FICHADAS, **C-WORKFLOW** 2026-06-03). UI ✅.
 
 ---
 
@@ -123,7 +128,7 @@
 |---|--------|-----------|
 | A | Intercambio de guardia | Dos agentes; carga equivalente; pueden ser días distintos |
 | B | Cambio de turno propio | Traslado entre días; no pisa lo ya en destino; origen queda franco |
-| C | Horas adicionales | Agrega turno extra; evaluación RRHH después |
+| C | Horas adicionales | Agrega turno extra; RRHH valida fichadas → jefe superior autoriza |
 
 Cancelar no toca outbox. Desaparecen botones legacy y toggle reemplazo/adicional.
 
@@ -137,7 +142,7 @@ Cancelar no toca outbox. Desaparecen botones legacy y toggle reemplazo/adicional
 ¿Un agente traslada turno(s) a otro día sin pisar segmentos en destino?
   SÍ → B
 
-¿Agregar turno extra para trámite posterior RRHH?
+¿Agregar turno extra (RRHH valida fichadas, jefe superior autoriza después)?
   SÍ → C
 ```
 
@@ -159,7 +164,7 @@ Cancelar no toca outbox. Desaparecen botones legacy y toggle reemplazo/adicional
 | B-N3 | Color feriado en celda; feriado en **registro** |
 | B-N4 | Franco origen: motivo + enlace op; **sin** cfg motivo |
 | C-N1 | Turno adicional + motivo; **sin** hs en formulario |
-| C10 | Dos fases registro / trámite RRHH |
+| C10 | Circuito C: registro jefe → **RRHH** (fichadas, validación, horas) → **jefe superior** (autorización final) → bolsa horas. **No** superior antes de RRHH. |
 | 11 | Materializar **por celda** |
 | 12 | Selector día móvil + tap PC |
 
@@ -168,7 +173,7 @@ Cancelar no toca outbox. Desaparecen botones legacy y toggle reemplazo/adicional
 | Caso | Comportamiento esperado |
 |------|-------------------------|
 | **B-N1** | Día 10 tiene **M**. Borrador 1: trae **T** del día 5 → preview día 10 = **M+T**. Borrador 2: agregar **N** solo si no choca con preview (**M+T** → **N** permitido). |
-| **C** | Día 8 teórico **M**; jefe registra adicional **N** + motivo «Refuerzo»; **sin** hs en formulario; RRHH cruza con fichadas después. |
+| **C** | Día 8 teórico **M**; jefe registra adicional **N** + motivo «Refuerzo»; **sin** hs en formulario. RRHH cruza fichadas y fija horas; jefe superior autoriza con ese expediente. |
 | **Feriado** | 10/jun: celda con **fondo feriado** + turno **T** visible; en persistencia: flag feriado + turno imputado. |
 
 ---
@@ -186,16 +191,20 @@ Código existente: `useAsistenciaOutbox.js`, `GrillaMesLicenciasPanel.jsx`, `cam
 
 ---
 
-## 10. Entregables implementación (orden — tras OK)
+## 10. Entregables implementación
 
-1. Shell modal + capabilities RRHH/jefe + gate + materialización celda  
-2. ~~Wizard paso 1 (A/B/C)~~ ✅  
-3. ~~Flujo **B** (validación colisión + preview)~~ ✅  
-4. Flujo **A** (emparejamiento + dos fechas)  
-5. Flujo **C** (turno + motivo)  
-6. `helpContent.js` + errores legibles capa  
-7. Banner outbox etiquetas legibles  
-8. QA LOKITO + combinaciones B+B  
+| # | Entregable | Estado |
+|---|------------|--------|
+| 1 | Shell modal + capabilities + gate + materializar celda | ✅ |
+| 2 | Wizard paso 1 (A/B/C) + ayuda in-app | ✅ |
+| 3 | Flujo **B** (preview + outbox RFC §3.2) | ✅ UI · batch diferido |
+| 4 | Flujo **A** (emparejamiento + dos fechas + outbox §3.1) | ✅ UI + QA navegador · batch diferido |
+| 5 | Flujo **C** (turno + motivo + snapshot + solo-C sin turno calc.) | ✅ UI + QA navegador · batch diferido |
+| 6 | Banner outbox etiquetas legibles A/B/C v2 | ✅ |
+| 7 | `helpContent.js` gestión turno A/B/C | ✅ |
+| 8 | QA combinaciones (A, B, C, C sin materializar) | ✅ |
+
+**Próximo bloque:** Fase 6 backend — A-BATCH + B-BATCH-1 + C-BATCH (`cambiosTurno.js`).
 
 ---
 
@@ -207,9 +216,10 @@ Código existente: `useAsistenciaOutbox.js`, `GrillaMesLicenciasPanel.jsx`, `cam
 | RFC F4 ampliado payloads | ✅ [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) |
 | Entregable 1 shell + gate + materializar celda | ✅ Código (deploy callable pendiente) |
 | Entregable 2 wizard A/B/C | ✅ UI paso 1 + enlace modales |
-| Entregable 3 flujo B (traslado + preview + outbox RFC §3.2 amendment) | ✅ UI/outbox; batch diferido |
-| F4 batch en rama | ✅ · deploy pendiente |
+| Entregable 5 flujo C (UI/outbox §3.3 + gate solo-C) | ✅ QA navegador |
+| Entregable 6–7 outbox labels + helpContent | ✅ |
+| F4 batch en rama | ✅ legacy · v2 batch Fase 6 pendiente |
 | RFC F4 ampliado | ⏸️ Con implementación |
 | PR → master | ⏸️ Paralelo |
 
-**Próximo paso:** confirmación explícita «implementar F-UX.3» → RFC + §10.
+**Próximo paso:** Fase 6 backend (A-BATCH, B-BATCH-1, C-BATCH) — ver RFC §3 y §5.
