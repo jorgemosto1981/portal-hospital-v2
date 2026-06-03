@@ -302,6 +302,8 @@ export function esAdicionalV2(op) {
  *   expectedVersionToken: string;
  *   grupoId: string;
  *   periodo: string;
+ *   personaLabel?: string;
+ *   grupoLabel?: string;
  *   estadoPrevio: ReturnType<typeof capturarEstadoPrevioDia>;
  *   creado_en?: string;
  * }} params
@@ -315,6 +317,7 @@ export function buildAdicionalOutboxOp(params) {
     creado_en: params.creado_en,
     tipo: "adicional",
     personaId: params.personaId,
+    personaLabel: String(params.personaLabel || "").trim(),
     fechaYmd: params.fechaYmd,
     turnoId,
     turno_id: turnoId,
@@ -323,6 +326,7 @@ export function buildAdicionalOutboxOp(params) {
     expectedVersionToken: String(params.expectedVersionToken || "").trim(),
     grupoId: params.grupoId,
     periodo: params.periodo,
+    grupoLabel: String(params.grupoLabel || "").trim(),
     estadoPrevio,
     esFeriado: estadoPrevio.es_feriado === true,
   };

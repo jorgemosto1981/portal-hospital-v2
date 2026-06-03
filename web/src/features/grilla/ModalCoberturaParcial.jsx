@@ -275,9 +275,14 @@ export default function ModalCoberturaParcial({
     }
     setOperando(true);
     try {
+      const personaDestinoLabel = personasMismoRegimen.find(
+        (p) => p.persona_id === personaDestinoId,
+      )?.persona_label || "";
       const op = buildIntercambioGuardiaOutboxOp({
         personaOrigenId,
         personaDestinoId,
+        personaOrigenLabel: personaOrigenLabel || "",
+        personaDestinoLabel,
         fechaOrigenYmd: fechaYmd,
         fechaDestinoYmd,
         segmentosCedidosOrigen: val.segmentosCedidosOrigen,

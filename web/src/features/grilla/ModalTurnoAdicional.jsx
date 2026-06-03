@@ -187,6 +187,7 @@ export default function ModalTurnoAdicional({
     try {
       const op = buildAdicionalOutboxOp({
         personaId,
+        personaLabel: personaNombre || "",
         fechaYmd,
         turnoId: val.turnoId,
         motivo: motivo.trim(),

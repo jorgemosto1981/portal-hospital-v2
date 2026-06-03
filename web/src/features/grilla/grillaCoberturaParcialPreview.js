@@ -428,6 +428,9 @@ export function esIntercambioGuardiaV2(op) {
  *   expectedVersionTokenDestino: string;
  *   grupoId: string;
  *   periodo: string;
+ *   personaOrigenLabel?: string;
+ *   personaDestinoLabel?: string;
+ *   grupoLabel?: string;
  *   creado_en?: string;
  * }} params
  */
@@ -441,6 +444,8 @@ export function buildIntercambioGuardiaOutboxOp(params) {
     tipo: "cobertura_parcial",
     personaOrigenId: params.personaOrigenId,
     personaDestinoId: params.personaDestinoId,
+    personaOrigenLabel: String(params.personaOrigenLabel || "").trim(),
+    personaDestinoLabel: String(params.personaDestinoLabel || "").trim(),
     fechaOrigenYmd: params.fechaOrigenYmd,
     fechaDestinoYmd: params.fechaDestinoYmd,
     fechaYmd: params.fechaOrigenYmd,
@@ -455,6 +460,7 @@ export function buildIntercambioGuardiaOutboxOp(params) {
     expectedVersionToken: String(params.expectedVersionTokenOrigen || "").trim(),
     grupoId: params.grupoId,
     periodo: params.periodo,
+    grupoLabel: String(params.grupoLabel || "").trim(),
   };
 }
 

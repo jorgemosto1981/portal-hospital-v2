@@ -280,6 +280,7 @@ export default function ModalCambioTurnoPropio({
       const val = proyeccion.validacion;
       const op = buildReemplazoPropioOutboxOp({
         personaId,
+        personaLabel: personaNombre || "",
         fechaOrigenYmd,
         fechaDestinoYmd,
         segmentosTrasladar,

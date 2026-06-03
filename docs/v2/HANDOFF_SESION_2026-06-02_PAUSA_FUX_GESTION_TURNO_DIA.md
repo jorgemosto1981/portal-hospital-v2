@@ -2,10 +2,11 @@
 
 **Fecha pausa inicial:** 2026-06-02  
 **Spec cerrada:** 2026-06-03 (sesión aclaraciones A/B/C + §9)  
+**Pausa frontend outbox:** 2026-06-03 (tarjetas grupo×mes, labels embebidos, QA banner)  
 **Rama:** `feat/epic-multi-hlg-fase1-execution`  
-**Estado:** F-UX.3 **en curso** — Entregable 1 (shell + gate) iniciado 2026-06-03  
+**Estado:** F-UX.3 **frontend cerrado** — outbox v2 legible + banner por tarjeta · **backend Fase 6 pendiente**  
 **RFC payloads:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md)  
-**Retomar:** Entregable 2 wizard A/B/C → B → A → C (§10)  
+**Retomar (obligatorio antes de backend):** §12 — visualización en grilla post-carga A/B/C · luego Fase 6 batch  
 
 **Relación:** F4 [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) · segmentos [`CAPA_TEORICA_SEGMENTOS_V2.md`](./CAPA_TEORICA_SEGMENTOS_V2.md) · pendientes [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md)
 
@@ -203,8 +204,10 @@ Código existente: `useAsistenciaOutbox.js`, `GrillaMesLicenciasPanel.jsx`, `cam
 | 6 | Banner outbox etiquetas legibles A/B/C v2 | ✅ |
 | 7 | `helpContent.js` gestión turno A/B/C | ✅ |
 | 8 | QA combinaciones (A, B, C, C sin materializar) | ✅ |
+| 9 | Banner: título función (no badge A/B/C), quitar/limpiar/enviar con confirmación | ✅ |
+| 10 | Banner: tarjeta por **grupo × mes/año** + labels persona/grupo embebidos en op | ✅ QA |
 
-**Próximo bloque:** Fase 6 backend — A-BATCH + B-BATCH-1 + C-BATCH (`cambiosTurno.js`).
+**Próximo bloque (orden):** §12 visualización grilla → Fase 6 backend A-BATCH + B-BATCH-1 + C-BATCH (`cambiosTurno.js`).
 
 ---
 
@@ -217,9 +220,44 @@ Código existente: `useAsistenciaOutbox.js`, `GrillaMesLicenciasPanel.jsx`, `cam
 | Entregable 1 shell + gate + materializar celda | ✅ Código (deploy callable pendiente) |
 | Entregable 2 wizard A/B/C | ✅ UI paso 1 + enlace modales |
 | Entregable 5 flujo C (UI/outbox §3.3 + gate solo-C) | ✅ QA navegador |
-| Entregable 6–7 outbox labels + helpContent | ✅ |
+| Entregable 6–7 outbox labels + helpContent | ✅ commit `19b411e` |
+| Entregable 9–10 banner outbox (función, tarjeta, labels) | ✅ 2026-06-03 · QA OK |
 | F4 batch en rama | ✅ legacy · v2 batch Fase 6 pendiente |
-| RFC F4 ampliado | ⏸️ Con implementación |
+| Visualización grilla post-aplicar A/B/C | ⏳ **Antes de backend** — §12 |
 | PR → master | ⏸️ Paralelo |
 
-**Próximo paso:** Fase 6 backend (A-BATCH, B-BATCH-1, C-BATCH) — ver RFC §3 y §5.
+**Próximo paso:** §12 → Fase 6 backend (A-BATCH, B-BATCH-1, C-BATCH) — ver RFC §3 y §5.
+
+---
+
+## 12. Próxima sesión — visualización en grilla (ANTES del backend)
+
+> **Gate de producto:** no implementar batch v2 hasta definir cómo se **ve** cada flujo en la grilla tras encolar/aplicar.
+
+### Preguntas a cerrar (A / B / C)
+
+| Flujo | Al agregar a outbox (preview) | Al aplicar batch (persistido) |
+|-------|------------------------------|-------------------------------|
+| **A** Intercambio | ¿Proyecta swap bilateral en **ambas** celdas vía `proyectarDiaConOpsPendientes`? ¿Segmentos cedidos/recibidos visibles en celda? | ¿Actualiza `capa_teorica` / `vis_*` en ambos días y ambos agentes? ¿Fichadas esperadas recalculadas? |
+| **B** Traslado propio | ¿Preview destino muestra incorporación additiva (M+T+N)? ¿Origen muestra saldo/franco parcial? | ¿Origen → franco o saldo parcial en capa? ¿Destino suma segmentos sin pisar? |
+| **C** Adicional | ¿Se visualiza turno **extra teórico** en celda antes de aplicar? ¿Badge distinto del teórico base? | ¿Segmento adicional en capa teórica o solo flag/trámite hasta RRHH? ¿Fichadas esperadas incluyen el extra? |
+
+### Artefactos a preparar
+
+1. **Matriz celda × flujo** — qué muestra la grilla (texto, color, tooltip) en: teórico base · preview outbox · post-batch.
+2. **Decisión capa teórica** — qué ops modifican `capa_teorica` al aplicar vs qué quedan en trámite (C-WORKFLOW: ¿extra visible teórico antes de RRHH?).
+3. **Wire preview existente** — revisar `proyectarDiaConOpsPendientes`, `GrillaMesEquipoTabla`, `grillaCeldaTeorico.js` · extender si falta feedback visual post-aplicar.
+4. **RFC amendment corto** — § visualización grilla F-UX.3 (referenciar desde RFC F4 §5).
+
+### Después de §12
+
+Seguir plan normal: Fase 6 backend (`cambiosTurno.js` A-BATCH, B-BATCH-1, C-BATCH) alineado a la matriz visual.
+
+### Arranque otra PC
+
+```bash
+git pull origin feat/epic-multi-hlg-fase1-execution
+npm install
+```
+
+Leer este handoff §12 + [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) bloque F-UX.

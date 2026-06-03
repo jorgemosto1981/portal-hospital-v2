@@ -109,6 +109,20 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
     /** @type {{ grupoId: string; periodo: string; label: string } | null} */ (null),
   );
   const outbox = useAsistenciaOutbox({ editorPersonaId: personaId, periodo: vista.periodo });
+  const labelGrupoParaOutbox = (grupoId) => {
+    const gid = String(grupoId || "").trim();
+    if (!gid) return "Titular (mi caso)";
+    return etiquetasGrupo[gid] || gid;
+  };
+  const enrichOutboxOp = (op, grupoId) => {
+    const gid = String(grupoId || op.grupoId || "").trim();
+    return {
+      ...op,
+      grupoId: gid,
+      periodo: String(op.periodo || vista.periodo || "").trim(),
+      grupoLabel: String(op.grupoLabel || labelGrupoParaOutbox(gid)).trim(),
+    };
+  };
   const puedeGestionTurno = puedeGestionarTurnoEnGrilla({
     esRrhh,
     esJefe,
@@ -387,8 +401,16 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
           ops={outbox.ops}
           aplicandoBatch={aplicandoBatch}
           personaLabels={etiquetasPersona}
+          grupoLabels={etiquetasGrupo}
           onAplicar={() => void handleAplicarCambios()}
-          onLimpiar={outbox.clear}
+          onLimpiar={() => {
+            outbox.clear();
+            toast.success("Cola de cambios vaciada.");
+          }}
+          onQuitarOp={(opId) => {
+            outbox.removeOp(opId);
+            toast.success("Cambio quitado de la cola.");
+          }}
           onAbrirAyuda={() => abrirAyuda("Cambios Pendientes (Borrador)")}
         />
       ) : null}
@@ -667,11 +689,9 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
           onRegistrado={() => {}}
           onDesactualizado={() => void vista.cargar()}
           onAgregarOutbox={(op) =>
-            outbox.addOp({
-              ...op,
-              grupoId: diaModal?.grupoTrabajoId || vista.grupoActivoId || "",
-              periodo: vista.periodo,
-            })
+            outbox.addOp(
+              enrichOutboxOp(op, diaModal?.grupoTrabajoId || vista.grupoActivoId),
+            )
           }
         />
       ) : null}
@@ -686,11 +706,12 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
           opsPendientes={outbox.ops}
           onCerrar={() => setCambioTurnoPropioModal(null)}
           onAgregarOutbox={(op) =>
-            outbox.addOp({
-              ...op,
-              grupoId: cambioTurnoPropioModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId || "",
-              periodo: vista.periodo,
-            })
+            outbox.addOp(
+              enrichOutboxOp(
+                op,
+                cambioTurnoPropioModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId,
+              ),
+            )
           }
         />
       ) : null}
@@ -707,11 +728,12 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
           onCerrar={() => setTurnoAdicionalModal(null)}
           onRegistrado={() => {}}
           onAgregarOutbox={(op) =>
-            outbox.addOp({
-              ...op,
-              grupoId: turnoAdicionalModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId || "",
-              periodo: vista.periodo,
-            })
+            outbox.addOp(
+              enrichOutboxOp(
+                op,
+                turnoAdicionalModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId,
+              ),
+            )
           }
         />
       ) : null}

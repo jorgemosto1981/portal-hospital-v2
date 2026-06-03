@@ -1,20 +1,45 @@
 # Punto de Continuación — Próxima Sesión
 
-> **Última sesión — 2026-06-02** · F3 T-02/T-03/T-04/T-08 + **F-UX.2** fichadas en grilla — **validado F:2 prod**.  
-> Handoff pausa: [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) · GSO: [`HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md`](./HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md).
+> **Última sesión — 2026-06-03** · F-UX.3 frontend gestión turno A/B/C + outbox banner por tarjeta — **pausa @ QA OK**.  
+> Handoff: [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) §12.
 
 ## PAUSA — retomar aquí (F-UX Gestión turno del día A/B/C)
 
 | Qué | Dónde |
 |-----|--------|
+| **Handoff completo** | [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) |
+| **Estado frontend F-UX.3** | ✅ Wizard A/B/C · modales · outbox v2 · banner por tarjeta grupo×mes · labels embebidos |
+| **Gate ANTES de backend** | **§12 handoff** — definir visualización en grilla de cada flujo A/B/C (preview + post-aplicar) |
+| **RFC F4 (outbox + batch)** | [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) · [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) |
+| **Branch trabajo** | `feat/epic-multi-hlg-fase1-execution` |
+| **Fase 6 backend (después §12)** | A-BATCH + B-BATCH-1 + C-BATCH en `cambiosTurno.js` |
+
+### Orden próxima sesión
+
+1. **Visualización grilla A/B/C** (matriz celda × preview × post-batch; ¿capa teórica? ¿turno extra teórico en C?)
+2. RFC amendment visualización (si aplica)
+3. Fase 6 backend batch v2
+4. PR merge épica (paralelo)
+
+**Última actualización:** pausa F-UX.3 outbox banner — 2026-06-03
+
+---
+
+> **Sesión previa 2026-06-02** · F3 T-02/T-03/T-04/T-08 + **F-UX.2** fichadas en grilla — **validado F:2 prod**.  
+> Handoff pausa: [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) · GSO: [`HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md`](./HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md).
+
+## Contexto F4 (histórico — reemplazado por bloque arriba)
+
+| Qué | Dónde |
+|-----|--------|
 | **Handoff completo (propuesta textual)** | [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) |
-| **Estado** | Spec producto **cerrada** 2026-06-03 (handoff §8) · **sin wizard A/B/C** · OK explícito → F-UX.3 + RFC F4 |
+| **Estado** | ~~Spec producto **cerrada**~~ → **frontend F-UX.3 cerrado** 2026-06-03 |
 | **RFC F4 (outbox)** | [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) |
 | **PR merge épica** | `master` ← `feat/epic-multi-hlg-fase1-execution` · `gh auth login` pendiente |
-| **F4 backend** | ✅ batch `cobertura_parcial` + `reemplazo` + `adicional` (rama, deploy pendiente) |
-| **UI actual** | Modales legacy — **reemplazar** por wizard A/B/C del handoff |
+| **F4 backend** | batch v2 pendiente (post §12 visualización) |
+| **UI actual** | Wizard A/B/C + banner outbox v2 ✅ |
 
-**Última actualización:** F-UX gestión turno — spec cerrada §9 — 2026-06-03
+**Última actualización histórica:** F-UX gestión turno — spec cerrada §9 — 2026-06-03
 
 ## Contexto F4 (sesión previa mismo día)
 

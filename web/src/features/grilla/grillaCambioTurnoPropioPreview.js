@@ -769,6 +769,8 @@ export function esReemplazoPropioV2(op) {
  *   expectedVersionToken: string;
  *   grupoId: string;
  *   periodo: string;
+ *   personaLabel?: string;
+ *   grupoLabel?: string;
  *   creado_en?: string;
  * }} params
  */
@@ -785,6 +787,7 @@ export function buildReemplazoPropioOutboxOp(params) {
     creado_en: params.creado_en,
     tipo: "reemplazo",
     personaId: params.personaId,
+    personaLabel: String(params.personaLabel || "").trim(),
     fechaYmd: fechaDestino,
     fechaOrigenYmd: fechaOrigen,
     fechaDestinoYmd: fechaDestino,
@@ -796,5 +799,6 @@ export function buildReemplazoPropioOutboxOp(params) {
     expectedVersionToken: String(params.expectedVersionToken || "").trim(),
     grupoId: params.grupoId,
     periodo: params.periodo,
+    grupoLabel: String(params.grupoLabel || "").trim(),
   };
 }
