@@ -14,7 +14,7 @@ const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { db, FieldValue } = require("../shared/context");
 const runtimeFlags = require("../shared/runtimeFlags.json");
 const { assertOverrideAuth } = require("../shared/helpers");
-const { materializarTurnoTeoricoDia } = require("./rdaTurnoTeoricoWorker");
+const { materializarTurnoTeoricoDia: materializarTurnoTeoricoDiaWorker } = require("./rdaTurnoTeoricoWorker");
 const { assertGrillaGsoEscrituraEnFecha } = require("./grillaGsoSoloLectura");
 const { buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
 const { obtenerCapaTeoricaDia } = require("./obtenerCapaTeoricaDia");
@@ -178,7 +178,7 @@ async function materializarDiaAfectado({ override, personaId, fechaYmd, grupoId,
 
   for (const pid of personas) {
     try {
-      await materializarTurnoTeoricoDia({ personaId: pid, grupoId: gdt, fechaYmd });
+      await materializarTurnoTeoricoDiaWorker({ personaId: pid, grupoId: gdt, fechaYmd });
       logger.info(`materializarTurnoTeoricoDia_${logTag} OK`, {
         personaId: pid, fecha: fechaYmd, grupoId: gdt,
       });
@@ -631,7 +631,7 @@ const aplicarBatchAsistencia = onCall({
 /**
  * Materializa capa teórica de un solo día (celda GSO). F-UX.3 gate.
  */
-const materializarTurnoTeoricoDiaCallable = onCall({
+const materializarTurnoTeoricoDia = onCall({
   invoker: "public",
   memory: "512MiB",
   timeoutSeconds: 120,
@@ -646,7 +646,7 @@ const materializarTurnoTeoricoDiaCallable = onCall({
   const token = (request.auth && request.auth.token) || {};
   await assertPeriodoEditable(personaId, fecha, grupoTrabajoId, token);
 
-  const result = await materializarTurnoTeoricoDia({
+  const result = await materializarTurnoTeoricoDiaWorker({
     personaId,
     grupoId: grupoTrabajoId,
     fechaYmd: fecha,
@@ -672,6 +672,6 @@ module.exports = {
   listarOverridesTurno,
   aplicarBatchAsistencia,
   obtenerCapaTeoricaDia,
-  materializarTurnoTeoricoDiaCallable,
+  materializarTurnoTeoricoDia,
   normalizeBatchOp,
 };
