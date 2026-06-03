@@ -3,8 +3,9 @@
 **Fecha pausa inicial:** 2026-06-02  
 **Spec cerrada:** 2026-06-03 (sesión aclaraciones A/B/C + §9)  
 **Rama:** `feat/epic-multi-hlg-fase1-execution`  
-**Estado:** producto/UI **cerrado** — **sin implementar** hasta OK explícito F-UX.3  
-**Retomar:** OK implementación → RFC F4 ampliado (A dos fechas, B origen/destino) → §5 entregables  
+**Estado:** F-UX.3 **en curso** — Entregable 1 (shell + gate) iniciado 2026-06-03  
+**RFC payloads:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md)  
+**Retomar:** Entregable 2 wizard A/B/C → B → A → C (§10)  
 
 **Relación:** F4 [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) · segmentos [`CAPA_TEORICA_SEGMENTOS_V2.md`](./CAPA_TEORICA_SEGMENTOS_V2.md) · pendientes [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md)
 
@@ -202,7 +203,9 @@ Código existente: `useAsistenciaOutbox.js`, `GrillaMesLicenciasPanel.jsx`, `cam
 | Ítem | Estado |
 |------|--------|
 | Spec producto A/B/C + §9 | ✅ 2026-06-03 |
-| UI wizard F-UX.3 | ⏸️ Pendiente OK explícito |
+| RFC F4 ampliado payloads | ✅ [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) |
+| Entregable 1 shell + gate + materializar celda | ✅ Código (deploy callable pendiente) |
+| Entregable 2 wizard A/B/C | ⏸️ Siguiente |
 | F4 batch en rama | ✅ · deploy pendiente |
 | RFC F4 ampliado | ⏸️ Con implementación |
 | PR → master | ⏸️ Paralelo |

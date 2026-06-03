@@ -66,6 +66,7 @@ function contenidoCeldaOperativa({
  *     dia: string; fechaYmd: string; personaId: string; eventos: unknown[];
  *     personaLabel?: string; grupoLabel?: string;
  *     turnoTeorico?: { rda_turno_id?: string; es_franco?: boolean; capa_teorica?: Record<string, unknown> };
+ *     grupoTrabajoId?: string;
  *   }) => void;
  * }} props
  */
@@ -232,6 +233,7 @@ export default function GrillaMesEquipoTabla({
                               eventos: Array.isArray(eventos) ? eventos : [],
                               personaLabel,
                               grupoLabel,
+                              grupoTrabajoId: grupoSeleccionado || cellGdt || undefined,
                               turnoTeorico: {
                                 rda_turno_id: turnoId || undefined,
                                 es_franco: esFranco,

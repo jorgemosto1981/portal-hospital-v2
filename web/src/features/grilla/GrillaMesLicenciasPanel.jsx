@@ -5,8 +5,10 @@ import { useAuthClaims } from "../auth/useAuthClaims.js";
 import { useAuthSession } from "../auth/useAuthSession.js";
 import { claimsIncludeJefe, claimsIncludeRrhh } from "../routing/portalRole.js";
 import DiaGrillaDetalleModal from "./DiaGrillaDetalleModal.jsx";
+import GestionTurnoDiaShell from "./GestionTurnoDiaShell.jsx";
 import ModalCoberturaParcial from "./ModalCoberturaParcial.jsx";
 import ModalCambioTurno from "./ModalCambioTurno.jsx";
+import { puedeGestionarTurnoEnGrilla } from "./grillaGestionTurnoCapabilities.js";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
 import { GRILLA_MES_MODO } from "./GrillaMesSelector.jsx";
@@ -84,6 +86,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
     vista.titularCalendarios,
   ]);
   const [diaModal, setDiaModal] = useState(null);
+  const [gestionTurnoShell, setGestionTurnoShell] = useState(null);
   const [coberturaModal, setCoberturaModal] = useState(null);
   const [cambioTurnoModal, setCambioTurnoModal] = useState(null);
   const [aplicandoBatch, setAplicandoBatch] = useState(false);
@@ -94,6 +97,11 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
     /** @type {{ grupoId: string; periodo: string; label: string } | null} */ (null),
   );
   const outbox = useAsistenciaOutbox({ editorPersonaId: personaId, periodo: vista.periodo });
+  const puedeGestionTurno = puedeGestionarTurnoEnGrilla({
+    esRrhh,
+    esJefe,
+    gsoPermiteEscritura: vista.gsoPermiteEscritura,
+  });
   const periodos = useMemo(
     () =>
       esJefe
@@ -520,8 +528,17 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   filas={vista.filas}
                   grupoSeleccionado={grupoLiquidacionId || vista.grupoId}
                   etiquetasGrupo={etiquetasGrupo}
-                  onCeldaClick={({ dia, fechaYmd, personaId: pid, eventos, personaLabel, grupoLabel, turnoTeorico }) =>
-                    setDiaModal({ dia, fechaYmd, personaId: pid, eventos, personaLabel, grupoLabel, turnoTeorico })
+                  onCeldaClick={({ dia, fechaYmd, personaId: pid, eventos, personaLabel, grupoLabel, turnoTeorico, grupoTrabajoId }) =>
+                    setDiaModal({
+                      dia,
+                      fechaYmd,
+                      personaId: pid,
+                      eventos,
+                      personaLabel,
+                      grupoLabel,
+                      turnoTeorico,
+                      grupoTrabajoId: grupoTrabajoId || grupoLiquidacionId || vista.grupoActivoId || "",
+                    })
                   }
                 />
               )}
@@ -583,30 +600,36 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
         personaId={diaModal?.personaId}
         fechaYmd={diaModal?.fechaYmd}
         soloLectura={!vista.gsoPermiteEscritura}
-        onAbrirCobertura={
-          vista.gsoPermiteEscritura && diaModal?.personaId && diaModal?.fechaYmd
+        puedeGestionarTurno={puedeGestionTurno}
+        onAbrirGestionTurno={
+          puedeGestionTurno && diaModal?.personaId && diaModal?.fechaYmd && diaModal?.grupoTrabajoId
             ? () => {
-                setCoberturaModal({
-                  personaOrigenId: diaModal.personaId,
-                  personaOrigenLabel: diaModal.personaLabel,
-                  fechaYmd: diaModal.fechaYmd,
-                });
-              }
-            : undefined
-        }
-        onAbrirCambioTurno={
-          vista.gsoPermiteEscritura && diaModal?.personaId && diaModal?.fechaYmd
-            ? () => {
-                setCambioTurnoModal({
+                setGestionTurnoShell({
                   personaId: diaModal.personaId,
-                  personaNombre: diaModal.personaLabel,
                   fechaYmd: diaModal.fechaYmd,
-                  grupoId: diaModal.grupoTrabajoId || vista.grupoActivoId || "",
+                  grupoTrabajoId: diaModal.grupoTrabajoId,
+                  personaLabel: diaModal.personaLabel,
+                  grupoLabel: diaModal.grupoLabel,
+                  turnoTeorico: diaModal.turnoTeorico,
                 });
               }
             : undefined
         }
       />
+
+      {gestionTurnoShell ? (
+        <GestionTurnoDiaShell
+          open
+          onClose={() => setGestionTurnoShell(null)}
+          personaId={gestionTurnoShell.personaId}
+          fechaYmd={gestionTurnoShell.fechaYmd}
+          grupoTrabajoId={gestionTurnoShell.grupoTrabajoId}
+          personaLabel={gestionTurnoShell.personaLabel}
+          grupoLabel={gestionTurnoShell.grupoLabel}
+          turnoVisInicial={gestionTurnoShell.turnoTeorico}
+          onCapaActualizada={() => void vista.cargar()}
+        />
+      ) : null}
 
       {coberturaModal ? (
         <ModalCoberturaParcial

@@ -403,6 +403,20 @@ export function callListarOverridesTurno(data) {
   return httpsCallable(getFunctionsV2(), "listarOverridesTurno")(data);
 }
 
+/** Materializa capa teórica de un solo día (F-UX.3 — gate celda). */
+export function callMaterializarTurnoTeoricoDia(data) {
+  const payload = data && typeof data === "object" ? data : {};
+  const gdt = String(payload.grupo_trabajo_id || payload.grupo_id || "").trim();
+  if (!/^gdt_/i.test(gdt)) {
+    return Promise.reject(new Error("grupo_trabajo_id (gdt_*) es obligatorio para materializar el día."));
+  }
+  return httpsCallable(getFunctionsV2(), "materializarTurnoTeoricoDia", { timeout: 120000 })({
+    persona_id: String(payload.persona_id || "").trim(),
+    fecha: String(payload.fecha || "").trim(),
+    grupo_trabajo_id: gdt,
+  });
+}
+
 /** Capa teórica materializada de un día (segmentos + token concurrencia) por gdt. */
 export function callObtenerCapaTeoricaDia(data) {
   const payload = data && typeof data === "object" ? data : {};

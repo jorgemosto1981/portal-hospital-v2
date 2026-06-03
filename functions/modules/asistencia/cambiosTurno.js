@@ -628,11 +628,50 @@ const aplicarBatchAsistencia = onCall({
   };
 });
 
+/**
+ * Materializa capa teórica de un solo día (celda GSO). F-UX.3 gate.
+ */
+const materializarTurnoTeoricoDiaCallable = onCall({
+  invoker: "public",
+  memory: "512MiB",
+  timeoutSeconds: 120,
+}, async (request) => {
+  const data = request.data || {};
+  const { personaId, fecha } = validarInput(data);
+  const grupoTrabajoId = requireGrupoTrabajoId(
+    resolveGrupoTrabajoId(data, data.context),
+    "[MAT-001] grupo_trabajo_id (gdt_*) requerido.",
+  );
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
+  const token = (request.auth && request.auth.token) || {};
+  await assertPeriodoEditable(personaId, fecha, grupoTrabajoId, token);
+
+  const result = await materializarTurnoTeoricoDia({
+    personaId,
+    grupoId: grupoTrabajoId,
+    fechaYmd: fecha,
+  });
+  if (!result?.ok) {
+    err(
+      "failed-precondition",
+      result?.error || "[MAT-002] No se pudo calcular el turno de este día. Revise plan y régimen.",
+    );
+  }
+  return {
+    ok: true,
+    persona_id: personaId,
+    fecha,
+    grupo_trabajo_id: grupoTrabajoId,
+    dias_procesados: result.diasProcesados ?? 1,
+  };
+});
+
 module.exports = {
   registrarCambioTurno,
   eliminarCambioTurno,
   listarOverridesTurno,
   aplicarBatchAsistencia,
   obtenerCapaTeoricaDia,
+  materializarTurnoTeoricoDiaCallable,
   normalizeBatchOp,
 };

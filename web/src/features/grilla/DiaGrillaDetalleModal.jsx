@@ -26,11 +26,27 @@ function labelEstado(id) {
  *   fechaYmd?: string;
  *   onAbrirCobertura?: () => void;
  *   onAbrirCambioTurno?: () => void;
+ *   onAbrirGestionTurno?: () => void;
+ *   puedeGestionarTurno?: boolean;
  *   soloLectura?: boolean;
  * }} props
  */
 export default function DiaGrillaDetalleModal({
-  open, onClose, dia, eventos, bandejaPath, subtitulo, turnoTeorico, grupoLabel, personaId, fechaYmd, onAbrirCobertura, onAbrirCambioTurno, soloLectura = false,
+  open,
+  onClose,
+  dia,
+  eventos,
+  bandejaPath,
+  subtitulo,
+  turnoTeorico,
+  grupoLabel,
+  personaId,
+  fechaYmd,
+  onAbrirCobertura,
+  onAbrirCambioTurno,
+  onAbrirGestionTurno,
+  puedeGestionarTurno = false,
+  soloLectura = false,
 }) {
   const [solFocus, setSolFocus] = useState("");
   const [resumen, setResumen] = useState(null);
@@ -228,7 +244,19 @@ export default function DiaGrillaDetalleModal({
             Este mes está en solo lectura. Los cambios de turno los gestiona RRHH.
           </p>
         ) : null}
-        {personaId && fechaYmd && onAbrirCobertura && !soloLectura ? (
+        {personaId && fechaYmd && puedeGestionarTurno && onAbrirGestionTurno ? (
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onAbrirGestionTurno();
+            }}
+            className="mt-4 flex min-h-11 w-full touch-manipulation items-center justify-center rounded-xl bg-violet-700 text-base font-semibold text-white active:bg-violet-800"
+          >
+            Gestionar turno de este día
+          </button>
+        ) : null}
+        {personaId && fechaYmd && puedeGestionarTurno && onAbrirCobertura && !onAbrirGestionTurno && !soloLectura ? (
           <button
             type="button"
             onClick={() => {
@@ -240,7 +268,7 @@ export default function DiaGrillaDetalleModal({
             Cobertura parcial por tramos
           </button>
         ) : null}
-        {personaId && fechaYmd && onAbrirCambioTurno && !soloLectura ? (
+        {personaId && fechaYmd && puedeGestionarTurno && onAbrirCambioTurno && !onAbrirGestionTurno && !soloLectura ? (
           <button
             type="button"
             onClick={() => {

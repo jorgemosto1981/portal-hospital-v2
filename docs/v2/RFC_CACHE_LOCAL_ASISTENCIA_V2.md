@@ -2,6 +2,7 @@
 
 **Estado:** borrador operativo — código parcial en rama `feat/epic-multi-hlg-fase1-execution`  
 **Prerequisito:** F3 cerrada (`v2.3.0-f3-turnos-compuestos`)  
+**Ampliación F-UX.3:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md)  
 **Relación:** [`EPIC_CACHE_LOCAL_ASISTENCIA_V2.md`](./EPIC_CACHE_LOCAL_ASISTENCIA_V2.md) · [`CAPA_TEORICA_SEGMENTOS_V2.md`](./CAPA_TEORICA_SEGMENTOS_V2.md)
 
 ---
