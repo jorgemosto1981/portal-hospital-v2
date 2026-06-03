@@ -597,27 +597,47 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   });
   await refreshClaimsLaboralPersona(personaId);
 
+  let materializacionAlta = null;
   if (regimenHorarioId && payload.activo) {
     const { materializarRango } = require("./asistencia/materializarRango");
     const { ymdFinMesSiguiente } = require("./asistencia/purgeCapaTeoricaGdtRango");
     const fi = laboralYmdOrNull(payload.fecha_inicio) || obtenerYmdHoyInstitucional();
     const hastaVentana = ymdFinMesSiguiente(fi);
     try {
-      const mat = await materializarRango(db, {
+      materializacionAlta = await materializarRango(db, {
         personaId,
         grupoId,
         fechaDesdeYmd: fi,
         fechaHastaYmd: hastaVentana,
         motivo: exists ? "actualizar_hlg" : "alta_hlg",
         origenEventoId: id,
+        ignorarPeriodoCerrado: true,
       });
-      console.log("materializarRango_post_hlg OK", JSON.stringify({ ok: mat.ok, dias: mat.diasProcesados }));
+      console.log(
+        "materializarRango_post_hlg OK",
+        JSON.stringify({ ok: materializacionAlta.ok, dias: materializacionAlta.diasProcesados }),
+      );
+      if (!materializacionAlta.ok) {
+        pushWarning(
+          warnings,
+          "VAL-HLG-ALTA-W003",
+          "Asignación guardada, pero no se materializaron todos los turnos teóricos del rango. Revisá el plan del grupo o rematerializá el sector.",
+          { hlg_id: id, desde: fi, hasta: hastaVentana, meses: materializacionAlta.meses },
+        );
+      }
     } catch (e) {
       console.error("materializarRango_post_hlg ERROR", e);
+      const msg = e instanceof Error ? e.message : String(e);
+      pushWarning(
+        warnings,
+        "VAL-HLG-ALTA-W003",
+        `Asignación guardada, pero falló la materialización de turnos teóricos: ${msg}`,
+        { hlg_id: id, desde: fi, hasta: hastaVentana },
+      );
     }
   }
 
-  return { ok: true, id, warnings, evento_id: eventoId };
+  return { ok: true, id, warnings, evento_id: eventoId, materializacion: materializacionAlta };
 });
 
 const rrhhDeshabilitarHlc = onCall(async (request) => {
@@ -928,15 +948,18 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
 
     const grupoHlgDes = toNullableTrimmedString(hlg.grupo_de_trabajo_id);
     let purgeResumen = null;
+    let materializacionSucesor = null;
     if (personaHlg && grupoHlgDes && fechaFin) {
       const {
         purgeCapaTeoricaGdtRango,
-        resolveHastaPurgeTrasDeshabilitarHlg,
+        resolvePurgeVentanaTrasDeshabilitarHlg,
         ymdAddDays,
+        ymdFinMesSiguiente,
       } = require("./asistencia/purgeCapaTeoricaGdtRango");
+      const { materializarRango } = require("./asistencia/materializarRango");
       // Desde el día de corte: sin capa teórica operativa (fecha_fin = primer día sin incorporación).
       const desdePurge = fechaCorte;
-      const hastaPurge = await resolveHastaPurgeTrasDeshabilitarHlg(db, {
+      const { hasta: hastaPurge, siguienteInicio } = await resolvePurgeVentanaTrasDeshabilitarHlg(db, {
         personaId: personaHlg,
         gdt: grupoHlgDes,
         desdeCorteYmd: fechaCorte,
@@ -961,27 +984,65 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
           );
         }
       }
-    }
 
-    if (personaHlg && grupoHlgDes && fechaFin) {
-      const { materializarRango } = require("./asistencia/materializarRango");
-      const { ymdAddDays } = require("./asistencia/purgeCapaTeoricaGdtRango");
       const desdeMat = fechaInicioHlg || fechaCorte;
       const hastaMat = ymdAddDays(fechaCorte, -1);
       try {
         if (desdeMat && hastaMat && desdeMat <= hastaMat) {
-        const mat = await materializarRango(db, {
-          personaId: personaHlg,
-          grupoId: grupoHlgDes,
-          fechaDesdeYmd: desdeMat,
-          fechaHastaYmd: hastaMat,
-          motivo: "deshabilitar_hlg",
-          origenEventoId: hlgId,
-        });
-        console.log("materializarRango_post_deshabilitar_hlg OK", JSON.stringify({ ok: mat.ok, dias: mat.diasProcesados }));
+          const mat = await materializarRango(db, {
+            personaId: personaHlg,
+            grupoId: grupoHlgDes,
+            fechaDesdeYmd: desdeMat,
+            fechaHastaYmd: hastaMat,
+            motivo: "deshabilitar_hlg",
+            origenEventoId: hlgId,
+            ignorarPeriodoCerrado: true,
+          });
+          console.log(
+            "materializarRango_post_deshabilitar_hlg OK",
+            JSON.stringify({ ok: mat.ok, dias: mat.diasProcesados }),
+          );
         }
       } catch (e) {
         console.error("materializarRango_post_deshabilitar_hlg ERROR", e);
+        pushWarning(
+          warnings,
+          "VAL-HLG-DES-W004",
+          "HLg deshabilitada, pero no se pudo rematerializar el tramo previo al corte.",
+          { hlg_id: hlgId, desde: desdeMat, hasta: hastaMat },
+        );
+      }
+
+      if (siguienteInicio) {
+        const hastaMatSucesor = ymdFinMesSiguiente(siguienteInicio);
+        try {
+          materializacionSucesor = await materializarRango(db, {
+            personaId: personaHlg,
+            grupoId: grupoHlgDes,
+            fechaDesdeYmd: siguienteInicio,
+            fechaHastaYmd: hastaMatSucesor,
+            motivo: "deshabilitar_hlg_sucesor",
+            origenEventoId: hlgId,
+            ignorarPeriodoCerrado: true,
+          });
+          console.log(
+            "materializarRango_post_deshabilitar_hlg_sucesor OK",
+            JSON.stringify({
+              ok: materializacionSucesor.ok,
+              dias: materializacionSucesor.diasProcesados,
+              desde: siguienteInicio,
+              hasta: hastaMatSucesor,
+            }),
+          );
+        } catch (e) {
+          console.error("materializarRango_post_deshabilitar_hlg_sucesor ERROR", e);
+          pushWarning(
+            warnings,
+            "VAL-HLG-DES-W005",
+            "HLg deshabilitada, pero no se pudo materializar la asignación vigente desde el día siguiente al corte. Reintentá rematerializar el sector.",
+            { hlg_id: hlgId, desde: siguienteInicio, hasta: hastaMatSucesor },
+          );
+        }
       }
     }
 
@@ -992,6 +1053,7 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
       warnings,
       evento_id: eventoId,
       purge_capa_teorica: purgeResumen,
+      materializacion_sucesor: materializacionSucesor,
     };
   } catch (err) {
     if (err instanceof HttpsError) throw err;

@@ -23,6 +23,8 @@ const {
   patchVisMetadataMaterializacionDot,
 } = require("./visMaterializacionMetadata");
 const { logger } = require("firebase-functions/v2");
+const { hldHlgFechaInicioYmd, hldHlgFechaFinYmd } = require("../shared/fechaLaboralYmd");
+const { hlgVigenteOperativaEnGrilla } = require("../shared/solicitudHlgVigencia");
 const { planHabilitadoDesdeQuerySnapshot } = require("./planGrupoAgentesNuevos");
 
 const COL_HLG = "historial_laboral_grupos";
@@ -79,11 +81,12 @@ async function obtenerHlgsVigentesParaMes(personaId, primerDia, ultimoDia) {
   const result = [];
   for (const doc of snap.docs) {
     const d = doc.data();
-    const fi = d.fecha_inicio || "";
-    const ff = d.fecha_fin || "";
+    const row = { id: doc.id, ...d };
+    const fi = hldHlgFechaInicioYmd(row);
+    const ff = hldHlgFechaFinYmd(row);
     if (fi && fi > ultimoDia) continue;
     if (ff && ff < primerDia) continue;
-    result.push({ id: doc.id, ...d });
+    result.push(row);
   }
   return result;
 }
@@ -346,10 +349,7 @@ async function resolverBaseDiaPersona({ personaId, fechaYmd, indiceCalendario, g
   let mejorResolucion = null;
   let mejorHlg = null;
   for (const { hlg, regimen, plan } of hlgContextos) {
-    const fi = hlg.fecha_inicio || "";
-    const ff = hlg.fecha_fin || "";
-    if (fi && fi > fechaYmd) continue;
-    if (ff && ff < fechaYmd) continue;
+    if (!hlgVigenteOperativaEnGrilla(hlg, fechaYmd)) continue;
 
     const res = resolverDiaConPreCarga(regimen, fechaYmd, hlg, plan, personaId, indiceCalendario);
     if (!mejorResolucion) {
@@ -705,10 +705,7 @@ async function materializarTurnoMesBatch({
 
     if (!mejorResolucion) {
       for (const { hlg, regimen, plan } of hlgContextos) {
-        const fi = hlg.fecha_inicio || "";
-        const ff = hlg.fecha_fin || "";
-        if (fi && fi > fechaYmd) continue;
-        if (ff && ff < fechaYmd) continue;
+        if (!hlgVigenteOperativaEnGrilla(hlg, fechaYmd)) continue;
 
         const res = resolverDiaConPreCarga(regimen, fechaYmd, hlg, plan, personaId, indiceCalendario);
         const esLaboral = esTipoLaboral(res.tipo_dia);
@@ -721,13 +718,7 @@ async function materializarTurnoMesBatch({
         }
       }
     } else {
-      const ctx = hlgContextos.find((c) => {
-        const fi = c.hlg.fecha_inicio || "";
-        const ff = c.hlg.fecha_fin || "";
-        if (fi && fi > fechaYmd) return false;
-        if (ff && ff < fechaYmd) return false;
-        return true;
-      });
+      const ctx = hlgContextos.find((c) => hlgVigenteOperativaEnGrilla(c.hlg, fechaYmd));
       mejorHlg = ctx?.hlg || hlgContextos[0]?.hlg;
     }
 

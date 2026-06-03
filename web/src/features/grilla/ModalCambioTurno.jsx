@@ -13,16 +13,23 @@ const TIPO_COLOR = {
   adicional: "bg-blue-100 text-blue-800",
 };
 
+const TITULO_POR_FLUJO = {
+  reemplazo: "Cambio de turno propio",
+  adicional: "Horas adicionales",
+};
+
 export default function ModalCambioTurno({
   personaId,
   fecha,
   personaNombre,
   grupoId = "",
+  /** @type {'reemplazo' | 'adicional' | undefined} */ modoFlujo,
   onCerrar,
   onRegistrado,
   onAgregarOutbox,
 }) {
   const usaOutbox = typeof onAgregarOutbox === "function";
+  const tipoFijo = modoFlujo === "reemplazo" || modoFlujo === "adicional" ? modoFlujo : null;
   const [expectedVersionToken, setExpectedVersionToken] = useState("");
   const [overrides, setOverrides] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -31,13 +38,18 @@ export default function ModalCambioTurno({
   const [feedback, setFeedback] = useState("");
 
   const [form, setForm] = useState({
-    tipo: "reemplazo",
+    tipo: tipoFijo || "reemplazo",
     turno_id: "",
     ingreso: "",
     egreso: "",
     horas_efectivas: "",
     motivo: "",
   });
+
+  useEffect(() => {
+    if (!tipoFijo) return;
+    setForm((p) => (p.tipo === tipoFijo ? p : { ...p, tipo: tipoFijo }));
+  }, [tipoFijo]);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -160,7 +172,9 @@ export default function ModalCambioTurno({
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Cambio de turno</h2>
+            <h2 className="text-lg font-semibold text-slate-900">
+              {tipoFijo ? TITULO_POR_FLUJO[tipoFijo] : "Cambio de turno"}
+            </h2>
             <p className="text-sm text-slate-500">
               {personaNombre || personaId} — <span className="font-mono">{fecha}</span>
             </p>
@@ -231,33 +245,43 @@ export default function ModalCambioTurno({
         {/* Formulario nuevo override */}
         <h3 className="mb-3 text-sm font-semibold text-slate-700">Registrar nuevo override</h3>
         <div className="space-y-3">
-          {/* Tipo */}
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Tipo de override</label>
-            <div className="flex gap-2">
-              {["reemplazo", "adicional"].map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setForm((p) => ({ ...p, tipo: t }))}
-                  className={`rounded-lg px-4 py-1.5 text-xs font-medium capitalize transition ${
-                    form.tipo === t
-                      ? t === "reemplazo"
-                        ? "bg-amber-600 text-white shadow-sm"
-                        : "bg-blue-600 text-white shadow-sm"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-            <p className="mt-1 text-[10px] text-slate-400">
-              {form.tipo === "reemplazo"
-                ? "Sustituye el turno teórico (ej. cambio de franco, cambio de guardia)."
-                : "Se suma al turno teórico (ej. doble guardia de urgencia, horas extras)."}
+          {tipoFijo ? (
+            <p className="text-xs text-slate-600">
+              Tipo:{" "}
+              <span
+                className={`inline-flex rounded-full px-2 py-0.5 font-medium ${TIPO_COLOR[tipoFijo] || "bg-slate-100"}`}
+              >
+                {tipoFijo === "reemplazo" ? "Cambio propio (reemplazo)" : "Adicional"}
+              </span>
             </p>
-          </div>
+          ) : (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">Tipo de override</label>
+              <div className="flex gap-2">
+                {["reemplazo", "adicional"].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setForm((p) => ({ ...p, tipo: t }))}
+                    className={`rounded-lg px-4 py-1.5 text-xs font-medium capitalize transition ${
+                      form.tipo === t
+                        ? t === "reemplazo"
+                          ? "bg-amber-600 text-white shadow-sm"
+                          : "bg-blue-600 text-white shadow-sm"
+                        : "bg-slate-100 text-slate-600 active:bg-slate-200"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-[10px] text-slate-400">
+                {form.tipo === "reemplazo"
+                  ? "Sustituye el turno teórico (ej. cambio de franco, cambio de guardia)."
+                  : "Se suma al turno teórico (ej. doble guardia de urgencia, horas extras)."}
+              </p>
+            </div>
+          )}
 
           {/* Turno ID */}
           <div>

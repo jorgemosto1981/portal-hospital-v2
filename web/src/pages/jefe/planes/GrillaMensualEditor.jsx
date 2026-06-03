@@ -20,6 +20,7 @@ import {
   varianteCeldaMensual,
 } from "../../../features/grilla/grillaTurnosVisual.js";
 import GrillaTurnosLeyenda from "../../../features/grilla/GrillaTurnosLeyenda.jsx";
+import { ymdDesdeValorLaboral } from "../../datos-laborales/utils.js";
 
 const PALETA_COLORES_BASE = [
   { bg: "bg-yellow-300 hover:bg-yellow-400", text: "text-yellow-950" },
@@ -50,8 +51,10 @@ const DOW_LABELS = ["D", "L", "M", "X", "J", "V", "S"];
 
 /** Hard block: fecha fuera de vigencia HLG */
 function esDiaEnVigenciaHlg(fechaYmd, fechaInicio, fechaFin) {
-  if (fechaInicio && fechaYmd < fechaInicio) return false;
-  if (fechaFin && fechaYmd > fechaFin) return false;
+  const fi = ymdDesdeValorLaboral(fechaInicio);
+  const ff = ymdDesdeValorLaboral(fechaFin);
+  if (fi && fechaYmd < fi) return false;
+  if (ff && fechaYmd > ff) return false;
   return true;
 }
 
@@ -607,8 +610,13 @@ export default function GrillaMensualEditor({
       ...(planVersionToken ? { plan_version_token: planVersionToken } : {}),
       agentes: agentes.map((ag) => {
         const row = grilla[ag.persona_id] || {};
+        const meta = agentesEnriquecidos[ag.persona_id];
         const dias = {};
         for (const [ymd, cel] of Object.entries(row)) {
+          if (meta && !esDiaEnVigenciaHlg(ymd, meta.fecha_inicio, meta.fecha_fin)) {
+            dias[ymd] = { tipo_dia: "franco", turno_id: null };
+            continue;
+          }
           dias[ymd] = extraerIntencionDia(cel);
         }
         return {
@@ -638,6 +646,7 @@ export default function GrillaMensualEditor({
     planVersionToken,
     extraerIntencionDia,
     modoIncorporacionAgentesNuevos,
+    agentesEnriquecidos,
   ]);
 
   const labelAgente = (pid) => {

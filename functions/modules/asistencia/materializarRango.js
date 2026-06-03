@@ -30,6 +30,7 @@ function anioMesDesdeYmd(ymd) {
  *   fechaHastaYmd?: string,
  *   motivo?: string,
  *   origenEventoId?: string | null,
+ *   ignorarPeriodoCerrado?: boolean,
  * }} params
  */
 async function materializarRango(db, params) {
@@ -46,7 +47,9 @@ async function materializarRango(db, params) {
     return { ok: false, codigo: "RANGO_INVALIDO", mensaje: "fecha_desde / fecha_hasta YMD inválidos." };
   }
 
-  await assertNuevaSolicitudNoEnPeriodoCerrado(db, personaId, desde, hasta, grupoId);
+  if (!params.ignorarPeriodoCerrado) {
+    await assertNuevaSolicitudNoEnPeriodoCerrado(db, personaId, desde, hasta, grupoId);
+  }
 
   const dias = iterarYmdInclusive(desde, hasta);
   if (dias.length === 0) {

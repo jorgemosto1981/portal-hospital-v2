@@ -429,8 +429,14 @@ const enviarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =>
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, prePlan.grupo_id, "enviar");
 
   const warnings = [];
+  let agentesParaEnviar = prePlan.agentes;
   if (prePlan.tipo_plan === "mensual") {
-    const regWarnings = await validarReglasContraRegimen(prePlan);
+    const { sanitizarAgentesPlanVigenciaHlg } = require("./planVigenciaHlg");
+    agentesParaEnviar = await sanitizarAgentesPlanVigenciaHlg(db, prePlan.agentes || []);
+    const regWarnings = await validarReglasContraRegimen({
+      ...prePlan,
+      agentes: agentesParaEnviar,
+    });
     warnings.push(...regWarnings);
   }
 
@@ -447,14 +453,18 @@ const enviarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =>
     const snap = await tx.get(ref);
     if (!snap.exists) err("not-found", "[PLT-ENV-002] Plan no encontrado.");
     assertEstados(snap.data(), ["BORRADOR", "EN_REVISION"]);
-    tx.update(ref, {
+    const updatePayload = {
       estado: "ENVIADO",
       observaciones_rechazo: null,
       observaciones_revision: null,
       aprobacion_pendiente: aprobacionPendiente,
       historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
       actualizado_en: FieldValue.serverTimestamp(),
-    });
+    };
+    if (prePlan.tipo_plan === "mensual" && agentesParaEnviar) {
+      updatePayload.agentes = agentesParaEnviar;
+    }
+    tx.update(ref, updatePayload);
   });
 
   return {
@@ -944,9 +954,15 @@ async function enrichPlanesConLabels(items) {
 }
 
 async function validarReglasContraRegimen(plan) {
+  const { sanitizarAgentesPlanVigenciaHlg } = require("./planVigenciaHlg");
+  const { hldHlgFechaInicioYmd, hldHlgFechaFinYmd } = require("../shared/fechaLaboralYmd");
+  const planSanitizado = {
+    ...plan,
+    agentes: await sanitizarAgentesPlanVigenciaHlg(db, plan.agentes || []),
+  };
   const warnings = [];
   const errors = [];
-  for (const ag of plan.agentes || []) {
+  for (const ag of planSanitizado.agentes || []) {
     if (!ag.regimen_horario_id) continue;
     const regSnap = await db.collection("cfg_regimen_horario").doc(ag.regimen_horario_id).get();
     if (!regSnap.exists) continue;
@@ -961,11 +977,12 @@ async function validarReglasContraRegimen(plan) {
       const hlgSnap = await db.collection("historial_laboral_grupos").doc(ag.hlg_id).get();
       if (hlgSnap.exists) {
         const hlg = hlgSnap.data();
-        const fi = hlg.fecha_inicio || "";
-        const ff = hlg.fecha_fin || "";
+        const fi = hldHlgFechaInicioYmd(hlg);
+        const ff = hldHlgFechaFinYmd(hlg);
         for (const ymd of diasKeys) {
           const cel = dias[ymd];
-          if (cel.tipo_dia === "franco") continue;
+          const tipo = String(cel?.tipo_dia || "").trim().toLowerCase();
+          if (tipo === "franco" || tipo === "no_laborable") continue;
           if ((fi && ymd < fi) || (ff && ymd > ff)) {
             errors.push({
               code: "PLT-VIG-E001",

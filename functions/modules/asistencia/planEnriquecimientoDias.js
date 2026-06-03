@@ -16,6 +16,7 @@ const {
 
 const COL_HLG = "historial_laboral_grupos";
 const COL_REGIMEN = "cfg_regimen_horario";
+const { sanitizarDiasPlanSegunVigenciaHlg } = require("./planVigenciaHlg");
 
 const TIPOS_DIA = new Set(["laborable", "guardia", "franco", "no_laborable"]);
 
@@ -128,7 +129,10 @@ async function enriquecerAgentesDiasPlan({ periodo, planId, agentes }) {
       }
     }
 
-    const diasIn = ag.dias && typeof ag.dias === "object" ? ag.dias : {};
+    const diasIn = sanitizarDiasPlanSegunVigenciaHlg(
+      ag.dias && typeof ag.dias === "object" ? ag.dias : {},
+      hlg.id ? hlg : null,
+    );
     const ymds = new Set([...ymdsMes, ...Object.keys(diasIn)]);
     const diasMap = {};
 
