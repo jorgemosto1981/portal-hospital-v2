@@ -8,13 +8,13 @@
 | Qué | Dónde |
 |-----|--------|
 | **Handoff completo (propuesta textual)** | [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) |
-| **Estado** | Sesión **cerrada** 2026-06-02 — propuesta acordada · **sin wizard A/B/C** · retomar §4 handoff |
+| **Estado** | Spec producto **cerrada** 2026-06-03 (handoff §8) · **sin wizard A/B/C** · OK explícito → F-UX.3 + RFC F4 |
 | **RFC F4 (outbox)** | [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) |
 | **PR merge épica** | `master` ← `feat/epic-multi-hlg-fase1-execution` · `gh auth login` pendiente |
 | **F4 backend** | ✅ batch `cobertura_parcial` + `reemplazo` + `adicional` (rama, deploy pendiente) |
 | **UI actual** | Modales legacy — **reemplazar** por wizard A/B/C del handoff |
 
-**Última actualización:** Pausa F-UX gestión turno — propuesta registrada — 2026-06-02
+**Última actualización:** F-UX gestión turno — spec cerrada §9 — 2026-06-03
 
 ## Contexto F4 (sesión previa mismo día)
 
