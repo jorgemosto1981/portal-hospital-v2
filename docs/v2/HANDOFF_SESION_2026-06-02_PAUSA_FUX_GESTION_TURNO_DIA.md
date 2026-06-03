@@ -94,15 +94,16 @@
 
 - **Un agente**, **mismo mes**.
 - **Origen:** quita segmento(s) elegidos (compuesto: uno / otro / ambos; no fraccionar horas dentro del segmento).
-- **Destino:** cualquier día del mes; **incorpora** sin pisar `turno_id` ya presente en destino.
+- **Destino:** cualquier día del mes (incl. **mismo día** — corrimiento intra-día B-N5); **incorpora** sin pisar tramos ya presentes.
+  - Cantidad destino = cantidad origen; combinación **libre** entre simples del régimen (M+T, T+N, M+N… — **sin exigir contigüidad** B-N6).
   - Destino **M+T**, llega **M** → solo puede agregar **N** (no M ni T) → ej. **M+T+N**.
   - Destino ya tiene **T**, no puede agregar **T**; sí **M** o **N**.
   - Destino **franco / no laborable** → pasa a laborable con turno imputado.
   - Destino **feriado** → **sigue feriado** (color celda + flag en registro).
-- **Origen tras op:** **franco explícito**; auditoría **motivo + id op** (B-N4: sin nuevo `cfg_*` motivo franco).
+- **Origen tras op:** **franco total** si se quitaron todos los tramos; **saldo parcial** si no (ej. M+T+N → quitar N → saldo M+T); auditoría **motivo + id op** (B-N4).
 - Encadenable con otras B/A/C (preview acumulado, tope 24 h).
 
-Outbox → `reemplazo` · **RFC pendiente:** `fecha_origen`, `fecha_destino`, segmentos, franco origen.
+**Contrato cerrado:** outbox `reemplazo` según [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) §3.2 (amendment 2026-06-03: B-N5…B-N7). UI + outbox ✅; batch `B-BATCH-1` diferido hasta consolidar con Flujo A (§2 RFC).
 
 ---
 
@@ -188,8 +189,8 @@ Código existente: `useAsistenciaOutbox.js`, `GrillaMesLicenciasPanel.jsx`, `cam
 ## 10. Entregables implementación (orden — tras OK)
 
 1. Shell modal + capabilities RRHH/jefe + gate + materialización celda  
-2. Wizard paso 1 (A/B/C)  
-3. Flujo **B** (validación colisión + preview)  
+2. ~~Wizard paso 1 (A/B/C)~~ ✅  
+3. ~~Flujo **B** (validación colisión + preview)~~ ✅  
 4. Flujo **A** (emparejamiento + dos fechas)  
 5. Flujo **C** (turno + motivo)  
 6. `helpContent.js` + errores legibles capa  
@@ -205,7 +206,8 @@ Código existente: `useAsistenciaOutbox.js`, `GrillaMesLicenciasPanel.jsx`, `cam
 | Spec producto A/B/C + §9 | ✅ 2026-06-03 |
 | RFC F4 ampliado payloads | ✅ [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) |
 | Entregable 1 shell + gate + materializar celda | ✅ Código (deploy callable pendiente) |
-| Entregable 2 wizard A/B/C | ⏸️ Siguiente |
+| Entregable 2 wizard A/B/C | ✅ UI paso 1 + enlace modales |
+| Entregable 3 flujo B (traslado + preview + outbox RFC §3.2 amendment) | ✅ UI/outbox; batch diferido |
 | F4 batch en rama | ✅ · deploy pendiente |
 | RFC F4 ampliado | ⏸️ Con implementación |
 | PR → master | ⏸️ Paralelo |

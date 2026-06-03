@@ -1,6 +1,6 @@
 # RFC F4 ampliado — Outbox gestión turno del día (F-UX.3)
 
-**Estado:** aprobado producto 2026-06-03 · implementación por fases  
+**Estado:** aprobado producto 2026-06-03 · **amendment Flujo B** 2026-06-03 (§3.2 B-N5…B-N7) · implementación por fases  
 **Tag spec:** `v2.4.0-pre-fux-gestion-turno-spec`  
 **Handoff:** [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md)  
 **Base:** [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md)
@@ -47,7 +47,9 @@ Cada op incluye además (UI → batch mapper):
 }
 ```
 
-**Compatibilidad:** el normalizador en `cambiosTurno.js` acepta `payload` anidado o campos planos legacy (MVP una fecha). F-UX.3 fase backend ampliará normalización según §3.
+**Compatibilidad:** el normalizador en `cambiosTurno.js` acepta `payload` anidado o campos planos legacy (MVP una fecha).
+
+**Batch consolidado (B-BATCH-1 + A-BATCH):** la normalización v2 de `reemplazo` (dos fechas, multi-tramo) y `cobertura_parcial` (swap bilateral) se implementará **en una sola fase backend** cuando las UIs A/B/C vuelquen el contrato §3 al outbox. Hasta entonces, outbox + preview UI son la fuente de verdad operativa; «Aplicar cambios» puede seguir en MVP legacy para ops de una sola fecha.
 
 ---
 
@@ -92,7 +94,9 @@ Swap bilateral; **dos fechas**; emparejamiento parcial de segmentos; misma carga
 
 ### 3.2 B — `reemplazo` (Cambio de turno propio)
 
-Traslado origen → destino; segmentos inmutables en destino; origen → franco auditado.
+Traslado origen → destino (mismo mes); **aditivo** en destino (no pisar segmentos ya presentes); origen con **franco total o saldo parcial** según tramos quitados.
+
+#### Payload v2 (contrato outbox → batch)
 
 ```json
 {
@@ -103,29 +107,65 @@ Traslado origen → destino; segmentos inmutables en destino; origen → franco 
   "periodo": "2026-06",
   "payload": {
     "persona_id": "per_…",
-    "fecha_origen": "2026-06-10",
-    "fecha_destino": "2026-06-15",
-    "segmentos_a_trasladar": ["M"],
-    "turno_id_destino": "N",
-    "franco_en_origen": true,
-    "origen_op_ref": null
+    "fecha_origen": "2026-06-16",
+    "fecha_destino": "2026-06-17",
+    "segmentos_a_trasladar": ["cfg_reg_turno_n"],
+    "segmentos_incorporados_destino": ["cfg_reg_turno_m"],
+    "turno_id_destino": "cfg_reg_turno_m",
+    "franco_en_origen": false,
+    "origen_op_ref": "uuid-op-outbox"
   }
 }
 ```
 
+Ejemplo multi-tramo con compuesto régimen (M+T+N):
+
+```json
+{
+  "segmentos_a_trasladar": ["cfg_reg_turno_m", "cfg_reg_turno_t", "cfg_reg_turno_n"],
+  "segmentos_incorporados_destino": ["cfg_reg_turno_m", "cfg_reg_turno_t", "cfg_reg_turno_n"],
+  "turno_id_destino": "cfg_reg_turno_m+cfg_reg_turno_t+cfg_reg_turno_n",
+  "franco_en_origen": true
+}
+```
+
+#### Campos
+
 | Campo | Uso |
 |-------|-----|
-| `segmentos_a_trasladar` | Ids régimen (M/T/N…); compuesto: subconjunto |
-| `turno_id_destino` | Segmento a **incorporar** en destino (no pisar ids existentes) |
-| `franco_en_origen` | Siempre `true` en producto cerrado |
+| `fecha_origen` | Día del que se **quitan** tramos |
+| `fecha_destino` | Día al que se **incorporan** tramos (puede ser igual a origen — ver B-N5) |
+| `segmentos_a_trasladar` | Ids régimen simples a quitar del origen (≥1) |
+| `segmentos_incorporados_destino` | **SSoT** de lo que se suma en destino; longitud = `segmentos_a_trasladar.length` |
+| `turno_id_destino` | Id **wire** para batch/materialización: compuesto del régimen si existe para ese conjunto exacto; si no, primer id de `segmentos_incorporados_destino` |
+| `franco_en_origen` | `true` **solo si** no queda ningún tramo teórico en origen tras quitar `segmentos_a_trasladar`; si queda saldo (ej. M+T tras quitar N), `false` |
 | `origen_op_ref` | Id op outbox para auditoría B-N4 (opcional en UI, recomendado) |
 
-**Validación UI (preview acumulado B-N1):**
+#### Reglas de negocio (producto cerrado)
 
-- Colisión: `turno_id_destino` ∉ segmentos ya en destino (caché + ops pendientes).
-- Tope **24 h**/día en destino tras aplicar preview.
+| Id | Regla |
+|----|--------|
+| **B-N1** | Preview acumulado: validar contra grilla destino + ops pendientes del mismo `persona_id` y `fecha_destino`. |
+| **B-N2** | Tope **24 h**/día en destino tras aplicar preview. |
+| **B-N3** | Destino en feriado: persiste flag feriado en registro; celda mantiene color feriado. |
+| **B-N4** | Auditoría franco/saldo origen: motivo obligatorio + `origen_op_ref` recomendado (sin nuevo `cfg_*` motivo franco). |
+| **B-N5** | **Corrimiento intra-día:** `fecha_origen === fecha_destino` **permitido** (caso hospitalario: reubicar tramos dentro del mismo día). **Rechazar** si `segmentos_a_trasladar` y `segmentos_incorporados_destino` son el **mismo conjunto** (noop). UI: aviso informativo mientras el preview muestre cambio neto. |
+| **B-N6** | **Destino multi-tramo:** cantidad destino = cantidad origen. Combinación **libre** entre simples incorporables del régimen (**sin exigir contigüidad** — ej. M+N válido). Contigüidad solo afecta si el régimen define un `turno_id` compuesto para ese conjunto exacto (M+T, T+N, M+T+N…). |
+| **B-N7** | Colisión: ningún id en `segmentos_incorporados_destino` puede estar ya presente en destino (capa + borradores). |
 
-**Mapper legacy:** `fecha` = `fecha_origen` si falta `fecha_destino` (corrimiento mismo día).
+#### Validación UI (implementación referencia)
+
+- Colisión por tramo (B-N7), no solo por `turno_id_destino` único.
+- Anti-noop mismo día (B-N5).
+- `franco_en_origen` calculado, no constante.
+
+#### Mapper y batch
+
+| Contexto | Comportamiento |
+|----------|----------------|
+| **Outbox UI (fase actual)** | Payload §3.2 completo; `fecha` redundante = `fecha_destino`. |
+| **Mapper legacy (transición)** | Si falta `fecha_destino`, `fecha` = `fecha_origen` (corrimiento mismo día MVP). |
+| **Batch v2 (B-BATCH-1, pendiente)** | Normalizar dos fechas; aplicar quita en origen + suma en destino; rematerializar **ambas** celdas; respetar `franco_en_origen` y `segmentos_incorporados_destino[]`. |
 
 ---
 
@@ -173,10 +213,11 @@ Registro declarativo; **sin** `horas_efectivas` en alta jefe (C-N1).
 |------|------------|-----|
 | 1 | Shell + gate + materializar celda | §4 |
 | 2 | Wizard A/B/C paso 1 | — |
-| 3 | Flujo B + preview | §3.2 |
-| 4 | Flujo A | §3.1 + backend swap |
+| 3 | Flujo B + preview + outbox §3.2 | §3.2 (UI ✅; batch B-BATCH-1 diferido) |
+| 4 | Flujo A UI + outbox §3.1 | §3.1 (batch A-BATCH diferido) |
 | 5 | Flujo C | §3.3 |
-| 6–8 | Ayuda, banner, QA | — |
+| 6 | Batch consolidado B-BATCH-1 + A-BATCH | §2, §3.1, §3.2 |
+| 7–9 | Ayuda, banner, QA apply | — |
 
 ---
 
