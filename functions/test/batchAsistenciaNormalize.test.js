@@ -63,7 +63,7 @@ describe("normalizeBatchOp", () => {
     assert.equal(item.override.turno_id, "M");
   });
 
-  it("normaliza adicional", () => {
+  it("normaliza adicional legacy (sin estado_previo)", () => {
     const item = normalizeBatchOp(mkBase({
       tipo: "adicional",
       payload: {
@@ -75,6 +75,50 @@ describe("normalizeBatchOp", () => {
     }), 0);
     assert.equal(item.tipo, "adicional");
     assert.equal(item.override.tipo, "adicional");
+  });
+
+  it("normaliza adicional v2 (C-BATCH) con estado_previo", () => {
+    const item = normalizeBatchOp(mkBase({
+      tipo: "adicional",
+      payload: {
+        persona_id: PER_X,
+        fecha: FECHA,
+        tipo: "adicional",
+        turno_id: "cfg_reg_turno_t",
+        turno_id_adicional: "cfg_reg_turno_t",
+        motivo: "Emergencia guardia",
+        estado_previo: {
+          es_franco: false,
+          es_feriado: true,
+          es_no_laborable: false,
+          turno_preasignado_id: "cfg_reg_turno_m",
+          horas_preasignadas: 8,
+          etiqueta_preasignada: "M",
+        },
+      },
+    }), 0);
+    assert.equal(item.tipo, "adicional");
+    assert.equal(item.override.turno_id, "cfg_reg_turno_t");
+    assert.equal(item.override.estado_previo.horas_preasignadas, 8);
+    assert.equal(item.override.estado_previo.etiqueta_preasignada, "M");
+    assert.equal(item.override.motivo, "Emergencia guardia");
+  });
+
+  it("rechaza adicional v2 con horas_efectivas en payload", () => {
+    assert.throws(
+      () => normalizeBatchOp(mkBase({
+        tipo: "adicional",
+        payload: {
+          persona_id: PER_X,
+          fecha: FECHA,
+          turno_id: "cfg_reg_turno_t",
+          motivo: "xxx",
+          horas_efectivas: 4,
+          estado_previo: { horas_preasignadas: 0 },
+        },
+      }), 0),
+      (e) => String(e.message).includes("[C-BATCH-014]"),
+    );
   });
 
   it("rechaza tipo desconocido", () => {

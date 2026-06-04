@@ -213,8 +213,114 @@ function payloadSimpleOverrideDesdeOp(op) {
     ingreso: src.ingreso,
     egreso: src.egreso,
     horas_efectivas: src.horas_efectivas,
+    horas_adicionales_solicitadas: src.horas_adicionales_solicitadas,
     turno_id: src.turno_id,
+    turno_id_adicional: src.turno_id_adicional,
     motivo: src.motivo,
+    estado_previo: src.estado_previo,
+    es_feriado: src.es_feriado,
+    fecha_origen: src.fecha_origen,
+    fecha_destino: src.fecha_destino,
+    segmentos_a_trasladar: src.segmentos_a_trasladar,
+    segmentos_trasladar: src.segmentos_trasladar,
+    segmentos_incorporados_destino: src.segmentos_incorporados_destino,
+    franco_en_origen: src.franco_en_origen,
+    origen: src.origen,
+    destino: src.destino,
+  };
+}
+
+/** @param {Record<string, unknown>} src */
+function esPayloadCoberturaV2(src) {
+  const o = src?.origen;
+  const d = src?.destino;
+  return Boolean(
+    o && typeof o === "object"
+    && d && typeof d === "object"
+    && PER_ID.test(String(o.persona_id || "").trim())
+    && PER_ID.test(String(d.persona_id || "").trim())
+    && Array.isArray(o.segmentos_cedidos)
+    && Array.isArray(d.segmentos_cedidos),
+  );
+}
+
+/** @param {Record<string, unknown>} src */
+function esPayloadReemplazoV2(src) {
+  const fo = String(src?.fecha_origen || "").trim();
+  const fd = String(src?.fecha_destino || "").trim();
+  const segs = src?.segmentos_a_trasladar || src?.segmentos_trasladar;
+  return YMD.test(fo) && YMD.test(fd) && Array.isArray(segs) && segs.length >= 1;
+}
+
+/** @param {Record<string, unknown>} src */
+function esPayloadAdicionalV2(src) {
+  const ep = src?.estado_previo;
+  if (!ep || typeof ep !== "object") return false;
+  const tid = String(src.turno_id_adicional || src.turno_id || "").trim();
+  return Boolean(tid);
+}
+
+function validarOverrideAdicionalV2(raw) {
+  const ov = raw && typeof raw === "object" ? raw : {};
+  const motivo = typeof ov.motivo === "string" ? ov.motivo.trim() : "";
+  if (motivo.length < 3) err("invalid-argument", "[C-BATCH-012] motivo requerido (mín. 3 caracteres).");
+
+  const turno_id = String(ov.turno_id_adicional || ov.turno_id || "").trim();
+  if (!turno_id) err("invalid-argument", "[C-BATCH-013] turno_id / turno_id_adicional requerido.");
+
+  if (ov.horas_efectivas != null && ov.horas_efectivas !== "") {
+    err("invalid-argument", "[C-BATCH-014] horas_efectivas no permitidas en alta jefe (Flujo C).");
+  }
+  if (ov.horas_adicionales_solicitadas != null && ov.horas_adicionales_solicitadas !== "") {
+    err("invalid-argument", "[C-BATCH-015] horas_adicionales_solicitadas no permitidas en alta jefe.");
+  }
+
+  const ep = ov.estado_previo;
+  if (!ep || typeof ep !== "object") {
+    err("invalid-argument", "[C-BATCH-016] estado_previo requerido (snapshot §3.3).");
+  }
+
+  const estado_previo = {
+    es_franco: ep.es_franco === true,
+    es_feriado: ep.es_feriado === true,
+    es_no_laborable: ep.es_no_laborable === true,
+    tipo_dia: typeof ep.tipo_dia === "string" ? ep.tipo_dia.trim() : null,
+    turno_preasignado_id: ep.turno_preasignado_id ? String(ep.turno_preasignado_id).trim() : null,
+    segmentos_preasignados: Array.isArray(ep.segmentos_preasignados)
+      ? ep.segmentos_preasignados.map(String)
+      : [],
+    etiqueta_preasignada: typeof ep.etiqueta_preasignada === "string"
+      ? ep.etiqueta_preasignada.trim()
+      : null,
+    horas_preasignadas: Number.isFinite(Number(ep.horas_preasignadas))
+      ? Math.max(0, Number(ep.horas_preasignadas))
+      : 0,
+  };
+
+  return {
+    tipo: "adicional",
+    turno_id,
+    motivo,
+    estado_previo,
+    es_feriado: ov.es_feriado === true || estado_previo.es_feriado === true,
+  };
+}
+
+function normalizeBatchOpAdicionalV2(op, idx, grupo_trabajo_id, expected) {
+  const payload = payloadSimpleOverrideDesdeOp(op);
+  const persona_id = typeof payload.persona_id === "string" ? payload.persona_id.trim() : "";
+  if (!PER_ID.test(persona_id)) err("invalid-argument", `[BATCH-008] op[${idx}] persona_id requerido.`);
+  const fecha = typeof payload.fecha === "string" ? payload.fecha.trim() : "";
+  if (!YMD.test(fecha)) err("invalid-argument", `[BATCH-004] op[${idx}] fecha YYYY-MM-DD requerida.`);
+  const override = validarOverrideAdicionalV2(payload);
+  return {
+    op_id: String(op.id || `op_${idx + 1}`),
+    tipo: "adicional",
+    fecha,
+    grupo_trabajo_id,
+    expected_version_token: expected,
+    persona_id,
+    override,
   };
 }
 
@@ -269,10 +375,24 @@ function normalizeBatchOp(raw, idx) {
   if (!expected) {
     err("invalid-argument", `[BATCH-003] op[${idx}] expected_version_token requerido.`);
   }
+  const payloadFlat = payloadSimpleOverrideDesdeOp(op);
+
   if (tipo === "cobertura_parcial") {
+    if (esPayloadCoberturaV2(payloadFlat)) {
+      err("unimplemented", `[BATCH-020] op[${idx}] intercambio v2 (A-BATCH) pendiente de implementación.`);
+    }
     return normalizeBatchOpCobertura(op, idx, grupo_trabajo_id, expected);
   }
-  if (tipo === "reemplazo" || tipo === "adicional") {
+  if (tipo === "reemplazo") {
+    if (esPayloadReemplazoV2(payloadFlat)) {
+      err("unimplemented", `[BATCH-021] op[${idx}] traslado propio v2 (B-BATCH-1) pendiente de implementación.`);
+    }
+    return normalizeBatchOpSimple(op, idx, tipo, grupo_trabajo_id, expected);
+  }
+  if (tipo === "adicional") {
+    if (esPayloadAdicionalV2(payloadFlat)) {
+      return normalizeBatchOpAdicionalV2(op, idx, grupo_trabajo_id, expected);
+    }
     return normalizeBatchOpSimple(op, idx, tipo, grupo_trabajo_id, expected);
   }
   err("invalid-argument", `[BATCH-002] op[${idx}] tipo no soportado: ${tipo}`);
@@ -742,4 +862,7 @@ module.exports = {
   obtenerCapaTeoricaDia,
   materializarTurnoTeoricoDia,
   normalizeBatchOp,
+  esPayloadAdicionalV2,
+  esPayloadReemplazoV2,
+  esPayloadCoberturaV2,
 };
