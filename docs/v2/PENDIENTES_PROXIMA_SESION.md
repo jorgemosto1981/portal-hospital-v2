@@ -1,7 +1,8 @@
 # Punto de Continuación — Próxima Sesión
 
-> **Épica F-UX.3 — CERRADA en rama** (2026-06-04) · Documentación: [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) · merge `master` = único gate pendiente.  
-> Handoff · Release · PR: [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) · [`RELEASE_NOTES_FUX_GESTION_TURNO_V3.md`](./RELEASE_NOTES_FUX_GESTION_TURNO_V3.md) · [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md).
+> **RETOMAR AQUÍ (otra PC):** [`HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md`](./HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md) — `git pull origin feat/epic-multi-hlg-fase1-execution` + `.env.v2.local`  
+> **Épica F-UX.3 — CERRADA en rama** · Registro: [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) · PR: [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md)  
+> **GSO conflictos (docs, sin código):** [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md)
 
 ## CIERRE F-UX.3 — gestión turno A/B/C (implementación terminada)
 
@@ -16,7 +17,8 @@
 | **Fase 6 backend batch v2** | ✅ A-BATCH + B-BATCH-1 + C-BATCH (`cambiosTurno.js` + worker v2) · deploy functions **2026-06-04** |
 | **QA batch prod** | ✅ Manual **4 aplicadas** + smokes dev |
 | **QA grilla prod** | ✅ Validado en grilla (hosting + functions 2026-06-04) |
-| **Push rama** | ✅ `425b869` en origin |
+| **Push rama** | ✅ Sincronizar con `git pull` — ver handoff 2026-06-04 |
+| **Handoff sesión 2026-06-04** | [`HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md`](./HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md) |
 
 ### Único paso pendiente (humano)
 

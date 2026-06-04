@@ -20,8 +20,13 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`DICCIONARIO_CFG_ASISTENCIA_TURNOS_V2.md`](./DICCIONARIO_CFG_ASISTENCIA_TURNOS_V2.md) | Catálogos `cfg_tcc_*`, `cfg_epl_*`, `cfg_cdc_*`, manifiesto ids |
 | [`EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md`](./EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md) | Fórmula fichadas esperadas + salida momentánea |
 | [`RFC_CIERRE_PERIODO_LIQUIDACION_V2.md`](./RFC_CIERRE_PERIODO_LIQUIDACION_V2.md) | Freeze período liquidación en `vis_*` |
-| **[`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md)** | **Gherkin A–H:** anti-blanco, licencias vs teoría, épicas US-1…US-12 |
+| **[`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md)** | **Gherkin A–I:** anti-blanco, licencias vs teoría, épicas US-1…US-17, acta RRHH §6 |
+| **[`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md)** | **Acta + piloto junio Sala** remediado (`plt_01KT9…`), principios blanco/error |
+| **[`ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md`](./ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md)** | **Brechas as-built** vs criterios (sin código en doc) |
 | [`GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md`](./GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md) | Operaciones: por qué la grilla de equipo recalcula al abrir |
+| [`HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md`](./HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md) | **Retomar otra PC** — cierre sesión batch + documental |
+| [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md) | Acta RRHH GSO reconciliación capas (jun 2026) |
+| [`ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md`](./ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md) | Brechas US ↔ código GSO |
 | [`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`](./EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md) | Tickets T-01…T-10 y ramas |
 | [`EPIC_CACHE_LOCAL_ASISTENCIA_V2.md`](./EPIC_CACHE_LOCAL_ASISTENCIA_V2.md) | Epic F4 outbox (implementado F-UX.3 en rama) |
 | **[`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md)** | **Registro maestro F-UX.3** — inventario docs, código, commits, QA, smokes |

@@ -4,7 +4,7 @@
 **Estado:** Fase **COMPLETADA** en rama `feat/epic-multi-hlg-fase1-execution` · QA grilla prod OK · merge `master` pendiente  
 **Tag sugerido post-merge:** `v2.4.0-fux-gestion-turno`
 
-**Índice operativo:** [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) (bloque cierre) · PR: [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md)
+**Índice operativo:** [`HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md`](./HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md) (otra PC) · [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · PR: [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md)
 
 ---
 

@@ -106,7 +106,7 @@
 - **Origen tras op:** **franco total** si se quitaron todos los tramos; **saldo parcial** si no (ej. M+T+N → quitar N → saldo M+T); auditoría **motivo + id op** (B-N4).
 - Encadenable con otras B/A/C (preview acumulado, tope 24 h).
 
-**Contrato cerrado:** outbox `reemplazo` según [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) §3.2 (amendment 2026-06-03: B-N5…B-N7). UI + outbox ✅; batch `B-BATCH-1` diferido hasta consolidar con Flujo A (§2 RFC).
+**Contrato cerrado:** outbox `reemplazo` §3.2 (B-N5…B-N7). UI + outbox ✅; **B-BATCH-1** ✅ (`17a04bf`).
 
 ---
 

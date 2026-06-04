@@ -2,8 +2,9 @@
 
 **Módulo:** GSO (Grilla de Servicios Operativos) — Calendario licencias  
 **Contexto:** Resolver opacidad visual en la superposición de capa teórica (1) y capa eventos/licencias (3). Evitar el síntoma de “celdas en blanco” y transparentar actos de recálculo ante el usuario.  
-**Estado:** especificación + **acta RRHH** (§6) y análisis **punto 9** (§6.2) — junio 2026  
-**Piloto de referencia:** MOSTO junio 2026 · Sala · plan `plt_01KSXBAFCN14GSHXE7HMTZM3MK`
+**Estado:** especificación + acta RRHH (§6) + piloto junio Sala **remediado** (§6.6) — junio 2026  
+**Piloto de referencia:** MOSTO · Sala · plan vigente `plt_01KT9AZQGV0BRZVSEEMBT0141A` (histórico `plt_01KSXBAFCN14GSHXE7HMTZM3MK`)  
+**Registro consolidado:** [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md) · **Brechas app:** [`ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md`](./ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md)
 
 **Documentos relacionados:**
 
@@ -349,6 +350,18 @@ En el **as-built** no existe un único botón “editar teoría de celda”. La 
 - **Q9-3 + Q9-4:** el jefe necesita señal **presente/ausente** agregada en API (distinto de `fichadas_reales` completas); RRHH consume fichada completa para regla **B** del ⚠️.
 - **Remediación (§6.5):** MOSTO 11/18/19/26 y planes equivalentes entran en **US-17**; tras replan, sirven de regresión “sin blanco / sin INCOMPLETO_PLAN”.
 
+### 6.6 Validación piloto — junio 2026 Sala (post replan)
+
+| Evidencia | Resultado |
+| :--- | :--- |
+| Plan vigente `plt_01KT9AZQGV0BRZVSEEMBT0141A` | `HABILITADO`, `eliminado: false`, **0** huecos en plan |
+| MOSTO `vis_*` días 11, 18, 19, 26 | Alineado a plan; 11 = franco + **64-A** |
+| LOKITO plan ↔ `vis_*` | **0** desalineaciones mes |
+| UI Calendario licencias equipo | 2 filas; días 1–27 con lectura; **sin blancos** (captura 2026-06-04) |
+| CHAPARRO | Fuera del plan vigente; `vis_*` = `no_laborable` (HLg baja) — no confundir con hueco |
+
+Detalle: [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md).
+
 ---
 
 ## 7. Definition of Done (épica 1 + remediación)
@@ -357,7 +370,8 @@ En el **as-built** no existe un único botón “editar teoría de celda”. La 
 - [ ] No regresión: licencias LAO/64-A visibles tras abrir grilla de equipo.
 - [ ] Tooltips/badges accesibles (`title` o componente equivalente).
 - [ ] Doc operaciones comunicado a RRHH/jefes (épica 3 o capacitación).
-- [ ] **US-17:** inventario de planes con hueco/blanco cerrado; piloto junio 2026 Sala replanificado y verificado en GSO.
+- [x] **US-17 (piloto):** junio 2026 Sala replanificado (`plt_01KT9…`) — BD + UI sin blancos (§6.6).
+- [ ] **US-17 (global):** inventario resto `gdt`/meses con hueco/blanco.
 - [ ] **US-9** activo: ningún plan nuevo habilitado con laborable/guardia sin turno o franco.
 
 ---
