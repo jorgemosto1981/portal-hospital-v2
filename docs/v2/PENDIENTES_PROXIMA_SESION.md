@@ -13,14 +13,15 @@
 | **RFC F4 (outbox + batch)** | [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) · [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) |
 | **Branch trabajo** | `feat/epic-multi-hlg-fase1-execution` |
 | **Fase 6 backend batch v2** | ✅ A-BATCH + B-BATCH-1 + C-BATCH (`cambiosTurno.js` + worker v2) · deploy functions **2026-06-04** |
-| **QA batch prod** | ✅ Manual **4 aplicadas** + `npm run test:batch-asistencia-normalize` + `smoke:outbox-batch-v2` |
-| **Commit batch** | ✅ `17a04bf` (push pendiente si no se corrió) |
+| **QA batch prod** | ✅ Manual **4 aplicadas** + smokes dev |
+| **QA grilla prod** | ✅ Validado en grilla (hosting + functions 2026-06-04) |
+| **Push rama** | ✅ `425b869` en origin |
 
 ### Orden próxima sesión
 
-1. **`git push`** rama `feat/epic-multi-hlg-fase1-execution`
-2. **Deploy hosting** (`npm run build:web` + `firebase deploy --only hosting`) — mensajes batch + token origen B + preview §12
-3. **PR merge épica** → `master`
+1. **PR merge épica** → `master` (texto sugerido abajo; `gh` no disponible en esta PC)
+2. Tag opcional post-merge: `v2.3.1-fux-gestion-turno` o continuar línea F3
+3. Formalizar acta §4.2 si RRHH pide cierre documental F-UX
 
 **Última actualización:** Fase 6 batch + QA cerrados — 2026-06-04
 
