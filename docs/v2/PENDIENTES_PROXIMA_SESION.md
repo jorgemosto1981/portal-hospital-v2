@@ -9,19 +9,20 @@
 |-----|--------|
 | **Handoff completo** | [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) |
 | **Estado frontend F-UX.3** | ✅ Wizard A/B/C · modales · outbox v2 · banner por tarjeta grupo×mes · labels embebidos |
-| **Spec visual grilla (§12)** | ✅ [`RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md`](./RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md) — implementación UI pendiente |
+| **Spec visual grilla (§12)** | ✅ UI `73d58cd` · consulta ligera callable desplegada |
 | **RFC F4 (outbox + batch)** | [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) · [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) |
 | **Branch trabajo** | `feat/epic-multi-hlg-fase1-execution` |
 | **Fase 6 backend batch v2** | ✅ A-BATCH + B-BATCH-1 + C-BATCH (`cambiosTurno.js` + worker v2) · deploy functions **2026-06-04** |
-| **QA batch prod** | ⏳ Aplicar cola intercambio / traslado / adicional desde localhost o hosting |
+| **QA batch prod** | ✅ Manual **4 aplicadas** + `npm run test:batch-asistencia-normalize` + `smoke:outbox-batch-v2` |
+| **Commit batch** | ✅ `17a04bf` (push pendiente si no se corrió) |
 
 ### Orden próxima sesión
 
-1. **QA smoke batch** — intercambio v2 (tokens origen+destino), traslado v2, adicional v2; recargar grilla si `[ASI-CONC-001]`
-2. **Commit + push** cambios batch (sin archivos `functions/modules/shared/*` salvo sync intencional)
-3. PR merge épica (paralelo) · hosting si falta preview visual §12 en prod
+1. **`git push`** rama `feat/epic-multi-hlg-fase1-execution`
+2. **Deploy hosting** (`npm run build:web` + `firebase deploy --only hosting`) — mensajes batch + token origen B + preview §12
+3. **PR merge épica** → `master`
 
-**Última actualización:** A/B/C-BATCH desplegado — 2026-06-04
+**Última actualización:** Fase 6 batch + QA cerrados — 2026-06-04
 
 ---
 

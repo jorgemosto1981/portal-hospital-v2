@@ -4,9 +4,9 @@
 **Spec cerrada:** 2026-06-03 (sesión aclaraciones A/B/C + §9)  
 **Pausa frontend outbox:** 2026-06-03 (tarjetas grupo×mes, labels embebidos, QA banner)  
 **Rama:** `feat/epic-multi-hlg-fase1-execution`  
-**Estado:** F-UX.3 **frontend cerrado** — outbox v2 legible + banner por tarjeta · **backend Fase 6 pendiente**  
+**Estado:** F-UX.3 **cerrado en rama** — UI §12 + batch v2 A/B/C desplegado · QA batch manual **4 aplicadas** + smokes dev OK (2026-06-04)  
 **RFC payloads:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md)  
-**Retomar:** implementar [`RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md`](./RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md) · luego Fase 6 batch  
+**Retomar:** push/PR épica · hosting prod si falta preview §12 · PR merge `master`  
 
 **Relación:** F4 [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) · segmentos [`CAPA_TEORICA_SEGMENTOS_V2.md`](./CAPA_TEORICA_SEGMENTOS_V2.md) · pendientes [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md)
 
@@ -198,16 +198,16 @@ Código existente: `useAsistenciaOutbox.js`, `GrillaMesLicenciasPanel.jsx`, `cam
 |---|------------|--------|
 | 1 | Shell modal + capabilities + gate + materializar celda | ✅ |
 | 2 | Wizard paso 1 (A/B/C) + ayuda in-app | ✅ |
-| 3 | Flujo **B** (preview + outbox RFC §3.2) | ✅ UI · batch diferido |
-| 4 | Flujo **A** (emparejamiento + dos fechas + outbox §3.1) | ✅ UI + QA navegador · batch diferido |
-| 5 | Flujo **C** (turno + motivo + snapshot + solo-C sin turno calc.) | ✅ UI + QA navegador · batch diferido |
+| 3 | Flujo **B** (preview + outbox RFC §3.2) | ✅ UI + **B-BATCH-1** (`17a04bf`) |
+| 4 | Flujo **A** (emparejamiento + dos fechas + outbox §3.1) | ✅ UI + **A-BATCH** (`17a04bf`) |
+| 5 | Flujo **C** (turno + motivo + snapshot + solo-C sin turno calc.) | ✅ UI + **C-BATCH** (`a49e9f1`) |
 | 6 | Banner outbox etiquetas legibles A/B/C v2 | ✅ |
 | 7 | `helpContent.js` gestión turno A/B/C | ✅ |
 | 8 | QA combinaciones (A, B, C, C sin materializar) | ✅ |
 | 9 | Banner: título función (no badge A/B/C), quitar/limpiar/enviar con confirmación | ✅ |
 | 10 | Banner: tarjeta por **grupo × mes/año** + labels persona/grupo embebidos en op | ✅ QA |
 
-**Próximo bloque (orden):** §12 visualización grilla → Fase 6 backend A-BATCH + B-BATCH-1 + C-BATCH (`cambiosTurno.js`).
+**Próximo bloque:** PR merge épica · validación visual en **hosting prod** (commit `73d58cd` + `17a04bf`).
 
 ---
 
@@ -222,11 +222,11 @@ Código existente: `useAsistenciaOutbox.js`, `GrillaMesLicenciasPanel.jsx`, `cam
 | Entregable 5 flujo C (UI/outbox §3.3 + gate solo-C) | ✅ QA navegador |
 | Entregable 6–7 outbox labels + helpContent | ✅ commit `19b411e` |
 | Entregable 9–10 banner outbox (función, tarjeta, labels) | ✅ 2026-06-03 · QA OK |
-| F4 batch en rama | ✅ legacy · v2 batch Fase 6 pendiente |
-| Visualización grilla post-aplicar A/B/C | ⏳ **Antes de backend** — §12 |
+| F4 batch v2 A/B/C | ✅ `17a04bf` + deploy functions 2026-06-04 · `npm run smoke:outbox-batch-v2` |
+| Visualización grilla §12 | ✅ `73d58cd` · deploy hosting si UI prod desactualizada |
 | PR → master | ⏸️ Paralelo |
 
-**Próximo paso:** §12 → Fase 6 backend (A-BATCH, B-BATCH-1, C-BATCH) — ver RFC §3 y §5.
+**Próximo paso:** `git push` · PR · smoke prod en grilla operativa.
 
 ---
 
@@ -244,8 +244,9 @@ Código existente: `useAsistenciaOutbox.js`, `GrillaMesLicenciasPanel.jsx`, `cam
 
 ### Siguiente paso (implementación)
 
-1. Wire grilla mes equipo + modal detalle (amendment §7).
-2. Fase 6 backend (`cambiosTurno.js` A-BATCH, B-BATCH-1, C-BATCH) alineado al amendment §3.5 y §4.
+1. ~~Wire grilla §7~~ ✅ `73d58cd`.
+2. ~~Fase 6 A/B/C-BATCH~~ ✅ `17a04bf` + worker v2 cross-fecha.
+3. Validación RRHH/jefe en prod tras deploy hosting.
 
 ### Arranque otra PC
 
