@@ -40,11 +40,13 @@ Referencias: [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](./MANUAL_CAPAS_ORQUESTACI
 |-------|--------|-------|
 | **F-UX.1** | ✅ ~100% | Menú RRHH, `/portal/rrhh/grilla-operativa`, sector por defecto |
 | **F-UX.2** | ✅ Parcial | Badge **F:n** + modal; validado F:2 prod 2026-06-02 · UX-6 API pendiente |
+| **F-UX.3** | ✅ Cerrado rama | Gestión turno A/B/C + batch v2 — [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) |
 | **F0** | ✅ Código + smoke prod | O-P0-1,4,5,7; purge HLg validado CHAPARRO |
 | **F1** | ✅ ~90% | Merge Multi-HLG en `master` (`25bc00c`); cierre manual RRHH OK |
 | **F1.2 QA formal** | ⏳ | Matriz §4.2 [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) |
-| **F2** | ~60–70% | Ver §3 — **etapa activa** |
-| **F3–F4** | ⏳ | **No empezar** hasta cerrar DoD F2 pendiente |
+| **F2** | ~60–70% | Ver §3 — orquestación (paralelo a cierre épica) |
+| **F3** | ✅ Núcleo | Tag `v2.3.0-f3-turnos-compuestos` · release notes F3 |
+| **F4** | ✅ En rama (F-UX.3) | Outbox + `aplicarBatchAsistencia` A/B/C — merge `master` pendiente |
 
 ### Decisiones de negocio ya cerradas (no reabrir sin RRHH)
 

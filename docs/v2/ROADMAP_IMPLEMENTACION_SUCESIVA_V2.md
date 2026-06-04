@@ -29,7 +29,7 @@
 | **F1** | Merge Multi-HLG + cierre período manual RRHH | master + freeze usable |
 | **F2** | Manual §15–22 en código (M+M+1, día 5, purge UX, rango) | ~90% reglas orquestación |
 | **F3** | Segmentos, cobertura día, fichadas esperadas | T-08 ✅ smoke + unit |
-| **F4** | Outbox + `enviarAccionesAsistencia` | RFC + batch estable |
+| **F4** | Outbox + batch (`aplicarBatchAsistencia`) | ✅ F-UX.3 en rama (2026-06-04) |
 
 ```mermaid
 flowchart TB
@@ -107,15 +107,18 @@ Que **Recursos Humanos** sea el dueño de la **grilla operativa** (calendario MD
 
 **Dependencias:** F-UX.1 aprobado; recomendable F0 (observabilidad) antes de muchos jefes en prod.
 
-#### F-UX.3 — Gestión turno del día (wizard A/B/C) — **pausa 2026-06-02**
+#### F-UX.3 — Gestión turno del día (wizard A/B/C) — **cerrado 2026-06-04**
 
 | ID | Entregable | DoD |
 |----|------------|-----|
-| UX-8 | Wizard «Gestionar turno de este día» | Paso 1: A Intercambio de guardia · B Cambio turno propio · C Horas adicionales |
-| UX-9 | Formularios mobile-first | Selects régimen/YY/compensación; gate materializar; errores legibles |
-| UX-10 | Copy ayuda | Términos §2 handoff en `helpContent.js` |
+| UX-8 | Wizard «Gestionar turno de este día» | ✅ A / B / C |
+| UX-9 | Formularios mobile-first | ✅ Gate materializar + tokens concurrencia |
+| UX-10 | Copy ayuda | ✅ `helpContent.js` |
+| UX-11 | Outbox tarjeta grupo×mes | ✅ `7be370b` |
+| UX-12 | Visual grilla §12 | ✅ `73d58cd` + amendment RFC |
+| UX-13 | Batch v2 A/B/C | ✅ `a49e9f1`, `17a04bf` · prod desplegado |
 
-**Handoff (propuesta textual, sin codificar):** [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) — cerrar decisiones §4 antes de implementar.
+**Registro documental:** [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) · Handoff: [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md).
 
 ---
 
@@ -251,16 +254,21 @@ Motor **solo tiempo**; `segmentos[]` SoT en `asi_*`; proyección `vis_*`; cobert
 
 Edición offline en grilla con **envío batch** append-only; acciones granulares sobre contrato F3.
 
+### Estado (2026-06-04)
+
+Núcleo F4 **implementado en F-UX.3** en rama `feat/epic-multi-hlg-fase1-execution`. Ver [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md).
+
 ### Entregables detallados
 
 | ID | Entregable | DoD |
 |----|------------|-----|
-| 4.1 | `RFC_CACHE_LOCAL_ASISTENCIA_V2.md` | ✅ Idempotencia `temp_id`; tipos acción |
-| 4.2 | `enviarAccionesAsistencia` (= `aplicarBatchAsistencia`) | ✅ `cobertura_parcial`, `reemplazo`, `adicional`; freeze; append |
-| 4.3 | Outbox UI | ⏳ Grilla equipo RRHH/jefe; falta pantalla legacy |
-| 4.4 | Integración | ⏳ Sin rematerializar mes entero por cada cambio local |
+| 4.1 | `RFC_CACHE_LOCAL_ASISTENCIA_V2.md` + RFC F4 ampliado | ✅ |
+| 4.2 | `aplicarBatchAsistencia` (A/B/C v2 + legacy) | ✅ Desplegado prod |
+| 4.3 | Outbox UI grilla | ✅ Banner tarjeta + wizard A/B/C |
+| 4.4 | Integración | ✅ `materializarTurnoTeoricoDia` por día afectado |
+| 4.5 | Visual §12 + consulta ligera | ✅ Amendment + callable |
 
-**Dependencias:** **F3 cerrada** (obligatorio).
+**Dependencias:** **F3 cerrada** (obligatorio). **Merge `master`:** pendiente humano ([`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md)).
 
 ---
 

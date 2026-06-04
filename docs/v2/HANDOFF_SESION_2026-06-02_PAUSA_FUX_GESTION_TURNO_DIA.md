@@ -6,6 +6,7 @@
 **Rama:** `feat/epic-multi-hlg-fase1-execution`  
 **Estado:** F-UX.3 **CERRADO** (implementación + QA prod) — 2026-06-04  
 **RFC payloads:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md)  
+**Registro documental (SSoT inventario):** [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md)  
 **Release:** [`RELEASE_NOTES_FUX_GESTION_TURNO_V3.md`](./RELEASE_NOTES_FUX_GESTION_TURNO_V3.md) · **PR:** [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md)  
 **Gate final:** merge rama → `master` + tag `v2.4.0-fux-gestion-turno`  
 

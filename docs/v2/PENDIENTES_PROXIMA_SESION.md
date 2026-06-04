@@ -1,7 +1,7 @@
 # Punto de Continuación — Próxima Sesión
 
-> **Épica F-UX.3 — CERRADA en rama** (2026-06-04) · QA grilla prod OK · merge `master` = único gate pendiente.  
-> Handoff: [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) · Release: [`RELEASE_NOTES_FUX_GESTION_TURNO_V3.md`](./RELEASE_NOTES_FUX_GESTION_TURNO_V3.md) · PR: [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md).
+> **Épica F-UX.3 — CERRADA en rama** (2026-06-04) · Documentación: [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) · merge `master` = único gate pendiente.  
+> Handoff · Release · PR: [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) · [`RELEASE_NOTES_FUX_GESTION_TURNO_V3.md`](./RELEASE_NOTES_FUX_GESTION_TURNO_V3.md) · [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md).
 
 ## CIERRE F-UX.3 — gestión turno A/B/C (implementación terminada)
 
@@ -10,6 +10,7 @@
 | **Handoff completo** | [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) |
 | **Estado frontend F-UX.3** | ✅ Wizard A/B/C · modales · outbox v2 · banner por tarjeta grupo×mes · labels embebidos |
 | **Spec visual grilla (§12)** | ✅ UI `73d58cd` · consulta ligera callable desplegada |
+| **Registro documental F-UX.3** | [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) |
 | **RFC F4 (outbox + batch)** | [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) · [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) |
 | **Branch trabajo** | `feat/epic-multi-hlg-fase1-execution` |
 | **Fase 6 backend batch v2** | ✅ A-BATCH + B-BATCH-1 + C-BATCH (`cambiosTurno.js` + worker v2) · deploy functions **2026-06-04** |
@@ -37,7 +38,7 @@
 | **Estado** | ~~Spec producto **cerrada**~~ → **frontend F-UX.3 cerrado** 2026-06-03 |
 | **RFC F4 (outbox)** | [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) |
 | **PR merge épica** | `master` ← `feat/epic-multi-hlg-fase1-execution` · `gh auth login` pendiente |
-| **F4 backend** | batch v2 pendiente (post §12 visualización) |
+| **F4 backend** | ✅ batch v2 A/B/C (ver registro F-UX.3) |
 | **UI actual** | Wizard A/B/C + banner outbox v2 ✅ |
 
 **Última actualización histórica:** F-UX gestión turno — spec cerrada §9 — 2026-06-03

@@ -1,8 +1,10 @@
 # RFC F4 ampliado — Outbox gestión turno del día (F-UX.3)
 
-**Estado:** aprobado producto 2026-06-03 · **amendment Flujo B** 2026-06-03 (§3.2 B-N5…B-N7) · **amendment Flujo A** 2026-06-03 (§3.1 A-N1…A-N5, A-BATCH) · UI A QA navegador ✅ · batch A-BATCH **pendiente**  
-**Tag spec:** `v2.4.0-pre-fux-gestion-turno-spec`  
+**Estado:** **implementado** 2026-06-04 — UI + batch A/B/C v2 desplegado · QA grilla prod OK  
+**Registro maestro:** [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md)  
+**Tag spec:** `v2.4.0-pre-fux-gestion-turno-spec` · tag release: `v2.4.0-fux-gestion-turno` (post-merge)  
 **Handoff:** [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md)  
+**Visual:** [`RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md`](./RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md)  
 **Base:** [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md)
 
 ---
@@ -91,7 +93,7 @@ Detección v2 en normalizador: `payload.origen.persona_id` + `payload.destino.pe
 
 Swap **bilateral** entre **dos agentes** del mismo cargo (`gdt_*`), mismo mes, mismo `regimen_horario_id`. Emparejamiento **parcial** de tramos (`cfg_reg_turno_*`); **igualdad de horas cedidas** entre lados. Las fechas de cada agente **pueden ser distintas** (ej. XX día 5 ↔ YY día 12) o iguales (corrimiento intra-día permitido salvo noop A-N5).
 
-**Amendment 2026-06-03:** reglas A-N1…A-N5, A-REG, A-TIPO, validación UI ✅ (`grillaCoberturaParcialPreview.js`, `ModalCoberturaParcial.jsx`). QA navegador ✅. Batch A-BATCH **pendiente** (§3.1.4).
+**Amendment 2026-06-03:** reglas A-N1…A-N5, A-REG, A-TIPO, validación UI ✅. **A-BATCH implementado** 2026-06-04 (`17a04bf`, §3.1.4). QA navegador + grilla prod ✅.
 
 #### Payload v2 (contrato outbox → batch)
 
@@ -204,7 +206,7 @@ Orden de validación en dominio: identidad/fechas → A-TIPO → A-REG → previ
 
 ---
 
-#### 3.1.4 A-BATCH — Especificación backend (pendiente implementación)
+#### 3.1.4 A-BATCH — Especificación backend (implementado 2026-06-04)
 
 **Objetivo:** persistir swap bilateral v2, assert de concurrencia dual, rematerializar todas las celdas afectadas, y aplicar overrides en el worker sin asumir misma fecha para ambos agentes.
 
@@ -418,7 +420,7 @@ Ejemplo multi-tramo con compuesto régimen (M+T+N):
 |----------|----------------|
 | **Outbox UI (fase actual)** | Payload §3.2 completo; `fecha` redundante = `fecha_destino`. |
 | **Mapper legacy (transición)** | Si falta `fecha_destino`, `fecha` = `fecha_origen` (corrimiento mismo día MVP). |
-| **Batch v2 (B-BATCH-1, pendiente)** | Normalizar dos fechas; aplicar quita en origen + suma en destino; rematerializar **ambas** celdas; respetar `franco_en_origen` y `segmentos_incorporados_destino[]`. |
+| **Batch v2 (B-BATCH-1)** | ✅ `17a04bf` — dos ítems por op; `reemplazo_traslado_v2`; rematerializar origen y destino. |
 
 ---
 
@@ -538,7 +540,7 @@ flowchart LR
 |----------|----------------|
 | **Outbox UI** | `estadoPrevio` + `turnoId` + `motivo` (sin horas extra) |
 | **Mapper web → wire** | Anida `estado_previo`; **no** envía `horas_adicionales_solicitadas` |
-| **Batch backend (C-BATCH, pendiente Fase 6)** | Persistir snapshot en override/registro; no confundir con `horas_efectivas` imputadas |
+| **Batch backend (C-BATCH)** | ✅ `a49e9f1` — `estado_previo` en override; rechazo horas en alta jefe |
 | **Mapper legacy** | `turno_id` + `motivo` sin snapshot (transición MVP) |
 
 ---

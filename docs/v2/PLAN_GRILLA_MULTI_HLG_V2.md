@@ -22,6 +22,8 @@
 | [`REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md`](./REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md) | **DEUDA-CT-001** (orquestación materialización) + **DEUDA-GO-001/002** (Grilla Operativa / Calendario) |
 | [`HANDOFF_SESION_2026-05-30_CONTINUACION.md`](./HANDOFF_SESION_2026-05-30_CONTINUACION.md) | **Punto exacto de continuación** — QA, archivos, deploy, piloto |
 | [`RFC_CIERRE_PERIODO_LIQUIDACION_V2.md`](./RFC_CIERRE_PERIODO_LIQUIDACION_V2.md) | Freeze en `vis_*` (ahora scoped por `gdt`) |
+| [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) | F-UX.3 gestión turno A/B/C + batch v2 (cerrado 2026-06-04) |
+| [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) | Handoff flujos A/B/C desde grilla |
 
 ---
 

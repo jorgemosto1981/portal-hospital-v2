@@ -31,6 +31,7 @@ Si Cloud Build falla con **missing permission on the build service account**, se
 
 - Variables web: [`.env.v2.example`](./.env.v2.example) → **`.env.v2.local`** (no comitear).
 - Plan maestro: [PLAN_DESARROLLO_VERSION2.md](./PLAN_DESARROLLO_VERSION2.md) · índice de docs: [docs/v2/README.md](./docs/v2/README.md).
+- **F-UX.3 gestión turno (cerrado):** [docs/v2/REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md](./docs/v2/REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md).
 - **Retomar sesión (28/05/2026):** [docs/v2/HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md](./docs/v2/HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) — control turno en todas las vistas; `grilla_aprobada` en `plt_*`; piloto `plt_01KSR8J55H1TN10M3ANSSWMPF2`.
 
 ## App React (V1)

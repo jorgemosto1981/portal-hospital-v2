@@ -2,6 +2,8 @@
 
 Usar al abrir el PR en GitHub (base: **master**, compare: **feat/epic-multi-hlg-fase1-execution**).
 
+**Inventario documental F-UX.3:** [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md)
+
 ## Title
 
 ```

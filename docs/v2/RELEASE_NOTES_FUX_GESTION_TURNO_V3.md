@@ -3,7 +3,8 @@
 **Fecha cierre:** 2026-06-04  
 **Rama:** `feat/epic-multi-hlg-fase1-execution`  
 **RFC:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) · visual [`RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md`](./RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md)  
-**Tag sugerido:** `v2.4.0-fux-gestion-turno` (tras merge a `master`)
+**Tag sugerido:** `v2.4.0-fux-gestion-turno` (tras merge a `master`)  
+**Registro documental completo:** [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md)
 
 ---
 

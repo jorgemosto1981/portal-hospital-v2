@@ -1,5 +1,7 @@
 # Amendment RFC F4 — Visualización grilla y consulta ligera (F-UX.3)
 
+**Registro documental:** [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) · **Estado implementación:** 2026-06-04 (`73d58cd`, prod hosting).
+
 **Estado:** aprobado producto 2026-06-04  
 **Relación:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) §3 (A/B/C) · [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) §12 · motor `proyectarDiaConOpsPendientes` (`grillaCambioTurnoPropioPreview.js`)  
 **Alcance UI:** grilla mes equipo (mismo `periodo` + `gdt` que outbox del editor)
@@ -70,7 +72,7 @@ Aplicar solo si `opAfectaDia(op, personaId, fechaYmd)` en el outbox del editor a
 
 ### 3.5 Paridad con batch backend
 
-Hasta **A-BATCH** y **B-BATCH-1** (Fase 6), el preview en grilla es el **contrato operativo UI**. El batch legacy puede divergir en intercambio bilateral entre fechas distintas; mantener advertencia producto existente (no confiar en «Aplicar cambios» para esos casos hasta Fase 6).
+Con **A-BATCH**, **B-BATCH-1** y **C-BATCH** desplegados (2026-06-04), preview y batch v2 están alineados para A/B/C. Validar en prod tras cada deploy; ver [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md).
 
 ---
 
@@ -133,7 +135,7 @@ Append en el documento `asi_{persona}_{fecha}`, array `consultas_gestion_turno` 
 | 1 | Wire preview en grilla mes equipo (outbox + proyección + §2–3) |
 | 2 | Bloque resumen + Anexo A en modal detalle día |
 | 3 | Append `consultas_gestion_turno` al abrir §5.2 |
-| 4 | Fase 6 batch A-BATCH / B-BATCH-1 (paridad preview ↔ persistido) |
+| 4 | ~~Fase 6 batch A/B/C~~ ✅ 2026-06-04 — paridad preview ↔ persistido validada en prod |
 
 ---
 
