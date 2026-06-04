@@ -121,6 +121,7 @@ Prioridad inmediata post-acta: **US-9**, **US-1**, **US-16**, **US-17** (remedia
 | [`RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md`](./RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md) | VER plan vs operativo |
 | [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) | CHAPARRO / bounded context |
 | [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](./MANUAL_CAPAS_ORQUESTACION_BORRADOR.md) | Capas 1 / 3 |
+| [`SIMULACION_IMPACTOS_HLG_PLAN_TURNO_GSO_V2.md`](./SIMULACION_IMPACTOS_HLG_PLAN_TURNO_GSO_V2.md) | Escenarios HLg / plan / override |
 
 ---
 
