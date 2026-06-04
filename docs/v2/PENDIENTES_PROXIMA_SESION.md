@@ -1,9 +1,9 @@
 # Punto de Continuación — Próxima Sesión
 
-> **Última sesión — 2026-06-03** · F-UX.3 frontend gestión turno A/B/C + outbox banner por tarjeta — **pausa @ QA OK**.  
-> Handoff: [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) §12 · Visual: [`RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md`](./RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md).
+> **Épica F-UX.3 — CERRADA en rama** (2026-06-04) · QA grilla prod OK · merge `master` = único gate pendiente.  
+> Handoff: [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) · Release: [`RELEASE_NOTES_FUX_GESTION_TURNO_V3.md`](./RELEASE_NOTES_FUX_GESTION_TURNO_V3.md) · PR: [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md).
 
-## PAUSA — retomar aquí (F-UX Gestión turno del día A/B/C)
+## CIERRE F-UX.3 — gestión turno A/B/C (implementación terminada)
 
 | Qué | Dónde |
 |-----|--------|
@@ -17,13 +17,12 @@
 | **QA grilla prod** | ✅ Validado en grilla (hosting + functions 2026-06-04) |
 | **Push rama** | ✅ `425b869` en origin |
 
-### Orden próxima sesión
+### Único paso pendiente (humano)
 
-1. **PR merge épica** → `master` (texto sugerido abajo; `gh` no disponible en esta PC)
-2. Tag opcional post-merge: `v2.3.1-fux-gestion-turno` o continuar línea F3
-3. Formalizar acta §4.2 si RRHH pide cierre documental F-UX
+1. Abrir PR y merge → **`PR_EPIC_MULTI_HLG_FUX.md`** · compare: `master`…`feat/epic-multi-hlg-fase1-execution`
+2. Post-merge: tag `v2.4.0-fux-gestion-turno` (comandos en release notes F-UX)
 
-**Última actualización:** Fase 6 batch + QA cerrados — 2026-06-04
+**Última actualización:** épica F-UX cerrada en rama — 2026-06-04
 
 ---
 

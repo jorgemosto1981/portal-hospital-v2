@@ -19,8 +19,13 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`DICCIONARIO_CFG_ASISTENCIA_TURNOS_V2.md`](./DICCIONARIO_CFG_ASISTENCIA_TURNOS_V2.md) | Catálogos `cfg_tcc_*`, `cfg_epl_*`, `cfg_cdc_*`, manifiesto ids |
 | [`EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md`](./EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md) | Fórmula fichadas esperadas + salida momentánea |
 | [`RFC_CIERRE_PERIODO_LIQUIDACION_V2.md`](./RFC_CIERRE_PERIODO_LIQUIDACION_V2.md) | Freeze período liquidación en `vis_*` |
+| **[`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md)** | **Gherkin A–H:** anti-blanco, licencias vs teoría, épicas US-1…US-12 |
+| [`GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md`](./GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md) | Operaciones: por qué la grilla de equipo recalcula al abrir |
 | [`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`](./EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md) | Tickets T-01…T-10 y ramas |
-| [`EPIC_CACHE_LOCAL_ASISTENCIA_V2.md`](./EPIC_CACHE_LOCAL_ASISTENCIA_V2.md) | Epic siguiente: outbox + envío consolidado |
+| [`EPIC_CACHE_LOCAL_ASISTENCIA_V2.md`](./EPIC_CACHE_LOCAL_ASISTENCIA_V2.md) | Epic F4 outbox (implementado F-UX.3 en rama) |
+| [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) | **F-UX.3 cerrado** — gestión turno A/B/C + batch v2 |
+| [`RELEASE_NOTES_FUX_GESTION_TURNO_V3.md`](./RELEASE_NOTES_FUX_GESTION_TURNO_V3.md) | Release notes F-UX.3 |
+| [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md) | Plantilla PR épica → master |
 
 ## Índice rápido
 

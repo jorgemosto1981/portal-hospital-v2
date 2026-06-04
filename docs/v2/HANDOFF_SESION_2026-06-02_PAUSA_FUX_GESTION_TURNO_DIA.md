@@ -4,9 +4,10 @@
 **Spec cerrada:** 2026-06-03 (sesión aclaraciones A/B/C + §9)  
 **Pausa frontend outbox:** 2026-06-03 (tarjetas grupo×mes, labels embebidos, QA banner)  
 **Rama:** `feat/epic-multi-hlg-fase1-execution`  
-**Estado:** F-UX.3 **cerrado en rama** — UI §12 + batch v2 A/B/C desplegado · QA batch manual **4 aplicadas** + smokes dev OK (2026-06-04)  
+**Estado:** F-UX.3 **CERRADO** (implementación + QA prod) — 2026-06-04  
 **RFC payloads:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md)  
-**Retomar:** push/PR épica · hosting prod si falta preview §12 · PR merge `master`  
+**Release:** [`RELEASE_NOTES_FUX_GESTION_TURNO_V3.md`](./RELEASE_NOTES_FUX_GESTION_TURNO_V3.md) · **PR:** [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md)  
+**Gate final:** merge rama → `master` + tag `v2.4.0-fux-gestion-turno`  
 
 **Relación:** F4 [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) · segmentos [`CAPA_TEORICA_SEGMENTOS_V2.md`](./CAPA_TEORICA_SEGMENTOS_V2.md) · pendientes [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md)
 

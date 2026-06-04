@@ -1,7 +1,7 @@
 # Epic — Caché local frontend + envío consolidado
 
-**Estado:** en curso — F4.1 RFC ✅; batch + UI parciales en rama `feat/epic-multi-hlg-fase1-execution`.  
-**Prerequisito:** F3 cerrada (`v2.3.0-f3-turnos-compuestos`).
+**Estado:** **F-UX.3 cerrado** en rama (2026-06-04) — outbox UI + `aplicarBatchAsistencia` A/B/C v2 desplegado. Ver [`RELEASE_NOTES_FUX_GESTION_TURNO_V3.md`](./RELEASE_NOTES_FUX_GESTION_TURNO_V3.md).  
+**Prerequisito:** F3 cerrada (`v2.3.0-f3-turnos-compuestos`). Callable legacy `enviarAccionesAsistencia` sigue fuera de alcance F-UX.3.
 
 ---
 
