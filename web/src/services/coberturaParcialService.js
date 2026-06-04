@@ -176,6 +176,9 @@ function mapOutboxOpToBatchPayload(op, idx, ctx) {
       creado_en: String(op?.creado_en || new Date().toISOString()),
       concurrencia: {
         expected_version_token: String(op?.expectedVersionToken || "").trim(),
+        expected_version_token_origen: String(
+          op?.expectedVersionTokenOrigen || op?.expectedVersionToken || "",
+        ).trim(),
       },
       context: {
         grupo_id: gdt,

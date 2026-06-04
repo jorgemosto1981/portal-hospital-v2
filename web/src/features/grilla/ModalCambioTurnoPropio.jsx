@@ -53,6 +53,7 @@ export default function ModalCambioTurnoPropio({
   const [turnosRegimenPorId, setTurnosRegimenPorId] = useState(/** @type {Record<string, object>} */ ({}));
   const [operando, setOperando] = useState(false);
   const [errorSubmit, setErrorSubmit] = useState("");
+  const [expectedVersionTokenOrigen, setExpectedVersionTokenOrigen] = useState("");
   const [turnosDestinoSel, setTurnosDestinoSel] = useState(() => new Set());
   const [avisoPreseleccion, setAvisoPreseleccion] = useState("");
   const [sinRegimen, setSinRegimen] = useState(false);
@@ -202,6 +203,9 @@ export default function ModalCambioTurnoPropio({
       }
       const capa = capaRes?.capa_teorica ?? capaRes?.capa_teorica_grupo ?? null;
       setCapaOrigen(capa);
+      setExpectedVersionTokenOrigen(
+        capaRes?.concurrencia?.expected_version_token || capaRes?.concurrencia?.vis_ultima_sync || "",
+      );
       setSeleccionados(new Set());
       setTurnosDestinoSel(new Set());
       setAvisoPreseleccion("");
@@ -270,6 +274,10 @@ export default function ModalCambioTurnoPropio({
       setErrorSubmit(val?.error || "No se puede incorporar en el destino.");
       return;
     }
+    if (!expectedVersionTokenOrigen) {
+      setErrorSubmit("No se pudo leer la versión del día origen. Recargá e intentá de nuevo.");
+      return;
+    }
     if (!proyeccion.expectedVersionToken) {
       setErrorSubmit("No se pudo leer la versión del día destino. Recargá e intentá de nuevo.");
       return;
@@ -289,6 +297,7 @@ export default function ModalCambioTurnoPropio({
         francoEnOrigen: francoOrigenCompleto,
         motivo: motivo.trim(),
         expectedVersionToken: proyeccion.expectedVersionToken,
+        expectedVersionTokenOrigen,
         grupoId,
         periodo,
       });

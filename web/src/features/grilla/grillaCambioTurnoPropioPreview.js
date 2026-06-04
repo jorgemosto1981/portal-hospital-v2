@@ -767,6 +767,7 @@ export function esReemplazoPropioV2(op) {
  *   francoEnOrigen?: boolean;
  *   motivo: string;
  *   expectedVersionToken: string;
+ *   expectedVersionTokenOrigen?: string;
  *   grupoId: string;
  *   periodo: string;
  *   personaLabel?: string;
@@ -797,6 +798,7 @@ export function buildReemplazoPropioOutboxOp(params) {
     francoEnOrigen: params.francoEnOrigen === true,
     motivo: String(params.motivo || "").trim(),
     expectedVersionToken: String(params.expectedVersionToken || "").trim(),
+    expectedVersionTokenOrigen: String(params.expectedVersionTokenOrigen || "").trim(),
     grupoId: params.grupoId,
     periodo: params.periodo,
     grupoLabel: String(params.grupoLabel || "").trim(),

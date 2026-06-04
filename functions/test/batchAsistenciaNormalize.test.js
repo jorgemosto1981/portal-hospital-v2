@@ -121,6 +121,79 @@ describe("normalizeBatchOp", () => {
     );
   });
 
+  it("normaliza cobertura_parcial v2 (A-BATCH)", () => {
+    const item = normalizeBatchOp(mkBase({
+      tipo: "cobertura_parcial",
+      concurrencia: {
+        expected_version_token: TOKEN,
+        expected_version_token_destino: "2026-06-03T10:00:00.000Z",
+      },
+      payload: {
+        origen: {
+          persona_id: PER_X,
+          fecha: "2026-06-05",
+          segmentos_cedidos: ["cfg_reg_turno_n"],
+        },
+        destino: {
+          persona_id: PER_Y,
+          fecha: "2026-06-12",
+          segmentos_cedidos: ["cfg_reg_turno_m"],
+        },
+        tipo_compensacion_id: CFG_TCC_CAMBIO_INTERNO,
+        motivo: "Intercambio guardia bilateral",
+        tipo: "cobertura_parcial",
+      },
+    }), 0);
+    assert.equal(item.tipo, "cobertura_parcial");
+    assert.equal(item.schema_version, 2);
+    assert.equal(item.fecha, "2026-06-05");
+    assert.equal(item.fecha_destino, "2026-06-12");
+    assert.equal(item.override.segmentos_cedidos_destino[0], "cfg_reg_turno_m");
+    assert.equal(item.expected_version_token_destino, "2026-06-03T10:00:00.000Z");
+  });
+
+  it("rechaza cobertura v2 sin token destino", () => {
+    assert.throws(
+      () => normalizeBatchOp(mkBase({
+        tipo: "cobertura_parcial",
+        concurrencia: { expected_version_token: TOKEN },
+        payload: {
+          origen: { persona_id: PER_X, fecha: FECHA, segmentos_cedidos: ["cfg_reg_turno_n"] },
+          destino: { persona_id: PER_Y, fecha: "2026-06-12", segmentos_cedidos: ["cfg_reg_turno_m"] },
+          tipo_compensacion_id: CFG_TCC_CAMBIO_INTERNO,
+          motivo: "Intercambio guardia",
+        },
+      }), 0),
+      (e) => String(e.message).includes("[BATCH-A005]"),
+    );
+  });
+
+  it("normaliza reemplazo v2 (B-BATCH-1) en dos ítems origen/destino", () => {
+    const raw = mkBase({
+      tipo: "reemplazo",
+      payload: {
+        persona_id: PER_X,
+        fecha: "2026-06-12",
+        fecha_origen: "2026-06-10",
+        fecha_destino: "2026-06-12",
+        segmentos_a_trasladar: ["cfg_reg_turno_n"],
+        segmentos_incorporados_destino: ["cfg_reg_turno_t"],
+        turno_id: "cfg_reg_turno_t",
+        franco_en_origen: false,
+        tipo: "reemplazo",
+        motivo: "Traslado guardia noche",
+      },
+    });
+    const items = normalizeBatchOp(raw, 0);
+    const expanded = Array.isArray(items) ? items : [items];
+    assert.equal(expanded.length, 2);
+    assert.equal(expanded[0].fecha, "2026-06-10");
+    assert.equal(expanded[0].override.reemplazo_traslado_v2, "origen");
+    assert.equal(expanded[1].fecha, "2026-06-12");
+    assert.equal(expanded[1].override.reemplazo_traslado_v2, "destino");
+    assert.equal(expanded[0].op_id, expanded[1].op_id);
+  });
+
   it("rechaza tipo desconocido", () => {
     assert.throws(
       () => normalizeBatchOp(mkBase({ tipo: "otro", payload: { fecha: FECHA } }), 0),

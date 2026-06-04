@@ -306,6 +306,122 @@ function validarOverrideAdicionalV2(raw) {
   };
 }
 
+function validarPayloadReemplazoV2(payload, idx) {
+  const persona_id = typeof payload.persona_id === "string" ? payload.persona_id.trim() : "";
+  if (!PER_ID.test(persona_id)) {
+    err("invalid-argument", `[B-BATCH-001] op[${idx}] persona_id requerido.`);
+  }
+  const fecha_origen = String(payload.fecha_origen || "").trim();
+  const fecha_destino = String(payload.fecha_destino || "").trim();
+  if (!YMD.test(fecha_origen) || !YMD.test(fecha_destino)) {
+    err("invalid-argument", `[B-BATCH-002] op[${idx}] fecha_origen y fecha_destino YYYY-MM-DD requeridas.`);
+  }
+  const segs = payload.segmentos_a_trasladar || payload.segmentos_trasladar;
+  const segmentos_a_trasladar = Array.isArray(segs)
+    ? [...new Set(segs.map((x) => String(x).trim()).filter(Boolean))]
+    : [];
+  if (segmentos_a_trasladar.length < 1) {
+    err("invalid-argument", `[B-BATCH-003] op[${idx}] segmentos_a_trasladar requerido (≥1).`);
+  }
+  const motivo = typeof payload.motivo === "string" ? payload.motivo.trim() : "";
+  if (motivo.length < 3) {
+    err("invalid-argument", `[B-BATCH-004] op[${idx}] motivo requerido (mín. 3 caracteres).`);
+  }
+  let segmentos_incorporados_destino = Array.isArray(payload.segmentos_incorporados_destino)
+    ? [...new Set(payload.segmentos_incorporados_destino.map((x) => String(x).trim()).filter(Boolean))]
+    : [];
+  if (!segmentos_incorporados_destino.length) {
+    const tid = String(payload.turno_id || payload.turno_id_destino || "").trim();
+    if (tid) segmentos_incorporados_destino = segmentos_a_trasladar.map(() => tid);
+  }
+  if (segmentos_incorporados_destino.length !== segmentos_a_trasladar.length) {
+    err(
+      "invalid-argument",
+      `[B-BATCH-005] op[${idx}] segmentos_incorporados_destino debe tener la misma cantidad que segmentos_a_trasladar.`,
+    );
+  }
+  const turno_id_destino = String(
+    payload.turno_id || payload.turno_id_destino || segmentos_incorporados_destino[0] || "",
+  ).trim();
+  if (!turno_id_destino) {
+    err("invalid-argument", `[B-BATCH-006] op[${idx}] turno_id / turno_id_destino requerido.`);
+  }
+  const mismoConjunto = segmentos_a_trasladar.every(
+    (id, i) => id === segmentos_incorporados_destino[i],
+  );
+  if (fecha_origen === fecha_destino && mismoConjunto) {
+    err("invalid-argument", `[B-BATCH-007] op[${idx}] traslado intra-día sin cambio neto (noop).`);
+  }
+  return {
+    persona_id,
+    fecha_origen,
+    fecha_destino,
+    segmentos_a_trasladar,
+    segmentos_incorporados_destino,
+    turno_id_destino,
+    franco_en_origen: payload.franco_en_origen === true,
+    motivo,
+  };
+}
+
+/**
+ * B-BATCH-1: una op outbox → dos ítems (origen + destino), mismo op_id.
+ * @returns {Array<Record<string, unknown>>}
+ */
+function normalizeBatchOpReemplazoV2(op, idx, grupo_trabajo_id, expectedDestino) {
+  const payload = payloadSimpleOverrideDesdeOp(op);
+  const v = validarPayloadReemplazoV2(payload, idx);
+  const op_id = String(op.id || `op_${idx + 1}`);
+  const ctxConc = op.concurrencia && typeof op.concurrencia === "object" ? op.concurrencia : {};
+  const expectedOrigen = typeof ctxConc.expected_version_token_origen === "string"
+    ? ctxConc.expected_version_token_origen.trim()
+    : expectedDestino;
+
+  const overrideOrigen = {
+    tipo: "reemplazo",
+    motivo: v.motivo,
+    reemplazo_traslado_v2: "origen",
+    fecha_origen: v.fecha_origen,
+    fecha_destino: v.fecha_destino,
+    segmentos_a_trasladar: v.segmentos_a_trasladar,
+    franco_en_origen: v.franco_en_origen,
+    turno_id: null,
+    ...(v.franco_en_origen ? { tipo_dia: "franco" } : {}),
+  };
+  const overrideDestino = {
+    tipo: "reemplazo",
+    motivo: v.motivo,
+    reemplazo_traslado_v2: "destino",
+    fecha_origen: v.fecha_origen,
+    fecha_destino: v.fecha_destino,
+    turno_id: v.turno_id_destino,
+    segmentos_incorporados_destino: v.segmentos_incorporados_destino,
+  };
+
+  return [
+    {
+      op_id,
+      tipo: "reemplazo",
+      fecha: v.fecha_origen,
+      grupo_trabajo_id,
+      expected_version_token: expectedOrigen,
+      persona_id: v.persona_id,
+      override: overrideOrigen,
+      batch_leg: "traslado_origen",
+    },
+    {
+      op_id,
+      tipo: "reemplazo",
+      fecha: v.fecha_destino,
+      grupo_trabajo_id,
+      expected_version_token: expectedDestino,
+      persona_id: v.persona_id,
+      override: overrideDestino,
+      batch_leg: "traslado_destino",
+    },
+  ];
+}
+
 function normalizeBatchOpAdicionalV2(op, idx, grupo_trabajo_id, expected) {
   const payload = payloadSimpleOverrideDesdeOp(op);
   const persona_id = typeof payload.persona_id === "string" ? payload.persona_id.trim() : "";
@@ -320,6 +436,104 @@ function normalizeBatchOpAdicionalV2(op, idx, grupo_trabajo_id, expected) {
     grupo_trabajo_id,
     expected_version_token: expected,
     persona_id,
+    override,
+  };
+}
+
+function validarPayloadCoberturaV2(src, idx, periodoCtx) {
+  const o = src?.origen && typeof src.origen === "object" ? src.origen : null;
+  const d = src?.destino && typeof src.destino === "object" ? src.destino : null;
+  if (!o || !d) {
+    err("invalid-argument", `[BATCH-A001] op[${idx}] origen y destino requeridos.`);
+  }
+  const persona_origen_id = String(o.persona_id || "").trim();
+  const persona_cobertura_id = String(d.persona_id || "").trim();
+  if (!PER_ID.test(persona_origen_id) || !PER_ID.test(persona_cobertura_id)) {
+    err("invalid-argument", `[BATCH-A001] op[${idx}] persona_id per_* en origen y destino.`);
+  }
+  if (persona_origen_id === persona_cobertura_id) {
+    err("invalid-argument", `[BATCH-A003] op[${idx}] intercambio requiere dos agentes distintos.`);
+  }
+  const fecha_origen = String(o.fecha || "").trim();
+  const fecha_destino = String(d.fecha || "").trim();
+  if (!YMD.test(fecha_origen) || !YMD.test(fecha_destino)) {
+    err("invalid-argument", `[BATCH-A001] op[${idx}] fechas origen/destino YYYY-MM-DD requeridas.`);
+  }
+  const periodo = String(periodoCtx || "").trim();
+  if (periodo && (fecha_origen.slice(0, 7) !== periodo || fecha_destino.slice(0, 7) !== periodo)) {
+    err("invalid-argument", `[BATCH-A002] op[${idx}] fechas deben pertenecer a context.periodo.`);
+  }
+  const segmentos_cedidos_origen = Array.isArray(o.segmentos_cedidos)
+    ? [...new Set(o.segmentos_cedidos.map((x) => String(x).trim()).filter(Boolean))]
+    : [];
+  const segmentos_cedidos_destino = Array.isArray(d.segmentos_cedidos)
+    ? [...new Set(d.segmentos_cedidos.map((x) => String(x).trim()).filter(Boolean))]
+    : [];
+  if (segmentos_cedidos_origen.length < 1 || segmentos_cedidos_destino.length < 1) {
+    err("invalid-argument", `[BATCH-A001] op[${idx}] segmentos_cedidos (≥1) en origen y destino.`);
+  }
+  const motivo = typeof src.motivo === "string" ? src.motivo.trim() : "";
+  if (motivo.length < 3) {
+    err("invalid-argument", `[BATCH-A004] op[${idx}] motivo requerido (mín. 3 caracteres).`);
+  }
+  const tipo_compensacion_id = typeof src.tipo_compensacion_id === "string"
+    ? src.tipo_compensacion_id.trim()
+    : "";
+  if (!TCC_IDS.has(tipo_compensacion_id)) {
+    err("invalid-argument", `[BATCH-A004] op[${idx}] tipo_compensacion_id cfg_tcc_* requerido.`);
+  }
+  return {
+    persona_origen_id,
+    persona_cobertura_id,
+    fecha_origen,
+    fecha_destino,
+    segmentos_cedidos_origen,
+    segmentos_cedidos_destino,
+    motivo,
+    tipo_compensacion_id,
+  };
+}
+
+/**
+ * A-BATCH: intercambio de guardia v2 (dos fechas, override duplicado en ambos asi_*).
+ */
+function normalizeBatchOpCoberturaV2(op, idx, grupo_trabajo_id, expectedOrigen) {
+  const src = op.payload && typeof op.payload === "object" ? op.payload : op;
+  const ctx = op.context && typeof op.context === "object" ? op.context : {};
+  const conc = op.concurrencia && typeof op.concurrencia === "object" ? op.concurrencia : {};
+  const expectedDestino = typeof conc.expected_version_token_destino === "string"
+    ? conc.expected_version_token_destino.trim()
+    : "";
+  if (!expectedDestino) {
+    err("invalid-argument", `[BATCH-A005] op[${idx}] expected_version_token_destino requerido en v2.`);
+  }
+  const v = validarPayloadCoberturaV2(src, idx, ctx.periodo);
+  const override = {
+    tipo: "cobertura_parcial",
+    tipo_override_id: CFG_TOV_COBERTURA_PARCIAL,
+    tipo_compensacion_id: v.tipo_compensacion_id,
+    motivo: v.motivo,
+    schema_version: 2,
+    persona_origen_id: v.persona_origen_id,
+    persona_cobertura_id: v.persona_cobertura_id,
+    fecha_origen: v.fecha_origen,
+    fecha_destino: v.fecha_destino,
+    segmentos_cedidos_origen: v.segmentos_cedidos_origen,
+    segmentos_cedidos_destino: v.segmentos_cedidos_destino,
+    segmentos_cubiertos: v.segmentos_cedidos_origen,
+  };
+  return {
+    op_id: String(op.id || `op_${idx + 1}`),
+    tipo: "cobertura_parcial",
+    schema_version: 2,
+    fecha: v.fecha_origen,
+    fecha_destino: v.fecha_destino,
+    grupo_trabajo_id,
+    expected_version_token: expectedOrigen,
+    expected_version_token_destino: expectedDestino,
+    persona_id: v.persona_origen_id,
+    persona_origen_id: v.persona_origen_id,
+    persona_cobertura_id: v.persona_cobertura_id,
     override,
   };
 }
@@ -379,13 +593,13 @@ function normalizeBatchOp(raw, idx) {
 
   if (tipo === "cobertura_parcial") {
     if (esPayloadCoberturaV2(payloadFlat)) {
-      err("unimplemented", `[BATCH-020] op[${idx}] intercambio v2 (A-BATCH) pendiente de implementación.`);
+      return normalizeBatchOpCoberturaV2(op, idx, grupo_trabajo_id, expected);
     }
     return normalizeBatchOpCobertura(op, idx, grupo_trabajo_id, expected);
   }
   if (tipo === "reemplazo") {
     if (esPayloadReemplazoV2(payloadFlat)) {
-      err("unimplemented", `[BATCH-021] op[${idx}] traslado propio v2 (B-BATCH-1) pendiente de implementación.`);
+      return normalizeBatchOpReemplazoV2(op, idx, grupo_trabajo_id, expected);
     }
     return normalizeBatchOpSimple(op, idx, tipo, grupo_trabajo_id, expected);
   }
@@ -413,20 +627,66 @@ function personaIdConcurrencia(it) {
   return it.tipo === "cobertura_parcial" ? it.persona_origen_id : it.persona_id;
 }
 
+function esBatchItemCoberturaV2(it) {
+  return it.tipo === "cobertura_parcial" && it.schema_version === 2 && YMD.test(String(it.fecha_destino || ""));
+}
+
+function clavesVisBatchItem(it) {
+  if (esBatchItemCoberturaV2(it)) {
+    return [
+      `${it.persona_origen_id}|${it.fecha}|${it.grupo_trabajo_id}`,
+      `${it.persona_cobertura_id}|${it.fecha_destino}|${it.grupo_trabajo_id}`,
+    ];
+  }
+  const out = [];
+  for (const pid of personaIdsAfectadosPorOp(it)) {
+    out.push(`${pid}|${it.fecha}|${it.grupo_trabajo_id}`);
+  }
+  return out;
+}
+
+function clavesAsiBatchItem(it) {
+  if (esBatchItemCoberturaV2(it)) {
+    return [
+      `${it.persona_origen_id}|${it.fecha}`,
+      `${it.persona_cobertura_id}|${it.fecha_destino}`,
+    ];
+  }
+  return [`${personaIdDocAsi(it)}|${it.fecha}`];
+}
+
+function periodosBatchItem(it) {
+  const meses = [it.fecha.slice(0, 7)];
+  if (it.fecha_destino) meses.push(String(it.fecha_destino).slice(0, 7));
+  return meses;
+}
+
 function visClosedByData(data) {
   const estado = data?.estado_periodo_liquidacion_id || null;
   return estado === CFG_EPL_LIQUIDADO_CERRADO;
 }
 
 async function rematerializarBatchOps(items) {
+  const visto = new Set();
   for (const it of items) {
-    await materializarDiaAfectado({
-      override: it.override,
-      personaId: personaIdDocAsi(it),
-      fechaYmd: it.fecha,
-      grupoId: it.grupo_trabajo_id,
-      logTag: "post_batch",
-    });
+    const pares = esBatchItemCoberturaV2(it)
+      ? [
+        { personaId: it.persona_origen_id, fechaYmd: it.fecha },
+        { personaId: it.persona_cobertura_id, fechaYmd: it.fecha_destino },
+      ]
+      : [{ personaId: personaIdDocAsi(it), fechaYmd: it.fecha }];
+    for (const { personaId, fechaYmd } of pares) {
+      const k = `${personaId}|${fechaYmd}|${it.grupo_trabajo_id}`;
+      if (visto.has(k)) continue;
+      visto.add(k);
+      await materializarDiaAfectado({
+        override: it.override,
+        personaId,
+        fechaYmd,
+        grupoId: it.grupo_trabajo_id,
+        logTag: "post_batch",
+      });
+    }
   }
 }
 
@@ -611,8 +871,14 @@ const aplicarBatchAsistencia = onCall({
   if (opsRaw.length < 1) err("invalid-argument", "[BATCH-001] ops[] requerido.");
   if (opsRaw.length > 50) err("invalid-argument", "[BATCH-005] Máximo 50 operaciones por batch.");
 
-  const items = opsRaw.map((op, i) => normalizeBatchOp(op, i));
-  const uniquePeriodo = new Set(items.map((i) => i.fecha.slice(0, 7)));
+  const items = opsRaw.flatMap((op, i) => {
+    const normalized = normalizeBatchOp(op, i);
+    return Array.isArray(normalized) ? normalized : [normalized];
+  });
+  const uniquePeriodo = new Set();
+  for (const it of items) {
+    for (const m of periodosBatchItem(it)) uniquePeriodo.add(m);
+  }
   if (uniquePeriodo.size > 1) err("invalid-argument", "[BATCH-006] Todas las operaciones deben ser del mismo período.");
 
   const uniquePersonas = new Set();
@@ -628,8 +894,13 @@ const aplicarBatchAsistencia = onCall({
   const token = (request.auth && request.auth.token) || {};
 
   for (const it of items) {
-    for (const pid of personaIdsAfectadosPorOp(it)) {
-      await assertPeriodoEditable(pid, it.fecha, it.grupo_trabajo_id, token);
+    if (esBatchItemCoberturaV2(it)) {
+      await assertPeriodoEditable(it.persona_origen_id, it.fecha, it.grupo_trabajo_id, token);
+      await assertPeriodoEditable(it.persona_cobertura_id, it.fecha_destino, it.grupo_trabajo_id, token);
+    } else {
+      for (const pid of personaIdsAfectadosPorOp(it)) {
+        await assertPeriodoEditable(pid, it.fecha, it.grupo_trabajo_id, token);
+      }
     }
   }
 
@@ -641,9 +912,7 @@ const aplicarBatchAsistencia = onCall({
     const visRefMap = new Map();
     const visKeySet = new Set();
     for (const it of items) {
-      for (const pid of personaIdsAfectadosPorOp(it)) {
-        visKeySet.add(`${pid}|${it.fecha}|${it.grupo_trabajo_id}`);
-      }
+      for (const key of clavesVisBatchItem(it)) visKeySet.add(key);
     }
     for (const key of visKeySet) {
       const [pid, fecha, gdt] = key.split("|");
@@ -656,7 +925,10 @@ const aplicarBatchAsistencia = onCall({
 
     const asiMap = new Map();
     const asiRefMap = new Map();
-    const asiKeySet = new Set(items.map((it) => `${personaIdDocAsi(it)}|${it.fecha}`));
+    const asiKeySet = new Set();
+    for (const it of items) {
+      for (const key of clavesAsiBatchItem(it)) asiKeySet.add(key);
+    }
     for (const key of asiKeySet) {
       const [pid, fecha] = key.split("|");
       const docId = docIdAsistencia(pid, fecha);
@@ -668,6 +940,29 @@ const aplicarBatchAsistencia = onCall({
 
     // Validaciones transaccionales (token + freeze)
     for (const it of items) {
+      if (esBatchItemCoberturaV2(it)) {
+        const visOrig = visMap.get(`${it.persona_origen_id}|${it.fecha}|${it.grupo_trabajo_id}`);
+        const tokOrig = visOrig?.exists ? readVisVersionToken(visOrig.data()) : null;
+        if (tokOrig !== it.expected_version_token) {
+          err(
+            "failed-precondition",
+            "[ASI-CONC-001] La información en pantalla está desactualizada. Por favor, recargue la grilla.",
+          );
+        }
+        const visDest = visMap.get(`${it.persona_cobertura_id}|${it.fecha_destino}|${it.grupo_trabajo_id}`);
+        const tokDest = visDest?.exists ? readVisVersionToken(visDest.data()) : null;
+        if (tokDest !== it.expected_version_token_destino) {
+          err(
+            "failed-precondition",
+            "[ASI-CONC-001] La información en pantalla está desactualizada. Por favor, recargue la grilla.",
+          );
+        }
+        if (visClosedByData(visOrig?.data()) || visClosedByData(visDest?.data())) {
+          err("failed-precondition", "[ASI-PER-001] El período está liquidado y cerrado. No se permiten cambios.");
+        }
+        continue;
+      }
+
       const concPersona = personaIdConcurrencia(it);
       const visOrigen = visMap.get(`${concPersona}|${it.fecha}|${it.grupo_trabajo_id}`);
       const actualToken = visOrigen?.exists ? readVisVersionToken(visOrigen.data()) : null;
@@ -690,10 +985,13 @@ const aplicarBatchAsistencia = onCall({
 
     // Escrituras asistencia_diaria
     const appendMap = new Map();
+    const pushEntry = (asiKey, entry) => {
+      const list = appendMap.get(asiKey) || [];
+      list.push(entry);
+      appendMap.set(asiKey, list);
+    };
     for (const it of items) {
-      const key = `${personaIdDocAsi(it)}|${it.fecha}`;
-      const list = appendMap.get(key) || [];
-      list.push({
+      const entry = {
         ...it.override,
         grupo_de_trabajo_id: it.grupo_trabajo_id,
         es_override_manual: true,
@@ -702,8 +1000,13 @@ const aplicarBatchAsistencia = onCall({
         creado_en: nowIso,
         invalidado_por_replanificacion: false,
         op_batch_id: it.op_id,
-      });
-      appendMap.set(key, list);
+      };
+      if (esBatchItemCoberturaV2(it)) {
+        pushEntry(`${it.persona_origen_id}|${it.fecha}`, entry);
+        pushEntry(`${it.persona_cobertura_id}|${it.fecha_destino}`, entry);
+      } else {
+        pushEntry(`${personaIdDocAsi(it)}|${it.fecha}`, entry);
+      }
     }
 
     for (const [key, extra] of appendMap.entries()) {

@@ -18,6 +18,7 @@ import GrillaMesSinDotacionAviso from "./GrillaMesSinDotacionAviso.jsx";
 import { useAsistenciaOutbox } from "./useAsistenciaOutbox.js";
 import { useGrillaMesVista } from "./useGrillaMesVista.js";
 import { aplicarBatchAsistencia } from "../../services/coberturaParcialService.js";
+import { laboralCallableErrorMessage } from "../../pages/datos-laborales/callableErrorMessage.js";
 import { opsOutboxParaGrupo } from "./grillaCeldaOutboxVisual.js";
 import { mergePersonaLabelsDesdeOps } from "./grillaOutboxLabels.js";
 import { RX_GDT } from "./grillaGrupoUtils.js";
@@ -229,7 +230,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
       outbox.clear();
       await vista.cargar();
     } catch (e) {
-      const msg = e?.message || "No se pudo aplicar el batch.";
+      const msg = laboralCallableErrorMessage(e, "No se pudo aplicar el batch.");
       if (msg.includes("ASI-CONC")) {
         toast.error("La grilla cambió. Se conservaron tus pendientes para reintentar.");
         await vista.cargar();
@@ -237,6 +238,12 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
         toast.error("Mes anterior en solo lectura. No se pueden aplicar cambios.");
       } else if (msg.includes("ASI-PER")) {
         toast.error("Período cerrado. Revisá los cambios pendientes.");
+      } else if (msg.includes("BATCH-A005")) {
+        toast.error("Falta la versión del día destino del intercambio. Abrí de nuevo el modal y reintentá.");
+      } else if (msg.includes("BATCH-020") || msg.includes("unimplemented")) {
+        toast.error("Ese tipo de cambio aún no está en el servidor. Actualizá functions o quitá la operación de la cola.");
+      } else if (/\[BATCH-/i.test(msg)) {
+        toast.error(msg.replace(/^\[[^\]]+\]\s*/i, ""));
       } else {
         toast.error(msg);
       }

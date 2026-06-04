@@ -25,6 +25,8 @@
     "test:fichadas-esperadas": "node --test functions/test/fichadasEsperadas.test.js",
     "test:grilla-sanitize-gso": "node --test functions/test/grillaVisSanitizeGso.test.js",
     "test:batch-asistencia-normalize": "node --test functions/test/batchAsistenciaNormalize.test.js",
+    "smoke:outbox-batch": "node scripts/smoke-outbox-batch-dev.mjs",
+    "smoke:outbox-batch-v2": "node scripts/smoke-outbox-batch-v2-dev.mjs",
     "smoke:fichadas-esperadas": "node scripts/smoke-fichadas-esperadas-dev.mjs",
     "db:migrar-regimen-plus": "node scripts/migrar-regimen-planificado-compuesto-plus.mjs",
     "test:firestore:v2": "node scripts/seed-v2/test-firestore-v2-connection.mjs",

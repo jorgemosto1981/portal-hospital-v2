@@ -467,9 +467,126 @@ async function listarCoberturasDia(fechaYmd, personaId, grupoId) {
   return out;
 }
 
+const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function esOverrideCoberturaV2(ov) {
+  return ov.schema_version === 2
+    || (YMD_RE.test(String(ov.fecha_origen || ""))
+      && YMD_RE.test(String(ov.fecha_destino || ""))
+      && Array.isArray(ov.segmentos_cedidos_origen));
+}
+
+async function segmentosTeoricosBaseEnFecha({
+  personaId,
+  fechaYmd,
+  indiceCalendario,
+  grupoId,
+}) {
+  const base = await resolverBaseDiaPersona({
+    personaId,
+    fechaYmd,
+    indiceCalendario,
+    grupoId,
+  });
+  if (!base) return [];
+  let segmentos = base.capaBase?.segmentos || [];
+  if (!segmentos.length) {
+    const turnoFallback = base.mejorResolucion?.turno_teorico;
+    if (turnoFallback) {
+      segmentos = buildSegmentosHorarioFallback({
+        fechaYmd,
+        personaId,
+        turno: turnoFallback,
+        origenSegmento: "plan_base",
+      });
+    }
+  }
+  return segmentos;
+}
+
+async function aplicarCoberturaParcialV2EnDia({
+  personaId,
+  fechaYmd,
+  segmentos,
+  ov,
+  indiceCalendario,
+  grupoId,
+}) {
+  const fo = String(ov.fecha_origen || "").trim();
+  const fd = String(ov.fecha_destino || "").trim();
+  const segsOrig = Array.isArray(ov.segmentos_cedidos_origen)
+    ? ov.segmentos_cedidos_origen
+    : (Array.isArray(ov.segmentos_cubiertos) ? ov.segmentos_cubiertos : []);
+  const segsDest = Array.isArray(ov.segmentos_cedidos_destino) ? ov.segmentos_cedidos_destino : [];
+  const tcc = ov.tipo_compensacion_id || null;
+
+  if (personaId === ov.persona_origen_id && fechaYmd === fo) {
+    for (const seg of segmentos) {
+      if (!segsOrig.includes(seg.segmento_id)) continue;
+      seg.persona_ejecutante_id = ov.persona_cobertura_id || seg.persona_ejecutante_id;
+      seg.origen_segmento = "override_cobertura";
+      seg.tipo_compensacion_id = tcc;
+    }
+    const peerSegs = await segmentosTeoricosBaseEnFecha({
+      personaId: ov.persona_cobertura_id,
+      fechaYmd: fd,
+      indiceCalendario,
+      grupoId,
+    });
+    for (const seg of peerSegs) {
+      if (!segsDest.includes(seg.segmento_id)) continue;
+      upsertSegmento(segmentos, {
+        ...seg,
+        persona_titular_id: ov.persona_origen_id,
+        persona_ejecutante_id: ov.persona_origen_id,
+        origen_segmento: "override_cobertura",
+        tipo_compensacion_id: tcc,
+      });
+    }
+    return;
+  }
+
+  if (personaId === ov.persona_cobertura_id && fechaYmd === fd) {
+    for (const seg of segmentos) {
+      if (!segsDest.includes(seg.segmento_id)) continue;
+      seg.persona_ejecutante_id = ov.persona_origen_id || seg.persona_ejecutante_id;
+      seg.origen_segmento = "override_cobertura";
+      seg.tipo_compensacion_id = tcc;
+    }
+    const peerSegs = await segmentosTeoricosBaseEnFecha({
+      personaId: ov.persona_origen_id,
+      fechaYmd: fo,
+      indiceCalendario,
+      grupoId,
+    });
+    for (const seg of peerSegs) {
+      if (!segsOrig.includes(seg.segmento_id)) continue;
+      upsertSegmento(segmentos, {
+        ...seg,
+        persona_titular_id: ov.persona_cobertura_id,
+        persona_ejecutante_id: ov.persona_cobertura_id,
+        origen_segmento: "override_cobertura",
+        tipo_compensacion_id: tcc,
+      });
+    }
+  }
+}
+
 async function aplicarCoberturasParciales({ personaId, fechaYmd, segmentos, coberturas, indiceCalendario, grupoId }) {
   const result = [...segmentos];
   for (const ov of coberturas) {
+    if (esOverrideCoberturaV2(ov)) {
+      await aplicarCoberturaParcialV2EnDia({
+        personaId,
+        fechaYmd,
+        segmentos: result,
+        ov,
+        indiceCalendario,
+        grupoId,
+      });
+      continue;
+    }
+
     const ids = Array.isArray(ov.segmentos_cubiertos) ? ov.segmentos_cubiertos : [];
     if (!ids.length) continue;
     if (ov.persona_origen_id === personaId) {
@@ -1050,15 +1167,23 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
   const activos = filtrarOverridesActivosPorGrupo(allOverrides, gdt);
 
   const reemplazos = activos.filter((o) => o.tipo === "reemplazo");
+  const trasladoOrigenV2 = reemplazos.filter((o) => o.reemplazo_traslado_v2 === "origen");
+  const trasladoDestinoV2 = reemplazos.filter((o) => o.reemplazo_traslado_v2 === "destino");
+  const reemplazosClassic = reemplazos.filter((o) => !o.reemplazo_traslado_v2);
   const adicionales = activos.filter((o) => o.tipo === "adicional");
   const coberturas = await listarCoberturasDia(fechaYmd, personaId, gdt);
 
   let turnoCompuestoId = base.mejorResolucion.turno_teorico?.turno_id || base.capaBase.turno_compuesto_id || null;
   let tipoDiaFinal = base.capaBase.tipo_dia || base.mejorResolucion.tipo_dia;
-  if (reemplazos.length > 0) {
-    const ultimo = reemplazos[reemplazos.length - 1];
+  if (reemplazosClassic.length > 0) {
+    const ultimo = reemplazosClassic[reemplazosClassic.length - 1];
     turnoCompuestoId = ultimo.turno_id || turnoCompuestoId;
     tipoDiaFinal = ultimo.tipo_dia || "laborable";
+  }
+  const francoTrasladoOrigen = trasladoOrigenV2.some((o) => o.franco_en_origen === true || o.tipo_dia === "franco");
+  if (francoTrasladoOrigen) {
+    turnoCompuestoId = null;
+    tipoDiaFinal = "franco";
   }
 
   let segmentos = [];
@@ -1098,6 +1223,17 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
     }
   }
 
+  if (trasladoOrigenV2.length > 0 && !francoTrasladoOrigen && segmentos.length > 0) {
+    const quitar = new Set();
+    for (const ov of trasladoOrigenV2) {
+      const ids = Array.isArray(ov.segmentos_a_trasladar) ? ov.segmentos_a_trasladar : [];
+      for (const id of ids) quitar.add(String(id));
+    }
+    if (quitar.size > 0) {
+      segmentos = segmentos.filter((s) => !quitar.has(s.segmento_id));
+    }
+  }
+
   for (const adicional of adicionales) {
     if (!adicional.turno_id) continue;
     const capaAdd = buildCapaTeoricaSegmentada({
@@ -1111,6 +1247,28 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
     });
     for (const seg of capaAdd.segmentos || []) {
       upsertSegmento(segmentos, seg);
+    }
+  }
+
+  for (const td of trasladoDestinoV2) {
+    const ids = Array.isArray(td.segmentos_incorporados_destino)
+      ? td.segmentos_incorporados_destino
+      : (td.turno_id ? [td.turno_id] : []);
+    for (const tid of ids) {
+      const turnoId = String(tid || "").trim();
+      if (!turnoId) continue;
+      const capaAdd = buildCapaTeoricaSegmentada({
+        fechaYmd,
+        personaId,
+        regimen: base.regimenDoc,
+        tipo_dia: "laborable",
+        turnoCompuestoId: turnoId,
+        origen_segmento: "override_cobertura",
+        indiceCalendario,
+      });
+      for (const seg of capaAdd.segmentos || []) {
+        upsertSegmento(segmentos, seg);
+      }
     }
   }
 
