@@ -4,7 +4,7 @@
 **Estado:** Fase **COMPLETADA** en rama `feat/epic-multi-hlg-fase1-execution` · QA grilla prod OK · merge `master` pendiente  
 **Tag sugerido post-merge:** `v2.4.0-fux-gestion-turno`
 
-**Índice operativo:** [`HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md`](./HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md) (otra PC) · [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · PR: [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md)
+**Índice operativo:** [`HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md`](./HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md) (otra PC) · [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **Backlog código:** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) · PR: [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md)
 
 ---
 
@@ -136,14 +136,18 @@ Script IAM: `npm run firebase:grant-callables-invoker` (tras `gcloud auth login`
 
 ## 8. Pendiente post-cierre (no bloquea registro documental)
 
+Detalle completo (GSO, F3, orquestación, proceso): [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md).
+
 | Ítem | Notas |
 |------|--------|
-| Merge PR → `master` | [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md) |
+| Merge PR → `master` | [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md) · §1 backlog |
 | Tag `v2.4.0-fux-gestion-turno` | Tras merge |
-| Horas RRHH post-flujo C | Fuera de celda; épica futura |
-| Validación horas espejo A2 en servidor | Opcional A-BATCH |
-| `enviarAccionesAsistencia` alias legacy | Nombre RFC; implementación = `aplicarBatchAsistencia` |
-| Limpieza overrides smoke jun-2026 dev | Ops opcional |
+| Épica GSO US-* | §2 backlog — **sin código** aún |
+| F3 T-05…T-09 | §3 backlog |
+| Horas RRHH post-flujo C | §4 FUX-OPT-1 |
+| Validación horas espejo A2 en servidor | §4 FUX-OPT-2 |
+| `enviarAccionesAsistencia` alias legacy | §4 FUX-OPT-3 |
+| Limpieza overrides smoke jun-2026 dev | §4 FUX-OPT-4 |
 
 ---
 
@@ -155,4 +159,4 @@ Este registro debe citarse desde:
 - [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md) — F-UX.3 y F4
 - [`HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md`](./HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md) — estado F-UX.3
 
-**Última actualización registro:** 2026-06-04
+**Última actualización registro:** 2026-06-04 — enlazado [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)

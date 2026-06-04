@@ -1,8 +1,9 @@
 # Punto de Continuación — Próxima Sesión
 
 > **RETOMAR AQUÍ (otra PC):** [`HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md`](./HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md) — `git pull origin feat/epic-multi-hlg-fase1-execution` + `.env.v2.local`  
+> **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **Épica F-UX.3 — CERRADA en rama** · Registro: [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) · PR: [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md)  
-> **GSO conflictos (docs, sin código):** [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md)
+> **GSO conflictos (docs listos; código pendiente US-9, US-1, US-16…):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) §2
 
 ## CIERRE F-UX.3 — gestión turno A/B/C (implementación terminada)
 
@@ -20,12 +21,20 @@
 | **Push rama** | ✅ Sincronizar con `git pull` — ver handoff 2026-06-04 |
 | **Handoff sesión 2026-06-04** | [`HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md`](./HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md) |
 
-### Único paso pendiente (humano)
+### Pendientes (resumen — detalle en [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md))
+
+| Tipo | Ítems |
+|------|--------|
+| **Proceso** | PR → `master`, tag `v2.4.0-fux-gestion-turno`, QA formal §4.2 |
+| **Código P0** | GSO: US-9, US-1, US-16 (anti-blanco + habilitar plan) |
+| **Código P1** | GSO: US-3, US-10, US-14, US-8… · F3: T-05…T-09 |
+| **Opcional F-UX** | Horas RRHH post-C, validación A2 servidor |
 
 1. Abrir PR y merge → **`PR_EPIC_MULTI_HLG_FUX.md`** · compare: `master`…`feat/epic-multi-hlg-fase1-execution`
 2. Post-merge: tag `v2.4.0-fux-gestion-turno` (comandos en release notes F-UX)
+3. Siguiente sprint código: §2 y §8 de **`PENDIENTES_IMPLEMENTACION_V2.md`**
 
-**Última actualización:** épica F-UX cerrada en rama — 2026-06-04
+**Última actualización:** registro backlog implementación — 2026-06-04
 
 ---
 
@@ -121,7 +130,7 @@
 | **Deploy producción** | ✅ Sesión 01/06 | Ver tabla deploy en [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md) |
 | **F3 T-05..T-07, T-09** | ⏳ Pendiente | UI editor segmentos, help, caché — ver handoff 2026-06-02 |
 | **F3 cierre épica** | ✅ Núcleo | Piloto Sala validado · release notes · tag pendiente commit |
-| **F4 Outbox** | ⏳ En curso | RFC 4.1 ✅ · batch 4.2 parcial · UI 4.3 parcial |
+| **F4 Outbox** | ✅ En rama (F-UX.3) | Ver [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) · backlog: [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) |
 
 ---
 
@@ -347,11 +356,13 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 
 ## Pendientes priorizados
 
+> **Lista maestra actualizada:** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) (sustituye esta sección para planificación 2026-06-04+).
+
 ### Alta (próxima sesión)
 
-1. **F2 O-P1-1** — job día 5 materialización M+1.
-2. **F2 O-P1-3** — GSO M-1 solo lectura.
-3. Paso 4 QA formal + PR merge épica.
+1. PR merge épica + tag F-UX (`REL-1`, `REL-2`).
+2. GSO **US-9**, **US-1**, **US-16** (P0).
+3. Paso 4 QA formal Multi-HLG.
 
 ### Media
 

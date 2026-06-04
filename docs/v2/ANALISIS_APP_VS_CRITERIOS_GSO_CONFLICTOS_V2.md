@@ -2,6 +2,7 @@
 
 **Alcance:** código y comportamiento **as-built** frente a [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md) y acta [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md).  
 **Método:** revisión estática (junio 2026). **Sin propuesta de diff** en este documento.  
+**Backlog implementación (tickets US):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) §2.  
 **Nota:** Los datos del piloto junio Sala ya cumplen plan + `vis_*`; varias brechas son **defensas** para no repetir el incidente si vuelve un plan con huecos o la UI regresa a ocultar celdas.
 
 ---

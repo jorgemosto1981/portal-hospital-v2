@@ -16,6 +16,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | **[`HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md`](./HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md)** | Incidente escenario Z + limpieza quirúrgica documentada |
 | [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) | Grilla aprobada VER plan; matriz control turno |
 | [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) | **Índice corto** → puntero sesión actual |
+| **[`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)** | **SSoT** qué falta implementar (GSO, F3, F-UX opt, orquestación, release) |
 | **[`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md)** | **Registro maestro F-UX.3** (gestión turno + batch) |
 | [`DICCIONARIO_CFG_ASISTENCIA_TURNOS_V2.md`](./DICCIONARIO_CFG_ASISTENCIA_TURNOS_V2.md) | Catálogos `cfg_tcc_*`, `cfg_epl_*`, `cfg_cdc_*`, manifiesto ids |
 | [`EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md`](./EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md) | Fórmula fichadas esperadas + salida momentánea |

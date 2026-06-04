@@ -63,15 +63,28 @@ npx firebase deploy --project portal-hospital-v2 --only hosting
 
 ---
 
-## 4. Próximo paso sugerido
+## 4. Qué falta implementar (registro maestro)
+
+**SSoT:** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) — proceso (PR/tag), épica GSO (US-*), F3 T-05…T-09, opcionales F-UX, orquestación O-P2.
+
+Resumen rápido:
+
+| Prioridad | Ítem |
+|-----------|------|
+| Proceso | PR → `master`, tag `v2.4.0-fux-gestion-turno` |
+| P0 código | GSO **US-9**, **US-1**, **US-16** |
+| P1 código | GSO US-3, US-10, US-14… · **T-05** editor segmentos |
+| ✅ Cerrado | F-UX.3 batch A/B/C, F4 núcleo outbox |
+
+## 5. Próximo paso sugerido
 
 1. **Merge PR** a `master` (plantilla en [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md)).
 2. Tag `v2.4.0-fux-gestion-turno` post-merge.
-3. **Épica GSO conflictos** (opcional, paralelo): partir de [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md) y [`ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md`](./ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md) — US-1, US-9, US-16 P0.
+3. **Épica GSO conflictos:** implementar según [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) §2 (acta: [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md)).
 
 ---
 
-## 5. Documentos nuevos / actualizados esta sesión
+## 6. Documentos nuevos / actualizados esta sesión
 
 | Archivo | Rol |
 |---------|-----|
@@ -82,7 +95,6 @@ npx firebase deploy --project portal-hospital-v2 --only hosting
 | [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md) | Acta RRHH GSO (docs) |
 | [`ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md`](./ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md) | Brechas US vs código |
 | [`GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md`](./GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md) | Ops materializar al abrir |
+| [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) | **Backlog** qué falta implementar |
 
----
-
-**Última actualización:** 2026-06-04 — sesión guardada para continuidad multi-PC.
+**Última actualización:** 2026-06-04 — backlog implementación registrado.

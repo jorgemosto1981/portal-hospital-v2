@@ -4,6 +4,7 @@
 **Audiencia:** agente de implementación (código, tests, deploy)  
 **Plan maestro:** [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md)  
 **SSoT operativo día a día:** [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md)  
+**SSoT qué falta implementar:** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 **Rama:** `feat/epic-multi-hlg-fase1-execution` @ `71232f0` (verificar con `git pull`)  
 **Producción:** https://portal-hospital-v2.web.app
 

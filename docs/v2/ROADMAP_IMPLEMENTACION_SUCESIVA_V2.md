@@ -306,6 +306,7 @@ Núcleo F4 **implementado en F-UX.3** en rama `feat/epic-multi-hlg-fase1-executi
 | Uso | Archivo |
 |-----|---------|
 | Tareas del día | [`PENDIENTES_PROXIMA_SESION.md`](PENDIENTES_PROXIMA_SESION.md) |
+| **Backlog implementación** | [`PENDIENTES_IMPLEMENTACION_V2.md`](PENDIENTES_IMPLEMENTACION_V2.md) |
 | **Handoff agente implementador** | [`HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md`](HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md) |
 | Reglas negocio | [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](MANUAL_CAPAS_ORQUESTACION_BORRADOR.md) |
 | Gaps código | [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md) |
