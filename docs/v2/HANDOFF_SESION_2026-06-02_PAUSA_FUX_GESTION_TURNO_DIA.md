@@ -89,7 +89,7 @@
 - Ej.: XX **M+T**, YY **T** → en XX elegir **M o T** para emparejar con **T** de YY.
 - **Compensación:** default operativo `cfg_tcc_*` (ej. «Intercambio interno»); jefe no elige siempre.
 - **Materializar** día XX y día YY si falta.
-- Outbox → `cobertura_parcial` · **RFC:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) §3.1 (amendment 2026-06-03: A-N1…A-N5, A-REG, A-TIPO, A-BATCH). **UI + outbox + QA navegador ✅**; batch **A-BATCH** diferido (§3.1.4 RFC).
+- Outbox → `cobertura_parcial` · **RFC:** §3.1 + **A-BATCH** ✅ (`17a04bf`). UI + outbox + QA navegador + grilla prod ✅.
 
 ---
 
