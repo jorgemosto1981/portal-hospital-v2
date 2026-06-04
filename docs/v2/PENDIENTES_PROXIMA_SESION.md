@@ -1,7 +1,7 @@
 # Punto de Continuación — Próxima Sesión
 
 > **Última sesión — 2026-06-03** · F-UX.3 frontend gestión turno A/B/C + outbox banner por tarjeta — **pausa @ QA OK**.  
-> Handoff: [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) §12.
+> Handoff: [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) §12 · Visual: [`RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md`](./RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md).
 
 ## PAUSA — retomar aquí (F-UX Gestión turno del día A/B/C)
 
@@ -9,19 +9,18 @@
 |-----|--------|
 | **Handoff completo** | [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) |
 | **Estado frontend F-UX.3** | ✅ Wizard A/B/C · modales · outbox v2 · banner por tarjeta grupo×mes · labels embebidos |
-| **Gate ANTES de backend** | **§12 handoff** — definir visualización en grilla de cada flujo A/B/C (preview + post-aplicar) |
+| **Spec visual grilla (§12)** | ✅ [`RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md`](./RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md) — implementación UI pendiente |
 | **RFC F4 (outbox + batch)** | [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) · [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) |
 | **Branch trabajo** | `feat/epic-multi-hlg-fase1-execution` |
 | **Fase 6 backend (después §12)** | A-BATCH + B-BATCH-1 + C-BATCH en `cambiosTurno.js` |
 
 ### Orden próxima sesión
 
-1. **Visualización grilla A/B/C** (matriz celda × preview × post-batch; ¿capa teórica? ¿turno extra teórico en C?)
-2. RFC amendment visualización (si aplica)
-3. Fase 6 backend batch v2
-4. PR merge épica (paralelo)
+1. **Implementar visual grilla + modal resumen** (amendment F4 visual — preview, post-batch limpio, consulta ligera)
+2. Fase 6 backend batch v2 (A-BATCH, B-BATCH-1, C-BATCH)
+3. PR merge épica (paralelo)
 
-**Última actualización:** pausa F-UX.3 outbox banner — 2026-06-03
+**Última actualización:** spec visual grilla cerrada — 2026-06-04
 
 ---
 

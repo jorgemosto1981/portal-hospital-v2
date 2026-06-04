@@ -582,3 +582,5 @@ npm run test:batch-asistencia-normalize
 ```
 
 Tras A-BATCH: tests v2 bilateral en `batchAsistenciaNormalize.test.js` + worker cross-fecha. Tras B-BATCH-1: tests reemplazo v2 multi-tramo.
+
+**Visualización grilla (preview / post-batch / consulta ligera):** [`RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md`](./RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md) — producto cerrado 2026-06-04.

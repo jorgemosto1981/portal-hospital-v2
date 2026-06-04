@@ -6,7 +6,7 @@
 **Rama:** `feat/epic-multi-hlg-fase1-execution`  
 **Estado:** F-UX.3 **frontend cerrado** — outbox v2 legible + banner por tarjeta · **backend Fase 6 pendiente**  
 **RFC payloads:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md)  
-**Retomar (obligatorio antes de backend):** §12 — visualización en grilla post-carga A/B/C · luego Fase 6 batch  
+**Retomar:** implementar [`RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md`](./RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md) · luego Fase 6 batch  
 
 **Relación:** F4 [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) · segmentos [`CAPA_TEORICA_SEGMENTOS_V2.md`](./CAPA_TEORICA_SEGMENTOS_V2.md) · pendientes [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md)
 
@@ -230,28 +230,22 @@ Código existente: `useAsistenciaOutbox.js`, `GrillaMesLicenciasPanel.jsx`, `cam
 
 ---
 
-## 12. Próxima sesión — visualización en grilla (ANTES del backend)
+## 12. Visualización en grilla — spec cerrada (ANTES del backend)
 
-> **Gate de producto:** no implementar batch v2 hasta definir cómo se **ve** cada flujo en la grilla tras encolar/aplicar.
+> **Gate de producto:** spec visual y consulta ligera **cerrados** 2026-06-04. Implementar UI según amendment antes de confiar en paridad total con batch v2.
 
-### Preguntas a cerrar (A / B / C)
+**Documento canónico:** [`RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md`](./RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md)
 
-| Flujo | Al agregar a outbox (preview) | Al aplicar batch (persistido) |
-|-------|------------------------------|-------------------------------|
-| **A** Intercambio | ¿Proyecta swap bilateral en **ambas** celdas vía `proyectarDiaConOpsPendientes`? ¿Segmentos cedidos/recibidos visibles en celda? | ¿Actualiza `capa_teorica` / `vis_*` en ambos días y ambos agentes? ¿Fichadas esperadas recalculadas? |
-| **B** Traslado propio | ¿Preview destino muestra incorporación additiva (M+T+N)? ¿Origen muestra saldo/franco parcial? | ¿Origen → franco o saldo parcial en capa? ¿Destino suma segmentos sin pisar? |
-| **C** Adicional | ¿Se visualiza turno **extra teórico** en celda antes de aplicar? ¿Badge distinto del teórico base? | ¿Segmento adicional en capa teórica o solo flag/trámite hasta RRHH? ¿Fichadas esperadas incluyen el extra? |
+| Tema | Decisión cerrada |
+|------|------------------|
+| Preview | Tres estados; sin iconos en celda; `proyectarDiaConOpsPendientes` en grilla; borde ámbar + diff ± + F:2\* |
+| Post-batch | Celda limpia; `capa_teorica` + F:n como materializado; C unificado en grilla; trámite horas RRHH fuera de celda |
+| Reconocimiento | Modal «Cambios de turno en este día» + Anexo A; append `consultas_gestion_turno` en `asi_*` al abrir (solo si hay overrides) |
 
-### Artefactos a preparar
+### Siguiente paso (implementación)
 
-1. **Matriz celda × flujo** — qué muestra la grilla (texto, color, tooltip) en: teórico base · preview outbox · post-batch.
-2. **Decisión capa teórica** — qué ops modifican `capa_teorica` al aplicar vs qué quedan en trámite (C-WORKFLOW: ¿extra visible teórico antes de RRHH?).
-3. **Wire preview existente** — revisar `proyectarDiaConOpsPendientes`, `GrillaMesEquipoTabla`, `grillaCeldaTeorico.js` · extender si falta feedback visual post-aplicar.
-4. **RFC amendment corto** — § visualización grilla F-UX.3 (referenciar desde RFC F4 §5).
-
-### Después de §12
-
-Seguir plan normal: Fase 6 backend (`cambiosTurno.js` A-BATCH, B-BATCH-1, C-BATCH) alineado a la matriz visual.
+1. Wire grilla mes equipo + modal detalle (amendment §7).
+2. Fase 6 backend (`cambiosTurno.js` A-BATCH, B-BATCH-1, C-BATCH) alineado al amendment §3.5 y §4.
 
 ### Arranque otra PC
 
