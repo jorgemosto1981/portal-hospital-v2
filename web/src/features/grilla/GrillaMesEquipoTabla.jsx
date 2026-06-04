@@ -17,6 +17,7 @@ import {
 import GrillaTurnosCeldaChip from "./GrillaTurnosCeldaChip.jsx";
 import GrillaFichadasEsperadasBadge from "./GrillaFichadasEsperadasBadge.jsx";
 import { fichadasEsperadasDesdeCeldaVis, titleFichadasEsperadas } from "./grillaFichadasEsperadasDisplay.js";
+import { visualCeldaOutboxPendiente } from "./grillaCeldaOutboxVisual.js";
 
 function contenidoCeldaOperativa({
   tieneLicencia,
@@ -26,14 +27,57 @@ function contenidoCeldaOperativa({
   esNoLaborable,
   turnoText,
   fichadasN,
+  outboxVisual,
 }) {
-  const badge = <GrillaFichadasEsperadasBadge valor={fichadasN} className="mt-px" />;
+  const fichadasMostrar = outboxVisual?.fichadasPreview ?? fichadasN;
+  const badge = (
+    <GrillaFichadasEsperadasBadge
+      valor={fichadasMostrar}
+      preview={outboxVisual?.fichadasEsPreview === true}
+      className="mt-px"
+    />
+  );
+  const diffBlock = outboxVisual?.pending && (outboxVisual.diffOut || outboxVisual.diffIn) ? (
+    <span className="mt-px text-[6px] leading-tight">
+      {outboxVisual.diffOut ? (
+        <span className="text-rose-700">− {outboxVisual.diffOut}</span>
+      ) : null}
+      {outboxVisual.diffOut && outboxVisual.diffIn ? (
+        <span className="text-slate-400"> · </span>
+      ) : null}
+      {outboxVisual.diffIn ? (
+        <span className="text-emerald-800">+ {outboxVisual.diffIn}</span>
+      ) : null}
+    </span>
+  ) : null;
+
+  if (outboxVisual?.lineaExtra) {
+    return (
+      <span className="flex w-full flex-col items-center justify-center leading-none">
+        {outboxVisual.lineaBaseMuted ? (
+          <span className={`${clasesTextoCelda(outboxVisual.lineaBaseMuted)} opacity-70`}>
+            {outboxVisual.lineaBaseMuted}
+          </span>
+        ) : null}
+        <span className={clasesTextoCelda(outboxVisual.lineaExtra)}>{outboxVisual.lineaExtra}</span>
+        <span className="mt-0.5 flex flex-col items-center gap-px">
+          {badge}
+          {diffBlock}
+        </span>
+      </span>
+    );
+  }
+
+  const turnoMostrar = outboxVisual?.turnoText ?? turnoText;
   if (tieneLicencia && (tieneTurno || esFranco || esNoLaborable)) {
     return (
       <span className="flex w-full flex-col items-center justify-center leading-none">
-        <span className={clasesTextoCelda(turnoText || (esNoLaborable ? "NL" : "F"))}>{turnoText || (esNoLaborable ? "NL" : "F")}</span>
+        <span className={clasesTextoCelda(turnoMostrar || (esNoLaborable ? "NL" : "F"))}>
+          {turnoMostrar || (esNoLaborable ? "NL" : "F")}
+        </span>
         <span className="mt-0.5 flex flex-col items-center gap-px">
           {badge}
+          {diffBlock}
           <span className="text-[7px] font-bold text-fuchsia-950">{licenciaCod.slice(0, 4)}</span>
         </span>
       </span>
@@ -49,8 +93,11 @@ function contenidoCeldaOperativa({
   }
   return (
     <span className="flex flex-col items-center justify-center leading-none">
-      <span className={clasesTextoCelda(turnoText)}>{turnoText}</span>
-      {badge}
+      <span className={clasesTextoCelda(turnoMostrar)}>{turnoMostrar}</span>
+      <span className="mt-0.5 flex flex-col items-center gap-px">
+        {badge}
+        {diffBlock}
+      </span>
     </span>
   );
 }
@@ -62,6 +109,8 @@ function contenidoCeldaOperativa({
  *   filas: Array<Record<string, unknown>>;
  *   grupoSeleccionado?: string;
  *   etiquetasGrupo?: Record<string, string>;
+ *   opsOutboxGrupo?: Array<Record<string, unknown>>;
+ *   periodoOutbox?: string;
  *   onCeldaClick: (payload: {
  *     dia: string; fechaYmd: string; personaId: string; eventos: unknown[];
  *     personaLabel?: string; grupoLabel?: string;
@@ -76,6 +125,8 @@ export default function GrillaMesEquipoTabla({
   filas,
   grupoSeleccionado,
   etiquetasGrupo = {},
+  opsOutboxGrupo = [],
+  periodoOutbox = "",
   onCeldaClick,
 }) {
   const totalDias = diasEnMes(anio, mes);
@@ -162,7 +213,17 @@ export default function GrillaMesEquipoTabla({
                     const eventos = cell.eventos;
                     const licenciaCod = etiquetaCelda(eventos);
                     const tieneLicencia = Boolean(licenciaCod);
-                    const turnoText = textoHorarioTurno(cell);
+                    const fechaYmd = `${anio}-${String(mes).padStart(2, "0")}-${dia}`;
+                    const personaIdFila = String(fila.persona_id || "");
+                    const outboxVisual = visualCeldaOutboxPendiente({
+                      cell,
+                      ops: opsOutboxGrupo,
+                      personaId: personaIdFila,
+                      fechaYmd,
+                      grupoId: grupoSeleccionado || cellGdt || "",
+                      personaLabels: { [personaIdFila]: personaLabel },
+                    });
+                    const turnoText = outboxVisual?.turnoText ?? textoHorarioTurno(cell);
                     const jornadaVis = celdaTieneJornadaVis(cell);
                     const tipoDiaVis = String(cell.tipo_dia || "")
                       .trim()
@@ -199,6 +260,7 @@ export default function GrillaMesEquipoTabla({
                     const fichadasN = fichadasEsperadasDesdeCeldaVis(cell);
                     const fichadasTitle = titleFichadasEsperadas(fichadasN);
                     if (fichadasTitle) titleParts.push(fichadasTitle);
+                    if (outboxVisual?.tooltip) titleParts.unshift(outboxVisual.tooltip);
 
                     const variant = varianteCeldaOperativa({
                       tieneLicencia,
@@ -228,7 +290,7 @@ export default function GrillaMesEquipoTabla({
                             tieneDatos &&
                             onCeldaClick({
                               dia,
-                              fechaYmd: `${anio}-${String(mes).padStart(2, "0")}-${dia}`,
+                              fechaYmd,
                               personaId: String(fila.persona_id || ""),
                               eventos: Array.isArray(eventos) ? eventos : [],
                               personaLabel,
@@ -257,7 +319,10 @@ export default function GrillaMesEquipoTabla({
                           className="flex w-full items-center justify-center py-0.5"
                           title={titleParts.join(" · ") || undefined}
                         >
-                          <GrillaTurnosCeldaChip variant={variant}>
+                          <GrillaTurnosCeldaChip
+                            variant={variant}
+                            className={outboxVisual?.pending ? "ring-2 ring-amber-500 ring-offset-0" : ""}
+                          >
                             {contenidoCeldaOperativa({
                               tieneLicencia,
                               licenciaCod,
@@ -266,6 +331,7 @@ export default function GrillaMesEquipoTabla({
                               esNoLaborable,
                               turnoText,
                               fichadasN,
+                              outboxVisual,
                             })}
                           </GrillaTurnosCeldaChip>
                         </GrillaMesCeldaLicencia>

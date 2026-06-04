@@ -18,6 +18,8 @@ import GrillaMesSinDotacionAviso from "./GrillaMesSinDotacionAviso.jsx";
 import { useAsistenciaOutbox } from "./useAsistenciaOutbox.js";
 import { useGrillaMesVista } from "./useGrillaMesVista.js";
 import { aplicarBatchAsistencia } from "../../services/coberturaParcialService.js";
+import { opsOutboxParaGrupo } from "./grillaCeldaOutboxVisual.js";
+import { mergePersonaLabelsDesdeOps } from "./grillaOutboxLabels.js";
 import { RX_GDT } from "./grillaGrupoUtils.js";
 import { periodosVentanaJefe } from "../jefe/periodoJefe.js";
 import GrillaTarjetaGrupoPeriodo from "./GrillaTarjetaGrupoPeriodo.jsx";
@@ -174,6 +176,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
     }
   };
 
+  const periodoGrillaModal = vistaModal?.periodo || vista.periodo;
   const grupoLiquidacionId = RX_GDT.test(String(contextoLiquidacion?.grupoId || ""))
     ? String(contextoLiquidacion.grupoId)
     : RX_GDT.test(String(vista.grupoId || ""))
@@ -187,6 +190,23 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
     esRrhh &&
     grupoLiquidacionId &&
     estadosPeriodo.estaCerrado(periodoLiquidacion, grupoLiquidacionId);
+
+  const gdtGrillaModal =
+    grupoLiquidacionId || vista.grupoActivoId || vista.grupoId || "";
+  const opsOutboxGrillaModal = useMemo(
+    () => opsOutboxParaGrupo(outbox.ops, gdtGrillaModal, periodoGrillaModal),
+    [outbox.ops, gdtGrillaModal, periodoGrillaModal],
+  );
+  const personaLabelsGrilla = useMemo(() => {
+    /** @type {Record<string, string>} */
+    const base = {};
+    for (const f of vista.filas || []) {
+      const id = String(f.persona_id || "").trim();
+      const lbl = String(f.persona_label || "").trim();
+      if (id && lbl) base[id] = lbl;
+    }
+    return mergePersonaLabelsDesdeOps(outbox.ops, base);
+  }, [vista.filas, outbox.ops]);
 
   useEffect(() => {
     if (!esRrhh || !RX_GDT.test(String(vista.grupoId || ""))) return;
@@ -539,6 +559,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   filas={vista.filas}
                   grupoSeleccionado={grupoLiquidacionId || vista.grupoId}
                   etiquetasGrupo={etiquetasGrupo}
+                  opsOutboxGrupo={opsOutboxGrillaModal}
+                  periodoOutbox={periodoGrillaModal}
                   onCeldaClick={({ dia, fechaYmd, personaId: pid, eventos, personaLabel, grupoLabel, turnoTeorico, grupoTrabajoId }) =>
                     setDiaModal({
                       dia,
@@ -592,6 +614,10 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   </span>
                   Fichadas esperadas (jornada)
                 </span>
+                <span>
+                  <span className="mr-1 inline-block h-3 w-5 rounded ring-2 ring-amber-500 align-middle" />
+                  Turno con cambio pendiente (cola)
+                </span>
                 <span>Clic = detalles</span>
               </div>
             </div>
@@ -610,6 +636,9 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
         turnoTeorico={diaModal?.turnoTeorico ?? null}
         personaId={diaModal?.personaId}
         fechaYmd={diaModal?.fechaYmd}
+        grupoTrabajoId={diaModal?.grupoTrabajoId || gdtGrillaModal}
+        opsOutboxPendientes={opsOutboxGrillaModal}
+        personaLabels={personaLabelsGrilla}
         soloLectura={!vista.gsoPermiteEscritura}
         puedeGestionarTurno={puedeGestionTurno}
         onAbrirGestionTurno={

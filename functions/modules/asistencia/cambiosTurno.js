@@ -628,6 +628,73 @@ const aplicarBatchAsistencia = onCall({
   };
 });
 
+const MAX_CONSULTAS_GESTION_TURNO = 20;
+
+/**
+ * Append consulta ligera al abrir grilla (RFC F4 amendment visual §5.2).
+ */
+const registrarConsultaGestionTurnoGrilla = onCall({
+  invoker: "public",
+  memory: "256MiB",
+  timeoutSeconds: 60,
+}, async (request) => {
+  const data = request.data || {};
+  const { personaId, fecha } = validarInput(data);
+  const grupoTrabajoId = requireGrupoTrabajoId(
+    resolveGrupoTrabajoId(data, data.context),
+    "[CONS-001] grupo_trabajo_id (gdt_*) requerido.",
+  );
+  const overrideRefs = Array.isArray(data.override_refs)
+    ? data.override_refs.map((x) => String(x).trim()).filter(Boolean)
+    : [];
+  if (overrideRefs.length < 1) {
+    return { ok: true, skipped: true, reason: "sin_overrides" };
+  }
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
+    await assertOverrideAuth(request, personaId);
+  }
+
+  const uid = (request.auth && request.auth.uid) || "system";
+  const token = (request.auth && request.auth.token) || {};
+  const opBatchIds = Array.isArray(data.op_batch_ids)
+    ? [...new Set(data.op_batch_ids.map((x) => String(x).trim()).filter(Boolean))]
+    : [];
+
+  const entry = {
+    consultado_en: new Date().toISOString(),
+    consultado_por_persona_id: token.persona_id || null,
+    consultado_por_uid: uid,
+    grupo_trabajo_id: grupoTrabajoId,
+    override_refs: overrideRefs,
+    op_batch_ids: opBatchIds,
+  };
+
+  const docId = docIdAsistencia(personaId, fecha);
+  const ref = db.collection(COL_ASISTENCIA).doc(docId);
+  const snap = await ref.get();
+  const prev = snap.exists && Array.isArray(snap.data()?.consultas_gestion_turno)
+    ? snap.data().consultas_gestion_turno
+    : [];
+  const next = [...prev, entry].slice(-MAX_CONSULTAS_GESTION_TURNO);
+
+  if (snap.exists) {
+    await ref.update({
+      consultas_gestion_turno: next,
+      actualizado_en: FieldValue.serverTimestamp(),
+    });
+  } else {
+    await ref.set({
+      persona_id: personaId,
+      fecha,
+      consultas_gestion_turno: next,
+      creado_en: FieldValue.serverTimestamp(),
+      actualizado_en: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
+
+  return { ok: true, doc_id: docId, consultas: next.length };
+});
+
 /**
  * Materializa capa teórica de un solo día (celda GSO). F-UX.3 gate.
  */
@@ -670,6 +737,7 @@ module.exports = {
   registrarCambioTurno,
   eliminarCambioTurno,
   listarOverridesTurno,
+  registrarConsultaGestionTurnoGrilla,
   aplicarBatchAsistencia,
   obtenerCapaTeoricaDia,
   materializarTurnoTeoricoDia,

@@ -53,6 +53,7 @@ const CALLABLE_EXPORT_IDS = [
   "registrarCambioTurno",
   "eliminarCambioTurno",
   "listarOverridesTurno",
+  "registrarConsultaGestionTurnoGrilla",
   "aplicarBatchAsistencia",
   "obtenerCapaTeoricaDia",
   "materializarTurnoTeoricoDia",

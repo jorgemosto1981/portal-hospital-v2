@@ -2,7 +2,18 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
-import { callObtenerResumenSolicitudArticuloGrilla } from "../../services/callables.js";
+import {
+  callListarOverridesTurno,
+  callObtenerResumenSolicitudArticuloGrilla,
+  callRegistrarConsultaGestionTurnoGrilla,
+} from "../../services/callables.js";
+import {
+  lineasPendienteEnCola,
+  overrideActivoEnGrupo,
+  overrideAfectaCelda,
+  tarjetaResumenOverride,
+} from "./grillaGestionTurnoHistorial.js";
+import { mergePersonaLabelsDesdeOps } from "./grillaOutboxLabels.js";
 
 function labelEstado(id) {
   const e = String(id || "");
@@ -29,6 +40,9 @@ function labelEstado(id) {
  *   onAbrirGestionTurno?: () => void;
  *   puedeGestionarTurno?: boolean;
  *   soloLectura?: boolean;
+ *   grupoTrabajoId?: string;
+ *   opsOutboxPendientes?: Array<Record<string, unknown>>;
+ *   personaLabels?: Record<string, string>;
  * }} props
  */
 export default function DiaGrillaDetalleModal({
@@ -47,10 +61,16 @@ export default function DiaGrillaDetalleModal({
   onAbrirGestionTurno,
   puedeGestionarTurno = false,
   soloLectura = false,
+  grupoTrabajoId = "",
+  opsOutboxPendientes = [],
+  personaLabels = {},
 }) {
   const [solFocus, setSolFocus] = useState("");
   const [resumen, setResumen] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [tarjetasGestion, setTarjetasGestion] = useState(/** @type {Array<ReturnType<typeof tarjetaResumenOverride>>} */ ([]));
+  const [pendientesCola, setPendientesCola] = useState(/** @type {string[]} */ ([]));
+  const [loadingGestion, setLoadingGestion] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -83,6 +103,54 @@ export default function DiaGrillaDetalleModal({
       cancelled = true;
     };
   }, [open, solFocus]);
+
+  useEffect(() => {
+    if (!open || !personaId || !fechaYmd) {
+      setTarjetasGestion([]);
+      setPendientesCola([]);
+      return;
+    }
+    const labels = mergePersonaLabelsDesdeOps(opsOutboxPendientes, personaLabels);
+    setPendientesCola(lineasPendienteEnCola(opsOutboxPendientes, personaId, fechaYmd, { personaLabels: labels }));
+    let cancelled = false;
+    setLoadingGestion(true);
+    void (async () => {
+      try {
+        const res = await callListarOverridesTurno({
+          persona_id: personaId,
+          fecha: fechaYmd,
+        });
+        const items = Array.isArray(res?.data?.items) ? res.data.items : [];
+        const gdt = String(grupoTrabajoId || "").trim();
+        const afectan = items.filter(
+          (o) => overrideActivoEnGrupo(o, gdt) && overrideAfectaCelda(o, personaId, fechaYmd),
+        );
+        if (cancelled) return;
+        const cards = afectan.map((o) => tarjetaResumenOverride(o, personaId, fechaYmd, { personaLabels: labels }));
+        setTarjetasGestion(cards);
+        if (afectan.length > 0) {
+          const override_refs = afectan.map((o, i) => String(o.op_batch_id || o.creado_en || i));
+          const op_batch_ids = [
+            ...new Set(afectan.map((o) => String(o.op_batch_id || "").trim()).filter(Boolean)),
+          ];
+          await callRegistrarConsultaGestionTurnoGrilla({
+            persona_id: personaId,
+            fecha: fechaYmd,
+            grupo_trabajo_id: gdt,
+            override_refs,
+            op_batch_ids,
+          });
+        }
+      } catch {
+        if (!cancelled) setTarjetasGestion([]);
+      } finally {
+        if (!cancelled) setLoadingGestion(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, personaId, fechaYmd, grupoTrabajoId, opsOutboxPendientes, personaLabels]);
 
   if (!open) return null;
 
@@ -167,6 +235,44 @@ export default function DiaGrillaDetalleModal({
                 </>
               ) : null}
             </dl>
+          </div>
+        ) : null}
+
+        {loadingGestion ? (
+          <p className="mt-3 text-xs text-slate-500">Cargando cambios de turno…</p>
+        ) : null}
+
+        {pendientesCola.length > 0 ? (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-900">Pendiente en cola</h4>
+            <ul className="mt-1.5 space-y-1 text-xs text-amber-950">
+              {pendientesCola.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {tarjetasGestion.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+              Cambios de turno en este día
+            </h4>
+            {tarjetasGestion.map((card, idx) => (
+              <div
+                key={`${card.enCaracterDe}-${idx}`}
+                className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800"
+              >
+                <p className="font-semibold text-slate-900">{card.enCaracterDe}</p>
+                <p className="mt-1">{card.quePaso}</p>
+                <p className="mt-0.5 text-slate-600">{card.conQuien}</p>
+                <p className="mt-1 text-slate-500">{card.cuandoQuien}</p>
+                {card.nota ? <p className="mt-1 italic text-slate-500">{card.nota}</p> : null}
+                {card.referencia ? (
+                  <p className="mt-1 font-mono text-[10px] text-slate-400">{card.referencia}</p>
+                ) : null}
+              </div>
+            ))}
           </div>
         ) : null}
 

@@ -403,6 +403,19 @@ export function callListarOverridesTurno(data) {
   return httpsCallable(getFunctionsV2(), "listarOverridesTurno")(data);
 }
 
+/** Registra consulta ligera al abrir detalle de día con gestión turno aplicada. */
+export function callRegistrarConsultaGestionTurnoGrilla(data) {
+  const payload = data && typeof data === "object" ? data : {};
+  const gdt = String(payload.grupo_trabajo_id || payload.grupo_id || "").trim();
+  return httpsCallable(getFunctionsV2(), "registrarConsultaGestionTurnoGrilla")({
+    persona_id: String(payload.persona_id || "").trim(),
+    fecha: String(payload.fecha || "").trim(),
+    grupo_trabajo_id: gdt,
+    override_refs: Array.isArray(payload.override_refs) ? payload.override_refs : [],
+    op_batch_ids: Array.isArray(payload.op_batch_ids) ? payload.op_batch_ids : [],
+  });
+}
+
 /** Materializa capa teórica de un solo día (F-UX.3 — gate celda). */
 export function callMaterializarTurnoTeoricoDia(data) {
   const payload = data && typeof data === "object" ? data : {};
