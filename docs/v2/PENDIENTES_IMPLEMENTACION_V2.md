@@ -82,6 +82,7 @@ Criterios: [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPT
 | **FUX-OPT-2** | Validación horas espejo A2 en servidor (A-BATCH) | P2 | Opcional RFC |
 | **FUX-OPT-3** | Alias callable `enviarAccionesAsistencia` | P2 | Nombre histórico RFC; hoy = `aplicarBatchAsistencia` |
 | **FUX-OPT-4** | Limpieza overrides smoke dev jun-2026 | P2 | Ops |
+| **FUX-OPT-5** | Alerta divergencia dotación plan vs grilla (on-demand) | P2 | RFC [`RFC_ALERTA_DIVERGENCIA_PLAN_VS_GRILLA_UX_V2.md`](./RFC_ALERTA_DIVERGENCIA_PLAN_VS_GRILLA_UX_V2.md); independiente Fase 4 HLg |
 
 **✅ Hecho:** 4.1–4.5 RFC F4, `aplicarBatchAsistencia` A/B/C v2, outbox UI, visual §12, smokes — registro §4–7.
 
