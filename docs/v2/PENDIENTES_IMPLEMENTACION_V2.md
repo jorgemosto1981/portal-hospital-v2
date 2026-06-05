@@ -63,7 +63,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | **US-8** | P1 | Revisar gates modales turno con mes cerrado / `ASI-GSO-001` | Modales gestión turno |
 | **US-11** | P2 | Unificar mensaje materialización equipo vs titular | `useGrillaMesVista.js`, `grillaMaterializacionToast.js` |
 | **US-13** | P1 | Matriz permisos teoría (doc → código) | Disperso plan / override / HLg |
-| **US-17** | P0 (ops) | Inventario global planes `HABILITADO` sin huecos | Script / informe (no solo piloto junio Sala) |
+| **US-17** | P0 (ops) | Inventario global planes `HABILITADO` sin huecos | [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md) · lib + `audit:us17-planes-huecos` ✅ · **falta ejecución prod + reporte** |
 
 **Orden sugerido (restante):** US-17 (ops) → US-3 escenario A + US-14 completo → US-15 → resto (ver análisis §5).
 
