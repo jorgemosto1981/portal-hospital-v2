@@ -62,6 +62,18 @@ function normalizarTipoDiaVis(raw) {
   return t;
 }
 
+/**
+ * US-1 / escenario C: laborable|guardia en capa 1 sin rda_* ni horario visible.
+ * @param {object|null|undefined} cell
+ */
+export function celdaEsIncompletoPlanVis(cell) {
+  if (!cell || typeof cell !== "object") return false;
+  const tipo = normalizarTipoDiaVis(cell.tipo_dia);
+  if (tipo !== "laborable" && tipo !== "guardia") return false;
+  if (cell.es_franco === true || tipo === "franco" || tipo === "no_laborable") return false;
+  return !celdaTieneJornadaVis(cell);
+}
+
 /** Jornada en vis_* (incluye turno en feriado aunque tipo_dia sea no_laborable). */
 export function celdaTieneJornadaVis(cell) {
   if (!cell || typeof cell !== "object") return false;

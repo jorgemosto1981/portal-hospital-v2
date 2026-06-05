@@ -5,6 +5,7 @@ import {
   institucionalPorDiaEnFilas,
   textoHorarioTurno,
   celdaTieneJornadaVis,
+  celdaEsIncompletoPlanVis,
   claseFondoColumna,
   varianteCeldaOperativa,
 } from "./grillaMesEquipoDisplay.js";
@@ -28,6 +29,7 @@ function contenidoCeldaOperativa({
   turnoText,
   fichadasN,
   outboxVisual,
+  esIncompletoPlan,
 }) {
   const fichadasMostrar = outboxVisual?.fichadasPreview ?? fichadasN;
   const badge = (
@@ -87,6 +89,17 @@ function contenidoCeldaOperativa({
     return (
       <span className="flex flex-col items-center">
         <span className={clasesTextoCelda(licenciaCod)}>{licenciaCod.slice(0, 4)}</span>
+        {esIncompletoPlan ? (
+          <span className="text-[6px] font-semibold text-rose-800">Plan incompleto</span>
+        ) : null}
+        {badge}
+      </span>
+    );
+  }
+  if (esIncompletoPlan) {
+    return (
+      <span className="flex flex-col items-center justify-center leading-none">
+        <span className="text-[7px] font-bold leading-tight text-rose-950">Sin turno</span>
         {badge}
       </span>
     );
@@ -242,8 +255,15 @@ export default function GrillaMesEquipoTabla({
                       tipoInstCol || cell.es_feriado === true || tipoInstCel === "feriado" || tipoInstCel === "asueto",
                     );
 
+                    const esIncompletoPlan = celdaEsIncompletoPlanVis(cell);
                     const tieneDatos =
-                      tieneLicencia || tieneTurno || esFranco || esNoLaborable || esInstitucional;
+                      tieneLicencia ||
+                      tieneTurno ||
+                      esFranco ||
+                      esNoLaborable ||
+                      esInstitucional ||
+                      esIncompletoPlan;
+                    const puedeOperarTurno = tieneDatos && !esIncompletoPlan;
                     const ingreso = cell.rda_ingreso || null;
                     const egreso = cell.rda_egreso || null;
                     const turnoId = cell.rda_turno_id || null;
@@ -261,12 +281,16 @@ export default function GrillaMesEquipoTabla({
                     const fichadasTitle = titleFichadasEsperadas(fichadasN);
                     if (fichadasTitle) titleParts.push(fichadasTitle);
                     if (outboxVisual?.tooltip) titleParts.unshift(outboxVisual.tooltip);
+                    if (esIncompletoPlan) {
+                      titleParts.push("Laborable sin turno (corregir plan del mes)");
+                    }
 
                     const variant = varianteCeldaOperativa({
                       tieneLicencia,
                       esNoLaborable,
                       esFranco,
                       tieneTurno: tieneTurno || jornadaVis,
+                      esIncompletoPlan: esIncompletoPlan && !tieneLicencia,
                     });
 
                     return (
@@ -289,6 +313,8 @@ export default function GrillaMesEquipoTabla({
                           onClick={() =>
                             tieneDatos &&
                             onCeldaClick({
+                              incompletoPlan: esIncompletoPlan,
+                              puedeOperarTurno,
                               dia,
                               fechaYmd,
                               personaId: String(fila.persona_id || ""),
@@ -331,6 +357,7 @@ export default function GrillaMesEquipoTabla({
                               esNoLaborable,
                               turnoText,
                               fichadasN,
+                              esIncompletoPlan,
                               outboxVisual,
                             })}
                           </GrillaTurnosCeldaChip>

@@ -1,7 +1,7 @@
 import { diasEnMes, etiquetaCelda } from "./grillaMesCellUtils.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 import { claseFondoCeldaCalendarioTitular } from "./grillaTurnosVisual.js";
-import { celdaTieneJornadaVis } from "./grillaMesEquipoDisplay.js";
+import { celdaTieneJornadaVis, celdaEsIncompletoPlanVis } from "./grillaMesEquipoDisplay.js";
 import { titularDiaAsignadoAGrupo } from "./grillaTitularAsignacionDia.js";
 import GrillaFichadasEsperadasBadge from "./GrillaFichadasEsperadasBadge.jsx";
 import { fichadasEsperadasDesdeCeldaVis, titleFichadasEsperadas } from "./grillaFichadasEsperadasDisplay.js";
@@ -124,8 +124,15 @@ export default function GrillaMesTitularCalendario({
           const asignadoAlGrupo = titularDiaAsignadoAGrupo(hlgRows, grupoVistaId, fechaYmd);
           const sinAsignacionGrupo = hlgListo && !asignadoAlGrupo;
 
+          const esIncompletoPlan = celdaEsIncompletoPlanVis(cell);
           const tieneDatos =
-            tieneEventos || turnoId || esFranco || esNoLaborable || esFeriado || jornadaVis;
+            tieneEventos ||
+            turnoId ||
+            esFranco ||
+            esNoLaborable ||
+            esFeriado ||
+            jornadaVis ||
+            esIncompletoPlan;
           const ingreso = cell.rda_ingreso || null;
           const turnoLabel = esNoLaborable
             ? "NL"
@@ -157,6 +164,9 @@ export default function GrillaMesTitularCalendario({
           const fichadasN = fichadasEsperadasDesdeCeldaVis(cell);
           const fichadasTitle = titleFichadasEsperadas(fichadasN);
           if (fichadasTitle) titleParts.push(fichadasTitle);
+          if (esIncompletoPlan) {
+            titleParts.push("Laborable sin turno (corregir plan del mes)");
+          }
 
           return (
             <GrillaMesCeldaLicencia
@@ -202,6 +212,11 @@ export default function GrillaMesTitularCalendario({
                 ) : null}
                 {esNoLaborable && asignadoAlGrupo ? (
                   <span className={`${CLASE_CHIP} ${chipNl}`}>NL</span>
+                ) : null}
+                {esIncompletoPlan && asignadoAlGrupo && !tieneEventos ? (
+                  <span className={`${CLASE_CHIP} border-rose-700 bg-rose-100 text-[8px] font-bold text-rose-950`}>
+                    Sin turno
+                  </span>
                 ) : null}
               </div>
               {label ? <span className={CLASE_LICENCIA}>{label}</span> : <span className="h-0 shrink-0" aria-hidden />}

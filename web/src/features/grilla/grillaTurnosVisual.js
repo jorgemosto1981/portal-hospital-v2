@@ -28,6 +28,10 @@ const VARIANTES_CHIP = {
   bloqueado: BLOQUEADO_STYLE,
   noAsignado: NO_ASIGNADO_STYLE,
   vacio: { bg: "bg-white", text: "text-slate-400" },
+  incompletoPlan: {
+    bg: "bg-rose-100 hover:bg-rose-200 bg-[repeating-linear-gradient(-45deg,transparent,transparent_3px,rgba(244,63,94,0.15)_3px,rgba(244,63,94,0.15)_6px)]",
+    text: "text-rose-950",
+  },
 };
 
 /** @param {keyof typeof VARIANTES_CHIP} variant */
@@ -177,6 +181,7 @@ export function varianteCeldaMensual({
  *   esNoLaborable?: boolean;
  *   esFranco?: boolean;
  *   tieneTurno?: boolean;
+ *   esIncompletoPlan?: boolean;
  *   soloInstitucional?: boolean;
  * }} p
  */
@@ -185,8 +190,10 @@ export function varianteCeldaOperativa({
   esNoLaborable,
   esFranco,
   tieneTurno,
+  esIncompletoPlan,
 }) {
   if (tieneLicencia) return "licencia";
+  if (esIncompletoPlan) return "incompletoPlan";
   if (tieneTurno) return "laborable";
   if (esNoLaborable) return "noLaborable";
   if (esFranco) return "franco";

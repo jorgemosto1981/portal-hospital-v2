@@ -568,7 +568,17 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   etiquetasGrupo={etiquetasGrupo}
                   opsOutboxGrupo={opsOutboxGrillaModal}
                   periodoOutbox={periodoGrillaModal}
-                  onCeldaClick={({ dia, fechaYmd, personaId: pid, eventos, personaLabel, grupoLabel, turnoTeorico, grupoTrabajoId }) =>
+                  onCeldaClick={({
+                    dia,
+                    fechaYmd,
+                    personaId: pid,
+                    eventos,
+                    personaLabel,
+                    grupoLabel,
+                    turnoTeorico,
+                    grupoTrabajoId,
+                    incompletoPlan,
+                  }) =>
                     setDiaModal({
                       dia,
                       fechaYmd,
@@ -577,6 +587,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                       personaLabel,
                       grupoLabel,
                       turnoTeorico,
+                      incompletoPlan: Boolean(incompletoPlan),
                       grupoTrabajoId: grupoTrabajoId || grupoLiquidacionId || vista.grupoActivoId || "",
                     })
                   }
@@ -625,6 +636,10 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   <span className="mr-1 inline-block h-3 w-5 rounded ring-2 ring-amber-500 align-middle" />
                   Turno con cambio pendiente (cola)
                 </span>
+                <span>
+                  <span className="mr-1 inline-block h-3 w-5 rounded border border-rose-700 bg-rose-100 align-middle" />
+                  Laborable sin turno (plan incompleto)
+                </span>
                 <span>Clic = detalles</span>
               </div>
             </div>
@@ -647,7 +662,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
         opsOutboxPendientes={opsOutboxGrillaModal}
         personaLabels={personaLabelsGrilla}
         soloLectura={!vista.gsoPermiteEscritura}
-        puedeGestionarTurno={puedeGestionTurno}
+        puedeGestionarTurno={puedeGestionTurno && !diaModal?.incompletoPlan}
         onAbrirGestionTurno={
           puedeGestionTurno && diaModal?.personaId && diaModal?.fechaYmd && diaModal?.grupoTrabajoId
             ? () => {
