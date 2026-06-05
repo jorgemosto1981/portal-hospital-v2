@@ -28,8 +28,8 @@
 | **F0** | Purge HLg, gate anclas, listado bulk, toasts GSO | 100% P0-A/B/C |
 | **F1** | Merge Multi-HLG + cierre período manual RRHH | master + freeze usable |
 | **F2** | Manual §15–22 en código (M+M+1, día 5, purge UX, rango) | ~90% reglas orquestación |
-| **F3** | Segmentos, cobertura día, fichadas esperadas | T-08 probado |
-| **F4** | Outbox + `enviarAccionesAsistencia` | RFC + batch estable |
+| **F3** | Segmentos, cobertura día, fichadas esperadas | T-08 ✅ smoke + unit |
+| **F4** | Outbox + batch (`aplicarBatchAsistencia`) | ✅ F-UX.3 en rama (2026-06-04) |
 
 ```mermaid
 flowchart TB
@@ -107,6 +107,19 @@ Que **Recursos Humanos** sea el dueño de la **grilla operativa** (calendario MD
 
 **Dependencias:** F-UX.1 aprobado; recomendable F0 (observabilidad) antes de muchos jefes en prod.
 
+#### F-UX.3 — Gestión turno del día (wizard A/B/C) — **cerrado 2026-06-04**
+
+| ID | Entregable | DoD |
+|----|------------|-----|
+| UX-8 | Wizard «Gestionar turno de este día» | ✅ A / B / C |
+| UX-9 | Formularios mobile-first | ✅ Gate materializar + tokens concurrencia |
+| UX-10 | Copy ayuda | ✅ `helpContent.js` |
+| UX-11 | Outbox tarjeta grupo×mes | ✅ `7be370b` |
+| UX-12 | Visual grilla §12 | ✅ `73d58cd` + amendment RFC |
+| UX-13 | Batch v2 A/B/C | ✅ `a49e9f1`, `17a04bf` · prod desplegado |
+
+**Registro documental:** [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) · Handoff: [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md).
+
 ---
 
 ## Etapa F0 — Contención P0
@@ -171,8 +184,8 @@ Integrar en **`master`** la épica scoped (Opción A) y entregar **cierre de per
 |----|------------|--------|-----|
 | 1.1 | PR Multi-HLG | Review, resolver comentarios, merge `master`; tag si aplica | CI verde; biblia al día |
 | 1.2 | QA Paso 4 | Ítems 2–3, 6, 8–9 matriz §4.2; pilotos MOSTO/CHAPARRO mayo-jun | Evidencia en doc sesión |
-| 1.3 | `cerrarPeriodoLiquidacion` | Callable RRHH; set `CFG_EPL_LIQUIDADO_CERRADO`; campos auditoría | RRHH cierra mayo desde GSO |
-| 1.4 | UI cierre | Botón + estado badge en grilla / detalle mes | Mensaje claro en español |
+| 1.3 | `cerrarPeriodoLiquidacion` | Callable RRHH; set `CFG_EPL_LIQUIDADO_CERRADO`; campos auditoría | ✅ Prod |
+| 1.4 | UI cierre | Tarjetas cerrado/sin dotación; reabrir en modal; consulta batch `personas_vigentes` | ✅ Prod 2026-06-01 |
 | 1.5 | Gates MDC trámite | `assertPeriodoNoCerrado` con excepción solicitud abierta pre-cierre | Licencia en trámite mayo completa workflow tras cierre |
 | 1.6 | Strip legacy | Verificar 0 `capa_teorica` raíz en entorno objetivo | Script verificación PASS |
 
@@ -184,6 +197,8 @@ Integrar en **`master`** la épica scoped (Opción A) y entregar **cierre de per
 
 ## Etapa F2 — Orquestación HLg
 
+**Estado (2026-06-01):** 2.1–2.7 y O-P1-1/2/3/4 en prod. **F1.4 GSO** (cierre/reapertura UI) cerrado en sesión tarde. **Siguiente:** F1 QA manual §4.2 → **F3** turnos compuestos.
+
 ### Objetivo
 
 Código alineado al **manual de capas** y §15–22 del plan: ventana M+M+1, purge en UX HLg, materialización informada, día 5 (mat), rangos parciales.
@@ -192,13 +207,13 @@ Código alineado al **manual de capas** y §15–22 del plan: ventana M+M+1, pur
 
 | ID | Entregable | Tareas | DoD |
 |----|------------|--------|-----|
-| 2.1 | Trazabilidad materializar | Motivo en metadata; toasts/callables unificados (extiende O-P0-5) | Cada mat batch deja `ultimo_motivo` |
-| 2.2 | Purge productivo | Si no en F0: cerrar F0; wire definitivo alta/cierre/eliminar HLg | Misma DoD purge |
-| 2.3 | `materializarRango` | API interna; feriado 1 día; HLg mid-mes; respeta período cerrado | No rematerializa mes entero por un feriado |
-| 2.4 | Job día 5 **materialización** | Scheduler + callable idempotente M+1 (§17.2.1); logs; **distinto** de cierre liquidación | 5/jun: julio creado solo si falta |
-| 2.5 | Plan usuario nuevo | Banner en turnos mensuales + flujo paralelo MVP §19.6 | Caso CHAPARRO documentado |
-| 2.6 | Piloto resolverFijo | GSO capa 2; rematerializar post-régimen UI | D2/D11 PASS en piloto |
-| 2.7 | Rematerializar post-régimen/feriado | Wire `RegimenesHorariosPage` / calendario → callables existentes | RRHH un clic tras cambio |
+| 2.1 | Trazabilidad materializar | Motivo en metadata; toasts/callables unificados (extiende O-P0-5) | ✅ metadata `vis_*` en prod (laboral/GSO); ⏳ toasts UI |
+| 2.2 | Purge productivo | Si no en F0: cerrar F0; wire definitivo alta/cierre/eliminar HLg | ✅ F0 + metadata purge |
+| 2.3 | `materializarRango` | API interna; feriado 1 día; HLg mid-mes; respeta período cerrado | ✅ API + HLg; ⏳ feriado masivo |
+| 2.4 | Job día 5 **materialización** | Scheduler + callable idempotente M+1 (§17.2.1); logs; **distinto** de cierre liquidación | ✅ Código — deploy + smoke pendiente |
+| 2.5 | Plan usuario nuevo | Banner en turnos mensuales + flujo paralelo MVP §19.6 | ✅ O-P1-4 deploy |
+| 2.6 | Piloto resolverFijo | GSO capa 2; `Number(dia_semana)` + franco sin match | ✅ Código — deploy + smoke MOSTO |
+| 2.7 | Rematerializar post-régimen/feriado | Wire `RegimenesHorariosPage` / calendario → callables | ✅ UI confirmación RRHH |
 
 **Avance esperado:** reglas documentadas **~90%** en código (auto-cierre liquidación = opcional P2).
 
@@ -216,17 +231,18 @@ Motor **solo tiempo**; `segmentos[]` SoT en `asi_*`; proyección `vis_*`; cobert
 
 | Ticket | Entregable | DoD |
 |--------|------------|-----|
-| T-02 | Zod + contrato segmentos | Schemas en repo; tests contrato |
-| T-03 | Worker segmentos + ISO | Medianoche, multi-segmento, Plan > HLG estable |
-| T-04 | Cobertura + `materializarDiaAfectado` | Reasignar segmento; freeze respetado |
-| T-08 | `fichadas_esperadas` + extras | Cálculo según EXPECTATIVAS doc |
+| T-02 | Zod + contrato segmentos | ✅ `capaTeoricaSegmentos.schema.js` + `npm run test:segmentos-contract` |
+| T-03 | Worker segmentos + ISO | ✅ Smoke `smoke-materializar-turno-dia-dev.mjs` (modo seguro régimen) |
+| T-04 | Cobertura + `materializarDiaAfectado` | ✅ Código + freeze; piloto Sala validado grilla |
+| T-08 | `fichadas_esperadas` + extras | ✅ `calcularFichadasEsperadas` + `npm run test:fichadas-esperadas` + `npm run smoke:fichadas-esperadas` |
 | T-05/06 | UI plan / grilla | Editor segmentos; sin legacy monolítico |
 
 ### Checklist cierre F3
 
-- [ ] Piloto nocturno/compuesto en un `gdt`.
-- [ ] F-UX.2 puede mostrar `fichadas_esperadas` en celda (UI).
-- [ ] Release notes + tag épica turnos compuestos.
+- [x] Piloto nocturno/compuesto en un `gdt` (Sala `1779788226715`, validado grilla 2026-06-02).
+- [x] F-UX.2 puede mostrar `fichadas_esperadas` en celda (UI).
+- [x] Release notes — [`RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md`](./RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md).
+- [x] Tag `v2.3.0-f3-turnos-compuestos` @ `925f214` — push remoto 2026-06-02.
 
 **Dependencias:** F1 scoped estable; F2 recomendado para HLg coherente.
 
@@ -238,16 +254,21 @@ Motor **solo tiempo**; `segmentos[]` SoT en `asi_*`; proyección `vis_*`; cobert
 
 Edición offline en grilla con **envío batch** append-only; acciones granulares sobre contrato F3.
 
+### Estado (2026-06-04)
+
+Núcleo F4 **implementado en F-UX.3** en rama `feat/epic-multi-hlg-fase1-execution`. Ver [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md).
+
 ### Entregables detallados
 
 | ID | Entregable | DoD |
 |----|------------|-----|
-| 4.1 | `RFC_CACHE_LOCAL_ASISTENCIA_V2.md` | Idempotencia `temp_id`; tipos acción |
-| 4.2 | `enviarAccionesAsistencia` | Valida freeze; `arrayUnion`; no `set` full doc |
-| 4.3 | Outbox UI | Cola pendientes; Enviar; ASI-CONC / ASI-PER |
-| 4.4 | Integración | Sin rematerializar mes entero por cada cambio local |
+| 4.1 | `RFC_CACHE_LOCAL_ASISTENCIA_V2.md` + RFC F4 ampliado | ✅ |
+| 4.2 | `aplicarBatchAsistencia` (A/B/C v2 + legacy) | ✅ Desplegado prod |
+| 4.3 | Outbox UI grilla | ✅ Banner tarjeta + wizard A/B/C |
+| 4.4 | Integración | ✅ `materializarTurnoTeoricoDia` por día afectado |
+| 4.5 | Visual §12 + consulta ligera | ✅ Amendment + callable |
 
-**Dependencias:** **F3 cerrada** (obligatorio).
+**Dependencias:** **F3 cerrada** (obligatorio). **Merge `master`:** pendiente humano ([`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md)).
 
 ---
 
@@ -285,6 +306,8 @@ Edición offline en grilla con **envío batch** append-only; acciones granulares
 | Uso | Archivo |
 |-----|---------|
 | Tareas del día | [`PENDIENTES_PROXIMA_SESION.md`](PENDIENTES_PROXIMA_SESION.md) |
+| **Backlog implementación** | [`PENDIENTES_IMPLEMENTACION_V2.md`](PENDIENTES_IMPLEMENTACION_V2.md) |
+| **Handoff agente implementador** | [`HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md`](HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md) |
 | Reglas negocio | [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](MANUAL_CAPAS_ORQUESTACION_BORRADOR.md) |
 | Gaps código | [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md) |
 

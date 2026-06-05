@@ -12,6 +12,36 @@ export function eventoPrincipal(eventos) {
   return eventos[0];
 }
 
+/**
+ * @param {Record<string, unknown> | null | undefined} evento
+ * @param {string} [grupoVistaId]
+ */
+export function eventoEsImputadoEnOtroGrupo(evento, grupoVistaId) {
+  const ancla = String(evento?.grupo_trabajo_id_ancla || "").trim();
+  const vista = String(grupoVistaId || "").trim();
+  if (!ancla || !vista) return false;
+  return ancla !== vista;
+}
+
+/**
+ * @param {unknown} eventos
+ * @param {string} [grupoVistaId]
+ */
+export function celdaTieneImputacionExterna(eventos, grupoVistaId) {
+  if (!Array.isArray(eventos) || !grupoVistaId) return false;
+  return eventos.some((ev) => eventoEsImputadoEnOtroGrupo(ev, grupoVistaId));
+}
+
+/**
+ * @param {Record<string, unknown> | null | undefined} evento
+ * @param {Record<string, string>} [etiquetasGrupo]
+ */
+export function etiquetaGrupoAnclaEvento(evento, etiquetasGrupo = {}) {
+  const ancla = String(evento?.grupo_trabajo_id_ancla || "").trim();
+  if (!ancla) return "otro sector";
+  return etiquetasGrupo[ancla] || ancla;
+}
+
 export function etiquetaCelda(eventos) {
   const e = eventoPrincipal(eventos);
   if (!e) return "";
@@ -60,7 +90,7 @@ export function labelEstadoSolicitud(id) {
 
 /**
  * @param {unknown} eventos
- * @param {{ personaLabel?: string; dia?: string }} [ctx]
+ * @param {{ personaLabel?: string; dia?: string; grupoVistaId?: string; etiquetasGrupo?: Record<string, string> }} [ctx]
  * @returns {string[]}
  */
 export function lineasTooltipCelda(eventos, ctx = {}) {
@@ -75,6 +105,9 @@ export function lineasTooltipCelda(eventos, ctx = {}) {
     const sol = solIdCorto(ev.solicitud_id);
     const prefix = eventos.length > 1 ? `${idx + 1}. ` : "";
     lines.push(`${prefix}${cod} · ${est}`);
+    if (eventoEsImputadoEnOtroGrupo(ev, ctx.grupoVistaId)) {
+      lines.push(`${prefix}Imputada en: ${etiquetaGrupoAnclaEvento(ev, ctx.etiquetasGrupo)}`);
+    }
     lines.push(`${prefix}sol: ${sol}`);
   });
   if (eventos.length > max) {
@@ -88,8 +121,9 @@ export function lineasTooltipCelda(eventos, ctx = {}) {
 /**
  * Estilos de celda: fondo MDC + borde que diferencia pendiente vs consolidado.
  * @param {unknown} eventos
+ * @param {{ grupoVistaId?: string }} [opts]
  */
-export function estiloVisualCelda(eventos) {
+export function estiloVisualCelda(eventos, opts = {}) {
   const tiene = Array.isArray(eventos) && eventos.length > 0;
   if (!tiene) {
     return {
@@ -97,8 +131,22 @@ export function estiloVisualCelda(eventos) {
       className: "",
     };
   }
+  const imputacionExterna = celdaTieneImputacionExterna(eventos, opts.grupoVistaId);
   const pendiente = celdaPendiente(eventos);
   const bg = colorCelda(eventos) || COLOR_MDC_PENDIENTE;
+  if (imputacionExterna) {
+    if (pendiente) {
+      return {
+        style: { backgroundColor: "#e2e8f0" },
+        className:
+          "border-2 border-dashed border-amber-800 text-slate-900 shadow-[inset_0_0_0_1px_rgba(100,116,139,0.35)]",
+      };
+    }
+    return {
+      style: { backgroundColor: "#f1f5f9" },
+      className: "border border-slate-400 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300",
+    };
+  }
   if (pendiente) {
     return {
       style: { backgroundColor: COLOR_MDC_PENDIENTE },

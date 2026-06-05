@@ -8,6 +8,7 @@
  * Uso:
  *   node scripts/smoke-materializar-turno-dia-dev.mjs --dry-run
  *   node scripts/smoke-materializar-turno-dia-dev.mjs --setup --apply
+ *   node scripts/smoke-materializar-turno-dia-dev.mjs --setup --apply --force-mutate-regimen
  *   node scripts/smoke-materializar-turno-dia-dev.mjs --apply --dni-origen=28914247 --dni-cobertura=12345678
  *   node scripts/smoke-materializar-turno-dia-dev.mjs --apply --fecha=2026-06-10 --segmento=cfg_reg_turno_01_manana
  */
@@ -53,6 +54,9 @@ const {
 const {
   resolverCapaTeoricaGrupo,
 } = require(join(repoRoot, "functions/modules/shared/capaTeoricaPorGrupoCore.js"));
+const {
+  planHabilitadoDesdeQuerySnapshot,
+} = require(join(repoRoot, "functions/modules/asistencia/planGrupoAgentesNuevos.js"));
 
 function loadGacPath() {
   const envFile = join(repoRoot, ".env.v2.local");
@@ -79,11 +83,13 @@ function parseArgs(argv) {
     fecha: "",
     segmento: SEGMENTO_SMOKE_DEFAULT,
     turnoBase: TURNO_BASE_SMOKE_DEFAULT,
+    forceMutateRegimen: false,
   };
   for (const a of argv) {
     if (a === "--apply") out.apply = true;
     else if (a === "--setup") out.setup = true;
     else if (a === "--dry-run") out.dryRun = true;
+    else if (a === "--force-mutate-regimen") out.forceMutateRegimen = true;
     else if (a.startsWith("--dni-origen=")) out.dniOrigen = a.slice("--dni-origen=".length);
     else if (a.startsWith("--dni-cobertura=")) out.dniCobertura = a.slice("--dni-cobertura=".length);
     else if (a.startsWith("--persona-origen=")) out.personaOrigen = a.slice("--persona-origen=".length);
@@ -143,12 +149,12 @@ async function resolverContextoOrigen(db, personaOrigen, fechaYmd) {
   const planHab = await db.collection(COL_PLANES)
     .where("grupo_id", "==", hlg.grupo_de_trabajo_id)
     .where("periodo", "==", periodoId)
-    .where("estado", "==", "HABILITADO")
-    .limit(1)
+    .limit(20)
     .get();
-  if (!planHab.empty) {
-    planId = planHab.docs[0].id;
-    plan = planHab.docs[0].data();
+  const canonico = planHabilitadoDesdeQuerySnapshot(planHab);
+  if (canonico) {
+    planId = canonico.planId;
+    plan = canonico.plan;
   }
 
   return {
@@ -163,16 +169,39 @@ async function resolverContextoOrigen(db, personaOrigen, fechaYmd) {
   };
 }
 
-async function ensureSmokeFixture(db, ctx, personaOrigen, fechaYmd, turnoBase) {
+async function ensureSmokeFixture(db, ctx, personaOrigen, fechaYmd, turnoBase, segmentoId) {
   const { regimenId, grupoId, periodoId, hlg } = ctx;
+  const forceMutateRegimen = ctx.forceMutateRegimen === true;
+  const turnosDisponibles = Array.isArray(ctx?.regimen?.turnos_disponibles) ? ctx.regimen.turnos_disponibles : [];
+  const primerTurnoId = String(turnosDisponibles[0]?.turno_id || "").trim();
+  const turnoBaseAplicado = forceMutateRegimen ? turnoBase : primerTurnoId;
+  const segmentoAplicado = forceMutateRegimen ? segmentoId : primerTurnoId;
 
-  await db.collection(COL_REGIMEN).doc(regimenId).set({
-    tipo_patron: "planificado",
-    turnos_disponibles: TURNOS_DISPONIBLES_SMOKE,
-    impacta_calendario_institucional: false,
-    actualizado_en: FieldValue.serverTimestamp(),
-  }, { merge: true });
-  console.log(`${TAG} [setup] Régimen ${regimenId} → planificado con M/T/N`);
+  if (ctx.tipoPatron !== "planificado" && !forceMutateRegimen) {
+    throw new Error(
+      [
+        `Régimen ${regimenId} es '${ctx.tipoPatron || "desconocido"}'.`,
+        "Por seguridad, --setup no muta cfg_regimen_horario reales.",
+        "Si querés mutarlo explícitamente para un entorno de pruebas descartable, reintentá con --force-mutate-regimen.",
+      ].join(" "),
+    );
+  }
+
+  if (forceMutateRegimen) {
+    await db.collection(COL_REGIMEN).doc(regimenId).set({
+      tipo_patron: "planificado",
+      turnos_disponibles: TURNOS_DISPONIBLES_SMOKE,
+      actualizado_en: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    console.log(`${TAG} [setup] Régimen ${regimenId} mutado explícitamente a planificado (flag --force-mutate-regimen)`);
+  } else {
+    if (!primerTurnoId) {
+      throw new Error(
+        `Régimen ${regimenId} no tiene turnos_disponibles; no se puede preparar smoke sin mutarlo.`,
+      );
+    }
+    console.log(`${TAG} [setup] Régimen ${regimenId} no se modifica (modo seguro)`);
+  }
 
   let planId = ctx.planId;
   let plan = ctx.plan;
@@ -195,7 +224,7 @@ async function ensureSmokeFixture(db, ctx, personaOrigen, fechaYmd, turnoBase) {
     agentes.push(ag);
   }
   ag.dias = ag.dias || {};
-  ag.dias[fechaYmd] = { tipo_dia: "laborable", turno_id: turnoBase };
+  ag.dias[fechaYmd] = { tipo_dia: "laborable", turno_id: turnoBaseAplicado };
 
   if (planId) {
     await db.collection(COL_PLANES).doc(planId).set({
@@ -206,7 +235,7 @@ async function ensureSmokeFixture(db, ctx, personaOrigen, fechaYmd, turnoBase) {
       regimen_horario_id: regimenId,
       actualizado_en: FieldValue.serverTimestamp(),
     }, { merge: true });
-    console.log(`${TAG} [setup] Plan ${planId} HABILITADO con ${turnoBase} en ${fechaYmd}`);
+    console.log(`${TAG} [setup] Plan ${planId} HABILITADO con ${turnoBaseAplicado} en ${fechaYmd}`);
   } else {
     const ref = db.collection(COL_PLANES).doc();
     planId = ref.id;
@@ -230,6 +259,8 @@ async function ensureSmokeFixture(db, ctx, personaOrigen, fechaYmd, turnoBase) {
     planId,
     plan: { ...plan, agentes, estado: "HABILITADO" },
     tipoPatron: "planificado",
+    smokeSegmento: segmentoAplicado,
+    smokeTurnoBase: turnoBaseAplicado,
   };
 }
 
@@ -249,10 +280,12 @@ async function resolverPersonaCobertura(db, grupoId, personaOrigen, dniCobertura
 
 async function setupDatos(db, ctx, args, personaOrigen, personaCobertura, fechaYmd) {
   const asiDocId = buildAsiDocumentId(personaOrigen, fechaYmd);
+  const grupoId = String(ctx?.grupoId || "").trim();
   const override = {
     tipo: "cobertura_parcial",
     tipo_override_id: CFG_TOV_COBERTURA_PARCIAL,
     tipo_compensacion_id: CFG_TCC_CAMBIO_INTERNO,
+    grupo_de_trabajo_id: grupoId,
     persona_origen_id: personaOrigen,
     persona_cobertura_id: personaCobertura,
     segmentos_cubiertos: [args.segmento],
@@ -295,7 +328,15 @@ function pickCapaParaZod(capa) {
   };
 }
 
-function validarCapaPersona({ capa, personaId, rol, segmento, personaOrigen, personaCobertura }) {
+function validarCapaPersona({
+  capa,
+  personaId,
+  rol,
+  segmento,
+  personaOrigen,
+  personaCobertura,
+  requiereSegmentosAdicionales = false,
+}) {
   const parsed = capaTeoricaSegmentadaSchema.parse(pickCapaParaZod(capa));
   const seg = parsed.segmentos.find((s) => s.segmento_id === segmento);
   if (!seg) {
@@ -312,7 +353,7 @@ function validarCapaPersona({ capa, personaId, rol, segmento, personaOrigen, per
       throw new Error(`[origen] origen_segmento esperado override_cobertura`);
     }
     const otros = parsed.segmentos.filter((s) => s.segmento_id !== segmento);
-    if (otros.length < 1) {
+    if (requiereSegmentosAdicionales && otros.length < 1) {
       throw new Error(`[origen] Se esperaban más segmentos además de ${segmento} (ej. T+N)`);
     }
   }
@@ -344,6 +385,13 @@ function validarVis(visData, fechaYmd, capa) {
   }
   if (capa.turno_id && dia.rda_turno_id !== capa.turno_id && dia.rda_turno_id !== capa.ingreso) {
     console.warn(`${TAG} vis rda_turno_id=${dia.rda_turno_id} capa.turno_id=${capa.turno_id}`);
+  }
+  if (typeof capa.fichadas_esperadas === "number") {
+    if (dia.fichadas_esperadas !== capa.fichadas_esperadas) {
+      throw new Error(
+        `vis_* fichadas_esperadas=${dia.fichadas_esperadas} distinto de capa=${capa.fichadas_esperadas}`,
+      );
+    }
   }
 }
 
@@ -405,13 +453,24 @@ async function main() {
       console.error(`${TAG} --setup requiere --apply`);
       process.exit(1);
     }
-    ctx = await ensureSmokeFixture(db, ctx, personaOrigen, fechaYmd, args.turnoBase);
-    await setupDatos(db, ctx, args, personaOrigen, personaCobertura, fechaYmd);
+    ctx = await ensureSmokeFixture(
+      db,
+      { ...ctx, forceMutateRegimen: args.forceMutateRegimen },
+      personaOrigen,
+      fechaYmd,
+      args.turnoBase,
+      args.segmento,
+    );
+    const setupArgs = { ...args, segmento: ctx.smokeSegmento || args.segmento };
+    await setupDatos(db, ctx, setupArgs, personaOrigen, personaCobertura, fechaYmd);
   } else if (ctx.tipoPatron !== "planificado" || !ctx.planId) {
     throw new Error(
       "Sin fixture planificado listo. Ejecutá con --setup --apply para preparar Dev.",
     );
   }
+  const segmentoValidacion = ctx.smokeSegmento || args.segmento;
+  const turnoBaseValidacion = ctx.smokeTurnoBase || args.turnoBase;
+  const requiereSegmentosAdicionales = String(turnoBaseValidacion || "").includes("+");
 
   if (args.apply && !args.dryRun) {
     const rX = await materializarTurnoTeoricoDia({
@@ -445,9 +504,10 @@ async function main() {
     capa: stX.capa,
     personaId: personaOrigen,
     rol: "origen",
-    segmento: args.segmento,
+    segmento: segmentoValidacion,
     personaOrigen,
     personaCobertura,
+    requiereSegmentosAdicionales,
   });
   if (stX.vis) validarVis(stX.vis, fechaYmd, capaX);
 
@@ -458,7 +518,7 @@ async function main() {
     capa: stY.capa,
     personaId: personaCobertura,
     rol: "cobertura",
-    segmento: args.segmento,
+    segmento: segmentoValidacion,
     personaOrigen,
     personaCobertura,
   });
@@ -467,7 +527,7 @@ async function main() {
   console.log(`${TAG} ✅ INTEGRACIÓN OK`);
   console.log(JSON.stringify({
     fecha: fechaYmd,
-    segmento_cubierto: args.segmento,
+    segmento_cubierto: segmentoValidacion,
     origen: {
       asi: stX.asiDocId,
       segmentos: capaX.segmentos.length,
@@ -479,7 +539,7 @@ async function main() {
     cobertura: {
       asi: stY.asiDocId,
       segmentos: capaY.segmentos.length,
-      segmento_M: capaY.segmentos.find((s) => s.segmento_id === args.segmento),
+      segmento_M: capaY.segmentos.find((s) => s.segmento_id === segmentoValidacion),
     },
   }, null, 2));
 }

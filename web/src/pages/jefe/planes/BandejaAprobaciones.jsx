@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 
 import PlanGrillaVistaModal from "../../../features/planes/PlanGrillaVistaModal.jsx";
+import { esPlanIncorporacion } from "../../../features/planes/planRolUtils.js";
 
 const BADGE_ESTADO = {
   ENVIADO: "bg-blue-100 text-blue-800",
@@ -109,6 +110,15 @@ export default function BandejaAprobaciones({ planes, onTransicion, operando, es
                 <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${BADGE_ESTADO[plan.estado] || "bg-slate-100"}`}>
                   {LABEL_ESTADO[plan.estado] || plan.estado}
                 </span>
+                {esPlanIncorporacion(plan) ? (
+                  <span className="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-900">
+                    Incorporación
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                    Plan mensual completo
+                  </span>
+                )}
                 {plan.aprobacion_pendiente?.huerfano && (
                   <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-900">
                     Huérfano — RRHH
@@ -153,7 +163,11 @@ export default function BandejaAprobaciones({ planes, onTransicion, operando, es
                   onClick={() => onTransicion("aprobar", plan.id)}
                   className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-green-700 disabled:opacity-50"
                 >
-                  {plan.estado === "EN_REVISION" ? "Rehabilitar" : "Aprobar"}
+                  {plan.estado === "EN_REVISION"
+                    ? "Rehabilitar"
+                    : esPlanIncorporacion(plan)
+                      ? "Aprobar incorporación"
+                      : "Aprobar"}
                 </button>
               )}
               {(plan.estado === "ENVIADO" || plan.estado === "EN_REVISION") && (

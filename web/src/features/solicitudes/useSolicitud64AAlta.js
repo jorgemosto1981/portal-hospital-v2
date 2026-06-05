@@ -15,6 +15,7 @@ import {
   fechasSolicitudCompletas,
   resolverDiasSolicitadosPatronB,
 } from "./patronBFechasUi.js";
+import { formatearMensajesEntorno } from "./formatearMensajeEntorno.js";
 
 const RX_YMD = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -226,18 +227,27 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
         return { success: true, data };
       }
 
-      const mensajes = Array.isArray(data?.mensajes)
+      const raw = Array.isArray(data?.mensajes)
         ? data.mensajes.map((m) => String(m || "").trim()).filter(Boolean)
         : [];
+      const vigentes = Array.isArray(data?.grupos_trabajo_vigentes)
+        ? data.grupos_trabajo_vigentes
+        : gruposVigentes;
       setEntornoMensajes(
-        mensajes.length ? mensajes : ["No podés continuar: revisá fecha, grupo o turno en grilla."],
+        formatearMensajesEntorno(
+          raw.length ? raw : ["No podés continuar: revisá fecha, grupo o turno en grilla."],
+          vigentes,
+        ),
       );
       setEntornoOk(false);
       return { success: false, data };
     } catch (e) {
-      setEntornoMensajes([
-        e?.message || "Error de conexión con el servidor. Intentá de nuevo en unos segundos.",
-      ]);
+      setEntornoMensajes(
+        formatearMensajesEntorno(
+          [e?.message || "Error de conexión con el servidor. Intentá de nuevo en unos segundos."],
+          gruposVigentes,
+        ),
+      );
       setEntornoOk(false);
       return { success: false };
     } finally {
@@ -249,6 +259,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     fechaDesde,
     fechasCompletas,
     grupoAnclaId,
+    gruposVigentes,
     personaId,
     validandoEntorno,
   ]);

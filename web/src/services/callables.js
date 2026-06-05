@@ -300,6 +300,11 @@ export function callReabrirPeriodoLiquidacion(data) {
   return httpsCallable(getFunctionsV2(), "reabrirPeriodoLiquidacion")(data);
 }
 
+/** RRHH: consulta si el período está cerrado por grupo/mes (tarjetas GSO). */
+export function callConsultarEstadosPeriodoLiquidacionGrupo(data) {
+  return httpsCallable(getFunctionsV2(), "consultarEstadosPeriodoLiquidacionGrupo")(data);
+}
+
 /** RRHH: crear o actualizar un régimen horario (cfg_regimen_horario). */
 export function callGuardarRegimenHorario(data) {
   return httpsCallable(getFunctionsV2(), "guardarRegimenHorario")(data);
@@ -318,6 +323,11 @@ export function callListarCatalogosAsistenciaTurnos(data) {
 /** Jefe/RRHH: crear o actualizar plan de turno (BORRADOR). */
 export function callGuardarPlanTurnoServicio(data) {
   return httpsCallable(getFunctionsV2(), "guardarPlanTurnoServicio")(data);
+}
+
+/** Jefe: crea plt_inc en BORRADOR vinculado a plan principal HABILITADO. */
+export function callIniciarIncorporacionPlanMensual(data) {
+  return httpsCallable(getFunctionsV2(), "iniciarIncorporacionPlanMensual")(data);
 }
 
 /** Jefe: enviar plan para aprobación (BORRADOR → ENVIADO). */
@@ -396,6 +406,33 @@ export function callEliminarCambioTurno(data) {
 /** Listar overrides activos de un agente para una fecha. */
 export function callListarOverridesTurno(data) {
   return httpsCallable(getFunctionsV2(), "listarOverridesTurno")(data);
+}
+
+/** Registra consulta ligera al abrir detalle de día con gestión turno aplicada. */
+export function callRegistrarConsultaGestionTurnoGrilla(data) {
+  const payload = data && typeof data === "object" ? data : {};
+  const gdt = String(payload.grupo_trabajo_id || payload.grupo_id || "").trim();
+  return httpsCallable(getFunctionsV2(), "registrarConsultaGestionTurnoGrilla")({
+    persona_id: String(payload.persona_id || "").trim(),
+    fecha: String(payload.fecha || "").trim(),
+    grupo_trabajo_id: gdt,
+    override_refs: Array.isArray(payload.override_refs) ? payload.override_refs : [],
+    op_batch_ids: Array.isArray(payload.op_batch_ids) ? payload.op_batch_ids : [],
+  });
+}
+
+/** Materializa capa teórica de un solo día (F-UX.3 — gate celda). */
+export function callMaterializarTurnoTeoricoDia(data) {
+  const payload = data && typeof data === "object" ? data : {};
+  const gdt = String(payload.grupo_trabajo_id || payload.grupo_id || "").trim();
+  if (!/^gdt_/i.test(gdt)) {
+    return Promise.reject(new Error("grupo_trabajo_id (gdt_*) es obligatorio para materializar el día."));
+  }
+  return httpsCallable(getFunctionsV2(), "materializarTurnoTeoricoDia", { timeout: 120000 })({
+    persona_id: String(payload.persona_id || "").trim(),
+    fecha: String(payload.fecha || "").trim(),
+    grupo_trabajo_id: gdt,
+  });
 }
 
 /** Capa teórica materializada de un día (segmentos + token concurrencia) por gdt. */

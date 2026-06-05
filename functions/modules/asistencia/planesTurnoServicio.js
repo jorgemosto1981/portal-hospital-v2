@@ -23,6 +23,29 @@ const { COL_VISTAS_GRILLA_MES } = require("../shared/mdcComandosConstants");
 const { getInfoDia } = require("../shared/calendarService");
 const { enriquecerAgentesDiasPlan } = require("./planEnriquecimientoDias");
 const { buildPersonaLabel } = require("../shared/eventosV2");
+const {
+  personaIdsEnPlan,
+  elegirPlanMensualCanonico,
+  detectarAgentesNuevosPlanificados,
+  mergeAgentesIncorporacionPlanMensual,
+} = require("./planGrupoAgentesNuevos");
+const {
+  PLAN_ROL_PRINCIPAL,
+  PLAN_ROL_INCORPORACION,
+  PLAN_ROLES,
+  ESTADOS_PLAN_TURNO_SERVICIO,
+  buildPlanMetaPayload,
+  planRolDeDoc,
+} = require("./planTurnoServicioMeta");
+const {
+  ESTADOS_INCORPORACION_FLUJO_ACTIVO,
+  esPlanIncorporacionActivo,
+  agentesStubIncorporacion,
+  assertPadreHabilitadoParaMerge,
+  mergeAgentesEditorAlPadre,
+  appendGrillaAprobadaParcial,
+  buildRegistroIncorporacionMergeada,
+} = require("./planIncorporacionParalelo");
 const crypto = require("crypto");
 
 const COL_PLANES = "planes_turno_servicio";
@@ -38,7 +61,7 @@ function nombreLegiblePersonaDoc(d) {
 const MAX_AGENTES_PLAN = 50;
 const COL_ASISTENCIA = "asistencia_diaria";
 
-const ESTADOS_VALIDOS = new Set(["BORRADOR", "ENVIADO", "HABILITADO", "EN_REVISION", "CERRADO"]);
+const ESTADOS_VALIDOS = new Set(ESTADOS_PLAN_TURNO_SERVICIO);
 const TIPOS_PLAN = new Set(["perpetuo", "mensual"]);
 
 function err(code, msg) {
@@ -48,6 +71,27 @@ function err(code, msg) {
 /**
  * Un solo plan mensual activo por grupo+período. Solo `eliminado: true` libera el slot.
  */
+async function assertSinIncorporacionActiva({ grupoId, periodo, excludePlanId }) {
+  if (!grupoId || !periodo) return;
+  const snap = await db
+    .collection(COL_PLANES)
+    .where("grupo_id", "==", grupoId)
+    .where("periodo", "==", periodo)
+    .where("tipo_plan", "==", "mensual")
+    .limit(30)
+    .get();
+  const conflicto = snap.docs.find((d) => {
+    if (excludePlanId && d.id === excludePlanId) return false;
+    return esPlanIncorporacionActivo(d.data());
+  });
+  if (conflicto) {
+    err(
+      "failed-precondition",
+      `[PLT-INC-006] Ya existe un plan de incorporación activo (${conflicto.id}, estado ${conflicto.data()?.estado || "?"}).`,
+    );
+  }
+}
+
 async function assertSinPlanMensualVigente({ grupoId, periodo, excludePlanId }) {
   if (!grupoId || !periodo) return;
   const snap = await db
@@ -59,7 +103,11 @@ async function assertSinPlanMensualVigente({ grupoId, periodo, excludePlanId }) 
     .get();
   const conflicto = snap.docs.find((d) => {
     if (excludePlanId && d.id === excludePlanId) return false;
-    return d.data()?.eliminado !== true;
+    const data = d.data() || {};
+    if (data.eliminado === true) return false;
+    if (planRolDeDoc(data) !== PLAN_ROL_PRINCIPAL) return false;
+    if (data.estado === "MERGEADO") return false;
+    return true;
   });
   if (conflicto) {
     const p = conflicto.data() || {};
@@ -213,10 +261,97 @@ function validarPlanPerpetuo(datos) {
 }
 
 /**
+ * Crea plt_inc en BORRADOR (plan paralelo) sin mutar el principal HABILITADO.
+ */
+const iniciarIncorporacionPlanMensual = onCall({ invoker: "public" }, async (request) => {
+  const planPadreId =
+    request.data && typeof request.data.plan_padre_id === "string"
+      ? request.data.plan_padre_id.trim()
+      : "";
+  if (!planPadreId) err("invalid-argument", "[PLT-INC-007] plan_padre_id requerido.");
+
+  const padreSnap = await db.collection(COL_PLANES).doc(planPadreId).get();
+  if (!padreSnap.exists) err("not-found", "[PLT-INC-008] Plan padre no encontrado.");
+  const padre = padreSnap.data() || {};
+  const valPadre = assertPadreHabilitadoParaMerge(padre, planPadreId);
+  if (!valPadre.ok) err("failed-precondition", valPadre.message);
+
+  if (padre.tipo_plan !== "mensual" || !padre.periodo) {
+    err("failed-precondition", "[PLT-INC-009] La incorporación paralela aplica solo a planes mensuales.");
+  }
+
+  const grupoId = padre.grupo_id;
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, grupoId, "guardar");
+
+  await assertSinIncorporacionActiva({
+    grupoId,
+    periodo: padre.periodo,
+    excludePlanId: null,
+  });
+
+  const { personasGrupo, regimenes } = await cargarPersonasYRegimenesPlanGrupo(grupoId, padre.periodo);
+  const agentesNuevos = detectarAgentesNuevosPlanificados({
+    personasGrupo,
+    regimenes,
+    personaIdsEnPlanMensual: personaIdsEnPlan(padre),
+  });
+  if (agentesNuevos.length === 0) {
+    err(
+      "failed-precondition",
+      "[PLT-INC-003] No hay agentes nuevos planificados para incorporar en este período.",
+    );
+  }
+
+  const { ulid } = require("ulid");
+  const id = `plt_${ulid()}`;
+  const now = FieldValue.serverTimestamp();
+  const uid = (request.auth && request.auth.uid) || "system";
+  const token = (request.auth && request.auth.token) || {};
+  const agentes = agentesStubIncorporacion(agentesNuevos);
+  const planVersionToken = nuevoPlanVersionToken();
+
+  const payload = {
+    id,
+    grupo_id: grupoId,
+    tipo_plan: "mensual",
+    periodo: padre.periodo,
+    estado: "BORRADOR",
+    agentes,
+    ...buildPlanMetaPayload({
+      agentes,
+      plan_rol: PLAN_ROL_INCORPORACION,
+      plan_padre_id: planPadreId,
+    }),
+    plan_version_token: planVersionToken,
+    comentarios_jefe: null,
+    observaciones_rechazo: null,
+    creado_por_uid: uid,
+    creado_por_persona_id: token.persona_id || null,
+    creado_en: now,
+    actualizado_en: now,
+    historial_aprobaciones: [],
+  };
+
+  await db.collection(COL_PLANES).doc(id).set(payload, { merge: true });
+
+  return {
+    ok: true,
+    id,
+    plan_padre_id: planPadreId,
+    estado: "BORRADOR",
+    plan_rol: PLAN_ROL_INCORPORACION,
+    agentes_nuevos: agentesNuevos,
+    plan_version_token: planVersionToken,
+  };
+});
+
+/**
  * Crea o actualiza un plan en estado BORRADOR.
  */
 const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) => {
   const datos = request.data && request.data.datos;
+  const modoIncorporacionAgentesNuevos =
+    request.data && request.data.modo_incorporacion_agentes_nuevos === true;
   const { grupoId, tipoPlan } = validarDatosBase(datos);
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, grupoId, "guardar");
 
@@ -227,6 +362,10 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
   const comentariosJefe = parseComentariosJefe(datos);
   const tokenEnviado =
     typeof datos.plan_version_token === "string" ? datos.plan_version_token.trim() : "";
+  const rolSolicitado =
+    typeof datos.plan_rol === "string" && PLAN_ROLES.has(datos.plan_rol.trim())
+      ? datos.plan_rol.trim()
+      : PLAN_ROL_PRINCIPAL;
 
   let especificos;
   if (tipoPlan === "mensual") {
@@ -259,7 +398,11 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
     id = existingId.trim();
     const snap = await db.collection(COL_PLANES).doc(id).get();
     if (snap.exists) {
-      assertEstados(snap.data(), ["BORRADOR", "EN_REVISION"]);
+      const prevEst = snap.data();
+      if (prevEst?.estado === "MERGEADO") {
+        err("failed-precondition", "[PLT-EST] El plan de incorporación ya fue mergeado y no admite edición.");
+      }
+      assertEstados(prevEst, ["BORRADOR", "EN_REVISION"]);
       exists = true;
     }
   }
@@ -269,32 +412,108 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
     id = `plt_${ulid()}`;
   }
 
+  let estadoTrasGuardar = "BORRADOR";
+
   if (tipoPlan === "mensual") {
-    if (!exists) {
-      await assertPlanMensualConAgentesPlanificados(grupoId, especificos.periodo);
+    let planDocPrevio = null;
+    if (exists) {
+      const prevSnap = await db.collection(COL_PLANES).doc(id).get();
+      if (prevSnap.exists) planDocPrevio = prevSnap.data();
     }
-    await assertSinPlanMensualVigente({
-      grupoId,
-      periodo: especificos.periodo,
-      excludePlanId: exists ? id : null,
-    });
+
+    if (modoIncorporacionAgentesNuevos && planDocPrevio && planRolDeDoc(planDocPrevio) === PLAN_ROL_PRINCIPAL) {
+      err(
+        "failed-precondition",
+        "[PLT-INC-005] Incorporación en el plan principal ya no está soportada. Usá iniciarIncorporacionPlanMensual.",
+      );
+    }
+
+    if (!exists) {
+      if (rolSolicitado === PLAN_ROL_INCORPORACION) {
+        err(
+          "failed-precondition",
+          "[PLT-INC-010] Creá el plan de incorporación con iniciarIncorporacionPlanMensual.",
+        );
+      }
+      await assertPlanMensualConAgentesPlanificados(grupoId, especificos.periodo);
+      await assertSinPlanMensualVigente({
+        grupoId,
+        periodo: especificos.periodo,
+        excludePlanId: null,
+      });
+    }
+
+    let agentesParaEnriquecer = datos.agentes;
+    if (exists && planDocPrevio && planRolDeDoc(planDocPrevio) === PLAN_ROL_INCORPORACION) {
+      assertEstados(planDocPrevio, ["BORRADOR", "EN_REVISION"]);
+      const padreId = String(planDocPrevio.plan_padre_id || "").trim();
+      if (!padreId) err("failed-precondition", "[PLT-INC-011] plan_padre_id faltante en incorporación.");
+      const padreSnap = await db.collection(COL_PLANES).doc(padreId).get();
+      const valPadre = assertPadreHabilitadoParaMerge(padreSnap.exists ? padreSnap.data() : null, padreId);
+      if (!valPadre.ok) err("failed-precondition", valPadre.message);
+
+      const { personasGrupo, regimenes } = await cargarPersonasYRegimenesPlanGrupo(
+        grupoId,
+        especificos.periodo,
+      );
+      const agentesNuevos = detectarAgentesNuevosPlanificados({
+        personasGrupo,
+        regimenes,
+        personaIdsEnPlanMensual: personaIdsEnPlan(padreSnap.data()),
+      });
+      const idsPermitidos = new Set(agentesNuevos.map((a) => a.persona_id));
+      if (idsPermitidos.size === 0) {
+        err("failed-precondition", "[PLT-INC-003] No hay agentes nuevos planificados para incorporar.");
+      }
+      const merged = mergeAgentesIncorporacionPlanMensual([], datos.agentes, idsPermitidos);
+      if (!merged.ok) {
+        err("permission-denied", `[${merged.code}] Solo podés asignar turnos a agentes nuevos permitidos.`);
+      }
+      const incorporados = new Set(
+        (datos.agentes || []).map((a) => String(a.persona_id || "").trim()).filter(Boolean),
+      );
+      if (![...idsPermitidos].some((pid) => incorporados.has(pid))) {
+        err("invalid-argument", "[PLT-INC-004] Debe guardar al menos un agente nuevo en la grilla.");
+      }
+      agentesParaEnriquecer = merged.agentes;
+      estadoTrasGuardar = planDocPrevio.estado === "EN_REVISION" ? "EN_REVISION" : "BORRADOR";
+    }
     const agentesEnriquecidos = await enriquecerAgentesDiasPlan({
       periodo: especificos.periodo,
       planId: id,
-      agentes: datos.agentes,
+      agentes: agentesParaEnriquecer,
     });
-    assertAgentesEnriquecidos(datos.agentes, agentesEnriquecidos);
+    assertAgentesEnriquecidos(agentesParaEnriquecer, agentesEnriquecidos);
     especificos.agentes = agentesEnriquecidos;
   }
 
   const planVersionToken = nuevoPlanVersionToken();
   const ref = db.collection(COL_PLANES).doc(id);
 
+  const padreSolicitado =
+    typeof datos.plan_padre_id === "string" ? datos.plan_padre_id.trim() || null : null;
+  if (rolSolicitado === PLAN_ROL_INCORPORACION && !padreSolicitado && !exists) {
+    err("invalid-argument", "[PLT-ROL-001] plan_padre_id requerido para plan_rol incorporacion.");
+  }
+
+  let rolPersistir = rolSolicitado;
+  let padrePersistir = padreSolicitado;
+  if (exists) {
+    const prev = (await ref.get()).data() || {};
+    rolPersistir = planRolDeDoc(prev);
+    padrePersistir = prev.plan_padre_id ?? null;
+  }
+
   const payloadBase = {
     id,
     grupo_id: grupoId,
-    estado: "BORRADOR",
+    estado: estadoTrasGuardar,
     ...especificos,
+    ...buildPlanMetaPayload({
+      agentes: especificos.agentes,
+      plan_rol: rolPersistir,
+      plan_padre_id: padrePersistir,
+    }),
     comentarios_jefe: comentariosJefe,
     plan_version_token: planVersionToken,
     creado_por_uid: uid,
@@ -325,7 +544,11 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
       err("not-found", "[PLT-SAV-001] Plan no encontrado.");
     }
     const actual = snap.data();
-    assertEstados(actual, ["BORRADOR", "EN_REVISION"]);
+    const estadosPermitidos =
+      planRolDeDoc(actual) === PLAN_ROL_INCORPORACION
+        ? ["BORRADOR", "EN_REVISION"]
+        : ["BORRADOR", "EN_REVISION"];
+    assertEstados(actual, estadosPermitidos);
     const almacenado = String(actual.plan_version_token || "").trim();
     if (almacenado) {
       if (!tokenEnviado || tokenEnviado !== almacenado) {
@@ -341,8 +564,8 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
   return {
     ok: true,
     id,
-    estado: "BORRADOR",
-    modo: "actualizado",
+    estado: estadoTrasGuardar,
+    modo: modoIncorporacionAgentesNuevos ? "incorporacion_agentes_nuevos" : "actualizado",
     plan_version_token: planVersionToken,
   };
 });
@@ -362,8 +585,14 @@ const enviarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =>
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, prePlan.grupo_id, "enviar");
 
   const warnings = [];
+  let agentesParaEnviar = prePlan.agentes;
   if (prePlan.tipo_plan === "mensual") {
-    const regWarnings = await validarReglasContraRegimen(prePlan);
+    const { sanitizarAgentesPlanVigenciaHlg } = require("./planVigenciaHlg");
+    agentesParaEnviar = await sanitizarAgentesPlanVigenciaHlg(db, prePlan.agentes || []);
+    const regWarnings = await validarReglasContraRegimen({
+      ...prePlan,
+      agentes: agentesParaEnviar,
+    });
     warnings.push(...regWarnings);
   }
 
@@ -380,14 +609,18 @@ const enviarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =>
     const snap = await tx.get(ref);
     if (!snap.exists) err("not-found", "[PLT-ENV-002] Plan no encontrado.");
     assertEstados(snap.data(), ["BORRADOR", "EN_REVISION"]);
-    tx.update(ref, {
+    const updatePayload = {
       estado: "ENVIADO",
       observaciones_rechazo: null,
       observaciones_revision: null,
       aprobacion_pendiente: aprobacionPendiente,
       historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
       actualizado_en: FieldValue.serverTimestamp(),
-    });
+    };
+    if (prePlan.tipo_plan === "mensual" && agentesParaEnviar) {
+      updatePayload.agentes = agentesParaEnviar;
+    }
+    tx.update(ref, updatePayload);
   });
 
   return {
@@ -403,6 +636,165 @@ const enviarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =>
 });
 
 /**
+ * Aprobación plt_inc: materialización acotada + merge atómico al padre HABILITADO.
+ */
+async function ejecutarAprobarPlanIncorporacion({
+  request,
+  planId,
+  ref,
+  plan,
+  confirmarInvalidarOverrides,
+}) {
+  const padreId = String(plan.plan_padre_id || "").trim();
+  if (!padreId) err("failed-precondition", "[PLT-INC-011] plan_padre_id faltante.");
+
+  const padreRef = db.collection(COL_PLANES).doc(padreId);
+  const padrePre = await padreRef.get();
+  const valPadre = assertPadreHabilitadoParaMerge(padrePre.exists ? padrePre.data() : null, padreId);
+  if (!valPadre.ok) err("failed-precondition", valPadre.message);
+
+  const aprobacionPendiente =
+    plan.aprobacion_pendiente || (await resolverAprobacionPendientePlan(db, plan));
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
+    assertPlanAprobarORechazar(request, plan, aprobacionPendiente);
+  }
+
+  const warnings = [];
+  const overridesEncontrados = await detectarOverridesFantasma(plan);
+  if (overridesEncontrados.length > 0 && !confirmarInvalidarOverrides) {
+    const detallePreview = overridesEncontrados.slice(0, 20).map((o) => ({
+      persona_id: o.persona_id,
+      fecha: o.fecha,
+      cantidad: o.cantidad,
+      doc_id: o.doc_id,
+    }));
+    return {
+      ok: false,
+      requiere_confirmacion: true,
+      overrides_afectados: overridesEncontrados.length,
+      detalle_overrides: detallePreview,
+      mensaje: `Existen ${overridesEncontrados.length} override(s) en el período de incorporación. Confirme con confirmar_invalidar_overrides: true.`,
+    };
+  }
+  if (overridesEncontrados.length > 0 && confirmarInvalidarOverrides) {
+    const invalidados = await invalidarOverridesFantasma(overridesEncontrados);
+    warnings.push({
+      code: "PLT-APR-W001",
+      mensaje: `Se invalidaron ${invalidados} override(s) por incorporación.`,
+    });
+  }
+
+  const obs = request.data && request.data.observaciones;
+  const aprobacion = buildAprobacion(request, "aprobar_incorporacion", obs);
+  const token = (request.auth && request.auth.token) || {};
+  const actorPersonaId = token.persona_id || null;
+
+  const personaIdsFilter = (plan.agentes || [])
+    .map((a) => String(a.persona_id || "").trim())
+    .filter((pid) => /^per_/i.test(pid));
+
+  let grillaNuevaAgentes = null;
+  if (plan.tipo_plan === "mensual" && plan.periodo) {
+    const [anio, mes] = plan.periodo.split("-").map(Number);
+    const planCache = { planId, plan };
+    const mat = await materializarGrupoMes({
+      grupoId: plan.grupo_id,
+      anio,
+      mes,
+      planCache,
+      personaIdsFilter,
+      materializacionMotivo: "aprobar_incorporacion_paralela",
+    });
+    if (!mat.ok) {
+      const det = (mat.fallos || []).slice(0, 5).map((f) => `${f.personaId}: ${f.error}`).join("; ");
+      err(
+        "failed-precondition",
+        `[PLT-APR-MAT] Materialización incompleta (${mat.fallos?.length || 0} fallo(s)). ${det}`,
+      );
+    }
+    const grillaNueva = await construirGrillaAprobada({ plan, planId });
+    if (!grillaNueva?.agentes?.length) {
+      err("failed-precondition", "[PLT-APR-GRD] No se pudo construir grilla de incorporación.");
+    }
+    grillaNuevaAgentes = grillaNueva.agentes;
+    logger.info("materializarGrupoMes_incorporacion OK", {
+      planId,
+      padreId,
+      personas: personaIdsFilter,
+    });
+  }
+
+  const nuevoTokenPadre = nuevoPlanVersionToken();
+  const registroMerge = buildRegistroIncorporacionMergeada({ planHijoId: planId, actorPersonaId });
+
+  await db.runTransaction(async (tx) => {
+    const hijoSnap = await tx.get(ref);
+    if (!hijoSnap.exists) err("not-found", "[PLT-APR-002] Plan no encontrado.");
+    const hijo = hijoSnap.data();
+    assertEstados(hijo, ["ENVIADO", "EN_REVISION"]);
+    if (planRolDeDoc(hijo) !== PLAN_ROL_INCORPORACION) {
+      err("failed-precondition", "[PLT-INC-012] El documento no es un plan de incorporación.");
+    }
+
+    const padreSnap = await tx.get(padreRef);
+    const padre = padreSnap.exists ? padreSnap.data() : null;
+    const valTx = assertPadreHabilitadoParaMerge(padre, padreId);
+    if (!valTx.ok) err("failed-precondition", valTx.message);
+
+    const mergedAgentes = mergeAgentesEditorAlPadre(padre.agentes || [], hijo.agentes || []);
+    if (!mergedAgentes.ok) {
+      err(
+        "failed-precondition",
+        `[${mergedAgentes.code}] Conflicto al mergear agente ${mergedAgentes.persona_id} en el plan padre.`,
+      );
+    }
+
+    const metaPadre = buildPlanMetaPayload({
+      agentes: mergedAgentes.agentes,
+      plan_rol: PLAN_ROL_PRINCIPAL,
+      plan_padre_id: null,
+    });
+
+    const grillaPadre = appendGrillaAprobadaParcial(padre.grilla_aprobada, grillaNuevaAgentes);
+    if (grillaNuevaAgentes?.length) {
+      grillaPadre.periodo = grillaPadre.periodo || padre.periodo || hijo.periodo;
+      grillaPadre.grupo_id = grillaPadre.grupo_id || padre.grupo_id;
+      grillaPadre.version = grillaPadre.version || 1;
+      grillaPadre.materializado_parcial_en = new Date().toISOString();
+    }
+
+    tx.update(padreRef, {
+      agentes: mergedAgentes.agentes,
+      ...metaPadre,
+      grilla_aprobada: grillaPadre,
+      grilla_aprobada_en: FieldValue.serverTimestamp(),
+      plan_version_token: nuevoTokenPadre,
+      incorporaciones_mergeadas: FieldValue.arrayUnion(registroMerge),
+      actualizado_en: FieldValue.serverTimestamp(),
+    });
+
+    tx.update(ref, {
+      estado: "MERGEADO",
+      resultado_merge: {
+        plan_padre_id: padreId,
+        mergeado_en: registroMerge.mergeado_en,
+        mergeado_por_persona_id: actorPersonaId,
+      },
+      historial_aprobaciones: FieldValue.arrayUnion(aprobacion),
+      actualizado_en: FieldValue.serverTimestamp(),
+    });
+  });
+
+  return {
+    ok: true,
+    id: planId,
+    estado: "MERGEADO",
+    plan_padre_id: padreId,
+    warnings,
+  };
+}
+
+/**
  * Superior (o RRHH en caso huérfano) aprueba: ENVIADO → HABILITADO.
  * Absorbe la lógica de materialización + overrides fantasma.
  */
@@ -415,6 +807,16 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
   const preSnap = await ref.get();
   if (!preSnap.exists) err("not-found", "[PLT-APR-002] Plan no encontrado.");
   const plan = preSnap.data();
+
+  if (planRolDeDoc(plan) === PLAN_ROL_INCORPORACION) {
+    return ejecutarAprobarPlanIncorporacion({
+      request,
+      planId,
+      ref,
+      plan,
+      confirmarInvalidarOverrides,
+    });
+  }
 
   const aprobacionPendiente =
     plan.aprobacion_pendiente || (await resolverAprobacionPendientePlan(db, plan));
@@ -488,9 +890,14 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
           .where("tipo_plan", "==", "mensual")
           .limit(20),
       );
-      const dupActivo = dupSnap.docs.find(
-        (d) => d.id !== planId && d.data()?.eliminado !== true,
-      );
+      const dupActivo = dupSnap.docs.find((d) => {
+        if (d.id === planId) return false;
+        const data = d.data() || {};
+        if (data.eliminado === true) return false;
+        if (planRolDeDoc(data) !== PLAN_ROL_PRINCIPAL) return false;
+        if (data.estado === "MERGEADO") return false;
+        return true;
+      });
       if (dupActivo) {
         const e = dupActivo.data()?.estado || "?";
         err(
@@ -535,6 +942,11 @@ const rechazarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) 
   if (!preSnap.exists) err("not-found", "[PLT-REC-003] Plan no encontrado.");
 
   const planRec = preSnap.data();
+  if (planRolDeDoc(planRec) === PLAN_ROL_INCORPORACION) {
+    // Rechazo de plt_inc: vuelve a BORRADOR; el principal no se toca.
+  } else if (planRec.estado === "MERGEADO") {
+    err("failed-precondition", "[PLT-REC-004] El plan de incorporación ya fue mergeado.");
+  }
   const aprobacionPendienteRec =
     planRec.aprobacion_pendiente || (await resolverAprobacionPendientePlan(db, planRec));
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
@@ -578,7 +990,11 @@ const revertirPlanTurnoServicio = onCall({ invoker: "public" }, async (request) 
     const ref = db.collection(COL_PLANES).doc(planId);
     const snap = await tx.get(ref);
     if (!snap.exists) err("not-found", "[PLT-REV-003] Plan no encontrado.");
-    assertEstado(snap.data(), "HABILITADO");
+    const revDoc = snap.data();
+    if (planRolDeDoc(revDoc) !== PLAN_ROL_PRINCIPAL) {
+      err("failed-precondition", "[PLT-REV-004] Solo se puede revertir el plan principal habilitado.");
+    }
+    assertEstado(revDoc, "HABILITADO");
     tx.update(ref, {
       estado: "EN_REVISION",
       observaciones_revision: observaciones.trim().slice(0, 500),
@@ -702,7 +1118,11 @@ const listarPlanesPendientesRrhh = onCall({ invoker: "public" }, async (request)
 
   const docs = [...snapEnviado.docs, ...snapRevision.docs];
   const raw = docs.slice(0, MAX_ITEMS).map((d) => ({ id: d.id, ...d.data() }));
-  const activos = raw.filter((p) => p.eliminado !== true);
+  const activos = raw.filter((p) => {
+    if (p.eliminado === true || p.estado === "MERGEADO") return false;
+    if (planRolDeDoc(p) === PLAN_ROL_PRINCIPAL && p.estado === "HABILITADO") return false;
+    return true;
+  });
   const withPendiente = await enrichPlanesAprobacionPendiente(activos);
   const items = await enrichPlanesConLabels(withPendiente);
 
@@ -777,7 +1197,12 @@ const listarPlanesTurnoServicio = onCall({ invoker: "public" }, async (request) 
 
   const snap = await q.get();
   const raw = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  const activos = raw.filter((p) => p.eliminado !== true);
+  const activos = raw.filter((p) => {
+    if (p.eliminado === true) return false;
+    if (estado === "MERGEADO") return p.estado === "MERGEADO";
+    if (p.estado === "MERGEADO") return false;
+    return true;
+  });
   const withPendiente = await enrichPlanesAprobacionPendiente(activos);
   const items = await enrichPlanesConLabels(withPendiente);
   return { items };
@@ -877,9 +1302,15 @@ async function enrichPlanesConLabels(items) {
 }
 
 async function validarReglasContraRegimen(plan) {
+  const { sanitizarAgentesPlanVigenciaHlg } = require("./planVigenciaHlg");
+  const { hldHlgFechaInicioYmd, hldHlgFechaFinYmd } = require("../shared/fechaLaboralYmd");
+  const planSanitizado = {
+    ...plan,
+    agentes: await sanitizarAgentesPlanVigenciaHlg(db, plan.agentes || []),
+  };
   const warnings = [];
   const errors = [];
-  for (const ag of plan.agentes || []) {
+  for (const ag of planSanitizado.agentes || []) {
     if (!ag.regimen_horario_id) continue;
     const regSnap = await db.collection("cfg_regimen_horario").doc(ag.regimen_horario_id).get();
     if (!regSnap.exists) continue;
@@ -894,11 +1325,12 @@ async function validarReglasContraRegimen(plan) {
       const hlgSnap = await db.collection("historial_laboral_grupos").doc(ag.hlg_id).get();
       if (hlgSnap.exists) {
         const hlg = hlgSnap.data();
-        const fi = hlg.fecha_inicio || "";
-        const ff = hlg.fecha_fin || "";
+        const fi = hldHlgFechaInicioYmd(hlg);
+        const ff = hldHlgFechaFinYmd(hlg);
         for (const ymd of diasKeys) {
           const cel = dias[ymd];
-          if (cel.tipo_dia === "franco") continue;
+          const tipo = String(cel?.tipo_dia || "").trim().toLowerCase();
+          if (tipo === "franco" || tipo === "no_laborable") continue;
           if ((fi && ymd < fi) || (ff && ymd > ff)) {
             errors.push({
               code: "PLT-VIG-E001",
@@ -1141,17 +1573,8 @@ async function invalidarOverridesFantasma(overridesEncontrados) {
   return count;
 }
 
-/**
- * Retorna contexto enriquecido para la grilla del jefe:
- * personas del grupo con HLG vigente + regímenes deduplicados.
- * ~43 reads para 20 agentes con 3 regímenes.
- */
-const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) => {
-  const grupoId = request.data && request.data.grupo_id;
-  const periodo = request.data && request.data.periodo;
-  if (!grupoId) err("invalid-argument", "[CTX-001] grupo_id requerido.");
-  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, grupoId, "leer");
-
+/** Personas HLg vigentes en el mes + regímenes (sin licencias ni calendario). */
+async function cargarPersonasYRegimenesPlanGrupo(grupoId, periodo) {
   const { periodo: periodoNorm, primerDia, ultimoDia } = rangoPeriodoMensual(periodo);
 
   const hlgSnap = await db.collection("historial_laboral_grupos")
@@ -1160,12 +1583,7 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
     .get();
 
   if (hlgSnap.empty) {
-    return {
-      personas_grupo: [],
-      regimenes: {},
-      periodo: periodoNorm,
-      hay_agentes_planificados: false,
-    };
+    return { periodo: periodoNorm, personasGrupo: [], regimenes: {} };
   }
 
   const hlgFilas = [];
@@ -1193,7 +1611,6 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
     if (pg.persona_id) personaIds.add(pg.persona_id);
   }
 
-  // Enriquecer con nombre de persona
   const personaDocs = {};
   if (personaIds.size > 0) {
     const personaChunks = [...personaIds];
@@ -1220,17 +1637,44 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
     String(a.persona_label || a.persona_id).localeCompare(String(b.persona_label || b.persona_id), "es"),
   );
 
-  // Cargar regímenes deduplicados
   const regimenes = {};
   for (const rid of regimenIds) {
     const rsnap = await db.collection("cfg_regimen_horario").doc(rid).get();
     if (rsnap.exists) {
-      const rd = rsnap.data();
-      regimenes[rid] = {
-        id: rid,
-        ...rd,
-      };
+      regimenes[rid] = { id: rid, ...rsnap.data() };
     }
+  }
+
+  return { periodo: periodoNorm, personasGrupo, regimenes };
+}
+
+/**
+ * Retorna contexto enriquecido para la grilla del jefe:
+ * personas del grupo con HLG vigente + regímenes deduplicados.
+ * ~43 reads para 20 agentes con 3 regímenes.
+ */
+const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) => {
+  const grupoId = request.data && request.data.grupo_id;
+  const periodo = request.data && request.data.periodo;
+  if (!grupoId) err("invalid-argument", "[CTX-001] grupo_id requerido.");
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, grupoId, "leer");
+
+  const { periodo: periodoNorm, personasGrupo, regimenes } = await cargarPersonasYRegimenesPlanGrupo(
+    grupoId,
+    periodo,
+  );
+
+  if (!personasGrupo.length) {
+    return {
+      personas_grupo: [],
+      regimenes: {},
+      periodo: periodoNorm,
+      hay_agentes_planificados: false,
+      requiere_plan_individual: false,
+      agentes_nuevos: [],
+      plan_mensual_id: null,
+      plan_mensual_estado: null,
+    };
   }
 
   // Cargar eventos/licencias proyectados del mes desde vis_* (sin nueva llamada frontend).
@@ -1279,11 +1723,50 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
 
   const hayAgentesPlanificados = Object.values(regimenes).some((reg) => regimenDocEsPlanificado(reg));
 
+  let planMensualCanonico = null;
+  const planesSnap = await db
+    .collection(COL_PLANES)
+    .where("grupo_id", "==", grupoId)
+    .where("periodo", "==", periodoNorm)
+    .where("tipo_plan", "==", "mensual")
+    .limit(20)
+    .get();
+  const planesActivos = planesSnap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((p) => p.eliminado !== true);
+  if (planesActivos.length > 0) {
+    planMensualCanonico = elegirPlanMensualCanonico(planesActivos);
+  }
+
+  const idsEnPlanOperativo = new Set();
+  if (planMensualCanonico && planMensualCanonico.estado !== "CERRADO") {
+    for (const pid of personaIdsEnPlan(planMensualCanonico)) idsEnPlanOperativo.add(pid);
+  }
+  const planIncActivo = planesActivos.find((p) => esPlanIncorporacionActivo(p));
+  if (planIncActivo) {
+    for (const pid of personaIdsEnPlan(planIncActivo)) idsEnPlanOperativo.add(pid);
+  }
+
+  const agentesNuevos =
+    planMensualCanonico && planMensualCanonico.estado !== "CERRADO"
+      ? detectarAgentesNuevosPlanificados({
+          personasGrupo,
+          regimenes,
+          personaIdsEnPlanMensual: idsEnPlanOperativo,
+        })
+      : [];
+
   return {
     personas_grupo: personasGrupo,
     regimenes,
     periodo: periodoNorm,
     hay_agentes_planificados: hayAgentesPlanificados,
+    requiere_plan_individual: agentesNuevos.length > 0,
+    agentes_nuevos: agentesNuevos,
+    plan_mensual_id: planMensualCanonico?.id || null,
+    plan_mensual_estado: planMensualCanonico?.estado || null,
+    plan_incorporacion_id: planIncActivo?.id || null,
+    plan_incorporacion_estado: planIncActivo?.estado || null,
     licencias_por_persona_ymd: licenciasPorPersonaYmd,
     calendario_institucional_mes: calendarioInstitucionalMes,
   };
@@ -1396,6 +1879,7 @@ const obtenerVistaPlanTurnoServicio = onCall({ invoker: "public" }, async (reque
 });
 
 module.exports = {
+  iniciarIncorporacionPlanMensual,
   guardarPlanTurnoServicio,
   enviarPlanTurnoServicio,
   aprobarPlanTurnoServicio,

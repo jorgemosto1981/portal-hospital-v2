@@ -11,6 +11,11 @@
 
 export const GLOSARIO_COMPLETO = [
   {
+    termino: "Turno compuesto con «+»",
+    definicion:
+      "En regímenes planificados, un id como M+T descompone la jornada en tramos M y T (horarios de la paleta). Si encadenan sin hueco, las fichadas esperadas siguen siendo 2; la descomposición habilita cobertura parcial por tramo. Tras cambiar ids, rematerialice el mes del grupo.",
+  },
+  {
     termino: "Régimen horario",
     definicion:
       "Molde o plantilla que define las reglas de horario de un agente: días laborables, turnos, horas efectivas, tolerancias y descansos. Se configura una vez y se asigna a múltiples personas.",
@@ -53,7 +58,37 @@ export const GLOSARIO_COMPLETO = [
   {
     termino: "Estados del plan",
     definicion:
-      "Máquina de estados: BORRADOR (editable) → ENVIADO (en revisión por superior) → HABILITADO (activo, lo usa el motor). EN_REVISION (RRHH revierte). CERRADO para perpetuos finalizados.",
+      "Circuito habitual: BORRADOR → ENVIADO (superior) → HABILITADO (teoría operativa del mes). EN_REVISION: RRHH devolvió el plan al jefe para corrección. CERRADO: perpetuo finalizado o plan histórico fuera de uso. MERGEADO: solo planes de incorporación ya fusionados al operativo (auditoría; no reemplaza al habilitado).",
+  },
+  {
+    termino: "Plan operativo (mensual)",
+    definicion:
+      "El plan principal habilitado del mes y grupo: es la foto oficial que usa la grilla de licencias (GSO) para quienes ya están planificados ahí. En la pantalla de turnos del servicio se muestra en tarjeta verde y, si está habilitado, es solo lectura para el jefe.",
+  },
+  {
+    termino: "Plan Paralelo de Incorporación",
+    definicion:
+      "Documento hijo (plt_inc) para sumar agentes nuevos al mes sin reabrir ni editar el plan operativo habilitado. Solo incluye filas de personal que aún no figuraba en ese turno mensual. Estados: BORRADOR o EN_REVISION (editable), ENVIADO (en aprobación), MERGEADO (ya unido al operativo).",
+  },
+  {
+    termino: "Pendiente de incorporación",
+    definicion:
+      "Situación de un agente con HLg vigente en el grupo pero cuyos turnos del mes se están armando en un plan paralelo de incorporación, todavía no mergeado. No es un error ni un «fantasma» de plan: es el trámite normal hasta que RRHH aprueba la incorporación.",
+  },
+  {
+    termino: "Inmutabilidad de régimen (HLg)",
+    definicion:
+      "Una vez creado el historial laboral en grupo (HLg), no se cambia el régimen horario ni el grupo de trabajo editando ese registro: hay que cerrar o anular el HLg y abrir uno nuevo. Evita desalinear turnos ya planificados o materializados.",
+  },
+  {
+    termino: "Cierre de HLg vs Anulación",
+    definicion:
+      "Cierre (deshabilitar): el agente deja de pertenecer al grupo desde una fecha de corte; el sistema ajusta planes y teoría a partir de ese momento. Anulación: revierte un alta errónea; elimina al agente de planes afectados y marca el HLg como anulado. Ambos limpian turnos futuros vinculados; las licencias ya tramitadas se conservan según reglas de grilla.",
+  },
+  {
+    termino: "Plan fantasma (histórico)",
+    definicion:
+      "Plan mensual legado que ya no corresponde al slot operativo del mes (remediado a CERRADO o eliminado). No confundir con un plan de incorporación en curso ni con un agente pendiente de incorporación.",
   },
   {
     termino: "Override (Reemplazo)",
@@ -126,13 +161,84 @@ export const GLOSARIO_COMPLETO = [
       "Al editar la grilla, tus cambios quedan guardados como borrador en el navegador. Para confirmar y registrar todo en el sistema, debes presionar \"Aplicar cambios\". Si cierras por accidente, podrás recuperar el borrador al volver.",
   },
   {
+    termino: "Gestionar turno del día (A/B/C)",
+    definicion:
+      "Desde el detalle de una celda, abrís el asistente para registrar cambios operativos del mes: A) Intercambio de guardia entre dos agentes; B) Cambio de turno propio (traslado entre días); C) Horas adicionales (turno extra declarado, trámite RRHH → jefe superior). Si el día no tiene turno calculado, solo se ofrece C.",
+  },
+  {
+    termino: "Intercambio de guardia (Flujo A)",
+    definicion:
+      "Swap bilateral entre dos agentes del mismo cargo y mes: cada uno cede tramos equivalentes en días que pueden ser distintos (ej. XX 05/06 cede N ↔ YY 12/06 cede M). Requiere turno calculado en ambos días.",
+  },
+  {
+    termino: "Cambio de turno propio (Flujo B)",
+    definicion:
+      "Un agente traslada segmentos de un día origen a un día destino sin pisar lo ya presente en destino. El origen queda franco (total o parcial). Requiere turno calculado en origen y destino.",
+  },
+  {
+    termino: "Horas adicionales (Flujo C)",
+    definicion:
+      "Declaración de un turno extra + motivo. No se tipean horas: RRHH valida fichadas reales y luego el jefe superior autoriza. Aplica en franco, feriado, no laborable o con turno preasignado; no exige calcular el día antes.",
+  },
+  {
     termino: "Protección de Datos (Grilla Desactualizada)",
     definicion:
       "Si otra persona modifica el mismo período mientras preparas cambios, el sistema pausa el guardado para evitar sobrescribir información. Solo necesitas refrescar la grilla y volver a aplicar tus pendientes.",
   },
 ];
 
+const MANUAL_GRILLA_OPERATIVA = {
+  titulo: "Grilla operativa (licencias y turnos)",
+  rol: "Jefe / RRHH",
+  pasos: [
+    {
+      titulo: "Leer la grilla del mes",
+      contenido:
+        "Elegí período, vista (titular, equipo o sector) y grupo. Cada celda muestra turno teórico, licencias y feriados. Tocá una celda para ver el detalle del día.",
+    },
+    {
+      titulo: "Gestionar turno de este día",
+      contenido:
+        "En el detalle del día, «Gestionar turno de este día» abre el asistente A/B/C. Con turno calculado: Intercambio (A), Traslado propio (B) u Horas adicionales (C). Sin turno calculado (franco, feriado, etc.): solo C.",
+    },
+    {
+      titulo: "Flujo A — Intercambio de guardia",
+      contenido:
+        "Dos agentes del mismo cargo intercambian tramos de igual carga en días del mismo mes (pueden ser fechas distintas). Ambos días deben tener turno calculado.",
+    },
+    {
+      titulo: "Flujo B — Cambio de turno propio",
+      contenido:
+        "Trasladá segmentos de un día a otro del mismo mes. El destino suma sin pisar tramos existentes; el origen queda franco auditado.",
+    },
+    {
+      titulo: "Flujo C — Horas adicionales",
+      contenido:
+        "Declará turno extra del régimen + motivo. RRHH validará fichadas; el jefe superior autoriza después. Las horas no se cargan en este paso.",
+    },
+    {
+      titulo: "Cola de cambios y Aplicar",
+      contenido:
+        "Cada registro va al borrador local (outbox). Revisá la lista con etiquetas legibles y presioná «Aplicar cambios» para enviar el lote al servidor.",
+    },
+  ],
+  glosarioRelevante: [
+    "GSO (Grilla de Supervisión Operativa)",
+    "Gestionar turno del día (A/B/C)",
+    "Intercambio de guardia (Flujo A)",
+    "Cambio de turno propio (Flujo B)",
+    "Horas adicionales (Flujo C)",
+    "Cobertura Parcial (Tramos)",
+    "Cambios Pendientes (Borrador)",
+    "Capa teórica",
+  ],
+};
+
 export const MANUALES_POR_RUTA = {
+  "/portal/grilla": MANUAL_GRILLA_OPERATIVA,
+
+  "/portal/rrhh/grilla-operativa": MANUAL_GRILLA_OPERATIVA,
+
   "/portal/rrhh/regimenes-horarios": {
     titulo: "Catálogo de Regímenes Horarios",
     rol: "RRHH",
@@ -155,7 +261,7 @@ export const MANUALES_POR_RUTA = {
       {
         titulo: "Configurar paleta (Planificado)",
         contenido:
-          "Defina los turnos disponibles que el jefe podrá asignar (ej. M=Mañana 06-14, T=Tarde 14-22, N=Noche 22-06). Opcionalmente, configure reglas de planificación (máx. días trabajo, mín. francos).",
+          "Defina los turnos base (M, T, N) con ingreso/egreso. Para jornadas compuestas use ids con «+» (M+T, T+N, M+T+N): el motor descompone tramos y permite cobertura parcial. Evite ids atómicos MT/TN si necesita ceder un tramo. Tras cambios, rematerialice la grilla del grupo.",
       },
       {
         titulo: "Asignar régimen a un agente",
@@ -170,6 +276,8 @@ export const MANUALES_POR_RUTA = {
     ],
     glosarioRelevante: [
       "Régimen horario",
+      "Patrón Planificado",
+      "Turno compuesto con «+»",
       "Patrón Fijo",
       "Patrón Rotativo",
       "Patrón Planificado",
@@ -184,89 +292,82 @@ export const MANUALES_POR_RUTA = {
     rol: "Jefe de servicio",
     pasos: [
       {
-        titulo: "Seleccionar grupo y período",
+        titulo: "Elegir grupo y mes",
         contenido:
-          "Ingrese el ID del grupo de trabajo y seleccione el mes a planificar. Haga clic en «Buscar» para ver los planes existentes.",
+          "Seleccioná el grupo de trabajo y el período (mes). Las tarjetas de la fila superior resumen el estado del turno de cada grupo para ese mes.",
       },
       {
-        titulo: "Crear plan mensual (enfermería)",
+        titulo: "Dos tarjetas: operativo e incorporación",
         contenido:
-          "Haga clic en «Nuevo plan». Agregue a cada agente del servicio con su persona_id, regimen_id y hlg_id. Use el sistema de pincel para pintar los turnos: seleccione M/T/N/G/F y haga clic en las celdas.",
+          "Si el mes ya tiene plan habilitado, la tarjeta verde «Plan operativo» es la foto oficial (solo lectura). Si hay agentes nuevos, puede aparecer además la tarjeta violeta «Incorporación» para armar solo sus turnos, sin tocar al resto del equipo.",
       },
       {
-        titulo: "Leer la grilla",
+        titulo: "Plan mensual nuevo (sin habilitado previo)",
         contenido:
-          "Cada celda muestra el turno asignado con colores: amarillo=Mañana, azul=Tarde, índigo=Noche, naranja=Guardia, gris=Franco. A la derecha se muestran contadores de días trabajados y francos.",
+          "Creá el plan completo del servicio: agregá agentes y pintá la grilla (M/T/N/G/F). Guardá borrador, enviá y seguí el circuito hasta que RRHH habilite.",
       },
       {
-        titulo: "Guardar y enviar",
+        titulo: "Incorporar agente(s) nuevos",
         contenido:
-          "«Guardar borrador» persiste el plan sin enviarlo. Puede editarlo las veces que necesite. Cuando esté conforme, use «Enviar» para pasarlo al circuito de aprobación.",
+          "Con plan operativo habilitado, si el sistema avisa «Requiere plan individual», usá «Incorporar agente(s)». Editá únicamente las filas de los nuevos en «Editar incorporación». Enviá o reenviá desde la tarjeta violeta (BORRADOR / EN_REVISION). Tras la aprobación de RRHH verás MERGEADO y el operativo sumará a esas personas.",
+      },
+      {
+        titulo: "Solo lectura en grilla",
+        contenido:
+          "Régimen fijo o rotativo sin filas planificadas: la grilla del mes se deriva del patrón (no se pinta a mano). Plan operativo habilitado: abrís «Ver plan operativo» en modo consulta. La incorporación en curso siempre marca las filas editables.",
       },
       {
         titulo: "Circuito de aprobación",
         contenido:
-          "Tras enviar: su Superior lo aprueba (→ Autorizado), luego RRHH lo habilita (→ Habilitado). Si rechazan, vuelve a Borrador con observaciones. Puede corregir y reenviar.",
+          "Enviado → superior → RRHH habilita (plan completo) o aprueba incorporación (merge al operativo). Si RRHH revierte, el estado pasa a EN_REVISION: corregís y reenviás.",
       },
       {
-        titulo: "Registrar cambios operativos (overrides)",
+        titulo: "Cambios del mes en operación",
         contenido:
-          "Durante el mes, si necesita hacer un cambio puntual (cambio de guardia, cobertura de urgencia), use la GSO: busque al agente, haga clic en «Cambio» y registre el override con motivo obligatorio.",
+          "Para urgencias puntuales (intercambio, traslado, horas adicionales) usá la grilla operativa (GSO), no reabras el plan habilitado salvo remediación acordada con RRHH.",
       },
     ],
     glosarioRelevante: [
       "Plan de turnos",
       "Plan mensual",
-      "Plan perpetuo",
+      "Plan operativo (mensual)",
+      "Plan Paralelo de Incorporación",
+      "Pendiente de incorporación",
       "Estados del plan",
+      "Plan fantasma (histórico)",
       "Franco",
-      "Override (Reemplazo)",
-      "Override (Adicional)",
-      "Override fantasma",
+      "Patrón Planificado",
+      "HLg (Historial laboral grupo)",
     ],
   },
 
-  "/portal/grilla": {
-    titulo: "Grilla de Supervisión Operativa (GSO)",
-    rol: "Jefe / RRHH",
+  "/portal/rrhh/bandeja-turnos": {
+    titulo: "Bandeja de turnos (RRHH)",
+    rol: "RRHH",
     pasos: [
       {
-        titulo: "Consultar estado operativo",
+        titulo: "Planes completos vs incorporación",
         contenido:
-          "Seleccione la fecha de corte y opcionalmente filtre por persona o grupo. La tabla muestra el estado laboral consolidado: persona, grupo, vigencia, carga horaria y warnings.",
+          "Los ítems de plan mensual habitual siguen el flujo revertir / habilitar. Los marcados como «Incorporación» son planes paralelos: al aprobar, el sistema fusiona solo los agentes nuevos al plan operativo habilitado del mismo mes y grupo.",
       },
       {
-        titulo: "Interpretar warnings",
+        titulo: "Qué no cambia al mergear",
         contenido:
-          "SOLAPE_CARGO_GRUPO indica superposición de asignaciones. DESVIO_CARGA_NORMATIVA indica que las horas asignadas no coinciden con la carga del cargo. Use el filtro de warnings para aislar casos.",
+          "Las filas ya habilitadas del operativo no se reescriben. El documento de incorporación queda en estado MERGEADO para auditoría.",
       },
       {
-        titulo: "Registrar cambio de turno",
+        titulo: "HLg: cierre y anulación",
         contenido:
-          "Haga clic en «Cambio» en la fila del agente. Se abrirá un modal donde puede ver los overrides existentes del día y registrar uno nuevo. Seleccione tipo (Reemplazo o Adicional), horarios y motivo.",
-      },
-      {
-        titulo: "Tipos de override",
-        contenido:
-          "Reemplazo: sustituye el turno teórico (ej. de Mañana a Franco). Adicional: suma horas al turno existente (ej. doble guardia). Ambos requieren motivo obligatorio y quedan registrados con auditoría completa.",
-      },
-      {
-        titulo: "Exportar datos",
-        contenido:
-          "Use los botones «Exportar JSON» o «Exportar CSV» para descargar los datos filtrados. Útil para auditorías y reportes.",
+          "Deshabilitar HLg corta la pertenencia al grupo desde una fecha. Anular un alta errónea limpia turnos en planes vinculados. Si una operación falla con mensaje de «demasiados planes afectados», registrá el caso y contactá soporte técnico central — no reintentes en cadena.",
       },
     ],
     glosarioRelevante: [
-      "GSO (Grilla de Supervisión Operativa)",
-      "Capa teórica",
-      "Override (Reemplazo)",
-      "Override (Adicional)",
-      "Divergencia",
-      "Fichada",
-      "Cobertura Parcial (Tramos)",
-      "Turnos Compuestos",
-      "Cambios Pendientes (Borrador)",
-      "Protección de Datos (Grilla Desactualizada)",
+      "Plan Paralelo de Incorporación",
+      "Plan operativo (mensual)",
+      "Estados del plan",
+      "Cierre de HLg vs Anulación",
+      "Inmutabilidad de régimen (HLg)",
+      "HLg (Historial laboral grupo)",
     ],
   },
 };
@@ -278,8 +379,9 @@ export const MANUALES_POR_RUTA = {
  */
 export function resolverAyudaContextual(pathname) {
   let manualKey = null;
+  const rutas = Object.keys(MANUALES_POR_RUTA).sort((a, b) => b.length - a.length);
 
-  for (const ruta of Object.keys(MANUALES_POR_RUTA)) {
+  for (const ruta of rutas) {
     if (pathname.startsWith(ruta)) {
       manualKey = ruta;
       break;

@@ -14,6 +14,7 @@ import {
   esFinDeSemanaYmd,
   subscribeEventosCalendarioInstitucional,
 } from "../../services/calendarioInstitucionalService.js";
+import { ofrecerRematerializarPostCalendario } from "../../features/grilla/rematerializarRrhhUi.js";
 
 /** Domingo primero: D L M M J V S */
 const DIAS_SEMANA = ["D", "L", "M", "M", "J", "V", "S"];
@@ -49,6 +50,12 @@ export default function CalendarioConfig() {
   const [descripcion, setDescripcion] = useState("");
   const [anual, setAnual] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [feedback, setFeedback] = useState("");
+
+  const showFeedback = useCallback((msg) => {
+    setFeedback(msg);
+    window.setTimeout(() => setFeedback(""), 6000);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -94,7 +101,10 @@ export default function CalendarioConfig() {
         multiplicador: Number(multiplicador),
         anual,
       });
+      const ymd = diaModal;
       cerrarModal();
+      showFeedback("Evento guardado.");
+      await ofrecerRematerializarPostCalendario({ fechaYmd: ymd, onFeedback: showFeedback });
     } catch (e) {
       setError(e?.message || "No se pudo guardar el evento.");
     } finally {
@@ -108,7 +118,10 @@ export default function CalendarioConfig() {
     setError("");
     try {
       await eliminarEventoCalendarioInstitucional(diaModal);
+      const ymd = diaModal;
       cerrarModal();
+      showFeedback("Evento eliminado.");
+      await ofrecerRematerializarPostCalendario({ fechaYmd: ymd, onFeedback: showFeedback });
     } catch (e) {
       setError(e?.message || "No se pudo eliminar.");
     } finally {
@@ -128,8 +141,13 @@ export default function CalendarioConfig() {
           <h1 className="text-xl font-semibold text-slate-900">Calendario institucional</h1>
           <p className="mt-1 text-sm text-slate-600">
             Fuente única de feriados, asuetos y multiplicadores. Los días marcados no cuentan como hábiles
-            para licencias y saldos.
+            para licencias y saldos. Tras guardar o eliminar un día podés actualizar las grillas afectadas.
           </p>
+          {feedback ? (
+            <p className="mt-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+              {feedback}
+            </p>
+          ) : null}
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-sm">
               Año

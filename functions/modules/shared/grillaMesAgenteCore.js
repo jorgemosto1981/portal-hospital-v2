@@ -7,6 +7,7 @@ const { buildPersonaLabel } = require("./eventosV2");
 const COL_HLG = "historial_laboral_grupos";
 const COL_PERSONAS = "personas";
 const COL_PLANES = "planes_turno_servicio";
+const { planHabilitadoDesdeQuerySnapshot } = require("../asistencia/planGrupoAgentesNuevos");
 const MAX_PERSONAS_GRUPO = 60;
 /** Mes casi completo con datos pero sin jornada ni francos (snapshot corrupto tipo Portería mayo). */
 const MIN_DIAS_EVALUAR_DEGENERADO = 20;
@@ -71,10 +72,9 @@ async function obtenerPlanHabilitadoCache(db, grupoId, periodoId) {
     .where("grupo_id", "==", grupoId)
     .where("periodo", "==", periodoId)
     .where("estado", "==", "HABILITADO")
-    .limit(1)
+    .limit(20)
     .get();
-  if (snap.empty) return null;
-  return { planId: snap.docs[0].id, plan: snap.docs[0].data() };
+  return planHabilitadoDesdeQuerySnapshot(snap);
 }
 
 /**
@@ -183,6 +183,7 @@ async function leerVistaGrillaMesAgente(db, { personaId, grupoTrabajoId, anio, m
     mes: data.mes ?? m,
     dias: data.dias && typeof data.dias === "object" ? data.dias : {},
     metadata: data.metadata || null,
+    estado_periodo_liquidacion_id: data.estado_periodo_liquidacion_id || null,
   };
 }
 
@@ -193,15 +194,17 @@ async function obtenerVistaGrillaMesAgente(db, opts) {
 }
 
 /**
+ * Personas con HLg vigente al cierre del mes en un grupo (misma regla que listado GSO).
  * @param {import("firebase-admin/firestore").Firestore} db
  * @param {{ grupoTrabajoId: string, anio: number, mes: number }} opts
+ * @returns {Promise<{ ok: boolean, fecha_corte?: string, persona_ids?: string[], codigo?: string }>}
  */
-async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
+async function personasVigentesIdsGrupoMes(db, { grupoTrabajoId, anio, mes }) {
   const gdt = String(grupoTrabajoId || "").trim();
   const y = Number(anio);
   const m = Number(mes);
   if (!/^gdt_/i.test(gdt) || !Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
-    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "grupo, anio o mes inválidos." };
+    return { ok: false, codigo: "PARAMS_INVALIDOS" };
   }
 
   const ultimoDia = diasEnMes(y, m);
@@ -243,12 +246,40 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
     vigentes.push(pid);
   }
 
-  const unique = [...new Set(vigentes)];
+  return { ok: true, fecha_corte: fechaCorte, persona_ids: [...new Set(vigentes)] };
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {{ grupoTrabajoId: string, anio: number, mes: number }} opts
+ */
+async function contarPersonasVigentesGrupoMes(db, opts) {
+  const r = await personasVigentesIdsGrupoMes(db, opts);
+  if (!r.ok) return 0;
+  return Array.isArray(r.persona_ids) ? r.persona_ids.length : 0;
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {{ grupoTrabajoId: string, anio: number, mes: number }} opts
+ */
+async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
+  const gdt = String(grupoTrabajoId || "").trim();
+  const y = Number(anio);
+  const m = Number(mes);
+  if (!/^gdt_/i.test(gdt) || !Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
+    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "grupo, anio o mes inválidos." };
+  }
+
+  const vigentesRes = await personasVigentesIdsGrupoMes(db, { grupoTrabajoId: gdt, anio: y, mes: m });
+  const fechaCorte = vigentesRes.fecha_corte || "";
+  const unique = vigentesRes.persona_ids || [];
   const truncado = unique.length > MAX_PERSONAS_GRUPO;
   const limited = unique.slice(0, MAX_PERSONAS_GRUPO);
   const personaCache = new Map();
   const filas = [];
 
+  const mm = String(m).padStart(2, "0");
   const periodoId = `${y}-${mm}`;
   const planCache = await obtenerPlanHabilitadoCache(db, gdt, periodoId);
   const { materializarGrupoMes } = require("../asistencia/rdaTurnoTeoricoWorker");
@@ -297,8 +328,11 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
 }
 
 module.exports = {
+  leerVistaGrillaMesAgente,
   obtenerVistaGrillaMesAgente,
   listarVistaGrillaMesPorGrupo,
+  personasVigentesIdsGrupoMes,
+  contarPersonasVigentesGrupoMes,
   ensureMaterializacionVisMes,
   visRequiereMaterializacion,
   visSnapshotDegenerado,

@@ -85,6 +85,7 @@ async function fanOutVisDesdeAsiGrupo(db, opts) {
 
   const color = opts.modo === "aprobado" ? COLOR_APROBADO : COLOR_PENDIENTE;
   const nivelOcupacion = String(opts.nivel_ocupacion_dia_id || "").trim() || null;
+  const ancla = String(opts.grupo_trabajo_id_ancla || opts.grupo_de_trabajo_id || "").trim();
   const evento = {
     solicitud_id: solId,
     articulo_id: String(opts.articulo_id || "").trim(),
@@ -92,6 +93,7 @@ async function fanOutVisDesdeAsiGrupo(db, opts) {
     color_ui: color,
     nivel_ocupacion_dia_id: nivelOcupacion,
     estado_solicitud_id: String(opts.estado_solicitud_id || "").trim(),
+    ...(RX_GDT.test(ancla) ? { grupo_trabajo_id_ancla: ancla } : {}),
   };
 
   await db.runTransaction(async (tx) => {

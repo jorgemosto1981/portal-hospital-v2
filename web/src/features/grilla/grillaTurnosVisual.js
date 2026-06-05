@@ -52,6 +52,32 @@ export function claseTdColumna({ esFinde, esFeriado }) {
   return base;
 }
 
+/**
+ * Fondos calendario titular (licencias): NL oscuro, laborables verde claro, finde rojizo, feriado ámbar.
+ * @param {{
+ *   sinAsignacionGrupo?: boolean;
+ *   esFinde?: boolean;
+ *   esFeriado?: boolean;
+ *   esNoLaborable?: boolean;
+ *   esLaborable?: boolean;
+ * }} p
+ */
+export function claseFondoCeldaCalendarioTitular({
+  sinAsignacionGrupo = false,
+  esFinde = false,
+  esFeriado = false,
+  esNoLaborable = false,
+  esLaborable = false,
+}) {
+  const base = "border border-slate-300";
+  if (sinAsignacionGrupo) return `${base} bg-slate-200`;
+  if (esFeriado) return `${base} bg-amber-100`;
+  if (esFinde) return `${base} bg-rose-100`;
+  if (esNoLaborable) return `${base} bg-slate-400`;
+  if (esLaborable) return `${base} bg-emerald-100`;
+  return `${base} bg-white`;
+}
+
 export function claseHeaderAgenteSticky() {
   return "sticky left-0 z-20 min-w-[132px] border-b border-r border-slate-400 bg-slate-200 px-2 py-1 text-left text-xs font-semibold text-slate-800 md:min-w-[210px]";
 }

@@ -91,9 +91,55 @@
         { "fieldPath": "grupos_trabajo_involucrados_ids", "arrayConfig": "CONTAINS" },
         { "fieldPath": "estado_solicitud_id", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "vistas_grilla_mes_agente",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "grupo_de_trabajo_id", "order": "ASCENDING" },
+        { "fieldPath": "anio", "order": "ASCENDING" },
+        { "fieldPath": "mes", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "planes_turno_servicio",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "grupo_id", "order": "ASCENDING" },
+        { "fieldPath": "periodo", "order": "ASCENDING" },
+        { "fieldPath": "tipo_plan", "order": "ASCENDING" },
+        { "fieldPath": "plan_rol", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "planes_turno_servicio",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "grupo_id", "order": "ASCENDING" },
+        { "fieldPath": "periodo", "order": "ASCENDING" },
+        { "fieldPath": "plan_rol", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [
+    {
+      "collectionGroup": "planes_turno_servicio",
+      "fieldPath": "agentes_hlg_ids",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "arrayConfig": "CONTAINS", "queryScope": "COLLECTION" }
+      ]
+    },
+    {
+      "collectionGroup": "planes_turno_servicio",
+      "fieldPath": "agentes_persona_ids",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "arrayConfig": "CONTAINS", "queryScope": "COLLECTION" }
+      ]
+    },
     {
       "collectionGroup": "versiones",
       "fieldPath": "estado_version_id",

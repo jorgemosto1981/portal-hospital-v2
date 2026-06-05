@@ -264,6 +264,18 @@ function assertHlgRegimenNoModificadoEnEdicion(existingSnap, nuevoRegimenId) {
   );
 }
 
+/** RFC Fase 4 — inmutabilidad de grupo en HLg vigente. */
+function assertHlgGrupoNoModificadoEnEdicion(existingSnap, nuevoGrupoId) {
+  if (!existingSnap || !existingSnap.exists) return;
+  const prev = toNullableTrimmedString(existingSnap.get("grupo_de_trabajo_id"));
+  const next = toNullableTrimmedString(nuevoGrupoId);
+  if (!prev || !next || prev === next) return;
+  throw new HttpsError(
+    "failed-precondition",
+    "[VAL-HLG-IMM-002] No se puede cambiar el grupo de trabajo de una asignación HLg existente. Cerrá la asignación (fecha de fin) y creá una nueva en el grupo destino.",
+  );
+}
+
 async function assertHlgDentroDeHlc({ fechaInicioHlg, fechaFinHlg, fechaDesdeHlc, fechaHastaHlc }) {
   const inicioHlg = ymdLaboralOrNull(fechaInicioHlg);
   const finHlg = ymdLaboralOrNull(fechaFinHlg);
@@ -409,6 +421,7 @@ module.exports = {
   isRegimenHorarioActivo,
   assertRegimenHorarioActivo,
   assertHlgRegimenNoModificadoEnEdicion,
+  assertHlgGrupoNoModificadoEnEdicion,
   hasRangoSolapado,
   assertHlgDentroDeHlc,
   assertHldDentroDeHlc,

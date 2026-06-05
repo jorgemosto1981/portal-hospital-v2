@@ -1,0 +1,40 @@
+{
+  "laborable_un_segmento": {
+    "fecha_base": "2026-06-10",
+    "segmentos": [
+      {
+        "segmento_id": "cfg_reg_turno_01_manana",
+        "ingreso_iso": "2026-06-10T11:00:00.000Z",
+        "egreso_iso": "2026-06-10T15:00:00.000Z",
+        "fecha_base": "2026-06-10",
+        "cruza_medianoche": false,
+        "persona_titular_id": "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ",
+        "persona_ejecutante_id": "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ",
+        "origen_segmento": "plan_base",
+        "tipo_compensacion_id": null,
+        "flags_liquidacion": null
+      }
+    ],
+    "ingreso_teorico_final": "2026-06-10T11:00:00.000Z",
+    "egreso_teorico_final": "2026-06-10T15:00:00.000Z",
+    "horas_teoricas_totales": 4,
+    "turno_compuesto_id": "cfg_reg_turno_01_manana",
+    "tiene_huecos": false,
+    "clasificacion_dia_calendario_id": "cfg_cdc_01KSN4ZJPVPW986NK2K2JV0PP3",
+    "calendario_evento_ref": null,
+    "tipo_dia": "laborable",
+    "es_feriado": false,
+    "fichadas_esperadas": 2
+  },
+  "no_laborable_sin_segmentos": {
+    "fecha_base": "2026-06-01",
+    "segmentos": [],
+    "ingreso_teorico_final": null,
+    "egreso_teorico_final": null,
+    "horas_teoricas_totales": 0,
+    "turno_compuesto_id": null,
+    "tiene_huecos": false,
+    "clasificacion_dia_calendario_id": "cfg_cdc_01KSN4ZJPVPW986NK2K2JV0PP3",
+    "tipo_dia": "no_laborable"
+  }
+}

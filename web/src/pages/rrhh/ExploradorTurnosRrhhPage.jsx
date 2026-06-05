@@ -288,6 +288,8 @@ export default function ExploradorTurnosRrhhPage() {
           return 2;
         case "CERRADO":
           return 1;
+        case "MERGEADO":
+          return 0;
         default:
           return 0;
       }
@@ -430,6 +432,7 @@ export default function ExploradorTurnosRrhhPage() {
               <option value="EN_REVISION">En revisión</option>
               <option value="HABILITADO">Habilitado</option>
               <option value="CERRADO">Cerrado</option>
+              <option value="MERGEADO">Mergeado (incorporación)</option>
             </select>
           </div>
           <div className="flex items-end">

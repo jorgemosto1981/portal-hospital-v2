@@ -1,13 +1,58 @@
 import { diasEnMes, etiquetaCelda } from "./grillaMesCellUtils.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
-import { claseTdColumna } from "./grillaTurnosVisual.js";
+import { claseFondoCeldaCalendarioTitular } from "./grillaTurnosVisual.js";
 import { celdaTieneJornadaVis } from "./grillaMesEquipoDisplay.js";
+import { titularDiaAsignadoAGrupo } from "./grillaTitularAsignacionDia.js";
+import GrillaFichadasEsperadasBadge from "./GrillaFichadasEsperadasBadge.jsx";
+import { fichadasEsperadasDesdeCeldaVis, titleFichadasEsperadas } from "./grillaFichadasEsperadasDisplay.js";
 
 const DIAS_SEMANA = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
+/** Altura mínima de celda: escala con ancho de pantalla (7 columnas en móvil). */
+const CLASE_CELDA_BASE =
+  "relative flex min-h-[clamp(4.75rem,15vw,7.75rem)] flex-col items-center justify-between gap-1 rounded-none py-1.5 px-0.5 text-center font-semibold sm:min-h-[6.5rem] sm:gap-1.5 sm:py-2";
+
+const CLASE_NUMERO_DIA =
+  "relative z-[1] shrink-0 text-[clamp(0.7rem,2.8vw,0.95rem)] font-bold tabular-nums leading-none sm:text-sm";
+
+const CLASE_CHIP =
+  "relative z-[1] max-w-full rounded-md border-2 px-1.5 py-0.5 text-[clamp(0.58rem,2.4vw,0.8rem)] font-bold leading-tight tracking-tight sm:px-2 sm:text-xs";
+
+const CLASE_LICENCIA =
+  "relative z-[12] max-w-full shrink-0 truncate px-0.5 text-[clamp(0.55rem,2.2vw,0.75rem)] font-bold leading-tight text-violet-950 drop-shadow-sm sm:text-[11px]";
 
 function primerDiaSemana(anio, mes) {
   const d = new Date(anio, mes - 1, 1).getDay();
   return d === 0 ? 7 : d;
+}
+
+function etiquetaInstitucional(tipoEvento) {
+  const t = String(tipoEvento || "").trim().toLowerCase();
+  if (t === "asueto") return "Asueto";
+  if (t === "feriado") return "Feriado";
+  return "Feriado";
+}
+
+function OverlaySinAsignacionGrupo({ conLicencia = false }) {
+  return (
+    <div
+      className={`pointer-events-none absolute inset-0 z-[5] ${
+        conLicencia ? "bg-slate-300/35" : "bg-slate-300/55"
+      }`}
+      aria-hidden
+    >
+      <div
+        className="absolute inset-0 opacity-90"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(135deg, transparent, transparent 5px, rgba(100,116,139,0.45) 5px, rgba(100,116,139,0.45) 7px)",
+        }}
+      />
+      <span className="absolute inset-0 flex items-center justify-center select-none text-[clamp(2rem,9vw,3.25rem)] font-extralight leading-none text-slate-600/70">
+        ×
+      </span>
+    </div>
+  );
 }
 
 /**
@@ -17,13 +62,28 @@ function primerDiaSemana(anio, mes) {
  *   mes: number;
  *   diasMap: Record<string, object> | null;
  *   grupoLabel?: string;
+ *   grupoVistaId?: string;
+ *   hlgRows?: Array<Record<string, unknown>>;
+ *   hlgListo?: boolean;
+ *   etiquetasGrupo?: Record<string, string>;
  *   onDiaClick: (payload: { dia: string; eventos: unknown[]; grupoLabel?: string }) => void;
  * }} props
  */
-export default function GrillaMesTitularCalendario({ anio, mes, diasMap, grupoLabel, onDiaClick }) {
+export default function GrillaMesTitularCalendario({
+  anio,
+  mes,
+  diasMap,
+  grupoLabel,
+  grupoVistaId,
+  hlgRows = [],
+  hlgListo = false,
+  etiquetasGrupo = {},
+  onDiaClick,
+}) {
   const map = diasMap && typeof diasMap === "object" ? diasMap : {};
   const totalDias = diasEnMes(anio, mes);
   const offset = primerDiaSemana(anio, mes) - 1;
+  const mesPad = String(mes).padStart(2, "0");
 
   return (
     <div className="mt-2">
@@ -31,7 +91,7 @@ export default function GrillaMesTitularCalendario({ anio, mes, diasMap, grupoLa
         {DIAS_SEMANA.map((nombre, idx) => (
           <div
             key={nombre}
-            className={`h-10 bg-slate-100 py-1 text-center text-[10px] font-bold uppercase tracking-wider ${
+            className={`flex h-11 items-center justify-center bg-slate-100 text-center text-[clamp(0.65rem,2.5vw,0.8rem)] font-bold uppercase tracking-wide sm:h-12 sm:text-xs ${
               idx >= 5 ? "text-rose-700" : "text-slate-600"
             }`}
           >
@@ -45,6 +105,7 @@ export default function GrillaMesTitularCalendario({ anio, mes, diasMap, grupoLa
 
         {Array.from({ length: totalDias }, (_, i) => {
           const dia = String(i + 1).padStart(2, "0");
+          const fechaYmd = `${anio}-${mesPad}-${dia}`;
           const cell = map[dia] || {};
           const colPos = (offset + i) % 7;
           const esFinDeSemana = colPos >= 5;
@@ -60,7 +121,11 @@ export default function GrillaMesTitularCalendario({ anio, mes, diasMap, grupoLa
           const esFranco = cell.es_franco === true && !esNoLaborable && !jornadaVis;
           const esFeriado = cell.es_feriado === true;
           const tipoEvento = cell.tipo_evento_institucional || null;
-          const tieneDatos = tieneEventos || turnoId || esFranco || esNoLaborable || esFeriado;
+          const asignadoAlGrupo = titularDiaAsignadoAGrupo(hlgRows, grupoVistaId, fechaYmd);
+          const sinAsignacionGrupo = hlgListo && !asignadoAlGrupo;
+
+          const tieneDatos =
+            tieneEventos || turnoId || esFranco || esNoLaborable || esFeriado || jornadaVis;
           const ingreso = cell.rda_ingreso || null;
           const turnoLabel = esNoLaborable
             ? "NL"
@@ -69,49 +134,77 @@ export default function GrillaMesTitularCalendario({ anio, mes, diasMap, grupoLa
               : ingreso && egreso
                 ? `${ingreso}–${egreso}`
                 : turnoId;
-          const bgCelda = claseTdColumna({
+          const bgCelda = claseFondoCeldaCalendarioTitular({
+            sinAsignacionGrupo,
             esFinde: esFinDeSemana,
             esFeriado,
+            esNoLaborable: esNoLaborable && asignadoAlGrupo,
+            esLaborable: jornadaVis && asignadoAlGrupo,
           });
-          const chipNl = esNoLaborable ? "bg-slate-200 text-slate-700" : "";
-          const chipFranco = esFranco && !esNoLaborable && !esFeriado ? "bg-slate-400 text-slate-900" : "";
-          const chipTurno = turnoLabel && !esNoLaborable && !esFranco ? "bg-green-300 text-green-950" : "";
+          const chipNl = "border-slate-600 bg-slate-600 text-white";
+          const chipFranco = "border-slate-500 bg-slate-500 text-white";
+          const chipTurno = "border-emerald-700 bg-emerald-200 text-emerald-950";
+          const chipFeriado = "border-amber-700 bg-amber-200 text-amber-950";
           const tachado = tieneEventos && turnoId ? "line-through opacity-60" : "";
           const titleParts = [];
+          if (sinAsignacionGrupo) {
+            titleParts.push("Sin asignación a este grupo en esta fecha");
+          }
           if (esFeriado && tipoEvento) {
-            titleParts.push(tipoEvento === "feriado" ? "Feriado" : tipoEvento === "asueto" ? "Asueto" : "Día institucional");
+            titleParts.push(etiquetaInstitucional(tipoEvento));
           }
           if (turnoLabel) titleParts.push(turnoLabel);
+          const fichadasN = fichadasEsperadasDesdeCeldaVis(cell);
+          const fichadasTitle = titleFichadasEsperadas(fichadasN);
+          if (fichadasTitle) titleParts.push(fichadasTitle);
 
           return (
             <GrillaMesCeldaLicencia
               key={dia}
               eventos={Array.isArray(eventos) ? eventos : []}
               dia={dia}
+              grupoVistaId={grupoVistaId}
+              etiquetasGrupo={etiquetasGrupo}
               disabled={!tieneDatos}
-              onClick={() => tieneDatos && onDiaClick({
-                dia,
-                eventos: Array.isArray(eventos) ? eventos : [],
-                grupoLabel: grupoLabel || cell.etiqueta_grupo_corta || null,
-              })}
-              className={`flex min-h-[5rem] flex-col items-center justify-center rounded-none border border-slate-300 text-center text-[10px] font-semibold ${bgCelda}`}
+              onClick={() =>
+                tieneDatos &&
+                onDiaClick({
+                  dia,
+                  eventos: Array.isArray(eventos) ? eventos : [],
+                  grupoLabel: grupoLabel || cell.etiqueta_grupo_corta || null,
+                })
+              }
+              className={`${CLASE_CELDA_BASE} ${bgCelda}`}
               title={titleParts.join(" · ") || undefined}
             >
-              <span className={`text-[9px] ${esFinDeSemana ? "text-rose-400" : "opacity-80"}`}>
+              {sinAsignacionGrupo ? (
+                <OverlaySinAsignacionGrupo conLicencia={tieneEventos} />
+              ) : null}
+              <span
+                className={`${CLASE_NUMERO_DIA} ${esFinDeSemana ? "text-rose-700" : "text-slate-800"}`}
+              >
                 {Number(dia)}
               </span>
-              {turnoLabel && !esNoLaborable && (
-                <span className={`rounded border border-slate-400 px-1 text-[8px] font-bold ${chipTurno} ${tachado}`}>
-                  {turnoLabel}
-                </span>
-              )}
-              {esFranco && !turnoLabel && !tieneEventos && !esFeriado && (
-                <span className={`rounded border border-slate-400 px-1 text-[8px] font-bold ${chipFranco}`}>F</span>
-              )}
-              {esNoLaborable && (
-                <span className={`rounded border border-slate-400 px-1 text-[8px] font-bold ${chipNl}`}>NL</span>
-              )}
-              <span className="truncate px-0.5">{label}</span>
+              <div className="relative z-[1] flex w-full min-h-0 flex-1 flex-col items-center justify-center gap-1">
+                {esFeriado && asignadoAlGrupo ? (
+                  <span className={`${CLASE_CHIP} uppercase ${chipFeriado}`}>
+                    {etiquetaInstitucional(tipoEvento)}
+                  </span>
+                ) : null}
+                {turnoLabel && !esNoLaborable && asignadoAlGrupo ? (
+                  <span className={`${CLASE_CHIP} flex flex-col items-center tabular-nums ${chipTurno} ${tachado}`}>
+                    <span>{turnoLabel}</span>
+                    <GrillaFichadasEsperadasBadge valor={fichadasN} />
+                  </span>
+                ) : null}
+                {esFranco && !turnoLabel && !tieneEventos && !esFeriado && asignadoAlGrupo ? (
+                  <span className={`${CLASE_CHIP} ${chipFranco}`}>F</span>
+                ) : null}
+                {esNoLaborable && asignadoAlGrupo ? (
+                  <span className={`${CLASE_CHIP} ${chipNl}`}>NL</span>
+                ) : null}
+              </div>
+              {label ? <span className={CLASE_LICENCIA}>{label}</span> : <span className="h-0 shrink-0" aria-hidden />}
             </GrillaMesCeldaLicencia>
           );
         })}

@@ -1,3 +1,25 @@
+const TURNO_TOKEN_HINTS = [
+  [/manana/i, "M"],
+  [/tarde/i, "T"],
+  [/noche/i, "N"],
+];
+
+/**
+ * Abreviatura M/T/N desde id cfg_reg_turno_* o token corto.
+ * @param {string} id
+ */
+export function labelTurnoToken(id) {
+  const s = String(id || "").trim();
+  if (!s) return "";
+  if (/^[MTN]$/i.test(s)) return s.toUpperCase();
+  for (const [re, lbl] of TURNO_TOKEN_HINTS) {
+    if (re.test(s)) return lbl;
+  }
+  return "";
+}
+
+import { horaDesdeIso } from "./grillaHorarioInstitucional.js";
+
 /**
  * Labels legibles para segmentos de capa_teorica (sin IDs técnicos en UI).
  * @param {Array<{ segmento_id: string; ingreso_iso?: string; egreso_iso?: string }>} segmentos
@@ -6,9 +28,12 @@
 export function enrichCapaTeoricaLabels(segmentos, turnosPorId = {}) {
   return (segmentos || []).map((seg) => {
     const meta = turnosPorId[seg.segmento_id] || {};
-    const etiqueta = meta.etiqueta || meta.turno_id || seg.segmento_id;
-    const ingreso = seg.ingreso_iso ? seg.ingreso_iso.slice(11, 16) : "—";
-    const egreso = seg.egreso_iso ? seg.egreso_iso.slice(11, 16) : "—";
+    const ingreso = seg.ingreso_iso ? horaDesdeIso(seg.ingreso_iso) : "—";
+    const egreso = seg.egreso_iso ? horaDesdeIso(seg.egreso_iso) : "—";
+    let etiqueta = meta.codigo_interno || labelTurnoToken(seg.segmento_id) || meta.etiqueta || "";
+    if (!etiqueta || /^__+horario__+$/i.test(etiqueta)) {
+      etiqueta = ingreso !== "—" && egreso !== "—" ? `${ingreso}–${egreso}` : "Turno";
+    }
     return {
       ...seg,
       segmento_label: etiqueta,

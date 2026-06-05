@@ -4,7 +4,8 @@ const { setGlobalOptions } = require("firebase-functions/v2");
 /** Más memoria / tiempo de arranque para Cloud Run (evita fallos de healthcheck en cold start con Admin SDK). */
 setGlobalOptions({
   region: "southamerica-east1",
-  memory: "512MiB",
+  memory: "1GiB",
+  cpu: 1,
   timeoutSeconds: 120,
   /** Necesario para callables desde el navegador (OPTIONS sin auth); si falta, CORS muestra 403. */
   invoker: "public",
@@ -45,9 +46,12 @@ const obtenerResumenSolicitudArticuloGrilla = require("./onCall/grilla/obtenerRe
 const listarVistaGrillaMesPorGrupo = require("./onCall/grilla/listarVistaGrillaMesPorGrupo");
 const cerrarPeriodoLiquidacion = require("./onCall/grilla/cerrarPeriodoLiquidacion");
 const reabrirPeriodoLiquidacion = require("./onCall/grilla/reabrirPeriodoLiquidacion");
+const consultarEstadosPeriodoLiquidacionGrupo = require("./onCall/grilla/consultarEstadosPeriodoLiquidacionGrupo");
 const planesTurnoServicio = require("./modules/asistencia/planesTurnoServicio");
 const cambiosTurno = require("./modules/asistencia/cambiosTurno");
 const rematerializacion = require("./modules/asistencia/rematerializacion");
+const { materializacionVentanaDia5Scheduled } = require("./onSchedule/materializacionVentanaDia5");
+const { ejecutarMaterializacionVentanaDia5 } = require("./onCall/grilla/ejecutarMaterializacionVentanaDia5");
 
 module.exports = {
   ...login,
@@ -85,7 +89,10 @@ module.exports = {
   ...listarVistaGrillaMesPorGrupo,
   ...cerrarPeriodoLiquidacion,
   ...reabrirPeriodoLiquidacion,
+  ...consultarEstadosPeriodoLiquidacionGrupo,
   ...planesTurnoServicio,
   ...cambiosTurno,
   ...rematerializacion,
+  materializacionVentanaDia5Scheduled,
+  ejecutarMaterializacionVentanaDia5,
 };

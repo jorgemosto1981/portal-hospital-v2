@@ -1,17 +1,36 @@
 import { useCallback, useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 import {
   callRegistrarCambioTurno,
   callEliminarCambioTurno,
   callListarOverridesTurno,
 } from "../../services/callables.js";
+import { obtenerCapaTeoricaDiaValidada } from "../../services/coberturaParcialService.js";
 
 const TIPO_COLOR = {
   reemplazo: "bg-amber-100 text-amber-800",
   adicional: "bg-blue-100 text-blue-800",
 };
 
-export default function ModalCambioTurno({ personaId, fecha, personaNombre, onCerrar, onRegistrado }) {
+const TITULO_POR_FLUJO = {
+  reemplazo: "Cambio de turno propio",
+  adicional: "Horas adicionales",
+};
+
+export default function ModalCambioTurno({
+  personaId,
+  fecha,
+  personaNombre,
+  grupoId = "",
+  /** @type {'reemplazo' | 'adicional' | undefined} */ modoFlujo,
+  onCerrar,
+  onRegistrado,
+  onAgregarOutbox,
+}) {
+  const usaOutbox = typeof onAgregarOutbox === "function";
+  const tipoFijo = modoFlujo === "reemplazo" || modoFlujo === "adicional" ? modoFlujo : null;
+  const [expectedVersionToken, setExpectedVersionToken] = useState("");
   const [overrides, setOverrides] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [operando, setOperando] = useState(false);
@@ -19,13 +38,18 @@ export default function ModalCambioTurno({ personaId, fecha, personaNombre, onCe
   const [feedback, setFeedback] = useState("");
 
   const [form, setForm] = useState({
-    tipo: "reemplazo",
+    tipo: tipoFijo || "reemplazo",
     turno_id: "",
     ingreso: "",
     egreso: "",
     horas_efectivas: "",
     motivo: "",
   });
+
+  useEffect(() => {
+    if (!tipoFijo) return;
+    setForm((p) => (p.tipo === tipoFijo ? p : { ...p, tipo: tipoFijo }));
+  }, [tipoFijo]);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -43,6 +67,22 @@ export default function ModalCambioTurno({ personaId, fecha, personaNombre, onCe
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  useEffect(() => {
+    if (!usaOutbox || !/^gdt_/i.test(String(grupoId || "").trim())) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const capa = await obtenerCapaTeoricaDiaValidada(personaId, fecha, grupoId);
+        if (!cancelled) {
+          setExpectedVersionToken(capa.concurrencia?.expected_version_token || capa.concurrencia?.vis_ultima_sync || "");
+        }
+      } catch {
+        if (!cancelled) setExpectedVersionToken("");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [usaOutbox, personaId, fecha, grupoId]);
 
   const showFeedback = (msg) => {
     setFeedback(msg);
@@ -66,6 +106,29 @@ export default function ModalCambioTurno({ personaId, fecha, personaNombre, onCe
         motivo: form.motivo.trim(),
         es_override_manual: true,
       };
+      if (usaOutbox) {
+        if (!expectedVersionToken) {
+          setError("No se pudo leer la versión de grilla. Recargá e intentá de nuevo.");
+          return;
+        }
+        onAgregarOutbox({
+          tipo: form.tipo,
+          personaId,
+          fechaYmd: fecha,
+          grupoId,
+          turnoId: override.turno_id,
+          ingreso: override.ingreso,
+          egreso: override.egreso,
+          horasEfectivas: override.horas_efectivas,
+          motivo: override.motivo,
+          expectedVersionToken,
+        });
+        toast.success("Cambio agregado a pendientes.");
+        setForm({ tipo: "reemplazo", turno_id: "", ingreso: "", egreso: "", horas_efectivas: "", motivo: "" });
+        if (onRegistrado) onRegistrado();
+        onCerrar();
+        return;
+      }
       await callRegistrarCambioTurno({ persona_id: personaId, fecha, override });
       showFeedback("Override registrado.");
       setForm({ tipo: "reemplazo", turno_id: "", ingreso: "", egreso: "", horas_efectivas: "", motivo: "" });
@@ -76,7 +139,7 @@ export default function ModalCambioTurno({ personaId, fecha, personaNombre, onCe
     } finally {
       setOperando(false);
     }
-  }, [form, personaId, fecha, cargar, onRegistrado]);
+  }, [form, personaId, fecha, cargar, onRegistrado, usaOutbox, onAgregarOutbox, grupoId, expectedVersionToken, onCerrar]);
 
   const handleEliminar = useCallback(async (idx) => {
     const motivo = window.prompt("Motivo de eliminación (obligatorio):");
@@ -109,7 +172,9 @@ export default function ModalCambioTurno({ personaId, fecha, personaNombre, onCe
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Cambio de turno</h2>
+            <h2 className="text-lg font-semibold text-slate-900">
+              {tipoFijo ? TITULO_POR_FLUJO[tipoFijo] : "Cambio de turno"}
+            </h2>
             <p className="text-sm text-slate-500">
               {personaNombre || personaId} — <span className="font-mono">{fecha}</span>
             </p>
@@ -180,33 +245,43 @@ export default function ModalCambioTurno({ personaId, fecha, personaNombre, onCe
         {/* Formulario nuevo override */}
         <h3 className="mb-3 text-sm font-semibold text-slate-700">Registrar nuevo override</h3>
         <div className="space-y-3">
-          {/* Tipo */}
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Tipo de override</label>
-            <div className="flex gap-2">
-              {["reemplazo", "adicional"].map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setForm((p) => ({ ...p, tipo: t }))}
-                  className={`rounded-lg px-4 py-1.5 text-xs font-medium capitalize transition ${
-                    form.tipo === t
-                      ? t === "reemplazo"
-                        ? "bg-amber-600 text-white shadow-sm"
-                        : "bg-blue-600 text-white shadow-sm"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-            <p className="mt-1 text-[10px] text-slate-400">
-              {form.tipo === "reemplazo"
-                ? "Sustituye el turno teórico (ej. cambio de franco, cambio de guardia)."
-                : "Se suma al turno teórico (ej. doble guardia de urgencia, horas extras)."}
+          {tipoFijo ? (
+            <p className="text-xs text-slate-600">
+              Tipo:{" "}
+              <span
+                className={`inline-flex rounded-full px-2 py-0.5 font-medium ${TIPO_COLOR[tipoFijo] || "bg-slate-100"}`}
+              >
+                {tipoFijo === "reemplazo" ? "Cambio propio (reemplazo)" : "Adicional"}
+              </span>
             </p>
-          </div>
+          ) : (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">Tipo de override</label>
+              <div className="flex gap-2">
+                {["reemplazo", "adicional"].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setForm((p) => ({ ...p, tipo: t }))}
+                    className={`rounded-lg px-4 py-1.5 text-xs font-medium capitalize transition ${
+                      form.tipo === t
+                        ? t === "reemplazo"
+                          ? "bg-amber-600 text-white shadow-sm"
+                          : "bg-blue-600 text-white shadow-sm"
+                        : "bg-slate-100 text-slate-600 active:bg-slate-200"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-[10px] text-slate-400">
+                {form.tipo === "reemplazo"
+                  ? "Sustituye el turno teórico (ej. cambio de franco, cambio de guardia)."
+                  : "Se suma al turno teórico (ej. doble guardia de urgencia, horas extras)."}
+              </p>
+            </div>
+          )}
 
           {/* Turno ID */}
           <div>
@@ -297,7 +372,7 @@ export default function ModalCambioTurno({ personaId, fecha, personaNombre, onCe
             onClick={handleRegistrar}
             className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
           >
-            {operando ? "Guardando…" : "Registrar override"}
+            {operando ? "Guardando…" : usaOutbox ? "Agregar a pendientes" : "Registrar override"}
           </button>
         </div>
       </div>

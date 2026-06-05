@@ -1,6 +1,8 @@
 "use strict";
 
-const { FieldValue } = require("firebase-admin/firestore");
+function purgeMetadataNow() {
+  return new Date().toISOString();
+}
 const {
   buildAsiDocumentId,
   buildVisDocumentId,
@@ -8,9 +10,34 @@ const {
   iterarYmdInclusive,
 } = require("../shared/mdcRdaDocumentIds");
 
+const { hldHlgFechaInicioYmd } = require("../shared/fechaLaboralYmd");
+
 const COL_ASISTENCIA = "asistencia_diaria";
 const COL_VIS = "vistas_grilla_mes_agente";
+const COL_HLG = "historial_laboral_grupos";
 const MAX_BATCH_OPS = 450;
+
+/**
+ * HLg activa del mismo gdt con fecha_inicio estrictamente posterior al corte.
+ *
+ * @param {Array<Record<string, unknown> & { id?: string }>} rows
+ * @param {{ desdeCorteYmd: string; excludeHlgId?: string }} opts
+ * @returns {string | null} YMD o null
+ */
+function findSiguienteHlgInicioTrasCorte(rows, { desdeCorteYmd, excludeHlgId }) {
+  const desde = String(desdeCorteYmd || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(desde)) return null;
+  let siguienteInicio = null;
+  for (const row of rows || []) {
+    const id = String(row.id || "").trim();
+    if (excludeHlgId && id === excludeHlgId) continue;
+    if (row.activo === false) continue;
+    const ini = hldHlgFechaInicioYmd(row);
+    if (!ini || ini <= desde) continue;
+    if (!siguienteInicio || ini < siguienteInicio) siguienteInicio = ini;
+  }
+  return siguienteInicio;
+}
 
 /**
  * @param {string} ymd
@@ -46,6 +73,56 @@ function ymdFinMesSiguiente(refYmd) {
 }
 
 /**
+ * Tope de purge tras deshabilitar HLg: ventana M+M+1, sin pisar otra HLg activa del mismo gdt.
+ *
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {{ personaId: string; gdt: string; desdeCorteYmd: string; excludeHlgId?: string }} opts
+ * @returns {Promise<string>}
+ */
+async function loadHlgRowsPersonaGdt(db, personaId, gdt) {
+  const pid = String(personaId || "").trim();
+  const gdtId = String(gdt || "").trim();
+  if (!/^per_/i.test(pid) || !/^gdt_/i.test(gdtId)) return [];
+  const snap = await db
+    .collection(COL_HLG)
+    .where("persona_id", "==", pid)
+    .where("grupo_de_trabajo_id", "==", gdtId)
+    .get();
+  return snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() || {}) }));
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {{ personaId: string; gdt: string; desdeCorteYmd: string; excludeHlgId?: string }} opts
+ * @returns {Promise<{ hasta: string; siguienteInicio: string | null }>}
+ */
+async function resolvePurgeVentanaTrasDeshabilitarHlg(db, { personaId, gdt, desdeCorteYmd, excludeHlgId }) {
+  const pid = String(personaId || "").trim();
+  const gdtId = String(gdt || "").trim();
+  const desde = String(desdeCorteYmd || "").slice(0, 10);
+  let hasta = ymdFinMesSiguiente(desde);
+  if (!/^per_/i.test(pid) || !/^gdt_/i.test(gdtId) || !/^\d{4}-\d{2}-\d{2}$/.test(desde)) {
+    return { hasta, siguienteInicio: null };
+  }
+
+  const rows = await loadHlgRowsPersonaGdt(db, pid, gdtId);
+  const siguienteInicio = findSiguienteHlgInicioTrasCorte(rows, { desdeCorteYmd: desde, excludeHlgId });
+
+  if (siguienteInicio) {
+    const hastaAntesSucesor = ymdAddDays(siguienteInicio, -1);
+    if (hastaAntesSucesor < hasta) hasta = hastaAntesSucesor;
+  }
+  if (hasta < desde) hasta = desde;
+  return { hasta, siguienteInicio };
+}
+
+/** @deprecated Usar resolvePurgeVentanaTrasDeshabilitarHlg */
+async function resolveHastaPurgeTrasDeshabilitarHlg(db, opts) {
+  const { hasta } = await resolvePurgeVentanaTrasDeshabilitarHlg(db, opts);
+  return hasta;
+}
+
+/**
  * Elimina capa teórica scoped (solo capa 1) desde `desdeYmd` hasta `hastaYmd` inclusive.
  * No toca overrides ni eventos MDC en vis_*.
  *
@@ -77,13 +154,17 @@ async function purgeCapaTeoricaGdtRango(db, { personaId, gdt, desdeYmd, hastaYmd
       const asiRef = db.collection(COL_ASISTENCIA).doc(asiId);
       const asiSnap = await asiRef.get();
       if (asiSnap.exists) {
-        batch.update(asiRef, {
-          [`capa_teorica_por_grupo.${gdtId}`]: FieldValue.delete(),
-          "metadata.ultimo_purge_teorico": FieldValue.serverTimestamp(),
-          "metadata.ultimo_purge_motivo": motivo || "purge_capa_teorica_gdt",
-        });
-        ops += 1;
-        diasPurge += 1;
+        const capaPorGrupo = { ...(asiSnap.data().capa_teorica_por_grupo || {}) };
+        if (Object.hasOwn(capaPorGrupo, gdtId)) {
+          delete capaPorGrupo[gdtId];
+          batch.update(asiRef, {
+            capa_teorica_por_grupo: capaPorGrupo,
+            "metadata.ultimo_purge_teorico": purgeMetadataNow(),
+            "metadata.ultimo_purge_motivo": motivo || "purge_capa_teorica_gdt",
+          });
+          ops += 1;
+          diasPurge += 1;
+        }
       }
     }
 
@@ -102,6 +183,7 @@ async function purgeCapaTeoricaGdtRango(db, { personaId, gdt, desdeYmd, hastaYmd
       patch[`dias.${diaKey}.rda_egreso`] = null;
       patch[`dias.${diaKey}.tipo_dia`] = "no_laborable";
       patch[`dias.${diaKey}.es_franco`] = false;
+      patch[`dias.${diaKey}.segmentos`] = null;
     }
 
     if (ops >= MAX_BATCH_OPS) {
@@ -117,7 +199,10 @@ async function purgeCapaTeoricaGdtRango(db, { personaId, gdt, desdeYmd, hastaYmd
     if (!visSnap.exists) continue;
     batch.update(visRef, {
       ...patch,
-      "metadata.ultima_sync_teorica": FieldValue.serverTimestamp(),
+      "metadata.ultima_sync_teorica": purgeMetadataNow(),
+      "metadata.ultimo_purge_motivo": motivo || "purge_capa_teorica_gdt",
+      "metadata.ultimo_purge_en": purgeMetadataNow(),
+      "metadata.ultimo_rango_purged": { desde, hasta },
     });
     ops += 1;
     if (ops >= MAX_BATCH_OPS) {
@@ -134,6 +219,10 @@ async function purgeCapaTeoricaGdtRango(db, { personaId, gdt, desdeYmd, hastaYmd
 
 module.exports = {
   purgeCapaTeoricaGdtRango,
+  findSiguienteHlgInicioTrasCorte,
+  loadHlgRowsPersonaGdt,
+  resolvePurgeVentanaTrasDeshabilitarHlg,
+  resolveHastaPurgeTrasDeshabilitarHlg,
   ymdAddDays,
   ymdFinMesSiguiente,
 };

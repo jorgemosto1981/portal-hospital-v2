@@ -4,14 +4,14 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db } = require("../../modules/shared/context");
 const { assertRrhh } = require("../../modules/shared/helpers");
 const { cerrarPeriodoLiquidacionCore } = require("../../modules/asistencia/asistenciaPeriodoLiquidacion");
-const runtimeFlags = require("../../../shared/runtimeFlags.json");
+const runtimeFlags = require("../../modules/shared/runtimeFlags.json");
 
 function actorPersonaIdFromRequest(request) {
   const t = request.auth?.token || {};
   return typeof t.persona_id === "string" ? t.persona_id.trim() : "";
 }
 
-const cerrarPeriodoLiquidacion = onCall(async (request) => {
+const cerrarPeriodoLiquidacion = onCall({ invoker: "public" }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Se requiere sesión.");
   }

@@ -22,6 +22,10 @@ const {
 } = require("./mdcRdaDocumentIds");
 const { fanOutVisDesdeAsi } = require("./mdcFanOutVis");
 const { enriquecerPayloadMdcDesdeVersion } = require("./mdcVersionEnriquecimiento");
+const {
+  assertNuevaSolicitudNoEnPeriodoCerrado,
+  esEstadoSolicitudEnTramite,
+} = require("../asistencia/asistenciaPeriodoLiquidacion");
 
 /**
  * @param {string} solId
@@ -85,6 +89,32 @@ async function procesarComandoMdc(db, rawPayload) {
   const dias = iterarYmdInclusive(p.fecha_desde, p.fecha_hasta);
   if (!dias.length) {
     return { ok: false, codigo: "FECHAS_INVALIDAS", mensaje: "Rango de fechas inválido." };
+  }
+
+  const gdtAncla = p.grupo_trabajo_id_ancla;
+  if (gdtAncla) {
+    const enTramite = esEstadoSolicitudEnTramite(p.estado_solicitud_id);
+    const comandoCierraWorkflow =
+      p.comando === MDC_COMANDO_CONSOLIDAR_APROBADO ||
+      p.comando === MDC_COMANDO_REVERTIR_PROYECCION ||
+      p.comando === MDC_COMANDO_AUTORIZAR_JEFE;
+    if (!enTramite && !comandoCierraWorkflow) {
+      try {
+        await assertNuevaSolicitudNoEnPeriodoCerrado(
+          db,
+          p.persona_id,
+          p.fecha_desde,
+          p.fecha_hasta,
+          gdtAncla,
+        );
+      } catch (err) {
+        return {
+          ok: false,
+          codigo: "ASI-PER-001",
+          mensaje: err instanceof Error ? err.message : "Período cerrado.",
+        };
+      }
+    }
   }
 
   const aporteBase = {

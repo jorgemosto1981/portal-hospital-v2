@@ -5,6 +5,8 @@ const { db } = require("../shared/context");
 const { buildAsiDocumentId, buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
 const { resolverCapaTeoricaGrupo } = require("../shared/capaTeoricaPorGrupoCore");
 const { consultarEstadoPeriodoLiquidacion } = require("./asistenciaPeriodoLiquidacion");
+const { resolverEscrituraGsoDia } = require("./grillaGsoSoloLectura");
+const { tokenHasRrhhLaborAccess } = require("../shared/laborProfile");
 const runtimeFlags = require("../shared/runtimeFlags.json");
 const { assertOverrideAuth } = require("../shared/helpers");
 
@@ -45,7 +47,13 @@ const obtenerCapaTeoricaDia = onCall({
 
   const asiData = asiSnap.exists ? asiSnap.data() : null;
   const capaGrupo = resolverCapaTeoricaGrupo(asiData, grupoTrabajoId);
-  const periodo = await consultarEstadoPeriodoLiquidacion(personaId, fecha, grupoTrabajoId);
+  const periodo = await consultarEstadoPeriodoLiquidacion(db, personaId, fecha, grupoTrabajoId);
+  const token = (request.auth && request.auth.token) || {};
+  const gsoEscritura = resolverEscrituraGsoDia({
+    fechaYmd: fecha,
+    esRrhhLabor: tokenHasRrhhLaborAccess(token),
+    periodoCerrado: periodo.cerrado === true,
+  });
   const diaKey = fecha.slice(8, 10);
   const diaVis = visSnap?.exists && visSnap.data()?.dias?.[diaKey] ? visSnap.data().dias[diaKey] : null;
   const versionToken = tsToIso(visSnap?.data()?.metadata?.version_token)
@@ -64,6 +72,7 @@ const obtenerCapaTeoricaDia = onCall({
       expected_version_token: versionToken,
     },
     periodo_liquidacion: periodo,
+    gso_escritura: gsoEscritura,
     vis_dia: diaVis,
   };
 });

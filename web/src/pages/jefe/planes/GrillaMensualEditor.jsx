@@ -20,6 +20,7 @@ import {
   varianteCeldaMensual,
 } from "../../../features/grilla/grillaTurnosVisual.js";
 import GrillaTurnosLeyenda from "../../../features/grilla/GrillaTurnosLeyenda.jsx";
+import { ymdDesdeValorLaboral } from "../../datos-laborales/utils.js";
 
 const PALETA_COLORES_BASE = [
   { bg: "bg-yellow-300 hover:bg-yellow-400", text: "text-yellow-950" },
@@ -50,8 +51,10 @@ const DOW_LABELS = ["D", "L", "M", "X", "J", "V", "S"];
 
 /** Hard block: fecha fuera de vigencia HLG */
 function esDiaEnVigenciaHlg(fechaYmd, fechaInicio, fechaFin) {
-  if (fechaInicio && fechaYmd < fechaInicio) return false;
-  if (fechaFin && fechaYmd > fechaFin) return false;
+  const fi = ymdDesdeValorLaboral(fechaInicio);
+  const ff = ymdDesdeValorLaboral(fechaFin);
+  if (fi && fechaYmd < fi) return false;
+  if (ff && fechaYmd > ff) return false;
   return true;
 }
 
@@ -291,6 +294,8 @@ function normalizarFilaDias(fila, dias) {
 export default function GrillaMensualEditor({
   plan,
   modoVistaEquipo = false,
+  modoIncorporacionAgentesNuevos = false,
+  agentesNuevosPermitidos = [],
   grupoId,
   grupoLabel,
   periodo,
@@ -427,11 +432,39 @@ export default function GrillaMensualEditor({
     });
   }, [contexto, agentes, dias, idxRegimenes, agentesEnriquecidos]);
 
-  // Al crear/editar, incluir automáticamente todos los agentes activos/vigentes del grupo.
+  const esModoIncorporacion =
+    modoIncorporacionAgentesNuevos || String(plan?.plan_rol || "").trim() === "incorporacion";
+
+  /** En plt_inc: solo filas incorporables (nunca todo el grupo si falta meta del banner). */
+  const idsAgentesNuevos = useMemo(() => {
+    if (!esModoIncorporacion) return null;
+    const ids = new Set();
+    for (const a of agentesNuevosPermitidos || []) {
+      const pid = String(a.persona_id || "").trim();
+      if (pid) ids.add(pid);
+    }
+    for (const a of contexto?.agentes_nuevos || []) {
+      const pid = String(a.persona_id || "").trim();
+      if (pid) ids.add(pid);
+    }
+    for (const a of plan?.agentes || []) {
+      const pid = String(a.persona_id || "").trim();
+      if (pid) ids.add(pid);
+    }
+    return ids;
+  }, [esModoIncorporacion, agentesNuevosPermitidos, contexto?.agentes_nuevos, plan?.agentes, plan?.id]);
+
+  // Al crear/editar plan principal: todos los vigentes del grupo. En incorporación: solo idsAgentesNuevos.
   useEffect(() => {
     const lista = contexto?.personas_grupo || [];
     if (!lista.length) return;
-    const nextAgentes = lista
+    let filtrada = lista;
+    if (esModoIncorporacion) {
+      if (!idsAgentesNuevos || idsAgentesNuevos.size === 0) return;
+      filtrada = lista.filter((p) => idsAgentesNuevos.has(String(p.persona_id || "").trim()));
+      if (filtrada.length === 0) return;
+    }
+    const nextAgentes = filtrada
       .map((p) => ({
         persona_id: String(p.persona_id || "").trim(),
         regimen_horario_id: p.regimen_horario_id || "",
@@ -461,7 +494,7 @@ export default function GrillaMensualEditor({
       }
       return next;
     });
-  }, [contexto, dias, agentesEnriquecidos]);
+  }, [contexto, dias, agentesEnriquecidos, esModoIncorporacion, idsAgentesNuevos]);
 
   const esFilaEditable = useCallback(
     (pid) => esRegimenPlanificado(idxRegimenes[agentes.find((a) => a.persona_id === pid)?.regimen_horario_id]),
@@ -471,6 +504,7 @@ export default function GrillaMensualEditor({
   // La grilla usa todos los agentes vigentes del grupo en el período (sin selección manual).
 
   const aplicarPincelEnCelda = useCallback((pid, ymd) => {
+    if (esModoIncorporacion && idsAgentesNuevos && !idsAgentesNuevos.has(pid)) return;
     if (!paleta || !esFilaEditable(pid)) return;
     const key = `${pid}:${ymd}:${paleta}`;
     if (ultimaCeldaPintadaRef.current === key) return;
@@ -496,7 +530,7 @@ export default function GrillaMensualEditor({
       ultimaCeldaPintadaRef.current = key;
       return { ...prev, [pid]: { ...prev[pid], [ymd]: nueva } };
     });
-  }, [paleta, agentesEnriquecidos, esFilaEditable, contexto]);
+  }, [paleta, agentesEnriquecidos, esFilaEditable, contexto, esModoIncorporacion, idsAgentesNuevos]);
 
   const iniciarPintado = useCallback((pid, ymd) => {
     setPintando(true);
@@ -591,8 +625,13 @@ export default function GrillaMensualEditor({
       ...(planVersionToken ? { plan_version_token: planVersionToken } : {}),
       agentes: agentes.map((ag) => {
         const row = grilla[ag.persona_id] || {};
+        const meta = agentesEnriquecidos[ag.persona_id];
         const dias = {};
         for (const [ymd, cel] of Object.entries(row)) {
+          if (meta && !esDiaEnVigenciaHlg(ymd, meta.fecha_inicio, meta.fecha_fin)) {
+            dias[ymd] = { tipo_dia: "franco", turno_id: null };
+            continue;
+          }
           dias[ymd] = extraerIntencionDia(cel);
         }
         return {
@@ -603,7 +642,7 @@ export default function GrillaMensualEditor({
         };
       }),
     };
-    const result = await onGuardar(datos, plan?.id || null);
+    const result = await onGuardar(datos, plan?.id || null, {});
     if (result?.ok === false) {
       setErrLocal(result.error || "No se pudo guardar el borrador.");
       return;
@@ -619,6 +658,7 @@ export default function GrillaMensualEditor({
     comentariosJefe,
     planVersionToken,
     extraerIntencionDia,
+    agentesEnriquecidos,
   ]);
 
   const labelAgente = (pid) => {
@@ -635,9 +675,11 @@ export default function GrillaMensualEditor({
             <h2 className="text-lg font-semibold text-slate-900">
               {modoVistaEquipo
                 ? "Ver turnos del equipo"
-                : plan
-                  ? "Editar Turno Mensual"
-                  : "Crear Turno Mensual"}
+                : esModoIncorporacion
+                  ? "Plan de incorporación"
+                  : plan
+                    ? "Editar Turno Mensual"
+                    : "Crear Turno Mensual"}
             </h2>
             <p className="text-sm text-slate-500">
               Período: <strong className="font-semibold text-slate-700">{periodo}</strong>
@@ -657,6 +699,13 @@ export default function GrillaMensualEditor({
             </svg>
           </button>
         </div>
+
+        {esModoIncorporacion ? (
+          <div className="mx-5 mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            Plan paralelo de incorporación: solo agentes nuevos planificados. El plan operativo habilitado no
+            se modifica hasta que RRHH apruebe y se mergee la grilla.
+          </div>
+        ) : null}
 
         {cargandoContexto && (
           <div className="px-5 py-3 text-sm text-slate-500">Cargando contexto del grupo...</div>

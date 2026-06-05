@@ -31,6 +31,9 @@ Si Cloud Build falla con **missing permission on the build service account**, se
 
 - Variables web: [`.env.v2.example`](./.env.v2.example) → **`.env.v2.local`** (no comitear).
 - Plan maestro: [PLAN_DESARROLLO_VERSION2.md](./PLAN_DESARROLLO_VERSION2.md) · índice de docs: [docs/v2/README.md](./docs/v2/README.md).
+- **Retomar sesión (2026-06-04):** [docs/v2/HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md](./docs/v2/HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md) · rama `feat/epic-multi-hlg-fase1-execution`.
+- **F-UX.3 gestión turno (cerrado):** [docs/v2/REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md](./docs/v2/REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md).
+- **Pendientes de implementación:** [docs/v2/PENDIENTES_IMPLEMENTACION_V2.md](./docs/v2/PENDIENTES_IMPLEMENTACION_V2.md).
 - **Retomar sesión (28/05/2026):** [docs/v2/HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md](./docs/v2/HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) — control turno en todas las vistas; `grilla_aprobada` en `plt_*`; piloto `plt_01KSR8J55H1TN10M3ANSSWMPF2`.
 
 ## App React (V1)

@@ -54,7 +54,11 @@ export default function BandejaTurnosRrhhPage() {
             showFeedback("Aprobación cancelada.");
             break;
           }
-          showFeedback("Plan aprobado y habilitado.");
+          if (res.data?.estado === "MERGEADO") {
+            showFeedback("Incorporación aprobada y mergeada al plan operativo (el mes sigue habilitado).");
+          } else {
+            showFeedback("Plan aprobado y habilitado.");
+          }
           break;
         }
         case "rechazar":

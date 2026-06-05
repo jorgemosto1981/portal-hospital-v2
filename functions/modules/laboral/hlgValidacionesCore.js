@@ -25,6 +25,8 @@ function isRegimenHorarioActivo(regimenDoc) {
 /** HLg que compite en validación de solape operativo (excluye baja administrativa). */
 function hlgCuentaParaSolapeOperativo(hlgDoc) {
   if (!hlgDoc || typeof hlgDoc !== "object") return false;
+  if (hlgDoc.eliminado === true) return false;
+  if (String(hlgDoc.estado || "").trim().toUpperCase() === "ANULADO") return false;
   return hlgDoc.activo !== false;
 }
 

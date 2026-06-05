@@ -107,7 +107,10 @@ export default function DatosLaborales() {
     motivo: "",
     fecha_corte: "",
     confirmar: false,
+    confirmar_purge: false,
   });
+  const [deshabilitarHlgPaso, setDeshabilitarHlgPaso] = useState(1);
+  const [deshabilitarHlgResumen, setDeshabilitarHlgResumen] = useState({ grupoLabel: "" });
   const { user: authUser } = useAuthSession();
   const [timelinePersonaId, setTimelinePersonaId] = useState("");
   const [timelineFiltro, setTimelineFiltro] = useState("todos");
@@ -476,7 +479,13 @@ export default function DatosLaborales() {
       motivo: "",
       fecha_corte: obtenerYmdHoyInstitucional(),
       confirmar: false,
+      confirmar_purge: false,
     });
+    setDeshabilitarHlgPaso(1);
+    const gdtLabel =
+      String(target.grupo_de_trabajo_nombre || target.grupo_nombre || target.grupo_de_trabajo_id || "").trim() ||
+      "el grupo de trabajo";
+    setDeshabilitarHlgResumen({ grupoLabel: gdtLabel, fechaCorte: obtenerYmdHoyInstitucional() });
     setDeshabilitarHlgModalAbierto(true);
   }
 
@@ -485,6 +494,7 @@ export default function DatosLaborales() {
     setDeshabilitarHlgModalAbierto(false);
     setHlgDeshabilitarId("");
     setDeshabilitarHlgError("");
+    setDeshabilitarHlgPaso(1);
   }
 
   async function confirmarDeshabilitacionHlg() {
@@ -494,16 +504,29 @@ export default function DatosLaborales() {
       setDeshabilitarHlgError("No se encontró la asignación HLg a deshabilitar.");
       return;
     }
+    if (fechaCorte && !/^\d{4}-\d{2}-\d{2}$/.test(fechaCorte)) {
+      setDeshabilitarHlgError("La fecha de corte es inválida. Usá el formato AAAA-MM-DD.");
+      return;
+    }
+    if (deshabilitarHlgPaso === 1) {
+      setDeshabilitarHlgError("");
+      setDeshabilitarHlgPaso(2);
+      setDeshabilitarHlgResumen((prev) => ({ ...prev, fechaCorte: fechaCorte || prev.fechaCorte }));
+      setDeshabilitarHlgForm((prev) => ({ ...prev, confirmar: false, confirmar_purge: false }));
+      return;
+    }
     if (!deshabilitarHlgForm.confirmar) {
       setDeshabilitarHlgError("Debés confirmar la deshabilitación para continuar.");
       return;
     }
-    if (motivo.length > 100) {
-      setDeshabilitarHlgError("El motivo no puede superar los 100 caracteres.");
+    if (!deshabilitarHlgForm.confirmar_purge) {
+      setDeshabilitarHlgError(
+        "Debés confirmar la purga de la capa teórica (turnos RDA) en días posteriores al corte.",
+      );
       return;
     }
-    if (fechaCorte && !/^\d{4}-\d{2}-\d{2}$/.test(fechaCorte)) {
-      setDeshabilitarHlgError("La fecha de corte es inválida. Usá el formato AAAA-MM-DD.");
+    if (motivo.length > 100) {
+      setDeshabilitarHlgError("El motivo no puede superar los 100 caracteres.");
       return;
     }
     setDeshabilitarHlgError("");
@@ -914,6 +937,8 @@ export default function DatosLaborales() {
           deshabilitarHlgForm={deshabilitarHlgForm}
           setDeshabilitarHlgForm={setDeshabilitarHlgForm}
           deshabilitarHlgError={deshabilitarHlgError}
+          deshabilitarHlgPaso={deshabilitarHlgPaso}
+          deshabilitarHlgResumen={deshabilitarHlgResumen}
           cerrarModalDeshabilitarHlg={cerrarModalDeshabilitarHlg}
           confirmarDeshabilitacionHlg={confirmarDeshabilitacionHlg}
           resultadoModalAbierto={resultadoModalAbierto}
