@@ -433,7 +433,7 @@ export default function PlanTurnoServicioPage() {
       ) {
         setError(tooltipBloqueoHuecosPlan(huecosPersistidos));
         showFeedback("Acción bloqueada: corregí los huecos de turno en el editor del plan.");
-        break;
+        return;
       }
       switch (accion) {
         case "enviar":
