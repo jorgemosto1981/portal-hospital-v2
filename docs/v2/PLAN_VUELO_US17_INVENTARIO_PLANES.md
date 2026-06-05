@@ -1,6 +1,6 @@
 # Plan de vuelo — US-17 inventario planes `HABILITADO` con huecos
 
-**Estado:** diseño cerrado (2026-06-05) · **Prerequisito:** blindaje US-9 en prod (`v2.6.1-blindaje-gso`)
+**Estado:** **código cerrado en `master`** (PR #3 mergeado 2026-06-05) · remediación RRHH **pendiente** · **Prerequisito:** blindaje US-9 en prod (`v2.6.1-blindaje-gso`) · pausa: [`HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md`](./HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md)
 
 ## Objetivo
 

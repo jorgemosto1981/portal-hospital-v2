@@ -1,11 +1,25 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (otra PC):** [`HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md`](./HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md) — `git pull origin feat/epic-multi-hlg-fase1-execution` + `.env.v2.local`  
+> **RETOMAR AQUÍ (2026-06-05 — PAUSA):** [`HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md`](./HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md) — `git checkout master` · `git pull origin master` · `.env.v2.local`  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
-> **Épica F-UX.3 — CERRADA en rama** · Registro: [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) · PR: [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md)  
-> **GSO conflictos (docs listos; código pendiente US-9, US-1, US-16…):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) §2
+> **US-17 inventario:** ✅ código en `master` (PR [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3)) · **ops RRHH:** 9 ALTA + 126 MEDIA → remediar → re-audit  
+> **Blindaje GSO:** ✅ prod `v2.6.1-blindaje-gso` (US-9, US-1, US-16, US-10, US-14, US-3 parcial) — [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md)
 
-## CIERRE F-UX.3 — gestión turno A/B/C (implementación terminada)
+## PAUSA — post cierre US-17 (2026-06-05)
+
+| Qué | Dónde |
+|-----|--------|
+| **Handoff sesión** | [`HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md`](./HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md) |
+| **Inventario + severidad** | [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md) |
+| **Audit CLI** | `npm run audit:us17-planes-huecos` |
+| **master** | `352692b` (merge PR #3) |
+| **Siguiente (sugerido)** | Remediación RRHH pasivo 9/126 **o** código US-3 escenario A + US-14 |
+
+**Última actualización índice:** 2026-06-05 — pausa registrada.
+
+---
+
+## Histórico — CIERRE F-UX.3 — gestión turno A/B/C (implementación terminada)
 
 | Qué | Dónde |
 |-----|--------|

@@ -1,9 +1,9 @@
 # Pendientes de implementación — Portal Hospital V2
 
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
-**Última actualización:** 2026-06-05 (cierre épica blindaje GSO)  
-**Rama / release:** `master` · tag **`v2.6.1-blindaje-gso`** (`669c353`) · PR [#2](https://github.com/jorgemosto1981/portal-hospital-v2/pull/2)  
-**Sesión / continuidad:** índice corto: [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · RFC: [`RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md`](./RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md) · cuerpo PR blindaje: [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md)
+**Última actualización:** 2026-06-05 (**PAUSA** — US-17 código cerrado; remediación RRHH pendiente)  
+**Rama / release:** `master` @ `352692b` · tag **`v2.6.1-blindaje-gso`** · PR blindaje [#2](https://github.com/jorgemosto1981/portal-hospital-v2/pull/2) · PR US-17 [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3) **mergeado**  
+**Sesión / continuidad:** **RETOMAR** [`HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md`](./HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md) · índice: [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · RFC: [`RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md`](./RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md)
 
 ---
 
@@ -63,9 +63,9 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | **US-8** | P1 | Revisar gates modales turno con mes cerrado / `ASI-GSO-001` | Modales gestión turno |
 | **US-11** | P2 | Unificar mensaje materialización equipo vs titular | `useGrillaMesVista.js`, `grillaMaterializacionToast.js` |
 | **US-13** | P1 | Matriz permisos teoría (doc → código) | Disperso plan / override / HLg |
-| **US-17** | P0 (ops) | Inventario 2026-06-05: 135 huecos US-9 → **9 ALTA** + **126 MEDIA** (severidad vs `vis_*`) · **remediación RRHH pendiente** | [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md) · PR [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3) |
+| **US-17** | P0 (ops) | **✅ Código cerrado** (`master`, audit + severidad ALTA/MEDIA) · **⏳ Remediación RRHH:** 135 huecos → **9 ALTA** + **126 MEDIA** (inventario 2026-06-05) | [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md) · handoff [`HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md`](./HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md) |
 
-**Orden sugerido (restante):** US-17 (ops) → US-3 escenario A + US-14 completo → US-15 → resto (ver análisis §5).
+**Orden sugerido (restante):** US-17 remediación (ops RRHH, re-audit) **en paralelo** con US-3 escenario A + US-14 completo → US-15 → resto (ver análisis §5).
 
 **Nota:** Piloto junio Sala **operativo** en BD; §2.1 es **defensa** desplegada ante regresión huecos/blanco. **No** sustituye remediación histórica (**US-17**) ni RFC plan paralelo (§1bis).
 
@@ -84,7 +84,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | **4** | HLg inmutable, `purgaAgentePlanesPorHlg`, anulación/cierre | ✅ | `catalogosLaborales.js`, `purgaAgentePlanesPorHlg.js` (`a245d86`) |
 | **5** | Manual/glosario, criterios §6.7, checklist E2E doc | ✅ | `627a435` |
 
-**Relación con backlog anterior:** cierra **F2 O-P1-4** / roadmap **2.5** (plan usuario nuevo §19.6) y el incidente “incorporar degrada principal a `EN_REVISION`”. **Blindaje huecos:** cerrado §2.1 (`v2.6.1`). **Sigue abierto:** US-17 (inventario global), reconciliación ⚠️ (§2.2).
+**Relación con backlog anterior:** cierra **F2 O-P1-4** / roadmap **2.5** (plan usuario nuevo §19.6) y el incidente “incorporar degrada principal a `EN_REVISION`”. **Blindaje huecos:** cerrado §2.1 (`v2.6.1`). **US-17 inventario (código):** cerrado en `master`. **Sigue abierto:** US-17 remediación ops, reconciliación ⚠️ (§2.2).
 
 **Opcional P2 (no bloquea RFC):** [`RFC_ALERTA_DIVERGENCIA_PLAN_VS_GRILLA_UX_V2.md`](./RFC_ALERTA_DIVERGENCIA_PLAN_VS_GRILLA_UX_V2.md) (**FUX-OPT-5**) — aviso on-demand plan foto vs grilla operativa.
 
