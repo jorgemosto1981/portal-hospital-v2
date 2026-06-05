@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import Card from "../../components/ui/Card.jsx";
 import {
@@ -27,6 +28,10 @@ import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
 import { claimsIncludeJefe, claimsIncludeRrhh } from "../../features/routing/portalRole.js";
 import GrillaMensualEditor from "./planes/GrillaMensualEditor.jsx";
+import {
+  contarHuecosEnPlanMensual,
+  tooltipBloqueoHuecosPlan,
+} from "./planes/planHuecosTurnoUtils.js";
 import { guardarPlanMensualDatosSchema } from "../../schemas/planTurnoServicio.schema.js";
 import PlanPerpetualViewer from "./planes/PlanPerpetualViewer.jsx";
 import BadgeEstadoPlan, { LABEL_ESTADO } from "../../components/ui/BadgeEstadoPlan.jsx";
@@ -189,6 +194,7 @@ function labelActorHistorial(h) {
 }
 
 export default function PlanTurnoServicioPage() {
+  const [searchParams] = useSearchParams();
   const { user } = useAuthSession();
   const { claims } = useAuthClaims(user);
   const esRrhh = claimsIncludeRrhh(claims);
@@ -197,8 +203,15 @@ export default function PlanTurnoServicioPage() {
   const mostrarAprobacionTurnos = esRrhh || (esJefe && tieneGruposHijos);
   const personaId = String(claims?.persona_id || "").trim();
 
-  const [grupoId, setGrupoId] = useState("");
-  const [periodo, setPeriodo] = useState(periodosVentanaJefe()[1]);
+  const periodosPermitidosInicial = useMemo(() => periodosVentanaJefe(), []);
+  const periodoDesdeUrl = String(searchParams.get("periodo") || "").trim();
+  const grupoDesdeUrl = String(searchParams.get("grupo_id") || "").trim();
+  const [grupoId, setGrupoId] = useState(() => grupoDesdeUrl);
+  const [periodo, setPeriodo] = useState(() =>
+    periodoDesdeUrl && periodosPermitidosInicial.includes(periodoDesdeUrl)
+      ? periodoDesdeUrl
+      : periodosPermitidosInicial[1],
+  );
   const [planes, setPlanes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -211,7 +224,7 @@ export default function PlanTurnoServicioPage() {
   const [gruposPorPeriodo, setGruposPorPeriodo] = useState({});
   const [gruposCargando, setGruposCargando] = useState(false);
   const [resumenGrupoPeriodo, setResumenGrupoPeriodo] = useState({});
-  const periodosPermitidos = useMemo(() => periodosVentanaJefe(), []);
+  const periodosPermitidos = periodosPermitidosInicial;
 
   const abrirPlanDetalle = useCallback((plan) => {
     setPlanDetalle(plan);
@@ -354,8 +367,18 @@ export default function PlanTurnoServicioPage() {
     const gruposMesActual = gruposPorPeriodo[periodo] || [];
     if (!gruposMesActual.length) return;
     if (grupoId && gruposMesActual.some((g) => g.id === grupoId)) return;
+    const desdeUrl = String(searchParams.get("grupo_id") || "").trim();
+    if (desdeUrl && gruposMesActual.some((g) => g.id === desdeUrl)) {
+      setGrupoId(desdeUrl);
+      return;
+    }
     setGrupoId(gruposMesActual[0].id);
-  }, [periodo, gruposPorPeriodo, grupoId]);
+  }, [periodo, gruposPorPeriodo, grupoId, searchParams]);
+
+  useEffect(() => {
+    const p = String(searchParams.get("periodo") || "").trim();
+    if (p && periodosPermitidos.includes(p) && p !== periodo) setPeriodo(p);
+  }, [searchParams, periodosPermitidos, periodo]);
 
   const showFeedback = (msg) => {
     setFeedback(msg);
@@ -401,6 +424,17 @@ export default function PlanTurnoServicioPage() {
     setOperando(true);
     try {
       let res;
+      const planRef = planes.find((p) => p.id === planId);
+      const huecosPersistidos =
+        planRef?.tipo_plan === "mensual" ? contarHuecosEnPlanMensual(planRef) : 0;
+      if (
+        (accion === "enviar" || accion === "aprobar") &&
+        huecosPersistidos > 0
+      ) {
+        setError(tooltipBloqueoHuecosPlan(huecosPersistidos));
+        showFeedback("Acción bloqueada: corregí los huecos de turno en el editor del plan.");
+        break;
+      }
       switch (accion) {
         case "enviar":
           if (!extras?.confirmarEnvio) {
@@ -480,7 +514,7 @@ export default function PlanTurnoServicioPage() {
     } finally {
       setOperando(false);
     }
-  }, [cargar, cargarResumenGrupos]);
+  }, [cargar, cargarResumenGrupos, planes]);
 
   const grupoLabel = useMemo(() => {
     const g = gruposDisponibles.find((x) => x.id === grupoId);
@@ -489,6 +523,14 @@ export default function PlanTurnoServicioPage() {
 
   const planPrincipalMes = useMemo(() => planPrincipalCanonico(planes), [planes]);
   const planIncorporacionMes = useMemo(() => planIncorporacionActivo(planes), [planes]);
+  const huecosPlanIncorporacion = useMemo(
+    () => contarHuecosEnPlanMensual(planIncorporacionMes),
+    [planIncorporacionMes],
+  );
+  const huecosPlanOpciones = useMemo(
+    () => (planOpciones?.plan ? contarHuecosEnPlanMensual(planOpciones.plan) : 0),
+    [planOpciones],
+  );
 
   const abrirEditorIncorporacion = useCallback(
     (planInc, agentesNuevos = []) => {
@@ -846,9 +888,14 @@ export default function PlanTurnoServicioPage() {
                     planIncorporacionMes.estado === "EN_REVISION") && (
                     <button
                       type="button"
-                      disabled={operando}
+                      disabled={operando || huecosPlanIncorporacion > 0}
+                      title={
+                        huecosPlanIncorporacion > 0
+                          ? tooltipBloqueoHuecosPlan(huecosPlanIncorporacion)
+                          : undefined
+                      }
                       onClick={() => void handleTransicion("enviar", planIncorporacionMes.id)}
-                      className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                      className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {planIncorporacionMes.estado === "EN_REVISION" ? "Reenviar" : "Enviar"}
                     </button>
@@ -938,9 +985,10 @@ export default function PlanTurnoServicioPage() {
               {(planOpciones.plan.estado === "BORRADOR" || planOpciones.plan.estado === "EN_REVISION") && (
                 <button
                   type="button"
-                  disabled={operando}
+                  disabled={operando || huecosPlanOpciones > 0}
+                  title={huecosPlanOpciones > 0 ? tooltipBloqueoHuecosPlan(huecosPlanOpciones) : undefined}
                   onClick={() => void handleTransicion("enviar", planOpciones.plan.id)}
-                  className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                  className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {planOpciones.plan.estado === "EN_REVISION" ? "Reenviar" : "Enviar"}
                 </button>

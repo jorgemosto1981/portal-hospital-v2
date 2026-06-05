@@ -37,6 +37,7 @@ const {
   buildPlanMetaPayload,
   planRolDeDoc,
 } = require("./planTurnoServicioMeta");
+const { assertPlanSinHuecosTurno } = require("./validacionesPlanTurno");
 const {
   ESTADOS_INCORPORACION_FLUJO_ACTIVO,
   esPlanIncorporacionActivo,
@@ -484,6 +485,7 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
       agentes: agentesParaEnriquecer,
     });
     assertAgentesEnriquecidos(agentesParaEnriquecer, agentesEnriquecidos);
+    assertPlanSinHuecosTurno(agentesEnriquecidos);
     especificos.agentes = agentesEnriquecidos;
   }
 
@@ -659,6 +661,8 @@ async function ejecutarAprobarPlanIncorporacion({
     assertPlanAprobarORechazar(request, plan, aprobacionPendiente);
   }
 
+  assertPlanSinHuecosTurno(plan.agentes);
+
   const warnings = [];
   const overridesEncontrados = await detectarOverridesFantasma(plan);
   if (overridesEncontrados.length > 0 && !confirmarInvalidarOverrides) {
@@ -817,6 +821,8 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
       confirmarInvalidarOverrides,
     });
   }
+
+  assertPlanSinHuecosTurno(plan.agentes);
 
   const aprobacionPendiente =
     plan.aprobacion_pendiente || (await resolverAprobacionPendientePlan(db, plan));
