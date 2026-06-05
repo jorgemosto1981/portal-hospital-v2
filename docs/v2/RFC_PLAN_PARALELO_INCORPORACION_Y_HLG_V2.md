@@ -144,7 +144,7 @@ Script: [`scripts/fase0-rfc-plan-paralelo-cleanup.mjs`](../../scripts/fase0-rfc-
 | **2** | Backend `plt_inc` — **hecho**: `iniciarIncorporacionPlanMensual`, `guardar` en hijo, `aprobar` merge, `materializarGrupoMes({ personaIdsFilter })` |
 | **3** | UI jefe + bandeja RRHH + banner dual — **hecho** |
 | **4** | HLg inmutabilidad régimen/grupo, `purgaAgentePlanesPorHlg`, `rrhhEliminarHlgAnulada`, integración `rrhhDeshabilitarHlg` — **hecho** |
-| **5** | Tests E2E + criterios GSO |
+| **5** | Deploy hosting, checklist E2E incorporación + purga HLg, criterios GSO §6.7, manual ayuda — **hecho** (jun 2026) |
 
 ---
 

@@ -12,6 +12,7 @@
 - [`GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md`](./GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md) — “efecto observador” al listar equipo  
 - [`RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md`](./RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md) — histórico VER plan vs operativo  
 - [`HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md`](./HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md) — Plan > HLG
+- [`RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md`](./RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md) — plan paralelo `plt_inc`, purga HLg, pendiente incorporación vs fantasmas
 
 ---
 
@@ -362,6 +363,37 @@ En el **as-built** no existe un único botón “editar teoría de celda”. La 
 
 Detalle: [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md).
 
+### 6.7 Incorporación paralela, HLg y teoría en GSO (jun 2026 — Fase 5)
+
+**Objetivo:** no confundir tres situaciones distintas al leer equipo/titular ni al auditar `plt_*`.
+
+| Concepto | Qué es | Efecto en capa 1 (GSO) | Confundir con |
+| :--- | :--- | :--- | :--- |
+| **Plan operativo habilitado** | `plt_*` principal `plan_rol: principal`, `estado: HABILITADO` | Teoría vigente del mes para agentes **ya planificados** en ese documento | Plan en revisión del mismo mes |
+| **Pendiente de incorporación** | Agente con HLg vigente en el grupo pero **aún no** en `agentes[]` del plan operativo; turnos en curso en `plt_inc` (`plan_rol: incorporacion`, `BORRADOR` / `EN_REVISION` / `ENVIADO`) | Hasta el **merge** aprobado: el agente nuevo **no** debe aparecer como fila del plan habilitado en GSO equipo; tras merge, materialización acotada lo incorpora al operativo | **Fantasma** de plan ni **hueco** P0 |
+| **Fantasma de plan** | `plt_*` legado u huérfano (sin slot operativo válido, remediado a `CERRADO` / `eliminado` en saneamiento) | No debe alimentar listados activos ni teoría del mes | Pendiente incorporación |
+| **Baja / cierre HLg** | `rrhhDeshabilitarHlg` (corte con fecha) o `rrhhEliminarHlgAnulada` (anulación + purga planes) | Días posteriores al corte: sin dotación en grupo (copy **Q3-2**); purga quita al agente de planes futuros/posteriores según RFC Fase 4 | Agente “en blanco” por plan incompleto (escenario C) |
+| **Régimen fijo/rotativo sin filas en plan** | Grupo sin agentes planificados en grilla mensual | Teoría desde HLg + patrón; editor plan **solo lectura** — no es pendiente incorporación si no hay `agentes_nuevos` en contexto | Plan mensual planificado vacío (error US-9) |
+
+**Criterios de aceptación (resumen BDD):**
+
+- **Dado** un mes con plan operativo `HABILITADO` y un `plt_inc` activo para agentes nuevos  
+  **Cuando** el jefe abre GSO equipo del mismo `gdt` y mes  
+  **Entonces** la dotación visible coincide con el **operativo mergeado** (no con el borrador de incorporación)  
+  **Y** los agentes solo en `plt_inc` no se interpretan como “fantasma” ni como celda blanca por ausencia de HLg.
+
+- **Dado** incorporación aprobada (`plt_inc` → `MERGEADO`)  
+  **Cuando** RRHH habilita el merge o el flujo de aprobación finaliza  
+  **Entonces** `agentes[]` del operativo incluye a los nuevos sin reescribir filas preexistentes  
+  **Y** `materializarGrupoMes` con filtro de personas actualiza `vis_*` de los incorporados.
+
+- **Dado** anulación o deshabilitación HLg con purga  
+  **Cuando** el agente tenía turnos en planes posteriores al evento  
+  **Entonces** la teoría deja de proyectarse en esos planes/meses (sin overrides huérfanos tipo “fantasma teórico” post-HLg)  
+  **Y** licencias históricas en `eventos[]` siguen visibles donde aplica (US-5 / Q3-2).
+
+**UI planificación (fuera de GSO pero gobierna teoría):** vista mensual jefe muestra **dos tarjetas** cuando corresponde: plan operativo (lectura si habilitado) e incorporación (editable en `BORRADOR` / `EN_REVISION`). Estado `MERGEADO` en hijo es terminal de auditoría; el slot activo del mes sigue siendo el operativo `HABILITADO`.
+
 ---
 
 ## 7. Definition of Done (épica 1 + remediación)
@@ -373,6 +405,7 @@ Detalle: [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACT
 - [x] **US-17 (piloto):** junio 2026 Sala replanificado (`plt_01KT9…`) — BD + UI sin blancos (§6.6).
 - [ ] **US-17 (global):** inventario resto `gdt`/meses con hueco/blanco.
 - [ ] **US-9** activo: ningún plan nuevo habilitado con laborable/guardia sin turno o franco.
+- [x] **Incorporación paralela (§6.7):** piloto jun 2026 Sala — `plt_inc` → `MERGEADO`, operativo intacto; UI tarjetas duales desplegada (hosting jun 2026).
 
 ---
 

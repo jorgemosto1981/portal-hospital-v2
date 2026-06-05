@@ -5,6 +5,8 @@
 **Backlog implementación (tickets US):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) §2.  
 **Nota:** Los datos del piloto junio Sala ya cumplen plan + `vis_*`; varias brechas son **defensas** para no repetir el incidente si vuelve un plan con huecos o la UI regresa a ocultar celdas.
 
+**Actualización Fase 5 (jun 2026):** incorporación paralela y purga HLg — ver §8 y criterios §6.7 en [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md).
+
 ---
 
 ## 1. Resumen ejecutivo
@@ -31,7 +33,7 @@
 | **US-2** | P0 | Licencia sobre plan incompleto (B) | Con licencia, `tieneLicencia` → celda visible | **OK** si hay `codigo_grilla` |
 | **US-3** | P1 | ⚠️ teoría/fichada post-licencia (A, Q9-4/5) | Sin badge en `GrillaMesCeldaLicencia` / tabla | **Sí** |
 | **US-4** | P1 | 🔗 fan-out (E) | Parcial en etiquetas; sin ícono estándar acta | **Parcial** |
-| **US-5** | P1 | 📅 post-purge HLg (F, Q3-2) | Copy no unificado en UI | **Sí** |
+| **US-5** | P1 | 📅 post-purge HLg (F, Q3-2) | Copy no unificado en GSO; backend Fase 4: `purgaAgentePlanesPorHlg` + deshabilitar/anular HLg | **Parcial** — lógica purge alineada RFC; copy UI GSO pendiente |
 | **US-6** | P2 | ⏳ lazy (G) | Variante `vacio` en `varianteCeldaOperativa` | **Parcial** |
 | **US-7** | P2 | ℹ️ licencia en franco (D) | Se ve F + licencia (rosa en captura piloto) | **Parcial** (hint opcional) |
 | **US-8** | P1 | 🔒 mes cerrado (H) | `gso_solo_lectura`, acciones RRHH período | **Parcial** — revisar gates en modales turno |
@@ -144,6 +146,30 @@ Flujo actual:
 | Habilitar plan | `functions/modules/asistencia/planesTurnoServicio.js` |
 | Toast equipo | `web/src/features/grilla/useGrillaMesVista.js` (~308–317) |
 | Sanitize fichada | `functions/modules/shared/grillaVisSanitizeGso.js` |
+| Incorporación `plt_inc` | `functions/modules/asistencia/planIncorporacionParalelo.js`, `planTurnoServicioMeta.js` |
+| Purga por HLg | `functions/modules/asistencia/purgaAgentePlanesPorHlg.js` |
+| UI tarjetas duales | `web/src/pages/jefe/PlanTurnoServicioPage.jsx`, `planRolUtils.js` |
+
+---
+
+## 8. Incorporación paralela y pendiente vs fantasma (as-built Fase 3–5)
+
+| Tema | Criterio (§6.7) | As-built | Gap |
+| :--- | :--- | :--- | :--- |
+| Slot operativo mensual | Un `HABILITADO` principal por `gdt`+mes | `planPrincipalCanonico`, listado excluye `MERGEADO` salvo filtro explícito | **OK** |
+| Agentes nuevos | `plt_inc` editable; operativo no se pisa | `iniciarIncorporacionPlanMensual`, editor filtra `agentes_nuevos` | **OK** (fix grilla vacía jun 2026) |
+| Merge | Hijo `MERGEADO`, append `agentes[]` | Callable aprobar + transacción RFC | **OK** piloto |
+| GSO antes del merge | No mostrar borrador incorporación como teoría oficial | Listado GSO usa materialización del operativo / HLg; agente nuevo sin merge puede no figurar en tabla equipo | **OK** (comportamiento esperado) |
+| CHAPARRO / HLg baja | `no_laborable` o fuera de dotación, no “hueco” | Piloto §6.6 | **OK** |
+| Fantasma `plt_*` | No en listado activo | `CERRADO` / `eliminado` post Fase 0 | **OK** histórico |
+| Purga masiva | Sin teoría post HLg en planes afectados | `purgaAgentePlanesPorHlg`; límite 450 → `PLT-PURGE-002` (mensaje técnico) | **OK** backend; **no** documentar código en ayuda usuario |
+
+**Regresión E2E recomendada (manual / piloto):**
+
+1. Mes con operativo `HABILITADO` + banner agentes nuevos → crear `plt_inc` → tarjeta violeta `BORRADOR`.
+2. Editar solo filas nuevas → enviar → `ENVIADO` / superior → RRHH bandeja etiqueta **Incorporación** → aprobar → `MERGEADO` + feedback merge.
+3. GSO equipo: conteo filas = operativo post-merge; sin blancos en días laborables de incorporados.
+4. Solo operativo (sin `plt_inc`): una tarjeta verde lectura (ej. grupo administrativo junio).
 
 ---
 
