@@ -16,6 +16,7 @@ const {
   findSolapeHlgMismoGrupo,
   assertRegimenHorarioActivo,
   assertHlgRegimenNoModificadoEnEdicion,
+  assertHlgGrupoNoModificadoEnEdicion,
   assertHlgDentroDeHlc,
   assertHldDentroDeHlc,
   buildWarningReconciliacionCarga,
@@ -507,7 +508,17 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
   assertRegimenHorarioActivo(regimenSnap, regimenHorarioId);
   const ref = db.collection(colRaw).doc(id);
   const existing = await ref.get();
+  if (existing.exists) {
+    const est = String(existing.get("estado") || "").trim().toUpperCase();
+    if (existing.get("eliminado") === true || est === "ANULADO") {
+      throw new HttpsError(
+        "failed-precondition",
+        "[VAL-HLG-ANU-006] La asignación HLg está anulada y no admite edición.",
+      );
+    }
+  }
   assertHlgRegimenNoModificadoEnEdicion(existing, regimenHorarioId);
+  assertHlgGrupoNoModificadoEnEdicion(existing, grupoId);
   const regimenDoc = regimenSnap.data();
   const regimenFechaAncla = laboralYmdOrNull(datos.regimen_fecha_ancla);
   const payload = {
@@ -897,6 +908,22 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
     const actorPersonaId = toNullableTrimmedString(request.auth && request.auth.token && request.auth.token.persona_id);
 
     const fechaFin = resolveFechaCierre(hlg.fecha_fin, fechaCorte);
+
+    const { ejecutarPurgaAgentePlanesPorHlg } = require("./asistencia/purgaAgentePlanesPorHlg");
+    const purgaPlanes = await ejecutarPurgaAgentePlanesPorHlg(db, {
+      hlgId,
+      personaId: personaHlg,
+      modo: "cierre_hlg",
+      fechaCorteYmd: fechaCorte,
+      motivoPurga: "deshabilitar_hlg",
+    });
+    if (!purgaPlanes.ok) {
+      throw new HttpsError(
+        "failed-precondition",
+        purgaPlanes.message || "[PLT-PURGE-003] No se pudo purgar planes antes de deshabilitar la HLg.",
+      );
+    }
+
     await hlgRef.set(
       {
         activo: false,
@@ -1052,6 +1079,7 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
       fecha_corte_aplicada: fechaCorte,
       warnings,
       evento_id: eventoId,
+      purga_planes: purgaPlanes,
       purge_capa_teorica: purgeResumen,
       materializacion_sucesor: materializacionSucesor,
     };
@@ -1063,6 +1091,148 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
       "internal",
       `[VAL-HLG-DES-500] No se pudo deshabilitar la asignacion HLg: ${msg}`,
     );
+  }
+});
+
+const rrhhEliminarHlgAnulada = onCall({ invoker: "public" }, async (request) => {
+  try {
+    const d = request.data && typeof request.data === "object" ? request.data : {};
+    const hlgId = toNullableTrimmedString(d.hlg_id);
+    const motivo = toNullableTrimmedString(d.motivo);
+
+    if (!hlgId) {
+      throw new HttpsError(
+        "invalid-argument",
+        "[VAL-HLG-ANU-001] hlg_id requerido para anular la asignación.",
+      );
+    }
+
+    const hlgRef = db.collection("historial_laboral_grupos").doc(hlgId);
+    const hlgSnap = await hlgRef.get();
+    if (!hlgSnap.exists) {
+      throw new HttpsError("not-found", "[VAL-HLG-ANU-002] No se encontró la asignación HLg.");
+    }
+    const hlg = hlgSnap.data() || {};
+    const personaHlg = toNullableTrimmedString(hlg.persona_id);
+    if (!laboralEscrituraSinAssertRrhh()) assertEscrituraLaboral(request, personaHlg);
+
+    if (hlg.eliminado === true || String(hlg.estado || "").trim().toUpperCase() === "ANULADO") {
+      throw new HttpsError(
+        "failed-precondition",
+        "[VAL-HLG-ANU-003] La asignación HLg ya está anulada.",
+      );
+    }
+
+    const { ejecutarPurgaAgentePlanesPorHlg } = require("./asistencia/purgaAgentePlanesPorHlg");
+    const purgaPlanes = await ejecutarPurgaAgentePlanesPorHlg(db, {
+      hlgId,
+      personaId: personaHlg,
+      modo: "anulacion",
+      motivoPurga: "anular_hlg",
+    });
+    if (!purgaPlanes.ok) {
+      throw new HttpsError(
+        "failed-precondition",
+        purgaPlanes.message || "[PLT-PURGE-004] Purga de planes falló; la HLg no fue anulada.",
+      );
+    }
+
+    const now = FieldValue.serverTimestamp();
+    const actorUid = (request.auth && request.auth.uid) || null;
+    const actorPersonaId = toNullableTrimmedString(request.auth && request.auth.token && request.auth.token.persona_id);
+
+    let eventoId = null;
+    try {
+      eventoId = await crearEventoDatosLaborales({
+        tipoEventoId: "cfg_tev_datos_laborales",
+        accion: "anular_hlg",
+        personaId: personaHlg,
+        actorUid,
+        actorPersonaId,
+        entidad: "historial_laboral_grupos",
+        contexto: {
+          id: hlgId,
+          hlg_id: hlgId,
+          motivo: motivo || null,
+          purga_planes: purgaPlanes,
+        },
+        cambios: [
+          {
+            campo: "estado",
+            label: "Estado de asignación",
+            antes: hlg.estado || "activo",
+            despues: "ANULADO",
+            tipo: "string",
+          },
+        ],
+      });
+    } catch (eventoErr) {
+      console.error("rrhhEliminarHlgAnulada: fallo evento auditoria", eventoErr);
+      throw new HttpsError(
+        "aborted",
+        "[VAL-HLG-ANU-004] No se registró el evento de auditoría; la HLg no fue anulada.",
+      );
+    }
+
+    await hlgRef.set(
+      {
+        activo: false,
+        eliminado: true,
+        estado: "ANULADO",
+        anulado_en: now,
+        anulado_motivo: motivo || null,
+        actualizado_en: now,
+      },
+      { merge: true },
+    );
+
+    const grupoHlg = toNullableTrimmedString(hlg.grupo_de_trabajo_id);
+    const fechaInicioHlg = await resolveHlgFechaInicioYmd(hlg);
+    let purgeResumen = null;
+    if (personaHlg && grupoHlg && fechaInicioHlg) {
+      const { purgeCapaTeoricaGdtRango, ymdFinMesSiguiente } = require("./asistencia/purgeCapaTeoricaGdtRango");
+      const { materializarRango } = require("./asistencia/materializarRango");
+      const hastaPurge = ymdFinMesSiguiente(fechaInicioHlg);
+      try {
+        purgeResumen = await purgeCapaTeoricaGdtRango(db, {
+          personaId: personaHlg,
+          gdt: grupoHlg,
+          desdeYmd: fechaInicioHlg,
+          hastaYmd: hastaPurge,
+          motivo: motivo || "anular_hlg",
+        });
+      } catch (purgeErr) {
+        console.error("rrhhEliminarHlgAnulada: purgeCapaTeoricaGdtRango", purgeErr);
+      }
+      try {
+        await materializarRango(db, {
+          personaId: personaHlg,
+          grupoId: grupoHlg,
+          fechaDesdeYmd: fechaInicioHlg,
+          fechaHastaYmd: hastaPurge,
+          motivo: "anular_hlg_remat_persona",
+          origenEventoId: hlgId,
+          ignorarPeriodoCerrado: true,
+        });
+      } catch (matErr) {
+        console.error("rrhhEliminarHlgAnulada: materializarRango", matErr);
+      }
+    }
+
+    if (personaHlg) await refreshClaimsLaboralPersona(personaHlg);
+
+    return {
+      ok: true,
+      hlg_id: hlgId,
+      evento_id: eventoId,
+      purga_planes: purgaPlanes,
+      purge_capa_teorica: purgeResumen,
+    };
+  } catch (err) {
+    if (err instanceof HttpsError) throw err;
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("rrhhEliminarHlgAnulada", err);
+    throw new HttpsError("internal", `[VAL-HLG-ANU-500] No se pudo anular la HLg: ${msg}`);
   }
 });
 
@@ -1227,5 +1397,6 @@ module.exports = {
   guardarRegistroLaboralTemporal,
   rrhhDeshabilitarHlc,
   rrhhDeshabilitarHlg,
+  rrhhEliminarHlgAnulada,
   listarReadModelLaboralOperativoTemporal,
 };

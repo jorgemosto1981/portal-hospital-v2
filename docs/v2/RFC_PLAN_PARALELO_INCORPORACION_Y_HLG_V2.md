@@ -1,7 +1,7 @@
 ---
 name: Plan paralelo incorporación y ciclo HLg
 status: aprobado-producto
-fase_implementacion: "Fases 0–2 backend core 2026-06-04; Fases 3–5 pendientes"
+fase_implementacion: "Fases 0–4 backend; Fase 3 UI; Fase 5 QA/GSO pendiente"
 piloto: "Sala junio 2026 (gdt_01KQA6QCA8TDQK9YBTHKYA4R2V)"
 ---
 
@@ -13,8 +13,8 @@ Brecha detectada: al **incorporar** agentes en un mes ya **HABILITADO**, el cód
 
 Principios:
 
-1. **Sin compatibilidad hacia atrás en HLg anuladas:** las HLg deshabilitadas o anuladas se **borran físicamente** de `historial_laboral_grupos`. Trazabilidad mínima en `evt_*` (B6), no documento HLg huérfano.
-2. **Inmutabilidad del régimen en HLg vigente:** prohibido cambiar `regimen_horario_id` en una fila existente. Cambio de régimen = **cerrar** HLg (adelantar `fecha_fin`) o **eliminar** + **alta nueva**.
+1. **HLg anulada = borrado lógico permanente (compliance):** las asignaciones dadas de baja por error de carga o anulación RRHH **no se eliminan físicamente** del datastore. El documento `hlg_*` permanece con `eliminado: true`, `estado: ANULADO`, `activo: false`, más **`evt_*` obligatorio** antes del cierre lógico. Los lectores operativos (solape, materialización, planes) **ignoran** HLg anuladas. *La Fase 0 ejecutó un saneamiento puntual con delete físico de legado; no es el flujo productivo a futuro.*
+2. **Inmutabilidad de HLg vigente:** prohibido cambiar `regimen_horario_id` o `grupo_de_trabajo_id` en una fila existente (`VAL-HLG-018`, `VAL-HLG-IMM-002`). Cambio de régimen o grupo = **cerrar** HLg (`fecha_fin`) + **alta nueva** HLg.
 3. **Plan principal estable:** el `plt_*` con `plan_rol=principal` y `estado=HABILITADO` **no muta** salvo **merge explícito** tras aprobar un `plt_inc` o flujos RRHH distintos (revertir plan completo, fuera de este RFC).
 4. **Regímenes planificado vs fijo/rotativo:**
    - **Planificado** sin fila en plan principal → flujo **`plt_inc`** + aprobación RRHH (turnos explícitos).
@@ -61,11 +61,16 @@ Vínculo: `plan_padre_id` → id del principal. Un principal **HABILITADO** pued
 
 ## 3. Eje B — HLg y efecto cascada en `plt_*`
 
-### 3.1 Eliminación / anulación HLg
+### 3.1 Anulación HLg (`rrhhEliminarHlgAnulada`)
 
-- **BD:** `delete` del documento `hlg_*` tras cascada exitosa.
-- **Evento:** `crearEventoDatosLaborales` con refs antes del delete.
-- **Planes:** búsqueda por `agentes_hlg_ids` `array-contains` (campo denormalizado, Fase 1). **Purga selectiva:** quitar bloque del agente en `agentes[]`. Si `agentes[]` queda vacío → borrado lógico del plan (`eliminado: true`) o política mensual acordada.
+Orden **inamovible**:
+
+1. **Purga planes** (`purgaAgentePlanesPorHlg`, modo `anulacion`) en transacción. Si falla → **no** se toca la HLg.
+2. **`evt_*`** (`accion: anular_hlg`). Si falla auditoría → **no** se anula la HLg.
+3. **Soft delete** en `hlg_*`: `eliminado: true`, `estado: ANULADO`, `activo: false`, metadatos `anulado_en` / `anulado_motivo`.
+4. **Capa teórica:** `purgeCapaTeoricaGdtRango` + `materializarRango` **solo** `persona_id` afectada (sin `materializarGrupoMes` del grupo).
+
+**Planes:** query `agentes_hlg_ids` `array-contains`. Purga selectiva del bloque en `agentes[]` y arrays denormalizados. Si `agentes[]` queda vacío → `plt_*` con `eliminado: true` (y `HABILITADO` → `CERRADO` si aplica).
 
 ### 3.2 Cierre HLg (adelanto `fecha_fin`)
 
@@ -77,10 +82,11 @@ Vínculo: `plan_padre_id` → id del principal. Un principal **HABILITADO** pued
 
 No existe como edición. Flujo: cierre HLg vieja → nueva HLg → si planificado y mes con principal habilitado → `plt_inc`.
 
-### 3.4 Atomicidad
+### 3.4 Atomicidad y límite de transacción
 
-- Batch/transacción: si falla actualización de algún `plt_*`, **no** borrar HLg.
-- Límite Firestore 500 ops: en piloto, fallar con listado de `plt_id` si excede umbral.
+- Transacción Firestore en purga de planes: si falla cualquier `plt_*`, **no** se deshabilita ni anula la HLg.
+- **Límite operativo:** máx. **450** writes por transacción de purga (`PLT-PURGE-002`). Si una HLg referencia más planes que el límite, el callable **aborta antes** de mutar la HLg y devuelve `plan_ids` afectados para intervención RRHH (purga asistida por lotes o revisión de datos). *No hay purga parcial silenciosa.*
+- **Deshabilitar HLg** (`rrhhDeshabilitarHlg`): misma purga previa (modo `cierre_hlg`), luego `activo: false` + materialización acotada por persona.
 
 ---
 
@@ -117,18 +123,13 @@ Tras habilitar, el snapshot es inmutable **por agente ya aprobado**. Al merge de
 
 ---
 
-## 6. Fase 0 — Limpieza BD (sin compatibilidad atrás)
+## 6. Fase 0 — Saneamiento one-shot (histórico, no flujo productivo)
 
-Script: [`scripts/fase0-rfc-plan-paralelo-cleanup.mjs`](../../scripts/fase0-rfc-plan-paralelo-cleanup.mjs)
+Script: [`scripts/fase0-rfc-plan-paralelo-cleanup.mjs`](../../scripts/fase0-rfc-plan-paralelo-cleanup.mjs). Ejecutado **una vez** para legado previo al RFC (jun 2026). Incluyó delete físico de HLg `activo:false` acumuladas en piloto.
 
-| Paso | Acción |
-|------|--------|
-| 0a | Auditoría: HLg `activo===false`, `plt_*` con `eliminado:true` y `estado:HABILITADO`, refs `hlg_id` huérfanas |
-| 0b | `--apply`: delete físico HLg deshabilitadas |
-| 0c | `--apply`: quitar `agentes[]` que referencien HLg borradas |
-| 0d | `--apply`: normalizar fantasmas → `estado:CERRADO` si `eliminado:true` |
+**A partir de Fase 4**, toda baja/anulación operativa usa **soft delete + `evt_*` + purga** (§3.1). No re-ejecutar delete físico de HLg en producción salvo script de migración explícito y aprobado.
 
-**Evidencia 2026-06-04 Fase 0:** `--apply` — 15 HLg borradas, 3 fantasmas `CERRADO`, 3 planes purgados (21 ops).
+**Evidencia 2026-06-04 Fase 0:** 15 HLg legado purgadas físicamente, 3 `plt_*` fantasmas → `CERRADO`, 3 planes depurados.
 
 **Evidencia 2026-06-04 Fase 1:** `fase1-migrate-plan-paralelo-schema.mjs --apply` — 2 `plt_*` test hard-deleted, 9 planes migrados (`plan_rol`, arrays denormalizados). Índices desplegados vía `firebase deploy --only firestore:indexes` (compuestos + `fieldOverrides` array-contains en `agentes_hlg_ids` / `agentes_persona_ids`).
 
@@ -141,9 +142,9 @@ Script: [`scripts/fase0-rfc-plan-paralelo-cleanup.mjs`](../../scripts/fase0-rfc-
 | **0** | Limpieza BD + este RFC — **hecho** (`fase0-rfc-plan-paralelo-cleanup.mjs`) |
 | **1** | Schema, índices, `MERGEADO`, migración — **hecho** (`planTurnoServicioMeta.js`, `fase1-migrate-plan-paralelo-schema.mjs`, `firebase-v2/firestore.indexes.json`) |
 | **2** | Backend `plt_inc` — **hecho**: `iniciarIncorporacionPlanMensual`, `guardar` en hijo, `aprobar` merge, `materializarGrupoMes({ personaIdsFilter })` |
-| **3** | UI jefe + bandeja RRHH + banner dual |
-| **4** | HLg inmutabilidad régimen, delete físico, `purgaAgentePlanesPorHlg` |
-| **5** | Tests + criterios GSO |
+| **3** | UI jefe + bandeja RRHH + banner dual — **hecho** |
+| **4** | HLg inmutabilidad régimen/grupo, `purgaAgentePlanesPorHlg`, `rrhhEliminarHlgAnulada`, integración `rrhhDeshabilitarHlg` — **hecho** |
+| **5** | Tests E2E + criterios GSO |
 
 ---
 
@@ -155,8 +156,8 @@ Script: [`scripts/fase0-rfc-plan-paralelo-cleanup.mjs`](../../scripts/fase0-rfc-
 
 ---
 
-## 9. Brecha código actual (referencia)
+## 9. Implementación (referencia código)
 
-- [`planesTurnoServicio.js`](../../functions/modules/asistencia/planesTurnoServicio.js): `modo_incorporacion_agentes_nuevos` muta el mismo doc y baja `HABILITADO` → `EN_REVISION`.
-- [`planGrupoAgentesNuevos.js`](../../functions/modules/asistencia/planGrupoAgentesNuevos.js): merge y detección solo planificados — **se reutiliza** en hijo.
-- [`grillaMesAgenteCore.js`](../../functions/modules/shared/grillaMesAgenteCore.js): `obtenerPlanHabilitadoCache` debe filtrar `plan_rol=principal` (Fase 1).
+- [`purgaAgentePlanesPorHlg.js`](../../functions/modules/asistencia/purgaAgentePlanesPorHlg.js) — purga transaccional por `agentes_hlg_ids`.
+- [`catalogosLaborales.js`](../../functions/modules/catalogosLaborales.js) — `rrhhEliminarHlgAnulada`, `rrhhDeshabilitarHlg` + purga previa.
+- [`catalogosShared.js`](../../functions/modules/catalogosShared.js) — `VAL-HLG-018`, `VAL-HLG-IMM-002`.

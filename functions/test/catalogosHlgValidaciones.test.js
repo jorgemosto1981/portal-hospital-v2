@@ -57,4 +57,9 @@ describe("hlgCuentaParaSolapeOperativo", () => {
     assert.equal(hlgCuentaParaSolapeOperativo({ activo: true }), true);
     assert.equal(hlgCuentaParaSolapeOperativo({}), true);
   });
+
+  it("excluye HLg anulada o eliminada", () => {
+    assert.equal(hlgCuentaParaSolapeOperativo({ eliminado: true }), false);
+    assert.equal(hlgCuentaParaSolapeOperativo({ estado: "ANULADO" }), false);
+  });
 });
