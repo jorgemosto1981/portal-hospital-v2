@@ -68,7 +68,7 @@ Referencias: [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](./MANUAL_CAPAS_ORQUESTACI
 | **2.3** | `materializarRango` | ✅ HLg; ⏳ feriado masivo | Feriado 1 día × N agentes |
 | **2.4** | Job día 5 materialización | ✅ Código | **Deploy + smoke dry_run** |
 | **O-P1-3** | GSO M-1 solo lectura (usuario/jefe) | ⏳ | Gates en callables grilla |
-| **2.5** | Plan usuario nuevo §19.6 | ⏳ | Banner + plan paralelo MVP |
+| **2.5** | Plan usuario nuevo §19.6 | ✅ | RFC plan paralelo Fases 0–5 — [`RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md`](./RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md) |
 | **2.6** | Piloto `resolverFijo` + rematerializar UI | ⏳ | Casos D2/D11 |
 | **2.7** | Rematerializar post-régimen/feriado UI | ⏳ | Wire régimen / calendario |
 

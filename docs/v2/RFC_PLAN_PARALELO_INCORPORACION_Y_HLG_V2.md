@@ -1,7 +1,7 @@
 ---
 name: Plan paralelo incorporación y ciclo HLg
 status: aprobado-producto
-fase_implementacion: "Fases 0–4 backend; Fase 3 UI; Fase 5 QA/GSO pendiente"
+fase_implementacion: "Fases 0–5 cerradas (jun 2026) — ver §7"
 piloto: "Sala junio 2026 (gdt_01KQA6QCA8TDQK9YBTHKYA4R2V)"
 ---
 

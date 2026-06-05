@@ -13,6 +13,7 @@
 
 | Área | Alineado hoy | Brecha principal |
 | :--- | :--- | :--- |
+| **Incorporación / HLg (RFC Fase 0–5)** | `plt_inc`, merge `MERGEADO`, purga cascada, tarjetas duales | **OK** — §8; no sustituye US-9/1/16 |
 | **Backend plan** | Habilitar enriquece horarios; soft-delete `eliminado` | **US-9:** no rechaza `laborable`/`guardia` sin `turno_id` al habilitar |
 | **Materialización** | `listarVistaGrillaMesPorGrupo` → `materializarGrupoMes`; licencias no pisadas en worker | Coherente con P6; riesgo si teoría cambia sin ⚠️ (US-3) |
 | **GSO UI equipo/titular** | Licencias, turnos con horario, F, NL, feriados | **US-1/16:** hueco `laborable` sin `rda_*` y sin licencia → `tieneDatos=false` → celda vacía |

@@ -1,9 +1,9 @@
 # Pendientes de implementación — Portal Hospital V2
 
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
-**Última actualización:** 2026-06-04  
+**Última actualización:** 2026-06-05  
 **Rama de trabajo:** `feat/epic-multi-hlg-fase1-execution`  
-**Sesión / continuidad:** [`HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md`](./HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md) · índice corto: [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md)
+**Sesión / continuidad:** RFC plan paralelo Fase 5 (`627a435`) · índice corto: [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · RFC: [`RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md`](./RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md)
 
 ---
 
@@ -57,7 +57,26 @@ Criterios: [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPT
 
 **Orden sugerido:** US-9 → US-1 + US-16 → US-10 → US-3 + US-14 + US-15 → US-17 → resto (ver análisis §5).
 
-**Nota:** Piloto junio Sala **operativo** en BD; las US anteriores son **defensa** ante regresión.
+**Nota:** Piloto junio Sala **operativo** en BD; las US anteriores son **defensa** ante regresión (huecos / blanco UI). **No** sustituyen el RFC plan paralelo (incorporación / HLg), ya cerrado en §1bis.
+
+---
+
+## 1bis. RFC plan paralelo + HLg inmutable — **cerrado (Fases 0–5)**
+
+**SSoT:** [`RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md`](./RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md) · criterios GSO §6.7 · as-built §8 en [`ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md`](./ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md).
+
+| Fase | Contenido | Estado | Referencia código / evidencia |
+|------|-----------|--------|-------------------------------|
+| **0** | Saneamiento BD legado | ✅ | `scripts/fase0-rfc-plan-paralelo-cleanup.mjs` |
+| **1** | Schema `plan_rol`, `MERGEADO`, índices | ✅ | `planTurnoServicioMeta.js`, `fase1-migrate-plan-paralelo-schema.mjs` |
+| **2** | Backend `plt_inc`, merge, materialización filtrada | ✅ | `planesTurnoServicio.js`, `planIncorporacionParalelo.js` |
+| **3** | UI tarjetas duales, bandeja incorporación, banner | ✅ | `PlanTurnoServicioPage.jsx`, `planRolUtils.js` (`f187dff`) |
+| **4** | HLg inmutable, `purgaAgentePlanesPorHlg`, anulación/cierre | ✅ | `catalogosLaborales.js`, `purgaAgentePlanesPorHlg.js` (`a245d86`) |
+| **5** | Manual/glosario, criterios §6.7, checklist E2E doc | ✅ | `627a435` |
+
+**Relación con backlog anterior:** cierra **F2 O-P1-4** / roadmap **2.5** (plan usuario nuevo §19.6) y el incidente “incorporar degrada principal a `EN_REVISION`”. **Sigue abierto:** US-9/1/16 (huecos y anti-blanco), US-17 (inventario global), REL merge/tag.
+
+**Opcional P2 (no bloquea RFC):** [`RFC_ALERTA_DIVERGENCIA_PLAN_VS_GRILLA_UX_V2.md`](./RFC_ALERTA_DIVERGENCIA_PLAN_VS_GRILLA_UX_V2.md) (**FUX-OPT-5**) — aviso on-demand plan foto vs grilla operativa.
 
 ---
 
@@ -98,6 +117,7 @@ Ver [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](./ANALISIS_COHERENCIA_ORQU
 | **O-P2-2** | LAO + cola sin RDA §20.4 | P2 | Excepción con precedente RRHH |
 | **O-P2-3** | Acotar lazy GSO si día 5 + alta HLg cubren | P2 | `grillaMesAgenteCore.js` |
 | **O-P2-4** | Manual RRHH normativo desde `MANUAL_CAPAS_*` | P2 | Validación proceso |
+| **F2-2.5 / O-P1-4** | Plan paralelo incorporación §19.6 + HLg cascada | ✅ | RFC Fases 0–5 — §1bis |
 | **F2-2.1** | Toasts materialización UI unificados | P1 | Metadata `vis_*` ✅; toasts ⏳ |
 | **F2-2.3** | Feriado masivo / rematerializar rango amplio | P1 | Feriado 1 día ✅ |
 | **F2-UX-6** | Auditar todos los callables listado grilla jefe sin `fichadas_reales` | P1 | Parcial `grillaVisSanitizeGso.js` |
@@ -118,7 +138,7 @@ Ver [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](./ANALISIS_COHERENCIA_ORQU
 
 ---
 
-## 7. Qué **no** falta implementar (cerrado 2026-06-04)
+## 7. Qué **no** falta implementar (cerrado hasta 2026-06-05)
 
 | Ámbito | Evidencia |
 |--------|-----------|
@@ -129,13 +149,16 @@ Ver [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](./ANALISIS_COHERENCIA_ORQU
 | F-UX.2 badge F:n | Validado prod |
 | F0 contención O-P0-4,1,5,7 | Smoke prod |
 | F1 cierre período manual | Callable + UI GSO |
+| **RFC plan paralelo + HLg inmutable (0–5)** | §1bis · `f187dff`, `a245d86`, `627a435` |
+| GSO §6.7 pendiente incorporación vs fantasma | Criterios + análisis §8 (E2E manual doc) |
 
 ---
 
 ## 8. Próxima sesión de código (recomendación)
 
-1. **Proceso:** REL-1 merge PR (si aprobado).
-2. **Código P0:** épica GSO **US-9** + **US-1** + **US-16** (un sprint defensivo).
-3. **Paralelo opcional:** F3 **T-05** si prioriza editor plan sobre GSO.
+1. **Proceso:** REL-1 merge PR (incluye RFC plan paralelo + épica F-UX.3/F3 en rama).
+2. **Código P0:** épica GSO defensiva **US-9** + **US-1** + **US-16** (independiente del RFC incorporación).
+3. **Ops P0:** **US-17** inventario planes `HABILITADO` sin huecos.
+4. **Paralelo opcional:** F3 **T-05** o **FUX-OPT-5** (divergencia plan vs grilla).
 
 Actualizar este archivo y [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) al cerrar cada ítem.
