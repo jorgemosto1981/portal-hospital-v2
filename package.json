@@ -25,6 +25,7 @@
     "test:fichadas-esperadas": "node --test functions/test/fichadasEsperadas.test.js",
     "test:grilla-sanitize-gso": "node --test functions/test/grillaVisSanitizeGso.test.js",
     "test:validaciones-plan-turno": "node --test functions/test/validacionesPlanTurno.test.js",
+    "test:blindaje-gso-dry-run": "node --test functions/test/blindajeGsoUs9Us10.dryRun.test.js",
     "test:batch-asistencia-normalize": "node --test functions/test/batchAsistenciaNormalize.test.js",
     "smoke:outbox-batch": "node scripts/smoke-outbox-batch-dev.mjs",
     "smoke:outbox-batch-v2": "node scripts/smoke-outbox-batch-v2-dev.mjs",

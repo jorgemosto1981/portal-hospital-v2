@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -24,6 +24,17 @@ function labelEstado(id) {
   return e || "—";
 }
 
+function planTurnoCorregirPath(grupoTrabajoId, fechaYmd) {
+  const g = String(grupoTrabajoId || "").trim();
+  const ymd = String(fechaYmd || "").trim();
+  const periodo = ymd.length >= 7 ? ymd.slice(0, 7) : "";
+  const params = new URLSearchParams();
+  if (g) params.set("grupo_id", g);
+  if (periodo) params.set("periodo", periodo);
+  const q = params.toString();
+  return `/portal/jefe/planes-turno${q ? `?${q}` : ""}`;
+}
+
 /**
  * @param {{
  *   open: boolean;
@@ -43,6 +54,8 @@ function labelEstado(id) {
  *   grupoTrabajoId?: string;
  *   opsOutboxPendientes?: Array<Record<string, unknown>>;
  *   personaLabels?: Record<string, string>;
+ *   incompletoPlan?: boolean;
+ *   puedeCorregirPlan?: boolean;
  * }} props
  */
 export default function DiaGrillaDetalleModal({
@@ -64,7 +77,13 @@ export default function DiaGrillaDetalleModal({
   grupoTrabajoId = "",
   opsOutboxPendientes = [],
   personaLabels = {},
+  incompletoPlan = false,
+  puedeCorregirPlan = false,
 }) {
+  const corregirPlanTo = useMemo(
+    () => planTurnoCorregirPath(grupoTrabajoId, fechaYmd),
+    [grupoTrabajoId, fechaYmd],
+  );
   const [solFocus, setSolFocus] = useState("");
   const [resumen, setResumen] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -167,7 +186,8 @@ export default function DiaGrillaDetalleModal({
       <div className="relative z-10 max-h-[min(90vh,32rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
         <div className="flex items-start justify-between gap-2">
           <h3 id="dia-grilla-titulo" className="text-lg font-semibold text-slate-900">
-            Día {Number(dia)} — licencias
+            Día {Number(dia)}
+            {incompletoPlan && lista.length === 0 ? " — sin turno en plan" : " — licencias"}
             {subtitulo ? (
               <span className="mt-0.5 block text-sm font-normal text-slate-600">{subtitulo}</span>
             ) : null}
@@ -183,6 +203,31 @@ export default function DiaGrillaDetalleModal({
             Cerrar
           </button>
         </div>
+
+        {incompletoPlan ? (
+          <div className="mt-3 rounded-lg border border-rose-300 bg-rose-50 p-3">
+            <p className="text-sm text-rose-950">
+              Este día laborable no tiene turno asignado en el plan mensual. Por favor, corrija la
+              asignación desde la vista de Planes de Turno.
+            </p>
+            {lista.length > 0 ? (
+              <p className="mt-2 text-xs font-medium text-rose-900">
+                Licencia sobre plan incompleto (falta turno): revise la solicitud y regularice el plan
+                antes de gestionar turno en este día.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {incompletoPlan && puedeCorregirPlan ? (
+          <Link
+            to={corregirPlanTo}
+            onClick={onClose}
+            className="mt-4 flex min-h-11 w-full touch-manipulation items-center justify-center rounded-xl bg-rose-700 text-base font-semibold text-white hover:bg-rose-800 active:bg-rose-900"
+          >
+            Corregir plan
+          </Link>
+        ) : null}
 
         {turnoTeorico && (turnoTeorico.rda_turno_id || turnoTeorico.es_franco || turnoTeorico.capa_teorica) ? (
           <div className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 p-3">

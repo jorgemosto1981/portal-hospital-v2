@@ -26,6 +26,7 @@ import { periodosVentanaJefe } from "../jefe/periodoJefe.js";
 import GrillaTarjetaGrupoPeriodo from "./GrillaTarjetaGrupoPeriodo.jsx";
 import GrillaPeriodoLiquidacionAccionesRrhh from "./GrillaPeriodoLiquidacionAccionesRrhh.jsx";
 import { useEstadosPeriodoLiquidacionGrupos } from "./useEstadosPeriodoLiquidacionGrupos.js";
+import { celdaEsIncompletoPlanVis } from "./grillaMesEquipoDisplay.js";
 
 function parsePeriodo(periodo) {
   const [yyyy, mm] = String(periodo || "").split("-");
@@ -529,6 +530,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                               personaId,
                               grupoTrabajoId: cal.grupo_trabajo_id,
                               eventos,
+                              incompletoPlan: celdaEsIncompletoPlanVis(cell),
                               personaLabel: "Mi calendario",
                               grupoLabel: grupoLabel || cal.grupo_label,
                               turnoTeorico: {
@@ -662,6 +664,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
         opsOutboxPendientes={opsOutboxGrillaModal}
         personaLabels={personaLabelsGrilla}
         soloLectura={!vista.gsoPermiteEscritura}
+        incompletoPlan={Boolean(diaModal?.incompletoPlan)}
+        puedeCorregirPlan={esJefe || esRrhh}
         puedeGestionarTurno={puedeGestionTurno && !diaModal?.incompletoPlan}
         onAbrirGestionTurno={
           puedeGestionTurno && diaModal?.personaId && diaModal?.fechaYmd && diaModal?.grupoTrabajoId

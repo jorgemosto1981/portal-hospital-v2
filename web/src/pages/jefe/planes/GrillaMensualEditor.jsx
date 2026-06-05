@@ -21,6 +21,7 @@ import {
 } from "../../../features/grilla/grillaTurnosVisual.js";
 import GrillaTurnosLeyenda from "../../../features/grilla/GrillaTurnosLeyenda.jsx";
 import { ymdDesdeValorLaboral } from "../../datos-laborales/utils.js";
+import { contarHuecosTurnoPlan, tooltipBloqueoHuecosPlan } from "./planHuecosTurnoUtils.js";
 
 const PALETA_COLORES_BASE = [
   { bg: "bg-yellow-300 hover:bg-yellow-400", text: "text-yellow-950" },
@@ -303,6 +304,7 @@ export default function GrillaMensualEditor({
   errorGuardar,
   onGuardar,
   onCerrar,
+  onHuecosTurnoChange,
 }) {
   const dias = useMemo(() => diasDelMes(periodo), [periodo]);
 
@@ -605,6 +607,25 @@ export default function GrillaMensualEditor({
     turno_id: cel?.turno_id != null && String(cel.turno_id).trim() !== "" ? String(cel.turno_id).trim() : null,
   }), []);
 
+  const huecosTurno = useMemo(
+    () =>
+      modoVistaEquipo
+        ? 0
+        : contarHuecosTurnoPlan(agentes, grilla, {
+            omitirCelda: (pid, ymd) => {
+              const meta = agentesEnriquecidos[pid];
+              return Boolean(
+                meta && !esDiaEnVigenciaHlg(ymd, meta.fecha_inicio, meta.fecha_fin),
+              );
+            },
+          }),
+    [modoVistaEquipo, agentes, grilla, agentesEnriquecidos],
+  );
+
+  useEffect(() => {
+    onHuecosTurnoChange?.(huecosTurno);
+  }, [huecosTurno, onHuecosTurnoChange]);
+
   const handleGuardar = useCallback(async () => {
     if (agentes.length === 0) {
       return setErrLocal("Agrega al menos un agente.");
@@ -704,6 +725,23 @@ export default function GrillaMensualEditor({
           <div className="mx-5 mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
             Plan paralelo de incorporación: solo agentes nuevos planificados. El plan operativo habilitado no
             se modifica hasta que RRHH apruebe y se mergee la grilla.
+          </div>
+        ) : null}
+
+        {!modoVistaEquipo && huecosTurno > 0 ? (
+          <div
+            className="mx-5 mt-3 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2.5 text-sm text-rose-950"
+            role="status"
+            title={tooltipBloqueoHuecosPlan(huecosTurno)}
+          >
+            <p className="font-semibold">
+              Días sin turno asignado:{" "}
+              <span className="font-mono tabular-nums">{huecosTurno}</span>
+            </p>
+            <p className="mt-1 text-xs text-rose-900">
+              Hay asignaciones laborables o de guardia sin turno que impedirán la habilitación del plan.
+              Completá la grilla antes de enviar o solicitar aprobación.
+            </p>
           </div>
         ) : null}
 
