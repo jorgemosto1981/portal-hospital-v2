@@ -46,9 +46,9 @@ Credenciales: `GOOGLE_APPLICATION_CREDENTIALS` en `.env.v2.local`.
 
 - [x] Lib + tests en verde
 - [x] Script CLI (`npm run audit:us17-planes-huecos`)
-- [ ] Script ejecutado contra entorno objetivo
-- [ ] Reporte archivado (sin secretos en git)
-- [ ] `PENDIENTES_IMPLEMENTACION_V2.md` §2.2 actualizado con fecha de inventario
+- [x] Script ejecutado contra prod (2026-06-05): 5 analizados, 4 con huecos, 135 celdas
+- [x] Reporte local `reports/us17-2026-06-05.json` (gitignored)
+- [x] Trazabilidad PR [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3) + `PR_US17_BODY.md`
 
 ## Siguiente épica (después de remediación)
 
