@@ -1,9 +1,9 @@
 # Pendientes de implementación — Portal Hospital V2
 
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
-**Última actualización:** 2026-06-05  
-**Rama de trabajo:** `feat/epic-multi-hlg-fase1-execution`  
-**Sesión / continuidad:** RFC plan paralelo Fase 5 (`627a435`) · índice corto: [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · RFC: [`RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md`](./RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md)
+**Última actualización:** 2026-06-05 (cierre épica blindaje GSO)  
+**Rama / release:** `master` · tag **`v2.6.1-blindaje-gso`** (`669c353`) · PR [#2](https://github.com/jorgemosto1981/portal-hospital-v2/pull/2)  
+**Sesión / continuidad:** índice corto: [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · RFC: [`RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md`](./RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md) · cuerpo PR blindaje: [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md)
 
 ---
 
@@ -32,19 +32,29 @@
 
 ---
 
-## 2. Épica GSO — conflictos capas (código pendiente)
+## 2. Épica GSO — conflictos capas
 
-**Documentación lista; implementación no iniciada.**  
 Criterios: [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md) · brechas: [`ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md`](./ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md) · acta: [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md).
+
+### 2.1 Blindaje huecos / anti-blanco — **✅ cerrado en prod (`v2.6.1`)**
+
+| US | Prioridad | Entregable | Evidencia |
+|----|-----------|------------|-----------|
+| **US-9** | P0 | `assertPlanSinHuecosTurno` → `PLT-US9-001` en guardar/aprobar/incorporación | `validacionesPlanTurno.js`, deploy functions jun 2026 |
+| **US-1** | P0 | `incompletoPlan` visible (rayado rosa, chip «Sin turno») | `grillaMesEquipoDisplay.js`, `grillaTurnosVisual.js` |
+| **US-16** | P0 | Sin gestión táctica en hueco de plan | `GrillaMesLicenciasPanel.jsx`, gates modales |
+| **US-10** | P1 | Banner + contador huecos; Enviar bloqueado en UI | `GrillaMensualEditor.jsx`, `planHuecosTurnoUtils.js` |
+| **US-14** | P1 | Modal incompleto: mensaje + CTA «Corregir plan» (deep-link) | `DiaGrillaDetalleModal.jsx` |
+| **US-3** | P1 | Licencia sobre plan incompleto: aviso en modal (escenario B parcial) | Mismo modal + criterios escenario B |
+
+Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-run`, vitest GSO/US-10. QA manual post-merge: checklist en [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md).
+
+### 2.2 GSO — código aún pendiente
 
 | US | Prioridad | Qué falta implementar | Archivos / área típica |
 |----|-----------|------------------------|-------------------------|
-| **US-9** | P0 | Rechazar habilitar plan con `laborable`/`guardia` sin `turno_id` | `functions/modules/asistencia/planesTurnoServicio.js` |
-| **US-1** | P0 | Anti-blanco: celda `laborable` sin `rda_*` → estado visible (no `tieneDatos=false` vacío) | `GrillaMesEquipoTabla.jsx`, `GrillaMesTitularCalendario.jsx`, display helpers |
-| **US-16** | P0 | Bloqueo operación en `INCOMPLETO_PLAN`; sin override en hueco de plan | Misma grilla + gates modales |
-| **US-10** | P1 | Warning al guardar plan borrador con huecos | Editor plan mensual |
-| **US-3** | P1 | Badge ⚠️ teoría vs licencia / post-cambio teoría | `GrillaMesCeldaLicencia`, tabla equipo |
-| **US-14** | P1 | Acciones acta ante ⚠️ (corregir plan, bandeja, gestión) | `DiaGrillaDetalleModal.jsx` |
+| **US-3** | P1 | Badge ⚠️ teoría vs licencia / post-cambio teoría (escenario A; distinto de B en modal) | `GrillaMesCeldaLicencia`, tabla equipo |
+| **US-14** | P1 | Acciones acta ante ⚠️ residual (bandeja + gestión turno; acción 1–2 completas en otros flujos) | `DiaGrillaDetalleModal.jsx` (extender) |
 | **US-15** | P2 | Presente/ausente fichada por rol (sin crudo a jefe) | GSO + `grillaVisSanitizeGso.js` (extender) |
 | **US-4** | P1 | Ícono/enlace fan-out estándar | Etiquetas grilla |
 | **US-5** | P1 | Copy unificado post-purge HLg | UI grilla / toasts |
@@ -55,9 +65,9 @@ Criterios: [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPT
 | **US-13** | P1 | Matriz permisos teoría (doc → código) | Disperso plan / override / HLg |
 | **US-17** | P0 (ops) | Inventario global planes `HABILITADO` sin huecos | Script / informe (no solo piloto junio Sala) |
 
-**Orden sugerido:** US-9 → US-1 + US-16 → US-10 → US-3 + US-14 + US-15 → US-17 → resto (ver análisis §5).
+**Orden sugerido (restante):** US-17 (ops) → US-3 escenario A + US-14 completo → US-15 → resto (ver análisis §5).
 
-**Nota:** Piloto junio Sala **operativo** en BD; las US anteriores son **defensa** ante regresión (huecos / blanco UI). **No** sustituyen el RFC plan paralelo (incorporación / HLg), ya cerrado en §1bis.
+**Nota:** Piloto junio Sala **operativo** en BD; §2.1 es **defensa** desplegada ante regresión huecos/blanco. **No** sustituye remediación histórica (**US-17**) ni RFC plan paralelo (§1bis).
 
 ---
 
@@ -74,7 +84,7 @@ Criterios: [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPT
 | **4** | HLg inmutable, `purgaAgentePlanesPorHlg`, anulación/cierre | ✅ | `catalogosLaborales.js`, `purgaAgentePlanesPorHlg.js` (`a245d86`) |
 | **5** | Manual/glosario, criterios §6.7, checklist E2E doc | ✅ | `627a435` |
 
-**Relación con backlog anterior:** cierra **F2 O-P1-4** / roadmap **2.5** (plan usuario nuevo §19.6) y el incidente “incorporar degrada principal a `EN_REVISION`”. **Sigue abierto:** US-9/1/16 (huecos y anti-blanco), US-17 (inventario global), REL merge/tag.
+**Relación con backlog anterior:** cierra **F2 O-P1-4** / roadmap **2.5** (plan usuario nuevo §19.6) y el incidente “incorporar degrada principal a `EN_REVISION`”. **Blindaje huecos:** cerrado §2.1 (`v2.6.1`). **Sigue abierto:** US-17 (inventario global), reconciliación ⚠️ (§2.2).
 
 **Opcional P2 (no bloquea RFC):** [`RFC_ALERTA_DIVERGENCIA_PLAN_VS_GRILLA_UX_V2.md`](./RFC_ALERTA_DIVERGENCIA_PLAN_VS_GRILLA_UX_V2.md) (**FUX-OPT-5**) — aviso on-demand plan foto vs grilla operativa.
 
@@ -150,15 +160,16 @@ Ver [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](./ANALISIS_COHERENCIA_ORQU
 | F0 contención O-P0-4,1,5,7 | Smoke prod |
 | F1 cierre período manual | Callable + UI GSO |
 | **RFC plan paralelo + HLg inmutable (0–5)** | §1bis · `f187dff`, `a245d86`, `627a435` |
+| **Épica blindaje GSO (US-9, 1, 16, 10, 14, 3 parcial)** | PR #2 · `v2.6.1-blindaje-gso` · hosting + functions prod |
 | GSO §6.7 pendiente incorporación vs fantasma | Criterios + análisis §8 (E2E manual doc) |
 
 ---
 
 ## 8. Próxima sesión de código (recomendación)
 
-1. **Proceso:** REL-1 merge PR (incluye RFC plan paralelo + épica F-UX.3/F3 en rama).
-2. **Código P0:** épica GSO defensiva **US-9** + **US-1** + **US-16** (independiente del RFC incorporación).
-3. **Ops P0:** **US-17** inventario planes `HABILITADO` sin huecos.
+1. **QA manual:** checklist [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md) (jefe: editor + GSO; RRHH: aprobar con hueco → `PLT-US9-001`).
+2. **Ops P0:** **US-17** inventario planes `HABILITADO` sin huecos (remediación global).
+3. **Código P1:** US-3 escenario A (⚠️ teoría post-licencia) + US-14 acciones completas ante ⚠️.
 4. **Paralelo opcional:** F3 **T-05** o **FUX-OPT-5** (divergencia plan vs grilla).
 
 Actualizar este archivo y [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) al cerrar cada ítem.
