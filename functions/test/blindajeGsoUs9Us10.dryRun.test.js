@@ -11,22 +11,8 @@ const assert = require("node:assert/strict");
 const {
   assertPlanSinHuecosTurno,
   CODIGO_US9,
+  listarHuecosTurnoEnAgentes,
 } = require("../modules/asistencia/validacionesPlanTurno.js");
-
-function contarHuecosComoEditor(agentes) {
-  let n = 0;
-  for (const ag of agentes || []) {
-    const dias = ag.dias && typeof ag.dias === "object" ? ag.dias : {};
-    for (const cel of Object.values(dias)) {
-      if (!cel || typeof cel !== "object") continue;
-      const tipo = cel.tipo_dia;
-      if (tipo !== "laborable" && tipo !== "guardia") continue;
-      const tid = cel.turno_id;
-      if (tid == null || String(tid).trim() === "") n += 1;
-    }
-  }
-  return n;
-}
 
 describe("blindaje GSO dry run (US-10 → US-9)", () => {
   it("plan con hueco: banner contaría > 0 y habilitar rebota PLT-US9-001", () => {
@@ -39,7 +25,7 @@ describe("blindaje GSO dry run (US-10 → US-9)", () => {
         },
       },
     ];
-    assert.equal(contarHuecosComoEditor(agentes), 1);
+    assert.equal(listarHuecosTurnoEnAgentes(agentes).length, 1);
     assert.throws(
       () => assertPlanSinHuecosTurno(agentes),
       (err) => {
@@ -61,7 +47,7 @@ describe("blindaje GSO dry run (US-10 → US-9)", () => {
         },
       },
     ];
-    assert.equal(contarHuecosComoEditor(agentes), 0);
+    assert.equal(listarHuecosTurnoEnAgentes(agentes).length, 0);
     assert.doesNotThrow(() => assertPlanSinHuecosTurno(agentes));
   });
 });

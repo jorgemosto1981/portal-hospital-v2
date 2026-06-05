@@ -33,3 +33,6 @@ Thumbs.db
 
 # Reporte local del seed de catálogos artículos (rutas absolutas / timestamp)
 scripts/seed-v2/seed-catalogos-articulos-v2-report.json
+
+# Auditorías US-17 y reportes ops (IDs, agentes; solo local)
+reports/
