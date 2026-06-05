@@ -493,11 +493,19 @@ export default function PlanTurnoServicioPage() {
   const abrirEditorIncorporacion = useCallback(
     (planInc, agentesNuevos = []) => {
       if (!planInc) return;
+      const desdeResumen = resumenGrupoPeriodo[periodo]?.[grupoId]?.agentes_nuevos || [];
+      const desdePlan = (planInc.agentes || []).map((a) => ({
+        persona_id: a.persona_id,
+        persona_label: a.persona_label || a.nombre || a.persona_nombre,
+        persona_dni: a.persona_dni || a.dni,
+      }));
       setPlanEdicion({
         ...planInc,
         agentesNuevos: agentesNuevos.length
           ? agentesNuevos
-          : resumenGrupoPeriodo[periodo]?.[grupoId]?.agentes_nuevos || [],
+          : desdeResumen.length
+            ? desdeResumen
+            : desdePlan,
       });
     },
     [grupoId, periodo, resumenGrupoPeriodo],

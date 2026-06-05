@@ -435,24 +435,35 @@ export default function GrillaMensualEditor({
   const esModoIncorporacion =
     modoIncorporacionAgentesNuevos || String(plan?.plan_rol || "").trim() === "incorporacion";
 
+  /** En plt_inc: solo filas incorporables (nunca todo el grupo si falta meta del banner). */
   const idsAgentesNuevos = useMemo(() => {
     if (!esModoIncorporacion) return null;
-    return new Set(
-      (agentesNuevosPermitidos || [])
-        .map((a) => String(a.persona_id || "").trim())
-        .filter(Boolean),
-    );
-  }, [esModoIncorporacion, agentesNuevosPermitidos]);
+    const ids = new Set();
+    for (const a of agentesNuevosPermitidos || []) {
+      const pid = String(a.persona_id || "").trim();
+      if (pid) ids.add(pid);
+    }
+    for (const a of contexto?.agentes_nuevos || []) {
+      const pid = String(a.persona_id || "").trim();
+      if (pid) ids.add(pid);
+    }
+    for (const a of plan?.agentes || []) {
+      const pid = String(a.persona_id || "").trim();
+      if (pid) ids.add(pid);
+    }
+    return ids;
+  }, [esModoIncorporacion, agentesNuevosPermitidos, contexto?.agentes_nuevos, plan?.agentes, plan?.id]);
 
-  // Al crear/editar, incluir automáticamente todos los agentes activos/vigentes del grupo.
+  // Al crear/editar plan principal: todos los vigentes del grupo. En incorporación: solo idsAgentesNuevos.
   useEffect(() => {
     const lista = contexto?.personas_grupo || [];
     if (!lista.length) return;
-    const filtrada =
-      idsAgentesNuevos && idsAgentesNuevos.size > 0
-        ? lista.filter((p) => idsAgentesNuevos.has(String(p.persona_id || "").trim()))
-        : lista;
-    if (esModoIncorporacion && filtrada.length === 0) return;
+    let filtrada = lista;
+    if (esModoIncorporacion) {
+      if (!idsAgentesNuevos || idsAgentesNuevos.size === 0) return;
+      filtrada = lista.filter((p) => idsAgentesNuevos.has(String(p.persona_id || "").trim()));
+      if (filtrada.length === 0) return;
+    }
     const nextAgentes = filtrada
       .map((p) => ({
         persona_id: String(p.persona_id || "").trim(),
@@ -493,6 +504,7 @@ export default function GrillaMensualEditor({
   // La grilla usa todos los agentes vigentes del grupo en el período (sin selección manual).
 
   const aplicarPincelEnCelda = useCallback((pid, ymd) => {
+    if (esModoIncorporacion && idsAgentesNuevos && !idsAgentesNuevos.has(pid)) return;
     if (!paleta || !esFilaEditable(pid)) return;
     const key = `${pid}:${ymd}:${paleta}`;
     if (ultimaCeldaPintadaRef.current === key) return;
@@ -518,7 +530,7 @@ export default function GrillaMensualEditor({
       ultimaCeldaPintadaRef.current = key;
       return { ...prev, [pid]: { ...prev[pid], [ymd]: nueva } };
     });
-  }, [paleta, agentesEnriquecidos, esFilaEditable, contexto]);
+  }, [paleta, agentesEnriquecidos, esFilaEditable, contexto, esModoIncorporacion, idsAgentesNuevos]);
 
   const iniciarPintado = useCallback((pid, ymd) => {
     setPintando(true);
