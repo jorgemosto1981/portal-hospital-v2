@@ -4,6 +4,7 @@ const BADGE_ESTADO = {
   EN_REVISION: "bg-amber-100 text-amber-800",
   HABILITADO: "bg-green-100 text-green-800",
   CERRADO: "bg-red-100 text-red-700",
+  MERGEADO: "bg-violet-100 text-violet-800",
 };
 
 const LABEL_ESTADO = {
@@ -12,6 +13,7 @@ const LABEL_ESTADO = {
   EN_REVISION: "En revisión",
   HABILITADO: "Habilitado",
   CERRADO: "Cerrado",
+  MERGEADO: "Mergeado",
 };
 
 export { BADGE_ESTADO, LABEL_ESTADO };

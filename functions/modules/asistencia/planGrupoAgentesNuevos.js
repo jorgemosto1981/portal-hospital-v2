@@ -4,7 +4,17 @@
  * §19.6 — Agentes con HLg planificado vigente en el mes que no figuran en el plan mensual del grupo.
  */
 
+const { PLAN_ROL_PRINCIPAL, planRolDeDoc } = require("./planTurnoServicioMeta");
+
 const ORDEN_PLAN_CANONICO = ["HABILITADO", "ENVIADO", "EN_REVISION", "BORRADOR", "CERRADO"];
+
+function filtrarPlanesPrincipalesOperativos(planes) {
+  return (planes || []).filter((p) => {
+    if (p.eliminado === true) return false;
+    if (p.estado === "MERGEADO") return false;
+    return planRolDeDoc(p) === PLAN_ROL_PRINCIPAL;
+  });
+}
 
 function regimenEsPlanificado(regimenDoc) {
   return Boolean(regimenDoc && regimenDoc.tipo_patron === "planificado");
@@ -25,7 +35,7 @@ function personaIdsEnPlan(plan) {
  * @returns {object|null}
  */
 function elegirPlanMensualCanonico(planesActivos) {
-  const list = Array.isArray(planesActivos) ? planesActivos : [];
+  const list = filtrarPlanesPrincipalesOperativos(planesActivos);
   for (const estado of ORDEN_PLAN_CANONICO) {
     const found = list.find((p) => p.estado === estado);
     if (found) return found;
@@ -95,9 +105,9 @@ function mergeAgentesIncorporacionPlanMensual(agentesExistentes, agentesPayload,
  */
 function planHabilitadoDesdeQuerySnapshot(snap) {
   if (!snap || snap.empty) return null;
-  const list = snap.docs
-    .map((d) => ({ id: d.id, ...d.data() }))
-    .filter((p) => p.eliminado !== true && p.estado === "HABILITADO");
+  const list = filtrarPlanesPrincipalesOperativos(
+    snap.docs.map((d) => ({ id: d.id, ...d.data() })),
+  ).filter((p) => p.estado === "HABILITADO");
   if (!list.length) return null;
   const pick = elegirPlanMensualCanonico(list);
   if (!pick) return null;
@@ -107,6 +117,7 @@ function planHabilitadoDesdeQuerySnapshot(snap) {
 
 module.exports = {
   ORDEN_PLAN_CANONICO,
+  filtrarPlanesPrincipalesOperativos,
   regimenEsPlanificado,
   personaIdsEnPlan,
   elegirPlanMensualCanonico,

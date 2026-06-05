@@ -12,6 +12,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | **[`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md)** | **Biblia multi-HLG (Opción A):** taxonomía Z/P/M, bounded context `gdt_*`, contrato `vis_*`/`asi_*`, matriz E1–E20, DoD, Known Issues |
 | **[`CAPA_TEORICA_SEGMENTOS_V2.md`](./CAPA_TEORICA_SEGMENTOS_V2.md)** | **RFC aprobado** — turnos compuestos, segmentos SoT, cobertura parcial (tag `v2.0.0-rfc-turnos-compuestos`) |
 | **[`RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md`](./RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md)** | Snapshot `grilla_aprobada` en `plt_*` al habilitar; lectura unificada VER plan vs capa operativa `asi_*`/`vis_*` |
+| **[`RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md`](./RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md)** | **Plan paralelo `plt_inc`**, estado `MERGEADO`, HLg inmutable, purga en `plt_*`, banner dual planificado vs fijo/rotativo |
 | **[`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md)** | **RETOMAR AQUÍ** — cierre hito Multi-HLG: strip 244 `asi_*`, PR pendiente, Paso 4 QA |
 | **[`HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md`](./HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md)** | Incidente escenario Z + limpieza quirúrgica documentada |
 | [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) | Grilla aprobada VER plan; matriz control turno |

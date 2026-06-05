@@ -65,6 +65,14 @@ describe("planGrupoAgentesNuevos", () => {
     assert.equal(p.id, "2");
   });
 
+  it("elegirPlanMensualCanonico ignora plan_rol incorporacion", () => {
+    const p = elegirPlanMensualCanonico([
+      { id: "inc", estado: "HABILITADO", plan_rol: "incorporacion" },
+      { id: "base", estado: "EN_REVISION", plan_rol: "principal" },
+    ]);
+    assert.equal(p.id, "base");
+  });
+
   it("planHabilitadoDesdeQuerySnapshot ignora eliminado", () => {
     const snap = {
       empty: false,

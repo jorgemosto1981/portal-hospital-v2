@@ -432,14 +432,17 @@ export default function GrillaMensualEditor({
     });
   }, [contexto, agentes, dias, idxRegimenes, agentesEnriquecidos]);
 
+  const esModoIncorporacion =
+    modoIncorporacionAgentesNuevos || String(plan?.plan_rol || "").trim() === "incorporacion";
+
   const idsAgentesNuevos = useMemo(() => {
-    if (!modoIncorporacionAgentesNuevos) return null;
+    if (!esModoIncorporacion) return null;
     return new Set(
       (agentesNuevosPermitidos || [])
         .map((a) => String(a.persona_id || "").trim())
         .filter(Boolean),
     );
-  }, [modoIncorporacionAgentesNuevos, agentesNuevosPermitidos]);
+  }, [esModoIncorporacion, agentesNuevosPermitidos]);
 
   // Al crear/editar, incluir automáticamente todos los agentes activos/vigentes del grupo.
   useEffect(() => {
@@ -449,7 +452,7 @@ export default function GrillaMensualEditor({
       idsAgentesNuevos && idsAgentesNuevos.size > 0
         ? lista.filter((p) => idsAgentesNuevos.has(String(p.persona_id || "").trim()))
         : lista;
-    if (modoIncorporacionAgentesNuevos && filtrada.length === 0) return;
+    if (esModoIncorporacion && filtrada.length === 0) return;
     const nextAgentes = filtrada
       .map((p) => ({
         persona_id: String(p.persona_id || "").trim(),
@@ -480,7 +483,7 @@ export default function GrillaMensualEditor({
       }
       return next;
     });
-  }, [contexto, dias, agentesEnriquecidos, modoIncorporacionAgentesNuevos, idsAgentesNuevos]);
+  }, [contexto, dias, agentesEnriquecidos, esModoIncorporacion, idsAgentesNuevos]);
 
   const esFilaEditable = useCallback(
     (pid) => esRegimenPlanificado(idxRegimenes[agentes.find((a) => a.persona_id === pid)?.regimen_horario_id]),
@@ -627,9 +630,7 @@ export default function GrillaMensualEditor({
         };
       }),
     };
-    const result = await onGuardar(datos, plan?.id || null, {
-      modoIncorporacion: modoIncorporacionAgentesNuevos,
-    });
+    const result = await onGuardar(datos, plan?.id || null, {});
     if (result?.ok === false) {
       setErrLocal(result.error || "No se pudo guardar el borrador.");
       return;
@@ -645,7 +646,6 @@ export default function GrillaMensualEditor({
     comentariosJefe,
     planVersionToken,
     extraerIntencionDia,
-    modoIncorporacionAgentesNuevos,
     agentesEnriquecidos,
   ]);
 
@@ -663,8 +663,8 @@ export default function GrillaMensualEditor({
             <h2 className="text-lg font-semibold text-slate-900">
               {modoVistaEquipo
                 ? "Ver turnos del equipo"
-                : modoIncorporacionAgentesNuevos
-                  ? "Incorporar agente(s) nuevo(s)"
+                : esModoIncorporacion
+                  ? "Plan de incorporación"
                   : plan
                     ? "Editar Turno Mensual"
                     : "Crear Turno Mensual"}
@@ -688,10 +688,10 @@ export default function GrillaMensualEditor({
           </button>
         </div>
 
-        {modoIncorporacionAgentesNuevos ? (
+        {esModoIncorporacion ? (
           <div className="mx-5 mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            Solo podés planificar a los agentes nuevos del grupo. Quienes ya estaban en el plan no se
-            modifican. Al guardar, el plan pasa a revisión si estaba habilitado o enviado.
+            Plan paralelo de incorporación: solo agentes nuevos planificados. El plan operativo habilitado no
+            se modifica hasta que RRHH apruebe y se mergee la grilla.
           </div>
         ) : null}
 

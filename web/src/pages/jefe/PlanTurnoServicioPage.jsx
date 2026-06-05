@@ -5,12 +5,21 @@ import {
   callListarPlanesTurnoServicio,
   callListarContextoPlanGrupo,
   callGuardarPlanTurnoServicio,
+  callIniciarIncorporacionPlanMensual,
   callEnviarPlanTurnoServicio,
   callAprobarPlanTurnoServicio,
   callRechazarPlanTurnoServicio,
   callCerrarPlanPerpetuo,
   callResolverContextoLaboralSolicitud,
 } from "../../services/callables.js";
+import {
+  estadoResumenGrupo,
+  estadoInboxGrupo,
+  grupoTieneInboxPendiente,
+  planPrincipalCanonico,
+  planIncorporacionActivo,
+  esPlanIncorporacion,
+} from "../../features/planes/planRolUtils.js";
 import PlanGrillaAprobadaTable from "../../features/planes/PlanGrillaAprobadaTable.jsx";
 import { useVistaPlanTurno } from "../../features/planes/useVistaPlanTurno.js";
 import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
@@ -22,22 +31,6 @@ import { guardarPlanMensualDatosSchema } from "../../schemas/planTurnoServicio.s
 import PlanPerpetualViewer from "./planes/PlanPerpetualViewer.jsx";
 import BadgeEstadoPlan, { LABEL_ESTADO } from "../../components/ui/BadgeEstadoPlan.jsx";
 import { periodosVentanaJefe } from "../../features/jefe/periodoJefe.js";
-
-/** Plan vigente a mostrar cuando hay varios docs (mismo grupo+período). HABILITADO gana; ENVIADO antes que EN_REVISION. */
-const ORDEN_PLAN_CANONICO = ["HABILITADO", "ENVIADO", "EN_REVISION", "BORRADOR", "CERRADO"];
-
-function planCanonicaGrupo(items) {
-  const list = Array.isArray(items) ? items : [];
-  for (const estado of ORDEN_PLAN_CANONICO) {
-    const found = list.find((p) => p.estado === estado);
-    if (found) return found;
-  }
-  return list[0] || null;
-}
-
-function estadoPrincipalGrupo(items) {
-  return planCanonicaGrupo(items)?.estado || "SIN_PLAN";
-}
 
 function estiloTarjetaGrupo(estado, activo) {
   const baseActivo = activo ? "ring-2 ring-offset-1" : "";
@@ -324,7 +317,7 @@ export default function PlanTurnoServicioPage() {
             return [
               g.id,
               {
-                estado: estadoPrincipalGrupo(items),
+                estado: estadoResumenGrupo(items),
                 cantidad: items.length,
                 items,
                 hay_planificados: resCtx?.data?.hay_agentes_planificados === true,
@@ -384,13 +377,8 @@ export default function PlanTurnoServicioPage() {
       const res = await callGuardarPlanTurnoServicio({
         datos: parsed.data,
         id: existingId || undefined,
-        modo_incorporacion_agentes_nuevos: opciones.modoIncorporacion === true,
       });
-      const modoMsg =
-        res.data?.modo === "incorporacion_agentes_nuevos"
-          ? "incorporación guardada (plan en revisión)"
-          : res.data?.modo || "guardado";
-      showFeedback(`Plan ${modoMsg} (${res.data?.id}).`);
+      showFeedback(`Borrador guardado (${res.data?.id}).`);
       setPlanEdicion(null);
       await cargar();
       await cargarResumenGrupos();
@@ -465,7 +453,9 @@ export default function PlanTurnoServicioPage() {
             showFeedback("Aprobación cancelada.");
             break;
           }
-          if (res.data?.warnings?.length) {
+          if (res.data?.estado === "MERGEADO") {
+            showFeedback("Incorporación aprobada y mergeada al plan operativo.");
+          } else if (res.data?.warnings?.length) {
             showFeedback(`Plan aprobado y habilitado con ${res.data.warnings.length} advertencia(s).`);
           } else {
             showFeedback("Plan aprobado y habilitado.");
@@ -497,7 +487,72 @@ export default function PlanTurnoServicioPage() {
     return g?.label || grupoId;
   }, [gruposDisponibles, grupoId]);
 
-  const estadosInbox = new Set(["ENVIADO", "EN_REVISION"]);
+  const planPrincipalMes = useMemo(() => planPrincipalCanonico(planes), [planes]);
+  const planIncorporacionMes = useMemo(() => planIncorporacionActivo(planes), [planes]);
+
+  const abrirEditorIncorporacion = useCallback(
+    (planInc, agentesNuevos = []) => {
+      if (!planInc) return;
+      setPlanEdicion({
+        ...planInc,
+        agentesNuevos: agentesNuevos.length
+          ? agentesNuevos
+          : resumenGrupoPeriodo[periodo]?.[grupoId]?.agentes_nuevos || [],
+      });
+    },
+    [grupoId, periodo, resumenGrupoPeriodo],
+  );
+
+  const handleIniciarIncorporacion = useCallback(async () => {
+    const padre = planPrincipalMes;
+    if (!padre?.id || padre.estado !== "HABILITADO") {
+      setError("Solo podés iniciar incorporación sobre un plan operativo habilitado.");
+      return;
+    }
+    if (planIncorporacionMes) {
+      abrirEditorIncorporacion(planIncorporacionMes);
+      return;
+    }
+    setOperando(true);
+    setError("");
+    try {
+      const res = await callIniciarIncorporacionPlanMensual({ plan_padre_id: padre.id });
+      const data = res.data || {};
+      const listRes = await callListarPlanesTurnoServicio({
+        grupo_id: grupoId.trim(),
+        periodo: periodo || undefined,
+      });
+      const items = listRes.data?.items || [];
+      setPlanes(items);
+      await cargarResumenGrupos();
+      const fresh = planIncorporacionActivo(items) || {
+        id: data.id,
+        tipo_plan: "mensual",
+        periodo,
+        grupo_id: grupoId,
+        estado: data.estado || "BORRADOR",
+        plan_rol: data.plan_rol || "incorporacion",
+        plan_padre_id: data.plan_padre_id,
+        plan_version_token: data.plan_version_token,
+        agentes: [],
+      };
+      abrirEditorIncorporacion(fresh, data.agentes_nuevos || []);
+      showFeedback(`Plan de incorporación creado (${data.id}).`);
+    } catch (e) {
+      const msg = e?.message || "No se pudo iniciar la incorporación.";
+      setError(msg.includes("PLT-") ? msg : `Error al iniciar incorporación. ${msg}`);
+    } finally {
+      setOperando(false);
+    }
+  }, [
+    planPrincipalMes,
+    planIncorporacionMes,
+    abrirEditorIncorporacion,
+    cargar,
+    cargarResumenGrupos,
+    grupoId,
+    periodo,
+  ]);
 
   const seleccionarTarjetaPlan = useCallback(
     async (p, g, esHistorico = false) => {
@@ -512,7 +567,7 @@ export default function PlanTurnoServicioPage() {
             periodo: p,
           });
           items = res?.data?.items || [];
-          meta = { estado: estadoPrincipalGrupo(items), cantidad: items.length, items };
+          meta = { estado: estadoResumenGrupo(items), cantidad: items.length, items };
         } catch {
           items = [];
           meta = { estado: "SIN_PLAN", cantidad: 0, items: [] };
@@ -542,16 +597,26 @@ export default function PlanTurnoServicioPage() {
         return;
       }
 
-      const plan = planCanonicaGrupo(items);
-      if (!plan) return;
+      const principal = planPrincipalCanonico(items);
+      const incorporacion = planIncorporacionActivo(items);
+      if (!principal && !incorporacion) return;
       if (esHistorico) {
-        void abrirPlanDetalle(plan);
+        if (principal) void abrirPlanDetalle(principal);
         return;
       }
-      if (plan.estado === "HABILITADO" || plan.estado === "CERRADO") {
-        void abrirPlanDetalle(plan);
+      if (incorporacion && (incorporacion.estado === "BORRADOR" || incorporacion.estado === "EN_REVISION")) {
+        setPlanEdicion({
+          ...incorporacion,
+          agentesNuevos: meta.agentes_nuevos || [],
+        });
         return;
       }
+      if (principal && (principal.estado === "HABILITADO" || principal.estado === "CERRADO")) {
+        void abrirPlanDetalle(principal);
+        return;
+      }
+      const plan = principal || incorporacion;
+      if (!plan) return;
       setPlanOpciones({ plan, estado: plan.estado, grupoLabel: g.label, periodo: p });
     },
     [resumenGrupoPeriodo, abrirPlanDetalle],
@@ -637,25 +702,37 @@ export default function PlanTurnoServicioPage() {
                 <p className="text-sm font-medium text-slate-900">{labelPeriodoCard(p, idx).split(" · ")[1]}</p>
                 <div className="mt-2 space-y-2">
                   {(gruposPorPeriodo[p] || [])
-                    .filter((g) => estadosInbox.has(resumenGrupoPeriodo[p]?.[g.id]?.estado || ""))
+                    .filter((g) => grupoTieneInboxPendiente(resumenGrupoPeriodo[p]?.[g.id]?.items || []))
                     .map((g) => {
-                      const meta = resumenGrupoPeriodo[p]?.[g.id] || { estado: "SIN_PLAN", cantidad: 0 };
+                      const meta = resumenGrupoPeriodo[p]?.[g.id] || { estado: "SIN_PLAN", cantidad: 0, items: [] };
+                      const estadoInbox = estadoInboxGrupo(meta.items || []);
+                      const esInc = Boolean(
+                        planIncorporacionActivo(meta.items || []) &&
+                          (estadoInbox === "ENVIADO" || estadoInbox === "EN_REVISION"),
+                      );
                       const activo = grupoId === g.id && periodo === p;
                       return (
                         <button
                           key={`inbox-${p}-${g.id}`}
                           type="button"
                           onClick={() => void seleccionarTarjetaPlan(p, g, idx === 0)}
-                          className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${estiloTarjetaGrupo(meta.estado, activo)}`}
+                          className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${estiloTarjetaGrupo(estadoInbox, activo)}`}
                         >
-                          <span className="font-medium">{g.label}</span>
+                          <span className="font-medium">
+                            {g.label}
+                            {esInc ? (
+                              <span className="ml-1 text-[10px] font-normal text-amber-800">· Incorp.</span>
+                            ) : null}
+                          </span>
                           <span className="text-xs opacity-85">
-                            {iconoEstadoGrupo(meta.estado)} {LABEL_ESTADO[meta.estado] || meta.estado}
+                            {iconoEstadoGrupo(estadoInbox)} {LABEL_ESTADO[estadoInbox] || estadoInbox}
                           </span>
                         </button>
                       );
                     })}
-                  {(gruposPorPeriodo[p] || []).filter((g) => estadosInbox.has(resumenGrupoPeriodo[p]?.[g.id]?.estado || "")).length === 0 ? (
+                  {(gruposPorPeriodo[p] || []).filter((g) =>
+                    grupoTieneInboxPendiente(resumenGrupoPeriodo[p]?.[g.id]?.items || []),
+                  ).length === 0 ? (
                     <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500">
                       Sin pendientes de aprobación.
                     </p>
@@ -675,8 +752,8 @@ export default function PlanTurnoServicioPage() {
         >
           <p className="font-medium">Requiere plan individual para agente(s) nuevo(s)</p>
           <p className="mt-1 text-xs text-amber-800">
-            Hay personal planificado en el grupo que no figura en el turno mensual vigente. Incorporá solo a
-            los agentes nuevos; quienes ya estaban en el plan no se modifican.
+            Hay personal planificado en el grupo que no figura en el turno mensual vigente. Creá un plan de
+            incorporación paralelo: solo editás a los agentes nuevos; el plan operativo habilitado no se toca.
           </p>
           <ul className="mt-2 list-inside list-disc text-xs text-amber-900">
             {(resumenGrupoPeriodo[periodo][grupoId].agentes_nuevos || []).slice(0, 5).map((a) => (
@@ -686,7 +763,96 @@ export default function PlanTurnoServicioPage() {
               </li>
             ))}
           </ul>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {planPrincipalMes?.estado === "HABILITADO" && !planIncorporacionMes ? (
+              <button
+                type="button"
+                disabled={operando}
+                onClick={() => void handleIniciarIncorporacion()}
+                className="rounded-xl bg-amber-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-amber-800 disabled:opacity-50"
+              >
+                Incorporar agente(s)
+              </button>
+            ) : null}
+            {planIncorporacionMes ? (
+              <button
+                type="button"
+                disabled={operando}
+                onClick={() => abrirEditorIncorporacion(planIncorporacionMes)}
+                className="rounded-xl border border-amber-400 bg-white px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+              >
+                Continuar incorporación ({LABEL_ESTADO[planIncorporacionMes.estado] || planIncorporacionMes.estado})
+              </button>
+            ) : null}
+          </div>
         </div>
+      ) : null}
+
+      {grupoId && periodo && (planPrincipalMes || planIncorporacionMes) ? (
+        <Card className="px-4 py-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-800">
+            Planes del período · {grupoLabel} · {periodo}
+          </h2>
+          <div className="grid gap-3 md:grid-cols-2">
+            {planPrincipalMes ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-900">Plan operativo</p>
+                    <p className="mt-0.5 text-xs text-emerald-800">Solo lectura cuando está habilitado.</p>
+                    <p className="mt-2 font-mono text-[11px] text-emerald-700">{planPrincipalMes.id}</p>
+                  </div>
+                  <BadgeEstadoPlan estado={planPrincipalMes.estado} />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => abrirPlanDetalle(planPrincipalMes)}
+                  className="mt-3 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm text-emerald-800 hover:bg-emerald-50"
+                >
+                  Ver plan operativo
+                </button>
+              </div>
+            ) : null}
+            {planIncorporacionMes ? (
+              <div className="rounded-xl border border-violet-200 bg-violet-50/80 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-violet-900">Incorporación</p>
+                    <p className="mt-0.5 text-xs text-violet-800">Borrador o en circuito de aprobación.</p>
+                    <p className="mt-2 font-mono text-[11px] text-violet-700">{planIncorporacionMes.id}</p>
+                  </div>
+                  <BadgeEstadoPlan estado={planIncorporacionMes.estado} />
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(planIncorporacionMes.estado === "BORRADOR" ||
+                    planIncorporacionMes.estado === "EN_REVISION") && (
+                    <button
+                      type="button"
+                      onClick={() => abrirEditorIncorporacion(planIncorporacionMes)}
+                      className="rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm text-violet-800 hover:bg-violet-50"
+                    >
+                      Editar incorporación
+                    </button>
+                  )}
+                  {(planIncorporacionMes.estado === "BORRADOR" ||
+                    planIncorporacionMes.estado === "EN_REVISION") && (
+                    <button
+                      type="button"
+                      disabled={operando}
+                      onClick={() => void handleTransicion("enviar", planIncorporacionMes.id)}
+                      className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                    >
+                      {planIncorporacionMes.estado === "EN_REVISION" ? "Reenviar" : "Enviar"}
+                    </button>
+                  )}
+                  {planIncorporacionMes.estado === "ENVIADO" ? (
+                    <p className="text-xs text-violet-700">Enviado — pendiente de aprobación superior.</p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </Card>
       ) : null}
 
       {feedback && (
@@ -713,9 +879,13 @@ export default function PlanTurnoServicioPage() {
         <GrillaMensualEditor
           plan={planEdicion.nuevo || planEdicion.modoVistaEquipo ? null : planEdicion}
           modoVistaEquipo={Boolean(planEdicion.modoVistaEquipo)}
-          modoIncorporacionAgentesNuevos={Boolean(planEdicion.modoIncorporacion)}
+          modoIncorporacionAgentesNuevos={
+            Boolean(planEdicion.modoIncorporacion) || esPlanIncorporacion(planEdicion)
+          }
           agentesNuevosPermitidos={
-            planEdicion.modoIncorporacion ? planEdicion.agentesNuevos || [] : []
+            planEdicion.modoIncorporacion || esPlanIncorporacion(planEdicion)
+              ? planEdicion.agentesNuevos || []
+              : []
           }
           grupoId={grupoId}
           grupoLabel={grupoLabel}
@@ -751,29 +921,12 @@ export default function PlanTurnoServicioPage() {
               <button type="button" onClick={() => { void abrirPlanDetalle(planOpciones.plan); setPlanOpciones(null); }} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
                 Ver
               </button>
-              {(planOpciones.plan.estado === "BORRADOR" || planOpciones.plan.estado === "EN_REVISION") && (
+              {(planOpciones.plan.estado === "BORRADOR" || planOpciones.plan.estado === "EN_REVISION") &&
+                !esPlanIncorporacion(planOpciones.plan) && (
                 <button type="button" onClick={() => { setPlanEdicion(planOpciones.plan); setPlanOpciones(null); }} className="rounded-lg border border-indigo-300 px-3 py-2 text-sm text-indigo-700 hover:bg-indigo-50">
                   Editar
                 </button>
               )}
-              {resumenGrupoPeriodo[planOpciones.periodo]?.[grupoId]?.requiere_plan_individual &&
-              ["HABILITADO", "ENVIADO", "EN_REVISION", "BORRADOR"].includes(planOpciones.plan.estado) ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPlanEdicion({
-                      ...planOpciones.plan,
-                      modoIncorporacion: true,
-                      agentesNuevos:
-                        resumenGrupoPeriodo[planOpciones.periodo]?.[grupoId]?.agentes_nuevos || [],
-                    });
-                    setPlanOpciones(null);
-                  }}
-                  className="rounded-lg border border-amber-300 px-3 py-2 text-sm text-amber-800 hover:bg-amber-50"
-                >
-                  Incorporar agente(s) nuevo(s)
-                </button>
-              ) : null}
               {(planOpciones.plan.estado === "BORRADOR" || planOpciones.plan.estado === "EN_REVISION") && (
                 <button
                   type="button"

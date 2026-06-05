@@ -1053,7 +1053,14 @@ async function materializarTurnoMesBatch({
  * @param {number} params.mes
  * @returns {Promise<{ ok: boolean, procesados: number, fallos: Array<{ personaId: string, error: string }> }>}
  */
-async function materializarGrupoMes({ grupoId, anio, mes, planCache: planCacheIn, materializacionMotivo }) {
+async function materializarGrupoMes({
+  grupoId,
+  anio,
+  mes,
+  planCache: planCacheIn,
+  materializacionMotivo,
+  personaIdsFilter,
+}) {
   const periodoId = `${anio}-${String(mes).padStart(2, "0")}`;
   const primerDia = `${periodoId}-01`;
   const ultimoDia = diasDelMes(anio, mes).pop() || primerDia;
@@ -1077,11 +1084,17 @@ async function materializarGrupoMes({ grupoId, anio, mes, planCache: planCacheIn
     agentes.push({ personaId: d.persona_id, hlgId: doc.id, regimenId: d.regimen_horario_id });
   }
 
-  if (agentes.length === 0) return { ok: true, procesados: 0, fallos: [] };
+  let agentesFiltrados = agentes;
+  if (Array.isArray(personaIdsFilter) && personaIdsFilter.length > 0) {
+    const { filtrarAgentesMaterializacionPorPersona } = require("./planIncorporacionParalelo");
+    agentesFiltrados = filtrarAgentesMaterializacionPorPersona(agentes, personaIdsFilter);
+  }
+
+  if (agentesFiltrados.length === 0) return { ok: true, procesados: 0, fallos: [] };
 
   // Dedup regímenes: pre-cargar los distintos
   const regimenCache = new Map();
-  const regimenIdsUnicos = [...new Set(agentes.map((a) => a.regimenId).filter(Boolean))];
+  const regimenIdsUnicos = [...new Set(agentesFiltrados.map((a) => a.regimenId).filter(Boolean))];
   await Promise.all(regimenIdsUnicos.map(async (rid) => {
     const snap = await db.collection(COL_REGIMEN).doc(rid).get();
     if (snap.exists) regimenCache.set(rid, snap.data());
@@ -1089,7 +1102,7 @@ async function materializarGrupoMes({ grupoId, anio, mes, planCache: planCacheIn
 
   let planCache = planCacheIn || null;
   if (!planCache) {
-    const tienesPlanificado = agentes.some((a) => {
+    const tienesPlanificado = agentesFiltrados.some((a) => {
       const reg = regimenCache.get(a.regimenId);
       return reg?.tipo_patron === "planificado";
     });
@@ -1107,8 +1120,8 @@ async function materializarGrupoMes({ grupoId, anio, mes, planCache: planCacheIn
   const fallos = [];
   let procesados = 0;
 
-  for (let i = 0; i < agentes.length; i += CHUNK_SIZE) {
-    const chunk = agentes.slice(i, i + CHUNK_SIZE);
+  for (let i = 0; i < agentesFiltrados.length; i += CHUNK_SIZE) {
+    const chunk = agentesFiltrados.slice(i, i + CHUNK_SIZE);
     const resultados = await Promise.allSettled(
       chunk.map((ag) =>
         materializarTurnoMesBatch({

@@ -325,6 +325,11 @@ export function callGuardarPlanTurnoServicio(data) {
   return httpsCallable(getFunctionsV2(), "guardarPlanTurnoServicio")(data);
 }
 
+/** Jefe: crea plt_inc en BORRADOR vinculado a plan principal HABILITADO. */
+export function callIniciarIncorporacionPlanMensual(data) {
+  return httpsCallable(getFunctionsV2(), "iniciarIncorporacionPlanMensual")(data);
+}
+
 /** Jefe: enviar plan para aprobación (BORRADOR → ENVIADO). */
 export function callEnviarPlanTurnoServicio(data) {
   return httpsCallable(getFunctionsV2(), "enviarPlanTurnoServicio")(data);
