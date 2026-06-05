@@ -6,6 +6,10 @@
  *   node scripts/audit-planes-habilitados-huecos-us17.mjs
  *   node scripts/audit-planes-habilitados-huecos-us17.mjs --periodo=2026-06 --json
  *   node scripts/audit-planes-habilitados-huecos-us17.mjs --out=reports/us17.json --max-plans=200
+ *
+ * Cada hueco US-9 se cruza con vis_* (jornada materializada):
+ *   severidad ALTA  — sin rda_* en vis (hueco operativo)
+ *   severidad MEDIA — con rda_* en vis (deuda de persistencia en plan)
  */
 import "./load-env-v2.mjs";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -20,8 +24,17 @@ const require = createRequire(import.meta.url);
 const { listarHuecosTurnoEnAgentes } = require(
   join(repoRoot, "functions/modules/asistencia/validacionesPlanTurno.js"),
 );
+const {
+  buildVisDocumentId,
+  diaMesKeyDesdeYmd,
+} = require(join(repoRoot, "functions/modules/shared/mdcRdaDocumentIds.js"));
+const { COL_VISTAS_GRILLA_MES } = require(
+  join(repoRoot, "functions/modules/shared/mdcComandosConstants.js"),
+);
 
 const COL = "planes_turno_servicio";
+const SEVERIDAD_ALTA = "ALTA";
+const SEVERIDAD_MEDIA = "MEDIA";
 const PLAN_ROL_INCORPORACION = "incorporacion";
 
 function parseArgs(argv) {
@@ -96,6 +109,83 @@ async function cargarPlanesHabilitados(db, filters) {
   return snap.docs;
 }
 
+/** Misma señal que grilla GSO (`celdaTieneJornadaVis`). */
+function celdaTieneJornadaMaterializada(cel) {
+  if (!cel || typeof cel !== "object") return false;
+  const ing = String(cel.rda_ingreso || "").trim();
+  const egr = String(cel.rda_egreso || "").trim();
+  if (ing || egr) return true;
+  return Boolean(String(cel.rda_turno_id || "").trim());
+}
+
+function severidadHuecoRrhh(tieneJornadaVis) {
+  return tieneJornadaVis ? SEVERIDAD_MEDIA : SEVERIDAD_ALTA;
+}
+
+function fechaAnclaDesdePeriodo(periodo) {
+  const p = String(periodo || "").trim();
+  if (/^\d{4}-\d{2}$/.test(p)) return `${p}-01`;
+  return "";
+}
+
+/**
+ * Cruza huecos US-9 con vis_* del mes (solo lectura, guía remediación RRHH).
+ * @param {import('firebase-admin/firestore').Firestore} db
+ */
+async function enriquecerHuecosConVis(db, grupoId, periodo, huecos) {
+  const gdt = String(grupoId || "").trim();
+  const ancla = fechaAnclaDesdePeriodo(periodo);
+  if (!gdt || !ancla || !Array.isArray(huecos) || huecos.length === 0) {
+    return huecos.map((h) => ({
+      ...h,
+      severidad: SEVERIDAD_ALTA,
+      tiene_materializacion: false,
+    }));
+  }
+
+  const personaIds = [...new Set(huecos.map((h) => String(h.persona_id || "").trim()).filter(Boolean))];
+  const visPorPersona = new Map();
+
+  const refs = personaIds.map((pid) =>
+    db.collection(COL_VISTAS_GRILLA_MES).doc(buildVisDocumentId(pid, ancla, gdt)),
+  );
+  if (refs.length > 0) {
+    const snaps = await db.getAll(...refs);
+    for (let i = 0; i < personaIds.length; i += 1) {
+      const snap = snaps[i];
+      const dias =
+        snap?.exists && snap.data()?.dias && typeof snap.data().dias === "object"
+          ? snap.data().dias
+          : {};
+      visPorPersona.set(personaIds[i], dias);
+    }
+  }
+
+  return huecos.map((h) => {
+    const pid = String(h.persona_id || "").trim();
+    const ymd = String(h.ymd || "").trim();
+    const diaKey = diaMesKeyDesdeYmd(ymd) || ymd.slice(8, 10);
+    const dias = visPorPersona.get(pid) || {};
+    const celVis = dias[diaKey] || dias[ymd] || null;
+    const tieneMat = celdaTieneJornadaMaterializada(celVis);
+    return {
+      ...h,
+      severidad: severidadHuecoRrhh(tieneMat),
+      tiene_materializacion: tieneMat,
+    };
+  });
+}
+
+function contarPorSeveridad(huecos) {
+  let alta = 0;
+  let media = 0;
+  for (const h of huecos) {
+    if (h.severidad === SEVERIDAD_MEDIA) media += 1;
+    else alta += 1;
+  }
+  return { alta, media };
+}
+
 async function runAudit() {
   const opts = parseArgs(process.argv.slice(2));
   const db = initFirebase();
@@ -115,6 +205,8 @@ async function runAudit() {
   let omitidosFiltro = 0;
   let sinAgentes = 0;
   let totalHuecos = 0;
+  let totalHuecosAlta = 0;
+  let totalHuecosMedia = 0;
 
   for (const doc of docs) {
     if (opts.maxPlans > 0 && escaneados >= opts.maxPlans) break;
@@ -135,21 +227,34 @@ async function runAudit() {
         plan_rol: String(plan.plan_rol || "principal").trim(),
         huecos_count: 0,
         sin_agentes: true,
+        severidad_plan: SEVERIDAD_ALTA,
+        anomalia_estructural: "sin_agentes",
+        huecos_severidad_alta: 0,
+        huecos_severidad_media: 0,
         huecos: [],
       });
       continue;
     }
 
-    const huecos = listarHuecosTurnoEnAgentes(agentes);
-    if (huecos.length === 0) continue;
+    const huecosRaw = listarHuecosTurnoEnAgentes(agentes);
+    if (huecosRaw.length === 0) continue;
+
+    const grupoId = String(plan.grupo_id || "").trim();
+    const periodo = String(plan.periodo || "").trim();
+    const huecos = await enriquecerHuecosConVis(db, grupoId, periodo, huecosRaw);
+    const { alta, media } = contarPorSeveridad(huecos);
 
     totalHuecos += huecos.length;
+    totalHuecosAlta += alta;
+    totalHuecosMedia += media;
     planesConHuecos.push({
       plan_id: doc.id,
-      grupo_id: String(plan.grupo_id || "").trim(),
-      periodo: String(plan.periodo || "").trim(),
+      grupo_id: grupoId,
+      periodo,
       plan_rol: String(plan.plan_rol || "principal").trim(),
       huecos_count: huecos.length,
+      huecos_severidad_alta: alta,
+      huecos_severidad_media: media,
       sin_agentes: false,
       huecos,
     });
@@ -158,6 +263,14 @@ async function runAudit() {
   const resumen = {
     generado_en: new Date().toISOString(),
     criterio: "US-9 / listarHuecosTurnoEnAgentes",
+    clasificacion_rrhh: {
+      ALTA:
+        "turno_id vacío en plan y sin jornada en vis_* (hueco operativo); o plan HABILITADO sin agentes[] (anomalía estructural, severidad_plan ALTA)",
+      MEDIA:
+        "turno_id vacío en plan con jornada en vis_* (deuda de persistencia; confirmar en editor de plan)",
+      sin_agentes:
+        "agentes[] vacío o ausente: severidad_plan ALTA — rearmar dotación en el plan antes de habilitar (no aplica cruce vis_* por celda)",
+    },
     filtros: {
       estado: "HABILITADO",
       eliminado: "!= true",
@@ -172,6 +285,8 @@ async function runAudit() {
     planes_con_huecos_o_sin_agentes: planesConHuecos.length,
     planes_sin_agentes: sinAgentes,
     total_huecos_celdas: totalHuecos,
+    total_huecos_severidad_alta: totalHuecosAlta,
+    total_huecos_severidad_media: totalHuecosMedia,
     planes: planesConHuecos,
   };
 
@@ -192,11 +307,16 @@ async function runAudit() {
     console.log(`Omitidos (no mensual / eliminado / incorporación): ${omitidosFiltro}`);
     console.log(`Planes con huecos o sin agentes: ${planesConHuecos.length}`);
     console.log(`Sin agentes en plan: ${sinAgentes}`);
-    console.log(`Total celdas hueco: ${totalHuecos}`);
+    console.log(`Total celdas hueco (US-9): ${totalHuecos}`);
+    console.log(`  severidad ALTA: ${totalHuecosAlta} · MEDIA: ${totalHuecosMedia}`);
     for (const row of planesConHuecos) {
-      const extra = row.sin_agentes ? " [SIN_AGENTES]" : "";
+      const extra = row.sin_agentes ? " [SIN_AGENTES·severidad_plan=ALTA]" : "";
+      const sev =
+        row.sin_agentes || row.huecos_count === 0
+          ? ""
+          : ` · ALTA=${row.huecos_severidad_alta} MEDIA=${row.huecos_severidad_media}`;
       console.log(
-        `  - ${row.plan_id} · ${row.grupo_id} · ${row.periodo} · huecos=${row.huecos_count}${extra}`,
+        `  - ${row.plan_id} · ${row.grupo_id} · ${row.periodo} · huecos=${row.huecos_count}${sev}${extra}`,
       );
     }
     if (opts.out) {
