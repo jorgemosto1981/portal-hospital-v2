@@ -1,6 +1,6 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (2026-06-06):** **US-3 68-B (horas)** ✅ smoke cerrado · **US-15** ✅ · **siguiente código sugerido:** **US-5** (copy post-purge HLg) + **US-4** (🔗 fan-out) · deploy hosting pendiente (fix modal smoke + badge ⚠️) · RFC HLG ⏸ espera RRHH  
+> **RETOMAR AQUÍ (2026-06-06):** **US-3 68-B (horas)** ✅ smoke + commit `4394055` + hosting deploy · **US-15** ✅ · **siguiente código:** **US-5** + **US-4** (iteración UX/copy) · RFC HLG ⏸ espera RRHH  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops (2026-06-06) · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)  
 > **Blindaje GSO:** ✅ prod `v2.6.1-blindaje-gso` (US-9, US-1, US-16, US-10, US-14, US-3 parcial) — [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md)
@@ -15,7 +15,8 @@
 | **Paso 1** | Fan-out smoke `sol_SMOKE68B_US3_DIA13` → chip **68-B** sobre turno M · `teoria_ref` capturada en proyección |
 | **Paso 2** | Override `asi_*.overrides_turno` reemplazo **T** + `materializarTurnoTeoricoDia` (no patch directo `vis_*` — se revierte con `materializarGrupoMes` al listar grilla) |
 | **UI validada** | Celda: T + chip 68-B + **⚠️** · Modal: bloque ámbar US-3 + acciones US-14 |
-| **Fix UI local** | `DiaGrillaDetalleModal.jsx` — no llama resumen si `solicitud_id` no es ULID real (evita 403 smoke) · `GrillaMesEquipoTabla.jsx` — badge ⚠️ `amber-700` |
+| **Fix UI** | `DiaGrillaDetalleModal.jsx` — no llama resumen si `solicitud_id` no es ULID real (evita 403 smoke) · `GrillaMesEquipoTabla.jsx` — badge ⚠️ `amber-700` · **hosting deploy 2026-06-06** |
+| **Commit** | `4394055` — `feat(gso): smoke US-3 68-B horas y fixes UI reconciliacion` |
 | **Limpieza** | `--modo=revert --apply` + `--modo=restore-turno --apply` → día 13 vuelve a **M** sin evento smoke |
 | **Lección** | Portero = gate alta (`depende_rda`) · Auditor = US-3 post-evento (`teoria_ref` vs piso vigente) |
 

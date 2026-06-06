@@ -67,7 +67,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | **US-13** | P1 | Matriz permisos teoría (doc → código) | Disperso plan / override / HLg |
 | **US-17** | — | **✅ Cerrado (código + ops)** — inventario + remediación 2026-06-06; audit prod **0 huecos** | [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md) · [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) |
 
-**Orden sugerido (restante):** ~~US-3 A + US-14 + US-15~~ ✅ · smoke US-3 68-B horas (`smoke-us3-fanout-68b-dev.mjs`) ✅ 2026-06-06 · smoke P/A US-15 ✅ · **US-5 → US-4 → US-8** (ver análisis §5) · deploy hosting (fix modal smoke + badge ⚠️).
+**Orden sugerido (restante):** ~~US-3 A + US-14 + US-15~~ ✅ · smoke US-3 68-B horas (`smoke-us3-fanout-68b-dev.mjs`) ✅ 2026-06-06 · smoke P/A US-15 ✅ · hosting deploy fixes UI reconciliación ✅ · **US-5 → US-4 → US-8** (ver análisis §5).
 
 **Nota:** Piloto junio Sala **operativo** en BD; §2.1 es **defensa** desplegada ante regresión huecos/blanco. **US-17 global cerrado** 2026-06-06.
 
