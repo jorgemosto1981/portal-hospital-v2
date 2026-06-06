@@ -131,22 +131,8 @@ export function estiloVisualCelda(eventos, opts = {}) {
       className: "",
     };
   }
-  const imputacionExterna = celdaTieneImputacionExterna(eventos, opts.grupoVistaId);
   const pendiente = celdaPendiente(eventos);
   const bg = colorCelda(eventos) || COLOR_MDC_PENDIENTE;
-  if (imputacionExterna) {
-    if (pendiente) {
-      return {
-        style: { backgroundColor: "#e2e8f0" },
-        className:
-          "border-2 border-dashed border-amber-800 text-slate-900 shadow-[inset_0_0_0_1px_rgba(100,116,139,0.35)]",
-      };
-    }
-    return {
-      style: { backgroundColor: "#f1f5f9" },
-      className: "border border-slate-400 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300",
-    };
-  }
   if (pendiente) {
     return {
       style: { backgroundColor: COLOR_MDC_PENDIENTE },

@@ -57,11 +57,13 @@ export function claseTdColumna({ esFinde, esFeriado }) {
 }
 
 /**
- * Fondos calendario titular (licencias): NL oscuro, laborables verde claro, finde rojizo, feriado ámbar.
+ * Fondos calendario titular / grilla equipo.
+ * Activo = verde claro · Inactivo (franco) = slate · Feriado = ámbar claro · NL / sin HLg = vacío (UI).
  * @param {{
  *   sinAsignacionGrupo?: boolean;
  *   esFinde?: boolean;
  *   esFeriado?: boolean;
+ *   esFranco?: boolean;
  *   esNoLaborable?: boolean;
  *   esLaborable?: boolean;
  * }} p
@@ -70,15 +72,17 @@ export function claseFondoCeldaCalendarioTitular({
   sinAsignacionGrupo = false,
   esFinde = false,
   esFeriado = false,
+  esFranco = false,
   esNoLaborable = false,
   esLaborable = false,
 }) {
   const base = "border border-slate-300";
   if (sinAsignacionGrupo) return `${base} bg-slate-200`;
   if (esFeriado) return `${base} bg-amber-100`;
-  if (esFinde) return `${base} bg-rose-100`;
-  if (esNoLaborable) return `${base} bg-slate-400`;
+  if (esFranco) return `${base} bg-slate-300`;
   if (esLaborable) return `${base} bg-emerald-100`;
+  if (esNoLaborable) return `${base} bg-slate-400`;
+  if (esFinde) return `${base} bg-rose-100`;
   return `${base} bg-white`;
 }
 

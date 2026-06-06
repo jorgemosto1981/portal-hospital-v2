@@ -22,6 +22,7 @@ import { laboralCallableErrorMessage } from "../../pages/datos-laborales/callabl
 import { opsOutboxParaGrupo } from "./grillaCeldaOutboxVisual.js";
 import { mergePersonaLabelsDesdeOps } from "./grillaOutboxLabels.js";
 import { RX_GDT } from "./grillaGrupoUtils.js";
+import { formatearRangoTramoMes, diaFueraVigenciaTramo } from "./grillaMesFilasUtils.js";
 import { periodosVentanaJefe } from "../jefe/periodoJefe.js";
 import GrillaTarjetaGrupoPeriodo from "./GrillaTarjetaGrupoPeriodo.jsx";
 import GrillaPeriodoLiquidacionAccionesRrhh from "./GrillaPeriodoLiquidacionAccionesRrhh.jsx";
@@ -492,18 +493,27 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   <div className="space-y-8 pb-4">
                     <p className="text-sm text-slate-600">
                       {vista.titularCalendarios.length === 1
-                        ? "1 cargo vigente en el mes"
-                        : `${vista.titularCalendarios.length} cargos vigentes en el mes`}
+                        ? "1 tramo HLg vigente en el mes"
+                        : `${vista.titularCalendarios.length} tramos HLg vigentes en el mes`}
                       {" · "}
                       {vista.hintModo}
                     </p>
-                    {vista.titularCalendarios.map((cal) => (
+                    {vista.titularCalendarios.map((cal) => {
+                      const tramoRango = formatearRangoTramoMes(cal.vigente_desde, cal.vigente_hasta);
+                      return (
                       <section
-                        key={cal.grupo_trabajo_id}
+                        key={cal.calendario_id || cal.fila_id || cal.grupo_trabajo_id}
                         className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 shadow-sm"
                       >
                         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-violet-200/80 pb-2">
-                          <h4 className="text-base font-semibold text-violet-950">{cal.grupo_label}</h4>
+                          <div>
+                            <h4 className="text-base font-semibold text-violet-950">{cal.grupo_label}</h4>
+                            {tramoRango ? (
+                              <p className="mt-0.5 text-xs font-medium text-indigo-700">
+                                Tramo: {tramoRango}
+                              </p>
+                            ) : null}
+                          </div>
                           {cal.error_carga ? (
                             <span className="text-xs font-medium text-amber-800">Error al cargar turnos</span>
                           ) : cal.existe ? (
@@ -518,16 +528,23 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                           diasMap={cal.dias}
                           grupoLabel={cal.grupo_label}
                           grupoVistaId={cal.grupo_trabajo_id}
+                          vigenteDesde={cal.vigente_desde}
+                          vigenteHasta={cal.vigente_hasta}
                           hlgRows={vista.titularHlgRows}
                           hlgListo={vista.titularHlgListo}
                           etiquetasGrupo={etiquetasGrupo}
                           onDiaClick={({ dia, eventos, grupoLabel }) => {
-                            const cell = cal.dias?.[dia] || {};
                             const fechaYmd = `${vista.anio}-${String(vista.mes).padStart(2, "0")}-${dia}`;
+                            if (cal.vigente_desde && cal.vigente_hasta) {
+                              if (diaFueraVigenciaTramo(fechaYmd, cal.vigente_desde, cal.vigente_hasta)) return;
+                            }
+                            const cell = cal.dias?.[dia] || {};
                             setDiaModal({
                               dia,
                               fechaYmd,
                               personaId,
+                              hlgId: cal.hlg_id || undefined,
+                              filaId: cal.fila_id || undefined,
                               grupoTrabajoId: cal.grupo_trabajo_id,
                               eventos,
                               incompletoPlan: celdaEsIncompletoPlanVis(cell),
@@ -551,7 +568,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                           }}
                         />
                       </section>
-                    ))}
+                    );
+                    })}
                   </div>
                 )
               ) : vista.error ? (

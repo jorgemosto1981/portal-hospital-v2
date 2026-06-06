@@ -20,9 +20,22 @@ describe("grillaMesCellUtils imputación externa", () => {
     expect(celdaTieneImputacionExterna(eventos, "gdt_oficina")).toBe(false);
   });
 
-  it("aplica estilo gris en vista ajena", () => {
+  it("usa color_ui de imputación en cualquier calendario (mismo tono)", () => {
+    const aprobada = [
+      {
+        ...eventos[0],
+        estado_solicitud_id: "cfg_esa_aprobada",
+        color_ui: "#3B82F6",
+      },
+    ];
+    const ext = estiloVisualCelda(aprobada, { grupoVistaId: "gdt_sala" });
+    expect(ext.style.backgroundColor).toBe("#3B82F6");
+    expect(ext.className).toContain("text-white");
+  });
+
+  it("pendiente mantiene ámbar aunque sea imputación externa", () => {
     const ext = estiloVisualCelda(eventos, { grupoVistaId: "gdt_sala" });
-    expect(ext.className).toContain("slate");
+    expect(ext.style.backgroundColor).toBe("#F59E0B");
   });
 
   it("tooltip indica grupo ancla", () => {

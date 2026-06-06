@@ -22,6 +22,7 @@ import {
 import { gsoPermiteEscritura } from "./grillaGsoSoloLectura.js";
 import { mensajeToastMaterializacionLazy } from "./grillaMaterializacionToast.js";
 import { normalizarFilasGrillaEquipo } from "./grillaMesFilasUtils.js";
+import { hlgSegmentosTitularMes } from "./grillaTitularTramosMes.js";
 
 function etiquetaGrupoSector(row) {
   const nombre = String(row.nombre || row.codigo || row.titulo || "").trim();
@@ -202,17 +203,15 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
         }
         const label =
           String(claims?.nombre_completo || claims?.display_name || "").trim() || personaId;
-        const cargos = gruposEquipo
-          .map((g) => {
-            const gdt = normalizeGrupoTrabajoId(g.grupo_de_trabajo_id);
-            if (!RX_GDT.test(gdt)) return null;
-            return {
-              gdt,
-              grupo_label: String(g.etiqueta_ui || gdt).trim(),
-            };
-          })
-          .filter(Boolean)
-          .sort((a, b) => a.grupo_label.localeCompare(b.grupo_label, "es"));
+        const etiquetasGrupoMap = Object.fromEntries(
+          gruposEquipo
+            .map((g) => {
+              const gdt = normalizeGrupoTrabajoId(g.grupo_de_trabajo_id);
+              if (!RX_GDT.test(gdt)) return null;
+              return [gdt, String(g.etiqueta_ui || gdt).trim()];
+            })
+            .filter(Boolean),
+        );
 
         let hlgRows = [];
         try {
@@ -225,8 +224,29 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
           setTitularHlgListo(true);
         }
 
-        const resultados = await Promise.all(
-          cargos.map(async ({ gdt, grupo_label }) => {
+        const tramosMes = hlgSegmentosTitularMes(hlgRows, anioEff, mesEff);
+        const tramosCalendario =
+          tramosMes.length > 0
+            ? tramosMes
+            : gruposEquipo
+                .map((g) => {
+                  const gdt = normalizeGrupoTrabajoId(g.grupo_de_trabajo_id);
+                  if (!RX_GDT.test(gdt)) return null;
+                  return {
+                    calendario_id: gdt,
+                    fila_id: gdt,
+                    hlg_id: null,
+                    grupo_de_trabajo_id: gdt,
+                    vigente_desde: null,
+                    vigente_hasta: null,
+                  };
+                })
+                .filter(Boolean);
+
+        const visPorGdt = new Map();
+        const gdtsUnicos = [...new Set(tramosCalendario.map((t) => t.grupo_de_trabajo_id))];
+        await Promise.all(
+          gdtsUnicos.map(async (gdt) => {
             try {
               const res = await callObtenerVistaGrillaMesAgente({
                 persona_id: personaId,
@@ -239,29 +259,47 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
               if (msgLazy) {
                 toast(msgLazy, { id: `lazy-${gdt}-${periodoEff}` });
               }
-              return {
-                grupo_trabajo_id: gdt,
-                grupo_label,
+              visPorGdt.set(gdt, {
                 vis_id: vista.vis_id || null,
                 existe: vista.existe === true,
                 dias: vista.dias && typeof vista.dias === "object" ? vista.dias : {},
                 materializado_lazy: vista.materializado_lazy === true,
                 gso_solo_lectura: vista.gso_solo_lectura === true,
                 estado_periodo_liquidacion_id: vista.estado_periodo_liquidacion_id || null,
-              };
+              });
             } catch {
-              toast.error(`No se pudo cargar la grilla de ${grupo_label}.`);
-              return {
-                grupo_trabajo_id: gdt,
-                grupo_label,
+              const grupoLabel = etiquetasGrupoMap[gdt] || gdt;
+              toast.error(`No se pudo cargar la grilla de ${grupoLabel}.`);
+              visPorGdt.set(gdt, {
                 vis_id: null,
                 existe: false,
                 dias: {},
                 error_carga: true,
-              };
+              });
             }
           }),
         );
+
+        const resultados = tramosCalendario.map((tramo) => {
+          const gdt = tramo.grupo_de_trabajo_id;
+          const vis = visPorGdt.get(gdt) || {};
+          return {
+            calendario_id: tramo.calendario_id || tramo.fila_id || gdt,
+            fila_id: tramo.fila_id || tramo.calendario_id || gdt,
+            hlg_id: tramo.hlg_id || null,
+            grupo_trabajo_id: gdt,
+            grupo_label: etiquetasGrupoMap[gdt] || gdt,
+            vigente_desde: tramo.vigente_desde || null,
+            vigente_hasta: tramo.vigente_hasta || null,
+            vis_id: vis.vis_id || null,
+            existe: vis.existe === true,
+            dias: vis.dias || {},
+            materializado_lazy: vis.materializado_lazy === true,
+            gso_solo_lectura: vis.gso_solo_lectura === true,
+            estado_periodo_liquidacion_id: vis.estado_periodo_liquidacion_id || null,
+            error_carga: vis.error_carga === true,
+          };
+        });
 
         setTitularCalendarios(resultados);
         const algunoSoloLectura = resultados.some((cal) => cal.gso_solo_lectura === true);
@@ -271,6 +309,7 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
           fecha_corte: fechaCorteFinMesDesdePeriodo(periodoEff),
           total_personas: 1,
           total_cargos: resultados.length,
+          total_tramos: tramosMes.length || resultados.length,
           truncado: false,
           gso_solo_lectura: algunoSoloLectura,
           gso_solo_lectura_motivo: algunoSoloLectura ? "ventana_mes_anterior_dia1" : null,
@@ -342,7 +381,7 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
 
   const hintModo =
     modo === GRILLA_MES_MODO.TITULAR
-      ? "Un calendario por cada cargo vigente en el mes (turno teórico, licencias y feriados por grupo)."
+      ? "Un calendario por cada tramo HLg vigente en el mes (turno teórico, licencias y feriados por grupo)."
       : modo === GRILLA_MES_MODO.EQUIPO
         ? "Tabla equipo: un renglón por tramo HLg del mes (máx. 60 personas)."
         : "Tabla sector RRHH según grupo elegido en catálogo.";
