@@ -16,6 +16,10 @@ import {
 import { mergePersonaLabelsDesdeOps } from "./grillaOutboxLabels.js";
 import { horarioOperativoDesdeCeldaVis } from "./grillaHorarioInstitucional.js";
 import { resumenFichadaModal, titleFichadaPresencia } from "./grillaFichadaPresenciaDisplay.js";
+import {
+  evaluarImputacionExternaCelda,
+  evaluarPostPurgeHlgCelda,
+} from "./grillaMesGsoHints.js";
 
 function labelEstado(id) {
   const e = String(id || "");
@@ -63,6 +67,8 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd) {
  *   celdaVis?: Record<string, unknown> | null;
  *   esRrhh?: boolean;
  *   mostrarFichada?: boolean;
+ *   etiquetasGrupo?: Record<string, string>;
+ *   vigenteHasta?: string | null;
  * }} props
  */
 export default function DiaGrillaDetalleModal({
@@ -91,12 +97,22 @@ export default function DiaGrillaDetalleModal({
   celdaVis = null,
   esRrhh = false,
   mostrarFichada = false,
+  etiquetasGrupo = {},
+  vigenteHasta = null,
 }) {
   const resumenFichada = useMemo(
     () => (mostrarFichada && celdaVis ? resumenFichadaModal(celdaVis, { esRrhh }) : null),
     [mostrarFichada, celdaVis, esRrhh],
   );
   const tituloDesalineacion = desalineacionTooltip || "Teoría modificada post-licencia";
+  const imputacionExterna = useMemo(
+    () => evaluarImputacionExternaCelda(eventos, grupoTrabajoId, etiquetasGrupo),
+    [eventos, grupoTrabajoId, etiquetasGrupo],
+  );
+  const postPurgeHlg = useMemo(
+    () => evaluarPostPurgeHlgCelda(celdaVis, eventos, { fechaYmd, vigenteHasta }),
+    [celdaVis, eventos, fechaYmd, vigenteHasta],
+  );
   const corregirPlanTo = useMemo(
     () => planTurnoCorregirPath(grupoTrabajoId, fechaYmd),
     [grupoTrabajoId, fechaYmd],
@@ -306,6 +322,22 @@ export default function DiaGrillaDetalleModal({
                 </Link>
               ) : null}
             </div>
+          </div>
+        ) : null}
+
+        {imputacionExterna.activo ? (
+          <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-3">
+            <p className="text-sm font-semibold text-sky-950">🔗 {imputacionExterna.tooltip}</p>
+            <p className="mt-1 text-xs text-sky-900">
+              La licencia se gestionó con ancla en otro grupo de trabajo. El saldo y la autorización siguen
+              vinculados al sector ancla.
+            </p>
+          </div>
+        ) : null}
+
+        {postPurgeHlg.activo ? (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3">
+            <p className="text-sm font-semibold text-amber-950">📅 {postPurgeHlg.tooltip}</p>
           </div>
         ) : null}
 

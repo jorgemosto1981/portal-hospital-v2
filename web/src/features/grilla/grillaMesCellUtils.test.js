@@ -43,6 +43,8 @@ describe("grillaMesCellUtils imputación externa", () => {
       grupoVistaId: "gdt_sala",
       etiquetasGrupo: { gdt_oficina: "Oficina PERSONAL" },
     });
-    expect(lines.some((l) => l.includes("Imputada en: Oficina PERSONAL"))).toBe(true);
+    expect(lines.some((l) => l.includes("🔗 Licencia gestionada en otro sector (Oficina PERSONAL)"))).toBe(
+      true,
+    );
   });
 });

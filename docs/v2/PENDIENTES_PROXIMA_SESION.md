@@ -1,9 +1,29 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (2026-06-06):** **US-3 68-B (horas)** ✅ smoke + commit `4394055` + hosting deploy · **US-15** ✅ · **siguiente código:** **US-5** + **US-4** (iteración UX/copy) · RFC HLG ⏸ espera RRHH  
+> **RETOMAR AQUÍ (2026-06-06):** **US-4** + **US-5** ✅ UX/copy + QA manual + hosting deploy · **siguiente código:** **US-8** (gates mes cerrado) · RFC HLG ⏸ espera RRHH  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops (2026-06-06) · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)  
 > **Blindaje GSO:** ✅ prod `v2.6.1-blindaje-gso` (US-9, US-1, US-16, US-10, US-14, US-3 parcial) — [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md)
+
+## CIERRE US-4 + US-5 — hints GSO UX/copy (2026-06-06)
+
+| Qué | Dónde / evidencia |
+|-----|-------------------|
+| **US-4 (E)** | Badge **🔗** + tooltip *«Licencia gestionada en otro sector ({nombre})»* cuando `grupo_trabajo_id_ancla` ≠ `gdt` del `vis_*` |
+| **US-5 (F / Q3-2)** | Badge **📅** + copy *«Sin dotación en este grupo desde el {fecha}. Licencias del período anterior conservadas.»* en celdas post-purge / `no_laborable` con licencia, o día > `vigente_hasta` |
+| **Util compartido** | `grillaMesGsoHints.js` — `evaluarImputacionExternaCelda`, `evaluarPostPurgeHlgCelda`, `copyPostPurgeHlg` |
+| **UI grilla** | `GrillaMesEquipoTabla.jsx`, `GrillaMesTitularCalendario.jsx`, `grillaMesCellUtils.js` (tooltip línea) |
+| **UI avisos** | `GrillaMesSinDotacionAviso.jsx`, `GrillaTarjetaGrupoPeriodo.jsx`, `GrillaMesLicenciasPanel.jsx` (leyenda 🔗 📅) |
+| **Modal** | `DiaGrillaDetalleModal.jsx` — bloques informativos sky/ámbar US-4 y US-5 |
+| **Tests** | `grillaMesGsoHints.test.js` (5) · `grillaMesCellUtils.test.js` (4) — vitest ✅ |
+| **Limitación** | Días fuera de tramo HLg (`diaFueraTramoHlg` → celda vacía) no muestran licencias aunque existan en `vis_*` — sin cambio backend en esta iteración |
+| **QA manual** | ✅ `sol_01KT3ZG…` día 11 jun-26 — Sala 🔗 *Oficina PERSONAL* · Oficina 📅 post-purge |
+| **Deploy** | hosting — ver commit de cierre US-4/US-5 |
+| **Siguiente** | **US-8** |
+
+**Última actualización índice:** 2026-06-06 — US-4/US-5 cerrados (QA + deploy).
+
+---
 
 ## CIERRE SMOKE US-3 — 68-B horas + reconciliación (2026-06-06)
 
@@ -39,7 +59,7 @@
 | **Tests** | `grillaFichadaPresencia.test.js` · `grillaVisSanitizeGso.test.js` · `grillaTeoriaDesalineacion.test.js` |
 | **Próximo paso (script)** | `npm run smoke:us15-fichada-presencia -- --dni=… --gdt=… --fecha=YYYY-MM-DD --modo=presente` (dry-run) · `--apply` para inyectar · `--modo=revert --apply` para limpiar |
 | **RFC HLG** | ⏸ [`RFC_HLG_COBERTURA_HLC_WARNING_V2.md`](./RFC_HLG_COBERTURA_HLC_WARNING_V2.md) — pendiente aprobación RRHH (`VAL-HLG-W004`) |
-| **Siguiente backlog GSO** | US-4, US-5, US-8… — ver [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) §2.2 |
+| **Siguiente backlog GSO** | ~~US-4, US-5~~ ✅ · **US-8**… — ver [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) §2.2 |
 
 **Última actualización índice:** 2026-06-06 — cierre US-15 registrado.
 

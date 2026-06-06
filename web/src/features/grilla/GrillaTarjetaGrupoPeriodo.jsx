@@ -64,7 +64,9 @@ export default function GrillaTarjetaGrupoPeriodo({
         ].join(" ")}
         aria-hidden={!cerrado && !sinDotacion}
       >
-        {cerrado ? "Período cerrado · solo lectura" : "Sin dotación este mes"}
+        {cerrado
+          ? "Período cerrado · solo lectura"
+          : "Sin dotación · licencias del período anterior conservadas"}
       </span>
     </button>
   );

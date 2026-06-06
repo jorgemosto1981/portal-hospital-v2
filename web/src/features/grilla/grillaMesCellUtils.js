@@ -116,7 +116,8 @@ export function lineasTooltipCelda(eventos, ctx = {}) {
     const prefix = eventos.length > 1 ? `${idx + 1}. ` : "";
     lines.push(`${prefix}${cod} · ${est}`);
     if (eventoEsImputadoEnOtroGrupo(ev, ctx.grupoVistaId)) {
-      lines.push(`${prefix}Imputada en: ${etiquetaGrupoAnclaEvento(ev, ctx.etiquetasGrupo)}`);
+      const nombre = etiquetaGrupoAnclaEvento(ev, ctx.etiquetasGrupo);
+      lines.push(`${prefix}🔗 Licencia gestionada en otro sector (${nombre})`);
     }
     lines.push(`${prefix}sol: ${sol}`);
   });

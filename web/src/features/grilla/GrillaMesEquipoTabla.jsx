@@ -1,4 +1,8 @@
 import { diasEnMes, etiquetaCelda, celdaTieneDesalineacionTeoria } from "./grillaMesCellUtils.js";
+import {
+  evaluarImputacionExternaCelda,
+  evaluarPostPurgeHlgCelda,
+} from "./grillaMesGsoHints.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 import {
   columnasCalendario,
@@ -36,6 +40,10 @@ function contenidoCeldaOperativa({
   esIncompletoPlan,
   desalineacionTeoria,
   desalineacionTooltip,
+  imputacionExterna,
+  imputacionTooltip,
+  postPurgeHlg,
+  postPurgeTooltip,
 }) {
   const fichadasMostrar = outboxVisual?.fichadasPreview ?? fichadasN;
   const alertaTitle = desalineacionTooltip || "Teoría modificada post-licencia";
@@ -48,6 +56,32 @@ function contenidoCeldaOperativa({
       ⚠
     </span>
   ) : null;
+  const badgeFanOut = imputacionExterna ? (
+    <span
+      className="text-[8px] font-bold leading-none text-sky-800"
+      title={imputacionTooltip || "Licencia gestionada en otro sector"}
+      aria-label={imputacionTooltip || "Licencia gestionada en otro sector"}
+    >
+      🔗
+    </span>
+  ) : null;
+  const badgePostPurge = postPurgeHlg ? (
+    <span
+      className="text-[8px] font-bold leading-none text-amber-900"
+      title={postPurgeTooltip || "HLg inactiva — historial de licencia preservado"}
+      aria-label={postPurgeTooltip || "HLg inactiva — historial de licencia preservado"}
+    >
+      📅
+    </span>
+  ) : null;
+  const filaBadges =
+    badgeAlerta || badgeFanOut || badgePostPurge ? (
+      <span className="flex items-center justify-center gap-px leading-none">
+        {badgeAlerta}
+        {badgeFanOut}
+        {badgePostPurge}
+      </span>
+    ) : null;
   const badge = (
     <GrillaFichadasEsperadasBadge
       valor={fichadasMostrar}
@@ -98,7 +132,7 @@ function contenidoCeldaOperativa({
           {turnoMostrar || (esNoLaborable ? "NL" : "F")}
         </span>
         <span className="mt-0.5 flex flex-col items-center gap-px">
-          {badgeAlerta}
+          {filaBadges}
           {badge}
           {badgeFichada}
           {diffBlock}
@@ -110,7 +144,7 @@ function contenidoCeldaOperativa({
   if (tieneLicencia) {
     return (
       <span className="flex flex-col items-center">
-        {badgeAlerta}
+        {filaBadges}
         <span className={clasesTextoCelda(licenciaCod)}>{licenciaCod.slice(0, 4)}</span>
         {esIncompletoPlan ? (
           <span className="text-[6px] font-semibold text-rose-800">Plan incompleto</span>
@@ -133,7 +167,7 @@ function contenidoCeldaOperativa({
     <span className="flex flex-col items-center justify-center leading-none">
       <span className={clasesTextoCelda(turnoMostrar)}>{turnoMostrar}</span>
       <span className="mt-0.5 flex flex-col items-center gap-px">
-        {badgeAlerta}
+        {filaBadges}
         {badge}
         {badgeFichada}
         {diffBlock}
@@ -162,6 +196,7 @@ function contenidoCeldaOperativa({
  *     incompletoPlan?: boolean;
  *     desalineacionTeoria?: boolean;
  *     desalineacionTooltip?: string;
+ *     vigenteHasta?: string | null;
  *   }) => void;
  * }} props
  */
@@ -312,6 +347,15 @@ export default function GrillaMesEquipoTabla({
                     const desalineacion = celdaTieneDesalineacionTeoria(eventos, cell);
                     const desalineacionTeoria = desalineacion.desalineado;
                     const desalineacionTooltip = desalineacion.tooltip;
+                    const imputacion = evaluarImputacionExternaCelda(
+                      eventos,
+                      grupoSeleccionado,
+                      etiquetasGrupo,
+                    );
+                    const postPurge = evaluarPostPurgeHlgCelda(cell, eventos, {
+                      fechaYmd,
+                      vigenteHasta: fila.vigente_hasta,
+                    });
                     const tieneDatos =
                       tieneLicencia ||
                       tieneTurno ||
@@ -347,6 +391,12 @@ export default function GrillaMesEquipoTabla({
                     if (fichadaTitle) titleParts.push(fichadaTitle);
                     if (desalineacionTeoria && desalineacionTooltip) {
                       titleParts.push(desalineacionTooltip);
+                    }
+                    if (imputacion.activo && imputacion.tooltip) {
+                      titleParts.push(imputacion.tooltip);
+                    }
+                    if (postPurge.activo && postPurge.tooltip) {
+                      titleParts.push(postPurge.tooltip);
                     }
 
                     const variant = varianteCeldaOperativa({
@@ -392,6 +442,7 @@ export default function GrillaMesEquipoTabla({
                               personaLabel,
                               grupoLabel,
                               grupoTrabajoId: grupoSeleccionado || cellGdt || undefined,
+                              vigenteHasta: fila.vigente_hasta,
                               turnoTeorico: {
                                 rda_turno_id: turnoId || undefined,
                                 es_franco: esFranco,
@@ -434,6 +485,10 @@ export default function GrillaMesEquipoTabla({
                               outboxVisual,
                               desalineacionTeoria,
                               desalineacionTooltip,
+                              imputacionExterna: imputacion.activo,
+                              imputacionTooltip: imputacion.tooltip,
+                              postPurgeHlg: postPurge.activo,
+                              postPurgeTooltip: postPurge.tooltip,
                             })}
                           </GrillaTurnosCeldaChip>
                         </GrillaMesCeldaLicencia>

@@ -58,8 +58,8 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | **US-3** | — | **✅ Cerrado** — escenario A (teoría post-licencia + Q9-4 fichada) | `grillaTeoriaDesalineacion.js`, grilla equipo/titular |
 | **US-14** | — | **✅ Cerrado** — modal ⚠️ + 3 acciones acta | `DiaGrillaDetalleModal.jsx` |
 | **US-15** | — | **✅ Cerrado** — P/A por rol; capa 4 en standby (sin datos reloj en prod) | `grillaFichadaPresencia.js`, `grillaVisSanitizeGso.js`, UI badges/modal |
-| **US-4** | P1 | Ícono/enlace fan-out estándar | Etiquetas grilla |
-| **US-5** | P1 | Copy unificado post-purge HLg | UI grilla / toasts |
+| **US-4** | — | **✅ Cerrado** — badge 🔗 + tooltip fan-out (escenario E) | `grillaMesGsoHints.js`, grilla equipo/titular/modal |
+| **US-5** | — | **✅ Cerrado** — copy Q3-2 📅 post-purge HLg (escenario F) | `grillaMesGsoHints.js`, avisos sin dotación, leyenda |
 | **US-6** | P2 | Indicador lazy materialización consistente | `varianteCeldaOperativa`, toasts titular vs equipo |
 | **US-7** | P2 | Hint licencia en franco | UI celda |
 | **US-8** | P1 | Revisar gates modales turno con mes cerrado / `ASI-GSO-001` | Modales gestión turno |
@@ -67,7 +67,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | **US-13** | P1 | Matriz permisos teoría (doc → código) | Disperso plan / override / HLg |
 | **US-17** | — | **✅ Cerrado (código + ops)** — inventario + remediación 2026-06-06; audit prod **0 huecos** | [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md) · [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) |
 
-**Orden sugerido (restante):** ~~US-3 A + US-14 + US-15~~ ✅ · smoke US-3 68-B horas (`smoke-us3-fanout-68b-dev.mjs`) ✅ 2026-06-06 · smoke P/A US-15 ✅ · hosting deploy fixes UI reconciliación ✅ · **US-5 → US-4 → US-8** (ver análisis §5).
+**Orden sugerido (restante):** ~~US-3 A + US-14 + US-15~~ ✅ · smoke US-3 68-B horas ✅ · smoke P/A US-15 ✅ · ~~US-5 + US-4~~ ✅ 2026-06-06 (UX/copy; pendiente hosting deploy) · **US-8** (ver análisis §5).
 
 **Nota:** Piloto junio Sala **operativo** en BD; §2.1 es **defensa** desplegada ante regresión huecos/blanco. **US-17 global cerrado** 2026-06-06.
 

@@ -33,8 +33,8 @@
 | **US-11** | P2 | Aviso al materializar | `useGrillaMesVista.js`: toast `materializacion_grupo` al listar equipo; `grillaMaterializacionToast.js` en titular por `materializado_lazy` | **Parcial** — equipo no usa mismo mensaje lazy por agente |
 | **US-2** | P0 | Licencia sobre plan incompleto (B) | Con licencia, `tieneLicencia` → celda visible | **OK** si hay `codigo_grilla` |
 | **US-3** | P1 | ⚠️ teoría/fichada post-licencia (A, Q9-4/5) | Sin badge en `GrillaMesCeldaLicencia` / tabla | **Sí** |
-| **US-4** | P1 | 🔗 fan-out (E) | Parcial en etiquetas; sin ícono estándar acta | **Parcial** |
-| **US-5** | P1 | 📅 post-purge HLg (F, Q3-2) | Copy no unificado en GSO; backend Fase 4: `purgaAgentePlanesPorHlg` + deshabilitar/anular HLg | **Parcial** — lógica purge alineada RFC; copy UI GSO pendiente |
+| **US-4** | — | 🔗 fan-out (E) | Badge 🔗 + tooltip acta en celda/modal/leyenda | **✅ Cerrado** 2026-06-06 — `grillaMesGsoHints.js` |
+| **US-5** | — | 📅 post-purge HLg (F, Q3-2) | Copy Q3-2 unificado en grilla, avisos y modal | **✅ Cerrado** 2026-06-06 — backend Fase 4 ya alineado RFC |
 | **US-6** | P2 | ⏳ lazy (G) | Variante `vacio` en `varianteCeldaOperativa` | **Parcial** |
 | **US-7** | P2 | ℹ️ licencia en franco (D) | Se ve F + licencia (rosa en captura piloto) | **Parcial** (hint opcional) |
 | **US-8** | P1 | 🔒 mes cerrado (H) | `gso_solo_lectura`, acciones RRHH período | **Parcial** — revisar gates en modales turno |

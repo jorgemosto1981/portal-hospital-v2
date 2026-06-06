@@ -548,6 +548,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                               filaId: cal.fila_id || undefined,
                               grupoTrabajoId: cal.grupo_trabajo_id,
                               eventos,
+                              celdaVis: cell,
+                              vigenteHasta: cal.vigente_hasta,
                               incompletoPlan: celdaEsIncompletoPlanVis(cell),
                               desalineacionTeoria: celdaTieneDesalineacionTeoria(eventos, cell).desalineado,
                               personaLabel: "Mi calendario",
@@ -608,6 +610,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                     desalineacionTeoria,
                     desalineacionTooltip,
                     celdaVis,
+                    vigenteHasta,
                   }) =>
                     setDiaModal({
                       dia,
@@ -623,6 +626,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                       desalineacionTeoria: Boolean(desalineacionTeoria),
                       desalineacionTooltip: desalineacionTooltip || undefined,
                       celdaVis: celdaVis || undefined,
+                      vigenteHasta: vigenteHasta || undefined,
                       grupoTrabajoId: grupoTrabajoId || grupoLiquidacionId || vista.grupoActivoId || "",
                     })
                   }
@@ -681,6 +685,18 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   </span>
                   Teoría modificada post-licencia
                 </span>
+                <span>
+                  <span className="mr-1 inline-block text-[10px] font-bold text-sky-800 align-middle">
+                    🔗
+                  </span>
+                  Licencia gestionada en otro sector (fan-out)
+                </span>
+                <span>
+                  <span className="mr-1 inline-block text-[10px] font-bold text-amber-900 align-middle">
+                    📅
+                  </span>
+                  HLg inactiva — licencias del período anterior conservadas
+                </span>
                 <span>Clic = detalles</span>
               </div>
             </div>
@@ -707,6 +723,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
         desalineacionTeoria={Boolean(diaModal?.desalineacionTeoria)}
         desalineacionTooltip={diaModal?.desalineacionTooltip}
         celdaVis={diaModal?.celdaVis ?? null}
+        etiquetasGrupo={etiquetasGrupo}
+        vigenteHasta={diaModal?.vigenteHasta ?? null}
         esRrhh={esRrhh}
         mostrarFichada={esRrhh || esJefe}
         puedeCorregirPlan={esJefe || esRrhh}

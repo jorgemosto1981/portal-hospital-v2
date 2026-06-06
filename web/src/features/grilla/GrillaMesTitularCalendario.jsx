@@ -1,4 +1,8 @@
 import { diasEnMes, etiquetaCelda, celdaTieneDesalineacionTeoria } from "./grillaMesCellUtils.js";
+import {
+  evaluarImputacionExternaCelda,
+  evaluarPostPurgeHlgCelda,
+} from "./grillaMesGsoHints.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 import { claseFondoCeldaCalendarioTitular } from "./grillaTurnosVisual.js";
 import { celdaTieneJornadaVis, celdaEsIncompletoPlanVis, textoHorarioTurno } from "./grillaMesEquipoDisplay.js";
@@ -122,7 +126,13 @@ export default function GrillaMesTitularCalendario({
           const esFeriado = cell.es_feriado === true;
           const tipoEvento = cell.tipo_evento_institucional || null;
           const esIncompletoPlan = celdaEsIncompletoPlanVis(cell);
-          const desalineacionTeoria = celdaTieneDesalineacionTeoria(eventos, cell).desalineado;
+          const desalineacion = celdaTieneDesalineacionTeoria(eventos, cell);
+          const desalineacionTeoria = desalineacion.desalineado;
+          const imputacion = evaluarImputacionExternaCelda(eventos, grupoVistaId, etiquetasGrupo);
+          const postPurge = evaluarPostPurgeHlgCelda(cell, eventos, {
+            fechaYmd,
+            vigenteHasta,
+          });
           const esLaborable = !esFranco && !esNoLaborable && (jornadaVis || Boolean(turnoId) || esIncompletoPlan);
 
           if (!celdaInactiva && esNoLaborable && !tieneLicencia) {
@@ -164,7 +174,11 @@ export default function GrillaMesTitularCalendario({
           const fichadasTitle = titleFichadasEsperadas(fichadasN);
           if (fichadasTitle) titleParts.push(fichadasTitle);
           if (esIncompletoPlan) titleParts.push("Laborable sin turno (corregir plan del mes)");
-          if (desalineacionTeoria) titleParts.push("Teoría modificada post-licencia");
+          if (desalineacionTeoria && desalineacion.tooltip) {
+            titleParts.push(desalineacion.tooltip);
+          }
+          if (imputacion.activo && imputacion.tooltip) titleParts.push(imputacion.tooltip);
+          if (postPurge.activo && postPurge.tooltip) titleParts.push(postPurge.tooltip);
 
           const colorNumero = tieneLicencia
             ? "text-white"
@@ -223,8 +237,18 @@ export default function GrillaMesTitularCalendario({
               {labelLicencia ? (
                 <span className={`${CLASE_LICENCIA} flex items-center gap-0.5`}>
                   {desalineacionTeoria ? (
-                    <span title="Teoría modificada post-licencia" aria-hidden>
+                    <span title={desalineacion.tooltip || "Teoría modificada post-licencia"} aria-hidden>
                       ⚠
+                    </span>
+                  ) : null}
+                  {imputacion.activo ? (
+                    <span title={imputacion.tooltip} aria-hidden>
+                      🔗
+                    </span>
+                  ) : null}
+                  {postPurge.activo ? (
+                    <span title={postPurge.tooltip} aria-hidden>
+                      📅
                     </span>
                   ) : null}
                   {labelLicencia}

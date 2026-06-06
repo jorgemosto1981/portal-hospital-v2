@@ -1,12 +1,16 @@
+import { copyPostPurgeHlg } from "./grillaMesGsoHints.js";
+
 /**
- * Aviso: sector en catálogo pero sin HLg vigente al cierre del mes.
- * @param {{ grupoLabel?: string; periodoLabel: string; compact?: boolean }} props
+ * Aviso: sector en catálogo pero sin HLg vigente al cierre del mes (US-5 / Q3-2).
+ * @param {{ grupoLabel?: string; periodoLabel: string; fechaCorteHlg?: string|null; compact?: boolean }} props
  */
 export default function GrillaMesSinDotacionAviso({
   grupoLabel = "este sector",
   periodoLabel,
+  fechaCorteHlg = null,
   compact = false,
 }) {
+  const copyOficial = copyPostPurgeHlg(fechaCorteHlg);
   return (
     <div
       className={[
@@ -17,8 +21,8 @@ export default function GrillaMesSinDotacionAviso({
     >
       <p className={compact ? "font-semibold" : "text-base font-semibold"}>Sin dotación este mes</p>
       <p className={compact ? "mt-1 text-[11px] leading-snug text-amber-900" : "mt-2 text-amber-900"}>
-        No hay agentes con HLg vigente al cierre de {periodoLabel} en {grupoLabel}. El sector sigue en
-        el catálogo institucional; revisá asignaciones laborales o elegí otro mes.
+        {copyOficial} En {periodoLabel}, {grupoLabel} no tiene agentes con HLg vigente al cierre del mes.
+        Revisá asignaciones laborales o elegí otro período.
       </p>
     </div>
   );
