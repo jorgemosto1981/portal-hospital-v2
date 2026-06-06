@@ -1,5 +1,7 @@
 "use strict";
 
+const { resolverFichadaPresencia } = require("../shared/grillaFichadaPresencia");
+
 /** Campos de capa 4 / reloj que GSO jefe no debe recibir por API (UX-6). */
 const CAMPOS_SOLO_RRHH_EN_DIA = [
   "fichadas_reales",
@@ -10,9 +12,13 @@ const CAMPOS_SOLO_RRHH_EN_DIA = [
 
 function sanitizarCeldaDiaGso(cell) {
   if (!cell || typeof cell !== "object") return cell;
+  const presencia = resolverFichadaPresencia(cell);
   const out = { ...cell };
   for (const k of CAMPOS_SOLO_RRHH_EN_DIA) {
     if (k in out) delete out[k];
+  }
+  if (presencia != null) {
+    out.fichada_presencia = presencia;
   }
   return out;
 }

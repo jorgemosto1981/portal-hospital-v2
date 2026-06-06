@@ -17,7 +17,9 @@ import {
 } from "./grillaTurnosVisual.js";
 import GrillaTurnosCeldaChip from "./GrillaTurnosCeldaChip.jsx";
 import GrillaFichadasEsperadasBadge from "./GrillaFichadasEsperadasBadge.jsx";
+import GrillaFichadaPresenciaBadge from "./GrillaFichadaPresenciaBadge.jsx";
 import { fichadasEsperadasDesdeCeldaVis, titleFichadasEsperadas } from "./grillaFichadasEsperadasDisplay.js";
+import { fichadaPresenciaDesdeCeldaVis, titleFichadaPresencia } from "./grillaFichadaPresenciaDisplay.js";
 import { visualCeldaOutboxPendiente } from "./grillaCeldaOutboxVisual.js";
 import { diaFueraTramoHlg } from "./grillaMesFilasUtils.js";
 
@@ -29,16 +31,19 @@ function contenidoCeldaOperativa({
   esNoLaborable,
   turnoText,
   fichadasN,
+  fichadaPresencia,
   outboxVisual,
   esIncompletoPlan,
   desalineacionTeoria,
+  desalineacionTooltip,
 }) {
   const fichadasMostrar = outboxVisual?.fichadasPreview ?? fichadasN;
+  const alertaTitle = desalineacionTooltip || "Teoría modificada post-licencia";
   const badgeAlerta = desalineacionTeoria ? (
     <span
       className="text-[8px] font-bold leading-none text-amber-300"
-      title="Teoría modificada post-licencia"
-      aria-label="Teoría modificada post-licencia"
+      title={alertaTitle}
+      aria-label={alertaTitle}
     >
       ⚠
     </span>
@@ -50,6 +55,9 @@ function contenidoCeldaOperativa({
       className="mt-px"
     />
   );
+  const badgeFichada = fichadaPresencia ? (
+    <GrillaFichadaPresenciaBadge presencia={fichadaPresencia} className="mt-px" compacto />
+  ) : null;
   const diffBlock = outboxVisual?.pending && (outboxVisual.diffOut || outboxVisual.diffIn) ? (
     <span className="mt-px text-[6px] leading-tight">
       {outboxVisual.diffOut ? (
@@ -75,6 +83,7 @@ function contenidoCeldaOperativa({
         <span className={clasesTextoCelda(outboxVisual.lineaExtra)}>{outboxVisual.lineaExtra}</span>
         <span className="mt-0.5 flex flex-col items-center gap-px">
           {badge}
+          {badgeFichada}
           {diffBlock}
         </span>
       </span>
@@ -91,6 +100,7 @@ function contenidoCeldaOperativa({
         <span className="mt-0.5 flex flex-col items-center gap-px">
           {badgeAlerta}
           {badge}
+          {badgeFichada}
           {diffBlock}
           <span className="text-[7px] font-bold text-fuchsia-950">{licenciaCod.slice(0, 4)}</span>
         </span>
@@ -106,6 +116,7 @@ function contenidoCeldaOperativa({
           <span className="text-[6px] font-semibold text-rose-800">Plan incompleto</span>
         ) : null}
         {badge}
+        {badgeFichada}
       </span>
     );
   }
@@ -114,6 +125,7 @@ function contenidoCeldaOperativa({
       <span className="flex flex-col items-center justify-center leading-none">
         <span className="text-[7px] font-bold leading-tight text-rose-950">Sin turno</span>
         {badge}
+        {badgeFichada}
       </span>
     );
   }
@@ -121,7 +133,9 @@ function contenidoCeldaOperativa({
     <span className="flex flex-col items-center justify-center leading-none">
       <span className={clasesTextoCelda(turnoMostrar)}>{turnoMostrar}</span>
       <span className="mt-0.5 flex flex-col items-center gap-px">
+        {badgeAlerta}
         {badge}
+        {badgeFichada}
         {diffBlock}
       </span>
     </span>
@@ -137,12 +151,17 @@ function contenidoCeldaOperativa({
  *   etiquetasGrupo?: Record<string, string>;
  *   opsOutboxGrupo?: Array<Record<string, unknown>>;
  *   periodoOutbox?: string;
+ *   modoFichada?: "rrhh" | "jefe" | null;
  *   onCeldaClick: (payload: {
  *     dia: string; fechaYmd: string; personaId: string; hlgId?: string; filaId?: string;
  *     eventos: unknown[];
  *     personaLabel?: string; grupoLabel?: string;
  *     turnoTeorico?: { rda_turno_id?: string; es_franco?: boolean; capa_teorica?: Record<string, unknown> };
  *     grupoTrabajoId?: string;
+ *     celdaVis?: Record<string, unknown>;
+ *     incompletoPlan?: boolean;
+ *     desalineacionTeoria?: boolean;
+ *     desalineacionTooltip?: string;
  *   }) => void;
  * }} props
  */
@@ -154,6 +173,7 @@ export default function GrillaMesEquipoTabla({
   etiquetasGrupo = {},
   opsOutboxGrupo = [],
   periodoOutbox = "",
+  modoFichada = null,
   onCeldaClick,
 }) {
   const totalDias = diasEnMes(anio, mes);
@@ -289,7 +309,9 @@ export default function GrillaMesEquipoTabla({
                     );
 
                     const esIncompletoPlan = celdaEsIncompletoPlanVis(cell);
-                    const desalineacionTeoria = celdaTieneDesalineacionTeoria(eventos, cell).desalineado;
+                    const desalineacion = celdaTieneDesalineacionTeoria(eventos, cell);
+                    const desalineacionTeoria = desalineacion.desalineado;
+                    const desalineacionTooltip = desalineacion.tooltip;
                     const tieneDatos =
                       tieneLicencia ||
                       tieneTurno ||
@@ -318,8 +340,13 @@ export default function GrillaMesEquipoTabla({
                     if (esIncompletoPlan) {
                       titleParts.push("Laborable sin turno (corregir plan del mes)");
                     }
-                    if (desalineacionTeoria) {
-                      titleParts.push("Teoría modificada post-licencia");
+                    const fichadaPresencia = modoFichada
+                      ? fichadaPresenciaDesdeCeldaVis(cell, { esRrhh: modoFichada === "rrhh" })
+                      : null;
+                    const fichadaTitle = titleFichadaPresencia(fichadaPresencia);
+                    if (fichadaTitle) titleParts.push(fichadaTitle);
+                    if (desalineacionTeoria && desalineacionTooltip) {
+                      titleParts.push(desalineacionTooltip);
                     }
 
                     const variant = varianteCeldaOperativa({
@@ -353,6 +380,8 @@ export default function GrillaMesEquipoTabla({
                             onCeldaClick({
                               incompletoPlan: esIncompletoPlan,
                               desalineacionTeoria,
+                              desalineacionTooltip,
+                              celdaVis: cell,
                               puedeOperarTurno,
                               dia,
                               fechaYmd,
@@ -400,9 +429,11 @@ export default function GrillaMesEquipoTabla({
                               esNoLaborable,
                               turnoText,
                               fichadasN,
+                              fichadaPresencia,
                               esIncompletoPlan,
                               outboxVisual,
                               desalineacionTeoria,
+                              desalineacionTooltip,
                             })}
                           </GrillaTurnosCeldaChip>
                         </GrillaMesCeldaLicencia>

@@ -15,6 +15,7 @@ import {
 } from "./grillaGestionTurnoHistorial.js";
 import { mergePersonaLabelsDesdeOps } from "./grillaOutboxLabels.js";
 import { horarioOperativoDesdeCeldaVis } from "./grillaHorarioInstitucional.js";
+import { resumenFichadaModal, titleFichadaPresencia } from "./grillaFichadaPresenciaDisplay.js";
 
 function labelEstado(id) {
   const e = String(id || "");
@@ -57,7 +58,11 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd) {
  *   personaLabels?: Record<string, string>;
  *   incompletoPlan?: boolean;
  *   desalineacionTeoria?: boolean;
+ *   desalineacionTooltip?: string;
  *   puedeCorregirPlan?: boolean;
+ *   celdaVis?: Record<string, unknown> | null;
+ *   esRrhh?: boolean;
+ *   mostrarFichada?: boolean;
  * }} props
  */
 export default function DiaGrillaDetalleModal({
@@ -81,8 +86,17 @@ export default function DiaGrillaDetalleModal({
   personaLabels = {},
   incompletoPlan = false,
   desalineacionTeoria = false,
+  desalineacionTooltip = "",
   puedeCorregirPlan = false,
+  celdaVis = null,
+  esRrhh = false,
+  mostrarFichada = false,
 }) {
+  const resumenFichada = useMemo(
+    () => (mostrarFichada && celdaVis ? resumenFichadaModal(celdaVis, { esRrhh }) : null),
+    [mostrarFichada, celdaVis, esRrhh],
+  );
+  const tituloDesalineacion = desalineacionTooltip || "Teoría modificada post-licencia";
   const corregirPlanTo = useMemo(
     () => planTurnoCorregirPath(grupoTrabajoId, fechaYmd),
     [grupoTrabajoId, fechaYmd],
@@ -244,10 +258,11 @@ export default function DiaGrillaDetalleModal({
 
         {desalineacionTeoria && !incompletoPlan ? (
           <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
-            <p className="text-sm font-semibold text-amber-950">Teoría modificada post-licencia</p>
+            <p className="text-sm font-semibold text-amber-950">{tituloDesalineacion}</p>
             <p className="mt-1 text-xs text-amber-900">
-              La jornada teórica vigente difiere de la referencia al registrar la licencia. Revisá la
-              solicitud, ajustá el turno del día o derivá la corrección al plan mensual.
+              {tituloDesalineacion === "Fichada no coincide con turno teórico"
+                ? "La asistencia registrada no coincide con la jornada teórica vigente. Revisá la solicitud, ajustá el turno del día o derivá la corrección al plan mensual."
+                : "La jornada teórica vigente difiere de la referencia al registrar la licencia. Revisá la solicitud, ajustá el turno del día o derivá la corrección al plan mensual."}
             </p>
             <div className="mt-3 flex flex-col gap-2">
               {resumen?.solicitud_id && bandejaPath ? (
@@ -285,6 +300,34 @@ export default function DiaGrillaDetalleModal({
                 </Link>
               ) : null}
             </div>
+          </div>
+        ) : null}
+
+        {resumenFichada && (resumenFichada.tieneRegistro || resumenFichada.presencia === "ausente") ? (
+          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600">
+              {resumenFichada.modo === "rrhh" ? "Fichada real" : "Asistencia"}
+            </h4>
+            <dl className="space-y-1 text-xs">
+              <div className="flex gap-2">
+                <dt className="font-medium text-slate-500">Estado:</dt>
+                <dd className="font-bold text-slate-800">
+                  {titleFichadaPresencia(resumenFichada.presencia) || "Sin registro"}
+                </dd>
+              </div>
+              {resumenFichada.modo === "rrhh" && resumenFichada.horarios.length > 0 ? (
+                <div className="flex gap-2">
+                  <dt className="shrink-0 font-medium text-slate-500">Horarios:</dt>
+                  <dd className="text-slate-700">
+                    <ul className="space-y-0.5">
+                      {resumenFichada.horarios.map((linea) => (
+                        <li key={linea}>{linea}</li>
+                      ))}
+                    </ul>
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
           </div>
         ) : null}
 

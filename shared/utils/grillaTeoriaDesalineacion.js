@@ -1,7 +1,10 @@
 /**
  * US-3 escenario A: comparar teoría vigente (rda_*) vs referencia al proyectar licencia.
+ * Q9-4 B: también fichada que contradice teoría vigente (con licencia en celda).
  * Sin I/O — usable en web y functions.
  */
+
+import { evaluarContradiccionFichadaTeoria } from "./grillaFichadaPresencia.js";
 
 /** @param {unknown} raw */
 function normalizarTipoDiaTeoria(raw) {
@@ -86,6 +89,7 @@ export function celdaTieneDesalineacionTeoria(eventos, celdaVigente) {
   if (!Array.isArray(eventos) || eventos.length === 0) {
     return { desalineado: false };
   }
+
   for (const ev of eventos) {
     const r = evaluarDesalineacionTeoriaLicencia(
       ev && typeof ev === "object" ? ev.teoria_ref : null,
@@ -93,5 +97,15 @@ export function celdaTieneDesalineacionTeoria(eventos, celdaVigente) {
     );
     if (r.desalineado) return r;
   }
+
+  const fichada = evaluarContradiccionFichadaTeoria(celdaVigente);
+  if (fichada.contradictorio) {
+    return {
+      desalineado: true,
+      motivo: fichada.motivo,
+      tooltip: fichada.tooltip,
+    };
+  }
+
   return { desalineado: false };
 }

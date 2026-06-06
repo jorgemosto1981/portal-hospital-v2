@@ -2,11 +2,14 @@
 // AUTO-GENERADO por scripts/sync-shared-to-functions.mjs
 // NO EDITAR MANUALMENTE — editar shared/utils/ y correr el script.
 
+const { evaluarContradiccionFichadaTeoria } = require("./grillaFichadaPresencia");
 
 /**
  * US-3 escenario A: comparar teoría vigente (rda_*) vs referencia al proyectar licencia.
+ * Q9-4 B: también fichada que contradice teoría vigente (con licencia en celda).
  * Sin I/O — usable en web y functions.
  */
+
 
 /** @param {unknown} raw */
 function normalizarTipoDiaTeoria(raw) {
@@ -91,6 +94,7 @@ function celdaTieneDesalineacionTeoria(eventos, celdaVigente) {
   if (!Array.isArray(eventos) || eventos.length === 0) {
     return { desalineado: false };
   }
+
   for (const ev of eventos) {
     const r = evaluarDesalineacionTeoriaLicencia(
       ev && typeof ev === "object" ? ev.teoria_ref : null,
@@ -98,6 +102,16 @@ function celdaTieneDesalineacionTeoria(eventos, celdaVigente) {
     );
     if (r.desalineado) return r;
   }
+
+  const fichada = evaluarContradiccionFichadaTeoria(celdaVigente);
+  if (fichada.contradictorio) {
+    return {
+      desalineado: true,
+      motivo: fichada.motivo,
+      tooltip: fichada.tooltip,
+    };
+  }
+
   return { desalineado: false };
 }
 

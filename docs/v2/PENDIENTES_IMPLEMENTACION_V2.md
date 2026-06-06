@@ -1,7 +1,7 @@
 # Pendientes de implementación — Portal Hospital V2
 
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
-**Última actualización:** 2026-06-06 (**US-17 cerrado** — remediación ops + R0/R2)  
+**Última actualización:** 2026-06-06 (**US-15 cerrado** — fichada por rol + deploy prod; **US-17** cerrado)  
 **Rama / release:** `master` · tag **`v2.6.1-blindaje-gso`** · PR blindaje [#2](https://github.com/jorgemosto1981/portal-hospital-v2/pull/2) · PR US-17 [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3) **mergeado**  
 **Sesión / continuidad:** **RETOMAR** [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) · índice: [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md)
 
@@ -55,9 +55,9 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 
 | US | Prioridad | Qué falta implementar | Archivos / área típica |
 |----|-----------|------------------------|-------------------------|
-| **US-3** | P1 | Badge ⚠️ teoría vs licencia / post-cambio teoría (escenario A; distinto de B en modal) | `GrillaMesCeldaLicencia`, tabla equipo |
-| **US-14** | P1 | Acciones acta ante ⚠️ residual (bandeja + gestión turno; acción 1–2 completas en otros flujos) | `DiaGrillaDetalleModal.jsx` (extender) |
-| **US-15** | P2 | Presente/ausente fichada por rol (sin crudo a jefe) | GSO + `grillaVisSanitizeGso.js` (extender) |
+| **US-3** | — | **✅ Cerrado** — escenario A (teoría post-licencia + Q9-4 fichada) | `grillaTeoriaDesalineacion.js`, grilla equipo/titular |
+| **US-14** | — | **✅ Cerrado** — modal ⚠️ + 3 acciones acta | `DiaGrillaDetalleModal.jsx` |
+| **US-15** | — | **✅ Cerrado** — P/A por rol; capa 4 en standby (sin datos reloj en prod) | `grillaFichadaPresencia.js`, `grillaVisSanitizeGso.js`, UI badges/modal |
 | **US-4** | P1 | Ícono/enlace fan-out estándar | Etiquetas grilla |
 | **US-5** | P1 | Copy unificado post-purge HLg | UI grilla / toasts |
 | **US-6** | P2 | Indicador lazy materialización consistente | `varianteCeldaOperativa`, toasts titular vs equipo |
@@ -67,7 +67,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | **US-13** | P1 | Matriz permisos teoría (doc → código) | Disperso plan / override / HLg |
 | **US-17** | — | **✅ Cerrado (código + ops)** — inventario + remediación 2026-06-06; audit prod **0 huecos** | [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md) · [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) |
 
-**Orden sugerido (restante):** US-3 escenario A + US-14 completo → US-15 → resto (ver análisis §5).
+**Orden sugerido (restante):** ~~US-3 A + US-14 + US-15~~ ✅ · smoke P/A (`smoke-us15-fichada-presencia-dev.mjs`) cuando capa 4 · US-4, US-5, US-8… (ver análisis §5).
 
 **Nota:** Piloto junio Sala **operativo** en BD; §2.1 es **defensa** desplegada ante regresión huecos/blanco. **US-17 global cerrado** 2026-06-06.
 

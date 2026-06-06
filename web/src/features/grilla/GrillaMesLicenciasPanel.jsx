@@ -592,6 +592,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   etiquetasGrupo={etiquetasGrupo}
                   opsOutboxGrupo={opsOutboxGrillaModal}
                   periodoOutbox={periodoGrillaModal}
+                  modoFichada={esRrhh ? "rrhh" : esJefe ? "jefe" : null}
                   onCeldaClick={({
                     dia,
                     fechaYmd,
@@ -605,6 +606,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                     grupoTrabajoId,
                     incompletoPlan,
                     desalineacionTeoria,
+                    desalineacionTooltip,
+                    celdaVis,
                   }) =>
                     setDiaModal({
                       dia,
@@ -618,6 +621,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                       turnoTeorico,
                       incompletoPlan: Boolean(incompletoPlan),
                       desalineacionTeoria: Boolean(desalineacionTeoria),
+                      desalineacionTooltip: desalineacionTooltip || undefined,
+                      celdaVis: celdaVis || undefined,
                       grupoTrabajoId: grupoTrabajoId || grupoLiquidacionId || vista.grupoActivoId || "",
                     })
                   }
@@ -700,6 +705,10 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
         soloLectura={!vista.gsoPermiteEscritura}
         incompletoPlan={Boolean(diaModal?.incompletoPlan)}
         desalineacionTeoria={Boolean(diaModal?.desalineacionTeoria)}
+        desalineacionTooltip={diaModal?.desalineacionTooltip}
+        celdaVis={diaModal?.celdaVis ?? null}
+        esRrhh={esRrhh}
+        mostrarFichada={esRrhh || esJefe}
         puedeCorregirPlan={esJefe || esRrhh}
         puedeGestionarTurno={puedeGestionTurno && !diaModal?.incompletoPlan}
         onAbrirGestionTurno={

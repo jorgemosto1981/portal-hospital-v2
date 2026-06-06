@@ -71,9 +71,26 @@ describe("grillaTeoriaDesalineacion", () => {
     assert.equal(celdaTieneDesalineacionTeoria(eventos, celda).desalineado, true);
   });
 
-  it("sin teoria_ref no marca desalineación", () => {
+  it("sin teoria_ref ni contradicción fichada no marca desalineación", () => {
     const eventos = [{ solicitud_id: "sol_test" }];
-    const celda = { tipo_dia: "laborable", rda_turno_id: "N" };
+    const celda = {
+      tipo_dia: "laborable",
+      rda_turno_id: "N",
+      fichadas_reales: [{ hora: "08:00" }],
+    };
     assert.equal(celdaTieneDesalineacionTeoria(eventos, celda).desalineado, false);
+  });
+
+  it("marca desalineación por fichada contradictoria con licencia", () => {
+    const eventos = [{ solicitud_id: "sol_test", codigo_grilla: "64-A" }];
+    const celda = {
+      tipo_dia: "laborable",
+      fichadas_esperadas: 2,
+      rda_turno_id: "M",
+      fichadas_reales: [],
+    };
+    const r = celdaTieneDesalineacionTeoria(eventos, celda);
+    assert.equal(r.desalineado, true);
+    assert.equal(r.tooltip, "Fichada no coincide con turno teórico");
   });
 });

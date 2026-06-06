@@ -25,6 +25,20 @@ describe("grillaVisSanitizeGso (UX-6)", () => {
     assert.equal("fichadas" in dias["09"], false);
     assert.equal("capa_realidad" in dias["09"], false);
     assert.equal("divergencias" in dias["09"], false);
+    assert.equal(dias["09"].fichada_presencia, "presente");
+  });
+
+  it("expone fichada_presencia ausente sin horarios crudos", () => {
+    const dias = sanitizarDiasVisGso({
+      "10": {
+        tipo_dia: "laborable",
+        fichadas_esperadas: 2,
+        rda_turno_id: "M",
+        fichadas_reales: [],
+      },
+    });
+    assert.equal(dias["10"].fichada_presencia, "ausente");
+    assert.equal("fichadas_reales" in dias["10"], false);
   });
 
   it("preserva metadata de vista", () => {

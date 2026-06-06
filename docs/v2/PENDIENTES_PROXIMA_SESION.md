@@ -1,9 +1,30 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (2026-06-06):** **US-3 A + US-14** ✅ cerrados (prod + smoke MOSTO día 27) · siguiente sugerido: **US-15** (fichada en celda) o [`RFC_HLG_COBERTURA_HLC_WARNING_V2.md`](./RFC_HLG_COBERTURA_HLC_WARNING_V2.md)  
+> **RETOMAR AQUÍ (2026-06-06):** **US-15** ✅ cerrado (código + deploy prod + smoke visual sin regresión) · **primer paso próxima sesión:** smoke badges P/A con capa 4 simulada (script abajo) · RFC HLG ⏸ espera RRHH  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops (2026-06-06) · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)  
 > **Blindaje GSO:** ✅ prod `v2.6.1-blindaje-gso` (US-9, US-1, US-16, US-10, US-14, US-3 parcial) — [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md)
+
+## CIERRE US-15 — fichada en celda por rol (2026-06-06)
+
+| Qué | Dónde / evidencia |
+|-----|-------------------|
+| **Contrato Q9-3** | RRHH: horarios en modal + badge P/A · Jefe: solo `fichada_presencia` (P/A) sin `fichadas_reales` · Titular: sin fichada |
+| **Util compartido** | `shared/utils/grillaFichadaPresencia.js` — presencia agregada + contradicción fichada ↔ teoría |
+| **Sanitize API jefe** | `grillaVisSanitizeGso.js` — quita capa 4 cruda; expone `fichada_presencia` |
+| **Q9-4 B** | `grillaTeoriaDesalineacion.js` — ⚠️ si fichada contradice teoría **con licencia en celda** |
+| **UI** | `GrillaFichadaPresenciaBadge.jsx` · `DiaGrillaDetalleModal.jsx` (bloque Fichada/Asistencia por rol) |
+| **Deploy prod** | functions + hosting · https://portal-hospital-v2.web.app — **2026-06-06** |
+| **Smoke visual prod** | Grilla igual que antes (sin capa 4 en `vis_*` → sin badges P/A; comportamiento esperado) |
+| **Guard capa 4** | Sin `fichadas_reales`/`fichadas`/`capa_realidad` en celda → no se infiere ausente (evita ruido pre-reloj) |
+| **Tests** | `grillaFichadaPresencia.test.js` · `grillaVisSanitizeGso.test.js` · `grillaTeoriaDesalineacion.test.js` |
+| **Próximo paso (script)** | `npm run smoke:us15-fichada-presencia -- --dni=… --gdt=… --fecha=YYYY-MM-DD --modo=presente` (dry-run) · `--apply` para inyectar · `--modo=revert --apply` para limpiar |
+| **RFC HLG** | ⏸ [`RFC_HLG_COBERTURA_HLC_WARNING_V2.md`](./RFC_HLG_COBERTURA_HLC_WARNING_V2.md) — pendiente aprobación RRHH (`VAL-HLG-W004`) |
+| **Siguiente backlog GSO** | US-4, US-5, US-8… — ver [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) §2.2 |
+
+**Última actualización índice:** 2026-06-06 — cierre US-15 registrado.
+
+---
 
 ## CIERRE US-3 A + US-14 — reconciliación teoría post-licencia (2026-06-06)
 
@@ -29,7 +50,7 @@
 | **Manifiesto R0–R4** | [`MANIFIESTO_REIMPACTO_INTEGRIDAD_PLAN_REGIMEN_2026.md`](./MANIFIESTO_REIMPACTO_INTEGRIDAD_PLAN_REGIMEN_2026.md) |
 | **Audit cierre** | `npm run audit:us17-planes-huecos` → 5 planes, **0 huecos** |
 | **Lista RRHH (histórico)** | [`reports/US17_LISTA_TRABAJO_RRHH_2026-06-05.md`](../reports/US17_LISTA_TRABAJO_RRHH_2026-06-05.md) |
-| **Siguiente (sugerido)** | ~~US-3 A + US-14~~ ✅ · US-15 / RFC HLG |
+| **Siguiente (sugerido)** | ~~US-3 A + US-14~~ ✅ · ~~US-15~~ ✅ · smoke P/A script · RFC HLG ⏸ |
 
 **Última actualización índice:** 2026-06-06 — cierre US-17 registrado (US-3/US-14 cerrados aparte arriba).
 
@@ -435,6 +456,7 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 | Materializar mes | `scripts/materializar-grupo-mes.mjs` |
 | Smoke purge HLg | `scripts/audit-purge-hlg-post-corte.mjs` |
 | Smoke fichadas / materializar día | `scripts/smoke-fichadas-esperadas-dev.mjs`, `smoke-materializar-turno-dia-dev.mjs` |
+| Smoke US-15 capa 4 (P/A) | `npm run smoke:us15-fichada-presencia -- --dni=… --gdt=… --fecha=YYYY-MM-DD --modo=presente` |
 | Rematerializar 1 día + leer vis | `scripts/_tmp-materializar-dia-y-leer-vis.mjs` |
 | Handoff pausa F3 | `docs/v2/HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md` |
 | HLg por persona/gdt | `scripts/audit-hlg-persona-gdts.mjs` |
