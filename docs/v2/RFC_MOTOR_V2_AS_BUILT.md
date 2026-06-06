@@ -1,9 +1,10 @@
 # RFC — Motor V2 As-Built: Especificación Técnica Final
 
 > **Estado:** As-Built (refleja el código en producción)
-> **Commit de referencia:** `74a2763` (merge paridad arquitectónica V2)
-> **Fecha:** 2026-05-25
-> **Alcance:** LAO (Patrón A) + Patrón B sobre orquestador unificado
+> **Commit de referencia:** `74a2763` + implementación Patrón C + smoke test E2E prod
+> **Fecha:** 2026-05-25 (actualizado)
+> **Alcance:** LAO (Patrón A) + Patrón B + Patrón C sobre orquestador unificado
+> **Motor universal:** 3 patrones, 1 pipeline, 76 campos, 0 huérfanos
 
 ---
 
@@ -11,15 +12,16 @@
 
 ### 1.1 Orquestador Unificado: `runMotorPipeline`
 
-El motor V2 elimina la dualidad de motores independientes. Tanto LAO como
-Patrón B ejecutan sobre un único pipeline secuencial con early-return:
+El motor V2 elimina la multiplicidad de motores independientes. Los tres
+patrones (LAO, Patrón B, Patrón C) ejecutan sobre un único pipeline
+secuencial con early-return:
 
 ```
 cfg_articulos_versiones/{ver_id}
         │
         ▼
   ┌─────────────┐
-  │ ConfigResolver│ ← resolvePatronBMotorConfig() / resolveLaoMotorConfig()
+  │ ConfigResolver│ ← resolvePatronBMotorConfig() / resolveLaoMotorConfig() / resolvePatronCMotorConfig()
   └──────┬──────┘
          │  config normalizada (defaults explícitos)
          ▼
@@ -44,17 +46,24 @@ cfg_articulos_versiones/{ver_id}
 
 ### 1.2 Fases por Patrón
 
-| Fase | Patrón B (`patronBAltaMotorV2.js`) | LAO (`laoAltaMotorCompleto.js`) |
-|------|-------------------------------------|----------------------------------|
-| P/A  | Validar patrón saldo = B            | Asignación core (TSE + matriz)   |
-| C    | Validar fechas artículo             | Config LAO (resolver + assert)   |
-| E    | Elegibilidad laboral (HLC)          | Elegibilidad laboral (HLC)       |
-| W    | Preaviso (advertencias)             | Preaviso (advertencias)          |
-| F    | Frecuencia mensual                  | —                                |
-| T    | Tope días por evento (<=)           | —                                |
-| S    | Saldo ciclo                         | Saldo ciclo LAO                  |
-| G    | Grilla horaria                      | —                                |
-| L    | —                                   | Superposición fechas LAO         |
+| Fase | Patrón B (`patronBAltaMotorV2.js`) | LAO (`laoAltaMotorCompleto.js`) | Patrón C (`patronCAltaMotorV2.js`) |
+|------|-------------------------------------|----------------------------------|------------------------------------|
+| P/A  | Validar patrón saldo = B            | Asignación core (TSE + matriz)   | Validar patrón saldo = C           |
+| C    | Validar fechas artículo             | Config LAO (resolver + assert)   | Validar fechas artículo            |
+| E    | Elegibilidad laboral (HLC)          | Elegibilidad laboral (HLC)       | Elegibilidad laboral (HLC)         |
+| W    | Preaviso (advertencias)             | Preaviso (advertencias)          | Preaviso (advertencias)            |
+| F    | Frecuencia mensual                  | —                                | Frecuencia mensual                 |
+| T    | Tope días por evento (<=)           | —                                | Tope horas por evento (<=)         |
+| S    | Saldo ciclo anual                   | Saldo ciclo LAO                  | Saldo global (cuenta corriente)    |
+| G    | Grilla horaria                      | —                                | Grilla horaria                     |
+| L    | —                                   | Superposición fechas LAO         | —                                  |
+
+#### Diferencias clave Patrón C
+
+- **Unidad nativa:** horas (`cfg_uma_horas`), no días. Campo solicitud: `horas_solicitadas`.
+- **Saldo global:** `sal_global_per_{ULID}` / bolsa `bol_{art}_global` / `anio_origen = 0`.
+- **Sin ciclo anual:** No hay `anio_ciclo_consumo`. La bolsa es una cuenta corriente interanual.
+- **`resolveConsumo()`:** Función que detecta la unidad de medida y resuelve la cantidad a consumir.
 
 ### 1.3 Flujo de Inyección de Configuración
 
@@ -217,7 +226,7 @@ lo que el snapshot ya decidió.
 
 ```
 motor_snapshot: {
-  motor_version: "patron-b-v2" | "lao-v2-motor",
+  motor_version: "patron-b-v2" | "lao-v2-motor" | "patron-c-v2",
   evaluado_en: "2026-05-25T15:30:00.000Z",
   version_aplicada_id: "ver_01KRNY...",
   eligible: true | false,
@@ -302,7 +311,19 @@ datos configurables en `cfg_articulos_versiones`:
 | Cómputo días | `regla_computo_dias_id` | — | CORRIDOS multi-día desbloqueado |
 | Superposición | `politica_superposicion_id` | `null` | Validación entre solicitudes |
 
-### 4.3 Decisiones V2 vs V1
+### 4.3 Patrón C (Cuenta Corriente)
+
+| Regla | Campo Configurador | Default | Decisión V2 |
+|---|---|---|---|
+| Unidad de consumo | `unidad_medida_id` | `cfg_uma_horas` | Horas como unidad nativa |
+| Tope horas por evento | `tope_dias_por_evento` | `null` | Interpretado como horas cuando `unidad_medida_id = cfg_uma_horas` |
+| Saldo global | `reinicio_ciclo_id` | `cfg_rcc_nunca` | Sin reinicio cíclico; `anio_origen = 0` |
+| Origen externo | `origen_saldo_id` | `cfg_os_externo_*` | Bolsa alimentada por eventos externos (horas extra) |
+| Frecuencia mensual | `tope_frecuencia_mensual` | `null` | Gate por mes calendario |
+| Fraccionamiento | `fraccionamiento_habilitado` | `false` | Habilita consumo fraccionado en minutos |
+| Módulo fracción | `modulo_fraccionamiento_minutos` | `15` | Granularidad mínima de consumo |
+
+### 4.4 Decisiones V2 vs V1
 
 | Aspecto | V1 (Legacy) | V2 (As-Built) |
 |---|---|---|
@@ -312,6 +333,8 @@ datos configurables en `cfg_articulos_versiones`:
 | Snapshot de decisión | No existe | `motor_snapshot` inmutable |
 | Config usada | No se persiste | `config_usada` en solicitud |
 | Motores independientes | 2 codebases separadas | 1 `runMotorPipeline` + N configuraciones |
+| Unidad de consumo fija | Solo días | Días o horas (`resolveConsumo`) |
+| Saldo global | No soportado | `sal_global_per_*` + bolsa `_global` (Patrón C) |
 
 ---
 
@@ -324,11 +347,11 @@ Matriz de validación para habilitar un nuevo artículo sobre Motor V2:
 | # | Verificación | Responsable | Artefacto |
 |---|---|---|---|
 | 1 | Versión publicada con 7 bloques completos | RRHH Config | `cfg_articulos_versiones/{ver_id}` |
-| 2 | Patrón de saldo resuelve correctamente | Motor | `resolvePatronSaldo()` → A o B |
-| 3 | ConfigResolver cablea todos los campos | CI | `auditar-campos-patron-b-resolver.mjs` |
-| 4 | Tests unitarios pasan (23/23) | CI | `laoAltaMotorCompleto.test.js` |
+| 2 | Patrón de saldo resuelve correctamente | Motor | `resolvePatronSaldo()` → A, B o C |
+| 3 | ConfigResolver cablea todos los campos | CI | `auditar-campos-patron-b-resolver.mjs` (B+C) |
+| 4 | Tests unitarios pasan (24/24) | CI | Suite completa (node:test) |
 | 5 | Agente piloto tiene HLC vigente | Datos | `historial_laboral_cargos` |
-| 6 | Bolsa de saldo existe para el ciclo | Datos | `saldos_articulo_agente/{doc}` |
+| 6 | Bolsa de saldo existe para el ciclo/global | Datos | `saldos_articulo_agente/{doc}` |
 
 ### 5.2 Smoke Test E2E
 
@@ -339,13 +362,34 @@ Matriz de validación para habilitar un nuevo artículo sobre Motor V2:
 | 3 | Verificar `config_usada` en Firestore | `version_aplicada_id`, campos decisionales |
 | 4 | Verificar snapshot inmutable | Re-leer después de 5 min, mismo contenido |
 
-### 5.3 Scripts de Soporte
+### 5.3 Smoke Test Patrón C — Resultado Producción (2026-05-25)
+
+| Dato | Valor |
+|---|---|
+| Solicitud | `sol_01KSG4MA559JESFB9Z1PK2M42A` |
+| Artículo | 68-B Compensatorio (`art_01KRYEF39ZM0KB0F0Y4GPBH38F`) |
+| Versión | `ver_01KRYEFZRQF0RKHJ5JTK6244G8` |
+| Persona | DNI 28914247 (`per_01KQN9WXFXF69Z9DCT5YNJ3TFZ`) |
+| `patron_saldo` | `C` / `schema_version: 3` |
+| `horas_solicitadas` | 6 |
+| `motor_version` | `patron-c-v2` |
+| Estado | `cfg_esa_en_revision_jefe` (huérfana → RRHH sustituto) |
+| Checks | 7/7 OK (P/C/E/E/F/S/G) |
+| Saldo pre | 100 hs |
+| Saldo post | 94 hs (disponible) / 6 hs (consumido) |
+| `config_usada.motor_tipo` | `patron-c-v2` |
+| `config_usada.unidad_medida_id` | `cfg_uma_horas` |
+| `config_usada.reinicio_ciclo_id` | `cfg_rcc_nunca` |
+
+### 5.4 Scripts de Soporte
 
 | Script | Propósito |
 |---|---|
-| `scripts/auditar-campos-patron-b-resolver.mjs` | CI: 0 huérfanos en resolver |
+| `scripts/auditar-campos-patron-b-resolver.mjs` | CI: 0 huérfanos en resolvers B+C (76 campos) |
 | `scripts/smoke-patron-b-motor-v2.mjs` | E2E: solicitud Patrón B en prod |
 | `scripts/smoke-acreditar-lao-bolsa-motor.mjs` | E2E: acreditación LAO en prod |
+| `scripts/smoke-patron-c-motor-v2.mjs` | E2E: solicitud Patrón C en prod (horas + saldo global) |
+| `scripts/analizar-solicitud-patron-c.mjs` | Diagnóstico: leer solicitud + saldo post-débito |
 
 ---
 
@@ -354,15 +398,40 @@ Matriz de validación para habilitar un nuevo artículo sobre Motor V2:
 | Archivo | Responsabilidad |
 |---|---|
 | `motorSolicitudOrquestador.js` | Pipeline genérico, `motorCheck`, `mergeMotivosFromChecks` |
-| `patronBAltaMotorV2.js` | 8 fases Patrón B (P/C/E/W/F/T/S/G) |
+| `patronBAltaMotorV2.js` | 8 fases Patrón B (P/C/E/W/F/T/S/G) — saldo cíclico, días |
 | `patronBMotorConfigResolver.js` | Resolver 7 bloques → config plana + `buildPatronBConfigUsada` |
+| `patronCAltaMotorV2.js` | 8 fases Patrón C (P/C/E/W/F/T/S/G) — saldo global, horas |
+| `patronCMotorConfigResolver.js` | Resolver 7 bloques → config plana + `buildPatronCConfigUsada` |
 | `laoAltaMotorCompleto.js` | 6 fases LAO (A/C/E/W/L/S) sobre `runMotorPipeline` |
 | `laoMotorConfigResolver.js` | Resolver LAO-específico |
 | `laoMotorAuditoriaSnapshot.js` | `buildMotorSnapshot`, `ensamblarContextoDeAuditoria` |
 | `solicitudElegibilidadLaboral.js` | Elegibilidad HLC compartida |
 | `validarFechasArticuloRuntime.js` | Validación fechas compartida |
 | `resolvePatronSaldo.js` | Clasificador A/B/C |
-| `laoSaldosBolsa.js` | Operaciones de bolsa/saldo |
+| `laoSaldosBolsa.js` | Operaciones de bolsa/saldo (cíclico + global) |
+| `ticketeraArticulosMvp.js` | Modo catálogo: discovery dinámico por collectionGroup |
+| `validarEntornoOperativoCore.js` | Validación entorno pre-preview (Patrón B + C) |
+
+### 6.2 Triggers y Callables
+
+| Archivo | Responsabilidad |
+|---|---|
+| `solicitudArticuloLaoOnCreate.js` | Trigger LAO: motor + débito saldo cíclico |
+| `solicitudArticuloPatronBOnCreate.js` | Trigger Patrón B: motor + débito saldo cíclico |
+| `solicitudArticuloPatronCOnCreate.js` | Trigger Patrón C: motor + débito saldo global |
+| `simularLaoPreview.js` | Callable preview LAO (dry-run) |
+| `previsualizarSolicitudPatronB.js` | Callable preview Patrón B (dry-run) |
+| `previsualizarSolicitudPatronC.js` | Callable preview Patrón C (dry-run, horas) |
+
+### 6.3 Frontend (Patrón C)
+
+| Archivo | Responsabilidad |
+|---|---|
+| `TicketeraPatronC.jsx` | Página wizard Patrón C |
+| `SolicitudPatronCForm.jsx` | Form 3 pasos (fecha+horas, preview, enviar) |
+| `PatronCPreviewInfo.jsx` | Visualización saldo global en horas |
+| `useSolicitudPatronCAlta.js` | Hook completo (grupos, entorno, preview, envío) |
+| `solicitudArticuloCreate.schema.js` | Schemas Zod: Patrón B + C (`horas_solicitadas`) |
 
 ---
 
@@ -376,3 +445,17 @@ Matriz de validación para habilitar un nuevo artículo sobre Motor V2:
 | `f8e3a53` | refactor(motor): unificar LAO sobre runMotorPipeline | Paridad arquitectónica |
 | `a69ea35` | ci(audit): script auditar campos | 0 huérfanos, 7 bloques |
 | `74a2763` | merge: paridad arquitectónica V2 | Hito consolidado en master |
+| — (pendiente) | feat(patron-c): motor V2 completo full-stack | Motor + trigger + preview + wizard + CI audit |
+
+---
+
+## §8 — Fixes Aplicados en Producción (Smoke Test 2026-05-25)
+
+| Fix | Archivo | Descripción |
+|---|---|---|
+| Fase C horas vs días | `patronCAltaMotorV2.js` | Para unidad=horas, `diasSolicitados` del validador de fechas usa días del rango, no horas |
+| Discovery patron field | `listarArticulosIngresoCore.js` | El Map del discovery no propagaba `patron` → `patron_saldo` siempre caía a "B" |
+| Entorno acepta Patrón C | `validarEntornoOperativoCore.js` | Validación de patrón expandida de `=== B` a `Set([B, C])` |
+| Grupo etiqueta_ui | `SolicitudPatronCForm.jsx` | Muestra `etiqueta_ui` del grupo en vez del ID crudo |
+| Catálogo abierto | `ticketeraArticulosMvp.js` | Lista MVP vacía → modo discovery por collectionGroup |
+| Índice Firestore | `firestore.indexes.json` | Field override `COLLECTION_GROUP_ASC` para `versiones.estado_version_id` |

@@ -226,6 +226,11 @@ export function callPrevisualizarSolicitudPatronB(data) {
   return httpsCallable(getFunctionsV2(), "previsualizarSolicitudPatronB")(data);
 }
 
+/** Preview Patrón C (elegibilidad + saldo global, horas) sin crear solicitud. */
+export function callPrevisualizarSolicitudPatronC(data) {
+  return httpsCallable(getFunctionsV2(), "previsualizarSolicitudPatronC")(data);
+}
+
 /** Paso 2 wizard Patrón B: entorno operativo (HLg, turno, grilla RDA) sin motor de saldos. */
 export function callValidarEntornoOperativoSolicitud(data) {
   return httpsCallable(getFunctionsV2(), "validarEntornoOperativoSolicitud")(data);
@@ -256,9 +261,23 @@ export function callRegistrarTomaConocimientoRrhhSolicitud(data) {
   return httpsCallable(getFunctionsV2(), "registrarTomaConocimientoRrhhSolicitud")(data);
 }
 
-/** Oleada C — vista mensual `vistas_grilla_mes_agente` (fan-out MDC). */
+/** Oleada C — vista mensual `vistas_grilla_mes_agente` (bounded context gdt). */
 export function callObtenerVistaGrillaMesAgente(data) {
-  return httpsCallable(getFunctionsV2(), "obtenerVistaGrillaMesAgente")(data);
+  const payload = data && typeof data === "object" ? data : {};
+  const gdt = String(payload.grupo_trabajo_id || payload.grupo_id || "").trim();
+  if (!/^gdt_/i.test(gdt)) {
+    return Promise.reject(new Error("grupo_trabajo_id (gdt_*) es obligatorio para la vista mensual."));
+  }
+  const persona_id = String(payload.persona_id || "").trim();
+  if (!/^per_/i.test(persona_id)) {
+    return Promise.reject(new Error("persona_id inválido para la vista mensual."));
+  }
+  return httpsCallable(getFunctionsV2(), "obtenerVistaGrillaMesAgente")({
+    persona_id,
+    anio: Number(payload.anio),
+    mes: Number(payload.mes),
+    grupo_trabajo_id: gdt,
+  });
 }
 
 /** Resumen lectura solicitud desde grilla GSO (Oleada C3). */
@@ -269,4 +288,175 @@ export function callObtenerResumenSolicitudArticuloGrilla(data) {
 /** Oleada C2 — matriz mes × personas de un grupo (HLg vigente a fin de mes). */
 export function callListarVistaGrillaMesPorGrupo(data) {
   return httpsCallable(getFunctionsV2(), "listarVistaGrillaMesPorGrupo")(data);
+}
+
+/** RRHH: cierra liquidación del mes en todas las vis_* del grupo (freeze). */
+export function callCerrarPeriodoLiquidacion(data) {
+  return httpsCallable(getFunctionsV2(), "cerrarPeriodoLiquidacion")(data);
+}
+
+/** RRHH: reabre período cerrado (motivo obligatorio). */
+export function callReabrirPeriodoLiquidacion(data) {
+  return httpsCallable(getFunctionsV2(), "reabrirPeriodoLiquidacion")(data);
+}
+
+/** RRHH: consulta si el período está cerrado por grupo/mes (tarjetas GSO). */
+export function callConsultarEstadosPeriodoLiquidacionGrupo(data) {
+  return httpsCallable(getFunctionsV2(), "consultarEstadosPeriodoLiquidacionGrupo")(data);
+}
+
+/** RRHH: crear o actualizar un régimen horario (cfg_regimen_horario). */
+export function callGuardarRegimenHorario(data) {
+  return httpsCallable(getFunctionsV2(), "guardarRegimenHorario")(data);
+}
+
+/** RRHH: listar todos los regímenes horarios. */
+export function callListarRegimenesHorarios(data) {
+  return httpsCallable(getFunctionsV2(), "listarRegimenesHorarios")(data || {});
+}
+
+/** Catálogos cfg asistencia/turnos (A0): tcc, epl, cdc, tov. */
+export function callListarCatalogosAsistenciaTurnos(data) {
+  return httpsCallable(getFunctionsV2(), "listarCatalogosAsistenciaTurnos")(data || {});
+}
+
+/** Jefe/RRHH: crear o actualizar plan de turno (BORRADOR). */
+export function callGuardarPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "guardarPlanTurnoServicio")(data);
+}
+
+/** Jefe: crea plt_inc en BORRADOR vinculado a plan principal HABILITADO. */
+export function callIniciarIncorporacionPlanMensual(data) {
+  return httpsCallable(getFunctionsV2(), "iniciarIncorporacionPlanMensual")(data);
+}
+
+/** Jefe: enviar plan para aprobación (BORRADOR → ENVIADO). */
+export function callEnviarPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "enviarPlanTurnoServicio")(data);
+}
+
+/** Superior o RRHH: aprobar plan (ENVIADO → HABILITADO + materialización). */
+export function callAprobarPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "aprobarPlanTurnoServicio")(data);
+}
+
+/** Superior/RRHH: rechazar plan (ENVIADO|EN_REVISION → BORRADOR). */
+export function callRechazarPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "rechazarPlanTurnoServicio")(data);
+}
+
+/** RRHH: revertir plan habilitado a revisión (HABILITADO → EN_REVISION). */
+export function callRevertirPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "revertirPlanTurnoServicio")(data);
+}
+
+/** RRHH: eliminar plan de turno (borrado lógico). */
+export function callEliminarPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "eliminarPlanTurnoServicio")(data);
+}
+
+/** RRHH: bandeja cross-grupo de planes pendientes (ENVIADO + EN_REVISION). */
+export function callListarPlanesPendientesRrhh(data) {
+  return httpsCallable(getFunctionsV2(), "listarPlanesPendientesRrhh")(data);
+}
+
+/** RRHH: cerrar plan perpetuo (HABILITADO → CERRADO). */
+export function callCerrarPlanPerpetuo(data) {
+  return httpsCallable(getFunctionsV2(), "cerrarPlanPerpetuo")(data);
+}
+
+/** Listar planes de un grupo (filtro opcional por estado/periodo). */
+export function callListarPlanesTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "listarPlanesTurnoServicio")(data);
+}
+
+/** Contexto enriquecido para grilla del jefe: personas + regímenes del grupo. */
+export function callListarContextoPlanGrupo(data) {
+  return httpsCallable(getFunctionsV2(), "listarContextoPlanGrupo")(data);
+}
+
+/** Vista unificada de plan (grilla_aprobada SoT para VER plan). */
+export function callObtenerVistaPlanTurnoServicio(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerVistaPlanTurnoServicio")(data);
+}
+
+/** Registrar override puntual en asistencia_diaria (requiere grupo_trabajo_id en coberturas). */
+export function callRegistrarCambioTurno(data) {
+  const payload = data && typeof data === "object" ? data : {};
+  const gdt = String(payload.grupo_trabajo_id || payload.grupo_id || payload.context?.grupo_id || "").trim();
+  if (!/^gdt_/i.test(gdt)) {
+    return Promise.reject(new Error("grupo_trabajo_id (gdt_*) es obligatorio para registrar cambios de turno."));
+  }
+  return httpsCallable(getFunctionsV2(), "registrarCambioTurno")({
+    ...payload,
+    grupo_trabajo_id: gdt,
+  });
+}
+
+/** Aplicar lote atómico de operaciones de asistencia (outbox E2). */
+export function callAplicarBatchAsistencia(data) {
+  return httpsCallable(getFunctionsV2(), "aplicarBatchAsistencia", { timeout: 120000 })(data);
+}
+
+/** Eliminar (soft-delete) un override por índice. */
+export function callEliminarCambioTurno(data) {
+  return httpsCallable(getFunctionsV2(), "eliminarCambioTurno")(data);
+}
+
+/** Listar overrides activos de un agente para una fecha. */
+export function callListarOverridesTurno(data) {
+  return httpsCallable(getFunctionsV2(), "listarOverridesTurno")(data);
+}
+
+/** Registra consulta ligera al abrir detalle de día con gestión turno aplicada. */
+export function callRegistrarConsultaGestionTurnoGrilla(data) {
+  const payload = data && typeof data === "object" ? data : {};
+  const gdt = String(payload.grupo_trabajo_id || payload.grupo_id || "").trim();
+  return httpsCallable(getFunctionsV2(), "registrarConsultaGestionTurnoGrilla")({
+    persona_id: String(payload.persona_id || "").trim(),
+    fecha: String(payload.fecha || "").trim(),
+    grupo_trabajo_id: gdt,
+    override_refs: Array.isArray(payload.override_refs) ? payload.override_refs : [],
+    op_batch_ids: Array.isArray(payload.op_batch_ids) ? payload.op_batch_ids : [],
+  });
+}
+
+/** Materializa capa teórica de un solo día (F-UX.3 — gate celda). */
+export function callMaterializarTurnoTeoricoDia(data) {
+  const payload = data && typeof data === "object" ? data : {};
+  const gdt = String(payload.grupo_trabajo_id || payload.grupo_id || "").trim();
+  if (!/^gdt_/i.test(gdt)) {
+    return Promise.reject(new Error("grupo_trabajo_id (gdt_*) es obligatorio para materializar el día."));
+  }
+  return httpsCallable(getFunctionsV2(), "materializarTurnoTeoricoDia", { timeout: 120000 })({
+    persona_id: String(payload.persona_id || "").trim(),
+    fecha: String(payload.fecha || "").trim(),
+    grupo_trabajo_id: gdt,
+  });
+}
+
+/** Capa teórica materializada de un día (segmentos + token concurrencia) por gdt. */
+export function callObtenerCapaTeoricaDia(data) {
+  const payload = data && typeof data === "object" ? data : {};
+  const gdt = String(payload.grupo_trabajo_id || payload.grupo_id || "").trim();
+  if (!/^gdt_/i.test(gdt)) {
+    return Promise.reject(new Error("grupo_trabajo_id (gdt_*) es obligatorio para la capa teórica del día."));
+  }
+  const persona_id = String(payload.persona_id || "").trim();
+  const fecha = String(payload.fecha || "").trim();
+  return httpsCallable(getFunctionsV2(), "obtenerCapaTeoricaDia")({
+    persona_id,
+    fecha,
+    grupo_trabajo_id: gdt,
+  });
+}
+
+/** Re-materializar tras cambio de calendario institucional (solo RRHH). */
+export function callRematerializarPostCalendario(data) {
+  return httpsCallable(getFunctionsV2(), "rematerializarPostCalendario", { timeout: 540000 })(data);
+}
+
+/** Re-materializar agentes de un régimen tras edición (solo RRHH). */
+export function callRematerializarPostRegimen(data) {
+  return httpsCallable(getFunctionsV2(), "rematerializarPostRegimen", { timeout: 540000 })(data);
 }

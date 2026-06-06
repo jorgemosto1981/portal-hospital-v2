@@ -34,7 +34,13 @@ export const PANTALLAS_CATALOGO = [
   { id: "configuracion", titulo: "Configuración", path: "/portal/configuracion", estado: "activo", fuente: "web/src/pages/Configuracion.jsx" },
   { id: "datos-personales", titulo: "Datos personales", path: "/portal/perfil", estado: "mvp", fuente: "web/src/pages/DatosPersonales.jsx" },
   { id: "perfil-legajo", titulo: "Perfil (legajo por id)", path: "/portal/perfil/per_demo", estado: "mvp", fuente: "web/src/pages/Perfil.jsx" },
-  { id: "grilla", titulo: "Grilla operativa", path: "/portal/grilla", estado: "borrador", fuente: "web/src/pages/GrillaOperativa.jsx" },
+  {
+    id: "grilla",
+    titulo: "Grilla operativa",
+    path: "/portal/rrhh/grilla-operativa",
+    estado: "borrador",
+    fuente: "web/src/pages/rrhh/GrillaOperativaRrhhPage.jsx",
+  },
   { id: "onboarding", titulo: "Onboarding wizard", path: "/onboarding", estado: "activo", fuente: "web/src/features/onboarding/OnboardingWizard.jsx" },
   { id: "rrhh-alta", titulo: "RRHH alta agente", path: "/portal/rrhh/alta", estado: "activo", fuente: "web/src/features/rrhh/AltaAgenteRRHH.jsx" },
   {

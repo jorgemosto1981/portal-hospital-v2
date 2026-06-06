@@ -13,13 +13,15 @@ const {
   isRangoInvalido,
   assertDocExistsOrNull,
   findSolapeHlc,
-  findSolapeHlgMismoCargo,
+  findSolapeHlgMismoGrupo,
+  assertRegimenHorarioActivo,
+  assertHlgRegimenNoModificadoEnEdicion,
+  assertHlgGrupoNoModificadoEnEdicion,
   assertHlgDentroDeHlc,
   assertHldDentroDeHlc,
   buildWarningReconciliacionCarga,
+  derivarCargaSemanalDesdeRegimen,
   pushWarning,
-  validarCargaPorDiaSemana,
-  cargaSemanalTieneHorasPositivas,
 } = require("./catalogosShared");
 const { refreshSessionClaimsForPersona } = require("./shared/authClaims");
 const {
@@ -58,13 +60,6 @@ function estadoAdminDesdeFechaFin(hasta) {
   return hasta ? "cerrado" : "abierto";
 }
 
-function sumarCargaSemanal(cargaPorDiaSemana) {
-  if (!Array.isArray(cargaPorDiaSemana)) return 0;
-  return cargaPorDiaSemana.reduce((acc, item) => {
-    const horas = item && typeof item === "object" && !Array.isArray(item) ? Number(item.horas) : Number(item);
-    return Number.isFinite(horas) ? acc + horas : acc;
-  }, 0);
-}
 
 function haySolapeInclusivo(aDesde, aHasta, bDesde, bHasta) {
   if (!aDesde || !bDesde) return false;
@@ -431,7 +426,6 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       id,
       persona_id: personaId,
       cargo_id: cargoId,
-      regimen_horario_id: toNullableTrimmedString(datos.regimen_horario_id),
       centro_costo_id: toNullableTrimmedString(datos.centro_costo_id),
       escalafon_id: toNullableTrimmedString(datos.escalafon_id),
       agrupamiento_id: toNullableTrimmedString(datos.agrupamiento_id),
@@ -454,7 +448,6 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       fechaDesdeHlc: laboralYmdOrNull(cargoSnap.get("fecha_desde")),
       fechaHastaHlc: laboralYmdOrNull(cargoSnap.get("fecha_hasta")),
     });
-    await assertDocExistsOrNull("cfg_regimen_horario", payload.regimen_horario_id, "regimen_horario_id");
     await assertDocExistsOrNull("cfg_centro_costo", payload.centro_costo_id, "centro_costo_id");
     const ref = db.collection(colRaw).doc(id);
     const existing = await ref.get();
@@ -504,45 +497,44 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     );
   }
   await assertDocExistsOrNull("grupos_de_trabajo", grupoId, "grupo_de_trabajo_id");
-  const carga = Array.isArray(datos.carga_por_dia_semana)
-    ? datos.carga_por_dia_semana.map((x) => {
-        if (x && typeof x === "object") {
-          return { dia_semana_id: toNullableTrimmedString(x.dia_semana_id), horas: toNumberOrNull(x.horas) || 0 };
-        }
-        const n = toNumberOrNull(x);
-        return n != null ? n : 0;
-      })
-    : [];
-  for (const item of carga) {
-    if (item && typeof item === "object" && !Array.isArray(item)) {
-      await assertDocExistsOrNull("cfg_dia_semana", toNullableTrimmedString(item.dia_semana_id), "carga_por_dia_semana.dia_semana_id");
+  const regimenHorarioId = toNullableTrimmedString(datos.regimen_horario_id);
+  if (!regimenHorarioId) {
+    throw new HttpsError("invalid-argument", "[VAL-HLG-016] regimen_horario_id es obligatorio para la asignacion a grupo.");
+  }
+  const regimenSnap = await db.collection("cfg_regimen_horario").doc(regimenHorarioId).get();
+  if (!regimenSnap.exists) {
+    throw new HttpsError("invalid-argument", `regimen_horario_id inválido o inexistente: ${regimenHorarioId}`);
+  }
+  assertRegimenHorarioActivo(regimenSnap, regimenHorarioId);
+  const ref = db.collection(colRaw).doc(id);
+  const existing = await ref.get();
+  if (existing.exists) {
+    const est = String(existing.get("estado") || "").trim().toUpperCase();
+    if (existing.get("eliminado") === true || est === "ANULADO") {
+      throw new HttpsError(
+        "failed-precondition",
+        "[VAL-HLG-ANU-006] La asignación HLg está anulada y no admite edición.",
+      );
     }
   }
+  assertHlgRegimenNoModificadoEnEdicion(existing, regimenHorarioId);
+  assertHlgGrupoNoModificadoEnEdicion(existing, grupoId);
+  const regimenDoc = regimenSnap.data();
+  const regimenFechaAncla = laboralYmdOrNull(datos.regimen_fecha_ancla);
   const payload = {
     id,
     persona_id: personaId,
     dato_laboral_id: datoLaboralId,
     grupo_de_trabajo_id: grupoId,
     nivel_jerarquico: toNumberOrNull(datos.nivel_jerarquico),
-    carga_por_dia_semana: carga,
+    regimen_horario_id: regimenHorarioId,
+    regimen_fecha_ancla: regimenFechaAncla,
     fecha_inicio: laboralYmdOrNull(datos.fecha_inicio),
     fecha_fin: laboralYmdOrNull(datos.fecha_fin),
     activo: datos.activo !== false,
     actualizado_en: now,
   };
   const warnings = [];
-  if (!Array.isArray(payload.carga_por_dia_semana) || payload.carga_por_dia_semana.length === 0) {
-    throw new HttpsError(
-      "invalid-argument",
-      "[VAL-HLG-013] Debes informar la carga horaria por dia con al menos un dia cargado.",
-    );
-  }
-  if (!cargaSemanalTieneHorasPositivas(payload.carga_por_dia_semana)) {
-    throw new HttpsError(
-      "invalid-argument",
-      "[VAL-HLG-013] Debes informar la carga horaria por dia con al menos un dia con horas mayores a cero.",
-    );
-  }
   if (!payload.fecha_inicio) {
     throw new HttpsError(
       "invalid-argument",
@@ -555,7 +547,6 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
       "[VAL-HLG-005] El periodo de la asignacion a grupo es invalido: la fecha de inicio no puede ser mayor que la fecha de fin.",
     );
   }
-  validarCargaPorDiaSemana(payload.carga_por_dia_semana);
   const cargoId = toNullableTrimmedString(datoSnap.get("cargo_id"));
   if (!cargoId) {
     throw new HttpsError(
@@ -571,37 +562,27 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     fechaDesdeHlc: toNullableTrimmedString(cargoSnap.get("fecha_desde")),
     fechaHastaHlc: toNullableTrimmedString(cargoSnap.get("fecha_hasta")),
   });
-  const solapeHlg = await findSolapeHlgMismoCargo({
+  const solapeMismoGrupo = await findSolapeHlgMismoGrupo({
     id,
+    personaId,
     grupoId,
-    cargoId,
     fechaInicio: payload.fecha_inicio,
     fechaFin: payload.fecha_fin,
   });
-  if (solapeHlg) {
-    pushWarning(
-      warnings,
-      "VAL-HLG-W002",
-      `Advertencia: esta asignación a grupo se superpone con otra asignación del mismo cargo y mismo grupo (registro relacionado: ${solapeHlg.id}).`,
-      { persona_id: personaId, cargo_id: cargoId, id, grupo_de_trabajo_id: grupoId, conflictivo_id: solapeHlg.id, collection: colRaw },
-    );
-  }
-  const hasDiaSemanaObjects = payload.carga_por_dia_semana.some((x) => x && typeof x === "object" && !Array.isArray(x));
-  if (!hasDiaSemanaObjects) {
+  if (solapeMismoGrupo) {
     throw new HttpsError(
-      "invalid-argument",
-      "[VAL-HLG-015] Cada fila de carga horaria debe incluir el dia de semana (dia_semana_id).",
+      "failed-precondition",
+      `[VAL-HLG-014] Ya existe otra asignación de esta persona al mismo grupo de trabajo con fechas superpuestas (registro: ${solapeMismoGrupo.id}). Cerrá o ajustá el período anterior antes de guardar.`,
     );
   }
+  const cargaSemanalActual = derivarCargaSemanalDesdeRegimen(regimenDoc);
   const warningCarga = await buildWarningReconciliacionCarga({
     id,
     cargoId,
-    cargaPorDiaSemanaActual: payload.carga_por_dia_semana,
+    cargaSemanalActual,
     cargaHorariaTotalHlc: cargoSnap.get("carga_horaria_total"),
   });
   if (warningCarga) warnings.push(warningCarga);
-  const ref = db.collection(colRaw).doc(id);
-  const existing = await ref.get();
   const exists = existing.exists;
   if (!exists) payload.creado_en = now;
   await ref.set(payload, { merge: true });
@@ -610,7 +591,7 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     "dato_laboral_id",
     "grupo_de_trabajo_id",
     "nivel_jerarquico",
-    "carga_por_dia_semana",
+    "regimen_horario_id",
     "fecha_inicio",
     "fecha_fin",
     "activo",
@@ -626,7 +607,48 @@ const guardarRegistroLaboralTemporal = onCall(async (request) => {
     cambios,
   });
   await refreshClaimsLaboralPersona(personaId);
-  return { ok: true, id, warnings, evento_id: eventoId };
+
+  let materializacionAlta = null;
+  if (regimenHorarioId && payload.activo) {
+    const { materializarRango } = require("./asistencia/materializarRango");
+    const { ymdFinMesSiguiente } = require("./asistencia/purgeCapaTeoricaGdtRango");
+    const fi = laboralYmdOrNull(payload.fecha_inicio) || obtenerYmdHoyInstitucional();
+    const hastaVentana = ymdFinMesSiguiente(fi);
+    try {
+      materializacionAlta = await materializarRango(db, {
+        personaId,
+        grupoId,
+        fechaDesdeYmd: fi,
+        fechaHastaYmd: hastaVentana,
+        motivo: exists ? "actualizar_hlg" : "alta_hlg",
+        origenEventoId: id,
+        ignorarPeriodoCerrado: true,
+      });
+      console.log(
+        "materializarRango_post_hlg OK",
+        JSON.stringify({ ok: materializacionAlta.ok, dias: materializacionAlta.diasProcesados }),
+      );
+      if (!materializacionAlta.ok) {
+        pushWarning(
+          warnings,
+          "VAL-HLG-ALTA-W003",
+          "Asignación guardada, pero no se materializaron todos los turnos teóricos del rango. Revisá el plan del grupo o rematerializá el sector.",
+          { hlg_id: id, desde: fi, hasta: hastaVentana, meses: materializacionAlta.meses },
+        );
+      }
+    } catch (e) {
+      console.error("materializarRango_post_hlg ERROR", e);
+      const msg = e instanceof Error ? e.message : String(e);
+      pushWarning(
+        warnings,
+        "VAL-HLG-ALTA-W003",
+        `Asignación guardada, pero falló la materialización de turnos teóricos: ${msg}`,
+        { hlg_id: id, desde: fi, hasta: hastaVentana },
+      );
+    }
+  }
+
+  return { ok: true, id, warnings, evento_id: eventoId, materializacion: materializacionAlta };
 });
 
 const rrhhDeshabilitarHlc = onCall(async (request) => {
@@ -886,6 +908,22 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
     const actorPersonaId = toNullableTrimmedString(request.auth && request.auth.token && request.auth.token.persona_id);
 
     const fechaFin = resolveFechaCierre(hlg.fecha_fin, fechaCorte);
+
+    const { ejecutarPurgaAgentePlanesPorHlg } = require("./asistencia/purgaAgentePlanesPorHlg");
+    const purgaPlanes = await ejecutarPurgaAgentePlanesPorHlg(db, {
+      hlgId,
+      personaId: personaHlg,
+      modo: "cierre_hlg",
+      fechaCorteYmd: fechaCorte,
+      motivoPurga: "deshabilitar_hlg",
+    });
+    if (!purgaPlanes.ok) {
+      throw new HttpsError(
+        "failed-precondition",
+        purgaPlanes.message || "[PLT-PURGE-003] No se pudo purgar planes antes de deshabilitar la HLg.",
+      );
+    }
+
     await hlgRef.set(
       {
         activo: false,
@@ -935,12 +973,115 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
 
     if (personaHlg) await refreshClaimsLaboralPersona(personaHlg);
 
+    const grupoHlgDes = toNullableTrimmedString(hlg.grupo_de_trabajo_id);
+    let purgeResumen = null;
+    let materializacionSucesor = null;
+    if (personaHlg && grupoHlgDes && fechaFin) {
+      const {
+        purgeCapaTeoricaGdtRango,
+        resolvePurgeVentanaTrasDeshabilitarHlg,
+        ymdAddDays,
+        ymdFinMesSiguiente,
+      } = require("./asistencia/purgeCapaTeoricaGdtRango");
+      const { materializarRango } = require("./asistencia/materializarRango");
+      // Desde el día de corte: sin capa teórica operativa (fecha_fin = primer día sin incorporación).
+      const desdePurge = fechaCorte;
+      const { hasta: hastaPurge, siguienteInicio } = await resolvePurgeVentanaTrasDeshabilitarHlg(db, {
+        personaId: personaHlg,
+        gdt: grupoHlgDes,
+        desdeCorteYmd: fechaCorte,
+        excludeHlgId: hlgId,
+      });
+      if (desdePurge <= hastaPurge) {
+        try {
+          purgeResumen = await purgeCapaTeoricaGdtRango(db, {
+            personaId: personaHlg,
+            gdt: grupoHlgDes,
+            desdeYmd: desdePurge,
+            hastaYmd: hastaPurge,
+            motivo: motivo || "deshabilitar_hlg",
+          });
+        } catch (purgeErr) {
+          console.error("rrhhDeshabilitarHlg: purgeCapaTeoricaGdtRango", purgeErr);
+          pushWarning(
+            warnings,
+            "VAL-HLG-DES-W003",
+            "HLg deshabilitada, pero no se pudo purgar la capa teórica futura. Reintentá rematerializar el sector.",
+            { hlg_id: hlgId, desde: desdePurge, hasta: hastaPurge },
+          );
+        }
+      }
+
+      const desdeMat = fechaInicioHlg || fechaCorte;
+      const hastaMat = ymdAddDays(fechaCorte, -1);
+      try {
+        if (desdeMat && hastaMat && desdeMat <= hastaMat) {
+          const mat = await materializarRango(db, {
+            personaId: personaHlg,
+            grupoId: grupoHlgDes,
+            fechaDesdeYmd: desdeMat,
+            fechaHastaYmd: hastaMat,
+            motivo: "deshabilitar_hlg",
+            origenEventoId: hlgId,
+            ignorarPeriodoCerrado: true,
+          });
+          console.log(
+            "materializarRango_post_deshabilitar_hlg OK",
+            JSON.stringify({ ok: mat.ok, dias: mat.diasProcesados }),
+          );
+        }
+      } catch (e) {
+        console.error("materializarRango_post_deshabilitar_hlg ERROR", e);
+        pushWarning(
+          warnings,
+          "VAL-HLG-DES-W004",
+          "HLg deshabilitada, pero no se pudo rematerializar el tramo previo al corte.",
+          { hlg_id: hlgId, desde: desdeMat, hasta: hastaMat },
+        );
+      }
+
+      if (siguienteInicio) {
+        const hastaMatSucesor = ymdFinMesSiguiente(siguienteInicio);
+        try {
+          materializacionSucesor = await materializarRango(db, {
+            personaId: personaHlg,
+            grupoId: grupoHlgDes,
+            fechaDesdeYmd: siguienteInicio,
+            fechaHastaYmd: hastaMatSucesor,
+            motivo: "deshabilitar_hlg_sucesor",
+            origenEventoId: hlgId,
+            ignorarPeriodoCerrado: true,
+          });
+          console.log(
+            "materializarRango_post_deshabilitar_hlg_sucesor OK",
+            JSON.stringify({
+              ok: materializacionSucesor.ok,
+              dias: materializacionSucesor.diasProcesados,
+              desde: siguienteInicio,
+              hasta: hastaMatSucesor,
+            }),
+          );
+        } catch (e) {
+          console.error("materializarRango_post_deshabilitar_hlg_sucesor ERROR", e);
+          pushWarning(
+            warnings,
+            "VAL-HLG-DES-W005",
+            "HLg deshabilitada, pero no se pudo materializar la asignación vigente desde el día siguiente al corte. Reintentá rematerializar el sector.",
+            { hlg_id: hlgId, desde: siguienteInicio, hasta: hastaMatSucesor },
+          );
+        }
+      }
+    }
+
     return {
       ok: true,
       hlg_id: hlgId,
       fecha_corte_aplicada: fechaCorte,
       warnings,
       evento_id: eventoId,
+      purga_planes: purgaPlanes,
+      purge_capa_teorica: purgeResumen,
+      materializacion_sucesor: materializacionSucesor,
     };
   } catch (err) {
     if (err instanceof HttpsError) throw err;
@@ -953,6 +1094,148 @@ const rrhhDeshabilitarHlg = onCall({ invoker: "public" }, async (request) => {
   }
 });
 
+const rrhhEliminarHlgAnulada = onCall({ invoker: "public" }, async (request) => {
+  try {
+    const d = request.data && typeof request.data === "object" ? request.data : {};
+    const hlgId = toNullableTrimmedString(d.hlg_id);
+    const motivo = toNullableTrimmedString(d.motivo);
+
+    if (!hlgId) {
+      throw new HttpsError(
+        "invalid-argument",
+        "[VAL-HLG-ANU-001] hlg_id requerido para anular la asignación.",
+      );
+    }
+
+    const hlgRef = db.collection("historial_laboral_grupos").doc(hlgId);
+    const hlgSnap = await hlgRef.get();
+    if (!hlgSnap.exists) {
+      throw new HttpsError("not-found", "[VAL-HLG-ANU-002] No se encontró la asignación HLg.");
+    }
+    const hlg = hlgSnap.data() || {};
+    const personaHlg = toNullableTrimmedString(hlg.persona_id);
+    if (!laboralEscrituraSinAssertRrhh()) assertEscrituraLaboral(request, personaHlg);
+
+    if (hlg.eliminado === true || String(hlg.estado || "").trim().toUpperCase() === "ANULADO") {
+      throw new HttpsError(
+        "failed-precondition",
+        "[VAL-HLG-ANU-003] La asignación HLg ya está anulada.",
+      );
+    }
+
+    const { ejecutarPurgaAgentePlanesPorHlg } = require("./asistencia/purgaAgentePlanesPorHlg");
+    const purgaPlanes = await ejecutarPurgaAgentePlanesPorHlg(db, {
+      hlgId,
+      personaId: personaHlg,
+      modo: "anulacion",
+      motivoPurga: "anular_hlg",
+    });
+    if (!purgaPlanes.ok) {
+      throw new HttpsError(
+        "failed-precondition",
+        purgaPlanes.message || "[PLT-PURGE-004] Purga de planes falló; la HLg no fue anulada.",
+      );
+    }
+
+    const now = FieldValue.serverTimestamp();
+    const actorUid = (request.auth && request.auth.uid) || null;
+    const actorPersonaId = toNullableTrimmedString(request.auth && request.auth.token && request.auth.token.persona_id);
+
+    let eventoId = null;
+    try {
+      eventoId = await crearEventoDatosLaborales({
+        tipoEventoId: "cfg_tev_datos_laborales",
+        accion: "anular_hlg",
+        personaId: personaHlg,
+        actorUid,
+        actorPersonaId,
+        entidad: "historial_laboral_grupos",
+        contexto: {
+          id: hlgId,
+          hlg_id: hlgId,
+          motivo: motivo || null,
+          purga_planes: purgaPlanes,
+        },
+        cambios: [
+          {
+            campo: "estado",
+            label: "Estado de asignación",
+            antes: hlg.estado || "activo",
+            despues: "ANULADO",
+            tipo: "string",
+          },
+        ],
+      });
+    } catch (eventoErr) {
+      console.error("rrhhEliminarHlgAnulada: fallo evento auditoria", eventoErr);
+      throw new HttpsError(
+        "aborted",
+        "[VAL-HLG-ANU-004] No se registró el evento de auditoría; la HLg no fue anulada.",
+      );
+    }
+
+    await hlgRef.set(
+      {
+        activo: false,
+        eliminado: true,
+        estado: "ANULADO",
+        anulado_en: now,
+        anulado_motivo: motivo || null,
+        actualizado_en: now,
+      },
+      { merge: true },
+    );
+
+    const grupoHlg = toNullableTrimmedString(hlg.grupo_de_trabajo_id);
+    const fechaInicioHlg = await resolveHlgFechaInicioYmd(hlg);
+    let purgeResumen = null;
+    if (personaHlg && grupoHlg && fechaInicioHlg) {
+      const { purgeCapaTeoricaGdtRango, ymdFinMesSiguiente } = require("./asistencia/purgeCapaTeoricaGdtRango");
+      const { materializarRango } = require("./asistencia/materializarRango");
+      const hastaPurge = ymdFinMesSiguiente(fechaInicioHlg);
+      try {
+        purgeResumen = await purgeCapaTeoricaGdtRango(db, {
+          personaId: personaHlg,
+          gdt: grupoHlg,
+          desdeYmd: fechaInicioHlg,
+          hastaYmd: hastaPurge,
+          motivo: motivo || "anular_hlg",
+        });
+      } catch (purgeErr) {
+        console.error("rrhhEliminarHlgAnulada: purgeCapaTeoricaGdtRango", purgeErr);
+      }
+      try {
+        await materializarRango(db, {
+          personaId: personaHlg,
+          grupoId: grupoHlg,
+          fechaDesdeYmd: fechaInicioHlg,
+          fechaHastaYmd: hastaPurge,
+          motivo: "anular_hlg_remat_persona",
+          origenEventoId: hlgId,
+          ignorarPeriodoCerrado: true,
+        });
+      } catch (matErr) {
+        console.error("rrhhEliminarHlgAnulada: materializarRango", matErr);
+      }
+    }
+
+    if (personaHlg) await refreshClaimsLaboralPersona(personaHlg);
+
+    return {
+      ok: true,
+      hlg_id: hlgId,
+      evento_id: eventoId,
+      purga_planes: purgaPlanes,
+      purge_capa_teorica: purgeResumen,
+    };
+  } catch (err) {
+    if (err instanceof HttpsError) throw err;
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("rrhhEliminarHlgAnulada", err);
+    throw new HttpsError("internal", `[VAL-HLG-ANU-500] No se pudo anular la HLg: ${msg}`);
+  }
+});
+
 const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
   if (!laboralEscrituraSinAssertRrhh()) assertRrhh(request);
   const data = request && request.data && typeof request.data === "object" ? request.data : {};
@@ -961,12 +1244,13 @@ const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
   const fechaCorte = ymdDesdeValorLaboral(data.fecha_corte) || obtenerYmdHoyInstitucional();
   const incluirNoVigentes = data.incluir_no_vigentes === true;
 
-  const [hlcSnap, hldSnap, hlgSnap, personasSnap, gruposSnap] = await Promise.all([
+  const [hlcSnap, hldSnap, hlgSnap, personasSnap, gruposSnap, regimenesSnap] = await Promise.all([
     db.collection("historial_laboral_cargos").get(),
     db.collection("historial_laboral_datos").get(),
     db.collection("historial_laboral_grupos").get(),
     db.collection("personas").get(),
     db.collection("grupos_de_trabajo").get(),
+    db.collection("cfg_regimen_horario").get(),
   ]);
 
   const idxHlc = new Map();
@@ -977,6 +1261,8 @@ const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
   personasSnap.docs.forEach((doc) => idxPersonas.set(doc.id, { id: doc.id, ...(doc.data() || {}) }));
   const idxGrupos = new Map();
   gruposSnap.docs.forEach((doc) => idxGrupos.set(doc.id, { id: doc.id, ...(doc.data() || {}) }));
+  const idxRegimenes = new Map();
+  regimenesSnap.docs.forEach((doc) => idxRegimenes.set(doc.id, doc.data() || {}));
 
   const totalCargaPorCargo = new Map();
   const hlgEnriquecidos = [];
@@ -997,7 +1283,9 @@ const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
       fecha_fin: fechaFin,
     });
     if (!cargoId) return;
-    totalCargaPorCargo.set(cargoId, Number(totalCargaPorCargo.get(cargoId) || 0) + sumarCargaSemanal(hlg.carga_por_dia_semana));
+    const regId = toNullableTrimmedString(hlg.regimen_horario_id);
+    const cargaReg = derivarCargaSemanalDesdeRegimen(regId ? idxRegimenes.get(regId) : null);
+    totalCargaPorCargo.set(cargoId, Number(totalCargaPorCargo.get(cargoId) || 0) + (cargaReg != null ? cargaReg : 0));
   });
 
   const idsConSolapeCargoGrupo = new Set();
@@ -1062,10 +1350,11 @@ const listarReadModelLaboralOperativoTemporal = onCall(async (request) => {
       estado_admin: estadoAdmin,
       fecha_inicio: fechaInicio || null,
       fecha_fin: fechaFin || null,
-      regimen_horario_id: hld ? toNullableTrimmedString(hld.regimen_horario_id) : null,
+      regimen_horario_id: toNullableTrimmedString(hlg.regimen_horario_id) || (hld ? toNullableTrimmedString(hld.regimen_horario_id) : null),
+      regimen_fecha_ancla: toNullableTrimmedString(hlg.regimen_fecha_ancla) || null,
       centro_costo_id: hld ? toNullableTrimmedString(hld.centro_costo_id) : null,
       rol_id: hlc ? toNullableTrimmedString(hlc.rol_id) : null,
-      carga_horas_semana_hlg: sumarCargaSemanal(hlg.carga_por_dia_semana),
+      carga_horas_semana_hlg: derivarCargaSemanalDesdeRegimen(toNullableTrimmedString(hlg.regimen_horario_id) ? idxRegimenes.get(toNullableTrimmedString(hlg.regimen_horario_id)) : null),
       carga_horas_total_hlc: Number.isFinite(expectedCarga) ? expectedCarga : null,
       warning_codes: warningCodes,
     });
@@ -1108,5 +1397,6 @@ module.exports = {
   guardarRegistroLaboralTemporal,
   rrhhDeshabilitarHlc,
   rrhhDeshabilitarHlg,
+  rrhhEliminarHlgAnulada,
   listarReadModelLaboralOperativoTemporal,
 };

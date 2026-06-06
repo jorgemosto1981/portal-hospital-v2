@@ -1,7 +1,7 @@
 "use strict";
 
 const { parseYmd } = require("../shared/laoPreviewDateUtils");
-const { PATRON_SALDO_B } = require("../shared/resolvePatronSaldo");
+const { PATRON_SALDO_B, PATRON_SALDO_C } = require("../shared/resolvePatronSaldo");
 const {
   filterHlcVigentesEnFecha,
   resolverElegibilidadSolicitud,
@@ -22,6 +22,11 @@ const {
 const { evaluarGrillaTurnoEntorno } = require("./grillaTurnoEntornoGate");
 const { tokenHasRrhhLaborAccess } = require("../shared/laborProfile");
 const { validarFechasArticuloEnMotor } = require("../shared/validarFechasArticuloRuntime");
+const {
+  assertNuevaSolicitudNoEnPeriodoCerrado,
+  CODIGO_PERIODO_CERRADO,
+  MSG_PERIODO_CERRADO,
+} = require("../asistencia/asistenciaPeriodoLiquidacion");
 
 const CFG_EST_VER_PUBLICADA = "cfg_est_ver_publicada";
 
@@ -164,8 +169,10 @@ async function validarEntornoOperativoSolicitud(params) {
     });
   }
 
-  if (patronFromVersion(versionData) !== PATRON_SALDO_B) {
-    return failBase(ctx, ["PATRON_INVALIDO"], ["El artículo no es Patrón B."], { checks: buildChecks() });
+  const patronResuelto = patronFromVersion(versionData);
+  const PATRONES_VALIDOS = new Set([PATRON_SALDO_B, PATRON_SALDO_C]);
+  if (!PATRONES_VALIDOS.has(patronResuelto)) {
+    return failBase(ctx, ["PATRON_INVALIDO"], ["El artículo no tiene un patrón de saldo válido (B o C)."], { checks: buildChecks() });
   }
 
   const diasVersion = diasSolicitadosDesdeVersion(versionData);
@@ -247,6 +254,31 @@ async function validarEntornoOperativoSolicitud(params) {
       hlcId: eleg.hlc_id,
       gruposVigentes,
       requiereSeleccionGrupo: grupoAncla.requiere_seleccion === true,
+    });
+  }
+
+  const gdtAncla = grupoAncla.grupo_trabajo_id_ancla || "";
+  try {
+    await assertNuevaSolicitudNoEnPeriodoCerrado(
+      db,
+      ctx.personaId,
+      ctx.fechaDesde,
+      ctx.fechaHasta,
+      gdtAncla,
+    );
+  } catch (err) {
+    const code = err && err.code === "failed-precondition" ? CODIGO_PERIODO_CERRADO : "PERIODO_CERRADO";
+    return failBase(ctx, [code], [err instanceof Error ? err.message : MSG_PERIODO_CERRADO], {
+      checks: buildChecks({
+        hlc_vigente: true,
+        elegibilidad_articulo: true,
+        circuito_ingreso: true,
+        grupo_trabajo_vigente: true,
+        grupo_ancla_resuelto: true,
+      }),
+      hlcId: eleg.hlc_id,
+      grupoAnclaId: gdtAncla,
+      gruposVigentes,
     });
   }
 

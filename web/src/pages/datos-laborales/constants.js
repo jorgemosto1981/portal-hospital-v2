@@ -21,7 +21,6 @@ export const COLECCIONES_FORM = [
   "cfg_causal_fin_asignacion_laboral",
   "cfg_motivo_deshabilitacion_hlc",
   "cfg_tipo_acto_designacion",
-  "cfg_dia_semana",
 ];
 
 export const AYUDA_CAMPOS = {
@@ -43,14 +42,15 @@ export const AYUDA_CAMPOS = {
   fecha_hasta: "Fecha de fin de vigencia (vacío = abierto).",
   cargo_id: "Referencia al registro HLc base del puesto.",
   rol_id: "Rol de la persona en el cargo base (HLc).",
-  regimen_horario_id: "Régimen horario de referencia para procesos futuros (Ticket/RDA/grillas).",
+  regimen_horario_id:
+    "Régimen horario activo en catálogo. Para cambiarlo en una asignación vigente, cerrá el HLg y creá uno nuevo desde la fecha del cambio.",
+  regimen_fecha_ancla: "Día 1 del ciclo para regímenes rotativos. Para fijos/planificados, dejar vacío.",
   centro_costo_id: "Centro de costo o imputación presupuestaria del dato laboral.",
   escalafon_id: "Escalafón administrativo/laboral del cargo.",
   agrupamiento_id: "Agrupamiento laboral del cargo.",
   funcion_real_id: "Función real desempeñada.",
   nivel_jerarquico: "Nivel jerárquico numérico (1 a 99).",
   dato_laboral_id: "Referencia al registro HLd del que depende este subnivel.",
-  carga_por_dia_semana: "Carga distribuida por día (seleccionar dia_semana_id + horas por fila).",
 };
 
 export const INITIAL_FORM_DATA_LABORAL = {
@@ -75,11 +75,11 @@ export const INITIAL_FORM_DATA_LABORAL = {
   categoria_id: "",
   rol_id: "",
   regimen_horario_id: "",
+  regimen_fecha_ancla: "",
   centro_costo_id: "",
   escalafon_id: "",
   agrupamiento_id: "",
   funcion_real_id: "",
   nivel_jerarquico: "",
   dato_laboral_id: "",
-  carga_por_dia_semana: "",
 };

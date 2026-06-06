@@ -12,8 +12,6 @@ export default function LaboralFormularioModal({
   modoEdicion,
   formData,
   onChangeField,
-  cargaPorDiaRows,
-  onChangeCargaRow,
   accionFormularioLabel,
   personaActivaLabel,
   cargoContexto,
@@ -30,7 +28,6 @@ export default function LaboralFormularioModal({
   opcionesTipoActo,
   opcionesRegimenHorario,
   opcionesCentroCosto,
-  opcionesDiaSemana,
   opcionesCausalFinAsignacion,
   errorValidacionFormulario,
   saveMsg,
@@ -123,14 +120,12 @@ export default function LaboralFormularioModal({
           {tipoAlta === "historial_laboral_grupos" && (
             <LaboralFormHlgFields
               modoAvanzado={modoAvanzado}
+              modoEdicion={modoEdicion}
               formData={formData}
               onChangeField={onChangeField}
               opcionesRegimenHorario={opcionesRegimenHorario}
               opcionesCentroCosto={opcionesCentroCosto}
               opcionesFuncion={opcionesFuncion}
-              cargaPorDiaRows={cargaPorDiaRows}
-              onChangeCargaRow={onChangeCargaRow}
-              opcionesDiaSemana={opcionesDiaSemana}
               ayudaCampos={AYUDA_CAMPOS}
             />
           )}

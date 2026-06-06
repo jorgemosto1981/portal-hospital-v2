@@ -5,6 +5,7 @@ export const ESTADO_SOLICITUD_ARTICULO_EN_REVISION_JEFE = "cfg_esa_en_revision_j
 
 export const SCHEMA_SOLICITUD_LAO = 1;
 export const SCHEMA_SOLICITUD_PATRON_B = 2;
+export const SCHEMA_SOLICITUD_PATRON_C = 3;
 
 /** Piloto ticketera Patrón B — @see docs/v2/ARTICULOS_BASICOS_OPERATIVOS_V2.md */
 export const ARTICULO_64A_ID = "art_01KRNK10V10CH7W5M2W6V558GS";
@@ -15,3 +16,9 @@ export const VERSION_64B_PILOTO_ID = "ver_01KRYEX13QN7VBPMFQFES1QHB4";
 
 /** Debe coincidir con `ARTICULO_IDS_MVP` en `functions/modules/shared/ticketeraArticulosMvp.js` */
 export const ARTICULO_IDS_PATRON_B_MVP = [ARTICULO_64A_ID, ARTICULO_64B_ID];
+
+/** Piloto ticketera Patrón C — 68-B Compensatorio */
+export const ARTICULO_68B_ID = "art_01KRYEF39ZM0KB0F0Y4GPBH38F";
+export const VERSION_68B_PILOTO_ID = "ver_01KRYEFZRQF0RKHJ5JTK6244G8";
+
+export const ARTICULO_IDS_PATRON_C_MVP = [ARTICULO_68B_ID];

@@ -14,7 +14,9 @@ import { fileURLToPath } from "node:url";
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const SCHEMA_PATH = join(repoRoot, "web/src/schemas/articulo.schema.js");
-const RESOLVER_PATH = join(repoRoot, "functions/modules/shared/patronBMotorConfigResolver.js");
+const RESOLVER_B_PATH = join(repoRoot, "functions/modules/shared/patronBMotorConfigResolver.js");
+const RESOLVER_C_PATH = join(repoRoot, "functions/modules/shared/patronCMotorConfigResolver.js");
+const RESOLVER_PATH = RESOLVER_B_PATH;
 
 const LAO_ONLY_FIELDS = new Set([
   "correspondencia_anio",
@@ -102,10 +104,12 @@ function extractSchemaFields(schemaText, parentSchemaName) {
 }
 
 const schemaText = readFileSync(SCHEMA_PATH, "utf8");
-const resolverText = readFileSync(RESOLVER_PATH, "utf8");
+const resolverBText = readFileSync(RESOLVER_B_PATH, "utf8");
+const resolverCText = readFileSync(RESOLVER_C_PATH, "utf8");
+const resolverText = resolverBText;
 
 console.log("=".repeat(60));
-console.log("CI AUDIT — Campos Schema vs Patron B Config Resolver");
+console.log("CI AUDIT — Campos Schema vs Config Resolvers (B + C)");
 console.log("=".repeat(60));
 
 let totalCampos = 0;
@@ -128,9 +132,16 @@ for (const bloque of BLOQUE_NAMES) {
       continue;
     }
 
-    const consumed = resolverText.includes(baseField);
-    if (consumed) {
-      console.log(`  OK    ${field}`);
+    const consumedB = resolverBText.includes(baseField);
+    const consumedC = resolverCText.includes(baseField);
+    if (consumedB && consumedC) {
+      console.log(`  OK    ${field} (B+C)`);
+      totalConsumed++;
+    } else if (consumedB) {
+      console.log(`  OK    ${field} (B only)`);
+      totalConsumed++;
+    } else if (consumedC) {
+      console.log(`  OK    ${field} (C only)`);
       totalConsumed++;
     } else {
       console.log(`  MISS  ${field}`);

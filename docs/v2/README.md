@@ -9,6 +9,36 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | Documento | Rol |
 |-----------|-----|
 | **[`ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md`](./ARQUITECTURA_MAESTRA_SIGAL_V2_MODULO_OPERATIVO_ASISTENCIA.md)** | **Entrada principal:** RDA, MDC, GSO, fusión 1:N, turnos nocturnos, jerarquía de verdad, identificadores y principios transversales |
+| **[`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md)** | **Biblia multi-HLG (Opción A):** taxonomía Z/P/M, bounded context `gdt_*`, contrato `vis_*`/`asi_*`, matriz E1–E20, DoD, Known Issues |
+| **[`CAPA_TEORICA_SEGMENTOS_V2.md`](./CAPA_TEORICA_SEGMENTOS_V2.md)** | **RFC aprobado** — turnos compuestos, segmentos SoT, cobertura parcial (tag `v2.0.0-rfc-turnos-compuestos`) |
+| **[`RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md`](./RFC_GRILLA_APROBADA_PLAN_TURNO_V2.md)** | Snapshot `grilla_aprobada` en `plt_*` al habilitar; lectura unificada VER plan vs capa operativa `asi_*`/`vis_*` |
+| **[`RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md`](./RFC_PLAN_PARALELO_INCORPORACION_Y_HLG_V2.md)** | **Plan paralelo `plt_inc`**, estado `MERGEADO`, HLg inmutable, purga en `plt_*`, banner dual planificado vs fijo/rotativo |
+| [`RFC_ALERTA_DIVERGENCIA_PLAN_VS_GRILLA_UX_V2.md`](./RFC_ALERTA_DIVERGENCIA_PLAN_VS_GRILLA_UX_V2.md) | **Backlog UX** — alerta on-demand si dotación operativa ≠ foto del plan (sin fatiga por licencias) |
+| **[`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md)** | **RETOMAR AQUÍ** — cierre hito Multi-HLG: strip 244 `asi_*`, PR pendiente, Paso 4 QA |
+| **[`HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md`](./HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md)** | Incidente escenario Z + limpieza quirúrgica documentada |
+| [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) | Grilla aprobada VER plan; matriz control turno |
+| [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) | **Índice corto** → puntero sesión actual |
+| **[`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)** | **SSoT** qué falta implementar (GSO, F3, F-UX opt, orquestación, release) |
+| **[`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md)** | **Registro maestro F-UX.3** (gestión turno + batch) |
+| [`DICCIONARIO_CFG_ASISTENCIA_TURNOS_V2.md`](./DICCIONARIO_CFG_ASISTENCIA_TURNOS_V2.md) | Catálogos `cfg_tcc_*`, `cfg_epl_*`, `cfg_cdc_*`, manifiesto ids |
+| [`EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md`](./EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md) | Fórmula fichadas esperadas + salida momentánea |
+| [`RFC_CIERRE_PERIODO_LIQUIDACION_V2.md`](./RFC_CIERRE_PERIODO_LIQUIDACION_V2.md) | Freeze período liquidación en `vis_*` |
+| **[`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md)** | **Gherkin A–I:** anti-blanco, licencias vs teoría, épicas US-1…US-17, acta RRHH §6 |
+| **[`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md)** | **Acta + piloto junio Sala** remediado (`plt_01KT9…`), principios blanco/error |
+| **[`ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md`](./ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md)** | **Brechas as-built** vs criterios (sin código en doc) |
+| **[`SIMULACION_IMPACTOS_HLG_PLAN_TURNO_GSO_V2.md`](./SIMULACION_IMPACTOS_HLG_PLAN_TURNO_GSO_V2.md)** | **Simulación** alta/baja/modificar HLg, plan, override — impactos V/A/GSO/L |
+| [`GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md`](./GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md) | Operaciones: por qué la grilla de equipo recalcula al abrir |
+| [`HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md`](./HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md) | **Retomar otra PC** — cierre sesión batch + documental |
+| [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md) | Acta RRHH GSO reconciliación capas (jun 2026) |
+| [`ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md`](./ANALISIS_APP_VS_CRITERIOS_GSO_CONFLICTOS_V2.md) | Brechas US ↔ código GSO |
+| [`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`](./EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md) | Tickets T-01…T-10 y ramas |
+| [`EPIC_CACHE_LOCAL_ASISTENCIA_V2.md`](./EPIC_CACHE_LOCAL_ASISTENCIA_V2.md) | Epic F4 outbox (implementado F-UX.3 en rama) |
+| **[`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md)** | **Registro maestro F-UX.3** — inventario docs, código, commits, QA, smokes |
+| [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) | Handoff sesión gestión turno A/B/C |
+| [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) | RFC payloads + A/B/C-BATCH |
+| [`RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md`](./RFC_F4_AMENDMENT_VISUAL_GRILLA_GESTION_TURNO.md) | Amendment visual grilla §12 |
+| [`RELEASE_NOTES_FUX_GESTION_TURNO_V3.md`](./RELEASE_NOTES_FUX_GESTION_TURNO_V3.md) | Release notes F-UX.3 |
+| [`PR_EPIC_MULTI_HLG_FUX.md`](./PR_EPIC_MULTI_HLG_FUX.md) | Plantilla PR épica → master |
 
 ## Índice rápido
 

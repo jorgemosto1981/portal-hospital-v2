@@ -6,7 +6,7 @@ import {
 } from "../services/datosLaboralesService.js";
 import { callSyncSessionClaims } from "../services/callables.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { INITIAL_FORM_DATA_LABORAL } from "./datos-laborales/constants.js";
 import IntegridadReferencialCard from "./datos-laborales/sections/IntegridadReferencialCard.jsx";
@@ -27,15 +27,10 @@ import { buildHlcPayload, buildHldPayload, buildHlgPayload } from "./datos-labor
 import LabeledSelect from "./datos-laborales/components/LabeledSelect.jsx";
 import {
   crearIndicePorId,
-  emptyCargaDia,
   labelDesdeIndice,
   normalizarWarnings,
   updateFormDataField,
-  updateCargaPorDiaRow,
-  addCargaPorDiaRow,
-  removeCargaPorDiaRow,
   buildRegistrosEdicionDetallados,
-  buildPlanillaCargaSemanal,
   obtenerYmdHoyInstitucional,
   hlcFechaDesdeYmd,
   hlcFechaHastaYmd,
@@ -45,11 +40,6 @@ import {
 const EMPTY_ROWS = [];
 
 const STORAGE_KEY_MODO_AVANZADO = "rrhh_datos_laborales_modo_avanzado_v1";
-
-function planillaCargaInicial(opcionesDiaSemana) {
-  const planilla = buildPlanillaCargaSemanal(opcionesDiaSemana, []);
-  return planilla.length > 0 ? planilla : [emptyCargaDia()];
-}
 
 function labelPersonaOpcion(p) {
   if (!p || !p.id) return "";
@@ -117,10 +107,11 @@ export default function DatosLaborales() {
     motivo: "",
     fecha_corte: "",
     confirmar: false,
+    confirmar_purge: false,
   });
+  const [deshabilitarHlgPaso, setDeshabilitarHlgPaso] = useState(1);
+  const [deshabilitarHlgResumen, setDeshabilitarHlgResumen] = useState({ grupoLabel: "" });
   const { user: authUser } = useAuthSession();
-  const planillaHlgCargadaRef = useRef("");
-  const [cargaPorDiaRows, setCargaPorDiaRows] = useState([emptyCargaDia()]);
   const [timelinePersonaId, setTimelinePersonaId] = useState("");
   const [timelineFiltro, setTimelineFiltro] = useState("todos");
   const [timelineFecha, setTimelineFecha] = useState("");
@@ -184,8 +175,21 @@ export default function DatosLaborales() {
   const opcionesMotivoDeshabilitacionHlc = rowsByCollection.cfg_motivo_deshabilitacion_hlc || [];
   const opcionesTipoActo = rowsByCollection.cfg_tipo_acto_designacion || [];
   const opcionesRegimenHorario = rowsByCollection.cfg_regimen_horario || [];
+  const idxRegimenes = crearIndicePorId(opcionesRegimenHorario);
+  const regimenHorarioOriginalHlg = useMemo(() => {
+    if (!modoEdicion || tipoAlta !== "historial_laboral_grupos") return "";
+    const row = hlgRows.find((r) => String(r.id) === String(registroEditId || ""));
+    return row ? String(row.regimen_horario_id || "") : "";
+  }, [modoEdicion, tipoAlta, registroEditId, hlgRows]);
+  const opcionesRegimenHorarioActivos = useMemo(() => {
+    const list = opcionesRegimenHorario || [];
+    const permitirId = String(regimenHorarioOriginalHlg || formData.regimen_horario_id || "").trim();
+    return list.filter((r) => {
+      if (r.activo !== false) return true;
+      return permitirId && String(r.id) === permitirId;
+    });
+  }, [opcionesRegimenHorario, regimenHorarioOriginalHlg, formData.regimen_horario_id]);
   const opcionesCentroCosto = rowsByCollection.cfg_centro_costo || [];
-  const opcionesDiaSemana = rowsByCollection.cfg_dia_semana || [];
 
   async function refrescarClaimsSesion() {
     if (!authUser) return;
@@ -298,6 +302,7 @@ export default function DatosLaborales() {
     idxEscalafon,
     idxAgrupamiento,
     idxCategorias,
+    idxRegimenes,
   });
   const {
     timelineItemsBase,
@@ -322,6 +327,7 @@ export default function DatosLaborales() {
     idxPersonas,
     idxRoles,
     idxFunciones,
+    idxRegimenes,
     timelinePersonaId,
     timelineFiltro,
     timelineFecha,
@@ -342,10 +348,23 @@ export default function DatosLaborales() {
       validateLaboralForm({
         tipoAlta,
         formData,
-        cargaPorDiaRows,
         idxHlc,
+        idxRegimenes,
+        modoEdicion,
+        registroEditId,
+        regimenHorarioOriginalId: regimenHorarioOriginalHlg,
+        hlgRows,
       }),
-    [tipoAlta, formData, cargaPorDiaRows, idxHlc],
+    [
+      tipoAlta,
+      formData,
+      idxHlc,
+      idxRegimenes,
+      modoEdicion,
+      registroEditId,
+      regimenHorarioOriginalHlg,
+      hlgRows,
+    ],
   );
   const puedeGuardarFormulario = !errorValidacionFormulario;
 
@@ -368,18 +387,6 @@ export default function DatosLaborales() {
 
   function onChangeField(key, value) {
     setFormData((prev) => updateFormDataField(prev, key, value));
-  }
-
-  function onChangeCargaRow(idx, key, value) {
-    setCargaPorDiaRows((prev) => updateCargaPorDiaRow(prev, idx, key, value));
-  }
-
-  function onAddCargaRow() {
-    setCargaPorDiaRows((prev) => addCargaPorDiaRow(prev));
-  }
-
-  function onRemoveCargaRow(idx) {
-    setCargaPorDiaRows((prev) => removeCargaPorDiaRow(prev, idx));
   }
 
   function abrirModalDeshabilitarHlc(hlcId) {
@@ -472,7 +479,13 @@ export default function DatosLaborales() {
       motivo: "",
       fecha_corte: obtenerYmdHoyInstitucional(),
       confirmar: false,
+      confirmar_purge: false,
     });
+    setDeshabilitarHlgPaso(1);
+    const gdtLabel =
+      String(target.grupo_de_trabajo_nombre || target.grupo_nombre || target.grupo_de_trabajo_id || "").trim() ||
+      "el grupo de trabajo";
+    setDeshabilitarHlgResumen({ grupoLabel: gdtLabel, fechaCorte: obtenerYmdHoyInstitucional() });
     setDeshabilitarHlgModalAbierto(true);
   }
 
@@ -481,6 +494,7 @@ export default function DatosLaborales() {
     setDeshabilitarHlgModalAbierto(false);
     setHlgDeshabilitarId("");
     setDeshabilitarHlgError("");
+    setDeshabilitarHlgPaso(1);
   }
 
   async function confirmarDeshabilitacionHlg() {
@@ -490,16 +504,29 @@ export default function DatosLaborales() {
       setDeshabilitarHlgError("No se encontró la asignación HLg a deshabilitar.");
       return;
     }
+    if (fechaCorte && !/^\d{4}-\d{2}-\d{2}$/.test(fechaCorte)) {
+      setDeshabilitarHlgError("La fecha de corte es inválida. Usá el formato AAAA-MM-DD.");
+      return;
+    }
+    if (deshabilitarHlgPaso === 1) {
+      setDeshabilitarHlgError("");
+      setDeshabilitarHlgPaso(2);
+      setDeshabilitarHlgResumen((prev) => ({ ...prev, fechaCorte: fechaCorte || prev.fechaCorte }));
+      setDeshabilitarHlgForm((prev) => ({ ...prev, confirmar: false, confirmar_purge: false }));
+      return;
+    }
     if (!deshabilitarHlgForm.confirmar) {
       setDeshabilitarHlgError("Debés confirmar la deshabilitación para continuar.");
       return;
     }
-    if (motivo.length > 100) {
-      setDeshabilitarHlgError("El motivo no puede superar los 100 caracteres.");
+    if (!deshabilitarHlgForm.confirmar_purge) {
+      setDeshabilitarHlgError(
+        "Debés confirmar la purga de la capa teórica (turnos RDA) en días posteriores al corte.",
+      );
       return;
     }
-    if (fechaCorte && !/^\d{4}-\d{2}-\d{2}$/.test(fechaCorte)) {
-      setDeshabilitarHlgError("La fecha de corte es inválida. Usá el formato AAAA-MM-DD.");
+    if (motivo.length > 100) {
+      setDeshabilitarHlgError("El motivo no puede superar los 100 caracteres.");
       return;
     }
     setDeshabilitarHlgError("");
@@ -540,7 +567,6 @@ export default function DatosLaborales() {
     setModoEdicion(false);
     setRegistroEditId("");
     setTipoAlta("historial_laboral_cargos");
-    setCargaPorDiaRows(planillaCargaInicial(opcionesDiaSemana));
     setFormData({
       ...INITIAL_FORM_DATA_LABORAL,
       persona_id: personaId,
@@ -563,7 +589,6 @@ export default function DatosLaborales() {
   function abrirFormularioEdicionHlg(hlgId) {
     const target = hlgRows.find((r) => String(r.id || "") === String(hlgId || ""));
     if (!target) return;
-    planillaHlgCargadaRef.current = "";
     setTipoAlta("historial_laboral_grupos");
     setModoEdicion(true);
     setModoAvanzado(false);
@@ -586,11 +611,11 @@ export default function DatosLaborales() {
       cargo_id: String(targetHlc.id || ""),
       grupo_de_trabajo_id: "",
       regimen_horario_id: "",
+      regimen_fecha_ancla: "",
       centro_costo_id: "",
       funcion_real_id: "",
       nivel_jerarquico: "",
     }));
-    setCargaPorDiaRows(planillaCargaInicial(opcionesDiaSemana));
     setMostrarFormulario(true);
   }
 
@@ -638,28 +663,10 @@ export default function DatosLaborales() {
     setTimelineWarningTipo("todos");
   }
 
-  /** Solo al cambiar tipo de alta (selector); no resetear mientras se edita un registro. */
   useEffect(() => {
     if (modoEdicion) return;
     setRegistroEditId("");
-    if (tipoAlta === "historial_laboral_grupos") {
-      setCargaPorDiaRows(planillaCargaInicial(opcionesDiaSemana));
-    } else {
-      setCargaPorDiaRows([emptyCargaDia()]);
-    }
-  }, [tipoAlta, opcionesDiaSemana, modoEdicion]);
-
-  /** Si el catálogo de días llega después de abrir edición HLg, rehidratar planilla desde Firestore. */
-  useEffect(() => {
-    if (!modoEdicion || tipoAlta !== "historial_laboral_grupos" || !registroEditId) return;
-    if (!opcionesDiaSemana.length) return;
-    const key = `${registroEditId}:${opcionesDiaSemana.length}`;
-    if (planillaHlgCargadaRef.current === key) return;
-    const full = hlgRows.find((r) => String(r.id) === String(registroEditId));
-    if (!full) return;
-    planillaHlgCargadaRef.current = key;
-    setCargaPorDiaRows(buildPlanillaCargaSemanal(opcionesDiaSemana, full.carga_por_dia_semana));
-  }, [modoEdicion, tipoAlta, registroEditId, opcionesDiaSemana, hlgRows]);
+  }, [tipoAlta, modoEdicion]);
 
   useEffect(() => {
     if (tipoAlta !== "historial_laboral_grupos") return;
@@ -693,11 +700,9 @@ export default function DatosLaborales() {
       record,
       idxHld,
       prevFormData: formData,
-      opcionesDiaSemana,
     });
     if (!next) return;
     setFormData(next.formData);
-    setCargaPorDiaRows(next.cargaPorDiaRows);
   }
 
   async function onGuardarRegistro(e) {
@@ -725,7 +730,6 @@ export default function DatosLaborales() {
         const payloadHlg = buildHlgPayload({
           formData,
           hldId: hldIdParaHlg,
-          cargaPorDiaRows,
           modoEdicion,
           registroEditId,
         });
@@ -833,8 +837,6 @@ export default function DatosLaborales() {
             modoEdicion={modoEdicion}
             formData={formData}
             onChangeField={onChangeField}
-            cargaPorDiaRows={cargaPorDiaRows}
-            onChangeCargaRow={onChangeCargaRow}
             accionFormularioLabel={accionFormularioLabel}
             personaActivaLabel={personaActivaLabel}
             cargoContexto={cargoContexto}
@@ -849,9 +851,8 @@ export default function DatosLaborales() {
             opcionesFuncion={opcionesFuncion}
             opcionesModalidadJornada={opcionesModalidadJornada}
             opcionesTipoActo={opcionesTipoActo}
-            opcionesRegimenHorario={opcionesRegimenHorario}
+            opcionesRegimenHorario={opcionesRegimenHorarioActivos}
             opcionesCentroCosto={opcionesCentroCosto}
-            opcionesDiaSemana={opcionesDiaSemana}
             opcionesCausalFinAsignacion={opcionesCausalFinAsignacion}
             errorValidacionFormulario={errorValidacionFormulario}
             saveMsg={saveMsg}
@@ -936,6 +937,8 @@ export default function DatosLaborales() {
           deshabilitarHlgForm={deshabilitarHlgForm}
           setDeshabilitarHlgForm={setDeshabilitarHlgForm}
           deshabilitarHlgError={deshabilitarHlgError}
+          deshabilitarHlgPaso={deshabilitarHlgPaso}
+          deshabilitarHlgResumen={deshabilitarHlgResumen}
           cerrarModalDeshabilitarHlg={cerrarModalDeshabilitarHlg}
           confirmarDeshabilitacionHlg={confirmarDeshabilitacionHlg}
           resultadoModalAbierto={resultadoModalAbierto}

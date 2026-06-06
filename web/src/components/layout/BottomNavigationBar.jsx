@@ -81,6 +81,36 @@ const ICONS_BY_ID = {
       strokeWidth={1.5}
     />
   ),
+  "bandeja-turnos-raiz-rrhh": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.75 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h10.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
+  "bandeja-turnos-evaluador-rrhh": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5a2.25 2.25 0 0 0 2.25-2.25m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5a2.25 2.25 0 0 1 2.25 2.25m-18 0v7.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
+  "bandeja-turnos-explorador-rrhh": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.75 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h9m6.75 0h.008v.008H19.5V13.5Zm0 4.5h.008v.008H19.5V18Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
   ticketera: () => (
     <path
       strokeLinecap="round"
@@ -198,6 +228,7 @@ const tabs = MODULOS_PORTAL.map((m) => ({
   id: m.id,
   label: m.label,
   grupo: m.grupo,
+  parentMenuId: m.parentMenuId || null,
   articuloIngresoId: m.articuloIngresoId,
   icon: ICONS_BY_ID[m.id],
 }));
@@ -249,6 +280,12 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
   );
 
   const grupoActivo = visibleTabs.find((t) => t.id === activeTab)?.grupo ?? bloquesConItems[0]?.bloque.id ?? null;
+
+  const isTabActive = useCallback((tab, allTabs, currentActiveTab) => {
+    if (currentActiveTab === tab.id) return true;
+    const children = allTabs.filter((t) => t.parentMenuId === tab.id);
+    return children.some((child) => child.id === currentActiveTab);
+  }, []);
 
   const [expandedMobile, setExpandedMobile] = useState(() => grupoActivo);
 
@@ -337,7 +374,8 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
                 aria-labelledby={`menu-grupo-${bloque.id}`}
               >
                 {items.map((tab) => {
-                  const active = activeTab === tab.id;
+                  const active = isTabActive(tab, items, activeTab);
+                  const esHijo = Boolean(tab.parentMenuId);
                   return (
                     <li key={tab.id} className="min-w-0">
                       <button
@@ -347,6 +385,7 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
                           "flex w-full min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-md py-1 touch-manipulation",
                           "transition-transform active:scale-95",
                           "md:min-h-10 md:flex-row md:justify-start md:gap-2.5 md:rounded-lg md:px-2.5 md:py-2",
+                          esHijo ? "md:ml-5 md:w-[calc(100%-1.25rem)]" : "",
                           active
                             ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-100 md:bg-blue-50 md:shadow-none md:ring-0"
                             : "text-slate-500 md:hover:bg-slate-100",
@@ -363,7 +402,7 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
                             active ? "text-blue-600 md:font-semibold" : "",
                           ].join(" ")}
                         >
-                          {tab.label}
+                          {esHijo ? `↳ ${tab.label}` : tab.label}
                         </span>
                       </button>
                     </li>

@@ -5,12 +5,45 @@ const { hldHlgFechaInicioYmd, hldHlgFechaFinYmd, vigenteEnFechaInclusivaYmd } = 
 const COL_HLG = "historial_laboral_grupos";
 
 /**
+ * HLg vigente para operación (solicitud, ancla, involucrados) en fechaRef.
+ * Deshabilitación administrativa (`activo: false`) cierra en `fecha_fin` con vigencia inclusiva:
+ * el día de corte sigue contando; al día siguiente no.
+ *
  * @param {Record<string, unknown>} hlg
  * @param {string} fechaRefYmd
  */
 function hlgVigenteEnFecha(hlg, fechaRefYmd) {
-  if (!hlg || hlg.activo === false) return false;
-  return vigenteEnFechaInclusivaYmd(hldHlgFechaInicioYmd(hlg), hldHlgFechaFinYmd(hlg) || null, fechaRefYmd);
+  if (!hlg) return false;
+  const finYmd = hldHlgFechaFinYmd(hlg);
+  const inRange = vigenteEnFechaInclusivaYmd(
+    hldHlgFechaInicioYmd(hlg),
+    finYmd || null,
+    fechaRefYmd,
+  );
+  if (hlg.activo !== false) return inRange;
+  if (!finYmd) return false;
+  return inRange;
+}
+
+/**
+ * HLg vigente para grilla operativa / capa teórica hacia adelante.
+ * Con `activo: false`, `fecha_fin` es el primer día **sin** incorporación operativa
+ * (corte exclusivo: ref >= fecha_fin → no vigente).
+ *
+ * @param {Record<string, unknown>} hlg
+ * @param {string} fechaRefYmd
+ */
+function hlgVigenteOperativaEnGrilla(hlg, fechaRefYmd) {
+  if (!hlg) return false;
+  const ref = String(fechaRefYmd || "").slice(0, 10);
+  const desde = hldHlgFechaInicioYmd(hlg);
+  const finYmd = hldHlgFechaFinYmd(hlg);
+  if (!desde || !ref || desde > ref) return false;
+  if (hlg.activo !== false) {
+    return vigenteEnFechaInclusivaYmd(desde, finYmd || null, ref);
+  }
+  if (!finYmd) return false;
+  return ref < finYmd;
 }
 
 /**
@@ -65,6 +98,7 @@ function nivelTitularEnGrupo(titularHlgVigentes, grupoTrabajoId) {
 module.exports = {
   COL_HLG,
   hlgVigenteEnFecha,
+  hlgVigenteOperativaEnGrilla,
   loadHlgRowsPorPersona,
   loadHlgRowsPorGrupo,
   filterHlgVigentesEnFecha,

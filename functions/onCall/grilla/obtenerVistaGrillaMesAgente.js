@@ -6,6 +6,9 @@ const { assertAgenteConPersonaId } = require("../../modules/shared/helpers");
 const { tokenHasRrhhLaborAccess } = require("../../modules/shared/laborProfile");
 const { isPortalRoleUsuario } = require("../../modules/shared/solicitudElegibilidadLaboral");
 const { obtenerVistaGrillaMesAgente } = require("../../modules/shared/grillaMesAgenteCore");
+const { evaluarPoliticaGsoAnioMes } = require("../../modules/asistencia/grillaGsoSoloLectura");
+const { sanitizarVistaGrillaMesAgenteGso } = require("../../modules/asistencia/grillaVisSanitizeGso");
+const { CFG_EPL_LIQUIDADO_CERRADO } = require("../../modules/shared/cfgAsistenciaTurnosIds");
 
 const obtenerVistaGrillaMesAgenteCallable = onCall(async (request) => {
   if (!request.auth) {
@@ -29,12 +32,18 @@ const obtenerVistaGrillaMesAgenteCallable = onCall(async (request) => {
 
   const anio = Number(d.anio);
   const mes = Number(d.mes);
+  const grupoTrabajoId = typeof d.grupo_trabajo_id === "string" ? d.grupo_trabajo_id.trim()
+    : (typeof d.grupo_id === "string" ? d.grupo_id.trim() : "");
   if (!Number.isFinite(anio) || !Number.isFinite(mes)) {
     throw new HttpsError("invalid-argument", "anio y mes son obligatorios.");
+  }
+  if (!/^gdt_/i.test(grupoTrabajoId)) {
+    throw new HttpsError("invalid-argument", "grupo_trabajo_id (gdt_*) es obligatorio.");
   }
 
   const result = await obtenerVistaGrillaMesAgente(db, {
     personaId: titular,
+    grupoTrabajoId,
     anio,
     mes,
   });
@@ -43,7 +52,21 @@ const obtenerVistaGrillaMesAgenteCallable = onCall(async (request) => {
     throw new HttpsError("invalid-argument", result.mensaje || "Consulta inválida.");
   }
 
-  return result;
+  const esRrhhLabor = tokenHasRrhhLaborAccess(token);
+  const politica = evaluarPoliticaGsoAnioMes({ anio, mes, esRrhhLabor });
+  const periodoCerrado = result.estado_periodo_liquidacion_id === CFG_EPL_LIQUIDADO_CERRADO;
+
+  const payload = {
+    ...result,
+    gso_politica_mes: politica,
+    gso_solo_lectura: !esRrhhLabor && (politica.solo_lectura || periodoCerrado),
+    gso_solo_lectura_motivo: periodoCerrado
+      ? "periodo_cerrado"
+      : (politica.motivo || null),
+    metadata: result.metadata || null,
+  };
+
+  return esRrhhLabor ? payload : sanitizarVistaGrillaMesAgenteGso(payload);
 });
 
 module.exports = { obtenerVistaGrillaMesAgente: obtenerVistaGrillaMesAgenteCallable };

@@ -93,6 +93,13 @@ export const MODULOS_PORTAL = [
     grupo: "rrhh",
   },
   {
+    id: "regimenes-horarios",
+    label: "Regímenes",
+    path: "/portal/rrhh/regimenes-horarios",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
     id: "checkin-saldos",
     label: "Check-in saldos",
     path: "/portal/rrhh/checkin-saldos",
@@ -108,9 +115,39 @@ export const MODULOS_PORTAL = [
     bandejaRrhhMenu: true,
   },
   {
+    id: "bandeja-turnos-raiz-rrhh",
+    label: "Bandeja de Turnos Mensuales",
+    path: "/portal/rrhh/bandeja-turnos",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
+    id: "bandeja-turnos-evaluador-rrhh",
+    label: "Evaluador",
+    path: "/portal/rrhh/bandeja-turnos",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "bandeja-turnos-raiz-rrhh",
+  },
+  {
+    id: "bandeja-turnos-explorador-rrhh",
+    label: "Explorador",
+    path: "/portal/rrhh/explorador-turnos",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "bandeja-turnos-raiz-rrhh",
+  },
+  {
     id: "grilla",
-    label: "Grilla",
-    path: "/portal/grilla",
+    label: "Grilla operativa",
+    path: "/portal/rrhh/grilla-operativa",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
+    id: "planes-turno-jefe",
+    label: "Turnos Mensuales",
+    path: "/portal/jefe/planes-turno",
     estado: ESTADOS_MODULO.MVP,
     grupo: "jefe",
   },
@@ -192,9 +229,14 @@ export function resolverTabPorPath(pathname) {
   }
   if (pathname.startsWith("/portal/rrhh/configuracion-articulos")) return "articulos-cfg";
   if (pathname.startsWith("/portal/rrhh/calendario-institucional")) return "calendario-institucional";
+  if (pathname.startsWith("/portal/rrhh/regimenes-horarios")) return "regimenes-horarios";
+  if (pathname.startsWith("/portal/rrhh/explorador-turnos")) return "bandeja-turnos-explorador-rrhh";
+  if (pathname.startsWith("/portal/rrhh/bandeja-turnos")) return "bandeja-turnos-evaluador-rrhh";
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
+  if (pathname.startsWith("/portal/rrhh/grilla-operativa")) return "grilla";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla";
+  if (pathname.startsWith("/portal/jefe/planes-turno")) return "planes-turno-jefe";
   if (pathname.startsWith("/portal/jefe/solicitudes")) return "bandeja-solicitudes-jefe";
   if (pathname.startsWith("/portal/solicitudes")) return "ticketera";
   if (pathname.startsWith("/portal/laboral") || pathname.startsWith("/laboral")) return "laboral";

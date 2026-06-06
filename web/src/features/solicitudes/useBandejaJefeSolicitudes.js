@@ -11,7 +11,9 @@ export const FILTROS_VISTA_JEFE = [
 
 const PAGE_SIZE = 10;
 
-export function useBandejaJefeSolicitudes() {
+export function useBandejaJefeSolicitudes(options = {}) {
+  const fechaDesdeMin = String(options.fechaDesdeMin || "").trim();
+  const fechaHastaMax = String(options.fechaHastaMax || "").trim();
   const [lista, setLista] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [cargandoMas, setCargandoMas] = useState(false);
@@ -37,6 +39,8 @@ export function useBandejaJefeSolicitudes() {
         page_size: PAGE_SIZE,
         dni: filtros.dni.replace(/\D/g, "").trim() || undefined,
         usuario: filtros.usuario.trim() || undefined,
+        fecha_desde_min: fechaDesdeMin || undefined,
+        fecha_desde_max: fechaHastaMax || undefined,
         cursor: cursor || undefined,
       };
       const res = await callListarSolicitudesBandejaJefe(body);
@@ -47,7 +51,7 @@ export function useBandejaJefeSolicitudes() {
       setTotalFiltrado(typeof info.total_filtrado === "number" ? info.total_filtrado : null);
       setLista((prev) => (append ? [...prev, ...batch] : batch));
     },
-    [applied],
+    [applied, fechaDesdeMin, fechaHastaMax],
   );
 
   const recargar = useCallback(

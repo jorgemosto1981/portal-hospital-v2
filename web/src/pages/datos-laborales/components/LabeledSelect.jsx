@@ -20,6 +20,8 @@ export default function LabeledSelect({
   technicalName,
   showTechnicalName = false,
   bare = false,
+  disabled = false,
+  required = false,
 }) {
   const formatLabel =
     optionLabel ||
@@ -34,6 +36,8 @@ export default function LabeledSelect({
     <select
       value={value}
       onChange={(e) => onValueChange(e.target.value)}
+      disabled={disabled}
+      required={required}
       className={bare ? SELECT_CLASS_BARE : SELECT_CLASS}
     >
       <option value="">{placeholder}</option>

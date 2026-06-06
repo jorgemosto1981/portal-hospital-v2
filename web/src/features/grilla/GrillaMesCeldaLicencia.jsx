@@ -8,6 +8,8 @@ import { lineasTooltipCelda, estiloVisualCelda } from "./grillaMesCellUtils.js";
  *   eventos: unknown[];
  *   personaLabel?: string;
  *   dia?: string;
+ *   grupoVistaId?: string;
+ *   etiquetasGrupo?: Record<string, string>;
  *   disabled?: boolean;
  *   onClick?: () => void;
  *   className?: string;
@@ -18,6 +20,8 @@ export default function GrillaMesCeldaLicencia({
   eventos,
   personaLabel,
   dia,
+  grupoVistaId,
+  etiquetasGrupo,
   disabled,
   onClick,
   className = "",
@@ -25,8 +29,10 @@ export default function GrillaMesCeldaLicencia({
 }) {
   const [hover, setHover] = useState(false);
   const tiene = Array.isArray(eventos) && eventos.length > 0;
-  const { style, className: visualClass } = estiloVisualCelda(eventos);
-  const lines = tiene ? lineasTooltipCelda(eventos, { personaLabel, dia }) : [];
+  const { style, className: visualClass } = estiloVisualCelda(eventos, { grupoVistaId });
+  const lines = tiene
+    ? lineasTooltipCelda(eventos, { personaLabel, dia, grupoVistaId, etiquetasGrupo })
+    : [];
 
   return (
     <div

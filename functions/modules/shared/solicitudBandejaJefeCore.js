@@ -175,6 +175,8 @@ async function listarSolicitudesBandejaJefe(db, opts) {
   const { filtroVista, dni, usuario, cursor, pageSize } = parseBandejaListPageOpts(opts, {
     filtroDefault: FILTRO_JEFE_PENDIENTES,
   });
+  const fechaDesdeMin = String(opts.fecha_desde_min || "").slice(0, 10);
+  const fechaDesdeMax = String(opts.fecha_desde_max || "").slice(0, 10);
 
   let titularIdsDni = null;
   if (dni) {
@@ -208,6 +210,8 @@ async function listarSolicitudesBandejaJefe(db, opts) {
       const titularId = String(sol.titular_persona_id || "").trim();
       const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
       if (!/^per_/i.test(titularId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) continue;
+      if (fechaDesdeMin && fechaRef < fechaDesdeMin) continue;
+      if (fechaDesdeMax && fechaRef > fechaDesdeMax) continue;
       if (titularIdsDni && !titularIdsDni.has(titularId)) continue;
       if (!(await revisorVeSolicitudEnBandejaJefe(db, sol, revisorPersonaId))) continue;
       const personaRow = await loadPersonaBandeja(db, titularId, personaCache);
@@ -232,6 +236,8 @@ async function listarSolicitudesBandejaJefe(db, opts) {
       const titularId = String(sol.titular_persona_id || "").trim();
       const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
       if (!/^per_/i.test(titularId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) continue;
+      if (fechaDesdeMin && fechaRef < fechaDesdeMin) continue;
+      if (fechaDesdeMax && fechaRef > fechaDesdeMax) continue;
       if (titularIdsDni && !titularIdsDni.has(titularId)) continue;
       const personaRow = await loadPersonaBandeja(db, titularId, personaCache);
       if (!personaCoincideUsuario(usuario, personaRow)) continue;
@@ -267,6 +273,8 @@ async function listarSolicitudesBandejaJefe(db, opts) {
       filtro_vista: filtroVista,
       dni: dni || null,
       usuario: usuario || null,
+      fecha_desde_min: fechaDesdeMin || null,
+      fecha_desde_max: fechaDesdeMax || null,
     },
   };
 }

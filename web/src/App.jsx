@@ -13,7 +13,6 @@ import DatosLaborales from "./pages/DatosLaborales.jsx";
 import Antiguedad from "./pages/Antiguedad.jsx";
 import DatosPersonales from "./pages/DatosPersonales.jsx";
 import EstadoModulos from "./pages/EstadoModulos.jsx";
-import GrillaOperativa from "./pages/GrillaOperativa.jsx";
 import NotificacionesEventosDatosPersonalesRRHH from "./pages/NotificacionesEventosDatosPersonalesRRHH.jsx";
 import PantallasCatalogo from "./pages/PantallasCatalogo.jsx";
 import Perfil from "./pages/Perfil.jsx";
@@ -27,15 +26,21 @@ import Solicitud64AAlta from "./pages/Solicitud64AAlta.jsx";
 import TicketeraShell from "./features/solicitudes/TicketeraShell.jsx";
 import TicketeraHub from "./pages/TicketeraHub.jsx";
 import TicketeraPatronB from "./pages/TicketeraPatronB.jsx";
+import TicketeraPatronC from "./pages/TicketeraPatronC.jsx";
 import BandejaJefeSolicitudes from "./pages/BandejaJefeSolicitudes.jsx";
 import BandejaRrhhSolicitudes from "./pages/BandejaRrhhSolicitudes.jsx";
 import GuardArticuloIngreso from "./features/solicitudes/GuardArticuloIngreso.jsx";
-import { ARTICULO_IDS_PATRON_B_MVP } from "./constants/solicitudesArticuloV2.js";
+import { ARTICULO_IDS_PATRON_B_MVP, ARTICULO_IDS_PATRON_C_MVP } from "./constants/solicitudesArticuloV2.js";
 import CheckinSaldosAgente from "./pages/CheckinSaldosAgente.jsx";
 import AltaAgenteOnboardingRRHH from "./pages/AltaAgenteOnboardingRRHH.jsx";
 import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
 import SeguimientoEnrolamientoUsuariosRRHH from "./pages/SeguimientoEnrolamientoUsuariosRRHH.jsx";
 import CalendarioConfig from "./pages/rrhh/CalendarioConfig.jsx";
+import RegimenesHorariosPage from "./pages/rrhh/RegimenesHorariosPage.jsx";
+import PlanTurnoServicioPage from "./pages/jefe/PlanTurnoServicioPage.jsx";
+import BandejaTurnosRrhhPage from "./pages/rrhh/BandejaTurnosRrhhPage.jsx";
+import ExploradorTurnosRrhhPage from "./pages/rrhh/ExploradorTurnosRrhhPage.jsx";
+import GrillaOperativaRrhhPage from "./pages/rrhh/GrillaOperativaRrhhPage.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import SistemasWeb from "./pages/SistemasWeb.jsx";
 import PerfilUsuario from "./pages/PerfilUsuario.jsx";
@@ -109,14 +114,23 @@ export default function App() {
                   </GuardArticuloIngreso>
                 }
               />
+              <Route
+                path="patron-c"
+                element={
+                  <GuardArticuloIngreso articuloIds={ARTICULO_IDS_PATRON_C_MVP}>
+                    <TicketeraPatronC />
+                  </GuardArticuloIngreso>
+                }
+              />
               <Route path="lao" element={<LaoWizardTicketera />} />
               <Route path="lao-formulario" element={<SolicitudLaoAlta />} />
             </Route>
             <Route path="solicitudes/asuntos-particulares" element={<Solicitud64AAlta />} />
             <Route path="perfil" element={<DatosPersonales />} />
             <Route path="perfil/:personaId" element={<Perfil />} />
-            <Route path="grilla" element={<GrillaOperativa />} />
+            <Route path="grilla" element={<Navigate to="/portal/rrhh/grilla-operativa" replace />} />
             <Route path="jefe/solicitudes" element={<BandejaJefeSolicitudes />} />
+            <Route path="jefe/planes-turno" element={<PlanTurnoServicioPage />} />
             <Route path="modulos" element={<EstadoModulos />} />
             <Route path="pantallas" element={<PantallasCatalogo />} />
             <Route path="configuracion" element={<Configuracion />} />
@@ -128,6 +142,10 @@ export default function App() {
               <Route path="rrhh/solicitudes-articulo" element={<BandejaRrhhSolicitudes />} />
               <Route path="rrhh/checkin-saldos" element={<CheckinSaldosAgente />} />
               <Route path="rrhh/calendario-institucional" element={<CalendarioConfig />} />
+              <Route path="rrhh/regimenes-horarios" element={<RegimenesHorariosPage />} />
+              <Route path="rrhh/bandeja-turnos" element={<BandejaTurnosRrhhPage />} />
+              <Route path="rrhh/explorador-turnos" element={<ExploradorTurnosRrhhPage />} />
+              <Route path="rrhh/grilla-operativa" element={<GrillaOperativaRrhhPage />} />
               <Route path="rrhh/lao-checkin" element={<LaoCheckinRRHH />} />
               <Route path="rrhh/configuracion-articulos" element={<ArticuloListadoGrilla />} />
               <Route
@@ -145,7 +163,7 @@ export default function App() {
         <Route path="/laboral" element={<LegacyNavigate to="/portal/laboral" />} />
         <Route path="/perfil" element={<LegacyNavigate to="/portal/perfil" />} />
         <Route path="/perfil/:personaId" element={<LegacyPerfilRedirect />} />
-        <Route path="/grilla" element={<LegacyNavigate to="/portal/grilla" />} />
+        <Route path="/grilla" element={<LegacyNavigate to="/portal/rrhh/grilla-operativa" />} />
         <Route path="/modulos" element={<LegacyNavigate to="/portal/modulos" />} />
         <Route path="/pantallas" element={<LegacyNavigate to="/portal/pantallas" />} />
         <Route path="/configuracion" element={<LegacyNavigate to="/portal/configuracion" />} />

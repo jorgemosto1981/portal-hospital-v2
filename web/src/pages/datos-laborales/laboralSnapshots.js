@@ -1,4 +1,5 @@
 import {
+  cargaSemanalDesdeHlg,
   formatDateDdMmAaaa,
   formatVigenciaHldPantalla,
   hlcFechaDesdeYmd,
@@ -11,11 +12,30 @@ import {
   isHlgAsignacionDeshabilitada,
   isHlgOHldVigenteEnHoy,
   labelDesdeIndice,
-  sumarHorasSemana,
+  obtenerYmdHoyInstitucional,
+  rangoSolapadoInclusivo,
 } from "./utils.js";
 
 function formatFechaVisible(value, fallback = "—") {
   return formatDateDdMmAaaa(value, fallback);
+}
+
+function hlgCerradaPorFecha(row, hoyYmd) {
+  const fin = hldHlgFechaFinYmd(row);
+  return Boolean(fin && fin < hoyYmd);
+}
+
+function hlgVigenteInterna(row, hoyYmd) {
+  if (!hlgVisibleEnPantalla(row)) return false;
+  if (isHlgAsignacionDeshabilitada(row)) return false;
+  // "Vigente interna" = asignacion abierta/no cerrada por fecha.
+  // Incluye asignaciones futuras (fecha_inicio > hoy) para no mostrarlas como historicas.
+  return !hlgCerradaPorFecha(row, hoyYmd);
+}
+
+function hlgHistoricaInterna(row, hoyYmd) {
+  if (!hlgVisibleEnPantalla(row)) return false;
+  return isHlgAsignacionDeshabilitada(row) || hlgCerradaPorFecha(row, hoyYmd);
 }
 
 export function buildLaboralSnapshotActual({
@@ -32,6 +52,7 @@ export function buildLaboralSnapshotActual({
   idxEscalafon,
   idxAgrupamiento,
   idxCategorias,
+  idxRegimenes,
 }) {
   const pid = String(personaId || "").trim();
   if (!pid) {
@@ -68,6 +89,7 @@ export function buildLaboralSnapshotActual({
     acc.get(cargoId).push(hld);
     return acc;
   }, new Map());
+  const hoy = obtenerYmdHoyInstitucional();
 
   const bloquesVigentes = hlcVigentes
     .slice()
@@ -76,10 +98,19 @@ export function buildLaboralSnapshotActual({
       const hldAsociados = hldByCargo.get(String(hlc.id || "")) || [];
       const hldAsociadosIds = new Set(hldAsociados.map((row) => String(row.id || "")));
       const hlgAsociados = hlgPersona.filter((r) => hldAsociadosIds.has(String(r.dato_laboral_id || "")));
-      const hlgVigDelHlc = hlgAsociados.filter(isHlgOHldVigenteEnHoy);
-      const hlgHistDelHlc = hlgAsociados.filter(
-        (r) => hlgVisibleEnPantalla(r) && !isHlgOHldVigenteEnHoy(r),
-      );
+      const hlgVigDelHlc = hlgAsociados.filter((r) => hlgVigenteInterna(r, hoy));
+      // En "historicos" del bloque activo solo deben quedar los que terminaron
+      // dentro del periodo del HLC vigente. Evita mostrar una nueva HLg vigente
+      // (ej. Porteria reabierta) como "historica" del mismo ciclo.
+      const hlgHistDelHlc = hlgAsociados.filter((r) => {
+        if (!hlgHistoricaInterna(r, hoy)) return false;
+        return rangoSolapadoInclusivo(
+          hldHlgFechaInicioYmd(r),
+          hldHlgFechaFinYmd(r),
+          hlcFechaDesdeYmd(hlc),
+          hlcFechaHastaYmd(hlc),
+        );
+      });
       const hldRelacionado =
         hlgVigDelHlc
           .map((r) => idxHld.get(String(r.dato_laboral_id || "")))
@@ -90,9 +121,9 @@ export function buildLaboralSnapshotActual({
       )}`;
       const mapHlg = (r) => {
         const hldRef = idxHld.get(String(r.dato_laboral_id || "")) || null;
-        const cargaHorariaGrupo = sumarHorasSemana(r.carga_por_dia_semana);
+        const cargaHorariaGrupo = cargaSemanalDesdeHlg(r, idxRegimenes) ?? 0;
         const warningHlg = [];
-        if (cargaHorariaGrupo <= 0) warningHlg.push("Sin carga horaria asignada al grupo.");
+        if (cargaHorariaGrupo <= 0) warningHlg.push("Sin carga horaria derivada del régimen.");
         if (!hldRef || !hldRef.funcion_real_id) warningHlg.push("Sin función real asociada.");
         const deshabilitado = isHlgAsignacionDeshabilitada(r);
         const finYmd = hldHlgFechaFinYmd(r);
@@ -105,7 +136,7 @@ export function buildLaboralSnapshotActual({
           funcion: labelDesdeIndice(idxFunciones, hldRef && hldRef.funcion_real_id),
           periodo,
           deshabilitado,
-          cargaHorariaGrupo: cargaHorariaGrupo > 0 ? cargaHorariaGrupo : 0,
+          cargaHorariaGrupo,
           warningHlg,
         };
       };
@@ -114,7 +145,7 @@ export function buildLaboralSnapshotActual({
       }`;
       const hldVigenciaPantalla = formatVigenciaHldPantalla(hldRelacionado);
       const hldId = hldRelacionado ? String(hldRelacionado.id || "") : "";
-      const totalCargaHlg = hlgVigDelHlc.reduce((acc, row) => acc + sumarHorasSemana(row.carga_por_dia_semana), 0);
+      const totalCargaHlg = hlgVigDelHlc.reduce((acc, row) => acc + (cargaSemanalDesdeHlg(row, idxRegimenes) ?? 0), 0);
       const warningsHlc = [];
       const cargaHlcNum = Number(hlc.carga_horaria_total);
       if (hlgVigDelHlc.length === 0) warningsHlc.push("Cargo vigente sin asignación vigente a grupo de trabajo.");
@@ -164,6 +195,7 @@ export function buildLaboralSnapshotHistorico({
   idxEscalafon,
   idxAgrupamiento,
   idxCategorias,
+  idxRegimenes,
 }) {
   const pid = String(personaId || "").trim();
   if (!pid) return [];
@@ -172,19 +204,34 @@ export function buildLaboralSnapshotHistorico({
     .filter(isHlcHistoricoVisible)
     .slice()
     .sort((a, b) => hlcFechaHastaYmd(b).localeCompare(hlcFechaHastaYmd(a)));
+  const hoy = obtenerYmdHoyInstitucional();
   return hlcCerrados.map((hlc, idx) => {
+    const hlcDesde = hlcFechaDesdeYmd(hlc);
+    const hlcHasta = hlcFechaHastaYmd(hlc);
     const hldDelPeriodo = hldRows.filter(
       (r) => String(r.persona_id || "") === pid && String(r.cargo_id || "") === String(hlc.id || ""),
     );
     const hldDelPeriodoIds = new Set(hldDelPeriodo.map((row) => String(row.id || "")));
-    const hlgDelPeriodo = hlgRowsVisibles.filter(
-      (r) => String(r.persona_id || "") === pid && hldDelPeriodoIds.has(String(r.dato_laboral_id || "")),
-    );
-    const hlgVigDelHlc = hlgDelPeriodo.filter(isHlgOHldVigenteEnHoy);
-    const hlgHistDelHlc = hlgDelPeriodo.filter((r) => !isHlgOHldVigenteEnHoy(r));
+    const hlgDelPeriodo = hlgRowsVisibles.filter((r) => {
+      if (String(r.persona_id || "") !== pid) return false;
+      if (!hldDelPeriodoIds.has(String(r.dato_laboral_id || ""))) return false;
+      // Evita "vigentes colados" en bloques historicos: solo HLg que intersectan
+      // con el periodo cerrado del HLC.
+      return rangoSolapadoInclusivo(
+        hldHlgFechaInicioYmd(r),
+        hldHlgFechaFinYmd(r),
+        hlcDesde,
+        hlcHasta,
+      );
+    });
+    // En el bloque historico solo mostramos asignaciones historicas del ciclo cerrado.
+    // Si hay HLg vigente vinculada a ese HLC, se considera inconsistencia de datos
+    // y no debe renderizarse como "vigente" dentro de historicos.
+    const hlgVigDelHlc = hlgDelPeriodo.filter((r) => hlgVigenteInterna(r, hoy));
+    const hlgHistDelHlc = hlgDelPeriodo.filter((r) => hlgHistoricaInterna(r, hoy));
     const mapHlg = (r) => {
       const hldRef = idxHld.get(String(r.dato_laboral_id || "")) || null;
-      const cargaHorariaGrupo = sumarHorasSemana(r.carga_por_dia_semana);
+      const cargaHorariaGrupo = cargaSemanalDesdeHlg(r, idxRegimenes) ?? 0;
       const deshabilitado = isHlgAsignacionDeshabilitada(r);
       const finYmd = hldHlgFechaFinYmd(r);
       const periodo = deshabilitado
@@ -217,7 +264,7 @@ export function buildLaboralSnapshotHistorico({
       orden: idx + 1,
       titulo,
       periodo,
-      asignaciones: hlgDelPeriodo.length,
+      asignaciones: hlgHistDelHlc.length,
       hlgVigentes: hlgVigDelHlc.map(mapHlg),
       hlgHistoricos: hlgHistDelHlc.map(mapHlg),
     };

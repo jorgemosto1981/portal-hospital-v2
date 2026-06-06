@@ -76,6 +76,7 @@ const syncSessionClaims = onCall(async (request) => {
     roles_hlc_vigentes: profile.roles_hlc_vigentes || [],
     cargo_activo: profile.cargo_activo === true,
     labor_rol_conflicto: profile.rol_conflicto === true,
+    tiene_subordinados: profile.tiene_subordinados === true,
     fecha_referencia_laboral: profile.fecha_referencia || null,
   };
 });

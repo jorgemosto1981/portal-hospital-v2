@@ -25,6 +25,7 @@ async function applyLaborAwareSessionClaims(uid, personaId, cuentaId) {
     roles_hlc_vigentes,
     cargo_activo: profile.cargo_activo === true,
     labor_rol_conflicto: profile.rol_conflicto === true,
+    tiene_subordinados: profile.tiene_subordinados === true,
     portal_role: null,
     perfil_rol_id: null,
   });

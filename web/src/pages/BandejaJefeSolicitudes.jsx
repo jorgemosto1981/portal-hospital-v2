@@ -6,18 +6,22 @@ import Card from "../components/ui/Card.jsx";
 import BandejaJefeSolicitudDetalle from "../features/solicitudes/BandejaJefeSolicitudDetalle.jsx";
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
-import { claimsIncludeRrhh } from "../features/routing/portalRole.js";
+import { claimsIncludeJefe, claimsIncludeRrhh } from "../features/routing/portalRole.js";
 import BandejaSolicitudResumenFilas from "../features/solicitudes/BandejaSolicitudResumenFilas.jsx";
 import {
   FILTROS_VISTA_JEFE,
   useBandejaJefeSolicitudes,
 } from "../features/solicitudes/useBandejaJefeSolicitudes.js";
 import { callResolverDecisionJefeSolicitud } from "../services/callables.js";
+import { periodosVentanaJefe, rangoFechasVentanaJefe } from "../features/jefe/periodoJefe.js";
 
 export default function BandejaJefeSolicitudes() {
   const { user } = useAuthSession();
   const { claims } = useAuthClaims(user);
   const esRrhh = claimsIncludeRrhh(claims);
+  const esJefe = claimsIncludeJefe(claims);
+  const periodos = periodosVentanaJefe();
+  const rango = rangoFechasVentanaJefe();
 
   const {
     lista,
@@ -35,7 +39,10 @@ export default function BandejaJefeSolicitudes() {
     recargar,
     cargarMas,
     aplicarFiltros,
-  } = useBandejaJefeSolicitudes();
+  } = useBandejaJefeSolicitudes({
+    fechaDesdeMin: rango.desdeYmd,
+    fechaHastaMax: rango.hastaYmd,
+  });
 
   const [selId, setSelId] = useState("");
   const [motivo, setMotivo] = useState("");
@@ -79,12 +86,23 @@ export default function BandejaJefeSolicitudes() {
     }
   }
 
+  if (!esJefe && !esRrhh) {
+    return (
+      <Card className="mx-auto mt-6 w-full max-w-2xl p-4">
+        <p className="text-sm text-slate-700">Sin permisos de jefatura para esta sección.</p>
+      </Card>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6">
       <header className="space-y-2">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900">Bandeja — revisión jefe</h1>
         <p className="text-sm leading-relaxed text-slate-600">
           Filtrá por estado o titular. Orden: fecha de inicio, de la más antigua a la más próxima.
+          <span className="ml-1.5 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+            Ventana activa: {periodos[0]} · {periodos[1]} · {periodos[2]}
+          </span>
           {esRrhh ? (
             <span className="ml-1.5 inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800">
               Sesión RRHH

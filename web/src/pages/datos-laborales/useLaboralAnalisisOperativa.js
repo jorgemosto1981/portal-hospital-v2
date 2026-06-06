@@ -22,6 +22,7 @@ export function useLaboralAnalisisOperativa({
   idxPersonas,
   idxRoles,
   idxFunciones,
+  idxRegimenes,
   timelinePersonaId,
   timelineFiltro,
   timelineFecha,
@@ -50,6 +51,7 @@ export function useLaboralAnalisisOperativa({
         idxPersonas,
         idxRoles,
         idxFunciones,
+        idxRegimenes,
       }),
     [
       timelinePersonaId,
@@ -63,6 +65,7 @@ export function useLaboralAnalisisOperativa({
       idxPersonas,
       idxRoles,
       idxFunciones,
+      idxRegimenes,
     ],
   );
 
@@ -106,8 +109,9 @@ export function useLaboralAnalisisOperativa({
         idxPersonas,
         idxHld,
         idxHlc,
+        idxRegimenes,
       }),
-    [grupoVistaId, grupoVistaFecha, hlgRowsVisibles, idxPersonas, idxHld, idxHlc],
+    [grupoVistaId, grupoVistaFecha, hlgRowsVisibles, idxPersonas, idxHld, idxHlc, idxRegimenes],
   );
 
   const integridad = useMemo(
