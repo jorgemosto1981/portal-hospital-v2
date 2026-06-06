@@ -1,6 +1,6 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (2026-06-06):** [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) — US-17 **cerrado** · siguiente: **US-3 A + US-14** o tema grilla acordado  
+> **RETOMAR AQUÍ (2026-06-06):** [`HANDOFF_SESION_2026-06-06_CIERRE_FASE5_GRILLA_TITULAR.md`](./HANDOFF_SESION_2026-06-06_CIERRE_FASE5_GRILLA_TITULAR.md) — Fase 5 **cerrada** · siguiente: **US-3 A + US-14** o F2.4  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops (2026-06-06) · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)  
 > **Blindaje GSO:** ✅ prod `v2.6.1-blindaje-gso` (US-9, US-1, US-16, US-10, US-14, US-3 parcial) — [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md)

@@ -1,7 +1,7 @@
 # Plan maestro — Grilla multi-HLG (Opción A)
 
 **Épica:** Turnos compuestos / coberturas — bounded context por grupo de trabajo  
-**Estado:** **Modelo final en producción** — Pasos 2–3 cerrados. **Fase 5 segmentación HLg por tramo (Plan + GSO)** cerrada 2026-06-06 — ver §7ter y [`reports/FASE5_CIERRE_SEGMENTACION_HLG_PLAN_GSO_2026-06-06.md`](../../reports/FASE5_CIERRE_SEGMENTACION_HLG_PLAN_GSO_2026-06-06.md). QA §4.2 ítems residuales y merge a `master` pendientes de proceso.  
+**Estado:** **Modelo final en producción** — Pasos 2–3 cerrados. **Fase 5 segmentación HLg (Plan + GSO + titular)** cerrada 2026-06-06 — ver §7ter y [`HANDOFF_SESION_2026-06-06_CIERRE_FASE5_GRILLA_TITULAR.md`](./HANDOFF_SESION_2026-06-06_CIERRE_FASE5_GRILLA_TITULAR.md). §4.2 ítems 6 y 9 diferidos (QA manual RRHH/jefe).  
 **Rama de entrega:** `feat/epic-multi-hlg-fase1-execution`  
 **Tag salvavidas:** `v2.2.0-pre-multi-hlg`  
 **Última actualización:** 6 de junio de 2026 (cierre Fase 5 tramos HLg)
@@ -267,14 +267,14 @@ Ejecutar antes de merge a `main`.
 | # | Caso | Verificar | Estado piloto |
 |---|------|-----------|---------------|
 | 1 | CHAPARRO junio Internación | `grilla_aprobada` = `vis_*` scoped = slice `asi_*` (NL / 08–14 / F) | ✅ mayo Sala (9 turnos); jun SKIP — HLg Sala inactiva 01/06 |
-| 2 | MOSTO LAO + GS-A en días distintos | Eventos MDC en `vis_*` del `gdt` correcto | ⚠️ manual UI |
-| 3 | LOKITO régimen planificado / compuesto | Sin regresión turnos compuestos | ✅ Oficina jun/jul prod; compuesto F3 |
+| 2 | MOSTO LAO + GS-A en días distintos | Eventos MDC en `vis_*` del `gdt` correcto | ✅ UI titular 2026-06-06 · `color_ui` unificado |
+| 3 | LOKITO régimen planificado / compuesto | Sin regresión turnos compuestos | ✅ smoke jun/jul Oficina + F3 |
 | 4 | Outbox cobertura parcial | Token concurrencia + remat con `gdt` | ✅ smoke dev |
-| 5 | Titular multicargo | Cambiar `gdt` recarga otro calendario; Oficina vacío si sin plan | ✅ smoke `D2-MOSTO-mayo-Porteria` + jun Oficina 2026-06-01 |
-| 6 | Rehabilitar / eliminar plan | No pisa `vis_*` de otro `gdt` | ⚠️ pendiente |
+| 5 | Titular multicargo / multitrato | N calendarios por tramo HLg; vacío fuera vigencia; licencias scoped al tramo | ✅ MOSTO jun Sala — 2 calendarios UI + smoke |
+| 6 | Rehabilitar / eliminar plan | No pisa `vis_*` de otro `gdt` | ⏳ QA manual RRHH (diferido) |
 | 7 | Solicitud `depende_rda` | Gate OK con capa en `gdt` ancla o plan HABILITADO | ✅ gate E11 deploy `fc54e8b` |
-| 8 | Grilla equipo jefe | `listarVistaGrillaMesPorGrupo` coherente con materialización | ✅ jun-2026 Sala — 1 fila/tramo HLg, vacío positivo (Fase 5) |
-| 9 | Override jefe | Solo muta `asi_*`/`vis_*` del contexto; snapshot plan intacto | ⚠️ pendiente |
+| 8 | Grilla equipo jefe | `listarVistaGrillaMesPorGrupo` coherente con materialización | ✅ jun-2026 Sala — 2 filas MOSTO · smoke callable |
+| 9 | Override jefe | Solo muta `asi_*`/`vis_*` del contexto; snapshot plan intacto | ⏳ QA manual jefe (diferido) |
 | 10 | Período liquidado | `assertPeriodoNoCerrado` scoped al `gdt` activo | ✅ fix gate jun 2026 |
 
 ### 4.3 Operaciones pre-prod ejecutadas
@@ -342,23 +342,23 @@ Detalle: [`REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md`](./REGISTRO_DEUDA
 
 ---
 
-## 7ter. Fase 5 — Segmentación HLg por tramo (Plan + GSO) — **CERRADA 2026-06-06**
+## 7ter. Fase 5 — Segmentación HLg por tramo (Plan + GSO + titular) — **CERRADA 2026-06-06**
 
-**Problema:** una persona con dos HLg vigentes en el mismo mes se **deduplicaba** por `persona_id` en plan y GSO; el tramo fijo 12 hs “llenaba” el mes en grilla aprobada.
+**Problema:** una persona con dos HLg vigentes en el mismo mes se **deduplicaba** por `persona_id` en plan, GSO y calendario titular.
 
-**Decisión:** **1 fila por tramo HLg** en listados y grillas; días fuera de `[vigente_desde, vigente_hasta]` → **vacío positivo** (gris), no F/NL derivados.
+**Decisión:** **1 fila / 1 calendario por tramo HLg**; días fuera de `[vigente_desde, vigente_hasta]` → **celda vacía** (sin licencias cruzadas).
 
 | Capa | Contrato |
 |------|----------|
 | Backend segmentación | `hlgSegmentosMes` → `fila_id = persona_id__hlg_id` |
-| GSO | `listarVistaGrillaMesPorGrupo`: N filas; `dias` omiten claves fuera tramo |
-| Plan guardar | `agentes[]` con `hlg_id`; validación coherencia HLg; US-9 solo en tramo |
-| Plan aprobado | `grilla_aprobada.agentes[]` con metadata tramo; snapshot días acotados HLg |
-| UI | `filaKeyAg`, subtítulo `Tramo: N hs · dd/mm–dd/mm`, celdas gris fuera vigencia |
+| GSO equipo | `listarVistaGrillaMesPorGrupo`: N filas; `dias` omiten claves fuera tramo |
+| Plan guardar / aprobada | `agentes[]` con `hlg_id`; snapshot días acotados HLg |
+| **Calendario titular** | `hlgSegmentosTitularMes` → N calendarios; vacío fuera tramo; fondos laborable/franco/feriado; licencia `color_ui` unificado |
+| UI | `filaKeyAg`, subtítulo `Tramo: dd/mm–dd/mm` |
 
 **Piloto validado:** MOSTO jun-2026 Sala — tramo A 01–10 (12 hs fijo) + tramo B 11–30 (40 hs planificado).
 
-**Reporte:** [`reports/FASE5_CIERRE_SEGMENTACION_HLG_PLAN_GSO_2026-06-06.md`](../../reports/FASE5_CIERRE_SEGMENTACION_HLG_PLAN_GSO_2026-06-06.md).
+**Acta cierre:** [`HANDOFF_SESION_2026-06-06_CIERRE_FASE5_GRILLA_TITULAR.md`](./HANDOFF_SESION_2026-06-06_CIERRE_FASE5_GRILLA_TITULAR.md).
 
 ---
 
@@ -368,7 +368,7 @@ Detalle: [`REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md`](./REGISTRO_DEUDA
 |------|-----------|--------|
 | **2 — Limpieza y gates** | strip `capa_teorica` + `grillaTurnoEntornoGate` + overrides E2 + sin fallback legacy | **✅ Cerrado 29/05/2026** |
 | **3 — Paridad histórica** | materializar **mayo 2026** scoped (Sala, 93 agentes) | **✅ Cerrado 29/05/2026** |
-| **4 — QA + merge** | matriz §4.2 (ítems 2–3, 6, 8–9) + **PR** + merge rama → `master` | **Pendiente** — ver [`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md) |
+| **4 — QA + merge** | matriz §4.2 (ítems 6 y 9 diferidos) + merge → `master` | **✅ Cerrado 2026-06-06** — `438e398` · ver handoff Fase 5 titular |
 
 **Modelo final vigente:** `asi_*` y `vis_*` 100 % scoped por `gdt_*`; sin fusión global ni campo `capa_teorica` raíz en BD.
 
@@ -398,7 +398,7 @@ Detalle: [`REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md`](./REGISTRO_DEUDA
 | 2026-05-29 | **Limpieza quirúrgica:** deploy gates `fc54e8b`, mayo scoped (93), strip 244 `asi_*` → 0 legacy |
 | 2026-05-29 | Sesión cerrada — handoff cierre + push `origin`; PR → `master` pendiente |
 | 2026-05-30 | Registro deuda CT-001 (orquestación materialización) + GO-001/002 (Grilla Operativa Calendario) |
-| 2026-05-30 | Titular multicargo: calendarios apilados; lazy `vis_*`; fix NL en materialización; deploy functions + web — ver handoff 30/05 |
+| 2026-06-06 | **Fase 5 cerrada:** segmentación HLg plan + GSO + calendario titular; deploy `438e398`; acta handoff titular |
 
 ---
 
