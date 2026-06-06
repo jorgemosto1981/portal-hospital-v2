@@ -3,6 +3,7 @@ import {
   evaluarImputacionExternaCelda,
   evaluarPostPurgeHlgCelda,
 } from "./grillaMesGsoHints.js";
+import { evaluarSoloLecturaCeldaGso } from "./grillaGsoSoloLectura.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 import { claseFondoCeldaCalendarioTitular } from "./grillaTurnosVisual.js";
 import { celdaTieneJornadaVis, celdaEsIncompletoPlanVis, textoHorarioTurno } from "./grillaMesEquipoDisplay.js";
@@ -54,6 +55,8 @@ function celdaVacia(key) {
  *   hlgRows?: Array<Record<string, unknown>>;
  *   hlgListo?: boolean;
  *   etiquetasGrupo?: Record<string, string>;
+ *   gsoPermiteEscritura?: boolean;
+ *   gsoSoloLecturaMotivo?: string | null;
  *   onDiaClick: (payload: { dia: string; eventos: unknown[]; grupoLabel?: string }) => void;
  * }} props
  */
@@ -68,6 +71,8 @@ export default function GrillaMesTitularCalendario({
   hlgRows = [],
   hlgListo = false,
   etiquetasGrupo = {},
+  gsoPermiteEscritura = true,
+  gsoSoloLecturaMotivo = null,
   onDiaClick,
 }) {
   const map = diasMap && typeof diasMap === "object" ? diasMap : {};
@@ -150,6 +155,11 @@ export default function GrillaMesTitularCalendario({
             esFeriado ||
             jornadaVis ||
             esIncompletoPlan;
+          const soloLectura = evaluarSoloLecturaCeldaGso({
+            gsoPermiteEscritura,
+            motivo: gsoSoloLecturaMotivo,
+            tieneDatos: tieneDatos || tieneLicencia,
+          });
 
           const bgCelda = tieneLicencia
             ? ""
@@ -179,6 +189,7 @@ export default function GrillaMesTitularCalendario({
           }
           if (imputacion.activo && imputacion.tooltip) titleParts.push(imputacion.tooltip);
           if (postPurge.activo && postPurge.tooltip) titleParts.push(postPurge.tooltip);
+          if (soloLectura.activo && soloLectura.tooltip) titleParts.push(soloLectura.tooltip);
 
           const colorNumero = tieneLicencia
             ? "text-white"
@@ -234,8 +245,8 @@ export default function GrillaMesTitularCalendario({
                   </span>
                 ) : null}
               </div>
-              {labelLicencia ? (
-                <span className={`${CLASE_LICENCIA} flex items-center gap-0.5`}>
+              {labelLicencia || soloLectura.activo || desalineacionTeoria || imputacion.activo || postPurge.activo ? (
+                <span className={`${labelLicencia ? CLASE_LICENCIA : "relative z-[12] flex items-center gap-0.5 text-[10px] font-bold text-slate-700"} flex items-center gap-0.5`}>
                   {desalineacionTeoria ? (
                     <span title={desalineacion.tooltip || "Teoría modificada post-licencia"} aria-hidden>
                       ⚠
@@ -249,6 +260,11 @@ export default function GrillaMesTitularCalendario({
                   {postPurge.activo ? (
                     <span title={postPurge.tooltip} aria-hidden>
                       📅
+                    </span>
+                  ) : null}
+                  {soloLectura.activo ? (
+                    <span title={soloLectura.tooltip} aria-hidden>
+                      🔒
                     </span>
                   ) : null}
                   {labelLicencia}

@@ -372,6 +372,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                         subtituloPeriodo={labelPeriodo(periodo)}
                         cerrado={estadosPeriodo.estaCerrado(periodo, g.id)}
                         sinDotacion={estadosPeriodo.estaSinDotacion(periodo, g.id)}
+                        esRrhh={esRrhh}
                         disabled={cargandoTarjeta}
                         onClick={() => {
                           if (esRrhh) {
@@ -475,7 +476,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
               ) : null}
               {!vista.gsoPermiteEscritura && vista.gsoSoloLecturaMensaje ? (
                 <div className="mb-3 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-800">
-                  <p className="font-medium">Solo lectura</p>
+                  <p className="font-medium">🔒 Mes cerrado / solo lectura</p>
                   <p className="mt-1 text-xs text-slate-600">{vista.gsoSoloLecturaMensaje}</p>
                 </div>
               ) : null}
@@ -534,6 +535,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                           hlgRows={vista.titularHlgRows}
                           hlgListo={vista.titularHlgListo}
                           etiquetasGrupo={etiquetasGrupo}
+                          gsoPermiteEscritura={vista.gsoPermiteEscritura}
+                          gsoSoloLecturaMotivo={vista.gsoSoloLecturaMotivo}
                           onDiaClick={({ dia, eventos, grupoLabel }) => {
                             const fechaYmd = `${vista.anio}-${String(vista.mes).padStart(2, "0")}-${dia}`;
                             if (cal.vigente_desde && cal.vigente_hasta) {
@@ -592,6 +595,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   filas={vista.filas}
                   grupoSeleccionado={grupoLiquidacionId || vista.grupoId}
                   etiquetasGrupo={etiquetasGrupo}
+                  gsoPermiteEscritura={vista.gsoPermiteEscritura}
+                  gsoSoloLecturaMotivo={vista.gsoSoloLecturaMotivo}
                   opsOutboxGrupo={opsOutboxGrillaModal}
                   periodoOutbox={periodoGrillaModal}
                   modoFichada={esRrhh ? "rrhh" : esJefe ? "jefe" : null}
@@ -697,6 +702,12 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   </span>
                   HLg inactiva — licencias del período anterior conservadas
                 </span>
+                <span>
+                  <span className="mr-1 inline-block text-[10px] font-bold text-slate-700 align-middle">
+                    🔒
+                  </span>
+                  Mes cerrado / solo lectura (sin edición de turno)
+                </span>
                 <span>Clic = detalles</span>
               </div>
             </div>
@@ -719,6 +730,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
         opsOutboxPendientes={opsOutboxGrillaModal}
         personaLabels={personaLabelsGrilla}
         soloLectura={!vista.gsoPermiteEscritura}
+        soloLecturaMensaje={vista.gsoSoloLecturaMensaje}
         incompletoPlan={Boolean(diaModal?.incompletoPlan)}
         desalineacionTeoria={Boolean(diaModal?.desalineacionTeoria)}
         desalineacionTooltip={diaModal?.desalineacionTooltip}
@@ -757,6 +769,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
           personaLabel={gestionTurnoShell.personaLabel}
           grupoLabel={gestionTurnoShell.grupoLabel}
           turnoVisInicial={gestionTurnoShell.turnoTeorico}
+          soloLectura={!vista.gsoPermiteEscritura}
+          soloLecturaMensaje={vista.gsoSoloLecturaMensaje}
           onCapaActualizada={() => void vista.cargar()}
           onAbrirAyuda={() => {
             window.dispatchEvent(new CustomEvent("portal-help-open", {

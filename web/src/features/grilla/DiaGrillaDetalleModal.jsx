@@ -20,6 +20,7 @@ import {
   evaluarImputacionExternaCelda,
   evaluarPostPurgeHlgCelda,
 } from "./grillaMesGsoHints.js";
+import { COPY_BADGE_SOLO_LECTURA_GSO } from "./grillaGsoSoloLectura.js";
 
 function labelEstado(id) {
   const e = String(id || "");
@@ -57,6 +58,7 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd) {
  *   onAbrirGestionTurno?: () => void;
  *   puedeGestionarTurno?: boolean;
  *   soloLectura?: boolean;
+ *   soloLecturaMensaje?: string | null;
  *   grupoTrabajoId?: string;
  *   opsOutboxPendientes?: Array<Record<string, unknown>>;
  *   personaLabels?: Record<string, string>;
@@ -87,6 +89,7 @@ export default function DiaGrillaDetalleModal({
   onAbrirGestionTurno,
   puedeGestionarTurno = false,
   soloLectura = false,
+  soloLecturaMensaje = null,
   grupoTrabajoId = "",
   opsOutboxPendientes = [],
   personaLabels = {},
@@ -531,11 +534,14 @@ export default function DiaGrillaDetalleModal({
         ) : null}
 
         {soloLectura ? (
-          <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            Este mes está en solo lectura. Los cambios de turno los gestiona RRHH.
-          </p>
+          <div className="mt-4 rounded-xl border border-slate-300 bg-slate-100 px-3 py-3">
+            <p className="text-sm font-semibold text-slate-900">🔒 {COPY_BADGE_SOLO_LECTURA_GSO}</p>
+            <p className="mt-1 text-xs text-slate-700">
+              {soloLecturaMensaje || "Los cambios de turno los gestiona RRHH."}
+            </p>
+          </div>
         ) : null}
-        {personaId && fechaYmd && puedeGestionarTurno && onAbrirGestionTurno && !desalineacionTeoria ? (
+        {personaId && fechaYmd && puedeGestionarTurno && onAbrirGestionTurno && !desalineacionTeoria && !soloLectura ? (
           <button
             type="button"
             onClick={() => {

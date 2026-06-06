@@ -110,8 +110,9 @@ export default function GrillaPeriodoLiquidacionAccionesRrhh({
         </p>
       ) : null}
       {cerrado && compact ? (
-        <p className="text-[11px] text-slate-600">
-          Período cerrado · {periodoLabel} · {sectorTxt}
+        <p className="rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-xs text-slate-700">
+          <span className="font-semibold">Período cerrado</span> — {periodoLabel} · {sectorTxt}.
+          Podés consultar la grilla y operar como RRHH (reapertura o cambios según política).
         </p>
       ) : null}
 

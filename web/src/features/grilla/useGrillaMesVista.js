@@ -19,7 +19,7 @@ import {
   resolverGrupoIdInicial,
   RX_GDT,
 } from "./grillaGrupoUtils.js";
-import { gsoPermiteEscritura } from "./grillaGsoSoloLectura.js";
+import { copyDetalleSoloLecturaGso, gsoPermiteEscritura } from "./grillaGsoSoloLectura.js";
 import { mensajeToastMaterializacionLazy } from "./grillaMaterializacionToast.js";
 import { normalizarFilasGrillaEquipo } from "./grillaMesFilasUtils.js";
 import { hlgSegmentosTitularMes } from "./grillaTitularTramosMes.js";
@@ -386,14 +386,17 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
         ? "Tabla equipo: un renglón por tramo HLg del mes (máx. 60 personas)."
         : "Tabla sector RRHH según grupo elegido en catálogo.";
 
+  const motivoApi = data?.gso_solo_lectura_motivo || null;
   const gsoEscrituraApi = data?.gso_solo_lectura === true
-    ? { permite: false, mensaje: data.gso_solo_lectura_motivo === "periodo_cerrado"
-        ? "Período de liquidación cerrado para este sector."
-        : "El mes anterior está en solo lectura desde el día 1." }
+    ? {
+        permite: false,
+        mensaje: copyDetalleSoloLecturaGso(motivoApi),
+        motivo: motivoApi,
+      }
     : null;
   const gsoEscrituraLocal = gsoPermiteEscritura(periodo, {
     esRrhh,
-    periodoCerrado: data?.gso_solo_lectura_motivo === "periodo_cerrado",
+    periodoCerrado: motivoApi === "periodo_cerrado",
   });
   const gsoEscritura = gsoEscrituraApi || gsoEscrituraLocal;
 
@@ -440,5 +443,6 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
     grupoActivoId: normalizeGrupoTrabajoId(grupoId),
     gsoPermiteEscritura: gsoEscritura.permite,
     gsoSoloLecturaMensaje: gsoEscritura.permite ? null : gsoEscritura.mensaje,
+    gsoSoloLecturaMotivo: gsoEscritura.permite ? null : gsoEscritura.motivo || motivoApi,
   };
 }

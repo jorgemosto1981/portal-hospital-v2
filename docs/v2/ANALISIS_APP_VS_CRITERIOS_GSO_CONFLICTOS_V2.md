@@ -37,7 +37,7 @@
 | **US-5** | — | 📅 post-purge HLg (F, Q3-2) | Copy Q3-2 unificado en grilla, avisos y modal | **✅ Cerrado** 2026-06-06 — backend Fase 4 ya alineado RFC |
 | **US-6** | P2 | ⏳ lazy (G) | Variante `vacio` en `varianteCeldaOperativa` | **Parcial** |
 | **US-7** | P2 | ℹ️ licencia en franco (D) | Se ve F + licencia (rosa en captura piloto) | **Parcial** (hint opcional) |
-| **US-8** | P1 | 🔒 mes cerrado (H) | `gso_solo_lectura`, acciones RRHH período | **Parcial** — revisar gates en modales turno |
+| **US-8** | — | 🔒 mes cerrado (H) | Badge celda + gates modales turno A/B/C/shell | **✅ Cerrado** 2026-06-06 — `grillaGsoSoloLectura.js` |
 | **US-13** | P1 | Matriz permisos teoría | Doc acta; código disperso (plan, override, HLg) | **Documental** |
 | **US-14** | P1 | Acciones 1+2+3 ante ⚠️ | `DiaGrillaDetalleModal.jsx`: bandeja, enlaces gestión; sin flujo ⚠️ dedicado | **Sí** |
 | **US-15** | P2 | Fichada por rol (Q9-3) | `grillaVisSanitizeGso.js` quita `fichadas_reales` a jefe; sin presente/ausente | **Sí** |

@@ -3,6 +3,7 @@ import {
   evaluarImputacionExternaCelda,
   evaluarPostPurgeHlgCelda,
 } from "./grillaMesGsoHints.js";
+import { evaluarSoloLecturaCeldaGso } from "./grillaGsoSoloLectura.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 import {
   columnasCalendario,
@@ -44,6 +45,8 @@ function contenidoCeldaOperativa({
   imputacionTooltip,
   postPurgeHlg,
   postPurgeTooltip,
+  soloLecturaGrilla,
+  soloLecturaTooltip,
 }) {
   const fichadasMostrar = outboxVisual?.fichadasPreview ?? fichadasN;
   const alertaTitle = desalineacionTooltip || "Teoría modificada post-licencia";
@@ -74,12 +77,22 @@ function contenidoCeldaOperativa({
       📅
     </span>
   ) : null;
+  const badgeSoloLectura = soloLecturaGrilla ? (
+    <span
+      className="text-[8px] font-bold leading-none text-slate-700"
+      title={soloLecturaTooltip || "Mes cerrado / solo lectura"}
+      aria-label={soloLecturaTooltip || "Mes cerrado / solo lectura"}
+    >
+      🔒
+    </span>
+  ) : null;
   const filaBadges =
-    badgeAlerta || badgeFanOut || badgePostPurge ? (
+    badgeAlerta || badgeFanOut || badgePostPurge || badgeSoloLectura ? (
       <span className="flex items-center justify-center gap-px leading-none">
         {badgeAlerta}
         {badgeFanOut}
         {badgePostPurge}
+        {badgeSoloLectura}
       </span>
     ) : null;
   const badge = (
@@ -183,6 +196,8 @@ function contenidoCeldaOperativa({
  *   filas: Array<Record<string, unknown>>;
  *   grupoSeleccionado?: string;
  *   etiquetasGrupo?: Record<string, string>;
+ *   gsoPermiteEscritura?: boolean;
+ *   gsoSoloLecturaMotivo?: string | null;
  *   opsOutboxGrupo?: Array<Record<string, unknown>>;
  *   periodoOutbox?: string;
  *   modoFichada?: "rrhh" | "jefe" | null;
@@ -206,6 +221,8 @@ export default function GrillaMesEquipoTabla({
   filas,
   grupoSeleccionado,
   etiquetasGrupo = {},
+  gsoPermiteEscritura = true,
+  gsoSoloLecturaMotivo = null,
   opsOutboxGrupo = [],
   periodoOutbox = "",
   modoFichada = null,
@@ -356,6 +373,17 @@ export default function GrillaMesEquipoTabla({
                       fechaYmd,
                       vigenteHasta: fila.vigente_hasta,
                     });
+                    const soloLectura = evaluarSoloLecturaCeldaGso({
+                      gsoPermiteEscritura,
+                      motivo: gsoSoloLecturaMotivo,
+                      tieneDatos:
+                        tieneLicencia ||
+                        tieneTurno ||
+                        esFranco ||
+                        esNoLaborable ||
+                        esInstitucional ||
+                        esIncompletoPlan,
+                    });
                     const tieneDatos =
                       tieneLicencia ||
                       tieneTurno ||
@@ -397,6 +425,9 @@ export default function GrillaMesEquipoTabla({
                     }
                     if (postPurge.activo && postPurge.tooltip) {
                       titleParts.push(postPurge.tooltip);
+                    }
+                    if (soloLectura.activo && soloLectura.tooltip) {
+                      titleParts.push(soloLectura.tooltip);
                     }
 
                     const variant = varianteCeldaOperativa({
@@ -489,6 +520,8 @@ export default function GrillaMesEquipoTabla({
                               imputacionTooltip: imputacion.tooltip,
                               postPurgeHlg: postPurge.activo,
                               postPurgeTooltip: postPurge.tooltip,
+                              soloLecturaGrilla: soloLectura.activo,
+                              soloLecturaTooltip: soloLectura.tooltip,
                             })}
                           </GrillaTurnosCeldaChip>
                         </GrillaMesCeldaLicencia>

@@ -1,9 +1,26 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (2026-06-06):** **US-4** + **US-5** ✅ UX/copy + QA manual + hosting deploy · **siguiente código:** **US-8** (gates mes cerrado) · RFC HLG ⏸ espera RRHH  
+> **RETOMAR AQUÍ (2026-06-06):** **US-8** ✅ QA + deploy hosting · **siguiente:** US-6 / US-7 / US-11 · RFC HLG ⏸ espera RRHH  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops (2026-06-06) · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)  
 > **Blindaje GSO:** ✅ prod `v2.6.1-blindaje-gso` (US-9, US-1, US-16, US-10, US-14, US-3 parcial) — [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md)
+
+## EN CURSO US-8 — mes cerrado / solo lectura (2026-06-06)
+
+| Qué | Dónde / evidencia |
+|-----|-------------------|
+| **Escenario H / P8** | Licencia visible + 🔒 en acciones de edición de turno |
+| **Util** | `grillaGsoSoloLectura.js` — `evaluarSoloLecturaCeldaGso`, `COPY_BADGE_SOLO_LECTURA_GSO`, `soloLecturaDesdeGsoEscrituraApi` |
+| **Celda** | Badge 🔒 en `GrillaMesEquipoTabla` y `GrillaMesTitularCalendario` cuando `!gsoPermiteEscritura` |
+| **Modal día** | `DiaGrillaDetalleModal` — bloque 🔒 + sin botón gestionar turno |
+| **Wizard turno** | `GestionTurnoDiaShell` — gate solo lectura (sin wizard) |
+| **Flujos A/B/C** | `ModalCoberturaParcial`, `ModalCambioTurnoPropio`, `ModalTurnoAdicional` — aviso + submit deshabilitado vía `gso_escritura` API |
+| **Banner grilla** | `GrillaMesLicenciasPanel` — copy acta + leyenda 🔒 |
+| **Tests** | `grillaGsoSoloLectura.test.js` (6) — vitest ✅ |
+| **QA manual** | ✅ RRHH MOSTO — tarjeta mayo Sala *«consulta y gestión RRHH»* · jefe M-1 🔒 sin edición |
+| **Deploy** | hosting — ver commit US-8 |
+
+---
 
 ## CIERRE US-4 + US-5 — hints GSO UX/copy (2026-06-06)
 

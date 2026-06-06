@@ -12,6 +12,7 @@ import { turnosDisponiblesDesdeRegimen } from "./enrichCapaTeoricaLabels.js";
 import { leerCapaTeoricaCelda } from "../../services/grillaMaterializarCeldaService.js";
 import { callListarContextoPlanGrupo } from "../../services/callables.js";
 import GestionTurnoWizardPaso1 from "./GestionTurnoWizardPaso1.jsx";
+import { COPY_BADGE_SOLO_LECTURA_GSO } from "./grillaGsoSoloLectura.js";
 
 /**
  * Shell F-UX.3 — gate materialización + wizard paso 1 (A/B/C).
@@ -28,6 +29,8 @@ import GestionTurnoWizardPaso1 from "./GestionTurnoWizardPaso1.jsx";
  *   onCapaActualizada?: () => void;
  *   onAbrirAyuda?: () => void;
  *   onElegirFlujo?: (flujo: import("./gestionTurnoWizardOpciones.js").GestionTurnoFlujoId) => void;
+ *   soloLectura?: boolean;
+ *   soloLecturaMensaje?: string | null;
  * }} props
  */
 export default function GestionTurnoDiaShell({
@@ -42,6 +45,8 @@ export default function GestionTurnoDiaShell({
   turnoVisInicial,
   onAbrirAyuda,
   onElegirFlujo,
+  soloLectura = false,
+  soloLecturaMensaje = null,
 }) {
   const [capaResp, setCapaResp] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -183,7 +188,16 @@ export default function GestionTurnoDiaShell({
           </p>
         ) : null}
 
-        {listoWizard ? (
+        {soloLectura ? (
+          <div className="mt-3 rounded-xl border border-slate-300 bg-slate-100 px-3 py-3">
+            <p className="text-sm font-semibold text-slate-900">🔒 {COPY_BADGE_SOLO_LECTURA_GSO}</p>
+            <p className="mt-1 text-xs text-slate-700">
+              {soloLecturaMensaje || "Los cambios de turno los gestiona RRHH."}
+            </p>
+          </div>
+        ) : null}
+
+        {listoWizard && !soloLectura ? (
           <GestionTurnoWizardPaso1
             seleccion={flujoSeleccionado}
             onSeleccion={setFlujoSeleccionado}

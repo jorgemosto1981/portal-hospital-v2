@@ -15,6 +15,10 @@ import {
   validarAdicionalTurno,
 } from "./grillaAdicionalPreview.js";
 import { etiquetaSegmentosCompuesto } from "./grillaCambioTurnoPropioPreview.js";
+import {
+  COPY_BADGE_SOLO_LECTURA_GSO,
+  soloLecturaDesdeGsoEscrituraApi,
+} from "./grillaGsoSoloLectura.js";
 
 /**
  * Flujo C — horas adicionales (RFC §3.3). Solo turno régimen + motivo.
@@ -51,7 +55,7 @@ export default function ModalTurnoAdicional({
   const [visDia, setVisDia] = useState(null);
   const [turnosRegimen, setTurnosRegimen] = useState(/** @type {Record<string, object>} */ ({}));
   const [expectedVersionToken, setExpectedVersionToken] = useState("");
-  const [periodoCerrado, setPeriodoCerrado] = useState(false);
+  const [soloLecturaInfo, setSoloLecturaInfo] = useState({ activo: false, detalle: "" });
   const [turnoId, setTurnoId] = useState("");
   const [motivo, setMotivo] = useState("");
 
@@ -76,7 +80,8 @@ export default function ModalTurnoAdicional({
         leerCapaTeoricaCelda(personaId, fechaYmd, grupoId),
         callListarContextoPlanGrupo({ grupo_id: grupoId, periodo }),
       ]);
-      setPeriodoCerrado(capaRes.gso_escritura?.escritura_habilitada === false);
+      const sl = soloLecturaDesdeGsoEscrituraApi(capaRes.gso_escritura);
+      setSoloLecturaInfo({ activo: sl.activo, detalle: sl.detalle || "" });
       setExpectedVersionToken(
         capaRes.concurrencia?.expected_version_token || capaRes.concurrencia?.vis_ultima_sync || "",
       );
@@ -244,10 +249,11 @@ export default function ModalTurnoAdicional({
           {esNoLaborable ? <span className="ml-1 text-blue-800">· No laborable</span> : null}
         </div>
 
-        {periodoCerrado ? (
-          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            Mes en solo lectura o período cerrado.
-          </p>
+        {soloLecturaInfo.activo ? (
+          <div className="mt-3 rounded-lg border border-slate-300 bg-slate-100 px-3 py-2">
+            <p className="text-xs font-semibold text-slate-900">🔒 {COPY_BADGE_SOLO_LECTURA_GSO}</p>
+            <p className="mt-1 text-xs text-slate-700">{soloLecturaInfo.detalle}</p>
+          </div>
         ) : null}
 
         {hayPreviewPendiente && !cargando ? (
@@ -354,7 +360,7 @@ export default function ModalTurnoAdicional({
             disabled={
               operando
               || cargando
-              || periodoCerrado
+              || soloLecturaInfo.activo
               || Boolean(errorCarga)
               || !opciones.length
               || !validacion?.ok
