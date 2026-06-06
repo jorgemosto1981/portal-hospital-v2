@@ -18,7 +18,8 @@
 | **Tests** | `grillaMesGsoHints.test.js` (5) · `grillaMesCellUtils.test.js` (4) — vitest ✅ |
 | **Limitación** | Días fuera de tramo HLg (`diaFueraTramoHlg` → celda vacía) no muestran licencias aunque existan en `vis_*` — sin cambio backend en esta iteración |
 | **QA manual** | ✅ `sol_01KT3ZG…` día 11 jun-26 — Sala 🔗 *Oficina PERSONAL* · Oficina 📅 post-purge |
-| **Deploy** | hosting — ver commit de cierre US-4/US-5 |
+| **Commit** | `dbc9fc5` — `feat(gso): cerrar US-4 y US-5 hints fan-out y post-purge HLg` |
+| **Deploy** | hosting https://portal-hospital-v2.web.app — 2026-06-06 |
 | **Siguiente** | **US-8** |
 
 **Última actualización índice:** 2026-06-06 — US-4/US-5 cerrados (QA + deploy).
