@@ -41,7 +41,7 @@ function contenidoCeldaOperativa({
   const alertaTitle = desalineacionTooltip || "Teoría modificada post-licencia";
   const badgeAlerta = desalineacionTeoria ? (
     <span
-      className="text-[8px] font-bold leading-none text-amber-300"
+      className="text-[8px] font-bold leading-none text-amber-700"
       title={alertaTitle}
       aria-label={alertaTitle}
     >

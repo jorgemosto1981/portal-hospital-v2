@@ -1,9 +1,27 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (2026-06-06):** **US-15** ✅ cerrado (código + deploy prod + smoke visual sin regresión) · **primer paso próxima sesión:** smoke badges P/A con capa 4 simulada (script abajo) · RFC HLG ⏸ espera RRHH  
+> **RETOMAR AQUÍ (2026-06-06):** **US-3 68-B (horas)** ✅ smoke cerrado · **US-15** ✅ · **siguiente código sugerido:** **US-5** (copy post-purge HLg) + **US-4** (🔗 fan-out) · deploy hosting pendiente (fix modal smoke + badge ⚠️) · RFC HLG ⏸ espera RRHH  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops (2026-06-06) · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)  
 > **Blindaje GSO:** ✅ prod `v2.6.1-blindaje-gso` (US-9, US-1, US-16, US-10, US-14, US-3 parcial) — [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md)
+
+## CIERRE SMOKE US-3 — 68-B horas + reconciliación (2026-06-06)
+
+| Qué | Dónde / evidencia |
+|-----|-------------------|
+| **Objetivo** | Validar que US-3 es **agnóstico** a unidad horas (`cfg_uma_horas`) y a `nivel_ocupacion_dia_id` (68-B piloto = `cfg_nod_exclusivo`) |
+| **Script** | `scripts/smoke-us3-fanout-68b-dev.mjs` · `npm run smoke:us3-fanout-68b` |
+| **Piloto** | MOSTO `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ` · Sala `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · **2026-06-13** (turno M) |
+| **Paso 1** | Fan-out smoke `sol_SMOKE68B_US3_DIA13` → chip **68-B** sobre turno M · `teoria_ref` capturada en proyección |
+| **Paso 2** | Override `asi_*.overrides_turno` reemplazo **T** + `materializarTurnoTeoricoDia` (no patch directo `vis_*` — se revierte con `materializarGrupoMes` al listar grilla) |
+| **UI validada** | Celda: T + chip 68-B + **⚠️** · Modal: bloque ámbar US-3 + acciones US-14 |
+| **Fix UI local** | `DiaGrillaDetalleModal.jsx` — no llama resumen si `solicitud_id` no es ULID real (evita 403 smoke) · `GrillaMesEquipoTabla.jsx` — badge ⚠️ `amber-700` |
+| **Limpieza** | `--modo=revert --apply` + `--modo=restore-turno --apply` → día 13 vuelve a **M** sin evento smoke |
+| **Lección** | Portero = gate alta (`depende_rda`) · Auditor = US-3 post-evento (`teoria_ref` vs piso vigente) |
+
+**Última actualización índice:** 2026-06-06 — smoke 68-B + US-3 cerrado y revertido.
+
+---
 
 ## CIERRE US-15 — fichada en celda por rol (2026-06-06)
 
@@ -35,6 +53,7 @@
 | **Util compartido** | `shared/utils/grillaTeoriaDesalineacion.js` |
 | **Deploy prod** | functions + hosting · rematerialización grupos con licencias jun/jul-26 |
 | **Smoke E2E** | Override día 27 Sala Internación (`M+T` → `T`) → ⚠️ + modal validado en UI → **revertido** |
+| **Smoke 68-B horas** | Día 13 jun-26 MOSTO — fan-out smoke + override T → ⚠️ + modal → **revertido** (sección arriba) |
 | **Tests** | `functions/test/grillaTeoriaDesalineacion.test.js` · `grillaMesEquipoDisplay.test.js` |
 | **Siguiente (sugerido)** | US-15 · RFC VAL-HLG-W004 |
 
@@ -457,6 +476,7 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 | Smoke purge HLg | `scripts/audit-purge-hlg-post-corte.mjs` |
 | Smoke fichadas / materializar día | `scripts/smoke-fichadas-esperadas-dev.mjs`, `smoke-materializar-turno-dia-dev.mjs` |
 | Smoke US-15 capa 4 (P/A) | `npm run smoke:us15-fichada-presencia -- --dni=… --gdt=… --fecha=YYYY-MM-DD --modo=presente` |
+| Smoke US-3 fan-out 68-B (horas) | `npm run smoke:us3-fanout-68b -- --dni=… --gdt=… --fecha=YYYY-MM-DD --modo=inject` · `patch-turno-t` · `revert` · `restore-turno` (+ `--apply`) |
 | Rematerializar 1 día + leer vis | `scripts/_tmp-materializar-dia-y-leer-vis.mjs` |
 | Handoff pausa F3 | `docs/v2/HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md` |
 | HLg por persona/gdt | `scripts/audit-hlg-persona-gdts.mjs` |

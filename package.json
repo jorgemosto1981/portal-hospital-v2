@@ -25,6 +25,7 @@
     "test:fichadas-esperadas": "node --test functions/test/fichadasEsperadas.test.js",
     "test:grilla-sanitize-gso": "node --test functions/test/grillaVisSanitizeGso.test.js",
     "smoke:us15-fichada-presencia": "node scripts/smoke-us15-fichada-presencia-dev.mjs",
+    "smoke:us3-fanout-68b": "node scripts/smoke-us3-fanout-68b-dev.mjs",
     "test:validaciones-plan-turno": "node --test functions/test/validacionesPlanTurno.test.js",
     "test:plan-enriquecimiento-dias": "node --test functions/test/planEnriquecimientoDias.test.js",
     "test:hlg-segmentos-mes": "node --test functions/test/hlgSegmentosMes.test.js",

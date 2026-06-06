@@ -120,6 +120,12 @@ export default function DiaGrillaDetalleModal({
 
   useEffect(() => {
     if (!open || !solFocus) return;
+    const esSolReal = /^sol_[0-9A-HJKMNP-TV-Z]{26}$/i.test(solFocus);
+    if (!esSolReal) {
+      setResumen(null);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     void (async () => {
