@@ -358,6 +358,8 @@ export default function GrillaMesEquipoTabla({
                                         : cell.tipo_dia || "laborable",
                                   ingreso,
                                   egreso,
+                                  horario_display: cell.rda_horario_display,
+                                  tiene_huecos: cell.rda_tiene_huecos,
                                   fichadas_esperadas: fichadasN ?? undefined,
                                   es_feriado: esInstitucional,
                                   tipo_evento_institucional: tipoInstCel || undefined,

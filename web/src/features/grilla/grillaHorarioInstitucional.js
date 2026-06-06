@@ -2,28 +2,23 @@
  * Horarios institucionales (America/Argentina/Buenos_Aires) — alineado a vis_* y régimen.
  */
 
-const ZONA_INSTITUCIONAL = "America/Argentina/Buenos_Aires";
+import {
+  horarioOperativoDesdeCeldaVis,
+  isoToHhmmInstitucional as horaDesdeIsoShared,
+} from "../../../../shared/utils/horarioInstitucionalDisplay.js";
+
+export {
+  horarioDisplayDesdeCapaTeorica,
+  horarioDisplayDesdeSegmentos,
+  horarioOperativoDesdeCeldaVis,
+} from "../../../../shared/utils/horarioInstitucionalDisplay.js";
 
 /**
  * HH:mm desde ISO UTC del backend (ymdHoraToIso → toISOString).
  * @param {unknown} iso
  */
 export function horaDesdeIso(iso) {
-  const s = String(iso || "").trim();
-  if (!s) return "";
-  try {
-    const d = new Date(s);
-    if (Number.isNaN(d.getTime())) return "";
-    return new Intl.DateTimeFormat("es-AR", {
-      timeZone: ZONA_INSTITUCIONAL,
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).format(d);
-  } catch {
-    const m = s.match(/T(\d{2}:\d{2})/);
-    return m ? m[1] : "";
-  }
+  return horaDesdeIsoShared(iso) || "";
 }
 
 /**
@@ -41,20 +36,19 @@ export function horasDesdeIsoTramo(ingresoIso, egresoIso) {
 
 /**
  * @param {unknown} visDia
- * @param {{ capa_teorica?: { ingreso?: string; egreso?: string } } | null | undefined} turnoVis
+ * @param {{ capa_teorica?: { ingreso?: string; egreso?: string; horario_display?: string; segmentos?: unknown[]; tiene_huecos?: boolean } } | null | undefined} turnoVis
  */
 export function horarioOperativoDesdeVis(visDia, turnoVis) {
-  const ing = String(
-    (visDia && typeof visDia === "object" ? visDia.rda_ingreso : null)
-    || turnoVis?.capa_teorica?.ingreso
-    || "",
-  ).trim();
-  const egr = String(
-    (visDia && typeof visDia === "object" ? visDia.rda_egreso : null)
-    || turnoVis?.capa_teorica?.egreso
-    || "",
-  ).trim();
-  if (ing && egr) return `${ing}–${egr}`;
-  if (ing) return ing;
-  return "";
+  const cell =
+    visDia && typeof visDia === "object"
+      ? visDia
+      : {
+          rda_ingreso: turnoVis?.capa_teorica?.ingreso,
+          rda_egreso: turnoVis?.capa_teorica?.egreso,
+          rda_horario_display: turnoVis?.capa_teorica?.horario_display,
+          rda_tiene_huecos: turnoVis?.capa_teorica?.tiene_huecos,
+          segmentos: turnoVis?.capa_teorica?.segmentos,
+          tiene_huecos: turnoVis?.capa_teorica?.tiene_huecos,
+        };
+  return horarioOperativoDesdeCeldaVis(cell, false);
 }

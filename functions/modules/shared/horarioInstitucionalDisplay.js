@@ -74,4 +74,81 @@ function resolverHorarioCelda(celda) {
   return { ingreso, egreso };
 }
 
-module.exports = { ZONA_HORARIA_INSTITUCIONAL, isoToHhmmInstitucional, toHhmmInstitucionalDisplay, rangoHhmmLabel, resolverHorarioCelda };
+/**
+ * Horario por tramos solo cuando la jornada tiene discontinuidad (`tiene_huecos`).
+ * Compuesto continuo (M+T, M+T+N) → null: la UI usa el sobre ingreso–egreso.
+ * Discontinuo (p. ej. M+N con hueco 14–22) → "06:00–14:00 · 22:00–06:00".
+ * @param {{
+ *   segmentos?: Array<{ ingreso_iso?: string; egreso_iso?: string; ingreso?: string; egreso?: string }>;
+ *   tiene_huecos?: boolean;
+ *   compact?: boolean;
+ * }} opts
+ * @returns {string|null}
+ */
+function horarioDisplayDesdeSegmentos(opts = {}) {
+  const seg = Array.isArray(opts.segmentos) ? opts.segmentos : [];
+  if (seg.length <= 1 || opts.tiene_huecos !== true) return null;
+
+  const compact = opts.compact === true;
+  const tramos = seg
+    .map((s) => {
+      const ing = toHhmmInstitucionalDisplay(s.ingreso) || isoToHhmmInstitucional(s.ingreso_iso);
+      const egr = toHhmmInstitucionalDisplay(s.egreso) || isoToHhmmInstitucional(s.egreso_iso);
+      if (!ing || !egr) return "";
+      return compact ? rangoHhmmLabel(ing, egr) : `${ing}–${egr}`;
+    })
+    .filter(Boolean);
+
+  if (!tramos.length) return null;
+  return tramos.join(" · ");
+}
+
+/**
+ * @param {object|null|undefined} capa
+ * @param {string|null|undefined} [ingresoEnvelope]
+ * @param {string|null|undefined} [egresoEnvelope]
+ * @param {boolean} [compact]
+ * @returns {string|null}
+ */
+function horarioDisplayDesdeCapaTeorica(capa, ingresoEnvelope, egresoEnvelope, compact = false) {
+  if (!capa || typeof capa !== "object") return null;
+  if (capa.tiene_huecos === true) {
+    const pre = String(capa.horario_display || capa.rda_horario_display || "").trim();
+    if (pre) return pre;
+    return horarioDisplayDesdeSegmentos({
+      segmentos: capa.segmentos,
+      tiene_huecos: true,
+      compact,
+    });
+  }
+  return null;
+}
+
+/**
+ * @param {object|null|undefined} cell — celda vis_* o capa mínima para UI
+ * @param {boolean} [compact]
+ * @returns {string}
+ */
+function horarioOperativoDesdeCeldaVis(cell, compact = false) {
+  if (!cell || typeof cell !== "object") return "";
+  const tieneHuecos = cell.rda_tiene_huecos === true || cell.tiene_huecos === true;
+
+  if (tieneHuecos) {
+    const display = String(cell.rda_horario_display || cell.horario_display || "").trim();
+    if (display) return display;
+    const porSegmentos = horarioDisplayDesdeSegmentos({
+      segmentos: cell.segmentos || cell.rda_segmentos,
+      tiene_huecos: true,
+      compact,
+    });
+    if (porSegmentos) return porSegmentos;
+  }
+
+  const ing = String(cell.rda_ingreso || cell.ingreso || "").trim();
+  const egr = String(cell.rda_egreso || cell.egreso || "").trim();
+  if (ing && egr) return compact ? rangoHhmmLabel(ing, egr) : `${ing}–${egr}`;
+  if (ing) return ing;
+  return "";
+}
+
+module.exports = { ZONA_HORARIA_INSTITUCIONAL, isoToHhmmInstitucional, toHhmmInstitucionalDisplay, rangoHhmmLabel, resolverHorarioCelda, horarioDisplayDesdeSegmentos, horarioDisplayDesdeCapaTeorica, horarioOperativoDesdeCeldaVis };

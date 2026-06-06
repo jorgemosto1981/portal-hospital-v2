@@ -50,4 +50,42 @@ describe("textoHorarioTurno hueco", () => {
     expect(celdaTieneJornadaVis(cell)).toBe(false);
     expect(textoHorarioTurno(cell)).toBe("");
   });
+
+  it("M+N con rda_horario_display muestra tramos reales", () => {
+    expect(
+      textoHorarioTurno({
+        tipo_dia: "laborable",
+        rda_turno_id: "M+N",
+        rda_ingreso: "06:00",
+        rda_egreso: "06:00",
+        rda_horario_display: "06:00–14:00 · 22:00–06:00",
+        rda_tiene_huecos: true,
+      }),
+    ).toBe("06:00–14:00 · 22:00–06:00");
+  });
+
+  it("M+T continuo usa sobre sin desglosar", () => {
+    expect(
+      textoHorarioTurno({
+        tipo_dia: "laborable",
+        rda_turno_id: "M+T",
+        rda_ingreso: "06:00",
+        rda_egreso: "22:00",
+        rda_tiene_huecos: false,
+      }),
+    ).toBe("06:00–22:00");
+  });
+
+  it("M+T+N continuo ignora display antiguo si no hay huecos", () => {
+    expect(
+      textoHorarioTurno({
+        tipo_dia: "laborable",
+        rda_turno_id: "M+T+N",
+        rda_ingreso: "06:00",
+        rda_egreso: "06:00",
+        rda_horario_display: "06:00–14:00 · 14:00–22:00 · 22:00–06:00",
+        rda_tiene_huecos: false,
+      }),
+    ).toBe("06:00–06:00");
+  });
 });

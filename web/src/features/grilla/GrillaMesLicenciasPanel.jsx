@@ -558,6 +558,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                                     || (cell.es_franco ? "franco" : "laborable"),
                                   ingreso: cell.rda_ingreso,
                                   egreso: cell.rda_egreso,
+                                  horario_display: cell.rda_horario_display,
+                                  tiene_huecos: cell.rda_tiene_huecos,
                                   fichadas_esperadas:
                                     cell.fichadas_esperadas != null ? cell.fichadas_esperadas : undefined,
                                   es_feriado: cell.es_feriado,

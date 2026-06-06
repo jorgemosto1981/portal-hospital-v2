@@ -1,7 +1,7 @@
 import { diasEnMes, etiquetaCelda } from "./grillaMesCellUtils.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 import { claseFondoCeldaCalendarioTitular } from "./grillaTurnosVisual.js";
-import { celdaTieneJornadaVis, celdaEsIncompletoPlanVis } from "./grillaMesEquipoDisplay.js";
+import { celdaTieneJornadaVis, celdaEsIncompletoPlanVis, textoHorarioTurno } from "./grillaMesEquipoDisplay.js";
 import { titularDiaAsignadoAGrupo } from "./grillaTitularAsignacionDia.js";
 import GrillaFichadasEsperadasBadge from "./GrillaFichadasEsperadasBadge.jsx";
 import { fichadasEsperadasDesdeCeldaVis, titleFichadasEsperadas } from "./grillaFichadasEsperadasDisplay.js";
@@ -131,9 +131,7 @@ export default function GrillaMesTitularCalendario({
           const ingreso = cell.rda_ingreso || null;
           const turnoLabel = esFranco
             ? "F"
-            : ingreso && egreso
-              ? `${ingreso}–${egreso}`
-              : turnoId;
+            : textoHorarioTurno(cell) || turnoId;
           const tieneDatos =
             tieneEventos ||
             turnoId ||

@@ -2,7 +2,11 @@
  * Reglas de teórico por celda — F-UX.3 (handoff §3.2, A1, A-FER).
  */
 import { parseFichadasEsperadasCelda } from "./grillaFichadasEsperadasDisplay.js";
-import { horaDesdeIso, horarioOperativoDesdeVis } from "./grillaHorarioInstitucional.js";
+import {
+  horaDesdeIso,
+  horarioOperativoDesdeVis,
+  horarioDisplayDesdeCapaTeorica,
+} from "./grillaHorarioInstitucional.js";
 import { textoHorarioTurno } from "./grillaMesEquipoDisplay.js";
 import { labelTurnoToken } from "./enrichCapaTeoricaLabels.js";
 
@@ -138,9 +142,12 @@ function labelsTurnoDesdeCapa(capa, turnosPorId = {}) {
 function horarioDesdeCapa(capa) {
   if (!capa || typeof capa !== "object") return "";
 
-  const ing = horaDesdeIso(capa.ingreso_teorico_final) || horaDesdeIso(capa.ingreso);
-  const egr = horaDesdeIso(capa.egreso_teorico_final) || horaDesdeIso(capa.egreso);
-  if (ing && egr) return `${ing}–${egr}`;
+  const ingEnv = horaDesdeIso(capa.ingreso_teorico_final) || horaDesdeIso(capa.ingreso);
+  const egrEnv = horaDesdeIso(capa.egreso_teorico_final) || horaDesdeIso(capa.egreso);
+  const porSegmentos = horarioDisplayDesdeCapaTeorica(capa, ingEnv, egrEnv, false);
+  if (porSegmentos) return porSegmentos;
+
+  if (ingEnv && egrEnv) return `${ingEnv}–${egrEnv}`;
 
   const seg = Array.isArray(capa.segmentos) ? capa.segmentos : [];
   if (seg.length) {

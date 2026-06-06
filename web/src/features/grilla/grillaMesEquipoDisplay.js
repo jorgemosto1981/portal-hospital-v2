@@ -2,6 +2,7 @@
  * Presentación de celdas en grilla equipo (calendario licencias).
  */
 
+import { horarioOperativoDesdeCeldaVis } from "../../../../shared/utils/horarioInstitucionalDisplay.js";
 import {
   claseHeaderColumna,
   claseTdColumna,
@@ -91,10 +92,8 @@ export function textoHorarioTurno(cell) {
   const tieneJornada = celdaTieneJornadaVis(cell);
   if (tipo === "no_laborable" && !tieneJornada) return "NL";
   if ((cell.es_franco === true || tipo === "franco") && !tieneJornada) return "F";
-  const ing = String(cell.rda_ingreso || "").trim();
-  const egr = String(cell.rda_egreso || "").trim();
-  if (ing && egr) return `${ing}–${egr}`;
-  if (ing) return ing;
+  const horario = horarioOperativoDesdeCeldaVis(cell, false);
+  if (horario) return horario;
   const tid = String(cell.rda_turno_id || "").trim();
   return tid;
 }

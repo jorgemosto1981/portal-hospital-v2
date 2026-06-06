@@ -16,7 +16,10 @@ const { getIndiceCalendario } = require("../shared/calendarService");
 const { resolverEventoEnIndice } = require("../shared/calendarInstitucionalCore");
 const { resolverFijo, resolverRotativo, buildTurnoResponse, ymdToDate, diffDays, isoWeekday } = require("./resolverTurnoDia");
 const { buildCapaTeoricaSegmentada, ymdHoraToIso } = require("./capaTeoricaSegmentosCore");
-const { toHhmmInstitucionalDisplay } = require("../shared/horarioInstitucionalDisplay");
+const {
+  toHhmmInstitucionalDisplay,
+  horarioDisplayDesdeCapaTeorica,
+} = require("../shared/horarioInstitucionalDisplay");
 const { CFG_EPL_ABIERTO } = require("../shared/cfgAsistenciaTurnosIds");
 const {
   buildVisMetadataMaterializacionFields,
@@ -157,7 +160,7 @@ function esDiaSinTurnoLaboral(tipoDia) {
 }
 
 function horariosVisDesdeCapaYTurno({ sinTurnoLaboral, capaTeorica, turnoFinal }) {
-  if (sinTurnoLaboral) return { ingreso: null, egreso: null };
+  if (sinTurnoLaboral) return { ingreso: null, egreso: null, horario_display: null };
   const ingreso = toHhmmInstitucionalDisplay(capaTeorica?.ingreso_teorico_final)
     || toHhmmInstitucionalDisplay(capaTeorica?.ingreso)
     || turnoFinal?.ingreso
@@ -166,7 +169,8 @@ function horariosVisDesdeCapaYTurno({ sinTurnoLaboral, capaTeorica, turnoFinal }
     || toHhmmInstitucionalDisplay(capaTeorica?.egreso)
     || turnoFinal?.egreso
     || null;
-  return { ingreso, egreso };
+  const horario_display = horarioDisplayDesdeCapaTeorica(capaTeorica, ingreso, egreso, false);
+  return { ingreso, egreso, horario_display };
 }
 
 function buildSegmentosHorarioFallback({ fechaYmd, personaId, turno, origenSegmento }) {
@@ -967,14 +971,24 @@ async function materializarTurnoMesBatch({
       tipoDiaVis = "no_laborable";
     }
     const sinTurnoLaboral = esDiaSinTurnoLaboral(tipoDiaVis);
-    const { ingreso: rdaIngreso, egreso: rdaEgreso } = horariosVisDesdeCapaYTurno({
-      sinTurnoLaboral,
-      capaTeorica: capaSlice,
-      turnoFinal,
-    });
+    const { ingreso: rdaIngreso, egreso: rdaEgreso, horario_display: rdaHorarioDisplay } =
+      horariosVisDesdeCapaYTurno({
+        sinTurnoLaboral,
+        capaTeorica: capaSlice,
+        turnoFinal,
+      });
     visDias[`dias.${diaKey}.rda_turno_id`] = pickRdaTurnoId(capaSlice, sinTurnoLaboral);
     visDias[`dias.${diaKey}.rda_ingreso`] = rdaIngreso;
     visDias[`dias.${diaKey}.rda_egreso`] = rdaEgreso;
+    if (capaSlice.tiene_huecos === true) {
+      visDias[`dias.${diaKey}.rda_tiene_huecos`] = true;
+      if (rdaHorarioDisplay) {
+        visDias[`dias.${diaKey}.rda_horario_display`] = rdaHorarioDisplay;
+      }
+    } else {
+      visDias[`dias.${diaKey}.rda_tiene_huecos`] = FieldValue.delete();
+      visDias[`dias.${diaKey}.rda_horario_display`] = FieldValue.delete();
+    }
     visDias[`dias.${diaKey}.fichadas_esperadas`] = fichadasEsperadasVisDesdeCapa(capaSlice);
     visDias[`dias.${diaKey}.tipo_dia`] = tipoDiaVis;
     visDias[`dias.${diaKey}.es_franco`] = tipoDiaVis === "franco";
@@ -1336,11 +1350,12 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
   if (visDocId) {
     const diaKey = diaMesKeyDesdeYmd(fechaYmd);
     const sinTurnoLaboral = esDiaSinTurnoLaboral(capaEscrita.tipo_dia);
-    const { ingreso: rdaIngreso, egreso: rdaEgreso } = horariosVisDesdeCapaYTurno({
-      sinTurnoLaboral,
-      capaTeorica: capaEscrita,
-      turnoFinal: base.mejorResolucion.turno_teorico,
-    });
+    const { ingreso: rdaIngreso, egreso: rdaEgreso, horario_display: rdaHorarioDisplay } =
+      horariosVisDesdeCapaYTurno({
+        sinTurnoLaboral,
+        capaTeorica: capaEscrita,
+        turnoFinal: base.mejorResolucion.turno_teorico,
+      });
     let tipoDiaVis = capaEscrita.tipo_dia;
     if (capaEscrita.es_feriado === true && (tipoDiaVis === "laborable" || tipoDiaVis === "guardia")) {
       tipoDiaVis = "no_laborable";
@@ -1355,6 +1370,15 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
       [`dias.${diaKey}.rda_turno_id`]: pickRdaTurnoId(capaEscrita, sinTurnoLaboral),
       [`dias.${diaKey}.rda_ingreso`]: rdaIngreso,
       [`dias.${diaKey}.rda_egreso`]: rdaEgreso,
+      ...(capaEscrita.tiene_huecos === true
+        ? {
+          [`dias.${diaKey}.rda_tiene_huecos`]: true,
+          ...(rdaHorarioDisplay ? { [`dias.${diaKey}.rda_horario_display`]: rdaHorarioDisplay } : {}),
+        }
+        : {
+          [`dias.${diaKey}.rda_tiene_huecos`]: FieldValue.delete(),
+          [`dias.${diaKey}.rda_horario_display`]: FieldValue.delete(),
+        }),
       [`dias.${diaKey}.fichadas_esperadas`]: fichadasEsperadasVisDesdeCapa(capaEscrita),
       [`dias.${diaKey}.tipo_dia`]: tipoDiaVis,
       [`dias.${diaKey}.es_franco`]: tipoDiaVis === "franco",
@@ -1379,6 +1403,12 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
           rda_turno_id: pickRdaTurnoId(capaEscrita, sinTurnoLaboral),
           rda_ingreso: rdaIngreso,
           rda_egreso: rdaEgreso,
+          ...(capaEscrita.tiene_huecos === true
+            ? {
+              rda_tiene_huecos: true,
+              ...(rdaHorarioDisplay ? { rda_horario_display: rdaHorarioDisplay } : {}),
+            }
+            : {}),
           fichadas_esperadas: fichadasEsperadasVisDesdeCapa(capaEscrita),
           tipo_dia: tipoDiaVis,
           es_franco: tipoDiaVis === "franco",

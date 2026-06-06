@@ -14,6 +14,7 @@ import {
   tarjetaResumenOverride,
 } from "./grillaGestionTurnoHistorial.js";
 import { mergePersonaLabelsDesdeOps } from "./grillaOutboxLabels.js";
+import { horarioOperativoDesdeCeldaVis } from "./grillaHorarioInstitucional.js";
 
 function labelEstado(id) {
   const e = String(id || "");
@@ -174,6 +175,16 @@ export default function DiaGrillaDetalleModal({
   if (!open) return null;
 
   const lista = Array.isArray(eventos) ? eventos : [];
+  const horarioTeorico = turnoTeorico?.capa_teorica
+    ? horarioOperativoDesdeCeldaVis({
+        rda_ingreso: turnoTeorico.capa_teorica.ingreso,
+        rda_egreso: turnoTeorico.capa_teorica.egreso,
+        rda_horario_display: turnoTeorico.capa_teorica.horario_display,
+        rda_tiene_huecos: turnoTeorico.capa_teorica.tiene_huecos,
+        segmentos: turnoTeorico.capa_teorica.segmentos,
+        tiene_huecos: turnoTeorico.capa_teorica.tiene_huecos,
+      })
+    : "";
 
   return (
     <div
@@ -253,10 +264,10 @@ export default function DiaGrillaDetalleModal({
                       <dd className="capitalize text-slate-700">{turnoTeorico.capa_teorica.tipo_dia}</dd>
                     </div>
                   ) : null}
-                  {turnoTeorico.capa_teorica.ingreso && turnoTeorico.capa_teorica.egreso ? (
+                  {horarioTeorico ? (
                     <div className="flex gap-2">
                       <dt className="font-medium text-slate-500">Horario:</dt>
-                      <dd className="text-slate-700">{turnoTeorico.capa_teorica.ingreso} — {turnoTeorico.capa_teorica.egreso}</dd>
+                      <dd className="text-slate-700">{horarioTeorico}</dd>
                     </div>
                   ) : null}
                   {turnoTeorico.capa_teorica.horas_efectivas != null ? (
