@@ -1,11 +1,42 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (2026-06-06):** **US-8** ✅ QA + deploy hosting · **siguiente:** US-6 / US-7 / US-11 · RFC HLG ⏸ espera RRHH  
+> **RETOMAR AQUÍ:** **US-6** (indicador ⏳ lazy materialización — escenario G) · luego US-7 / US-11 · RFC HLG ⏸ espera RRHH  
+> **Hosting prod:** https://portal-hospital-v2.web.app · último push sesión 2026-06-06 (`5755b42`)  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
-> **US-17:** ✅ código + remediación ops (2026-06-06) · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)  
-> **Blindaje GSO:** ✅ prod `v2.6.1-blindaje-gso` (US-9, US-1, US-16, US-10, US-14, US-3 parcial) — [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md)
+> **US-17:** ✅ código + remediación ops · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)
 
-## EN CURSO US-8 — mes cerrado / solo lectura (2026-06-06)
+---
+
+## CIERRE SESIÓN — GSO UX/copy + US-8 (2026-06-06)
+
+| Bloque | Estado | Commits / deploy |
+|--------|--------|------------------|
+| **US-4 + US-5** | ✅ QA + hosting | `dbc9fc5` · `6119285` |
+| **US-8** | ✅ QA + hosting | `4dcd9b9` · `5755b42` |
+| **Smoke US-3 68-B** | ✅ (sesión previa, revertido) | `4394055` · `2669503` |
+
+**Entregables sesión**
+
+- Hints **🔗** fan-out (US-4) y **📅** post-purge HLg (US-5) en celda, modal, avisos y leyenda.
+- Badge **🔒** mes cerrado / solo lectura (US-8) + gates modales turno A/B/C/shell.
+- Copy tarjeta RRHH período cerrado: *«consulta y gestión RRHH»* (no “solo lectura” para MOSTO/RRHH).
+- Tests vitest: `grillaMesGsoHints.test.js`, `grillaGsoSoloLectura.test.js`.
+
+**Pausa — no iniciado en código**
+
+- **US-6:** escenario G — celda ⏳ *«Teoría pendiente de cálculo»* con licencia visible (explicado en chat; ver §escenario G en [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md)).
+- **US-7, US-11:** backlog P2 sin cambios.
+
+**QA piloto validado**
+
+- `sol_01KT3ZG…` día 11 jun-26 — Sala 🔗 Oficina PERSONAL · Oficina 📅 post-purge.
+- Tarjeta mayo Sala Internación — RRHH período cerrado con copy correcto.
+
+**Última actualización índice:** 2026-06-06 — sesión cerrada y publicada en `origin/master`.
+
+---
+
+## CIERRE US-8 — mes cerrado / solo lectura (2026-06-06)
 
 | Qué | Dónde / evidencia |
 |-----|-------------------|
@@ -38,7 +69,6 @@
 | **QA manual** | ✅ `sol_01KT3ZG…` día 11 jun-26 — Sala 🔗 *Oficina PERSONAL* · Oficina 📅 post-purge |
 | **Commit** | `dbc9fc5` — `feat(gso): cerrar US-4 y US-5 hints fan-out y post-purge HLg` |
 | **Deploy** | hosting https://portal-hospital-v2.web.app — 2026-06-06 |
-| **Siguiente** | **US-8** |
 
 **Última actualización índice:** 2026-06-06 — US-4/US-5 cerrados (QA + deploy).
 
