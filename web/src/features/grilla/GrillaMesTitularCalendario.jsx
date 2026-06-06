@@ -1,4 +1,4 @@
-import { diasEnMes, etiquetaCelda } from "./grillaMesCellUtils.js";
+import { diasEnMes, etiquetaCelda, celdaTieneDesalineacionTeoria } from "./grillaMesCellUtils.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 import { claseFondoCeldaCalendarioTitular } from "./grillaTurnosVisual.js";
 import { celdaTieneJornadaVis, celdaEsIncompletoPlanVis, textoHorarioTurno } from "./grillaMesEquipoDisplay.js";
@@ -122,6 +122,7 @@ export default function GrillaMesTitularCalendario({
           const esFeriado = cell.es_feriado === true;
           const tipoEvento = cell.tipo_evento_institucional || null;
           const esIncompletoPlan = celdaEsIncompletoPlanVis(cell);
+          const desalineacionTeoria = celdaTieneDesalineacionTeoria(eventos, cell).desalineado;
           const esLaborable = !esFranco && !esNoLaborable && (jornadaVis || Boolean(turnoId) || esIncompletoPlan);
 
           if (!celdaInactiva && esNoLaborable && !tieneLicencia) {
@@ -163,6 +164,7 @@ export default function GrillaMesTitularCalendario({
           const fichadasTitle = titleFichadasEsperadas(fichadasN);
           if (fichadasTitle) titleParts.push(fichadasTitle);
           if (esIncompletoPlan) titleParts.push("Laborable sin turno (corregir plan del mes)");
+          if (desalineacionTeoria) titleParts.push("Teoría modificada post-licencia");
 
           const colorNumero = tieneLicencia
             ? "text-white"
@@ -180,6 +182,7 @@ export default function GrillaMesTitularCalendario({
             <GrillaMesCeldaLicencia
               key={dia}
               eventos={Array.isArray(eventos) ? eventos : []}
+              celdaVis={cell}
               dia={dia}
               grupoVistaId={grupoVistaId}
               etiquetasGrupo={etiquetasGrupo}
@@ -218,7 +221,14 @@ export default function GrillaMesTitularCalendario({
                 ) : null}
               </div>
               {labelLicencia ? (
-                <span className={CLASE_LICENCIA}>{labelLicencia}</span>
+                <span className={`${CLASE_LICENCIA} flex items-center gap-0.5`}>
+                  {desalineacionTeoria ? (
+                    <span title="Teoría modificada post-licencia" aria-hidden>
+                      ⚠
+                    </span>
+                  ) : null}
+                  {labelLicencia}
+                </span>
               ) : (
                 <span className="h-0 shrink-0" aria-hidden />
               )}

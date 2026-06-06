@@ -56,6 +56,7 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd) {
  *   opsOutboxPendientes?: Array<Record<string, unknown>>;
  *   personaLabels?: Record<string, string>;
  *   incompletoPlan?: boolean;
+ *   desalineacionTeoria?: boolean;
  *   puedeCorregirPlan?: boolean;
  * }} props
  */
@@ -79,6 +80,7 @@ export default function DiaGrillaDetalleModal({
   opsOutboxPendientes = [],
   personaLabels = {},
   incompletoPlan = false,
+  desalineacionTeoria = false,
   puedeCorregirPlan = false,
 }) {
   const corregirPlanTo = useMemo(
@@ -238,6 +240,52 @@ export default function DiaGrillaDetalleModal({
           >
             Corregir plan
           </Link>
+        ) : null}
+
+        {desalineacionTeoria && !incompletoPlan ? (
+          <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
+            <p className="text-sm font-semibold text-amber-950">Teoría modificada post-licencia</p>
+            <p className="mt-1 text-xs text-amber-900">
+              La jornada teórica vigente difiere de la referencia al registrar la licencia. Revisá la
+              solicitud, ajustá el turno del día o derivá la corrección al plan mensual.
+            </p>
+            <div className="mt-3 flex flex-col gap-2">
+              {resumen?.solicitud_id && bandejaPath ? (
+                <Link
+                  to={`${bandejaPath}?sol_id=${encodeURIComponent(resumen.solicitud_id)}`}
+                  onClick={onClose}
+                  className="flex min-h-11 w-full touch-manipulation items-center justify-center rounded-xl border border-amber-400 bg-white text-sm font-semibold text-amber-950 active:bg-amber-100"
+                >
+                  Ir a solicitud en bandeja
+                </Link>
+              ) : null}
+              {personaId && fechaYmd && puedeGestionarTurno && onAbrirGestionTurno && !soloLectura ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onAbrirGestionTurno();
+                  }}
+                  className="flex min-h-11 w-full touch-manipulation items-center justify-center rounded-xl bg-violet-700 text-sm font-semibold text-white active:bg-violet-800"
+                >
+                  Ajustar turno del día
+                </button>
+              ) : soloLectura && desalineacionTeoria ? (
+                <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                  Mes en solo lectura: el ajuste de turno lo gestiona RRHH.
+                </p>
+              ) : null}
+              {puedeCorregirPlan ? (
+                <Link
+                  to={corregirPlanTo}
+                  onClick={onClose}
+                  className="flex min-h-11 w-full touch-manipulation items-center justify-center rounded-xl border border-rose-300 bg-rose-50 text-sm font-semibold text-rose-900 active:bg-rose-100"
+                >
+                  Derivar a corrección de plan
+                </Link>
+              ) : null}
+            </div>
+          </div>
         ) : null}
 
         {turnoTeorico && (turnoTeorico.rda_turno_id || turnoTeorico.es_franco || turnoTeorico.capa_teorica) ? (
@@ -406,7 +454,7 @@ export default function DiaGrillaDetalleModal({
             Este mes está en solo lectura. Los cambios de turno los gestiona RRHH.
           </p>
         ) : null}
-        {personaId && fechaYmd && puedeGestionarTurno && onAbrirGestionTurno ? (
+        {personaId && fechaYmd && puedeGestionarTurno && onAbrirGestionTurno && !desalineacionTeoria ? (
           <button
             type="button"
             onClick={() => {
@@ -443,7 +491,7 @@ export default function DiaGrillaDetalleModal({
           </button>
         ) : null}
 
-        {resumen?.solicitud_id && bandejaPath ? (
+        {resumen?.solicitud_id && bandejaPath && !desalineacionTeoria ? (
           <Link
             to={`${bandejaPath}?sol_id=${encodeURIComponent(resumen.solicitud_id)}`}
             onClick={onClose}

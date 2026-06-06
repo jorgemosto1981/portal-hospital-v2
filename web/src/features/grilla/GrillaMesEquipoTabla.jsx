@@ -1,4 +1,4 @@
-import { diasEnMes, etiquetaCelda } from "./grillaMesCellUtils.js";
+import { diasEnMes, etiquetaCelda, celdaTieneDesalineacionTeoria } from "./grillaMesCellUtils.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 import {
   columnasCalendario,
@@ -31,8 +31,18 @@ function contenidoCeldaOperativa({
   fichadasN,
   outboxVisual,
   esIncompletoPlan,
+  desalineacionTeoria,
 }) {
   const fichadasMostrar = outboxVisual?.fichadasPreview ?? fichadasN;
+  const badgeAlerta = desalineacionTeoria ? (
+    <span
+      className="text-[8px] font-bold leading-none text-amber-300"
+      title="Teoría modificada post-licencia"
+      aria-label="Teoría modificada post-licencia"
+    >
+      ⚠
+    </span>
+  ) : null;
   const badge = (
     <GrillaFichadasEsperadasBadge
       valor={fichadasMostrar}
@@ -79,6 +89,7 @@ function contenidoCeldaOperativa({
           {turnoMostrar || (esNoLaborable ? "NL" : "F")}
         </span>
         <span className="mt-0.5 flex flex-col items-center gap-px">
+          {badgeAlerta}
           {badge}
           {diffBlock}
           <span className="text-[7px] font-bold text-fuchsia-950">{licenciaCod.slice(0, 4)}</span>
@@ -89,6 +100,7 @@ function contenidoCeldaOperativa({
   if (tieneLicencia) {
     return (
       <span className="flex flex-col items-center">
+        {badgeAlerta}
         <span className={clasesTextoCelda(licenciaCod)}>{licenciaCod.slice(0, 4)}</span>
         {esIncompletoPlan ? (
           <span className="text-[6px] font-semibold text-rose-800">Plan incompleto</span>
@@ -277,6 +289,7 @@ export default function GrillaMesEquipoTabla({
                     );
 
                     const esIncompletoPlan = celdaEsIncompletoPlanVis(cell);
+                    const desalineacionTeoria = celdaTieneDesalineacionTeoria(eventos, cell).desalineado;
                     const tieneDatos =
                       tieneLicencia ||
                       tieneTurno ||
@@ -305,6 +318,9 @@ export default function GrillaMesEquipoTabla({
                     if (esIncompletoPlan) {
                       titleParts.push("Laborable sin turno (corregir plan del mes)");
                     }
+                    if (desalineacionTeoria) {
+                      titleParts.push("Teoría modificada post-licencia");
+                    }
 
                     const variant = varianteCeldaOperativa({
                       tieneLicencia,
@@ -326,6 +342,7 @@ export default function GrillaMesEquipoTabla({
                       >
                         <GrillaMesCeldaLicencia
                           eventos={Array.isArray(eventos) ? eventos : []}
+                          celdaVis={cell}
                           personaLabel={personaLabel}
                           dia={dia}
                           grupoVistaId={grupoSeleccionado || undefined}
@@ -335,6 +352,7 @@ export default function GrillaMesEquipoTabla({
                             tieneDatos &&
                             onCeldaClick({
                               incompletoPlan: esIncompletoPlan,
+                              desalineacionTeoria,
                               puedeOperarTurno,
                               dia,
                               fechaYmd,
@@ -384,6 +402,7 @@ export default function GrillaMesEquipoTabla({
                               fichadasN,
                               esIncompletoPlan,
                               outboxVisual,
+                              desalineacionTeoria,
                             })}
                           </GrillaTurnosCeldaChip>
                         </GrillaMesCeldaLicencia>

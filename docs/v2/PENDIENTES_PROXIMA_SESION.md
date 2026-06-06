@@ -1,9 +1,25 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (2026-06-06):** [`HANDOFF_SESION_2026-06-06_CIERRE_FASE5_GRILLA_TITULAR.md`](./HANDOFF_SESION_2026-06-06_CIERRE_FASE5_GRILLA_TITULAR.md) — Fase 5 **cerrada** · siguiente: **US-3 A + US-14** · backlog laboral: [`RFC_HLG_COBERTURA_HLC_WARNING_V2.md`](./RFC_HLG_COBERTURA_HLC_WARNING_V2.md) (borrador)  
+> **RETOMAR AQUÍ (2026-06-06):** **US-3 A + US-14** ✅ cerrados (prod + smoke MOSTO día 27) · siguiente sugerido: **US-15** (fichada en celda) o [`RFC_HLG_COBERTURA_HLC_WARNING_V2.md`](./RFC_HLG_COBERTURA_HLC_WARNING_V2.md)  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops (2026-06-06) · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)  
 > **Blindaje GSO:** ✅ prod `v2.6.1-blindaje-gso` (US-9, US-1, US-16, US-10, US-14, US-3 parcial) — [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md)
+
+## CIERRE US-3 A + US-14 — reconciliación teoría post-licencia (2026-06-06)
+
+| Qué | Dónde / evidencia |
+|-----|-------------------|
+| **Badge ⚠️** | `teoria_ref` en fan-out MDC + backfill en rematerialización; comparación en grilla equipo/titular |
+| **Modal US-14** | `DiaGrillaDetalleModal.jsx` — bloque ámbar + 3 acciones (bandeja, ajuste turno, derivar plan) |
+| **Util compartido** | `shared/utils/grillaTeoriaDesalineacion.js` |
+| **Deploy prod** | functions + hosting · rematerialización grupos con licencias jun/jul-26 |
+| **Smoke E2E** | Override día 27 Sala Internación (`M+T` → `T`) → ⚠️ + modal validado en UI → **revertido** |
+| **Tests** | `functions/test/grillaTeoriaDesalineacion.test.js` · `grillaMesEquipoDisplay.test.js` |
+| **Siguiente (sugerido)** | US-15 · RFC VAL-HLG-W004 |
+
+**Última actualización índice:** 2026-06-06 — cierre US-3/US-14 registrado.
+
+---
 
 ## CIERRE US-17 — remediación (2026-06-06)
 
@@ -13,9 +29,9 @@
 | **Manifiesto R0–R4** | [`MANIFIESTO_REIMPACTO_INTEGRIDAD_PLAN_REGIMEN_2026.md`](./MANIFIESTO_REIMPACTO_INTEGRIDAD_PLAN_REGIMEN_2026.md) |
 | **Audit cierre** | `npm run audit:us17-planes-huecos` → 5 planes, **0 huecos** |
 | **Lista RRHH (histórico)** | [`reports/US17_LISTA_TRABAJO_RRHH_2026-06-05.md`](../reports/US17_LISTA_TRABAJO_RRHH_2026-06-05.md) |
-| **Siguiente (sugerido)** | US-3 escenario A + US-14 · tema grilla |
+| **Siguiente (sugerido)** | ~~US-3 A + US-14~~ ✅ · US-15 / RFC HLG |
 
-**Última actualización índice:** 2026-06-06 — cierre US-17 registrado.
+**Última actualización índice:** 2026-06-06 — cierre US-17 registrado (US-3/US-14 cerrados aparte arriba).
 
 ---
 

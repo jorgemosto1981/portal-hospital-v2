@@ -28,6 +28,7 @@ import GrillaTarjetaGrupoPeriodo from "./GrillaTarjetaGrupoPeriodo.jsx";
 import GrillaPeriodoLiquidacionAccionesRrhh from "./GrillaPeriodoLiquidacionAccionesRrhh.jsx";
 import { useEstadosPeriodoLiquidacionGrupos } from "./useEstadosPeriodoLiquidacionGrupos.js";
 import { celdaEsIncompletoPlanVis } from "./grillaMesEquipoDisplay.js";
+import { celdaTieneDesalineacionTeoria } from "./grillaMesCellUtils.js";
 
 function parsePeriodo(periodo) {
   const [yyyy, mm] = String(periodo || "").split("-");
@@ -548,6 +549,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                               grupoTrabajoId: cal.grupo_trabajo_id,
                               eventos,
                               incompletoPlan: celdaEsIncompletoPlanVis(cell),
+                              desalineacionTeoria: celdaTieneDesalineacionTeoria(eventos, cell).desalineado,
                               personaLabel: "Mi calendario",
                               grupoLabel: grupoLabel || cal.grupo_label,
                               turnoTeorico: {
@@ -602,6 +604,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                     turnoTeorico,
                     grupoTrabajoId,
                     incompletoPlan,
+                    desalineacionTeoria,
                   }) =>
                     setDiaModal({
                       dia,
@@ -614,6 +617,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                       grupoLabel,
                       turnoTeorico,
                       incompletoPlan: Boolean(incompletoPlan),
+                      desalineacionTeoria: Boolean(desalineacionTeoria),
                       grupoTrabajoId: grupoTrabajoId || grupoLiquidacionId || vista.grupoActivoId || "",
                     })
                   }
@@ -666,6 +670,12 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   <span className="mr-1 inline-block h-3 w-5 rounded border border-rose-700 bg-rose-100 align-middle" />
                   Laborable sin turno (plan incompleto)
                 </span>
+                <span>
+                  <span className="mr-1 inline-block text-[10px] font-bold text-amber-600 align-middle">
+                    ⚠
+                  </span>
+                  Teoría modificada post-licencia
+                </span>
                 <span>Clic = detalles</span>
               </div>
             </div>
@@ -689,6 +699,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
         personaLabels={personaLabelsGrilla}
         soloLectura={!vista.gsoPermiteEscritura}
         incompletoPlan={Boolean(diaModal?.incompletoPlan)}
+        desalineacionTeoria={Boolean(diaModal?.desalineacionTeoria)}
         puedeCorregirPlan={esJefe || esRrhh}
         puedeGestionarTurno={puedeGestionTurno && !diaModal?.incompletoPlan}
         onAbrirGestionTurno={

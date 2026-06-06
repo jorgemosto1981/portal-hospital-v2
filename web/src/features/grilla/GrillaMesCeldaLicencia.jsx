@@ -10,6 +10,7 @@ import { lineasTooltipCelda, estiloVisualCelda } from "./grillaMesCellUtils.js";
  *   dia?: string;
  *   grupoVistaId?: string;
  *   etiquetasGrupo?: Record<string, string>;
+ *   celdaVis?: Record<string, unknown>;
  *   disabled?: boolean;
  *   onClick?: () => void;
  *   className?: string;
@@ -22,6 +23,7 @@ export default function GrillaMesCeldaLicencia({
   dia,
   grupoVistaId,
   etiquetasGrupo,
+  celdaVis,
   disabled,
   onClick,
   className = "",
@@ -31,7 +33,7 @@ export default function GrillaMesCeldaLicencia({
   const tiene = Array.isArray(eventos) && eventos.length > 0;
   const { style, className: visualClass } = estiloVisualCelda(eventos, { grupoVistaId });
   const lines = tiene
-    ? lineasTooltipCelda(eventos, { personaLabel, dia, grupoVistaId, etiquetasGrupo })
+    ? lineasTooltipCelda(eventos, { personaLabel, dia, grupoVistaId, etiquetasGrupo, celdaVis })
     : [];
 
   return (

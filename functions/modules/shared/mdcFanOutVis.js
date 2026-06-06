@@ -7,6 +7,7 @@ const {
   diaMesKeyDesdeYmd,
 } = require("./mdcRdaDocumentIds");
 const { calcularTieneConflictoDia } = require("./mdcVisConflictoDia");
+const { extraerTeoriaRefDesdeCeldaVis } = require("./grillaTeoriaDesalineacion");
 
 const COLOR_PENDIENTE = "#F59E0B";
 const COLOR_APROBADO = "#3B82F6";
@@ -86,24 +87,29 @@ async function fanOutVisDesdeAsiGrupo(db, opts) {
   const color = opts.modo === "aprobado" ? COLOR_APROBADO : COLOR_PENDIENTE;
   const nivelOcupacion = String(opts.nivel_ocupacion_dia_id || "").trim() || null;
   const ancla = String(opts.grupo_trabajo_id_ancla || opts.grupo_de_trabajo_id || "").trim();
-  const evento = {
-    solicitud_id: solId,
-    articulo_id: String(opts.articulo_id || "").trim(),
-    codigo_grilla: String(opts.codigo_grilla || "").trim(),
-    color_ui: color,
-    nivel_ocupacion_dia_id: nivelOcupacion,
-    estado_solicitud_id: String(opts.estado_solicitud_id || "").trim(),
-    ...(RX_GDT.test(ancla) ? { grupo_trabajo_id_ancla: ancla } : {}),
-  };
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(visRef);
     const data = snap.exists ? snap.data() || {} : {};
     const dias = { ...(data.dias || {}) };
     const prev = dias[diaKey] || { eventos: [] };
-    const rest = (Array.isArray(prev.eventos) ? prev.eventos : []).filter(
-      (e) => String(e?.solicitud_id || "") !== solId,
-    );
+    const prevEventos = Array.isArray(prev.eventos) ? prev.eventos : [];
+    const existente = prevEventos.find((e) => String(e?.solicitud_id || "") === solId);
+    let teoriaRef = existente?.teoria_ref || null;
+    if (!teoriaRef) {
+      teoriaRef = extraerTeoriaRefDesdeCeldaVis(prev);
+    }
+    const rest = prevEventos.filter((e) => String(e?.solicitud_id || "") !== solId);
+    const evento = {
+      solicitud_id: solId,
+      articulo_id: String(opts.articulo_id || "").trim(),
+      codigo_grilla: String(opts.codigo_grilla || "").trim(),
+      color_ui: color,
+      nivel_ocupacion_dia_id: nivelOcupacion,
+      estado_solicitud_id: String(opts.estado_solicitud_id || "").trim(),
+      ...(RX_GDT.test(ancla) ? { grupo_trabajo_id_ancla: ancla } : {}),
+      ...(teoriaRef ? { teoria_ref: teoriaRef } : {}),
+    };
     const eventos = [...rest, evento];
     dias[diaKey] = {
       ...prev,

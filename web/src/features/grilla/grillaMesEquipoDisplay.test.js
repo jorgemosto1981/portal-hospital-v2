@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { celdaEsIncompletoPlanVis, celdaTieneJornadaVis, textoHorarioTurno } from "./grillaMesEquipoDisplay.js";
+import { celdaTieneDesalineacionTeoria } from "./grillaMesCellUtils.js";
 import { varianteCeldaOperativa } from "./grillaTurnosVisual.js";
 
 describe("celdaEsIncompletoPlanVis (US-1)", () => {
@@ -87,5 +88,17 @@ describe("textoHorarioTurno hueco", () => {
         rda_tiene_huecos: false,
       }),
     ).toBe("06:00–06:00");
+  });
+});
+
+describe("celdaTieneDesalineacionTeoria (US-3 A)", () => {
+  it("marca desalineación si turno cambió post-licencia", () => {
+    const eventos = [
+      {
+        teoria_ref: { tipo_dia: "laborable", rda_turno_id: "M", es_franco: false },
+      },
+    ];
+    const cell = { tipo_dia: "laborable", rda_turno_id: "T", es_franco: false };
+    expect(celdaTieneDesalineacionTeoria(eventos, cell).desalineado).toBe(true);
   });
 });

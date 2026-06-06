@@ -20,6 +20,7 @@ const {
   toHhmmInstitucionalDisplay,
   horarioDisplayDesdeCapaTeorica,
 } = require("../shared/horarioInstitucionalDisplay");
+const { extraerTeoriaRefDesdeCeldaVis } = require("../shared/grillaTeoriaDesalineacion");
 const { CFG_EPL_ABIERTO } = require("../shared/cfgAsistenciaTurnosIds");
 const {
   buildVisMetadataMaterializacionFields,
@@ -820,6 +821,13 @@ async function materializarTurnoMesBatch({
   const visDias = {};
   let diasProcesados = 0;
 
+  const visDocIdPre = buildVisDocumentId(personaId, `${anio}-${String(mes).padStart(2, "0")}-01`, gdt);
+  let visDiasSnapshot = {};
+  if (visDocIdPre) {
+    const visSnapPre = await db.collection(COL_VIS).doc(visDocIdPre).get();
+    visDiasSnapshot = visSnapPre.exists && visSnapPre.data()?.dias ? visSnapPre.data().dias : {};
+  }
+
   for (const fechaYmd of dias) {
     let mejorResolucion = resolucionDesdeFotoPlan(planBundle, personaId, fechaYmd);
     let mejorHlg = null;
@@ -943,6 +951,21 @@ async function materializarTurnoMesBatch({
     encolarCapaTeoricaPorGrupo(batch, asiRef, asiSnap, gdt, capaSlice, personaId, fechaYmd);
 
     const diaKey = diaMesKeyDesdeYmd(fechaYmd);
+    const prevDiaVis = visDiasSnapshot[diaKey] || {};
+    const eventosPrev = Array.isArray(prevDiaVis.eventos) ? prevDiaVis.eventos : [];
+    if (eventosPrev.length > 0) {
+      const refBase = extraerTeoriaRefDesdeCeldaVis(prevDiaVis);
+      if (refBase) {
+        const eventosEnriquecidos = eventosPrev.map((ev) => {
+          if (ev?.teoria_ref) return ev;
+          return { ...ev, teoria_ref: refBase };
+        });
+        if (eventosEnriquecidos.some((ev, i) => !eventosPrev[i]?.teoria_ref)) {
+          visDias[`dias.${diaKey}.eventos`] = eventosEnriquecidos;
+        }
+      }
+    }
+
     let tipoDiaVis = normalizarTipoDiaMaterializacion(tipoDiaFinal);
     const esFeriadoInst = capaSlice.es_feriado === true;
     const fotoTipoPlan =

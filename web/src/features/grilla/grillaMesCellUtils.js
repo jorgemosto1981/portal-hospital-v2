@@ -1,4 +1,10 @@
 /** Tokens MDC (fan-out vis_*) — mantener alineados con mdcFanOutVis.js */
+import {
+  celdaTieneDesalineacionTeoria,
+  evaluarDesalineacionTeoriaLicencia,
+} from "../../../../shared/utils/grillaTeoriaDesalineacion.js";
+
+export { celdaTieneDesalineacionTeoria, evaluarDesalineacionTeoriaLicencia };
 export const COLOR_MDC_APROBADO = "#3B82F6";
 export const COLOR_MDC_PENDIENTE = "#F59E0B";
 
@@ -90,7 +96,7 @@ export function labelEstadoSolicitud(id) {
 
 /**
  * @param {unknown} eventos
- * @param {{ personaLabel?: string; dia?: string; grupoVistaId?: string; etiquetasGrupo?: Record<string, string> }} [ctx]
+ * @param {{ personaLabel?: string; dia?: string; grupoVistaId?: string; etiquetasGrupo?: Record<string, string>; celdaVis?: Record<string, unknown> }} [ctx]
  * @returns {string[]}
  */
 export function lineasTooltipCelda(eventos, ctx = {}) {
@@ -98,6 +104,10 @@ export function lineasTooltipCelda(eventos, ctx = {}) {
   const lines = [];
   if (ctx.personaLabel) lines.push(String(ctx.personaLabel));
   if (ctx.dia) lines.push(`Día ${ctx.dia}`);
+  const desal = ctx.celdaVis ? celdaTieneDesalineacionTeoria(eventos, ctx.celdaVis) : null;
+  if (desal?.desalineado && desal.tooltip) {
+    lines.push(`⚠ ${desal.tooltip}`);
+  }
   const max = 3;
   eventos.slice(0, max).forEach((ev, idx) => {
     const cod = String(ev.codigo_grilla || "—");
