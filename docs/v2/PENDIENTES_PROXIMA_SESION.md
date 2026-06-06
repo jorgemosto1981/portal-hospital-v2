@@ -18,7 +18,8 @@
 | **Banner grilla** | `GrillaMesLicenciasPanel` — copy acta + leyenda 🔒 |
 | **Tests** | `grillaGsoSoloLectura.test.js` (6) — vitest ✅ |
 | **QA manual** | ✅ RRHH MOSTO — tarjeta mayo Sala *«consulta y gestión RRHH»* · jefe M-1 🔒 sin edición |
-| **Deploy** | hosting — ver commit US-8 |
+| **Commit** | `4dcd9b9` — `feat(gso): cerrar US-8 mes cerrado badge y gates modales turno` |
+| **Deploy** | hosting https://portal-hospital-v2.web.app — 2026-06-06 |
 
 ---
 

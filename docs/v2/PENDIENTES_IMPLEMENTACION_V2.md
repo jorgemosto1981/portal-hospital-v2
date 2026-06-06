@@ -62,7 +62,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | **US-5** | — | **✅ Cerrado** — copy Q3-2 📅 post-purge HLg (escenario F) | `grillaMesGsoHints.js`, avisos sin dotación, leyenda |
 | **US-6** | P2 | Indicador lazy materialización consistente | `varianteCeldaOperativa`, toasts titular vs equipo |
 | **US-7** | P2 | Hint licencia en franco | UI celda |
-| **US-8** | — | **✅ Cerrado (código)** — badge 🔒 + gates modales A/B/C/shell (pendiente QA + deploy) | `grillaGsoSoloLectura.js`, grilla + modales turno |
+| **US-8** | — | **✅ Cerrado** — badge 🔒 + gates modales + copy RRHH tarjeta (`4dcd9b9`) | `grillaGsoSoloLectura.js`, grilla + modales turno |
 | **US-11** | P2 | Unificar mensaje materialización equipo vs titular | `useGrillaMesVista.js`, `grillaMaterializacionToast.js` |
 | **US-13** | P1 | Matriz permisos teoría (doc → código) | Disperso plan / override / HLg |
 | **US-17** | — | **✅ Cerrado (código + ops)** — inventario + remediación 2026-06-06; audit prod **0 huecos** | [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md) · [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) |
