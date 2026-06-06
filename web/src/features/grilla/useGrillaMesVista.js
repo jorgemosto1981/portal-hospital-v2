@@ -21,6 +21,7 @@ import {
 } from "./grillaGrupoUtils.js";
 import { gsoPermiteEscritura } from "./grillaGsoSoloLectura.js";
 import { mensajeToastMaterializacionLazy } from "./grillaMaterializacionToast.js";
+import { normalizarFilasGrillaEquipo } from "./grillaMesFilasUtils.js";
 
 function etiquetaGrupoSector(row) {
   const nombre = String(row.nombre || row.codigo || row.titulo || "").trim();
@@ -316,7 +317,12 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
           `Materialización del sector incompleta (${matGrupo.fallos} agente(s)). Revisá turnos teóricos.`,
         );
       }
-      setData(payload ? { ...payload, modo: modoEff, periodo: periodoEff } : null);
+      setData(payload ? {
+        ...payload,
+        modo: modoEff,
+        periodo: periodoEff,
+        filas: normalizarFilasGrillaEquipo(payload.filas),
+      } : null);
     } catch (e) {
       setData(null);
       setError(e?.message || "No se pudo cargar la grilla.");
@@ -338,7 +344,7 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
     modo === GRILLA_MES_MODO.TITULAR
       ? "Un calendario por cada cargo vigente en el mes (turno teórico, licencias y feriados por grupo)."
       : modo === GRILLA_MES_MODO.EQUIPO
-        ? "Tabla equipo: HLg vigente al cierre del mes (máx. 60 personas)."
+        ? "Tabla equipo: un renglón por tramo HLg del mes (máx. 60 personas)."
         : "Tabla sector RRHH según grupo elegido en catálogo.";
 
   const gsoEscrituraApi = data?.gso_solo_lectura === true
@@ -352,7 +358,10 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
   });
   const gsoEscritura = gsoEscrituraApi || gsoEscrituraLocal;
 
-  const filas = Array.isArray(data?.filas) ? data.filas : [];
+  const filas = useMemo(
+    () => normalizarFilasGrillaEquipo(data?.filas),
+    [data?.filas],
+  );
   const titularDias =
     modo === GRILLA_MES_MODO.TITULAR && titularCalendarios[0]?.dias
       ? titularCalendarios[0].dias
@@ -379,6 +388,8 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
     anio,
     mes,
     filas,
+    totalFilas: data?.total_filas ?? filas.length,
+    totalPersonas: data?.total_personas ?? 0,
     titularDias,
     titularCalendarios,
     titularHlgRows,

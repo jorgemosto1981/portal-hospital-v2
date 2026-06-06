@@ -1,6 +1,6 @@
 # Handoff — Sesión 2026-06-05 · Cierre US-17 inventario + pausa
 
-**Estado:** **PAUSA** — épica US-17 **cerrada en código**; remediación RRHH **pendiente (ops)**.  
+**Estado:** **SUPERSEDED** — ver cierre [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md).  
 **Rama canónica:** `master` @ `352692b` (merge PR [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3))  
 **Release previo (blindaje):** tag **`v2.6.1-blindaje-gso`** · PR [#2](https://github.com/jorgemosto1981/portal-hospital-v2/pull/2)  
 **Producción:** https://portal-hospital-v2.web.app
@@ -112,4 +112,4 @@ npm run test:blindaje-gso-dry-run
 | `0ff71b8` | Script audit US-17 |
 | (rama) | Lib `listarHuecosTurnoEnAgentes` + tests |
 
-**Última actualización documental:** 2026-06-05 — pausa post-cierre US-17.
+**Última actualización documental:** 2026-06-05 — pausa post-cierre inventario. **Cierre ops:** 2026-06-06 → [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md).

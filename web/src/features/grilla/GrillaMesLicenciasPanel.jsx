@@ -574,6 +574,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                     dia,
                     fechaYmd,
                     personaId: pid,
+                    hlgId,
+                    filaId,
                     eventos,
                     personaLabel,
                     grupoLabel,
@@ -585,6 +587,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                       dia,
                       fechaYmd,
                       personaId: pid,
+                      hlgId,
+                      filaId,
                       eventos,
                       personaLabel,
                       grupoLabel,
@@ -674,6 +678,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   personaId: diaModal.personaId,
                   fechaYmd: diaModal.fechaYmd,
                   grupoTrabajoId: diaModal.grupoTrabajoId,
+                  hlgId: diaModal.hlgId,
                   personaLabel: diaModal.personaLabel,
                   grupoLabel: diaModal.grupoLabel,
                   turnoTeorico: diaModal.turnoTeorico,
@@ -690,6 +695,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
           personaId={gestionTurnoShell.personaId}
           fechaYmd={gestionTurnoShell.fechaYmd}
           grupoTrabajoId={gestionTurnoShell.grupoTrabajoId}
+          hlgId={gestionTurnoShell.hlgId}
           personaLabel={gestionTurnoShell.personaLabel}
           grupoLabel={gestionTurnoShell.grupoLabel}
           turnoVisInicial={gestionTurnoShell.turnoTeorico}

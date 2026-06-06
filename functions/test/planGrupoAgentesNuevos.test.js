@@ -19,6 +19,21 @@ describe("planGrupoAgentesNuevos", () => {
     assert.ok(ids.has("per_A"));
   });
 
+  it("detecta tramo planificado no en plan por hlg_id", () => {
+    const regimenes = { reg_plan: { tipo_patron: "planificado" } };
+    const nuevos = detectarAgentesNuevosPlanificados({
+      personasGrupo: [
+        { persona_id: "per_A", hlg_id: "hlg_1", regimen_horario_id: "reg_plan", persona_label: "A" },
+        { persona_id: "per_A", hlg_id: "hlg_2", regimen_horario_id: "reg_plan", persona_label: "A · 40 hs" },
+      ],
+      regimenes,
+      personaIdsEnPlanMensual: new Set(["per_A"]),
+      hlgIdsEnPlanMensual: new Set(["hlg_1"]),
+    });
+    assert.equal(nuevos.length, 1);
+    assert.equal(nuevos[0].hlg_id, "hlg_2");
+  });
+
   it("detecta agentes planificados vigentes no en plan", () => {
     const regimenes = {
       reg_plan: { tipo_patron: "planificado" },

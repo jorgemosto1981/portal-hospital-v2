@@ -40,6 +40,10 @@ El plan **no se reforma** después de HABILITADO. La operación evoluciona en `a
       "persona_id": "per_…",
       "regimen_horario_id": "cfg_reg_…",
       "hlg_id": "hlg_…",
+      "fila_id": "per_…__hlg_…",
+      "vigente_desde": "2026-06-01",
+      "vigente_hasta": "2026-06-10",
+      "carga_horaria_semanal": 12,
       "dias": {
         "2026-05-01": {
           "tipo_dia": "laborable",
@@ -62,6 +66,7 @@ El plan **no se reforma** después de HABILITADO. La operación evoluciona en `a
 ```
 
 - `agentes[].dias` sustituye para **lectura** al campo editor `agentes[].dias` (que puede estar vacío en fijos/rotativos).
+- **Fase 5 (2026-06):** una entrada por tramo HLg (`hlg_id`); `dias` solo incluye fechas dentro de vigencia HLg; metadata `vigente_desde` / `vigente_hasta` / `carga_horaria_semanal` para UI histórica. Planes legacy sin metadata: `obtenerVistaPlanTurnoServicio` enriquece desde contexto grupo.
 - `segmentos` opcional y acotado (compuestos/nocturnos); UI puede mostrar resumen + detalle bajo demanda.
 
 ## Flujo al aprobar

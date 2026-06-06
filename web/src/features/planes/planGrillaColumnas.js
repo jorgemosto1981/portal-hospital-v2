@@ -9,7 +9,7 @@ function diaNumeroDesdeClave(diaKey) {
   return Number.isFinite(solo) ? solo : 0;
 }
 
-function ymdDesdeClave(diaKey, periodo) {
+export function ymdDesdeClave(diaKey, periodo) {
   const s = String(diaKey || "").trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   if (/^\d{1,2}$/.test(s) && periodo) {

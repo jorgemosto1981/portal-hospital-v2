@@ -84,9 +84,9 @@ function iconoEstadoGrupo(estado) {
   }
 }
 
-function estiloTarjetaMisTurnos(estado, activo, esHistorico, verEquipoSinPlan = false) {
+function estiloTarjetaMisTurnos(estado, activo, esHistorico, verEquipoSinPlan = false, borradorRechazado = false) {
   const baseActivo = activo ? "ring-2 ring-offset-1" : "";
-  if (esHistorico) {
+  if (esHistorico && !borradorRechazado) {
     return activo
       ? `border-slate-300 bg-slate-100 text-slate-800 ring-slate-300 ${baseActivo}`
       : "border-slate-200 bg-slate-100/80 text-slate-700 hover:border-slate-300";
@@ -111,12 +111,13 @@ function estiloTarjetaMisTurnos(estado, activo, esHistorico, verEquipoSinPlan = 
     : "border-amber-200 bg-amber-50/80 text-amber-900 hover:border-amber-300";
 }
 
-function etiquetaEstadoTarjeta(estado, esHistorico = false, hayPlanificados) {
+function etiquetaEstadoTarjeta(estado, esHistorico = false, hayPlanificados, borradorRechazado = false) {
   if (estado === "SIN_PLAN") {
     if (esHistorico) return "Sin Turno";
     if (hayPlanificados === false) return "Ver equipo";
     return "Crear Turno";
   }
+  if (borradorRechazado) return "Corregir rechazo";
   return LABEL_ESTADO[estado] || estado;
 }
 
@@ -129,6 +130,17 @@ function fechaCorteFinMes(periodo) {
   if (!Number.isFinite(anio) || !Number.isFinite(mes)) return "";
   const d = new Date(anio, mes, 0);
   return `${anio}-${String(mes).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Mes anterior: excepción para corregir y reenviar tras rechazo RRHH. */
+function esBorradorRechazado(plan) {
+  if (!plan || String(plan.estado || "") !== "BORRADOR") return false;
+  if (esPlanIncorporacion(plan)) return false;
+  return Boolean(String(plan.observaciones_rechazo || "").trim());
+}
+
+function borradorRechazadoEnItems(items) {
+  return esBorradorRechazado(planPrincipalCanonico(items));
 }
 
 function labelPeriodoCard(periodo, idx) {
@@ -523,13 +535,23 @@ export default function PlanTurnoServicioPage() {
 
   const planPrincipalMes = useMemo(() => planPrincipalCanonico(planes), [planes]);
   const planIncorporacionMes = useMemo(() => planIncorporacionActivo(planes), [planes]);
+  const planOpcionesResuelto = useMemo(() => {
+    if (!planOpciones?.plan) return null;
+    const id = planOpciones.plan.id;
+    if (!id) return planOpciones.plan;
+    return planes.find((p) => p.id === id) ?? planOpciones.plan;
+  }, [planOpciones, planes]);
+  const huecosPlanPrincipal = useMemo(
+    () => contarHuecosEnPlanMensual(planPrincipalMes),
+    [planPrincipalMes],
+  );
   const huecosPlanIncorporacion = useMemo(
     () => contarHuecosEnPlanMensual(planIncorporacionMes),
     [planIncorporacionMes],
   );
   const huecosPlanOpciones = useMemo(
-    () => (planOpciones?.plan ? contarHuecosEnPlanMensual(planOpciones.plan) : 0),
-    [planOpciones],
+    () => contarHuecosEnPlanMensual(planOpcionesResuelto),
+    [planOpcionesResuelto],
   );
 
   const abrirEditorIncorporacion = useCallback(
@@ -651,6 +673,17 @@ export default function PlanTurnoServicioPage() {
       const incorporacion = planIncorporacionActivo(items);
       if (!principal && !incorporacion) return;
       if (esHistorico) {
+        const planRechazado = principal && esBorradorRechazado(principal) ? principal : null;
+        if (planRechazado) {
+          setPlanOpciones({
+            plan: planRechazado,
+            estado: planRechazado.estado,
+            grupoLabel: g.label,
+            periodo: p,
+            mesHistoricoRechazado: true,
+          });
+          return;
+        }
         if (principal) void abrirPlanDetalle(principal);
         return;
       }
@@ -715,6 +748,7 @@ export default function PlanTurnoServicioPage() {
                     const meta = resumenGrupoPeriodo[p]?.[g.id] || { estado: "SIN_PLAN", cantidad: 0 };
                     const activo = grupoId === g.id && periodo === p;
                     const esHistorico = idx === 0;
+                    const borradorRechazado = esHistorico && borradorRechazadoEnItems(meta.items);
                     const verEquipoSinPlan =
                       meta.estado === "SIN_PLAN" && !esHistorico && meta.hay_planificados === false;
                     return (
@@ -722,12 +756,12 @@ export default function PlanTurnoServicioPage() {
                         key={`${p}-${g.id}`}
                         type="button"
                         onClick={() => void seleccionarTarjetaPlan(p, g, esHistorico)}
-                        className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${estiloTarjetaMisTurnos(meta.estado, activo, esHistorico, verEquipoSinPlan)}`}
+                        className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${estiloTarjetaMisTurnos(meta.estado, activo, esHistorico, verEquipoSinPlan, borradorRechazado)}`}
                       >
                         <span className="font-medium">{g.label}</span>
                         <span className="text-xs opacity-85">
                           {iconoEstadoGrupo(meta.estado)}{" "}
-                          {etiquetaEstadoTarjeta(meta.estado, esHistorico, meta.hay_planificados)}
+                          {etiquetaEstadoTarjeta(meta.estado, esHistorico, meta.hay_planificados, borradorRechazado)}
                         </span>
                       </button>
                     );
@@ -844,25 +878,87 @@ export default function PlanTurnoServicioPage() {
             Planes del período · {grupoLabel} · {periodo}
           </h2>
           <div className="grid gap-3 md:grid-cols-2">
-            {planPrincipalMes ? (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-emerald-900">Plan operativo</p>
-                    <p className="mt-0.5 text-xs text-emerald-800">Solo lectura cuando está habilitado.</p>
-                    <p className="mt-2 font-mono text-[11px] text-emerald-700">{planPrincipalMes.id}</p>
+            {planPrincipalMes ? (() => {
+              const pp = planPrincipalMes;
+              const editable =
+                pp.estado === "BORRADOR" || pp.estado === "EN_REVISION";
+              const soloLectura =
+                pp.estado === "HABILITADO" || pp.estado === "CERRADO";
+              const rechazado = esBorradorRechazado(pp);
+              const cardCls = soloLectura
+                ? "border-emerald-200 bg-emerald-50/80"
+                : editable
+                  ? "border-amber-200 bg-amber-50/80"
+                  : "border-slate-200 bg-slate-50/80";
+              const titleCls = soloLectura ? "text-emerald-900" : editable ? "text-amber-900" : "text-slate-900";
+              const subCls = soloLectura ? "text-emerald-800" : editable ? "text-amber-800" : "text-slate-700";
+              const idCls = soloLectura ? "text-emerald-700" : editable ? "text-amber-700" : "text-slate-600";
+              return (
+                <div className={`rounded-xl border p-4 ${cardCls}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className={`text-sm font-semibold ${titleCls}`}>
+                        {soloLectura ? "Plan operativo" : rechazado ? "Corregir rechazo" : "Plan mensual"}
+                      </p>
+                      <p className={`mt-0.5 text-xs ${subCls}`}>
+                        {soloLectura
+                          ? "Solo lectura cuando está habilitado."
+                          : rechazado
+                            ? "Rechazado por RRHH: editá y reenviá cuando esté listo."
+                            : "Borrador o en circuito de aprobación."}
+                      </p>
+                      {rechazado && pp.observaciones_rechazo ? (
+                        <p className={`mt-1 text-xs ${subCls}`}>
+                          Motivo: {pp.observaciones_rechazo}
+                        </p>
+                      ) : null}
+                      <p className={`mt-2 font-mono text-[11px] ${idCls}`}>{pp.id}</p>
+                    </div>
+                    <BadgeEstadoPlan estado={pp.estado} />
                   </div>
-                  <BadgeEstadoPlan estado={planPrincipalMes.estado} />
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => abrirPlanDetalle(pp)}
+                      className={`rounded-lg border bg-white px-3 py-2 text-sm ${
+                        soloLectura
+                          ? "border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                          : "border-slate-300 text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      {soloLectura ? "Ver plan operativo" : "Ver"}
+                    </button>
+                    {editable ? (
+                      <button
+                        type="button"
+                        onClick={() => setPlanEdicion(pp)}
+                        className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm text-amber-900 hover:bg-amber-50"
+                      >
+                        Editar plan
+                      </button>
+                    ) : null}
+                    {editable ? (
+                      <button
+                        type="button"
+                        disabled={operando || huecosPlanPrincipal > 0}
+                        title={
+                          huecosPlanPrincipal > 0
+                            ? tooltipBloqueoHuecosPlan(huecosPlanPrincipal)
+                            : undefined
+                        }
+                        onClick={() => void handleTransicion("enviar", pp.id)}
+                        className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {pp.estado === "EN_REVISION" ? "Reenviar" : "Enviar"}
+                      </button>
+                    ) : null}
+                    {pp.estado === "ENVIADO" ? (
+                      <p className="text-xs text-slate-700">Enviado — pendiente de aprobación superior.</p>
+                    ) : null}
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => abrirPlanDetalle(planPrincipalMes)}
-                  className="mt-3 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm text-emerald-800 hover:bg-emerald-50"
-                >
-                  Ver plan operativo
-                </button>
-              </div>
-            ) : null}
+              );
+            })() : null}
             {planIncorporacionMes ? (
               <div className="rounded-xl border border-violet-200 bg-violet-50/80 p-4">
                 <div className="flex items-start justify-between gap-2">
@@ -972,27 +1068,41 @@ export default function PlanTurnoServicioPage() {
             <p className="mt-1 text-xs text-slate-600">
               {planOpciones.grupoLabel} · {planOpciones.periodo} · {LABEL_ESTADO[planOpciones.estado] || planOpciones.estado}
             </p>
+            {planOpciones.mesHistoricoRechazado && planOpcionesResuelto && (
+              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                Mes anterior: podés corregir y reenviar este plan rechazado por RRHH.
+                {planOpcionesResuelto.observaciones_rechazo ? (
+                  <p className="mt-1 text-amber-800">
+                    Motivo: {planOpcionesResuelto.observaciones_rechazo}
+                  </p>
+                ) : null}
+              </div>
+            )}
             <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => { void abrirPlanDetalle(planOpciones.plan); setPlanOpciones(null); }} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                Ver
-              </button>
-              {(planOpciones.plan.estado === "BORRADOR" || planOpciones.plan.estado === "EN_REVISION") &&
-                !esPlanIncorporacion(planOpciones.plan) && (
-                <button type="button" onClick={() => { setPlanEdicion(planOpciones.plan); setPlanOpciones(null); }} className="rounded-lg border border-indigo-300 px-3 py-2 text-sm text-indigo-700 hover:bg-indigo-50">
-                  Editar
-                </button>
-              )}
-              {(planOpciones.plan.estado === "BORRADOR" || planOpciones.plan.estado === "EN_REVISION") && (
-                <button
-                  type="button"
-                  disabled={operando || huecosPlanOpciones > 0}
-                  title={huecosPlanOpciones > 0 ? tooltipBloqueoHuecosPlan(huecosPlanOpciones) : undefined}
-                  onClick={() => void handleTransicion("enviar", planOpciones.plan.id)}
-                  className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {planOpciones.plan.estado === "EN_REVISION" ? "Reenviar" : "Enviar"}
-                </button>
-              )}
+              {planOpcionesResuelto ? (
+                <>
+                  <button type="button" onClick={() => { void abrirPlanDetalle(planOpcionesResuelto); setPlanOpciones(null); }} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                    Ver
+                  </button>
+                  {(planOpcionesResuelto.estado === "BORRADOR" || planOpcionesResuelto.estado === "EN_REVISION") &&
+                    !esPlanIncorporacion(planOpcionesResuelto) && (
+                    <button type="button" onClick={() => { setPlanEdicion(planOpcionesResuelto); setPlanOpciones(null); }} className="rounded-lg border border-indigo-300 px-3 py-2 text-sm text-indigo-700 hover:bg-indigo-50">
+                      Editar
+                    </button>
+                  )}
+                  {(planOpcionesResuelto.estado === "BORRADOR" || planOpcionesResuelto.estado === "EN_REVISION") && (
+                    <button
+                      type="button"
+                      disabled={operando || huecosPlanOpciones > 0}
+                      title={huecosPlanOpciones > 0 ? tooltipBloqueoHuecosPlan(huecosPlanOpciones) : undefined}
+                      onClick={() => void handleTransicion("enviar", planOpcionesResuelto.id)}
+                      className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {planOpcionesResuelto.estado === "EN_REVISION" ? "Reenviar" : "Enviar"}
+                    </button>
+                  )}
+                </>
+              ) : null}
             </div>
           </div>
         </div>

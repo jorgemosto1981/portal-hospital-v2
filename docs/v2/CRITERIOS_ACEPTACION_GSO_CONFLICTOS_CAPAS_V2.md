@@ -403,7 +403,7 @@ Detalle: [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACT
 - [ ] Tooltips/badges accesibles (`title` o componente equivalente).
 - [ ] Doc operaciones comunicado a RRHH/jefes (épica 3 o capacitación).
 - [x] **US-17 (piloto):** junio 2026 Sala replanificado (`plt_01KT9…`) — BD + UI sin blancos (§6.6).
-- [ ] **US-17 (global):** inventario resto `gdt`/meses con hueco/blanco.
+- [x] **US-17 (global):** remediación 2026-06-06 — 5 planes HABILITADO, audit **0 huecos** — [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md).
 - [ ] **US-9** activo: ningún plan nuevo habilitado con laborable/guardia sin turno o franco.
 - [x] **Incorporación paralela (§6.7):** piloto jun 2026 Sala — `plt_inc` → `MERGEADO`, operativo intacto; UI tarjetas duales desplegada (hosting jun 2026).
 

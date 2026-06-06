@@ -20,15 +20,19 @@ export function celdaEsHuecoTurnoPlan(cel) {
  * @param {Record<string, Record<string, object>>} grillaPorPersona
  * @param {{ omitirCelda?: (personaId: string, ymd: string, cel: object) => boolean }} [options]
  */
-export function contarHuecosTurnoPlan(agentes, grillaPorPersona, options = {}) {
+export function contarHuecosTurnoPlan(agentes, grillaPorFila, options = {}) {
   const { omitirCelda } = options;
   let n = 0;
   for (const ag of agentes || []) {
-    const pid = String(ag.persona_id || "").trim();
-    if (!pid) continue;
-    const row = grillaPorPersona[pid] || {};
+    const key =
+      String(ag?.fila_id || "").trim()
+      || (String(ag?.hlg_id || "").trim()
+        ? `${String(ag.persona_id || "").trim()}__${String(ag.hlg_id).trim()}`
+        : String(ag.persona_id || "").trim());
+    if (!key) continue;
+    const row = grillaPorFila[key] || {};
     for (const [ymd, cel] of Object.entries(row)) {
-      if (omitirCelda?.(pid, ymd, cel)) continue;
+      if (omitirCelda?.(key, ymd, cel, ag)) continue;
       if (celdaEsHuecoTurnoPlan(cel)) n += 1;
     }
   }

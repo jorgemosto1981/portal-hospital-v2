@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { callObtenerVistaPlanTurnoServicio } from "../../services/callables.js";
+import {
+  callListarContextoPlanGrupo,
+  callObtenerVistaPlanTurnoServicio,
+} from "../../services/callables.js";
+import {
+  agentesGrillaNecesitanTramos,
+  enriquecerGrillaAprobadaConPersonasGrupo,
+} from "./planGrillaTramosUtils.js";
 
 /**
  * Carga grilla del plan vía obtenerVistaPlanTurnoServicio (SoT: grilla_aprobada o vista calculada).
@@ -29,8 +36,33 @@ export function useVistaPlanTurno(planId, enabled = true) {
         const res = await callObtenerVistaPlanTurnoServicio({ plan_id: planId });
         if (cancelled) return;
         const data = res.data || {};
-        setPlan(data.plan || null);
-        setGrillaAprobada(data.grilla_aprobada || null);
+        const planMeta = data.plan || null;
+        let grilla = data.grilla_aprobada || null;
+
+        if (
+          grilla?.agentes?.length &&
+          planMeta?.grupo_id &&
+          planMeta?.periodo &&
+          agentesGrillaNecesitanTramos(grilla.agentes)
+        ) {
+          try {
+            const ctxRes = await callListarContextoPlanGrupo({
+              grupo_id: planMeta.grupo_id,
+              periodo: planMeta.periodo,
+            });
+            grilla = enriquecerGrillaAprobadaConPersonasGrupo(
+              grilla,
+              ctxRes.data?.personas_grupo,
+              ctxRes.data?.regimenes,
+            );
+          } catch {
+            /* snapshot sin tramos: se muestra grilla cruda */
+          }
+        }
+
+        if (cancelled) return;
+        setPlan(planMeta);
+        setGrillaAprobada(grilla);
         setAgentesMeta(Array.isArray(data.agentes_meta) ? data.agentes_meta : []);
       } catch (e) {
         if (!cancelled) {

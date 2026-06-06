@@ -30,6 +30,16 @@ function personaIdsEnPlan(plan) {
   return set;
 }
 
+/** @param {object|null|undefined} plan */
+function hlgIdsEnPlan(plan) {
+  const set = new Set();
+  for (const ag of plan?.agentes || []) {
+    const hid = String(ag?.hlg_id || "").trim();
+    if (/^hlg_/i.test(hid)) set.add(hid);
+  }
+  return set;
+}
+
 /**
  * @param {object[]} planesActivos — docs sin eliminado
  * @returns {object|null}
@@ -48,13 +58,23 @@ function elegirPlanMensualCanonico(planesActivos) {
  * @param {object[]} params.personasGrupo
  * @param {Record<string, object>} params.regimenes
  * @param {Set<string>} params.personaIdsEnPlanMensual
+ * @param {Set<string>} [params.hlgIdsEnPlanMensual]
  */
-function detectarAgentesNuevosPlanificados({ personasGrupo, regimenes, personaIdsEnPlanMensual }) {
-  const enPlan = personaIdsEnPlanMensual instanceof Set ? personaIdsEnPlanMensual : new Set();
+function detectarAgentesNuevosPlanificados({
+  personasGrupo,
+  regimenes,
+  personaIdsEnPlanMensual,
+  hlgIdsEnPlanMensual,
+}) {
+  const enPlanPersona = personaIdsEnPlanMensual instanceof Set ? personaIdsEnPlanMensual : new Set();
+  const enPlanHlg = hlgIdsEnPlanMensual instanceof Set ? hlgIdsEnPlanMensual : new Set();
   const nuevos = [];
   for (const pg of personasGrupo || []) {
     const pid = String(pg.persona_id || "").trim();
-    if (!pid || enPlan.has(pid)) continue;
+    const hid = String(pg.hlg_id || "").trim();
+    if (!pid) continue;
+    if (hid && enPlanHlg.has(hid)) continue;
+    if (!hid && enPlanPersona.has(pid)) continue;
     const reg = regimenes?.[pg.regimen_horario_id];
     if (!regimenEsPlanificado(reg)) continue;
     nuevos.push({
@@ -63,6 +83,7 @@ function detectarAgentesNuevosPlanificados({ personasGrupo, regimenes, personaId
       persona_dni: pg.persona_dni || null,
       regimen_horario_id: pg.regimen_horario_id || null,
       hlg_id: pg.hlg_id || null,
+      fila_id: pg.fila_id || null,
     });
   }
   nuevos.sort((a, b) =>
@@ -71,31 +92,40 @@ function detectarAgentesNuevosPlanificados({ personasGrupo, regimenes, personaId
   return nuevos;
 }
 
+function agentePlanKey(ag) {
+  const hid = String(ag?.hlg_id || "").trim();
+  if (/^hlg_/i.test(hid)) return `hlg:${hid}`;
+  const pid = String(ag?.persona_id || "").trim();
+  return `per:${pid}`;
+}
+
 /**
  * Fusiona solo agentes nuevos; las filas ya en el plan no se modifican.
  * @param {object[]} agentesExistentes
  * @param {object[]} agentesPayload
- * @param {Set<string>} idsNuevosPermitidos
+ * @param {Set<string>} idsNuevosPermitidos — persona_id permitidos (incorporación)
  */
 function mergeAgentesIncorporacionPlanMensual(agentesExistentes, agentesPayload, idsNuevosPermitidos) {
   const permitidos = idsNuevosPermitidos instanceof Set ? idsNuevosPermitidos : new Set(idsNuevosPermitidos);
-  const porPid = new Map();
+  const porKey = new Map();
   for (const ag of agentesExistentes || []) {
-    const pid = String(ag?.persona_id || "").trim();
-    if (pid) porPid.set(pid, ag);
+    const key = agentePlanKey(ag);
+    if (!key || key === "per:" || key === "hlg:") continue;
+    porKey.set(key, ag);
   }
   for (const ag of agentesPayload || []) {
     const pid = String(ag?.persona_id || "").trim();
     if (!pid) continue;
-    if (porPid.has(pid) && !permitidos.has(pid)) {
+    const key = agentePlanKey(ag);
+    if (porKey.has(key) && !permitidos.has(pid)) {
       continue;
     }
     if (!permitidos.has(pid)) {
       return { ok: false, code: "PLT-INC-001", persona_id: pid };
     }
-    porPid.set(pid, ag);
+    porKey.set(key, ag);
   }
-  return { ok: true, agentes: [...porPid.values()] };
+  return { ok: true, agentes: [...porKey.values()] };
 }
 
 /**
@@ -120,6 +150,7 @@ module.exports = {
   filtrarPlanesPrincipalesOperativos,
   regimenEsPlanificado,
   personaIdsEnPlan,
+  hlgIdsEnPlan,
   elegirPlanMensualCanonico,
   detectarAgentesNuevosPlanificados,
   mergeAgentesIncorporacionPlanMensual,

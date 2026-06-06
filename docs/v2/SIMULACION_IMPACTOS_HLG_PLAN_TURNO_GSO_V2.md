@@ -1,7 +1,8 @@
 # Simulación de situaciones — HLg, plan, turno (override) e impactos GSO
 
-**Alcance:** evaluación **conceptual** (sin codificar) según arquitectura V2, acta [`HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md`](./HANDOFF_ACTA_GSO_RECONCILIACION_JUNIO_2026_SALA_V2.md) y [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md).  
-**Lectura clave:** [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md), [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](./MANUAL_CAPAS_ORQUESTACION_BORRADOR.md), [`GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md`](./GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md).
+**Alcance:** evaluación conceptual + **as-built Fase 5** (segmentación HLg por tramo en Plan + GSO, jun 2026).  
+**Lectura clave:** [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) §7ter, [`reports/FASE5_CIERRE_SEGMENTACION_HLG_PLAN_GSO_2026-06-06.md`](../../reports/FASE5_CIERRE_SEGMENTACION_HLG_PLAN_GSO_2026-06-06.md), [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](./MANUAL_CAPAS_ORQUESTACION_BORRADOR.md), [`GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md`](./GSO_MATERIALIZACION_AL_ABRIR_EQUIPO_OPERACIONES_V2.md).  
+**Última actualización:** 2026-06-06 (A7 multitrato mismo `gdt`).
 
 **Leyenda impacto**
 
@@ -83,6 +84,18 @@
 | Un **`vis_*` por `gdt`**; no fusionar en un solo calendario |
 | GSO equipo de Sala **no** muestra teoría de Portería |
 | **L** con `grupo_trabajo_id_ancla` → escenario **E** (🔗 otro sector) |
+
+### A7 — Dos HLg **secuenciales** mismo `gdt` en el mes (multitrato — **implementado Fase 5**)
+
+| Paso | Impacto |
+| :--- | :--- |
+| Persona con HLg A (ej. fijo 12 hs, 01–10) + HLg B (planificado 40 hs, 11–30) | **1 fila por tramo** en GSO y plan; `fila_id = persona_id__hlg_id` |
+| Días fuera vigencia de cada tramo | **Vacío positivo** (gris); no F/NL del mes entero |
+| **P** habilitado | `grilla_aprobada`: dos entradas `agentes[]` con `hlg_id` distinto; días acotados HLg |
+| **V** | Materialización scoped por `gdt`; cada tramo con su régimen en su rango |
+| **GSO** | `listarVistaGrillaMesPorGrupo` omite claves `dias` fuera tramo |
+| **Riesgo legacy** | Planes aprobados antes del fix: lectura enriquece tramos vía contexto grupo |
+| **Piloto** | MOSTO jun-2026 Sala — ver reporte Fase 5 |
 
 ---
 

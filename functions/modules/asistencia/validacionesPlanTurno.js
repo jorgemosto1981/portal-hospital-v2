@@ -48,9 +48,11 @@ function listarHuecosTurnoEnAgentes(agentes) {
 
 /**
  * US-9: rechazar habilitación si laborable/guardia carece de turno_id.
- * @param {Array<{ persona_id?: string, dias?: Record<string, object> }>} agentes
+ * @param {Array<{ persona_id?: string, hlg_id?: string, dias?: Record<string, object> }>} agentes
+ * @param {{ celdaCuentaParaHuecos?: (ag: object, ymd: string) => boolean }} [options]
  */
-function assertPlanSinHuecosTurno(agentes) {
+function assertPlanSinHuecosTurno(agentes, options = {}) {
+  const { celdaCuentaParaHuecos } = options || {};
   if (!Array.isArray(agentes) || agentes.length === 0) {
     throw new HttpsError(
       "failed-precondition",
@@ -58,7 +60,20 @@ function assertPlanSinHuecosTurno(agentes) {
     );
   }
 
-  const huecos = listarHuecosTurnoEnAgentes(agentes);
+  const huecos = [];
+  for (const ag of agentes) {
+    const personaId = ag && ag.persona_id ? String(ag.persona_id) : "?";
+    const dias = ag && ag.dias && typeof ag.dias === "object" ? ag.dias : {};
+    for (const [ymd, cel] of Object.entries(dias)) {
+      if (celdaCuentaParaHuecos && !celdaCuentaParaHuecos(ag, ymd)) continue;
+      if (!celdaHuecoTurnoPlan(cel)) continue;
+      huecos.push({
+        persona_id: personaId,
+        ymd: String(ymd),
+        tipo_dia: String(cel.tipo_dia),
+      });
+    }
+  }
   if (huecos.length > 0) {
     const first = huecos[0];
     throw new HttpsError(

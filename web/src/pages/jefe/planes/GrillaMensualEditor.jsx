@@ -22,6 +22,7 @@ import {
 import GrillaTurnosLeyenda from "../../../features/grilla/GrillaTurnosLeyenda.jsx";
 import { ymdDesdeValorLaboral } from "../../datos-laborales/utils.js";
 import { contarHuecosTurnoPlan, tooltipBloqueoHuecosPlan } from "./planHuecosTurnoUtils.js";
+import { filaKeyAg } from "../../../features/grilla/grillaMesFilasUtils.js";
 
 const PALETA_COLORES_BASE = [
   { bg: "bg-yellow-300 hover:bg-yellow-400", text: "text-yellow-950" },
@@ -49,6 +50,48 @@ function diasDelMes(periodo) {
 }
 
 const DOW_LABELS = ["D", "L", "M", "X", "J", "V", "S"];
+const ISO_DOW_LETTERS = { 1: "L", 2: "M", 3: "X", 4: "J", 5: "V", 6: "S", 7: "D" };
+
+function esTipoDiaConJornada(tipoDiaRaw) {
+  const t = String(tipoDiaRaw || "").trim().toLowerCase().replace(/\s+/g, "_");
+  return t === "laborable" || t === "guardia";
+}
+
+/** Patrón real del régimen fijo: solo días laborables del patrón, sin catálogo turnos_disponibles. */
+function detalleHorariosRegimenFijo(regimen) {
+  const byHorario = new Map();
+  for (const d of regimen.dias || []) {
+    if (!esTipoDiaConJornada(d?.tipo_dia)) continue;
+    const h = valorHorario(d.turno || d);
+    if (!h) continue;
+    const ds = Number(d.dia_semana);
+    if (!Number.isFinite(ds) || ds < 1 || ds > 7) continue;
+    if (!byHorario.has(h)) byHorario.set(h, []);
+    byHorario.get(h).push(ds);
+  }
+  if (byHorario.size === 0) return "Sin horario fijo";
+  return [...byHorario.entries()]
+    .map(([h, diasSem]) => {
+      diasSem.sort((a, b) => a - b);
+      const letras = diasSem.map((ds) => ISO_DOW_LETTERS[ds] || "?").join("");
+      return `${letras} ${h}`;
+    })
+    .join(" · ");
+}
+
+/** Horarios distintos del ciclo rotativo (sin unión de turnos_disponibles). */
+function detalleHorariosRegimenRotativo(regimen) {
+  const horarios = [];
+  const horariosSet = new Set();
+  for (const c of regimen.ciclo || []) {
+    if (!esTipoDiaConJornada(c?.tipo_dia)) continue;
+    const h = valorHorario(c.turno || c);
+    if (!h || horariosSet.has(h)) continue;
+    horariosSet.add(h);
+    horarios.push(h);
+  }
+  return horarios.length ? horarios.join(" · ") : "Sin horario rotativo";
+}
 
 /** Hard block: fecha fuera de vigencia HLG */
 function esDiaEnVigenciaHlg(fechaYmd, fechaInicio, fechaFin) {
@@ -196,14 +239,6 @@ function resumenRegimenTurnos(regimen) {
 function detalleHorariosRegimen(regimen) {
   if (!regimen || typeof regimen !== "object") return "Sin detalle de turnos";
   const tipo = String(regimen.tipo_patron || "").toLowerCase();
-  const horarios = [];
-  const horariosSet = new Set();
-  const addHorario = (source) => {
-    const h = valorHorario(source);
-    if (!h || horariosSet.has(h)) return;
-    horariosSet.add(h);
-    horarios.push(h);
-  };
   const turnosPlanificados = [];
   const turnosPlanificadosSet = new Set();
   const addTurnoPlanificado = (turno) => {
@@ -216,20 +251,10 @@ function detalleHorariosRegimen(regimen) {
     turnosPlanificados.push(row);
   };
   if (tipo === "fijo") {
-    (regimen.dias || []).forEach((d) => {
-      if (d?.turno) addHorario(d.turno);
-      addHorario(d);
-    });
-    (regimen.turnos_disponibles || []).forEach(addHorario);
-    return horarios.length ? horarios.join(" · ") : "Sin horario fijo";
+    return detalleHorariosRegimenFijo(regimen);
   }
   if (tipo === "rotativo") {
-    (regimen.ciclo || []).forEach((c) => {
-      if (c?.turno) addHorario(c.turno);
-      addHorario(c);
-    });
-    (regimen.turnos_disponibles || []).forEach(addHorario);
-    return horarios.length ? horarios.join(" · ") : "Sin horario rotativo";
+    return detalleHorariosRegimenRotativo(regimen);
   }
   if (tipo === "planificado") {
     (regimen.turnos_disponibles || []).forEach(addTurnoPlanificado);
@@ -267,12 +292,30 @@ function buildPaletaDinamica(regimenes) {
 function crearGrillaLimpia(agentes, dias) {
   const grilla = {};
   for (const ag of agentes) {
-    grilla[ag.persona_id] = {};
+    const key = filaKeyAg(ag);
+    grilla[key] = {};
     for (const dia of dias) {
-      grilla[ag.persona_id][dia.ymd] = { tipo_dia: "franco", turno_id: null };
+      grilla[key][dia.ymd] = { tipo_dia: "franco", turno_id: null };
     }
   }
   return grilla;
+}
+
+function normalizarCeldaDesdePersistencia(cel) {
+  if (!cel || typeof cel !== "object") {
+    return { tipo_dia: "franco", turno_id: null };
+  }
+  const tipo = normalizarTipoDiaCelda(cel.tipo_dia);
+  const tidRaw = cel.turno_id;
+  const turno_id =
+    tidRaw != null && String(tidRaw).trim() !== "" ? String(tidRaw).trim() : null;
+  const out = { tipo_dia: tipo, turno_id };
+  const ingreso = String(cel.ingreso || "").trim();
+  const egreso = String(cel.egreso || "").trim();
+  if (ingreso) out.ingreso = ingreso;
+  if (egreso) out.egreso = egreso;
+  if (cel.es_feriado === true) out.es_feriado = true;
+  return out;
 }
 
 function normalizarFilaDias(fila, dias) {
@@ -284,12 +327,65 @@ function normalizarFilaDias(fila, dias) {
   for (const dia of dias) {
     const actual = fila[dia.ymd];
     if (!actual || typeof actual !== "object") continue;
-    base[dia.ymd] = {
-      tipo_dia: actual.tipo_dia || "franco",
-      turno_id: actual.turno_id || null,
-    };
+    base[dia.ymd] = normalizarCeldaDesdePersistencia(actual);
   }
   return base;
+}
+
+/** Fila con al menos un día persistido en Firestore (foto R0/R2). */
+function filaDiasTieneFotoPersistida(fila) {
+  if (!fila || typeof fila !== "object") return false;
+  return Object.keys(fila).length > 0;
+}
+
+/**
+ * Carga canónica: dias[] enriquecidos del plan persistido (no reconstruir desde régimen).
+ * @returns {Record<string, object>|null} null → bootstrap con generarGrillaDesdeRegimen
+ */
+function diasCanonicoDesdePlan(plan, agRef, diasMes) {
+  if (!plan?.id) return null;
+  const hid = String(agRef?.hlg_id || "").trim();
+  const pid = String(agRef?.persona_id || "").trim();
+  const ag = (plan.agentes || []).find((a) =>
+    hid ? String(a.hlg_id || "").trim() === hid : String(a.persona_id || "").trim() === pid,
+  );
+  const row = ag?.dias;
+  if (!filaDiasTieneFotoPersistida(row)) return null;
+  return normalizarFilaDias(row, diasMes);
+}
+
+function construirDiasAgenteParaGuardar({
+  ag,
+  row,
+  meta,
+  regimen,
+  plan,
+  diasMes,
+  extraerIntencionDia,
+}) {
+  const canonRow =
+    regimen && esRegimenDerivado(regimen) ? diasCanonicoDesdePlan(plan, ag, diasMes) : null;
+  const dias = {};
+  for (const dia of diasMes) {
+    const ymd = dia.ymd;
+    if (meta && !esDiaEnVigenciaHlg(ymd, meta.fecha_inicio, meta.fecha_fin)) {
+      dias[ymd] = { tipo_dia: "franco", turno_id: null };
+      continue;
+    }
+    let cel;
+    if (regimen && esRegimenDerivado(regimen)) {
+      cel = canonRow?.[ymd] ?? row[ymd];
+    } else {
+      cel = row[ymd] ?? canonRow?.[ymd];
+    }
+    let intencion = extraerIntencionDia(cel || { tipo_dia: "franco", turno_id: null });
+    // R0: fijo/rotativo — turno_id lo deriva el backend al guardar.
+    if (regimen && esRegimenDerivado(regimen)) {
+      intencion = { tipo_dia: intencion.tipo_dia, turno_id: null };
+    }
+    dias[ymd] = intencion;
+  }
+  return dias;
 }
 
 export default function GrillaMensualEditor({
@@ -313,6 +409,7 @@ export default function GrillaMensualEditor({
 
   const [agentes, setAgentes] = useState(() => {
     if (plan?.agentes?.length) return plan.agentes.map((a) => ({
+      fila_id: a.fila_id || filaKeyAg(a),
       persona_id: a.persona_id,
       regimen_horario_id: a.regimen_horario_id,
       hlg_id: a.hlg_id,
@@ -322,8 +419,11 @@ export default function GrillaMensualEditor({
 
   const [grilla, setGrilla] = useState(() => {
     if (plan?.agentes?.length) {
+      const diasInit = diasDelMes(periodo);
       const g = {};
-      for (const ag of plan.agentes) g[ag.persona_id] = ag.dias || {};
+      for (const ag of plan.agentes) {
+        g[filaKeyAg(ag)] = normalizarFilaDias(ag.dias, diasInit);
+      }
       return g;
     }
     return {};
@@ -405,11 +505,41 @@ export default function GrillaMensualEditor({
   const agentesEnriquecidos = useMemo(() => {
     const map = {};
     for (const p of contexto?.personas_grupo || []) {
-      const pid = String(p.persona_id || "").trim();
-      if (pid && !map[pid]) map[pid] = p;
+      const key = filaKeyAg(p);
+      if (key) map[key] = p;
     }
     return map;
   }, [contexto]);
+
+  const avisoTramosPlanificados = useMemo(() => {
+    const porPersona = new Map();
+    for (const ag of agentes) {
+      const pid = String(ag.persona_id || "").trim();
+      if (!pid) continue;
+      if (!porPersona.has(pid)) porPersona.set(pid, []);
+      porPersona.get(pid).push(ag);
+    }
+    const filas = [];
+    for (const lista of porPersona.values()) {
+      if (lista.length < 2) continue;
+      for (const ag of lista) {
+        if (!esRegimenPlanificado(idxRegimenes[ag.regimen_horario_id])) continue;
+        const meta = agentesEnriquecidos[filaKeyAg(ag)] || {};
+        const vd = meta.vigente_desde
+          ? `${meta.vigente_desde.slice(8, 10)}/${meta.vigente_desde.slice(5, 7)}`
+          : null;
+        const vh = meta.vigente_hasta
+          ? `${meta.vigente_hasta.slice(8, 10)}/${meta.vigente_hasta.slice(5, 7)}`
+          : null;
+        filas.push({
+          key: filaKeyAg(ag),
+          etiqueta: String(meta.persona_label || meta.persona_id || "").trim(),
+          rango: vd && vh ? `${vd}–${vh}` : null,
+        });
+      }
+    }
+    return filas;
+  }, [agentes, agentesEnriquecidos, idxRegimenes]);
 
   useEffect(() => {
     if (agentes.length > 0 && Object.keys(grilla).length === 0) {
@@ -417,7 +547,7 @@ export default function GrillaMensualEditor({
     }
   }, [agentes, dias, grilla]);
 
-  // Régimen fijo/rotativo: precargar mes desde el patrón (solo lectura en plan mensual)
+  // Régimen fijo/rotativo: foto canónica del plan o bootstrap desde patrón (plan nuevo / fila vacía)
   useEffect(() => {
     if (!contexto?.regimenes || dias.length === 0 || agentes.length === 0) return;
     setGrilla((prev) => {
@@ -426,13 +556,16 @@ export default function GrillaMensualEditor({
       for (const ag of agentes) {
         const regimen = idxRegimenes[ag.regimen_horario_id];
         if (!esRegimenDerivado(regimen)) continue;
-        const meta = agentesEnriquecidos[ag.persona_id] || {};
-        next[ag.persona_id] = generarGrillaDesdeRegimen(regimen, dias, meta);
+        const key = filaKeyAg(ag);
+        const meta = agentesEnriquecidos[key] || {};
+        const canon = diasCanonicoDesdePlan(plan, ag, dias);
+        const row = canon ?? generarGrillaDesdeRegimen(regimen, dias, meta);
+        next[key] = row;
         changed = true;
       }
       return changed ? next : prev;
     });
-  }, [contexto, agentes, dias, idxRegimenes, agentesEnriquecidos]);
+  }, [contexto, agentes, dias, idxRegimenes, agentesEnriquecidos, plan]);
 
   const esModoIncorporacion =
     modoIncorporacionAgentesNuevos || String(plan?.plan_rol || "").trim() === "incorporacion";
@@ -468,6 +601,7 @@ export default function GrillaMensualEditor({
     }
     const nextAgentes = filtrada
       .map((p) => ({
+        fila_id: p.fila_id || filaKeyAg(p),
         persona_id: String(p.persona_id || "").trim(),
         regimen_horario_id: p.regimen_horario_id || "",
         hlg_id: p.hlg_id || "",
@@ -484,41 +618,45 @@ export default function GrillaMensualEditor({
         const pa = prioridadTipo(a.regimen_horario_id);
         const pb = prioridadTipo(b.regimen_horario_id);
         if (pa !== pb) return pa - pb;
-        const la = String(agentesEnriquecidos[a.persona_id]?.persona_label || a.persona_id);
-        const lb = String(agentesEnriquecidos[b.persona_id]?.persona_label || b.persona_id);
-        return la.localeCompare(lb, "es");
+        const la = String(agentesEnriquecidos[filaKeyAg(a)]?.persona_label || a.persona_id);
+        const lb = String(agentesEnriquecidos[filaKeyAg(b)]?.persona_label || b.persona_id);
+        if (la !== lb) return la.localeCompare(lb, "es");
+        return String(a.vigente_desde || a.hlg_id || "").localeCompare(String(b.vigente_desde || b.hlg_id || ""), "es");
       });
     setAgentes(nextAgentes);
     setGrilla((prev) => {
       const next = {};
       for (const ag of nextAgentes) {
-        next[ag.persona_id] = normalizarFilaDias(prev[ag.persona_id], dias);
+        next[filaKeyAg(ag)] = normalizarFilaDias(prev[filaKeyAg(ag)], dias);
       }
       return next;
     });
   }, [contexto, dias, agentesEnriquecidos, esModoIncorporacion, idsAgentesNuevos]);
 
   const esFilaEditable = useCallback(
-    (pid) => esRegimenPlanificado(idxRegimenes[agentes.find((a) => a.persona_id === pid)?.regimen_horario_id]),
+    (filaKey) => {
+      const ag = agentes.find((a) => filaKeyAg(a) === filaKey);
+      return esRegimenPlanificado(idxRegimenes[ag?.regimen_horario_id]);
+    },
     [agentes, idxRegimenes],
   );
 
-  // La grilla usa todos los agentes vigentes del grupo en el período (sin selección manual).
-
-  const aplicarPincelEnCelda = useCallback((pid, ymd) => {
-    if (esModoIncorporacion && idsAgentesNuevos && !idsAgentesNuevos.has(pid)) return;
-    if (!paleta || !esFilaEditable(pid)) return;
-    const key = `${pid}:${ymd}:${paleta}`;
+  const aplicarPincelEnCelda = useCallback((filaKey, ymd) => {
+    const ag = agentes.find((a) => filaKeyAg(a) === filaKey);
+    const pid = String(ag?.persona_id || "").trim();
+    if (esModoIncorporacion && idsAgentesNuevos && pid && !idsAgentesNuevos.has(pid)) return;
+    if (!paleta || !esFilaEditable(filaKey)) return;
+    const key = `${filaKey}:${ymd}:${paleta}`;
     if (ultimaCeldaPintadaRef.current === key) return;
-    const enriquecido = agentesEnriquecidos[pid];
+    const enriquecido = agentesEnriquecidos[filaKey];
     if (enriquecido && !esDiaEnVigenciaHlg(ymd, enriquecido.fecha_inicio, enriquecido.fecha_fin)) {
-      return; // hard block
+      return;
     }
-    if (obtenerLicenciasDia(contexto, pid, ymd).length > 0) {
-      return; // bloqueado por licencia/proyección existente del día
+    if (pid && obtenerLicenciasDia(contexto, pid, ymd).length > 0) {
+      return;
     }
     setGrilla((prev) => {
-      const celda = prev[pid]?.[ymd];
+      const celda = prev[filaKey]?.[ymd];
       if (!celda) return prev;
       let nueva;
       if (paleta === "F") {
@@ -530,9 +668,9 @@ export default function GrillaMensualEditor({
         return prev;
       }
       ultimaCeldaPintadaRef.current = key;
-      return { ...prev, [pid]: { ...prev[pid], [ymd]: nueva } };
+      return { ...prev, [filaKey]: { ...prev[filaKey], [ymd]: nueva } };
     });
-  }, [paleta, agentesEnriquecidos, esFilaEditable, contexto, esModoIncorporacion, idsAgentesNuevos]);
+  }, [paleta, agentesEnriquecidos, esFilaEditable, contexto, esModoIncorporacion, idsAgentesNuevos, agentes]);
 
   const iniciarPintado = useCallback((pid, ymd) => {
     setPintando(true);
@@ -573,8 +711,8 @@ export default function GrillaMensualEditor({
     });
   }, [agentes]);
 
-  const resumenAgente = useCallback((pid) => {
-    const row = grilla[pid] || {};
+  const resumenAgente = useCallback((filaKey) => {
+    const row = grilla[filaKey] || {};
     let trabajo = 0, francos = 0, noLaborables = 0;
     for (const cel of Object.values(row)) {
       const tipoDia = normalizarTipoDiaCelda(cel?.tipo_dia);
@@ -585,12 +723,12 @@ export default function GrillaMensualEditor({
     return { trabajo, francos, noLaborables };
   }, [grilla]);
 
-  const getCeldaEstado = useCallback((pid, ymd, cel) => {
-    const enriquecido = agentesEnriquecidos[pid];
+  const getCeldaEstado = useCallback((filaKey, ymd, cel, personaId) => {
+    const enriquecido = agentesEnriquecidos[filaKey];
     if (enriquecido && !esDiaEnVigenciaHlg(ymd, enriquecido.fecha_inicio, enriquecido.fecha_fin)) {
       return "bloqueado";
     }
-    if (obtenerLicenciasDia(contexto, pid, ymd).length > 0) return "licencia";
+    if (personaId && obtenerLicenciasDia(contexto, personaId, ymd).length > 0) return "licencia";
     if (contexto?.calendario_institucional_mes?.[ymd]?.es_feriado === true) return "institucional";
     const tipoDia = normalizarTipoDiaCelda(cel?.tipo_dia);
     if (tipoDia === "no_laborable") return "no_laborable";
@@ -612,14 +750,17 @@ export default function GrillaMensualEditor({
       modoVistaEquipo
         ? 0
         : contarHuecosTurnoPlan(agentes, grilla, {
-            omitirCelda: (pid, ymd) => {
-              const meta = agentesEnriquecidos[pid];
-              return Boolean(
-                meta && !esDiaEnVigenciaHlg(ymd, meta.fecha_inicio, meta.fecha_fin),
-              );
+            omitirCelda: (filaKey, ymd) => {
+              const meta = agentesEnriquecidos[filaKey];
+              if (meta && !esDiaEnVigenciaHlg(ymd, meta.fecha_inicio, meta.fecha_fin)) {
+                return true;
+              }
+              const ag = agentes.find((a) => filaKeyAg(a) === filaKey);
+              const regimen = idxRegimenes[ag?.regimen_horario_id];
+              return esRegimenDerivado(regimen);
             },
           }),
-    [modoVistaEquipo, agentes, grilla, agentesEnriquecidos],
+    [modoVistaEquipo, agentes, grilla, agentesEnriquecidos, idxRegimenes],
   );
 
   useEffect(() => {
@@ -638,6 +779,16 @@ export default function GrillaMensualEditor({
       return setErrLocal("Comentarios del jefe: máximo 200 caracteres.");
     }
     setErrLocal("");
+    let planFuente = plan;
+    if (plan?.id && grupoId && periodo) {
+      try {
+        const res = await callListarPlanesTurnoServicio({ grupo_id: grupoId, periodo });
+        const fresh = (res.data?.items || []).find((p) => p.id === plan.id);
+        if (fresh) planFuente = fresh;
+      } catch {
+        /* conservar plan en memoria */
+      }
+    }
     const datos = {
       grupo_id: grupoId,
       tipo_plan: "mensual",
@@ -645,25 +796,36 @@ export default function GrillaMensualEditor({
       comentarios_jefe: comTrim || null,
       ...(planVersionToken ? { plan_version_token: planVersionToken } : {}),
       agentes: agentes.map((ag) => {
-        const row = grilla[ag.persona_id] || {};
-        const meta = agentesEnriquecidos[ag.persona_id];
-        const dias = {};
-        for (const [ymd, cel] of Object.entries(row)) {
-          if (meta && !esDiaEnVigenciaHlg(ymd, meta.fecha_inicio, meta.fecha_fin)) {
-            dias[ymd] = { tipo_dia: "franco", turno_id: null };
-            continue;
-          }
-          dias[ymd] = extraerIntencionDia(cel);
-        }
+        const filaKey = filaKeyAg(ag);
+        const row = grilla[filaKey] || {};
+        const meta = agentesEnriquecidos[filaKey];
+        const agPlan = (planFuente?.agentes || plan?.agentes || []).find(
+          (a) =>
+            String(a.hlg_id || "").trim() === String(ag.hlg_id || "").trim()
+            || (
+              !ag.hlg_id
+              && String(a.persona_id || "").trim() === String(ag.persona_id || "").trim()
+            ),
+        );
+        const regimen = idxRegimenes[ag.regimen_horario_id];
+        const diasAgente = construirDiasAgenteParaGuardar({
+          ag,
+          row,
+          meta,
+          regimen,
+          plan: planFuente,
+          diasMes: dias,
+          extraerIntencionDia,
+        });
         return {
           persona_id: ag.persona_id,
-          regimen_horario_id: ag.regimen_horario_id,
-          hlg_id: ag.hlg_id,
-          dias,
+          regimen_horario_id: agPlan?.regimen_horario_id || ag.regimen_horario_id,
+          hlg_id: agPlan?.hlg_id || ag.hlg_id,
+          dias: diasAgente,
         };
       }),
     };
-    const result = await onGuardar(datos, plan?.id || null, {});
+    const result = await onGuardar(datos, planFuente?.id || plan?.id || null, {});
     if (result?.ok === false) {
       setErrLocal(result.error || "No se pudo guardar el borrador.");
       return;
@@ -672,6 +834,7 @@ export default function GrillaMensualEditor({
   }, [
     agentes,
     grilla,
+    dias,
     grupoId,
     periodo,
     plan,
@@ -680,11 +843,12 @@ export default function GrillaMensualEditor({
     planVersionToken,
     extraerIntencionDia,
     agentesEnriquecidos,
+    idxRegimenes,
   ]);
 
-  const labelAgente = (pid) => {
-    const e = agentesEnriquecidos[pid];
-    return e?.persona_label || pid;
+  const labelAgente = (filaKey) => {
+    const e = agentesEnriquecidos[filaKey];
+    return e?.persona_label || e?.persona_id || filaKey;
   };
 
   return (
@@ -742,6 +906,21 @@ export default function GrillaMensualEditor({
               Hay asignaciones laborables o de guardia sin turno que impedirán la habilitación del plan.
               Completá la grilla antes de enviar o solicitar aprobación.
             </p>
+          </div>
+        ) : null}
+
+        {avisoTramosPlanificados.length > 0 ? (
+          <div className="mx-5 mt-3 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-950">
+            <p>
+              Este mes hay agentes con <strong>varios tramos</strong> (una fila por tramo).
+              Podés editar turnos <strong>solo en la fila planificada</strong>, en los días de su vigencia.
+            </p>
+            {avisoTramosPlanificados.map((t) => (
+              <p key={t.key} className="mt-1 text-indigo-900">
+                <span className="font-semibold">{t.etiqueta}</span>
+                {t.rango ? ` · editable ${t.rango}` : null}
+              </p>
+            ))}
           </div>
         ) : null}
 
@@ -810,7 +989,7 @@ export default function GrillaMensualEditor({
               </button>
               <div className="min-w-0 flex-1 text-center">
                 <div className="truncate text-xs font-semibold text-slate-800">
-                  {labelAgente(agentes[indiceAgenteMobile]?.persona_id)}
+                  {labelAgente(filaKeyAg(agentes[indiceAgenteMobile] || {}))}
                 </div>
                 <div className="text-[10px] text-slate-500">
                   {indiceAgenteMobile + 1} / {agentes.length}
@@ -866,21 +1045,28 @@ export default function GrillaMensualEditor({
               </thead>
               <tbody>
                 {agentes.map((ag, idxAgente) => {
-                  const res = resumenAgente(ag.persona_id);
+                  const filaKey = filaKeyAg(ag);
+                  const res = resumenAgente(filaKey);
                   const regimen = idxRegimenes[ag.regimen_horario_id];
-                  const persona = agentesEnriquecidos[ag.persona_id] || {};
+                  const persona = agentesEnriquecidos[filaKey] || {};
                   const editable = esRegimenPlanificado(regimen);
                   return (
                     <tr
-                      key={ag.persona_id}
+                      key={filaKey}
                       className={`group h-16 ${editable ? "" : "bg-slate-50/80"} ${
                         idxAgente === indiceAgenteMobile ? "table-row md:table-row" : "hidden md:table-row"
                       }`}
                     >
                       <td className={claseCeldaAgenteSticky()}>
                         <span className="block truncate text-xs font-semibold text-slate-800">
-                          {labelAgente(ag.persona_id)}
+                          {labelAgente(filaKey)}
                         </span>
+                        {persona.vigente_desde && persona.vigente_hasta ? (
+                          <span className="mt-0.5 block text-[10px] text-indigo-700">
+                            Tramo: {persona.vigente_desde.slice(8, 10)}/{persona.vigente_desde.slice(5, 7)}–
+                            {persona.vigente_hasta.slice(8, 10)}/{persona.vigente_hasta.slice(5, 7)}
+                          </span>
+                        ) : null}
                         <span className="mt-0.5 block text-[10px] text-slate-500">
                           DNI: {String(persona?.persona_dni || "s/d")}
                         </span>
@@ -893,10 +1079,10 @@ export default function GrillaMensualEditor({
                         </span>
                       </td>
                       {dias.map((dia) => {
-                        const cel = grilla[ag.persona_id]?.[dia.ymd];
+                        const cel = grilla[filaKey]?.[dia.ymd];
                         const esInstitucionalDia = Boolean(contexto?.calendario_institucional_mes?.[dia.ymd]);
                         const esFindeDia = Boolean(dia?.esFinde);
-                        const estado = getCeldaEstado(ag.persona_id, dia.ymd, cel);
+                        const estado = getCeldaEstado(filaKey, dia.ymd, cel, ag.persona_id);
                         const tipoDiaCelda = normalizarTipoDiaCelda(cel?.tipo_dia);
                         const esNoLaborable = tipoDiaCelda === "no_laborable";
                         const esFranco =
@@ -905,6 +1091,8 @@ export default function GrillaMensualEditor({
                           tipoDiaCelda === "no_laborable" ||
                           (!tipoDiaCelda && !cel?.turno_id);
                         const turno = cel?.turno_id || "";
+                        const horarioPersistidoCelda =
+                          !editable && cel ? horarioIngresoEgreso(cel) : "";
                         const horarioDerivado = !editable
                           ? horarioDerivadoPorDia(regimen, dia.ymd, persona?.regimen_fecha_ancla)
                           : "";
@@ -930,7 +1118,9 @@ export default function GrillaMensualEditor({
                           );
                         }
 
-                        const horarioCeldaPre = String(horarioDerivado || horarioPlanificado || "").trim();
+                        const horarioCeldaPre = String(
+                          horarioPersistidoCelda || horarioDerivado || horarioPlanificado || "",
+                        ).trim();
                         const variantMensual = varianteCeldaMensual({
                           esFranco,
                           esNoLaborable,
@@ -1014,9 +1204,9 @@ export default function GrillaMensualEditor({
                                 type="button"
                                 onMouseDown={(e) => {
                                   e.preventDefault();
-                                  iniciarPintado(ag.persona_id, dia.ymd);
+                                  iniciarPintado(filaKey, dia.ymd);
                                 }}
-                                onMouseEnter={() => continuarPintado(ag.persona_id, dia.ymd)}
+                                onMouseEnter={() => continuarPintado(filaKey, dia.ymd)}
                                 onMouseUp={finalizarPintado}
                                 onClick={(e) => e.preventDefault()}
                                 className="block"

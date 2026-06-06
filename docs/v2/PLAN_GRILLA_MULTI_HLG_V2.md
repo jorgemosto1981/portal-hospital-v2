@@ -1,10 +1,10 @@
 # Plan maestro — Grilla multi-HLG (Opción A)
 
 **Épica:** Turnos compuestos / coberturas — bounded context por grupo de trabajo  
-**Estado:** **Modelo final en producción** — Pasos 2–3 cerrados (gates, overrides E2, materialización mayo, strip legacy). QA §4.2 y merge a `main` pendientes.  
+**Estado:** **Modelo final en producción** — Pasos 2–3 cerrados. **Fase 5 segmentación HLg por tramo (Plan + GSO)** cerrada 2026-06-06 — ver §7ter y [`reports/FASE5_CIERRE_SEGMENTACION_HLG_PLAN_GSO_2026-06-06.md`](../../reports/FASE5_CIERRE_SEGMENTACION_HLG_PLAN_GSO_2026-06-06.md). QA §4.2 ítems residuales y merge a `master` pendientes de proceso.  
 **Rama de entrega:** `feat/epic-multi-hlg-fase1-execution`  
 **Tag salvavidas:** `v2.2.0-pre-multi-hlg`  
-**Última actualización:** 29 de mayo de 2026 (cierre limpieza quirúrgica `asi_*`)
+**Última actualización:** 6 de junio de 2026 (cierre Fase 5 tramos HLg)
 
 ---
 
@@ -273,7 +273,7 @@ Ejecutar antes de merge a `main`.
 | 5 | Titular multicargo | Cambiar `gdt` recarga otro calendario; Oficina vacío si sin plan | ✅ smoke `D2-MOSTO-mayo-Porteria` + jun Oficina 2026-06-01 |
 | 6 | Rehabilitar / eliminar plan | No pisa `vis_*` de otro `gdt` | ⚠️ pendiente |
 | 7 | Solicitud `depende_rda` | Gate OK con capa en `gdt` ancla o plan HABILITADO | ✅ gate E11 deploy `fc54e8b` |
-| 8 | Grilla equipo jefe | `listarVistaGrillaMesPorGrupo` coherente con materialización | ⚠️ pendiente |
+| 8 | Grilla equipo jefe | `listarVistaGrillaMesPorGrupo` coherente con materialización | ✅ jun-2026 Sala — 1 fila/tramo HLg, vacío positivo (Fase 5) |
 | 9 | Override jefe | Solo muta `asi_*`/`vis_*` del contexto; snapshot plan intacto | ⚠️ pendiente |
 | 10 | Período liquidado | `assertPeriodoNoCerrado` scoped al `gdt` activo | ✅ fix gate jun 2026 |
 
@@ -310,6 +310,9 @@ Documentados explícitamente para evitar tickets “bug” futuros.
 | [`materializar-grupo-mes.mjs`](../../scripts/materializar-grupo-mes.mjs) | `--gdt=gdt_* --periodo=YYYY-MM` — rematerialización batch |
 | [`verificar-vis-mes-agente.mjs`](../../scripts/verificar-vis-mes-agente.mjs) | Auditoría post-mat por persona/`gdt`/mes |
 | [`smoke-f1-qa-4-2-prod.mjs`](../../scripts/smoke-f1-qa-4-2-prod.mjs) | Matriz §4.2 — checks BD (D2, MOSTO, LOKITO, CHAPARRO) |
+| [`audit-hlg-vigencia-grupo.mjs`](../../scripts/audit-hlg-vigencia-grupo.mjs) | Auditoría solapes HLg + tramos por mes (`npm run audit:hlg-vigencia-grupo`) |
+| [`smoke-listar-grilla-mosto-jun26.mjs`](../../scripts/smoke-listar-grilla-mosto-jun26.mjs) | Smoke 2 filas MOSTO en GSO jun-2026 |
+| Regresión unitaria Fase 5 | `npm run test:fase5-segmentacion-hlg` (24 tests backend + 6 web) |
 | [`purge-vis-legacy.mjs`](../../scripts/purge-vis-legacy.mjs) | Purga `vis_*` sin `_gdt_` (`--dry-run` default) |
 | [`strip-capa-teorica-legacy.mjs`](../../scripts/strip-capa-teorica-legacy.mjs) | Delete campo `capa_teorica` raíz — **aplicado 29/05** (244 docs) |
 
@@ -336,6 +339,26 @@ Documentados explícitamente para evitar tickets “bug” futuros.
 | **DEUDA-GO-002** | MEDIA — A DEFINIR | Sala Internación visible pero sin paridad visual con Turnos Mensuales |
 
 Detalle: [`REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md`](./REGISTRO_DEUDA_2026-05-30_CAPA_TEORICA_Y_GRILLA.md).
+
+---
+
+## 7ter. Fase 5 — Segmentación HLg por tramo (Plan + GSO) — **CERRADA 2026-06-06**
+
+**Problema:** una persona con dos HLg vigentes en el mismo mes se **deduplicaba** por `persona_id` en plan y GSO; el tramo fijo 12 hs “llenaba” el mes en grilla aprobada.
+
+**Decisión:** **1 fila por tramo HLg** en listados y grillas; días fuera de `[vigente_desde, vigente_hasta]` → **vacío positivo** (gris), no F/NL derivados.
+
+| Capa | Contrato |
+|------|----------|
+| Backend segmentación | `hlgSegmentosMes` → `fila_id = persona_id__hlg_id` |
+| GSO | `listarVistaGrillaMesPorGrupo`: N filas; `dias` omiten claves fuera tramo |
+| Plan guardar | `agentes[]` con `hlg_id`; validación coherencia HLg; US-9 solo en tramo |
+| Plan aprobado | `grilla_aprobada.agentes[]` con metadata tramo; snapshot días acotados HLg |
+| UI | `filaKeyAg`, subtítulo `Tramo: N hs · dd/mm–dd/mm`, celdas gris fuera vigencia |
+
+**Piloto validado:** MOSTO jun-2026 Sala — tramo A 01–10 (12 hs fijo) + tramo B 11–30 (40 hs planificado).
+
+**Reporte:** [`reports/FASE5_CIERRE_SEGMENTACION_HLG_PLAN_GSO_2026-06-06.md`](../../reports/FASE5_CIERRE_SEGMENTACION_HLG_PLAN_GSO_2026-06-06.md).
 
 ---
 

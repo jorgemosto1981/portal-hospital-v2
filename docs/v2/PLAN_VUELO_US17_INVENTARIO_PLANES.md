@@ -1,6 +1,6 @@
 # Plan de vuelo — US-17 inventario planes `HABILITADO` con huecos
 
-**Estado:** **código cerrado en `master`** (PR #3 mergeado 2026-06-05) · remediación RRHH **pendiente** · **Prerequisito:** blindaje US-9 en prod (`v2.6.1-blindaje-gso`) · pausa: [`HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md`](./HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md)
+**Estado:** **✅ CERRADO (código + ops)** — remediación RRHH completada 2026-06-06 · audit prod **0 huecos** · acta: [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) · inventario inicial: [`HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md`](./HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md)
 
 ## Objetivo
 
@@ -76,6 +76,16 @@ Credenciales: `GOOGLE_APPLICATION_CREDENTIALS` en `.env.v2.local`.
 - [x] Reporte local `reports/us17-*.json` (gitignored; incluir severidad en corridas post-merge)
 - [x] Trazabilidad PR [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3) + `PR_US17_BODY.md`
 
-## Siguiente épica (después de remediación)
+## Done (remediación 2026-06-06)
 
-US-3 escenario A + US-14 completo (⚠️ licencia vs teoría vigente).
+- [x] **R0** `planEnriquecimientoDias.js` — inferencia fijo/rotativo, pool cruzado, ids ≤32
+- [x] Enriquecimiento en **guardar** y **aprobar** (`planesTurnoServicio.js`)
+- [x] **R2** `scripts/reimpact-plan-mensual-r2.mjs` aplicado sobre planes afectados
+- [x] UI: editor + `PlanTurnoServicioPage` (Enviar/Editar plan principal BORRADOR; mes rechazado)
+- [x] Tests `planEnriquecimientoDias.test.js` — 10/10
+- [x] Re-audit prod: **5 planes HABILITADO, 0 huecos** (`reports/us17-2026-06-06-cierre.json`)
+- [x] Acta cierre: [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md)
+
+## Siguiente épica (post US-17)
+
+US-3 escenario A + US-14 completo (⚠️ licencia vs teoría vigente) — ver [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) §2.2.

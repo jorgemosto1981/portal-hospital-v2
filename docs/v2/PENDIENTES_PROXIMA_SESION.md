@@ -1,11 +1,25 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (2026-06-05 — PAUSA):** [`HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md`](./HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md) — `git checkout master` · `git pull origin master` · `.env.v2.local`  
+> **RETOMAR AQUÍ (2026-06-06):** [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) — US-17 **cerrado** · siguiente: **US-3 A + US-14** o tema grilla acordado  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
-> **US-17 inventario:** ✅ código en `master` (PR [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3)) · **ops RRHH:** 9 ALTA + 126 MEDIA → remediar → re-audit  
+> **US-17:** ✅ código + remediación ops (2026-06-06) · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)  
 > **Blindaje GSO:** ✅ prod `v2.6.1-blindaje-gso` (US-9, US-1, US-16, US-10, US-14, US-3 parcial) — [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md)
 
-## PAUSA — post cierre US-17 (2026-06-05)
+## CIERRE US-17 — remediación (2026-06-06)
+
+| Qué | Dónde |
+|-----|--------|
+| **Acta cierre** | [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) |
+| **Manifiesto R0–R4** | [`MANIFIESTO_REIMPACTO_INTEGRIDAD_PLAN_REGIMEN_2026.md`](./MANIFIESTO_REIMPACTO_INTEGRIDAD_PLAN_REGIMEN_2026.md) |
+| **Audit cierre** | `npm run audit:us17-planes-huecos` → 5 planes, **0 huecos** |
+| **Lista RRHH (histórico)** | [`reports/US17_LISTA_TRABAJO_RRHH_2026-06-05.md`](../reports/US17_LISTA_TRABAJO_RRHH_2026-06-05.md) |
+| **Siguiente (sugerido)** | US-3 escenario A + US-14 · tema grilla |
+
+**Última actualización índice:** 2026-06-06 — cierre US-17 registrado.
+
+---
+
+## Histórico — PAUSA post inventario US-17 (2026-06-05)
 
 | Qué | Dónde |
 |-----|--------|
@@ -15,7 +29,7 @@
 | **master** | `352692b` (merge PR #3) |
 | **Siguiente (sugerido)** | Remediación RRHH pasivo 9/126 **o** código US-3 escenario A + US-14 |
 
-**Última actualización índice:** 2026-06-05 — pausa registrada.
+**Última actualización:** 2026-06-05 — pausa registrada (supersedida por cierre 2026-06-06).
 
 ---
 

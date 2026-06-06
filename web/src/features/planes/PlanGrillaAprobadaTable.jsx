@@ -2,13 +2,14 @@ import {
   etiquetaCeldaAprobada,
   varianteCeldaAprobada,
 } from "./planGrillaAprobadaDisplay.js";
-import { columnasMetadataGrilla } from "./planGrillaColumnas.js";
+import { columnasMetadataGrilla, ymdDesdeClave } from "./planGrillaColumnas.js";
 import {
   claseHeaderColumna,
   claseTdColumna,
   claseHeaderAgenteSticky,
   claseCeldaAgenteSticky,
   clasesTextoCelda,
+  claseFondoCeldaCalendarioTitular,
 } from "../grilla/grillaTurnosVisual.js";
 import GrillaTurnosCeldaChip from "../grilla/GrillaTurnosCeldaChip.jsx";
 import GrillaTurnosLeyenda from "../grilla/GrillaTurnosLeyenda.jsx";
@@ -17,6 +18,12 @@ import {
   fichadasEsperadasDesdeCeldaVis,
   titleFichadasEsperadas,
 } from "../grilla/grillaFichadasEsperadasDisplay.js";
+import {
+  filaKeyAg,
+  diaFueraVigenciaTramo,
+  formatearRangoTramoMes,
+  etiquetaCargaTramo,
+} from "../grilla/grillaMesFilasUtils.js";
 
 function labelAgente(ag) {
   const nombre = String(
@@ -25,6 +32,13 @@ function labelAgente(ag) {
   const dni = String(ag?.dni || ag?.persona_dni || "").trim();
   if (nombre && dni) return `${nombre} · DNI ${dni}`;
   return nombre || dni || ag?.persona_id || "—";
+}
+
+function subtituloTramoAgente(ag) {
+  const carga = etiquetaCargaTramo(ag?.carga_horaria_semanal);
+  const rango = formatearRangoTramoMes(ag?.vigente_desde, ag?.vigente_hasta);
+  const partes = [carga, rango].filter(Boolean);
+  return partes.length ? partes.join(" · ") : null;
 }
 
 /**
@@ -39,6 +53,7 @@ export default function PlanGrillaAprobadaTable({ grillaAprobada, labelsPorPerso
     return <p className="text-sm text-slate-500">Sin grilla aprobada registrada.</p>;
   }
 
+  const periodo = grillaAprobada?.periodo || null;
   const columnas = columnasMetadataGrilla(grillaAprobada);
 
   return (
@@ -82,34 +97,57 @@ export default function PlanGrillaAprobadaTable({ grillaAprobada, labelsPorPerso
         </thead>
         <tbody>
           {grillaAprobada.agentes.map((ag) => {
+            const filaKey = filaKeyAg(ag);
             const meta = labelsPorPersona[ag.persona_id] || {};
             const rowLabel = labelAgente({ ...ag, ...meta });
+            const tramoLine = subtituloTramoAgente(ag);
             return (
-              <tr key={ag.persona_id} className="h-16">
+              <tr key={filaKey} className="h-16">
                 <td className={claseCeldaAgenteSticky()}>
                   <span className="block truncate text-xs font-semibold text-slate-800">{rowLabel}</span>
+                  {tramoLine ? (
+                    <span className="mt-0.5 block text-[10px] font-medium text-indigo-700">
+                      Tramo: {tramoLine}
+                    </span>
+                  ) : null}
                 </td>
                 {columnas.map((col) => {
+                  const ymd = ymdDesdeClave(col.diaKey, periodo);
+                  const fueraTramo = diaFueraVigenciaTramo(ymd, ag.vigente_desde, ag.vigente_hasta);
+
+                  if (fueraTramo) {
+                    return (
+                      <td
+                        key={`${filaKey}-${col.diaKey}`}
+                        className={`${claseFondoCeldaCalendarioTitular({ sinAsignacionGrupo: true })} px-0.5 py-0.5 align-middle`}
+                        title={`${ymd} — Fuera de vigencia HLg`}
+                      >
+                        <div className="mx-auto h-12 w-14" aria-hidden="true" />
+                      </td>
+                    );
+                  }
+
                   const dias = ag?.dias && typeof ag.dias === "object" ? ag.dias : {};
                   const cel =
                     dias[col.diaKey] ||
+                    dias[ymd] ||
                     dias[String(col.num).padStart(2, "0")] ||
                     null;
                   const etiqueta = etiquetaCeldaAprobada(cel);
                   const variant = varianteCeldaAprobada(cel);
                   const fichadasN = fichadasEsperadasDesdeCeldaVis(cel);
                   const titleCel =
-                    [col.diaKey, titleFichadasEsperadas(fichadasN)].filter(Boolean).join(" · ") || col.diaKey;
+                    [ymd, titleFichadasEsperadas(fichadasN)].filter(Boolean).join(" · ") || ymd;
                   return (
                     <td
-                      key={`${ag.persona_id}-${col.diaKey}`}
+                      key={`${filaKey}-${col.diaKey}`}
                       className={claseTdColumna({
                         esFinde: col.esFinde,
                         esFeriado: col.esFeriadoCol,
                       })}
                       title={titleCel}
                     >
-                      <GrillaTurnosCeldaChip variant={variant} title={col.diaKey}>
+                      <GrillaTurnosCeldaChip variant={variant} title={ymd}>
                         <span className="flex flex-col items-center leading-none">
                           <span className={clasesTextoCelda(etiqueta)}>{etiqueta || "—"}</span>
                           <GrillaFichadasEsperadasBadge valor={fichadasN} />

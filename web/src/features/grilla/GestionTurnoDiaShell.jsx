@@ -23,6 +23,7 @@ import GestionTurnoWizardPaso1 from "./GestionTurnoWizardPaso1.jsx";
  *   grupoTrabajoId: string;
  *   personaLabel?: string;
  *   grupoLabel?: string;
+ *   hlgId?: string;
  *   turnoVisInicial?: Record<string, unknown> | null;
  *   onCapaActualizada?: () => void;
  *   onAbrirAyuda?: () => void;
@@ -37,6 +38,7 @@ export default function GestionTurnoDiaShell({
   grupoTrabajoId,
   personaLabel,
   grupoLabel,
+  hlgId,
   turnoVisInicial,
   onAbrirAyuda,
   onElegirFlujo,
@@ -113,7 +115,11 @@ export default function GestionTurnoDiaShell({
       try {
         const ctx = await callListarContextoPlanGrupo({ grupo_id: grupoTrabajoId, periodo });
         const regimenes = ctx?.data?.regimenes || {};
-        const hlg = (ctx?.data?.personas_grupo || []).find((p) => p.persona_id === personaId);
+        const personasGrupo = ctx?.data?.personas_grupo || [];
+        const hlgIdNorm = String(hlgId || "").trim();
+        const hlg = hlgIdNorm
+          ? personasGrupo.find((p) => String(p.hlg_id || "").trim() === hlgIdNorm)
+          : personasGrupo.find((p) => p.persona_id === personaId);
         if (!cancelled) {
           setRegimenesIdx(regimenes);
           const regId = String(hlg?.regimen_horario_id || "").trim();
@@ -131,7 +137,7 @@ export default function GestionTurnoDiaShell({
     return () => {
       cancelled = true;
     };
-  }, [open, grupoTrabajoId, fechaYmd, personaId]);
+  }, [open, grupoTrabajoId, fechaYmd, personaId, hlgId]);
 
   if (!open) return null;
 

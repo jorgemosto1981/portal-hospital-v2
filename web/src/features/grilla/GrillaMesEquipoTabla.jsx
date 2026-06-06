@@ -19,6 +19,7 @@ import GrillaTurnosCeldaChip from "./GrillaTurnosCeldaChip.jsx";
 import GrillaFichadasEsperadasBadge from "./GrillaFichadasEsperadasBadge.jsx";
 import { fichadasEsperadasDesdeCeldaVis, titleFichadasEsperadas } from "./grillaFichadasEsperadasDisplay.js";
 import { visualCeldaOutboxPendiente } from "./grillaCeldaOutboxVisual.js";
+import { diaFueraTramoHlg } from "./grillaMesFilasUtils.js";
 
 function contenidoCeldaOperativa({
   tieneLicencia,
@@ -125,7 +126,8 @@ function contenidoCeldaOperativa({
  *   opsOutboxGrupo?: Array<Record<string, unknown>>;
  *   periodoOutbox?: string;
  *   onCeldaClick: (payload: {
- *     dia: string; fechaYmd: string; personaId: string; eventos: unknown[];
+ *     dia: string; fechaYmd: string; personaId: string; hlgId?: string; filaId?: string;
+ *     eventos: unknown[];
  *     personaLabel?: string; grupoLabel?: string;
  *     turnoTeorico?: { rda_turno_id?: string; es_franco?: boolean; capa_teorica?: Record<string, unknown> };
  *     grupoTrabajoId?: string;
@@ -193,9 +195,11 @@ export default function GrillaMesEquipoTabla({
             </tr>
           ) : (
             filas.map((fila) => {
+              const filaId = String(fila.fila_id || fila.persona_id || "");
               const personaLabel = String(fila.persona_label || fila.persona_id || "");
+              const hlgIdFila = String(fila.hlg_id || "").trim() || undefined;
               return (
-                <tr key={String(fila.persona_id)} className="h-16 align-middle">
+                <tr key={filaId} className="h-16 align-middle">
                   <td className={claseCeldaAgenteSticky()}>
                     <span className="block truncate text-[11px] font-semibold leading-snug text-slate-800">
                       {personaLabel}
@@ -204,6 +208,24 @@ export default function GrillaMesEquipoTabla({
                   {columnas.map((col) => {
                     const dia = col.dia;
                     const dias = fila.dias && typeof fila.dias === "object" ? fila.dias : {};
+                    const fueraTramo = diaFueraTramoHlg(dias, dia);
+                    const tipoInstCol = institucionalPorDia[dia];
+
+                    if (fueraTramo) {
+                      return (
+                        <td
+                          key={dia}
+                          className={`${claseFondoCeldaCalendarioTitular({ sinAsignacionGrupo: true })} px-0.5 py-0.5 align-middle`}
+                        >
+                          <div
+                            className="mx-auto h-12 w-14"
+                            aria-hidden="true"
+                            title="No efectivo en este tramo"
+                          />
+                        </td>
+                      );
+                    }
+
                     const cell = dias[dia] || {};
                     const cellGdt = cell.grupo_de_trabajo_id || null;
                     const esOtroGrupo = grupoSeleccionado && cellGdt && cellGdt !== grupoSeleccionado;
@@ -249,7 +271,6 @@ export default function GrillaMesEquipoTabla({
                         turnoText === "NL");
                     const tieneTurno = Boolean(turnoText && turnoText !== "F" && turnoText !== "NL");
                     const esFranco = (cell.es_franco === true || turnoText === "F") && !esNoLaborable;
-                    const tipoInstCol = institucionalPorDia[dia];
                     const tipoInstCel = cell.tipo_evento_institucional || tipoInstCol;
                     const esInstitucional = Boolean(
                       tipoInstCol || cell.es_feriado === true || tipoInstCel === "feriado" || tipoInstCel === "asueto",
@@ -318,6 +339,8 @@ export default function GrillaMesEquipoTabla({
                               dia,
                               fechaYmd,
                               personaId: String(fila.persona_id || ""),
+                              hlgId: hlgIdFila,
+                              filaId,
                               eventos: Array.isArray(eventos) ? eventos : [],
                               personaLabel,
                               grupoLabel,

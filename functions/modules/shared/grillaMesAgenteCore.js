@@ -8,6 +8,15 @@ const COL_HLG = "historial_laboral_grupos";
 const COL_PERSONAS = "personas";
 const COL_PLANES = "planes_turno_servicio";
 const { planHabilitadoDesdeQuerySnapshot } = require("../asistencia/planGrupoAgentesNuevos");
+const { hlgCuentaParaSolapeOperativo } = require("../laboral/hlgValidacionesCore");
+const { derivarCargaSemanalDesdeRegimen } = require("../catalogosShared");
+const {
+  hlgSegmentosMes,
+  filtrarDiasPorTramo,
+  buildPersonaLabelConCarga,
+  limitarTramosPorPersonasUnicas,
+  rangoMes,
+} = require("./hlgSegmentosMes");
 const MAX_PERSONAS_GRUPO = 60;
 /** Mes casi completo con datos pero sin jornada ni francos (snapshot corrupto tipo Portería mayo). */
 const MIN_DIAS_EVALUAR_DEGENERADO = 20;
@@ -65,6 +74,102 @@ function visRequiereMaterializacion(vista) {
   if (visSnapshotDegenerado(dias)) return true;
   const conTurno = keys.filter((k) => celdaTieneSenalTurno(dias[k]));
   return conTurno.length === 0;
+}
+
+/**
+ * Carga HLg del grupo con fechas resueltas desde HLD cuando aplica.
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {string} grupoTrabajoId
+ */
+async function cargarHlgsOperativosGrupo(db, grupoTrabajoId) {
+  const gdt = String(grupoTrabajoId || "").trim();
+  const hlgSnap = await db.collection(COL_HLG).where("grupo_de_trabajo_id", "==", gdt).get();
+  const hldIds = new Set();
+  for (const doc of hlgSnap.docs) {
+    const hldId = String((doc.data() || {}).dato_laboral_id || "").trim();
+    if (hldId) hldIds.add(hldId);
+  }
+
+  const hldMap = new Map();
+  if (hldIds.size > 0) {
+    const ids = [...hldIds].slice(0, 200);
+    const col = db.collection("historial_laboral_datos");
+    const GET_ALL_CHUNK = 10;
+    for (let i = 0; i < ids.length; i += GET_ALL_CHUNK) {
+      const chunk = ids.slice(i, i + GET_ALL_CHUNK);
+      const refs = chunk.map((id) => col.doc(id));
+      const snaps = await db.getAll(...refs);
+      snaps.forEach((s) => {
+        if (s.exists) hldMap.set(s.id, s.data() || {});
+      });
+    }
+  }
+
+  const rows = [];
+  for (const doc of hlgSnap.docs) {
+    const hlg = doc.data() || {};
+    if (!hlgCuentaParaSolapeOperativo(hlg)) continue;
+    const pid = String(hlg.persona_id || "").trim();
+    if (!/^per_/i.test(pid)) continue;
+    const hld = hldMap.get(String(hlg.dato_laboral_id || "").trim());
+    rows.push({
+      hlg_id: doc.id,
+      persona_id: pid,
+      grupo_de_trabajo_id: gdt,
+      regimen_horario_id: hlg.regimen_horario_id || null,
+      fecha_inicio: hlgFechaInicio(hlg, hld),
+      fecha_fin: hlgFechaFin(hlg, hld),
+      activo: hlg.activo,
+      eliminado: hlg.eliminado,
+      estado: hlg.estado,
+    });
+  }
+  return rows;
+}
+
+/**
+ * Tramos HLg operativos que solapan el mes (1 fila por tramo).
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {{ grupoTrabajoId: string, anio: number, mes: number }} opts
+ */
+async function hlgTramosGrupoMes(db, { grupoTrabajoId, anio, mes }) {
+  const gdt = String(grupoTrabajoId || "").trim();
+  const y = Number(anio);
+  const m = Number(mes);
+  if (!/^gdt_/i.test(gdt) || !Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
+    return { ok: false, codigo: "PARAMS_INVALIDOS" };
+  }
+
+  const hlgs = await cargarHlgsOperativosGrupo(db, gdt);
+  const tramos = hlgSegmentosMes(hlgs, y, m);
+  const rango = rangoMes(y, m);
+  return { ok: true, tramos, rango, fecha_corte: rango.ultimoDia };
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {Map<string, object|null>} cache
+ * @param {string[]} regimenIds
+ */
+async function resolveRegimenesMap(db, cache, regimenIds) {
+  const ids = [...new Set((regimenIds || []).filter(Boolean))];
+  const pending = ids.filter((id) => !cache.has(id));
+  if (pending.length > 0) {
+    const col = db.collection("cfg_regimen_horario");
+    const GET_ALL_CHUNK = 10;
+    for (let i = 0; i < pending.length; i += GET_ALL_CHUNK) {
+      const chunk = pending.slice(i, i + GET_ALL_CHUNK);
+      const refs = chunk.map((id) => col.doc(id));
+      const snaps = await db.getAll(...refs);
+      snaps.forEach((s) => {
+        cache.set(s.id, s.exists ? s.data() || {} : null);
+      });
+      for (const id of chunk) {
+        if (!cache.has(id)) cache.set(id, null);
+      }
+    }
+  }
+  return cache;
 }
 
 async function obtenerPlanHabilitadoCache(db, grupoId, periodoId) {
@@ -211,39 +316,11 @@ async function personasVigentesIdsGrupoMes(db, { grupoTrabajoId, anio, mes }) {
   const mm = String(m).padStart(2, "0");
   const fechaCorte = `${y}-${mm}-${String(ultimoDia).padStart(2, "0")}`;
 
-  const hlgSnap = await db.collection(COL_HLG).where("grupo_de_trabajo_id", "==", gdt).get();
-  const hldIds = new Set();
-  for (const doc of hlgSnap.docs) {
-    const hldId = String((doc.data() || {}).dato_laboral_id || "").trim();
-    if (hldId) hldIds.add(hldId);
-  }
-
-  const hldMap = new Map();
-  if (hldIds.size > 0) {
-    const ids = [...hldIds].slice(0, 200);
-    const col = db.collection("historial_laboral_datos");
-    const GET_ALL_CHUNK = 10;
-    for (let i = 0; i < ids.length; i += GET_ALL_CHUNK) {
-      const chunk = ids.slice(i, i + GET_ALL_CHUNK);
-      const refs = chunk.map((id) => col.doc(id));
-      const snaps = await db.getAll(...refs);
-      snaps.forEach((s) => {
-        if (s.exists) hldMap.set(s.id, s.data() || {});
-      });
-    }
-  }
-
+  const hlgs = await cargarHlgsOperativosGrupo(db, gdt);
   const vigentes = [];
-  for (const doc of hlgSnap.docs) {
-    const hlg = doc.data() || {};
-    if (hlg.activo === false) continue;
-    const pid = String(hlg.persona_id || "").trim();
-    if (!/^per_/i.test(pid)) continue;
-    const hld = hldMap.get(String(hlg.dato_laboral_id || "").trim());
-    const ini = hlgFechaInicio(hlg, hld);
-    const fin = hlgFechaFin(hlg, hld);
-    if (!vigenteHlgEnCorte(ini, fin, fechaCorte)) continue;
-    vigentes.push(pid);
+  for (const h of hlgs) {
+    if (!vigenteHlgEnCorte(h.fecha_inicio, h.fecha_fin, fechaCorte)) continue;
+    vigentes.push(h.persona_id);
   }
 
   return { ok: true, fecha_corte: fechaCorte, persona_ids: [...new Set(vigentes)] };
@@ -271,13 +348,23 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
     return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "grupo, anio o mes inválidos." };
   }
 
-  const vigentesRes = await personasVigentesIdsGrupoMes(db, { grupoTrabajoId: gdt, anio: y, mes: m });
-  const fechaCorte = vigentesRes.fecha_corte || "";
-  const unique = vigentesRes.persona_ids || [];
-  const truncado = unique.length > MAX_PERSONAS_GRUPO;
-  const limited = unique.slice(0, MAX_PERSONAS_GRUPO);
+  const tramosRes = await hlgTramosGrupoMes(db, { grupoTrabajoId: gdt, anio: y, mes: m });
+  if (!tramosRes.ok) {
+    return { ok: false, codigo: tramosRes.codigo || "PARAMS_INVALIDOS", mensaje: "grupo, anio o mes inválidos." };
+  }
+
+  const { tramos: tramosLimitados, total_personas_unicas, truncado } = limitarTramosPorPersonasUnicas(
+    tramosRes.tramos,
+    MAX_PERSONAS_GRUPO,
+  );
+  const fechaCorte = tramosRes.fecha_corte || "";
   const personaCache = new Map();
-  const filas = [];
+  const regimenCache = new Map();
+  await resolveRegimenesMap(
+    db,
+    regimenCache,
+    tramosLimitados.map((t) => t.regimen_horario_id),
+  );
 
   const mm = String(m).padStart(2, "0");
   const periodoId = `${y}-${mm}`;
@@ -290,20 +377,32 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
     planCache,
   });
 
-  for (const pid of limited) {
+  const filas = [];
+  for (const tramo of tramosLimitados) {
+    const pid = tramo.persona_id;
     const vista = await leerVistaGrillaMesAgente(db, {
       personaId: pid,
       grupoTrabajoId: gdt,
       anio: y,
       mes: m,
     });
-    const persona_label = await resolvePersonaLabel(db, pid, personaCache);
+    const baseLabel = await resolvePersonaLabel(db, pid, personaCache);
+    const regimenDoc = tramo.regimen_horario_id ? regimenCache.get(tramo.regimen_horario_id) : null;
+    const cargaHoras = derivarCargaSemanalDesdeRegimen(regimenDoc);
+    const persona_label = buildPersonaLabelConCarga(baseLabel, cargaHoras);
+    const diasCompletos = vista.ok !== false && vista.dias ? vista.dias : {};
     filas.push({
+      fila_id: tramo.fila_id,
       persona_id: pid,
+      hlg_id: tramo.hlg_id,
+      regimen_horario_id: tramo.regimen_horario_id,
+      vigente_desde: tramo.vigente_desde,
+      vigente_hasta: tramo.vigente_hasta,
+      carga_horaria_semanal: cargaHoras,
       persona_label,
       vis_id: vista.vis_id || null,
       existe: vista.existe === true,
-      dias: vista.ok !== false && vista.dias ? vista.dias : {},
+      dias: filtrarDiasPorTramo(diasCompletos, tramo.vigente_desde, tramo.vigente_hasta),
       materializado_lazy: false,
     });
   }
@@ -316,7 +415,8 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
     anio: y,
     mes: m,
     fecha_corte: fechaCorte,
-    total_personas: filas.length,
+    total_personas: total_personas_unicas,
+    total_filas: filas.length,
     truncado,
     materializacion_grupo: {
       ok: matGrupo.ok === true,
@@ -331,6 +431,7 @@ module.exports = {
   leerVistaGrillaMesAgente,
   obtenerVistaGrillaMesAgente,
   listarVistaGrillaMesPorGrupo,
+  hlgTramosGrupoMes,
   personasVigentesIdsGrupoMes,
   contarPersonasVigentesGrupoMes,
   ensureMaterializacionVisMes,

@@ -19,14 +19,8 @@ export default function GrillaTurnosLeyenda({ className = "" }) {
         No laborable
       </span>
       <span className="flex items-center gap-1">
-        <span
-          className="inline-block h-3 w-3 rounded border border-slate-400 bg-slate-100"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px)",
-          }}
-        />
-        Fuera vigencia
+        <span className="inline-block h-3 w-3 rounded border border-slate-400 bg-slate-200" />
+        Fuera tramo HLg
       </span>
       <span className="flex items-center gap-1">
         <span className="inline-block h-3 w-3 rounded border border-slate-400 bg-fuchsia-300" />

@@ -93,7 +93,7 @@ Calendario licencias · Sala · junio 2026:
 | Replan junio Sala | **Hecho** (`plt_01KT9…`) |
 | Verificación BD | **OK** |
 | Verificación UI | **OK** (captura) |
-| Inventario otros `gdt`/meses | **Pendiente** operativo |
+| Inventario global + remediación | **✅ Cerrado** 2026-06-06 — audit 0 huecos — [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) |
 
 ---
 
@@ -109,7 +109,7 @@ Calendario licencias · Sala · junio 2026:
 
 Ver tabla completa en [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md) §2.
 
-Prioridad inmediata post-acta: **US-9**, **US-1**, **US-16**, **US-17** (remediación resto), **US-3**, **US-14**.
+Prioridad inmediata post-acta: ~~**US-17**~~ ✅ cerrado 2026-06-06 · **US-3**, **US-14** (siguiente código).
 
 ---
 

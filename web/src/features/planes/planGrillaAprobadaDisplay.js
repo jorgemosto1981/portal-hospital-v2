@@ -1,5 +1,6 @@
 /**
  * Etiquetas de celda desde grilla_aprobada (snapshot del plan HABILITADO).
+ * Presentación compacta: horario (08-14) o etiqueta corta; nunca IDs cfg_* en chip.
  */
 
 import { rangoHhmmLabel } from "../../../../shared/utils/horarioInstitucionalDisplay.js";
@@ -8,6 +9,22 @@ import { horarioVisibleEnCelda } from "../grilla/grillaTurnosVisual.js";
 function horarioDesdeCelda(celda) {
   const { ingreso, egreso } = horarioVisibleEnCelda(celda);
   return rangoHhmmLabel(ingreso, egreso);
+}
+
+/** Etiqueta legible desde turno_id cuando no hay horario en celda. */
+function etiquetaCortaTurno(turnoIdRaw) {
+  const tid = String(turnoIdRaw || "").trim();
+  if (!tid) return "";
+  const lower = tid.toLowerCase();
+  if (lower.includes("manana") || lower.includes("mañana")) return "Mañana";
+  if (lower.includes("tarde")) return "Tarde";
+  if (lower.includes("noche")) return "Noche";
+  if (tid.startsWith("cfg_")) {
+    const tail = tid.split("_").pop() || "";
+    if (tail) return tail.charAt(0).toUpperCase() + tail.slice(1);
+    return "Turno";
+  }
+  return tid.length > 12 ? `${tid.slice(0, 10)}…` : tid;
 }
 
 export function etiquetaCeldaAprobada(celda) {
@@ -21,11 +38,10 @@ export function etiquetaCeldaAprobada(celda) {
   ) {
     return celda.tipo_evento_institucional === "asueto" ? "Asu" : "Fer";
   }
-  const turno = String(celda.turno_id || celda.turno_compuesto_id || "").trim();
   const horario = horarioDesdeCelda(celda);
-  if (turno && horario) return `${turno} ${horario}`;
-  if (turno) return turno;
   if (horario) return horario;
+  const turno = String(celda.turno_id || celda.turno_compuesto_id || "").trim();
+  if (turno) return etiquetaCortaTurno(turno);
   return "";
 }
 

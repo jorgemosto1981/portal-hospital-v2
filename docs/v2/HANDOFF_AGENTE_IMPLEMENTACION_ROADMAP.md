@@ -1,9 +1,9 @@
 # Handoff — Agente implementador · Roadmap F-UX → F4
 
-**Fecha:** 2026-06-05 (actualizado pausa US-17)  
+**Fecha:** 2026-06-06 (actualizado cierre US-17)  
 **Audiencia:** agente de implementación (código, tests, deploy)  
 **Plan maestro:** [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md)  
-**SSoT operativo día a día:** [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) — **RETOMAR:** [`HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md`](./HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md)  
+**SSoT operativo día a día:** [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) — **RETOMAR:** [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md)  
 **SSoT qué falta implementar:** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 **Rama canónica:** `master` @ `352692b` (`git pull origin master`)  
 **Producción:** https://portal-hospital-v2.web.app

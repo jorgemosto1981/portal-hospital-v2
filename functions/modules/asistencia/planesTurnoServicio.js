@@ -25,10 +25,13 @@ const { enriquecerAgentesDiasPlan } = require("./planEnriquecimientoDias");
 const { buildPersonaLabel } = require("../shared/eventosV2");
 const {
   personaIdsEnPlan,
+  hlgIdsEnPlan,
   elegirPlanMensualCanonico,
   detectarAgentesNuevosPlanificados,
   mergeAgentesIncorporacionPlanMensual,
 } = require("./planGrupoAgentesNuevos");
+const { hlgSegmentosMes, buildFilaId } = require("../shared/hlgSegmentosMes");
+const { derivarCargaSemanalDesdeRegimen } = require("../catalogosShared");
 const {
   PLAN_ROL_PRINCIPAL,
   PLAN_ROL_INCORPORACION,
@@ -295,6 +298,7 @@ const iniciarIncorporacionPlanMensual = onCall({ invoker: "public" }, async (req
     personasGrupo,
     regimenes,
     personaIdsEnPlanMensual: personaIdsEnPlan(padre),
+    hlgIdsEnPlanMensual: hlgIdsEnPlan(padre),
   });
   if (agentesNuevos.length === 0) {
     err(
@@ -445,6 +449,17 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
     }
 
     let agentesParaEnriquecer = datos.agentes;
+    const rangoPlan = rangoPeriodoMensual(especificos.periodo);
+    const ctxPlan = await cargarPersonasYRegimenesPlanGrupo(grupoId, especificos.periodo);
+    const vigenciaPorHlg = buildVigenciaPorHlgDesdePersonasGrupo(ctxPlan.personasGrupo);
+    assertAgentesHlgCoherentes(agentesParaEnriquecer, ctxPlan.personasGrupo);
+    agentesParaEnriquecer = filtrarDiasAgentesPorVigenciaHlg(
+      agentesParaEnriquecer,
+      vigenciaPorHlg,
+      rangoPlan.ultimoDia,
+    );
+    const celdaCuentaHuecos = buildCeldaCuentaParaHuecosPlan(vigenciaPorHlg, rangoPlan.ultimoDia);
+
     if (exists && planDocPrevio && planRolDeDoc(planDocPrevio) === PLAN_ROL_INCORPORACION) {
       assertEstados(planDocPrevio, ["BORRADOR", "EN_REVISION"]);
       const padreId = String(planDocPrevio.plan_padre_id || "").trim();
@@ -453,14 +468,12 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
       const valPadre = assertPadreHabilitadoParaMerge(padreSnap.exists ? padreSnap.data() : null, padreId);
       if (!valPadre.ok) err("failed-precondition", valPadre.message);
 
-      const { personasGrupo, regimenes } = await cargarPersonasYRegimenesPlanGrupo(
-        grupoId,
-        especificos.periodo,
-      );
+      const { personasGrupo, regimenes } = ctxPlan;
       const agentesNuevos = detectarAgentesNuevosPlanificados({
         personasGrupo,
         regimenes,
         personaIdsEnPlanMensual: personaIdsEnPlan(padreSnap.data()),
+        hlgIdsEnPlanMensual: hlgIdsEnPlan(padreSnap.data()),
       });
       const idsPermitidos = new Set(agentesNuevos.map((a) => a.persona_id));
       if (idsPermitidos.size === 0) {
@@ -485,7 +498,7 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
       agentes: agentesParaEnriquecer,
     });
     assertAgentesEnriquecidos(agentesParaEnriquecer, agentesEnriquecidos);
-    assertPlanSinHuecosTurno(agentesEnriquecidos);
+    assertPlanSinHuecosTurno(agentesEnriquecidos, { celdaCuentaParaHuecos: celdaCuentaHuecos });
     especificos.agentes = agentesEnriquecidos;
   }
 
@@ -661,7 +674,12 @@ async function ejecutarAprobarPlanIncorporacion({
     assertPlanAprobarORechazar(request, plan, aprobacionPendiente);
   }
 
-  assertPlanSinHuecosTurno(plan.agentes);
+  const rangoInc = rangoPeriodoMensual(plan.periodo);
+  const ctxInc = await cargarPersonasYRegimenesPlanGrupo(plan.grupo_id, plan.periodo);
+  const vigInc = buildVigenciaPorHlgDesdePersonasGrupo(ctxInc.personasGrupo);
+  assertPlanSinHuecosTurno(plan.agentes, {
+    celdaCuentaParaHuecos: buildCeldaCuentaParaHuecosPlan(vigInc, rangoInc.ultimoDia),
+  });
 
   const warnings = [];
   const overridesEncontrados = await detectarOverridesFantasma(plan);
@@ -810,7 +828,7 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
   const ref = db.collection(COL_PLANES).doc(planId);
   const preSnap = await ref.get();
   if (!preSnap.exists) err("not-found", "[PLT-APR-002] Plan no encontrado.");
-  const plan = preSnap.data();
+  let plan = preSnap.data();
 
   if (planRolDeDoc(plan) === PLAN_ROL_INCORPORACION) {
     return ejecutarAprobarPlanIncorporacion({
@@ -822,7 +840,25 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
     });
   }
 
-  assertPlanSinHuecosTurno(plan.agentes);
+  let agentesEnriquecidosAprobar = null;
+  if (plan.tipo_plan === "mensual" && plan.periodo && Array.isArray(plan.agentes) && plan.agentes.length > 0) {
+    const rangoApr = rangoPeriodoMensual(plan.periodo);
+    const ctxApr = await cargarPersonasYRegimenesPlanGrupo(plan.grupo_id, plan.periodo);
+    const vigApr = buildVigenciaPorHlgDesdePersonasGrupo(ctxApr.personasGrupo);
+    const huecosOpts = {
+      celdaCuentaParaHuecos: buildCeldaCuentaParaHuecosPlan(vigApr, rangoApr.ultimoDia),
+    };
+    agentesEnriquecidosAprobar = await enriquecerAgentesDiasPlan({
+      periodo: plan.periodo,
+      planId,
+      agentes: plan.agentes,
+    });
+    assertAgentesEnriquecidos(plan.agentes, agentesEnriquecidosAprobar);
+    assertPlanSinHuecosTurno(agentesEnriquecidosAprobar, huecosOpts);
+    plan = { ...plan, agentes: agentesEnriquecidosAprobar };
+  } else {
+    assertPlanSinHuecosTurno(plan.agentes);
+  }
 
   const aprobacionPendiente =
     plan.aprobacion_pendiente || (await resolverAprobacionPendientePlan(db, plan));
@@ -924,6 +960,17 @@ const aprobarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
     if (grillaAprobada) {
       updatePayload.grilla_aprobada = grillaAprobada;
       updatePayload.grilla_aprobada_en = FieldValue.serverTimestamp();
+    }
+    if (agentesEnriquecidosAprobar) {
+      updatePayload.agentes = agentesEnriquecidosAprobar;
+      Object.assign(
+        updatePayload,
+        buildPlanMetaPayload({
+          agentes: agentesEnriquecidosAprobar,
+          plan_rol: planRolDeDoc(current),
+          plan_padre_id: current.plan_padre_id ?? null,
+        }),
+      );
     }
     tx.update(ref, updatePayload);
   });
@@ -1473,6 +1520,103 @@ async function detectarOverridesFantasma(plan) {
   return encontrados;
 }
 
+function diaEnVigenciaHlgPlan(ymd, fechaInicio, fechaFin, ultimoDiaMes) {
+  const y = String(ymd || "").slice(0, 10);
+  const fi = String(fechaInicio || "").slice(0, 10);
+  const ff = fechaFin ? String(fechaFin).slice(0, 10) : String(ultimoDiaMes || "").slice(0, 10);
+  if (fi && y < fi) return false;
+  if (ff && y > ff) return false;
+  return true;
+}
+
+/**
+ * Normaliza dias[] del payload: fuera de vigencia HLg → franco (no persistir planificación inválida).
+ * @param {object[]} agentes
+ * @param {Map<string, { fecha_inicio?: string, fecha_fin?: string|null }>} vigenciaPorHlg
+ * @param {string} ultimoDiaMes
+ */
+function filtrarDiasAgentesPorVigenciaHlg(agentes, vigenciaPorHlg, ultimoDiaMes) {
+  if (!Array.isArray(agentes)) return agentes;
+  return agentes.map((ag) => {
+    const hid = String(ag?.hlg_id || "").trim();
+    const vig = vigenciaPorHlg.get(hid);
+    if (!vig || !ag?.dias || typeof ag.dias !== "object") return ag;
+    const dias = { ...ag.dias };
+    for (const ymd of Object.keys(dias)) {
+      if (!diaEnVigenciaHlgPlan(ymd, vig.fecha_inicio, vig.fecha_fin, ultimoDiaMes)) {
+        dias[ymd] = { tipo_dia: "franco", turno_id: null };
+      }
+    }
+    return { ...ag, dias };
+  });
+}
+
+function buildVigenciaPorHlgDesdePersonasGrupo(personasGrupo) {
+  const map = new Map();
+  for (const pg of personasGrupo || []) {
+    const hid = String(pg?.hlg_id || "").trim();
+    if (!hid) continue;
+    map.set(hid, {
+      fecha_inicio: pg.fecha_inicio || pg.vigente_desde || null,
+      fecha_fin: pg.fecha_fin ?? null,
+      vigente_desde: pg.vigente_desde || null,
+      vigente_hasta: pg.vigente_hasta || null,
+    });
+  }
+  return map;
+}
+
+function buildCeldaCuentaParaHuecosPlan(vigenciaPorHlg, ultimoDiaMes) {
+  return (ag, ymd) => {
+    const hid = String(ag?.hlg_id || "").trim();
+    if (!hid) return true;
+    const vig = vigenciaPorHlg.get(hid);
+    if (!vig) return true;
+    return diaEnVigenciaHlgPlan(ymd, vig.fecha_inicio, vig.fecha_fin, ultimoDiaMes);
+  };
+}
+
+function assertAgentesHlgCoherentes(agentes, personasGrupo) {
+  const byHlg = new Map();
+  for (const pg of personasGrupo || []) {
+    const hid = String(pg?.hlg_id || "").trim();
+    if (hid) byHlg.set(hid, pg);
+  }
+  for (let i = 0; i < (agentes || []).length; i += 1) {
+    const ag = agentes[i];
+    const hid = String(ag?.hlg_id || "").trim();
+    const pid = String(ag?.persona_id || "").trim();
+    if (!hid) continue;
+    const ref = byHlg.get(hid);
+    if (!ref) {
+      err("invalid-argument", `[PLT-HLG-001] agentes[${i}]: hlg_id ${hid} no vigente en el grupo/período.`);
+    }
+    if (pid && ref.persona_id && pid !== ref.persona_id) {
+      err("invalid-argument", `[PLT-HLG-002] agentes[${i}]: persona_id no coincide con hlg_id.`);
+    }
+    if (ag.regimen_horario_id && ref.regimen_horario_id && ag.regimen_horario_id !== ref.regimen_horario_id) {
+      err("invalid-argument", `[PLT-HLG-003] agentes[${i}]: regimen_horario_id no coincide con el tramo HLg.`);
+    }
+  }
+}
+
+function hlgTramosPorPersona(personasGrupo) {
+  const map = new Map();
+  for (const pg of personasGrupo || []) {
+    const pid = String(pg.persona_id || "").trim();
+    if (!pid) continue;
+    if (!map.has(pid)) map.set(pid, []);
+    map.get(pid).push({
+      fila_id: pg.fila_id || buildFilaId(pid, pg.hlg_id),
+      hlg_id: pg.hlg_id,
+      vigente_desde: pg.vigente_desde,
+      vigente_hasta: pg.vigente_hasta,
+      regimen_horario_id: pg.regimen_horario_id,
+    });
+  }
+  return map;
+}
+
 function rangoPeriodoMensual(periodo) {
   const raw = typeof periodo === "string" ? periodo.trim() : "";
   let p = raw;
@@ -1503,27 +1647,10 @@ function regimenDocEsPlanificado(regimenDoc) {
   return regimenDoc && regimenDoc.tipo_patron === "planificado";
 }
 
-/** Al menos un HLg activo del grupo en el mes con régimen planificado. */
+/** Al menos un tramo HLg del grupo en el mes con régimen planificado. */
 async function hayAgentesPlanificadosEnGrupoMes(grupoId, periodo) {
-  const { primerDia, ultimoDia } = rangoPeriodoMensual(periodo);
-  const hlgSnap = await db.collection("historial_laboral_grupos")
-    .where("grupo_de_trabajo_id", "==", grupoId)
-    .where("activo", "==", true)
-    .get();
-  if (hlgSnap.empty) return false;
-
-  const regimenIds = new Set();
-  for (const doc of hlgSnap.docs) {
-    const d = doc.data();
-    if (!hlgSolapaPeriodo(d, primerDia, ultimoDia)) continue;
-    const rid = typeof d.regimen_horario_id === "string" ? d.regimen_horario_id.trim() : "";
-    if (rid) regimenIds.add(rid);
-  }
-  if (regimenIds.size === 0) return false;
-
-  const refs = [...regimenIds].map((rid) => db.collection("cfg_regimen_horario").doc(rid));
-  const snaps = await db.getAll(...refs);
-  return snaps.some((s) => s.exists && regimenDocEsPlanificado(s.data()));
+  const { personasGrupo, regimenes } = await cargarPersonasYRegimenesPlanGrupo(grupoId, periodo);
+  return personasGrupo.some((pg) => regimenDocEsPlanificado(regimenes[pg.regimen_horario_id]));
 }
 
 async function assertPlanMensualConAgentesPlanificados(grupoId, periodo) {
@@ -1534,31 +1661,6 @@ async function assertPlanMensualConAgentesPlanificados(grupoId, periodo) {
       "[PLT-017] Este grupo no tiene agentes con régimen planificado en el período. No se puede crear un plan mensual; use la vista de equipo (turnos derivados del régimen).",
     );
   }
-}
-
-/** Una fila por persona_id: preferir HLG con régimen y fecha_inicio más reciente. */
-function deduplicarPersonasGrupoPorPersona(rows) {
-  const byPersona = new Map();
-  for (const row of rows) {
-    const pid = String(row.persona_id || "").trim();
-    if (!pid || !/^per_/i.test(pid)) continue;
-    const prev = byPersona.get(pid);
-    if (!prev) {
-      byPersona.set(pid, row);
-      continue;
-    }
-    const prevReg = Boolean(prev.regimen_horario_id);
-    const rowReg = Boolean(row.regimen_horario_id);
-    if (!prevReg && rowReg) {
-      byPersona.set(pid, row);
-      continue;
-    }
-    if (prevReg && !rowReg) continue;
-    const prevFi = String(prev.fecha_inicio || "");
-    const rowFi = String(row.fecha_inicio || "");
-    if (rowFi > prevFi) byPersona.set(pid, row);
-  }
-  return [...byPersona.values()];
 }
 
 async function invalidarOverridesFantasma(overridesEncontrados) {
@@ -1579,9 +1681,10 @@ async function invalidarOverridesFantasma(overridesEncontrados) {
   return count;
 }
 
-/** Personas HLg vigentes en el mes + regímenes (sin licencias ni calendario). */
+/** Una fila por tramo HLg en el mes (sin deduplicar persona_id). */
 async function cargarPersonasYRegimenesPlanGrupo(grupoId, periodo) {
   const { periodo: periodoNorm, primerDia, ultimoDia } = rangoPeriodoMensual(periodo);
+  const [anio, mes] = periodoNorm.split("-").map(Number);
 
   const hlgSnap = await db.collection("historial_laboral_grupos")
     .where("grupo_de_trabajo_id", "==", grupoId)
@@ -1600,15 +1703,35 @@ async function cargarPersonasYRegimenesPlanGrupo(grupoId, periodo) {
     hlgFilas.push({
       hlg_id: doc.id,
       persona_id: d.persona_id,
+      grupo_de_trabajo_id: grupoId,
       regimen_horario_id: d.regimen_horario_id || null,
       fecha_inicio: d.fecha_inicio || null,
       fecha_fin: d.fecha_fin || null,
       regimen_fecha_ancla: d.regimen_fecha_ancla || null,
       dato_laboral_id: d.dato_laboral_id || null,
+      activo: d.activo,
     });
   }
 
-  const personasGrupo = deduplicarPersonasGrupoPorPersona(hlgFilas);
+  const tramos = hlgSegmentosMes(hlgFilas, anio, mes);
+  const metaPorHlg = new Map(hlgFilas.map((h) => [h.hlg_id, h]));
+
+  const personasGrupo = tramos.map((t) => {
+    const src = metaPorHlg.get(t.hlg_id) || {};
+    return {
+      fila_id: t.fila_id,
+      hlg_id: t.hlg_id,
+      persona_id: t.persona_id,
+      regimen_horario_id: t.regimen_horario_id,
+      vigente_desde: t.vigente_desde,
+      vigente_hasta: t.vigente_hasta,
+      fecha_inicio: src.fecha_inicio || t.fecha_inicio,
+      fecha_fin: src.fecha_fin ?? t.fecha_fin ?? null,
+      regimen_fecha_ancla: src.regimen_fecha_ancla || null,
+      dato_laboral_id: src.dato_laboral_id || null,
+    };
+  });
+
   const regimenIds = new Set();
   const personaIds = new Set();
 
@@ -1633,16 +1756,6 @@ async function cargarPersonasYRegimenesPlanGrupo(grupoId, periodo) {
     }
   }
 
-  for (const pg of personasGrupo) {
-    const pdata = personaDocs[pg.persona_id] || {};
-    pg.persona_label = pdata.nombre_completo || pg.persona_id;
-    pg.persona_dni = pdata.dni || null;
-  }
-
-  personasGrupo.sort((a, b) =>
-    String(a.persona_label || a.persona_id).localeCompare(String(b.persona_label || b.persona_id), "es"),
-  );
-
   const regimenes = {};
   for (const rid of regimenIds) {
     const rsnap = await db.collection("cfg_regimen_horario").doc(rid).get();
@@ -1651,7 +1764,22 @@ async function cargarPersonasYRegimenesPlanGrupo(grupoId, periodo) {
     }
   }
 
-  return { periodo: periodoNorm, personasGrupo, regimenes };
+  for (const pg of personasGrupo) {
+    const pdata = personaDocs[pg.persona_id] || {};
+    const baseLabel = pdata.nombre_completo || pg.persona_id;
+    const carga = derivarCargaSemanalDesdeRegimen(regimenes[pg.regimen_horario_id]);
+    pg.persona_label =
+      carga != null && Number.isFinite(Number(carga))
+        ? `${baseLabel} · ${Number.isInteger(Number(carga)) ? Number(carga) : Math.round(Number(carga) * 10) / 10} hs`
+        : baseLabel;
+    pg.persona_dni = pdata.dni || null;
+  }
+
+  personasGrupo.sort((a, b) =>
+    String(a.persona_label || a.persona_id).localeCompare(String(b.persona_label || b.persona_id), "es"),
+  );
+
+  return { periodo: periodoNorm, personasGrupo, regimenes, ultimoDia };
 }
 
 /**
@@ -1745,13 +1873,25 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
   }
 
   const idsEnPlanOperativo = new Set();
+  const hlgIdsEnPlanOperativo = new Set();
   if (planMensualCanonico && planMensualCanonico.estado !== "CERRADO") {
     for (const pid of personaIdsEnPlan(planMensualCanonico)) idsEnPlanOperativo.add(pid);
+    for (const hid of hlgIdsEnPlan(planMensualCanonico)) hlgIdsEnPlanOperativo.add(hid);
   }
   const planIncActivo = planesActivos.find((p) => esPlanIncorporacionActivo(p));
   if (planIncActivo) {
     for (const pid of personaIdsEnPlan(planIncActivo)) idsEnPlanOperativo.add(pid);
+    for (const hid of hlgIdsEnPlan(planIncActivo)) hlgIdsEnPlanOperativo.add(hid);
   }
+
+  const tramosPorPersona = hlgTramosPorPersona(personasGrupo);
+  const agentes_multiples_tramos = [...tramosPorPersona.entries()]
+    .filter(([, tramos]) => tramos.length >= 2)
+    .map(([persona_id, tramos]) => ({
+      persona_id,
+      persona_label: personasGrupo.find((p) => p.persona_id === persona_id)?.persona_label || persona_id,
+      tramos,
+    }));
 
   const agentesNuevos =
     planMensualCanonico && planMensualCanonico.estado !== "CERRADO"
@@ -1759,11 +1899,16 @@ const listarContextoPlanGrupo = onCall({ invoker: "public" }, async (request) =>
           personasGrupo,
           regimenes,
           personaIdsEnPlanMensual: idsEnPlanOperativo,
+          hlgIdsEnPlanMensual: hlgIdsEnPlanOperativo,
         })
       : [];
 
   return {
     personas_grupo: personasGrupo,
+    hlg_tramos_por_persona: Object.fromEntries(tramosPorPersona),
+    agentes_multiples_tramos,
+    total_filas: personasGrupo.length,
+    total_personas: new Set(personasGrupo.map((p) => p.persona_id)).size,
     regimenes,
     periodo: periodoNorm,
     hay_agentes_planificados: hayAgentesPlanificados,
@@ -1836,6 +1981,51 @@ async function resolverAgentesMetaVistaPlan(agentesPlan = [], grillaAprobada = n
 }
 
 /**
+ * Enriquece agentes de grilla_aprobada con tramo HLg del mes (vigencia, carga).
+ * Planes legacy sin metadata en snapshot: lookup por grupo/período al servir la vista.
+ * @param {object|null} grillaAprobada
+ * @param {{ grupo_id?: string, periodo?: string }} planData
+ */
+async function enriquecerGrillaAprobadaConTramos(grillaAprobada, planData) {
+  if (!grillaAprobada?.agentes?.length) return grillaAprobada;
+  const grupoId = String(planData?.grupo_id || "").trim();
+  const periodo = String(planData?.periodo || grillaAprobada?.periodo || "").trim();
+  if (!grupoId || !/^\d{4}-\d{2}$/.test(periodo)) return grillaAprobada;
+
+  const ctx = await cargarPersonasYRegimenesPlanGrupo(grupoId, periodo);
+  const byFila = new Map();
+  const byHlg = new Map();
+  for (const pg of ctx.personasGrupo || []) {
+    const fid = pg.fila_id || buildFilaId(pg.persona_id, pg.hlg_id);
+    byFila.set(fid, pg);
+    if (pg.hlg_id) byHlg.set(String(pg.hlg_id), pg);
+  }
+
+  const agentes = grillaAprobada.agentes.map((ag) => {
+    const hid = String(ag?.hlg_id || "").trim();
+    const fid = buildFilaId(ag.persona_id, hid);
+    const pg = byFila.get(fid) || (hid ? byHlg.get(hid) : null);
+    if (!pg) return ag;
+
+    const carga =
+      ag.carga_horaria_semanal != null
+        ? ag.carga_horaria_semanal
+        : derivarCargaSemanalDesdeRegimen(ctx.regimenes[pg.regimen_horario_id]);
+
+    return {
+      ...ag,
+      fila_id: ag.fila_id || fid,
+      vigente_desde: ag.vigente_desde || pg.vigente_desde || null,
+      vigente_hasta: ag.vigente_hasta || pg.vigente_hasta || null,
+      carga_horaria_semanal: carga ?? null,
+      regimen_horario_id: ag.regimen_horario_id || pg.regimen_horario_id || null,
+    };
+  });
+
+  return { ...grillaAprobada, agentes };
+}
+
+/**
  * Vista unificada de plan mensual: lectura de grilla_aprobada (SoT histórico).
  * Lazy backfill si HABILITADO sin snapshot (planes legacy).
  */
@@ -1864,6 +2054,10 @@ const obtenerVistaPlanTurnoServicio = onCall({ invoker: "public" }, async (reque
   }
 
   const agentesMeta = await resolverAgentesMetaVistaPlan(data.agentes || [], grillaAprobada);
+
+  if (data.tipo_plan === "mensual" && grillaAprobada) {
+    grillaAprobada = await enriquecerGrillaAprobadaConTramos(grillaAprobada, data);
+  }
 
   return {
     plan: {

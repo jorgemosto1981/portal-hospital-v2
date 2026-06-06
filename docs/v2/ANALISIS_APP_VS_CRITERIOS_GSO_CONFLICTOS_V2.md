@@ -41,7 +41,7 @@
 | **US-13** | P1 | Matriz permisos teoría | Doc acta; código disperso (plan, override, HLg) | **Documental** |
 | **US-14** | P1 | Acciones 1+2+3 ante ⚠️ | `DiaGrillaDetalleModal.jsx`: bandeja, enlaces gestión; sin flujo ⚠️ dedicado | **Sí** |
 | **US-15** | P2 | Fichada por rol (Q9-3) | `grillaVisSanitizeGso.js` quita `fichadas_reales` a jefe; sin presente/ausente | **Sí** |
-| **US-17** | P0 | Remediación planes | Operativo junio Sala **hecho** en BD/UI | Inventario global **pendiente** |
+| **US-17** | — | Remediación planes | **✅ Cerrado** 2026-06-06 — audit prod 0 huecos (5 planes HABILITADO) |
 
 ---
 

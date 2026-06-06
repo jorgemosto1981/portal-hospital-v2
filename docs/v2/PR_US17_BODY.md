@@ -1,3 +1,5 @@
+> **Post-merge (2026-06-06):** remediación ops cerrada — audit prod **0 huecos**. Acta: [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md).
+
 ## Summary
 - Expone `listarHuecosTurnoEnAgentes` en `validacionesPlanTurno.js` (mismo criterio que US-9) y refactoriza `assertPlanSinHuecosTurno` para usar el listado.
 - Añade script offline `scripts/audit-planes-habilitados-huecos-us17.mjs` y `npm run audit:us17-planes-huecos` (solo lectura Firestore).
