@@ -1,9 +1,9 @@
 # Pendientes de implementación — Portal Hospital V2
 
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
-**Última actualización:** 2026-06-06 (**US-15 cerrado** — fichada por rol + deploy prod; **US-17** cerrado)  
-**Rama / release:** `master` · tag **`v2.6.1-blindaje-gso`** · PR blindaje [#2](https://github.com/jorgemosto1981/portal-hospital-v2/pull/2) · PR US-17 [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3) **mergeado**  
-**Sesión / continuidad:** **RETOMAR** [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) · índice: [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md)
+**Última actualización:** 2026-06-08 (**US-6 / US-7 / US-11** cerrados — hosting prod; índice sesión actualizado)  
+**Rama / release:** `master` · tag **`v2.6.3-gso-us6`** (`ccc1040`) · anterior **`v2.6.1-blindaje-gso`** · PR blindaje [#2](https://github.com/jorgemosto1981/portal-hospital-v2/pull/2) · PR US-17 [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3) **mergeado**  
+**Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR US-13** (matriz permisos teoría)
 
 ---
 
@@ -51,7 +51,7 @@ Criterios: [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPT
 
 Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-run`, vitest GSO/US-10. QA manual post-merge: checklist en [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md).
 
-### 2.2 GSO — código aún pendiente
+### 2.2 GSO — reconciliación / UX (backlog restante)
 
 | US | Prioridad | Qué falta implementar | Archivos / área típica |
 |----|-----------|------------------------|-------------------------|
@@ -60,16 +60,16 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | **US-15** | — | **✅ Cerrado** — P/A por rol; capa 4 en standby (sin datos reloj en prod) | `grillaFichadaPresencia.js`, `grillaVisSanitizeGso.js`, UI badges/modal |
 | **US-4** | — | **✅ Cerrado** — badge 🔗 + tooltip fan-out (escenario E) | `grillaMesGsoHints.js`, grilla equipo/titular/modal |
 | **US-5** | — | **✅ Cerrado** — copy Q3-2 📅 post-purge HLg (escenario F) | `grillaMesGsoHints.js`, avisos sin dotación, leyenda |
-| **US-6** | P2 | Indicador lazy materialización consistente | `varianteCeldaOperativa`, toasts titular vs equipo |
-| **US-7** | P2 | Hint licencia en franco | UI celda |
+| **US-6** | — | **✅ Cerrado** — ⏳ teoría pendiente lazy (escenario G); chip `teoriaPendiente` (`ccc1040` · `v2.6.3-gso-us6`) | `grillaMesGsoHints.js`, `grillaTurnosVisual.js`, grilla + modal |
+| **US-7** | — | **✅ Cerrado** — ℹ️ licencia en franco (escenario D) | `evaluarLicenciaEnFrancoCelda`, grilla + modal |
 | **US-8** | — | **✅ Cerrado** — badge 🔒 + gates modales + copy RRHH tarjeta (`4dcd9b9`) | `grillaGsoSoloLectura.js`, grilla + modales turno |
-| **US-11** | P2 | Unificar mensaje materialización equipo vs titular | `useGrillaMesVista.js`, `grillaMaterializacionToast.js` |
+| **US-11** | — | **✅ Cerrado** — toast materialización sector alineado a titular | `grillaMaterializacionToast.js`, `useGrillaMesVista.js` |
 | **US-13** | P1 | Matriz permisos teoría (doc → código) | Disperso plan / override / HLg |
 | **US-17** | — | **✅ Cerrado (código + ops)** — inventario + remediación 2026-06-06; audit prod **0 huecos** | [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md) · [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) |
 
-**Orden sugerido (restante):** ~~US-3…US-8~~ ✅ (hosting 2026-06-06) · **US-6** → US-7 → US-11 (P2; ver análisis §5).
+**Orden sugerido (restante épica GSO):** ~~US-3…US-11~~ ✅ (hosting 2026-06-08) · **US-13** (P1) · RFC HLG warning ⏸ RRHH.
 
-**Nota:** Piloto junio Sala **operativo** en BD; §2.1 es **defensa** desplegada ante regresión huecos/blanco. **US-17 global cerrado** 2026-06-06.
+**Nota:** Piloto junio Sala **operativo** en BD; §2.1 es **defensa** desplegada ante regresión huecos/blanco. **US-17 global cerrado** 2026-06-06. **US-6 ⏳** en piloto estable suele no verse en LAO/franco ya materializado (QA 2026-06-08 — ver índice sesión).
 
 ---
 
@@ -130,7 +130,7 @@ Ver [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](./ANALISIS_COHERENCIA_ORQU
 | **O-P2-3** | Acotar lazy GSO si día 5 + alta HLg cubren | P2 | `grillaMesAgenteCore.js` |
 | **O-P2-4** | Manual RRHH normativo desde `MANUAL_CAPAS_*` | P2 | Validación proceso |
 | **F2-2.5 / O-P1-4** | Plan paralelo incorporación §19.6 + HLg cascada | ✅ | RFC Fases 0–5 — §1bis |
-| **F2-2.1** | Toasts materialización UI unificados | P1 | Metadata `vis_*` ✅; toasts ⏳ |
+| **F2-2.1** | Toasts materialización UI unificados | ✅ | US-11 · `ccc1040` · hosting 2026-06-08 |
 | **F2-2.3** | Feriado masivo / rematerializar rango amplio | P1 | Feriado 1 día ✅ |
 | **F2-UX-6** | Auditar todos los callables listado grilla jefe sin `fichadas_reales` | P1 | Parcial `grillaVisSanitizeGso.js` |
 
@@ -163,15 +163,16 @@ Ver [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](./ANALISIS_COHERENCIA_ORQU
 | F1 cierre período manual | Callable + UI GSO |
 | **RFC plan paralelo + HLg inmutable (0–5)** | §1bis · `f187dff`, `a245d86`, `627a435` |
 | **Épica blindaje GSO (US-9, 1, 16, 10, 14, 3 parcial)** | PR #2 · `v2.6.1-blindaje-gso` · hosting + functions prod |
+| **GSO US-6, US-7, US-11 (lazy / franco / toasts)** | `ccc1040` · tag `v2.6.3-gso-us6` · hosting 2026-06-08 |
 | GSO §6.7 pendiente incorporación vs fantasma | Criterios + análisis §8 (E2E manual doc) |
 
 ---
 
 ## 8. Próxima sesión de código (recomendación)
 
-1. **QA manual:** checklist [`PR_BLINDAJE_GSO_BODY.md`](./PR_BLINDAJE_GSO_BODY.md) (jefe: editor + GSO; RRHH: aprobar con hueco → `PLT-US9-001`).
-2. ~~**Ops P0:** **US-17** inventario planes `HABILITADO` sin huecos~~ ✅ 2026-06-06
-3. **Código P1:** US-3 escenario A (⚠️ teoría post-licencia) + US-14 acciones completas ante ⚠️.
-4. **Paralelo opcional:** F3 **T-05** o **FUX-OPT-5** (divergencia plan vs grilla).
+1. **Código P1:** **US-13** — matriz permisos teoría (doc → código).
+2. **Paralelo:** F3 **T-05/T-06** (editor segmentos) o **FUX-OPT-5** (divergencia plan vs grilla).
+3. **Proceso:** QA formal Multi-HLG §4.2 (ítems 6 y 9 manuales RRHH/jefe).
+4. ~~**GSO US-6 → US-7 → US-11**~~ ✅ 2026-06-08 · ~~**US-17** ops~~ ✅ 2026-06-06 · ~~**US-3/US-14** completos~~ ✅.
 
 Actualizar este archivo y [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) al cerrar cada ítem.
