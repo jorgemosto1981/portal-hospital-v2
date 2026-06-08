@@ -194,6 +194,26 @@ describe("normalizeBatchOp", () => {
     assert.equal(expanded[0].op_id, expanded[1].op_id);
   });
 
+  it("conserva es_urgencia_operativa en reemplazo v2", () => {
+    const items = normalizeBatchOp(mkBase({
+      tipo: "reemplazo",
+      payload: {
+        persona_id: PER_X,
+        fecha: "2026-06-12",
+        fecha_origen: "2026-06-10",
+        fecha_destino: "2026-06-12",
+        segmentos_a_trasladar: ["cfg_reg_turno_n"],
+        turno_id: "cfg_reg_turno_t",
+        tipo: "reemplazo",
+        motivo: "Urgencia operativa",
+        es_urgencia_operativa: true,
+      },
+    }), 0);
+    const expanded = Array.isArray(items) ? items : [items];
+    assert.equal(expanded[0].es_urgencia_operativa, true);
+    assert.equal(expanded[1].es_urgencia_operativa, true);
+  });
+
   it("rechaza tipo desconocido", () => {
     assert.throws(
       () => normalizeBatchOp(mkBase({ tipo: "otro", payload: { fecha: FECHA } }), 0),

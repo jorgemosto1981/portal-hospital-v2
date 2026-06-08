@@ -32,6 +32,7 @@ const {
   filterHlgVigentesEnFecha,
   nivelTitularEnGrupo,
 } = require("./solicitudHlgVigencia");
+const { assertTeoriaOverrideAuth } = require("./teoriaPermisosGso");
 
 /**
  * RRHH: `CFG_RRHH` ∈ `roles_hlc_vigentes` o legacy dev (`portal_role`).
@@ -133,14 +134,37 @@ async function assertPlanAuth(request, grupoId, accion) {
   }
 }
 
+/** @type {Map<string, Array<Record<string, unknown>>>} */
+const _hlgVigenteCacheMutacion = new Map();
+
+function _nivelEnGrupoDesdeFilas(filasVigentes, grupoTrabajoId) {
+  const n = nivelTitularEnGrupo(filasVigentes, grupoTrabajoId);
+  return Number.isFinite(n) ? n : 0;
+}
+
+async function _filasHlgVigentesPersona(personaId) {
+  const pid = String(personaId || "").trim();
+  if (!pid) return [];
+  if (_hlgVigenteCacheMutacion.has(pid)) {
+    return _hlgVigenteCacheMutacion.get(pid);
+  }
+  const hoy = _hoyYmd();
+  const rows = await loadHlgRowsPorPersona(db, pid);
+  const vigentes = filterHlgVigentesEnFecha(rows, hoy);
+  _hlgVigenteCacheMutacion.set(pid, vigentes);
+  return vigentes;
+}
+
+function clearHlgVigenteCacheMutacion() {
+  _hlgVigenteCacheMutacion.clear();
+}
+
 /**
- * RBAC para overrides de turno: RRHH pasa; actor === target pasa;
- * o actor es superior jerárquico del target en algún grupo común.
- *
+ * Lectura / listados: jerarquía en algún grupo común; permite consultar propia ficha.
  * @param {import("firebase-functions/v2/https").CallableRequest} request
- * @param {string} targetPersonaId - persona_id del agente afectado
+ * @param {string} targetPersonaId
  */
-async function assertOverrideAuth(request, targetPersonaId) {
+async function assertOverrideAuthLectura(request, targetPersonaId) {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Se requiere sesión.");
   }
@@ -152,13 +176,8 @@ async function assertOverrideAuth(request, targetPersonaId) {
   }
   if (actorPid === targetPersonaId) return;
 
-  const hoy = _hoyYmd();
-  const [actorHlgs, targetHlgs] = await Promise.all([
-    loadHlgRowsPorPersona(db, actorPid),
-    loadHlgRowsPorPersona(db, targetPersonaId),
-  ]);
-  const actorVigentes = filterHlgVigentesEnFecha(actorHlgs, hoy);
-  const targetVigentes = filterHlgVigentesEnFecha(targetHlgs, hoy);
+  const actorVigentes = await _filasHlgVigentesPersona(actorPid);
+  const targetVigentes = await _filasHlgVigentesPersona(targetPersonaId);
 
   const targetGrupos = new Set(
     targetVigentes.map((h) => String(h.grupo_de_trabajo_id || "").trim()).filter(Boolean),
@@ -173,6 +192,47 @@ async function assertOverrideAuth(request, targetPersonaId) {
   }
 
   throw new HttpsError("permission-denied", "No tenés permisos sobre este agente.");
+}
+
+/**
+ * RBAC overrides / mutación teórica (US-13 G1–G4) anclado al GDT de la operación.
+ *
+ * @param {import("firebase-functions/v2/https").CallableRequest} request
+ * @param {string} targetPersonaId
+ * @param {{
+ *   mutacionTeoria?: boolean;
+ *   grupoTrabajoId?: string;
+ *   planEstado?: string | null;
+ *   esUrgenciaOperativa?: boolean;
+ *   periodo?: { cerrado?: boolean; ventanaM1?: boolean } | null;
+ * }} [opts]
+ */
+async function assertOverrideAuth(request, targetPersonaId, opts = {}) {
+  const options = opts && typeof opts === "object" ? opts : {};
+  if (options.mutacionTeoria !== true) {
+    return assertOverrideAuthLectura(request, targetPersonaId);
+  }
+
+  const gdt = String(options.grupoTrabajoId || "").trim();
+  if (!/^gdt_/i.test(gdt)) {
+    throw new HttpsError("invalid-argument", "grupoTrabajoId (gdt_*) requerido para mutación de teoría.");
+  }
+
+  const actorPid = _actorPersonaId(request);
+  const [actorVigentes, targetVigentes] = await Promise.all([
+    _filasHlgVigentesPersona(actorPid),
+    _filasHlgVigentesPersona(targetPersonaId),
+  ]);
+
+  assertTeoriaOverrideAuth(request, {
+    targetPersonaId,
+    grupoTrabajoId: gdt,
+    actorNivelJerarquicoEnGrupo: _nivelEnGrupoDesdeFilas(actorVigentes, gdt),
+    targetNivelJerarquicoEnGrupo: _nivelEnGrupoDesdeFilas(targetVigentes, gdt),
+    esUrgenciaOperativa: options.esUrgenciaOperativa === true,
+    planEstado: options.planEstado || "BORRADOR",
+    periodo: options.periodo || null,
+  });
 }
 
 function assertAgenteConPersonaId(request) {
@@ -344,6 +404,8 @@ module.exports = {
   assertRrhh,
   assertPlanAuth,
   assertOverrideAuth,
+  assertOverrideAuthLectura,
+  clearHlgVigenteCacheMutacion,
   assertEscrituraLaboral,
   assertAgenteConPersonaId,
   resolvePersonaIdSolicitudFlujoAgente,

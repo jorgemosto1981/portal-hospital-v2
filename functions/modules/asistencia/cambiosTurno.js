@@ -13,7 +13,11 @@
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { db, FieldValue } = require("../shared/context");
 const runtimeFlags = require("../shared/runtimeFlags.json");
-const { assertOverrideAuth } = require("../shared/helpers");
+const {
+  assertOverrideAuth,
+  clearHlgVigenteCacheMutacion,
+} = require("../shared/helpers");
+const { resolverEstadoPlanMensualGrupo } = require("./planEstadoMensualGrupo");
 const { materializarTurnoTeoricoDia: materializarTurnoTeoricoDiaWorker } = require("./rdaTurnoTeoricoWorker");
 const { assertGrillaGsoEscrituraEnFecha } = require("./grillaGsoSoloLectura");
 const { buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
@@ -227,7 +231,42 @@ function payloadSimpleOverrideDesdeOp(op) {
     franco_en_origen: src.franco_en_origen,
     origen: src.origen,
     destino: src.destino,
+    es_urgencia_operativa: src.es_urgencia_operativa === true,
   };
+}
+
+function leerEsUrgenciaOperativaDesdeOp(op) {
+  const payload = payloadSimpleOverrideDesdeOp(op);
+  return payload.es_urgencia_operativa === true;
+}
+
+/**
+ * Personas afectadas por una op cruda del batch (antes de normalizar legs).
+ * @param {Record<string, unknown>} op
+ * @param {number} idx
+ * @returns {string[]}
+ */
+function personaIdsAfectadosPorOpRaw(op, idx) {
+  const payload = payloadSimpleOverrideDesdeOp(op);
+  const tipo = String(op.tipo || payload.tipo || "cobertura_parcial").trim();
+  if (tipo === "cobertura_parcial") {
+    if (esPayloadCoberturaV2(payload)) {
+      const o = payload.origen;
+      const d = payload.destino;
+      return [
+        String(o.persona_id || "").trim(),
+        String(d.persona_id || "").trim(),
+      ].filter((id) => PER_ID.test(id));
+    }
+    const po = String(payload.persona_origen_id || "").trim();
+    const pc = String(payload.persona_cobertura_id || "").trim();
+    return [po, pc].filter((id) => PER_ID.test(id));
+  }
+  const pid = String(payload.persona_id || "").trim();
+  if (!PER_ID.test(pid)) {
+    err("invalid-argument", `[BATCH-008] op[${idx}] persona_id requerido.`);
+  }
+  return [pid];
 }
 
 /** @param {Record<string, unknown>} src */
@@ -371,6 +410,7 @@ function validarPayloadReemplazoV2(payload, idx) {
 function normalizeBatchOpReemplazoV2(op, idx, grupo_trabajo_id, expectedDestino) {
   const payload = payloadSimpleOverrideDesdeOp(op);
   const v = validarPayloadReemplazoV2(payload, idx);
+  const esUrgencia = payload.es_urgencia_operativa === true;
   const op_id = String(op.id || `op_${idx + 1}`);
   const ctxConc = op.concurrencia && typeof op.concurrencia === "object" ? op.concurrencia : {};
   const expectedOrigen = typeof ctxConc.expected_version_token_origen === "string"
@@ -408,6 +448,7 @@ function normalizeBatchOpReemplazoV2(op, idx, grupo_trabajo_id, expectedDestino)
       persona_id: v.persona_id,
       override: overrideOrigen,
       batch_leg: "traslado_origen",
+      es_urgencia_operativa: esUrgencia,
     },
     {
       op_id,
@@ -418,6 +459,7 @@ function normalizeBatchOpReemplazoV2(op, idx, grupo_trabajo_id, expectedDestino)
       persona_id: v.persona_id,
       override: overrideDestino,
       batch_leg: "traslado_destino",
+      es_urgencia_operativa: esUrgencia,
     },
   ];
 }
@@ -437,6 +479,7 @@ function normalizeBatchOpAdicionalV2(op, idx, grupo_trabajo_id, expected) {
     expected_version_token: expected,
     persona_id,
     override,
+    es_urgencia_operativa: payload.es_urgencia_operativa === true,
   };
 }
 
@@ -491,6 +534,7 @@ function validarPayloadCoberturaV2(src, idx, periodoCtx) {
     segmentos_cedidos_destino,
     motivo,
     tipo_compensacion_id,
+    es_urgencia_operativa: src.es_urgencia_operativa === true,
   };
 }
 
@@ -535,6 +579,7 @@ function normalizeBatchOpCoberturaV2(op, idx, grupo_trabajo_id, expectedOrigen) 
     persona_origen_id: v.persona_origen_id,
     persona_cobertura_id: v.persona_cobertura_id,
     override,
+    es_urgencia_operativa: v.es_urgencia_operativa === true,
   };
 }
 
@@ -553,6 +598,7 @@ function normalizeBatchOpCobertura(op, idx, grupo_trabajo_id, expected) {
     persona_origen_id: override.persona_origen_id,
     persona_cobertura_id: override.persona_cobertura_id,
     override,
+    es_urgencia_operativa: payload.es_urgencia_operativa === true,
   };
 }
 
@@ -572,6 +618,7 @@ function normalizeBatchOpSimple(op, idx, tipo, grupo_trabajo_id, expected) {
     expected_version_token: expected,
     persona_id,
     override,
+    es_urgencia_operativa: payload.es_urgencia_operativa === true,
   };
 }
 
@@ -705,8 +752,28 @@ const registrarCambioTurno = onCall({
     resolveGrupoTrabajoId(data, data.context),
     "[OVR-031] grupo_trabajo_id (gdt_*) requerido.",
   );
-  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
   const token = (request.auth && request.auth.token) || {};
+  const rawOverride = data.override && typeof data.override === "object" ? data.override : {};
+  const esUrgencia = rawOverride.es_urgencia_operativa === true || data.es_urgencia_operativa === true;
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
+    clearHlgVigenteCacheMutacion();
+    const planEstado = await resolverEstadoPlanMensualGrupo(db, grupoTrabajoId, fecha.slice(0, 7));
+    const personasAuth = rawOverride.tipo === "cobertura_parcial"
+      ? [
+        String(rawOverride.persona_origen_id || "").trim(),
+        String(rawOverride.persona_cobertura_id || "").trim(),
+      ].filter((id) => PER_ID.test(id))
+      : [personaId];
+    for (const pid of personasAuth) {
+      await assertOverrideAuth(request, pid, {
+        mutacionTeoria: true,
+        grupoTrabajoId,
+        planEstado,
+        esUrgenciaOperativa: esUrgencia,
+      });
+    }
+    clearHlgVigenteCacheMutacion();
+  }
   await assertPeriodoEditable(personaId, fecha, grupoTrabajoId, token);
   const override = validarOverride(data.override);
   if (override.tipo === "cobertura_parcial") {
@@ -784,7 +851,16 @@ const eliminarCambioTurno = onCall({
     resolveGrupoTrabajoId(data, data.context),
     "[OVR-031] grupo_trabajo_id (gdt_*) requerido.",
   );
-  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
+    clearHlgVigenteCacheMutacion();
+    const planEstado = await resolverEstadoPlanMensualGrupo(db, grupoTrabajoId, fecha.slice(0, 7));
+    await assertOverrideAuth(request, personaId, {
+      mutacionTeoria: true,
+      grupoTrabajoId,
+      planEstado,
+      esUrgenciaOperativa: false,
+    });
+  }
   const tokenDel = (request.auth && request.auth.token) || {};
   await assertPeriodoEditable(personaId, fecha, grupoTrabajoId, tokenDel);
 
@@ -881,14 +957,41 @@ const aplicarBatchAsistencia = onCall({
   }
   if (uniquePeriodo.size > 1) err("invalid-argument", "[BATCH-006] Todas las operaciones deben ser del mismo período.");
 
-  const uniquePersonas = new Set();
-  for (const it of items) {
-    for (const pid of personaIdsAfectadosPorOp(it)) uniquePersonas.add(pid);
-  }
+  const periodoNorm = [...uniquePeriodo][0];
+
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
-    for (const pid of uniquePersonas) {
-      await assertOverrideAuth(request, pid);
+    clearHlgVigenteCacheMutacion();
+    /** @type {Record<string, string>} */
+    const cachePlanes = Object.create(null);
+    const planEstadoPara = async (gdt, periodo) => {
+      const key = `${gdt}|${periodo}`;
+      if (!Object.prototype.hasOwnProperty.call(cachePlanes, key)) {
+        cachePlanes[key] = await resolverEstadoPlanMensualGrupo(db, gdt, periodo);
+      }
+      return cachePlanes[key];
+    };
+
+    for (let i = 0; i < opsRaw.length; i++) {
+      const op = opsRaw[i];
+      const ctx = op.context && typeof op.context === "object" ? op.context : {};
+      const gdt = requireGrupoTrabajoId(
+        resolveGrupoTrabajoId(op, ctx),
+        `[BATCH-US13] op[${i}] context.grupo_id (gdt_*) requerido.`,
+      );
+      const periodoOp = String(ctx.periodo || periodoNorm || "").trim();
+      const planEstado = await planEstadoPara(gdt, periodoOp);
+      const esUrgencia = leerEsUrgenciaOperativaDesdeOp(op);
+      const pids = personaIdsAfectadosPorOpRaw(op, i);
+      for (const pid of pids) {
+        await assertOverrideAuth(request, pid, {
+          mutacionTeoria: true,
+          grupoTrabajoId: gdt,
+          planEstado,
+          esUrgenciaOperativa: esUrgencia,
+        });
+      }
     }
+    clearHlgVigenteCacheMutacion();
   }
 
   const token = (request.auth && request.auth.token) || {};
@@ -1132,7 +1235,16 @@ const materializarTurnoTeoricoDia = onCall({
     resolveGrupoTrabajoId(data, data.context),
     "[MAT-001] grupo_trabajo_id (gdt_*) requerido.",
   );
-  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertOverrideAuth(request, personaId);
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
+    clearHlgVigenteCacheMutacion();
+    const planEstado = await resolverEstadoPlanMensualGrupo(db, grupoTrabajoId, fecha.slice(0, 7));
+    await assertOverrideAuth(request, personaId, {
+      mutacionTeoria: true,
+      grupoTrabajoId,
+      planEstado,
+      esUrgenciaOperativa: data.es_urgencia_operativa === true,
+    });
+  }
   const token = (request.auth && request.auth.token) || {};
   await assertPeriodoEditable(personaId, fecha, grupoTrabajoId, token);
 
