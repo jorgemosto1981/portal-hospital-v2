@@ -306,6 +306,7 @@ export function esAdicionalV2(op) {
  *   grupoLabel?: string;
  *   estadoPrevio: ReturnType<typeof capturarEstadoPrevioDia>;
  *   creado_en?: string;
+ *   esUrgenciaOperativa?: boolean;
  * }} params
  */
 export function buildAdicionalOutboxOp(params) {
@@ -329,5 +330,6 @@ export function buildAdicionalOutboxOp(params) {
     grupoLabel: String(params.grupoLabel || "").trim(),
     estadoPrevio,
     esFeriado: estadoPrevio.es_feriado === true,
+    esUrgenciaOperativa: params.esUrgenciaOperativa === true,
   };
 }

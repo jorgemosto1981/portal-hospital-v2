@@ -104,3 +104,56 @@ export function evaluarPermisoTeoria(accion, contexto) {
       return { permitido: false, motivoRechazo: MOTIVOS_RECHAZO_TEORIA.ACCION_DESCONOCIDA };
   }
 }
+
+/**
+ * @param {{ id?: string; esJefe?: boolean; esRrhh?: boolean }} actorPortal
+ */
+export function actorTeoriaDesdePortal(actorPortal) {
+  const a = actorPortal && typeof actorPortal === "object" ? actorPortal : {};
+  const esRrhh = a.esRrhh === true;
+  return {
+    id: String(a.id || "").trim() || undefined,
+    esJefe: a.esJefe === true,
+    esRrhh,
+    esRrhhAdmin: esRrhh,
+    esRrhhLabor: esRrhh,
+  };
+}
+
+/**
+ * G6 — guardar / enviar plan mensual.
+ * @param {ReturnType<typeof actorTeoriaDesdePortal>} actor
+ * @param {string | null | undefined} planEstado
+ */
+export function evaluarPermisosPlanMensual(actor, planEstado) {
+  const ctx = {
+    actor,
+    planEstado: planEstado || "BORRADOR",
+  };
+  return {
+    guardar: evaluarPermisoTeoria(CANALES_TEORIA.GUARDAR_PLAN, ctx),
+    enviar: evaluarPermisoTeoria(CANALES_TEORIA.ENVIAR_PLAN, ctx),
+  };
+}
+
+/** Copy UI amigable para motivoRechazo de teoriaPermisosGso. */
+/** Validación de motivo en modales A/B/C (G1). Devuelve mensaje de error o null si OK. */
+export function errorMotivoTeoriaOverride(motivo, requiereUrgenciaG1) {
+  if (String(motivo || "").trim().length >= 3) return null;
+  return requiereUrgenciaG1 === true
+    ? "Debés justificar la urgencia operativa (mín. 3 caracteres)."
+    : "Motivo obligatorio (mín. 3 caracteres).";
+}
+
+export function copyMotivoRechazoTeoriaUsuario(motivoRechazo) {
+  switch (motivoRechazo) {
+    case MOTIVOS_RECHAZO_TEORIA.SOLO_JEFE_O_RRHH_PUEDE_EDITAR_PLAN:
+      return "Solo el jefe de servicio o RRHH puede editar y enviar el plan mensual.";
+    case MOTIVOS_RECHAZO_TEORIA.SOLO_RRHH:
+      return "Solo RRHH puede realizar esta acción sobre el plan.";
+    default:
+      return motivoRechazo
+        ? String(motivoRechazo).replace(/_/g, " ").toLowerCase()
+        : "No tenés permiso para esta acción.";
+  }
+}

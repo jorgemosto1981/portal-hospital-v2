@@ -36,6 +36,11 @@ import { guardarPlanMensualDatosSchema } from "../../schemas/planTurnoServicio.s
 import PlanPerpetualViewer from "./planes/PlanPerpetualViewer.jsx";
 import BadgeEstadoPlan, { LABEL_ESTADO } from "../../components/ui/BadgeEstadoPlan.jsx";
 import { periodosVentanaJefe } from "../../features/jefe/periodoJefe.js";
+import {
+  actorTeoriaDesdePortal,
+  copyMotivoRechazoTeoriaUsuario,
+  evaluarPermisosPlanMensual,
+} from "../../features/grilla/teoriaPermisosGso.js";
 
 function estiloTarjetaGrupo(estado, activo) {
   const baseActivo = activo ? "ring-2 ring-offset-1" : "";
@@ -238,6 +243,21 @@ export default function PlanTurnoServicioPage() {
   const [resumenGrupoPeriodo, setResumenGrupoPeriodo] = useState({});
   const periodosPermitidos = periodosPermitidosInicial;
 
+  const actorTeoriaPlan = useMemo(
+    () =>
+      actorTeoriaDesdePortal({
+        id: personaId,
+        esJefe,
+        esRrhh,
+      }),
+    [personaId, esJefe, esRrhh],
+  );
+
+  const permisosPlan = useCallback(
+    (planEstado) => evaluarPermisosPlanMensual(actorTeoriaPlan, planEstado),
+    [actorTeoriaPlan],
+  );
+
   const abrirPlanDetalle = useCallback((plan) => {
     setPlanDetalle(plan);
   }, []);
@@ -398,6 +418,16 @@ export default function PlanTurnoServicioPage() {
   };
 
   const handleGuardarBorrador = useCallback(async (datos, existingId, opciones = {}) => {
+    const estadoRef =
+      planEdicion?.estado
+      || planes.find((p) => p.id === existingId)?.estado
+      || "BORRADOR";
+    const { guardar: permGuardar } = permisosPlan(estadoRef);
+    if (!permGuardar.permitido) {
+      const msg = copyMotivoRechazoTeoriaUsuario(permGuardar.motivoRechazo);
+      setError(msg);
+      return { ok: false, error: msg };
+    }
     setOperando(true);
     setError("");
     try {
@@ -430,13 +460,22 @@ export default function PlanTurnoServicioPage() {
     } finally {
       setOperando(false);
     }
-  }, [cargar, cargarResumenGrupos]);
+  }, [cargar, cargarResumenGrupos, permisosPlan, planEdicion, planes]);
 
   const handleTransicion = useCallback(async (accion, planId, extras) => {
     setOperando(true);
     try {
       let res;
       const planRef = planes.find((p) => p.id === planId);
+      if (accion === "enviar") {
+        const { enviar: permEnviar } = permisosPlan(planRef?.estado);
+        if (!permEnviar.permitido) {
+          const msg = copyMotivoRechazoTeoriaUsuario(permEnviar.motivoRechazo);
+          setError(msg);
+          showFeedback("Envío no permitido.");
+          return;
+        }
+      }
       const huecosPersistidos =
         planRef?.tipo_plan === "mensual" ? contarHuecosEnPlanMensual(planRef) : 0;
       if (
@@ -526,7 +565,7 @@ export default function PlanTurnoServicioPage() {
     } finally {
       setOperando(false);
     }
-  }, [cargar, cargarResumenGrupos, planes]);
+  }, [cargar, cargarResumenGrupos, permisosPlan, planes]);
 
   const grupoLabel = useMemo(() => {
     const g = gruposDisponibles.find((x) => x.id === grupoId);
@@ -553,6 +592,13 @@ export default function PlanTurnoServicioPage() {
     () => contarHuecosEnPlanMensual(planOpcionesResuelto),
     [planOpcionesResuelto],
   );
+  const permisosPlanEdicion = useMemo(() => {
+    if (!planEdicion || planEdicion.modoVistaEquipo || planEdicion.tipo_plan !== "mensual") {
+      return null;
+    }
+    const estado = planEdicion.estado || "BORRADOR";
+    return permisosPlan(estado);
+  }, [planEdicion, permisosPlan]);
 
   const abrirEditorIncorporacion = useCallback(
     (planInc, agentesNuevos = []) => {
@@ -893,6 +939,7 @@ export default function PlanTurnoServicioPage() {
               const titleCls = soloLectura ? "text-emerald-900" : editable ? "text-amber-900" : "text-slate-900";
               const subCls = soloLectura ? "text-emerald-800" : editable ? "text-amber-800" : "text-slate-700";
               const idCls = soloLectura ? "text-emerald-700" : editable ? "text-amber-700" : "text-slate-600";
+              const permEnviarPp = permisosPlan(pp.estado);
               return (
                 <div className={`rounded-xl border p-4 ${cardCls}`}>
                   <div className="flex items-start justify-between gap-2">
@@ -940,11 +987,17 @@ export default function PlanTurnoServicioPage() {
                     {editable ? (
                       <button
                         type="button"
-                        disabled={operando || huecosPlanPrincipal > 0}
+                        disabled={
+                          operando
+                          || huecosPlanPrincipal > 0
+                          || !permEnviarPp.enviar.permitido
+                        }
                         title={
                           huecosPlanPrincipal > 0
                             ? tooltipBloqueoHuecosPlan(huecosPlanPrincipal)
-                            : undefined
+                            : !permEnviarPp.enviar.permitido
+                              ? copyMotivoRechazoTeoriaUsuario(permEnviarPp.enviar.motivoRechazo)
+                              : undefined
                         }
                         onClick={() => void handleTransicion("enviar", pp.id)}
                         className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
@@ -984,11 +1037,19 @@ export default function PlanTurnoServicioPage() {
                     planIncorporacionMes.estado === "EN_REVISION") && (
                     <button
                       type="button"
-                      disabled={operando || huecosPlanIncorporacion > 0}
+                      disabled={
+                        operando
+                        || huecosPlanIncorporacion > 0
+                        || !permisosPlan(planIncorporacionMes.estado).enviar.permitido
+                      }
                       title={
                         huecosPlanIncorporacion > 0
                           ? tooltipBloqueoHuecosPlan(huecosPlanIncorporacion)
-                          : undefined
+                          : !permisosPlan(planIncorporacionMes.estado).enviar.permitido
+                            ? copyMotivoRechazoTeoriaUsuario(
+                                permisosPlan(planIncorporacionMes.estado).enviar.motivoRechazo,
+                              )
+                            : undefined
                       }
                       onClick={() => void handleTransicion("enviar", planIncorporacionMes.id)}
                       className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
@@ -1043,6 +1104,12 @@ export default function PlanTurnoServicioPage() {
           periodo={periodo}
           guardando={operando}
           errorGuardar={error}
+          puedeGuardarPlan={permisosPlanEdicion?.guardar?.permitido !== false}
+          motivoGuardarDeshabilitado={
+            permisosPlanEdicion && !permisosPlanEdicion.guardar.permitido
+              ? copyMotivoRechazoTeoriaUsuario(permisosPlanEdicion.guardar.motivoRechazo)
+              : undefined
+          }
           onGuardar={handleGuardarBorrador}
           onCerrar={() => {
             setPlanEdicion(null);
@@ -1093,8 +1160,20 @@ export default function PlanTurnoServicioPage() {
                   {(planOpcionesResuelto.estado === "BORRADOR" || planOpcionesResuelto.estado === "EN_REVISION") && (
                     <button
                       type="button"
-                      disabled={operando || huecosPlanOpciones > 0}
-                      title={huecosPlanOpciones > 0 ? tooltipBloqueoHuecosPlan(huecosPlanOpciones) : undefined}
+                      disabled={
+                        operando
+                        || huecosPlanOpciones > 0
+                        || !permisosPlan(planOpcionesResuelto.estado).enviar.permitido
+                      }
+                      title={
+                        huecosPlanOpciones > 0
+                          ? tooltipBloqueoHuecosPlan(huecosPlanOpciones)
+                          : !permisosPlan(planOpcionesResuelto.estado).enviar.permitido
+                            ? copyMotivoRechazoTeoriaUsuario(
+                                permisosPlan(planOpcionesResuelto.estado).enviar.motivoRechazo,
+                              )
+                            : undefined
+                      }
                       onClick={() => void handleTransicion("enviar", planOpcionesResuelto.id)}
                       className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >

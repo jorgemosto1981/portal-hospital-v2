@@ -432,6 +432,7 @@ export function esIntercambioGuardiaV2(op) {
  *   personaDestinoLabel?: string;
  *   grupoLabel?: string;
  *   creado_en?: string;
+ *   esUrgenciaOperativa?: boolean;
  * }} params
  */
 export function buildIntercambioGuardiaOutboxOp(params) {
@@ -461,6 +462,7 @@ export function buildIntercambioGuardiaOutboxOp(params) {
     grupoId: params.grupoId,
     periodo: params.periodo,
     grupoLabel: String(params.grupoLabel || "").trim(),
+    esUrgenciaOperativa: params.esUrgenciaOperativa === true,
   };
 }
 

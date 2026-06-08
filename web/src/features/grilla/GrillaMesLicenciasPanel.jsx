@@ -172,7 +172,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
         id: diaModal.personaId,
         nivelJerarquico: targetNivel,
       },
-      estadoPlan: "HABILITADO",
+      estadoPlan: vista.planMensualEstado || "BORRADOR",
       periodoGso,
     });
   }, [
@@ -182,6 +182,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
     esRrhh,
     vista.filas,
     vista.gsoPermiteEscritura,
+    vista.planMensualEstado,
     nivelJerarquicoActor,
     periodoGso,
   ]);
@@ -858,11 +859,13 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
           onElegirFlujo={(flujo) => {
             const ctx = gestionTurnoShell;
             setGestionTurnoShell(null);
+            const urgenciaG1 = ctx.requiereUrgenciaG1 === true;
             if (flujo === "cobertura_parcial") {
               setCoberturaModal({
                 personaOrigenId: ctx.personaId,
                 personaOrigenLabel: ctx.personaLabel || ctx.personaId,
                 fechaYmd: ctx.fechaYmd,
+                requiereUrgenciaG1: urgenciaG1,
               });
               return;
             }
@@ -872,6 +875,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                 fechaOrigenYmd: ctx.fechaYmd,
                 personaNombre: ctx.personaLabel || "",
                 grupoId: ctx.grupoTrabajoId,
+                requiereUrgenciaG1: urgenciaG1,
               });
               return;
             }
@@ -882,6 +886,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                 personaNombre: ctx.personaLabel || "",
                 grupoId: ctx.grupoTrabajoId,
                 turnoVisInicial: ctx.turnoTeorico ?? null,
+                requiereUrgenciaG1: urgenciaG1,
               });
             }
           }}
@@ -893,6 +898,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
           personaOrigenId={coberturaModal.personaOrigenId}
           personaOrigenLabel={coberturaModal.personaOrigenLabel}
           fechaYmd={coberturaModal.fechaYmd}
+          requiereUrgenciaG1={coberturaModal.requiereUrgenciaG1 === true}
           grupoId={diaModal?.grupoTrabajoId || vista.grupoActivoId}
           periodo={vista.periodo}
           opsPendientes={outbox.ops}
@@ -912,6 +918,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
           personaId={cambioTurnoPropioModal.personaId}
           fechaOrigenYmd={cambioTurnoPropioModal.fechaOrigenYmd}
           personaNombre={cambioTurnoPropioModal.personaNombre}
+          requiereUrgenciaG1={cambioTurnoPropioModal.requiereUrgenciaG1 === true}
           grupoId={cambioTurnoPropioModal.grupoId}
           periodo={vista.periodo}
           opsPendientes={outbox.ops}
@@ -932,6 +939,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
           personaId={turnoAdicionalModal.personaId}
           personaNombre={turnoAdicionalModal.personaNombre}
           fechaYmd={turnoAdicionalModal.fechaYmd}
+          requiereUrgenciaG1={turnoAdicionalModal.requiereUrgenciaG1 === true}
           grupoId={turnoAdicionalModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId || ""}
           periodo={vista.periodo}
           opsPendientes={outbox.ops}

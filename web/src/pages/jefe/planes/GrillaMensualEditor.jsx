@@ -398,6 +398,8 @@ export default function GrillaMensualEditor({
   periodo,
   guardando,
   errorGuardar,
+  puedeGuardarPlan = true,
+  motivoGuardarDeshabilitado,
   onGuardar,
   onCerrar,
   onHuecosTurnoChange,
@@ -1284,9 +1286,15 @@ export default function GrillaMensualEditor({
                   </button>
                   <button
                     type="button"
-                    disabled={guardando || agentes.length === 0 || agentes.length > 50}
+                    disabled={
+                      guardando
+                      || agentes.length === 0
+                      || agentes.length > 50
+                      || !puedeGuardarPlan
+                    }
+                    title={!puedeGuardarPlan ? motivoGuardarDeshabilitado : undefined}
                     onClick={handleGuardar}
-                    className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
+                    className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {guardando ? "Guardando..." : "Guardar borrador"}
                   </button>

@@ -196,6 +196,7 @@ function mapOutboxOpToBatchPayload(op, idx, ctx) {
         franco_en_origen: op.francoEnOrigen === true,
         tipo: "reemplazo",
         motivo: String(op?.motivo || "").trim(),
+        es_urgencia_operativa: op.esUrgenciaOperativa === true,
         origen_op_ref: String(op?.id || "").trim() || null,
       },
     };
@@ -237,6 +238,7 @@ function mapOutboxOpToBatchPayload(op, idx, ctx) {
         tipo_compensacion_id: tcc || null,
         motivo: String(op?.motivo || "").trim(),
         tipo: "cobertura_parcial",
+        es_urgencia_operativa: op.esUrgenciaOperativa === true,
       },
     };
   }
@@ -266,6 +268,7 @@ function mapOutboxOpToBatchPayload(op, idx, ctx) {
         turno_id_adicional: turnoId,
         motivo: String(op?.motivo || "").trim(),
         es_feriado: estadoPrevio.es_feriado === true,
+        es_urgencia_operativa: op.esUrgenciaOperativa === true,
         estado_previo: {
           es_franco: estadoPrevio.es_franco === true,
           es_feriado: estadoPrevio.es_feriado === true,

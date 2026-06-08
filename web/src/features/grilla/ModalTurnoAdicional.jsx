@@ -19,6 +19,8 @@ import {
   COPY_BADGE_SOLO_LECTURA_GSO,
   soloLecturaDesdeGsoEscrituraApi,
 } from "./grillaGsoSoloLectura.js";
+import { errorMotivoTeoriaOverride } from "./teoriaPermisosGso.js";
+import UrgenciaG1AvisoModal from "./UrgenciaG1AvisoModal.jsx";
 
 /**
  * Flujo C — horas adicionales (RFC §3.3). Solo turno régimen + motivo.
@@ -33,12 +35,14 @@ import {
  *   onCerrar: () => void;
  *   onRegistrado?: () => void;
  *   onAgregarOutbox: (op: Record<string, unknown>) => void;
+ *   requiereUrgenciaG1?: boolean;
  * }} props
  */
 export default function ModalTurnoAdicional({
   personaId,
   personaNombre,
   fechaYmd,
+  requiereUrgenciaG1 = false,
   grupoId,
   periodo,
   opsPendientes = [],
@@ -179,6 +183,11 @@ export default function ModalTurnoAdicional({
 
   const handleSubmit = async () => {
     setErrorSubmit("");
+    const errMotivo = errorMotivoTeoriaOverride(motivo, requiereUrgenciaG1);
+    if (errMotivo) {
+      setErrorSubmit(errMotivo);
+      return;
+    }
     const val = validacion;
     if (!val?.ok) {
       setErrorSubmit(val?.error || "Completá el turno adicional y el motivo.");
@@ -200,6 +209,7 @@ export default function ModalTurnoAdicional({
         grupoId,
         periodo,
         estadoPrevio: val.estadoPrevio,
+        esUrgenciaOperativa: requiereUrgenciaG1,
       });
       onAgregarOutbox(op);
       toast.success("Turno adicional agregado a cambios pendientes.");
@@ -255,6 +265,7 @@ export default function ModalTurnoAdicional({
             <p className="mt-1 text-xs text-slate-700">{soloLecturaInfo.detalle}</p>
           </div>
         ) : null}
+        <UrgenciaG1AvisoModal visible={requiereUrgenciaG1} />
 
         {hayPreviewPendiente && !cargando ? (
           <p className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-950">
@@ -317,13 +328,21 @@ export default function ModalTurnoAdicional({
             </section>
 
             <section>
-              <h3 className="text-sm font-semibold text-slate-800">Motivo</h3>
+              <h3 className="text-sm font-semibold text-slate-800">
+                Motivo
+                <span className="font-normal text-rose-700"> *</span>
+              </h3>
               <textarea
                 rows={2}
                 maxLength={500}
+                required
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
-                placeholder="Motivo operativo (obligatorio)…"
+                placeholder={
+                  requiereUrgenciaG1
+                    ? "Justificá la urgencia operativa (obligatorio)…"
+                    : "Motivo operativo (obligatorio)…"
+                }
                 className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
               />
             </section>

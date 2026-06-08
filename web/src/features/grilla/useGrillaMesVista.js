@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { cargarHlgRowsParaTitular } from "./grillaTitularHlgLoad.js";
 
 import {
+  callListarContextoPlanGrupo,
   callListarVistaGrillaMesPorGrupo,
   callObtenerVistaGrillaMesAgente,
   callResolverContextoLaboralSolicitud,
@@ -358,10 +359,21 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
           `Materialización del sector incompleta (${matGrupo.fallos} agente(s)). Revisá turnos teóricos.`,
         );
       }
+      let planMensualEstado = null;
+      try {
+        const ctxRes = await callListarContextoPlanGrupo({
+          grupo_id: gdt,
+          periodo: periodoEff,
+        });
+        planMensualEstado = ctxRes?.data?.plan_mensual_estado ?? null;
+      } catch {
+        planMensualEstado = null;
+      }
       setData(payload ? {
         ...payload,
         modo: modoEff,
         periodo: periodoEff,
+        plan_mensual_estado: planMensualEstado,
         filas: normalizarFilasGrillaEquipo(payload.filas),
       } : null);
     } catch (e) {
@@ -446,5 +458,6 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
     gsoPermiteEscritura: gsoEscritura.permite,
     gsoSoloLecturaMensaje: gsoEscritura.permite ? null : gsoEscritura.mensaje,
     gsoSoloLecturaMotivo: gsoEscritura.permite ? null : gsoEscritura.motivo || motivoApi,
+    planMensualEstado: data?.plan_mensual_estado ?? null,
   };
 }

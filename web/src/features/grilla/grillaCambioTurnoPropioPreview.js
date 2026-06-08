@@ -773,6 +773,7 @@ export function esReemplazoPropioV2(op) {
  *   personaLabel?: string;
  *   grupoLabel?: string;
  *   creado_en?: string;
+ *   esUrgenciaOperativa?: boolean;
  * }} params
  */
 export function buildReemplazoPropioOutboxOp(params) {
@@ -802,5 +803,6 @@ export function buildReemplazoPropioOutboxOp(params) {
     grupoId: params.grupoId,
     periodo: params.periodo,
     grupoLabel: String(params.grupoLabel || "").trim(),
+    esUrgenciaOperativa: params.esUrgenciaOperativa === true,
   };
 }

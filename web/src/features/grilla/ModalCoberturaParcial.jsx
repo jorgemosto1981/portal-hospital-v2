@@ -22,6 +22,8 @@ import {
   COPY_BADGE_SOLO_LECTURA_GSO,
   soloLecturaDesdeGsoEscrituraApi,
 } from "./grillaGsoSoloLectura.js";
+import { errorMotivoTeoriaOverride } from "./teoriaPermisosGso.js";
+import UrgenciaG1AvisoModal from "./UrgenciaG1AvisoModal.jsx";
 
 /**
  * Flujo A — intercambio de guardia bilateral (RFC §3.1).
@@ -36,12 +38,14 @@ import {
  *   onRegistrado?: () => void;
  *   onDesactualizado?: () => void;
  *   onAgregarOutbox: (op: Record<string, unknown>) => void;
+ *   requiereUrgenciaG1?: boolean;
  * }} props
  */
 export default function ModalCoberturaParcial({
   personaOrigenId,
   personaOrigenLabel,
   fechaYmd,
+  requiereUrgenciaG1 = false,
   grupoId,
   periodo,
   opsPendientes = [],
@@ -265,8 +269,9 @@ export default function ModalCoberturaParcial({
 
   const handleSubmit = async () => {
     setErrorSubmit("");
-    if (motivo.trim().length < 3) {
-      setErrorSubmit("Motivo obligatorio (mín. 3 caracteres).");
+    const errMotivo = errorMotivoTeoriaOverride(motivo, requiereUrgenciaG1);
+    if (errMotivo) {
+      setErrorSubmit(errMotivo);
       return;
     }
     const val = validacion;
@@ -297,6 +302,7 @@ export default function ModalCoberturaParcial({
         expectedVersionTokenDestino: destino.expectedVersionToken,
         grupoId,
         periodo,
+        esUrgenciaOperativa: requiereUrgenciaG1,
       });
       onAgregarOutbox(op);
       toast.success("Intercambio agregado a cambios pendientes.");
@@ -363,6 +369,7 @@ export default function ModalCoberturaParcial({
             <p className="mt-1 text-xs text-slate-700">{soloLecturaInfo.detalle}</p>
           </div>
         ) : null}
+        <UrgenciaG1AvisoModal visible={requiereUrgenciaG1} />
         {hayPreviewPendiente && !cargandoOrigen ? (
           <p className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-950">
             Tramos según grilla + borradores pendientes (sin aplicar aún).
@@ -534,13 +541,21 @@ export default function ModalCoberturaParcial({
             </section>
 
             <section>
-              <h3 className="text-sm font-semibold text-slate-800">3. Motivo</h3>
+              <h3 className="text-sm font-semibold text-slate-800">
+                3. Motivo
+                <span className="font-normal text-rose-700"> *</span>
+              </h3>
               <textarea
                 rows={2}
                 maxLength={500}
+                required
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
-                placeholder="Motivo operativo (obligatorio)…"
+                placeholder={
+                  requiereUrgenciaG1
+                    ? "Justificá la urgencia operativa (obligatorio)…"
+                    : "Motivo operativo (obligatorio)…"
+                }
                 className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
               />
             </section>
