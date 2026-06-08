@@ -89,6 +89,60 @@ Entorno Firebase: proyecto único `portal-hospital-v2` (https://portal-hospital-
 
 Checklist extendido: [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md).
 
+---
+
+## Unidad piloto — smoke US-13 post-deploy (ejecución humana)
+
+**Entorno:** https://portal-hospital-v2.web.app · deploy US-13 **2026-06-08** (hosting + functions).  
+**Estado smoke:** ⏳ pendiente ejecución · resultados → § **Acta smoke** en checklist.
+
+### Escenario (mapeo BD documentada)
+
+| Parámetro | Valor acordado | IDs / notas en repo |
+|-----------|----------------|---------------------|
+| **GDT** | Sala de Clínica Médica *(nombre operativo)* | En catálogo figura **Sala Internación 1** — `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · confirmar etiqueta en UI antes de empezar |
+| **Período** | **Junio 2026** (`2026-06`) | Plan vigente documentado: `plt_01KT9AZQGV0BRZVSEEMBT0141A` · agentes en plan: LOKITO `per_01KQQJA5Q1VKBTJ74RHQ0HSHSB`, MOSTO `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ` |
+| **Pre-flight G1/G6** | Plan en **HABILITADO** | Tras login jefe/RRHH: Plan turno servicio o contexto grilla → si no está HABILITADO, **no** usar este mes para G1 hasta habilitar (RRHH) o elegir mes que lo esté |
+
+### Usuarios piloto (roles)
+
+Sustituir por **cuenta portal + DNI** reales al ejecutar; niveles **10 / 5** = `nivel_jerarquico` en **HLG vigente** del `gdt_01KQA6Q…`, no el rol de negocio.
+
+| Alias | Rol esperado | Uso en smoke | Expectativa motor |
+|-------|--------------|--------------|-------------------|
+| **Jefe_Sala** | Jefe · `tiene_subordinados` · nivel **>** subordinado en GDT | G1, G2 (caso feliz opcional), G1b | Override subordinado con jerarquía; en plan HABILITADO sin urgencia → bloqueo G1; con urgencia → OK |
+| **Medico_Planta** | Agente · **sin** `tiene_subordinados` · nivel bajo | G4, G6 | Bloqueos G4/G6; no usar para validar “puede todo” |
+| **Administrativo_RRHH** | Claim RRHH (`esRrhhOperativo`) | G3 *(opcional)* | Bypass **G1** y **G2** sobre **otros**; **G6** guardar/enviar plan OK · **G4 self-override sigue bloqueado** (política G4 + tests) |
+
+**Hallazgo vs política:** si RRHH esperaba editar **su propia** teoría, es **rechazo esperado** (`TITULAR_NO_PUEDE_EDITAR_PROPIA_TEORIA`), no bug.
+
+### Protocolo — 4 pilares (orden sugerido)
+
+Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` · día **laborable con turno** (ej. MOSTO **13** documentado en smokes previos). Plan: **Plan turno servicio** mismo GDT/mes.
+
+| # | Test | Actor | Pasos | Pass |
+|---|------|-------|-------|------|
+| **G4** | Self-override | **Medico_Planta** | Gestión turno / override **sobre sí mismo** (`per_*` titular = target) | Mensaje/código `TITULAR_NO_PUEDE_EDITAR_PROPIA_TEORIA` · sin persistir |
+| **G2** | Jerarquía | **Jefe_Sala** | Override sobre colega **nivel ≥** en el **mismo GDT** *o* intento sobre agente cuya op no cumple superioridad (ej. par jefe/jefe si existen) | `NO_ES_SUPERIOR_JERARQUICO` |
+| **G1a** | Plan habilitado | **Jefe_Sala** | Plan **HABILITADO** · override sobre subordinado **sin** marcar urgencia | `PLAN_HABILITADO_REQUIERE_URGENCIA` |
+| **G1b** | Urgencia | **Jefe_Sala** | Mismo día/agente · marcar **urgencia operativa** + motivo (modal) | **Permitido** (UI + guardado) |
+| **G6** | Plan mensual | **Medico_Planta** | Plan jun-26 · **Guardar** / **Enviar a aprobación** | Botón deshabilitado o `SOLO_JEFE_O_RRHH_PUEDE_EDITAR_PLAN` |
+
+**Opcional G3:** **Administrativo_RRHH** · plan HABILITADO · override sobre LOKITO **sin** urgencia → **debe permitir** (contrasta con G1a).
+
+### Registro de resultados (completar operador)
+
+| Test | Fecha | Cuenta (alias) | `per_*` / uid | Resultado | Evidencia / notas |
+|------|-------|----------------|---------------|-----------|-------------------|
+| G4 | | | | ☐ OK ☐ Falla | |
+| G2 | | | | ☐ OK ☐ Falla | |
+| G1a | | | | ☐ OK ☐ Falla | |
+| G1b | | | | ☐ OK ☐ Falla | |
+| G6 | | | | ☐ OK ☐ Falla | |
+| G3 opt. | | | | ☐ OK ☐ Falla | |
+
+**Si falla:** no cambiar código aún · clasificar **dato HLG** (Nivel 1) vs **lógica** (Nivel 2 rollback) · anotar en tabla.
+
 ### 3. Contingencia (rollback)
 
 | Nivel | Cuándo | Acción |

@@ -209,14 +209,39 @@ Marcar si **siguen vigentes** sin cambio; si no, anotar en notas.
 
 | Campo | Valor |
 | :--- | :--- |
-| **Fecha validación** | 2026-06-08 (sesión iterativa checklist) |
+| **Fecha validación política (G1–G7)** | 2026-06-08 (sesión iterativa checklist) |
 | **Contexto** | Pre go-live hospital — sin usuarios con hábitos previos |
 | **G1–G7** | [x] **Todos cerrados** — ver § Decisiones registradas + Resumen ejecutivo |
 | **Lista urgencias override (G1)** | [x] § Decisiones registradas (3 frases) |
 | **G7 lanzamiento** | [x] Reglas estrictas día 1; capacitación en onboarding |
-| **Siguiente paso desarrollo** | [x] **Fase A** `teoriaPermisosGso.js` → Fase B UI → Fase C callables |
+| **Código + deploy** | [x] Fases A/B/C · `origin/master` · hosting + functions 2026-06-08 |
 
 **Firma / visto bueno RRHH (nombre + rol):**  
+
+---
+
+## Acta smoke post-deploy (staging / piloto — completar tras ejecución humana)
+
+| Campo | Valor |
+| :--- | :--- |
+| **Fecha smoke** | *(pendiente)* |
+| **GDT** | `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` (Sala Internación 1 / Clínica Médica — confirmar etiqueta UI) |
+| **Período** | `2026-06` · plan `plt_01KT9AZQGV0BRZVSEEMBT0141A` (estado al probar: _______) |
+| **Jefe_Sala** | cuenta _______ · `per_*` _______ · nivel HLG en GDT _______ |
+| **Medico_Planta** | cuenta _______ · `per_*` _______ (ej. LOKITO `per_01KQQJA5Q1VKBTJ74RHQ0HSHSB`) |
+| **Administrativo_RRHH** | cuenta _______ · `per_*` _______ |
+| **G4** | ☐ `TITULAR_NO_PUEDE_EDITAR_PROPIA_TEORIA` |
+| **G2** | ☐ `NO_ES_SUPERIOR_JERARQUICO` |
+| **G1** | ☐ sin urgencia bloqueado · ☐ con urgencia permitido |
+| **G6** | ☐ `SOLO_JEFE_O_RRHH_PUEDE_EDITAR_PLAN` |
+| **G3 opc.** | ☐ RRHH override sin urgencia en HABILITADO permitido |
+| **Estado US-13 ops** | ☐ **Cerrado** ☐ Hallazgos (ver notas) |
+
+**Notas / hallazgos:**  
+
+**Firma operador smoke:**  
+
+*Protocolo detallado:* [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) § **Unidad piloto — smoke US-13 post-deploy**.
 
 ---
 
