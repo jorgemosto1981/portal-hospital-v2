@@ -10,7 +10,11 @@ import ModalCoberturaParcial from "./ModalCoberturaParcial.jsx";
 import ModalCambioTurnoPropio from "./ModalCambioTurnoPropio.jsx";
 import ModalTurnoAdicional from "./ModalTurnoAdicional.jsx";
 import GrillaOutboxPendientesBanner from "./GrillaOutboxPendientesBanner.jsx";
-import { puedeGestionarTurnoEnGrilla } from "./grillaGestionTurnoCapabilities.js";
+import {
+  evaluarCapabilitiesGestionTurno,
+  periodoGsoDesdeVista,
+  resolverNivelJerarquicoEnFilas,
+} from "./grillaGestionTurnoCapabilities.js";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
 import { GRILLA_MES_MODO } from "./GrillaMesSelector.jsx";
@@ -129,11 +133,58 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
       grupoLabel: String(op.grupoLabel || labelGrupoParaOutbox(gid)).trim(),
     };
   };
-  const puedeGestionTurno = puedeGestionarTurnoEnGrilla({
-    esRrhh,
+  const periodoGso = useMemo(
+    () => periodoGsoDesdeVista({
+      gsoSoloLecturaMotivo: vista.gsoSoloLecturaMotivo,
+      gsoPermiteEscritura: vista.gsoPermiteEscritura,
+    }),
+    [vista.gsoSoloLecturaMotivo, vista.gsoPermiteEscritura],
+  );
+
+  const nivelJerarquicoActor = useMemo(
+    () => resolverNivelJerarquicoEnFilas(vista.filas, personaId),
+    [vista.filas, personaId],
+  );
+
+  const capabilitiesDiaModal = useMemo(() => {
+    if (!diaModal?.personaId || !diaModal?.fechaYmd) {
+      return { puedeGestionarTurno: false, requiereUrgencia: false, mensajeBloqueo: null };
+    }
+    if (personaId && diaModal.personaId === personaId) {
+      return { puedeGestionarTurno: false, requiereUrgencia: false, mensajeBloqueo: null };
+    }
+    if (!vista.gsoPermiteEscritura && !esRrhh) {
+      return { puedeGestionarTurno: false, requiereUrgencia: false, mensajeBloqueo: null };
+    }
+    const targetNivel = resolverNivelJerarquicoEnFilas(
+      vista.filas,
+      diaModal.personaId,
+      diaModal.filaId,
+    );
+    return evaluarCapabilitiesGestionTurno({
+      usuarioActual: {
+        id: personaId,
+        esJefe,
+        esRrhh,
+        nivelJerarquico: nivelJerarquicoActor,
+      },
+      agenteTarget: {
+        id: diaModal.personaId,
+        nivelJerarquico: targetNivel,
+      },
+      estadoPlan: "HABILITADO",
+      periodoGso,
+    });
+  }, [
+    diaModal,
+    personaId,
     esJefe,
-    gsoPermiteEscritura: vista.gsoPermiteEscritura,
-  });
+    esRrhh,
+    vista.filas,
+    vista.gsoPermiteEscritura,
+    nivelJerarquicoActor,
+    periodoGso,
+  ]);
   const periodos = useMemo(
     () =>
       esJefe
@@ -760,9 +811,14 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
         esRrhh={esRrhh}
         mostrarFichada={esRrhh || esJefe}
         puedeCorregirPlan={esJefe || esRrhh}
-        puedeGestionarTurno={puedeGestionTurno && !diaModal?.incompletoPlan}
+        puedeGestionarTurno={
+          capabilitiesDiaModal.puedeGestionarTurno && !diaModal?.incompletoPlan
+        }
         onAbrirGestionTurno={
-          puedeGestionTurno && diaModal?.personaId && diaModal?.fechaYmd && diaModal?.grupoTrabajoId
+          capabilitiesDiaModal.puedeGestionarTurno
+          && diaModal?.personaId
+          && diaModal?.fechaYmd
+          && diaModal?.grupoTrabajoId
             ? () => {
                 setGestionTurnoShell({
                   personaId: diaModal.personaId,
@@ -772,6 +828,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   personaLabel: diaModal.personaLabel,
                   grupoLabel: diaModal.grupoLabel,
                   turnoTeorico: diaModal.turnoTeorico,
+                  requiereUrgenciaG1: capabilitiesDiaModal.requiereUrgencia === true,
                 });
               }
             : undefined
@@ -789,6 +846,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
           personaLabel={gestionTurnoShell.personaLabel}
           grupoLabel={gestionTurnoShell.grupoLabel}
           turnoVisInicial={gestionTurnoShell.turnoTeorico}
+          requiereUrgenciaG1={gestionTurnoShell.requiereUrgenciaG1 === true}
           soloLectura={!vista.gsoPermiteEscritura}
           soloLecturaMensaje={vista.gsoSoloLecturaMensaje}
           onCapaActualizada={() => void vista.cargar()}

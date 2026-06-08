@@ -61,12 +61,18 @@ function hlgSegmentosMes(hlgs, anio, mes) {
     if (!hlgSolapaMes(h, rango)) continue;
     const fi = String(h.fecha_inicio || "").slice(0, 10);
     const ff = h.fecha_fin ? String(h.fecha_fin).slice(0, 10) : rango.ultimoDia;
+    const rawNivel = h.nivel_jerarquico;
+    const nivelJerarquico =
+      rawNivel === null || rawNivel === undefined || rawNivel === ""
+        ? null
+        : Number(rawNivel);
     out.push({
       fila_id: buildFilaId(h.persona_id, h.hlg_id),
       persona_id: String(h.persona_id || ""),
       hlg_id: String(h.hlg_id || ""),
       grupo_de_trabajo_id: String(h.grupo_de_trabajo_id || ""),
       regimen_horario_id: h.regimen_horario_id || null,
+      nivel_jerarquico: Number.isFinite(nivelJerarquico) ? nivelJerarquico : null,
       vigente_desde: maxYmd(fi, rango.primerDia),
       vigente_hasta: minYmd(ff, rango.ultimoDia),
       fecha_inicio: h.fecha_inicio,

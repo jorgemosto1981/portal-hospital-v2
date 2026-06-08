@@ -31,6 +31,7 @@ import { COPY_BADGE_SOLO_LECTURA_GSO } from "./grillaGsoSoloLectura.js";
  *   onElegirFlujo?: (flujo: import("./gestionTurnoWizardOpciones.js").GestionTurnoFlujoId) => void;
  *   soloLectura?: boolean;
  *   soloLecturaMensaje?: string | null;
+ *   requiereUrgenciaG1?: boolean;
  * }} props
  */
 export default function GestionTurnoDiaShell({
@@ -47,6 +48,7 @@ export default function GestionTurnoDiaShell({
   onElegirFlujo,
   soloLectura = false,
   soloLecturaMensaje = null,
+  requiereUrgenciaG1 = false,
 }) {
   const [capaResp, setCapaResp] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -181,6 +183,13 @@ export default function GestionTurnoDiaShell({
           <span className="font-medium">Teórico: </span>
           {loading ? "Cargando…" : resumen || "—"}
         </div>
+
+        {requiereUrgenciaG1 ? (
+          <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+            Plan del mes <strong>habilitado</strong>: solo contingencia operativa (urgencia). Cambios de diseño del mes
+            van por <strong>revisión del plan</strong> con RRHH.
+          </p>
+        ) : null}
 
         {error ? (
           <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">

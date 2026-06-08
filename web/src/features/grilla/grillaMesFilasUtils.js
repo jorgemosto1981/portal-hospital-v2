@@ -1,3 +1,10 @@
+/** @param {unknown} raw */
+function parseNivelJerarquicoFila(raw) {
+  if (raw === null || raw === undefined || raw === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
 /**
  * Normaliza filas de listarVistaGrillaMesPorGrupo (1 fila por tramo HLg).
  * @param {Array<Record<string, unknown>> | null | undefined} filas
@@ -27,6 +34,7 @@ export function normalizarFilasGrillaEquipo(filas) {
       vigente_desde: fila.vigente_desde ? String(fila.vigente_desde).slice(0, 10) : null,
       vigente_hasta: fila.vigente_hasta ? String(fila.vigente_hasta).slice(0, 10) : null,
       regimen_horario_id: fila.regimen_horario_id || null,
+      nivel_jerarquico: parseNivelJerarquicoFila(fila.nivel_jerarquico),
       carga_horaria_semanal:
         fila.carga_horaria_semanal != null && Number.isFinite(Number(fila.carga_horaria_semanal))
           ? Number(fila.carga_horaria_semanal)

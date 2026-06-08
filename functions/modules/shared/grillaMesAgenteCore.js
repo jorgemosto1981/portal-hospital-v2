@@ -396,6 +396,7 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
       persona_id: pid,
       hlg_id: tramo.hlg_id,
       regimen_horario_id: tramo.regimen_horario_id,
+      nivel_jerarquico: tramo.nivel_jerarquico ?? null,
       vigente_desde: tramo.vigente_desde,
       vigente_hasta: tramo.vigente_hasta,
       carga_horaria_semanal: cargaHoras,
