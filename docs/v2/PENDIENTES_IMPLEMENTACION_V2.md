@@ -98,7 +98,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 
 | Ticket | Entregable | Estado | Referencia |
 |--------|------------|--------|------------|
-| **T-05** | Grilla selector dinámico / editor segmentos en plan mensual | Pendiente | [`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`](./EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md), `GrillaMensualEditor` |
+| **T-05** | (A) Selector foco **GDT** unificado grilla jefe + planes · (B) paleta segmentos / compuestos `+` en `GrillaMensualEditor` | Pendiente | Handoff [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md) · épica [`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`](./EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md) |
 | **T-06** | Bandeja + ayuda extendida | Pendiente | `HelpContext`, bandeja |
 | **T-07** | Lecturas `vis_*` + caché RAM catálogo | Pendiente | Optimización; sin outbox |
 | **T-09** | Guías + `helpContent` | Pendiente | Docs UX |
