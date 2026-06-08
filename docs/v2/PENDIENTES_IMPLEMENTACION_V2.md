@@ -3,7 +3,7 @@
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
 **Última actualización:** 2026-06-08 (**US-6 / US-7 / US-11** cerrados — hosting prod; índice sesión actualizado)  
 **Rama / release:** `master` · tag **`v2.6.3-gso-us6`** (`ccc1040`) · anterior **`v2.6.1-blindaje-gso`** · PR blindaje [#2](https://github.com/jorgemosto1981/portal-hospital-v2/pull/2) · PR US-17 [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3) **mergeado**  
-**Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR US-13** (matriz permisos teoría)
+**Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR US-13 Fase A** (`teoriaPermisosGso.js` + Vitest; SSoT G1–G7 en docs)
 
 ---
 
@@ -64,7 +64,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | **US-7** | — | **✅ Cerrado** — ℹ️ licencia en franco (escenario D) | `evaluarLicenciaEnFrancoCelda`, grilla + modal |
 | **US-8** | — | **✅ Cerrado** — badge 🔒 + gates modales + copy RRHH tarjeta (`4dcd9b9`) | `grillaGsoSoloLectura.js`, grilla + modales turno |
 | **US-11** | — | **✅ Cerrado** — toast materialización sector alineado a titular | `grillaMaterializacionToast.js`, `useGrillaMesVista.js` |
-| **US-13** | P1 | Matriz permisos teoría (doc → código) | Disperso plan / override / HLg |
+| **US-13** | P1 | **SSoT G1–G7 ✅** → Fase A/B/C código | [`MATRIZ_US13_PERMISOS_TEORIA_V2.md`](./MATRIZ_US13_PERMISOS_TEORIA_V2.md) · [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md) |
 | **US-17** | — | **✅ Cerrado (código + ops)** — inventario + remediación 2026-06-06; audit prod **0 huecos** | [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md) · [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) |
 
 **Orden sugerido (restante épica GSO):** ~~US-3…US-11~~ ✅ (hosting 2026-06-08) · **US-13** (P1) · RFC HLG warning ⏸ RRHH.

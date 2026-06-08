@@ -17,7 +17,7 @@
 | **Backend plan** | Habilitar enriquece horarios; soft-delete `eliminado` | **US-9:** no rechaza `laborable`/`guardia` sin `turno_id` al habilitar |
 | **Materialización** | `listarVistaGrillaMesPorGrupo` → `materializarGrupoMes`; licencias no pisadas en worker | Coherente con P6; riesgo si teoría cambia sin ⚠️ (US-3) |
 | **GSO UI equipo/titular** | Licencias, turnos con horario, F, NL, feriados | **US-1/16:** hueco `laborable` sin `rda_*` y sin licencia → `tieneDatos=false` → celda vacía |
-| **Reconciliación** | Modal día, overrides, cobertura | **US-3/4/14/15:** badges y acciones US-14 no completos |
+| **Reconciliación** | Modal día, overrides, cobertura | **US-3/4/14/15:** badges y acciones US-14 no completos; **US-13:** borrador matriz permisos en revisión |
 | **Operaciones** | Toast materialización grupo en equipo | Parcial vs US-11; titular usa otro callable + lazy toast |
 
 ---
@@ -38,10 +38,12 @@
 | **US-6** | P2 | ⏳ lazy (G) | Variante `vacio` en `varianteCeldaOperativa` | **Parcial** |
 | **US-7** | P2 | ℹ️ licencia en franco (D) | Se ve F + licencia (rosa en captura piloto) | **Parcial** (hint opcional) |
 | **US-8** | — | 🔒 mes cerrado (H) | Badge celda + gates modales turno A/B/C/shell | **✅ Cerrado** 2026-06-06 — `grillaGsoSoloLectura.js` |
-| **US-13** | P1 | Matriz permisos teoría | Doc acta; código disperso (plan, override, HLg) | **Documental** |
+| **US-13** | P1 | Matriz permisos teoría | Matriz + checklist **G1–G7 cerrados** [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md); código disperso | **Implementación** — Fase A/B/C (go-live día 1) |
 | **US-14** | P1 | Acciones 1+2+3 ante ⚠️ | `DiaGrillaDetalleModal.jsx`: bandeja, enlaces gestión; sin flujo ⚠️ dedicado | **Sí** |
 | **US-15** | P2 | Fichada por rol (Q9-3) | `grillaVisSanitizeGso.js` quita `fichadas_reales` a jefe; sin presente/ausente | **Sí** |
 | **US-17** | — | Remediación planes | **✅ Cerrado** 2026-06-06 — audit prod 0 huecos (5 planes HABILITADO) |
+
+**US-13 (jun 2026):** checklist **G1–G7 cerrado**; política en [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md) + [`MATRIZ_US13_PERMISOS_TEORIA_V2.md`](./MATRIZ_US13_PERMISOS_TEORIA_V2.md). Siguiente: **Fase A** código (sin rollout permisivo — G7).
 
 ---
 

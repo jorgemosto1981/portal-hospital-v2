@@ -1,6 +1,8 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ:** **US-13** (matriz permisos teoría, P1) · **T-05/T-06** F3 turnos compuestos · RFC HLG ⏸ espera RRHH  
+> **RETOMAR AQUÍ:** **US-13 Fase A (código)** — TDD: crear `web/src/features/grilla/teoriaPermisosGso.js` + `teoriaPermisosGso.test.js` (Vitest) aplicando reglas **G1–G7** de [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md) / § SSoT en [`MATRIZ_US13_PERMISOS_TEORIA_V2.md`](./MATRIZ_US13_PERMISOS_TEORIA_V2.md). Sin UI ni callables hasta verde en tests.  
+> **US-13 docs:** ✅ commit SSoT G1–G7 · go-live día 1 (G7) · luego Fase B UI → Fase C callables.  
+> **Otros:** **T-05/T-06** F3 turnos compuestos · RFC HLG ⏸ espera RRHH  
 > **Hosting prod:** https://portal-hospital-v2.web.app · último deploy **2026-06-08** (`ccc1040` · tag **`v2.6.3-gso-us6`**)  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)
@@ -34,7 +36,25 @@
 
 - `npm run build:web` + `firebase deploy --project portal-hospital-v2 --only hosting` — **2026-06-08** (solo hosting; functions sin cambios).
 
-**Última actualización índice:** 2026-06-08 — US-6/7/11 cerrados y publicados en `origin/master`.
+**Última actualización índice:** 2026-06-08 — Etapa **analítica US-13 cerrada** (SSoT G1–G7); próxima sesión = **Fase A TDD**.
+
+---
+
+## CIERRE SESIÓN — US-13 política permisos (analítica, 2026-06-08)
+
+| Qué | Dónde / estado |
+|-----|----------------|
+| **Matriz rol × acción × pantalla** | [`MATRIZ_US13_PERMISOS_TEORIA_V2.md`](./MATRIZ_US13_PERMISOS_TEORIA_V2.md) — § Política oficial G1–G7 |
+| **Checklist RRHH (cerrado)** | [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md) |
+| **Commit SSoT** | `docs(gso): oficializar politica de permisos US-13 (G1-G7)` |
+| **Próxima sesión — Fase A** | `teoriaPermisosGso.js` + Vitest; reglas G1–G6 + `esRrhhOperativo` (G3); referencia `grillaGsoSoloLectura.test.js` (functions) |
+| **Después** | Fase B: `grillaGestionTurnoCapabilities`, plan, modales · Fase C: `assertOverrideAuth`, `assertPlanAuth` |
+
+**Fase A — criterios de arranque (TDD)**
+
+1. Tests primero: titular sin override (G4), jefe solo sobre subordinado (G2), RRHH unificado (G3), plan guardar/enviar solo jefatura (G6), override mes habilitado acotado a urgencias G1 (casos felices y denegados).
+2. Módulo puro (sin React): reutilizar / espejar lógica de `grillaGsoSoloLectura.js` donde aplique ventanas M-1 / 🔒.
+3. No deploy ni feature flag «modo permisivo» (G7).
 
 ---
 
