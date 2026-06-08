@@ -33,6 +33,17 @@ describe("celdaEsIncompletoPlanVis (US-1)", () => {
   });
 });
 
+describe("varianteCeldaOperativa US-6", () => {
+  it("prioriza teoria pendiente sobre licencia fucsia", () => {
+    expect(
+      varianteCeldaOperativa({
+        tieneLicencia: true,
+        teoriaPendienteLazy: true,
+      }),
+    ).toBe("teoriaPendiente");
+  });
+});
+
 describe("varianteCeldaOperativa incompleto", () => {
   it("no devuelve vacio si es incompleto plan", () => {
     expect(

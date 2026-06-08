@@ -32,3 +32,16 @@ export function mensajeToastMaterializacionLazy(vista) {
     ? `Turno teórico recalculado (${etiqueta}).`
     : "Turno teórico recalculado al vuelo para este cargo.";
 }
+
+/**
+ * US-11 — mensaje alineado con titular tras materializar sector (equipo).
+ * @param {{ ok?: boolean; procesados?: number } | null | undefined} matGrupo
+ */
+export function mensajeToastMaterializacionGrupo(matGrupo) {
+  if (matGrupo?.ok !== true) return null;
+  const n = Number(matGrupo.procesados);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n === 1
+    ? "Turno teórico recalculado al vuelo para 1 agente-mes del sector."
+    : `Turno teórico recalculado al vuelo (${n} agente-mes en el sector).`;
+}

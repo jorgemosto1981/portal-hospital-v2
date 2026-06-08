@@ -32,6 +32,7 @@ const VARIANTES_CHIP = {
     bg: "bg-rose-100 hover:bg-rose-200 bg-[repeating-linear-gradient(-45deg,transparent,transparent_3px,rgba(244,63,94,0.15)_3px,rgba(244,63,94,0.15)_6px)]",
     text: "text-rose-950",
   },
+  teoriaPendiente: { bg: "bg-slate-200 hover:bg-slate-300", text: "text-slate-800" },
 };
 
 /** @param {keyof typeof VARIANTES_CHIP} variant */
@@ -186,6 +187,7 @@ export function varianteCeldaMensual({
  *   esFranco?: boolean;
  *   tieneTurno?: boolean;
  *   esIncompletoPlan?: boolean;
+ *   teoriaPendienteLazy?: boolean;
  *   soloInstitucional?: boolean;
  * }} p
  */
@@ -195,7 +197,9 @@ export function varianteCeldaOperativa({
   esFranco,
   tieneTurno,
   esIncompletoPlan,
+  teoriaPendienteLazy,
 }) {
+  if (teoriaPendienteLazy && tieneLicencia) return "teoriaPendiente";
   if (tieneLicencia) return "licencia";
   if (esIncompletoPlan) return "incompletoPlan";
   if (tieneTurno) return "laborable";

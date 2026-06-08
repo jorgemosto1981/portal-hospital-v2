@@ -1,7 +1,9 @@
 import { diasEnMes, etiquetaCelda, celdaTieneDesalineacionTeoria } from "./grillaMesCellUtils.js";
 import {
   evaluarImputacionExternaCelda,
+  evaluarLicenciaEnFrancoCelda,
   evaluarPostPurgeHlgCelda,
+  evaluarTeoriaPendienteLazyCelda,
 } from "./grillaMesGsoHints.js";
 import { evaluarSoloLecturaCeldaGso } from "./grillaGsoSoloLectura.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
@@ -57,6 +59,7 @@ function celdaVacia(key) {
  *   etiquetasGrupo?: Record<string, string>;
  *   gsoPermiteEscritura?: boolean;
  *   gsoSoloLecturaMotivo?: string | null;
+ *   materializadoLazy?: boolean;
  *   onDiaClick: (payload: { dia: string; eventos: unknown[]; grupoLabel?: string }) => void;
  * }} props
  */
@@ -73,6 +76,7 @@ export default function GrillaMesTitularCalendario({
   etiquetasGrupo = {},
   gsoPermiteEscritura = true,
   gsoSoloLecturaMotivo = null,
+  materializadoLazy = false,
   onDiaClick,
 }) {
   const map = diasMap && typeof diasMap === "object" ? diasMap : {};
@@ -138,6 +142,13 @@ export default function GrillaMesTitularCalendario({
             fechaYmd,
             vigenteHasta,
           });
+          const teoriaPendiente = evaluarTeoriaPendienteLazyCelda(cell, eventos, {
+            fechaYmd,
+            vigenteHasta,
+            materializadoLazy,
+            postPurgeActivo: postPurge.activo,
+          });
+          const licenciaFranco = evaluarLicenciaEnFrancoCelda(cell, eventos);
           const esLaborable = !esFranco && !esNoLaborable && (jornadaVis || Boolean(turnoId) || esIncompletoPlan);
 
           if (!celdaInactiva && esNoLaborable && !tieneLicencia) {
@@ -161,13 +172,16 @@ export default function GrillaMesTitularCalendario({
             tieneDatos: tieneDatos || tieneLicencia,
           });
 
-          const bgCelda = tieneLicencia
-            ? ""
-            : claseFondoCeldaCalendarioTitular({
-                esFeriado,
-                esFranco: esFranco && !esFeriado,
-                esLaborable: esLaborable && !esFeriado,
-              });
+          const bgCelda =
+            teoriaPendiente.activo && tieneLicencia
+              ? "bg-slate-200"
+              : tieneLicencia
+                ? ""
+                : claseFondoCeldaCalendarioTitular({
+                    esFeriado,
+                    esFranco: esFranco && !esFeriado,
+                    esLaborable: esLaborable && !esFeriado,
+                  });
 
           const chipTurno = tieneLicencia
             ? "border-white/40 bg-white/25 text-white"
@@ -189,9 +203,18 @@ export default function GrillaMesTitularCalendario({
           }
           if (imputacion.activo && imputacion.tooltip) titleParts.push(imputacion.tooltip);
           if (postPurge.activo && postPurge.tooltip) titleParts.push(postPurge.tooltip);
+          if (teoriaPendiente.activo && teoriaPendiente.tooltip) {
+            titleParts.push(teoriaPendiente.tooltip);
+          }
+          if (licenciaFranco.activo && licenciaFranco.tooltip) {
+            titleParts.push(licenciaFranco.tooltip);
+          }
           if (soloLectura.activo && soloLectura.tooltip) titleParts.push(soloLectura.tooltip);
 
-          const colorNumero = tieneLicencia
+          const colorNumero =
+            teoriaPendiente.activo && tieneLicencia
+              ? "text-slate-800"
+              : tieneLicencia
             ? "text-white"
             : esFeriado
               ? "text-amber-900"
@@ -245,8 +268,22 @@ export default function GrillaMesTitularCalendario({
                   </span>
                 ) : null}
               </div>
-              {labelLicencia || soloLectura.activo || desalineacionTeoria || imputacion.activo || postPurge.activo ? (
-                <span className={`${labelLicencia ? CLASE_LICENCIA : "relative z-[12] flex items-center gap-0.5 text-[10px] font-bold text-slate-700"} flex items-center gap-0.5`}>
+              {labelLicencia ||
+              soloLectura.activo ||
+              desalineacionTeoria ||
+              imputacion.activo ||
+              postPurge.activo ||
+              teoriaPendiente.activo ||
+              licenciaFranco.activo ? (
+                <span
+                  className={`${
+                    labelLicencia
+                      ? teoriaPendiente.activo
+                        ? "relative z-[12] max-w-full shrink-0 truncate px-0.5 text-[clamp(0.55rem,2.2vw,0.75rem)] font-bold leading-tight text-slate-800 sm:text-[11px]"
+                        : CLASE_LICENCIA
+                      : "relative z-[12] flex items-center gap-0.5 text-[10px] font-bold text-slate-700"
+                  } flex items-center gap-0.5`}
+                >
                   {desalineacionTeoria ? (
                     <span title={desalineacion.tooltip || "Teoría modificada post-licencia"} aria-hidden>
                       ⚠
@@ -260,6 +297,16 @@ export default function GrillaMesTitularCalendario({
                   {postPurge.activo ? (
                     <span title={postPurge.tooltip} aria-hidden>
                       📅
+                    </span>
+                  ) : null}
+                  {teoriaPendiente.activo ? (
+                    <span title={teoriaPendiente.tooltip} aria-hidden>
+                      ⏳
+                    </span>
+                  ) : null}
+                  {licenciaFranco.activo ? (
+                    <span title={licenciaFranco.tooltip} aria-hidden>
+                      ℹ️
                     </span>
                   ) : null}
                   {soloLectura.activo ? (

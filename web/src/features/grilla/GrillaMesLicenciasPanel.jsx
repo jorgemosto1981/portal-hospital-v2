@@ -537,6 +537,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                           etiquetasGrupo={etiquetasGrupo}
                           gsoPermiteEscritura={vista.gsoPermiteEscritura}
                           gsoSoloLecturaMotivo={vista.gsoSoloLecturaMotivo}
+                          materializadoLazy={cal.materializado_lazy === true}
                           onDiaClick={({ dia, eventos, grupoLabel }) => {
                             const fechaYmd = `${vista.anio}-${String(vista.mes).padStart(2, "0")}-${dia}`;
                             if (cal.vigente_desde && cal.vigente_hasta) {
@@ -553,6 +554,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                               eventos,
                               celdaVis: cell,
                               vigenteHasta: cal.vigente_hasta,
+                              materializadoLazy: cal.materializado_lazy === true,
                               incompletoPlan: celdaEsIncompletoPlanVis(cell),
                               desalineacionTeoria: celdaTieneDesalineacionTeoria(eventos, cell).desalineado,
                               personaLabel: "Mi calendario",
@@ -600,6 +602,9 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   opsOutboxGrupo={opsOutboxGrillaModal}
                   periodoOutbox={periodoGrillaModal}
                   modoFichada={esRrhh ? "rrhh" : esJefe ? "jefe" : null}
+                  materializacionGrupoReciente={
+                    (vista.data?.materializacion_grupo?.procesados ?? 0) > 0
+                  }
                   onCeldaClick={({
                     dia,
                     fechaYmd,
@@ -632,6 +637,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                       desalineacionTooltip: desalineacionTooltip || undefined,
                       celdaVis: celdaVis || undefined,
                       vigenteHasta: vigenteHasta || undefined,
+                      materializadoLazy:
+                        (vista.data?.materializacion_grupo?.procesados ?? 0) > 0,
                       grupoTrabajoId: grupoTrabajoId || grupoLiquidacionId || vista.grupoActivoId || "",
                     })
                   }
@@ -708,6 +715,18 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                   </span>
                   Mes cerrado / solo lectura (sin edición de turno)
                 </span>
+                <span>
+                  <span className="mr-1 inline-block text-[10px] font-bold text-slate-600 align-middle">
+                    ⏳
+                  </span>
+                  Teoría pendiente de cálculo (licencia visible)
+                </span>
+                <span>
+                  <span className="mr-1 inline-block text-[10px] font-bold text-slate-600 align-middle">
+                    ℹ️
+                  </span>
+                  Licencia solapada en franco
+                </span>
                 <span>Clic = detalles</span>
               </div>
             </div>
@@ -737,6 +756,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
         celdaVis={diaModal?.celdaVis ?? null}
         etiquetasGrupo={etiquetasGrupo}
         vigenteHasta={diaModal?.vigenteHasta ?? null}
+        materializadoLazy={diaModal?.materializadoLazy === true}
         esRrhh={esRrhh}
         mostrarFichada={esRrhh || esJefe}
         puedeCorregirPlan={esJefe || esRrhh}

@@ -1,7 +1,10 @@
 /**
- * US-4 (escenario E) y US-5 (escenario F / Q3-2) — hints GSO en celda.
- * @see docs/v2/CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md §3 Escenarios E/F
+ * US-4 (E), US-5 (F), US-6 (G), US-7 (D) — hints GSO en celda.
+ * @see docs/v2/CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md §3
  */
+
+export const COPY_TEORIA_PENDIENTE = "Teoría pendiente de cálculo";
+export const COPY_LICENCIA_EN_FRANCO = "Licencia solapada en franco";
 import {
   celdaTieneImputacionExterna,
   etiquetaGrupoAnclaEvento,
@@ -90,4 +93,65 @@ export function evaluarPostPurgeHlgCelda(cell, eventos, opts = {}) {
   }
 
   return { activo: false };
+}
+
+/** @param {unknown} eventos */
+export function celdaTieneEventoLicenciaVisible(eventos) {
+  const evs = Array.isArray(eventos) ? eventos : [];
+  return evs.some((ev) => String(ev?.codigo_grilla || "").trim().length > 0);
+}
+
+/**
+ * Escenario G — teoría aún no materializada de forma útil, con licencia visible.
+ * @param {Record<string, unknown>|null|undefined} cell
+ * @param {unknown} eventos
+ * @param {{ fechaYmd?: string; vigenteHasta?: string|null; materializadoLazy?: boolean; postPurgeActivo?: boolean }} [opts]
+ */
+export function evaluarTeoriaPendienteLazyCelda(cell, eventos, opts = {}) {
+  if (opts.postPurgeActivo === true) return { activo: false };
+  if (!celdaTieneEventoLicenciaVisible(eventos)) return { activo: false };
+  if (celdaTieneJornadaVis(cell)) return { activo: false };
+
+  if (opts.postPurgeActivo !== true) {
+    const pp = evaluarPostPurgeHlgCelda(cell, eventos, opts);
+    if (pp.activo) return { activo: false };
+  }
+
+  const tipo = String(cell?.tipo_dia || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  const esFranco = cell?.es_franco === true || tipo === "franco";
+  if (esFranco) return { activo: false };
+
+  const esLaborableOGuardia = tipo === "laborable" || tipo === "guardia";
+  if (esLaborableOGuardia) {
+    if (opts.materializadoLazy === true) {
+      return { activo: true, tooltip: COPY_TEORIA_PENDIENTE };
+    }
+    return { activo: false };
+  }
+
+  if (tipo === "no_laborable" || tipo === "no-laborable" || tipo === "nolaborable") {
+    return { activo: false };
+  }
+
+  return { activo: true, tooltip: COPY_TEORIA_PENDIENTE };
+}
+
+/**
+ * Escenario D — hint opcional licencia en franco (US-7).
+ * @param {Record<string, unknown>|null|undefined} cell
+ * @param {unknown} eventos
+ */
+export function evaluarLicenciaEnFrancoCelda(cell, eventos) {
+  if (!celdaTieneEventoLicenciaVisible(eventos)) return { activo: false };
+  const tipo = String(cell?.tipo_dia || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  const esFranco =
+    cell?.es_franco === true || (tipo === "franco" && !celdaTieneJornadaVis(cell));
+  if (!esFranco) return { activo: false };
+  return { activo: true, tooltip: COPY_LICENCIA_EN_FRANCO };
 }

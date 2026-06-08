@@ -18,7 +18,9 @@ import { horarioOperativoDesdeCeldaVis } from "./grillaHorarioInstitucional.js";
 import { resumenFichadaModal, titleFichadaPresencia } from "./grillaFichadaPresenciaDisplay.js";
 import {
   evaluarImputacionExternaCelda,
+  evaluarLicenciaEnFrancoCelda,
   evaluarPostPurgeHlgCelda,
+  evaluarTeoriaPendienteLazyCelda,
 } from "./grillaMesGsoHints.js";
 import { COPY_BADGE_SOLO_LECTURA_GSO } from "./grillaGsoSoloLectura.js";
 
@@ -71,6 +73,7 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd) {
  *   mostrarFichada?: boolean;
  *   etiquetasGrupo?: Record<string, string>;
  *   vigenteHasta?: string | null;
+ *   materializadoLazy?: boolean;
  * }} props
  */
 export default function DiaGrillaDetalleModal({
@@ -102,6 +105,7 @@ export default function DiaGrillaDetalleModal({
   mostrarFichada = false,
   etiquetasGrupo = {},
   vigenteHasta = null,
+  materializadoLazy = false,
 }) {
   const resumenFichada = useMemo(
     () => (mostrarFichada && celdaVis ? resumenFichadaModal(celdaVis, { esRrhh }) : null),
@@ -115,6 +119,20 @@ export default function DiaGrillaDetalleModal({
   const postPurgeHlg = useMemo(
     () => evaluarPostPurgeHlgCelda(celdaVis, eventos, { fechaYmd, vigenteHasta }),
     [celdaVis, eventos, fechaYmd, vigenteHasta],
+  );
+  const teoriaPendiente = useMemo(
+    () =>
+      evaluarTeoriaPendienteLazyCelda(celdaVis, eventos, {
+        fechaYmd,
+        vigenteHasta,
+        materializadoLazy,
+        postPurgeActivo: postPurgeHlg.activo,
+      }),
+    [celdaVis, eventos, fechaYmd, vigenteHasta, materializadoLazy, postPurgeHlg.activo],
+  );
+  const licenciaEnFranco = useMemo(
+    () => evaluarLicenciaEnFrancoCelda(celdaVis, eventos),
+    [celdaVis, eventos],
   );
   const corregirPlanTo = useMemo(
     () => planTurnoCorregirPath(grupoTrabajoId, fechaYmd),
@@ -341,6 +359,22 @@ export default function DiaGrillaDetalleModal({
         {postPurgeHlg.activo ? (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3">
             <p className="text-sm font-semibold text-amber-950">📅 {postPurgeHlg.tooltip}</p>
+          </div>
+        ) : null}
+
+        {teoriaPendiente.activo ? (
+          <div className="mt-3 rounded-lg border border-slate-300 bg-slate-100 p-3">
+            <p className="text-sm font-semibold text-slate-900">⏳ {teoriaPendiente.tooltip}</p>
+            <p className="mt-1 text-xs text-slate-700">
+              La licencia ya está proyectada en la grilla; el turno teórico se completará al sincronizar la
+              materialización del mes.
+            </p>
+          </div>
+        ) : null}
+
+        {licenciaEnFranco.activo ? (
+          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-sm font-semibold text-slate-800">ℹ️ {licenciaEnFranco.tooltip}</p>
           </div>
         ) : null}
 

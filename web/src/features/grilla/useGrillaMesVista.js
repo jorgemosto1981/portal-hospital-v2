@@ -20,7 +20,10 @@ import {
   RX_GDT,
 } from "./grillaGrupoUtils.js";
 import { copyDetalleSoloLecturaGso, gsoPermiteEscritura } from "./grillaGsoSoloLectura.js";
-import { mensajeToastMaterializacionLazy } from "./grillaMaterializacionToast.js";
+import {
+  mensajeToastMaterializacionGrupo,
+  mensajeToastMaterializacionLazy,
+} from "./grillaMaterializacionToast.js";
 import { normalizarFilasGrillaEquipo } from "./grillaMesFilasUtils.js";
 import { hlgSegmentosTitularMes } from "./grillaTitularTramosMes.js";
 
@@ -346,10 +349,9 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
         }
       }
       const matGrupo = payload?.materializacion_grupo;
-      if (matGrupo?.ok === true && (matGrupo.procesados || 0) > 0) {
-        toast.success(`Sector sincronizado (${matGrupo.procesados} agente-mes).`, {
-          id: `mat-ok-${periodoEff}-${gdt}`,
-        });
+      const msgMatGrupo = mensajeToastMaterializacionGrupo(matGrupo);
+      if (msgMatGrupo) {
+        toast(msgMatGrupo, { id: `mat-ok-${periodoEff}-${gdt}` });
       }
       if (matGrupo && matGrupo.ok === false && (matGrupo.fallos || 0) > 0) {
         toast.error(

@@ -1,7 +1,9 @@
 import { diasEnMes, etiquetaCelda, celdaTieneDesalineacionTeoria } from "./grillaMesCellUtils.js";
 import {
   evaluarImputacionExternaCelda,
+  evaluarLicenciaEnFrancoCelda,
   evaluarPostPurgeHlgCelda,
+  evaluarTeoriaPendienteLazyCelda,
 } from "./grillaMesGsoHints.js";
 import { evaluarSoloLecturaCeldaGso } from "./grillaGsoSoloLectura.js";
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
@@ -45,6 +47,10 @@ function contenidoCeldaOperativa({
   imputacionTooltip,
   postPurgeHlg,
   postPurgeTooltip,
+  teoriaPendienteLazy,
+  teoriaPendienteTooltip,
+  licenciaEnFranco,
+  licenciaEnFrancoTooltip,
   soloLecturaGrilla,
   soloLecturaTooltip,
 }) {
@@ -77,6 +83,24 @@ function contenidoCeldaOperativa({
       📅
     </span>
   ) : null;
+  const badgeTeoriaPendiente = teoriaPendienteLazy ? (
+    <span
+      className="text-[8px] font-bold leading-none text-slate-700"
+      title={teoriaPendienteTooltip || "Teoría pendiente de cálculo"}
+      aria-label={teoriaPendienteTooltip || "Teoría pendiente de cálculo"}
+    >
+      ⏳
+    </span>
+  ) : null;
+  const badgeLicenciaFranco = licenciaEnFranco ? (
+    <span
+      className="text-[8px] font-bold leading-none text-slate-600"
+      title={licenciaEnFrancoTooltip || "Licencia solapada en franco"}
+      aria-label={licenciaEnFrancoTooltip || "Licencia solapada en franco"}
+    >
+      ℹ️
+    </span>
+  ) : null;
   const badgeSoloLectura = soloLecturaGrilla ? (
     <span
       className="text-[8px] font-bold leading-none text-slate-700"
@@ -87,11 +111,18 @@ function contenidoCeldaOperativa({
     </span>
   ) : null;
   const filaBadges =
-    badgeAlerta || badgeFanOut || badgePostPurge || badgeSoloLectura ? (
+    badgeAlerta ||
+    badgeFanOut ||
+    badgePostPurge ||
+    badgeTeoriaPendiente ||
+    badgeLicenciaFranco ||
+    badgeSoloLectura ? (
       <span className="flex items-center justify-center gap-px leading-none">
         {badgeAlerta}
         {badgeFanOut}
         {badgePostPurge}
+        {badgeTeoriaPendiente}
+        {badgeLicenciaFranco}
         {badgeSoloLectura}
       </span>
     ) : null;
@@ -201,6 +232,7 @@ function contenidoCeldaOperativa({
  *   opsOutboxGrupo?: Array<Record<string, unknown>>;
  *   periodoOutbox?: string;
  *   modoFichada?: "rrhh" | "jefe" | null;
+ *   materializacionGrupoReciente?: boolean;
  *   onCeldaClick: (payload: {
  *     dia: string; fechaYmd: string; personaId: string; hlgId?: string; filaId?: string;
  *     eventos: unknown[];
@@ -226,6 +258,7 @@ export default function GrillaMesEquipoTabla({
   opsOutboxGrupo = [],
   periodoOutbox = "",
   modoFichada = null,
+  materializacionGrupoReciente = false,
   onCeldaClick,
 }) {
   const totalDias = diasEnMes(anio, mes);
@@ -373,6 +406,15 @@ export default function GrillaMesEquipoTabla({
                       fechaYmd,
                       vigenteHasta: fila.vigente_hasta,
                     });
+                    const filaMaterializoLazy =
+                      fila.materializado_lazy === true || materializacionGrupoReciente === true;
+                    const teoriaPendiente = evaluarTeoriaPendienteLazyCelda(cell, eventos, {
+                      fechaYmd,
+                      vigenteHasta: fila.vigente_hasta,
+                      materializadoLazy: filaMaterializoLazy,
+                      postPurgeActivo: postPurge.activo,
+                    });
+                    const licenciaFranco = evaluarLicenciaEnFrancoCelda(cell, eventos);
                     const soloLectura = evaluarSoloLecturaCeldaGso({
                       gsoPermiteEscritura,
                       motivo: gsoSoloLecturaMotivo,
@@ -426,6 +468,12 @@ export default function GrillaMesEquipoTabla({
                     if (postPurge.activo && postPurge.tooltip) {
                       titleParts.push(postPurge.tooltip);
                     }
+                    if (teoriaPendiente.activo && teoriaPendiente.tooltip) {
+                      titleParts.push(teoriaPendiente.tooltip);
+                    }
+                    if (licenciaFranco.activo && licenciaFranco.tooltip) {
+                      titleParts.push(licenciaFranco.tooltip);
+                    }
                     if (soloLectura.activo && soloLectura.tooltip) {
                       titleParts.push(soloLectura.tooltip);
                     }
@@ -436,6 +484,7 @@ export default function GrillaMesEquipoTabla({
                       esFranco,
                       tieneTurno: tieneTurno || jornadaVis,
                       esIncompletoPlan: esIncompletoPlan && !tieneLicencia,
+                      teoriaPendienteLazy: teoriaPendiente.activo,
                     });
 
                     return (
@@ -520,6 +569,10 @@ export default function GrillaMesEquipoTabla({
                               imputacionTooltip: imputacion.tooltip,
                               postPurgeHlg: postPurge.activo,
                               postPurgeTooltip: postPurge.tooltip,
+                              teoriaPendienteLazy: teoriaPendiente.activo,
+                              teoriaPendienteTooltip: teoriaPendiente.tooltip,
+                              licenciaEnFranco: licenciaFranco.activo,
+                              licenciaEnFrancoTooltip: licenciaFranco.tooltip,
                               soloLecturaGrilla: soloLectura.activo,
                               soloLecturaTooltip: soloLectura.tooltip,
                             })}
