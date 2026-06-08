@@ -1,6 +1,6 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ:** **US-13 ops** — `firebase deploy` **functions** (+ hosting con `c15a1a1` UI) · ejecutar checklist RRHH en **staging** ([`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md): urgencia G1, jerarquía G2, G4 self, G6 plan).  
+> **RETOMAR AQUÍ:** **US-13 deploy + smoke** — § **Deploy US-13 — estrategia cero fricción (OFICIAL)** → checklist RRHH. **No** T-05/T-06 hasta smoke verde.  
 > **US-13 código:** ✅ `c15a1a1` (Fase B UI) · `c4753fa` motor · `3ac3e25` batch · `b79b7d1` G6 plan · tests `npm run test:us13-functions` + vitest web.  
 > **Otros:** **T-05/T-06** F3 turnos compuestos · RFC HLG ⏸ espera RRHH  
 > **Hosting prod:** https://portal-hospital-v2.web.app · último deploy **2026-06-08** (`ccc1040` · tag **`v2.6.3-gso-us6`**)  
@@ -36,7 +36,7 @@
 
 - `npm run build:web` + `firebase deploy --project portal-hospital-v2 --only hosting` — **2026-06-08** (solo hosting; functions sin cambios).
 
-**Última actualización índice:** 2026-06-08 — **US-13 código cerrado** (Fase A/B/C); próxima = deploy + QA RRHH staging.
+**Última actualización índice:** 2026-06-08 — plan deploy US-13 oficial (hosting → functions + smoke G4/G2/G1/G6).
 
 ---
 
@@ -48,9 +48,56 @@
 | **Checklist RRHH (cerrado)** | [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md) |
 | **Commit SSoT** | `docs(gso): oficializar politica de permisos US-13 (G1-G7)` |
 | **Código (cerrado)** | Web: `teoriaPermisosGso`, capabilities, plan G6, modales urgencia · Functions: motor, batch, `assertPlanTeoriaAuth` |
-| **Próximo (ops)** | Deploy functions · checklist RRHH en staging |
+| **Próximo (ops)** | Plan deploy/smoke (§ siguiente) · deploy · checklist RRHH en staging |
 
-**Fase A — criterios de arranque (TDD)**
+---
+
+## Deploy US-13 — estrategia cero fricción + smoke (~10 min) — OFICIAL
+
+**Estado:** US-13 **pre-producción** · G7 = reglas estrictas día 1 (sin modo permisivo).  
+**Códigos de rechazo (UI + `teoriaPermisosGso` web/functions):** `TITULAR_NO_PUEDE_EDITAR_PROPIA_TEORIA` · `NO_ES_SUPERIOR_JERARQUICO` · `PLAN_HABILITADO_REQUIERE_URGENCIA` · `SOLO_JEFE_O_RRHH_PUEDE_EDITAR_PLAN`.
+
+### 1. Despliegue (orden obligatorio)
+
+**Riesgo a evitar:** backend nuevo exige `es_urgencia_operativa` (G1) antes de que el front lo envíe → jefes bloqueados sin UI de urgencia.
+
+| Paso | Acción | Comando / nota |
+|------|--------|----------------|
+| **0** | Gate | CI verde en `master` · `npm run test:us13-functions` |
+| **1** | **Hosting UI primero** | `npm run build:web` · `firebase deploy --project portal-hospital-v2 --only hosting` |
+| **2** | **Functions inmediatamente después** | `npm run firebase:deploy:functions` |
+| **3** | Smoke §2 | En **&lt;15 min** tras paso 2 · solo piloto antes de anuncio masivo |
+
+**Paso 1 — compatibilidad:** con backend **aún viejo**, el front nuevo puede enviar `es_urgencia_operativa` (campo ignorado o inofensivo); operación sigue como hoy.  
+**Paso 2 — enforcement:** al publicar functions, G1–G6 activos al instante; el front ya preparado → **zero-downtime coordinado**.
+
+Entorno Firebase: proyecto único `portal-hospital-v2` (https://portal-hospital-v2.web.app) — tratar primeras horas post-deploy como **staging operativo** con actores piloto.
+
+**Flags:** `OPEN_ACCESS_TEMP` = **false** en [`functions/modules/shared/runtimeFlags.json`](../../functions/modules/shared/runtimeFlags.json) y [`shared/runtimeFlags.json`](../../shared/runtimeFlags.json).
+
+### 2. Smoke tests (validación humana)
+
+**Piloto:** GDT conocido · mes con plan **HABILITADO** (G1) · jefe con `tiene_subordinados` · médico de planta sin subordinados.
+
+| Regla | Escenario | Resultado esperado |
+|-------|-----------|-------------------|
+| **G4** | Jefe intenta **self-override** (editar su propia teoría) | Bloqueo · `TITULAR_NO_PUEDE_EDITAR_PROPIA_TEORIA` (UI + 403 backend) |
+| **G2** | Jefe edita agente **fuera de jerarquía** en el GDT de la op (otro sector / igual o mayor `nivel_jerarquico` HLG vigente) | Bloqueo · `NO_ES_SUPERIOR_JERARQUICO` |
+| **G1a** | Plan **HABILITADO** · override **sin** urgencia | Bloqueo · `PLAN_HABILITADO_REQUIERE_URGENCIA` |
+| **G1b** | Mismo caso · override **con** urgencia operativa (modal + payload) | **Permitido** |
+| **G6** | Médico de planta **Guardar/Enviar** plan mensual | Bloqueo · `SOLO_JEFE_O_RRHH_PUEDE_EDITAR_PLAN` |
+
+Checklist extendido: [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md).
+
+### 3. Contingencia (rollback)
+
+| Nivel | Cuándo | Acción |
+|-------|--------|--------|
+| **1 — Datos (recomendado)** | Falso positivo G2 (jefe legítimo bloqueado) | Ajustar `nivel_jerarquico` en **HLG vigente** para el **GDT de la operación** (sin redeploy) |
+| **2 — Rollback** | Regresión de código / muchos falsos positivos | Firebase Console → **Functions**: revisión anterior · **Hosting**: release anterior |
+| **3 — Emergencia** | Guardia / operación crítica inminente | `OPEN_ACCESS_TEMP=true` en **ambas** copias de `runtimeFlags` + redeploy functions (**última ratio**; bypassa overrides y planes) |
+
+**Fase A — criterios de arranque (TDD)** — histórico, código ✅
 
 1. Tests primero: titular sin override (G4), jefe solo sobre subordinado (G2), RRHH unificado (G3), plan guardar/enviar solo jefatura (G6), override mes habilitado acotado a urgencias G1 (casos felices y denegados).
 2. Módulo puro (sin React): reutilizar / espejar lógica de `grillaGsoSoloLectura.js` donde aplique ventanas M-1 / 🔒.
