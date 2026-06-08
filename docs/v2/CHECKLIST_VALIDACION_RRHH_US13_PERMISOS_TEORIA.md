@@ -224,20 +224,19 @@ Marcar si **siguen vigentes** sin cambio; si no, anotar en notas.
 
 | Campo | Valor |
 | :--- | :--- |
-| **Fecha smoke** | *(pendiente)* |
-| **GDT** | `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` (Sala Internación 1 / Clínica Médica — confirmar etiqueta UI) |
-| **Período** | `2026-06` · plan `plt_01KT9AZQGV0BRZVSEEMBT0141A` (estado al probar: _______) |
-| **Jefe_Sala** | cuenta _______ · `per_*` _______ · nivel HLG en GDT _______ |
-| **Medico_Planta** | cuenta _______ · `per_*` _______ (ej. LOKITO `per_01KQQJA5Q1VKBTJ74RHQ0HSHSB`) |
-| **Administrativo_RRHH** | cuenta _______ · `per_*` _______ |
-| **G4** | ☐ `TITULAR_NO_PUEDE_EDITAR_PROPIA_TEORIA` |
-| **G2** | ☐ `NO_ES_SUPERIOR_JERARQUICO` |
-| **G1** | ☐ sin urgencia bloqueado · ☐ con urgencia permitido |
-| **G6** | ☐ `SOLO_JEFE_O_RRHH_PUEDE_EDITAR_PLAN` |
-| **G3 opc.** | ☐ RRHH override sin urgencia en HABILITADO permitido |
-| **Estado US-13 ops** | ☐ **Cerrado** ☐ Hallazgos (ver notas) |
+| **Fecha smoke** | 2026-06-08 (parcial — automatizado + prod) |
+| **GDT** | `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` — UI **Sala Internación 1** |
+| **Período** | `2026-06` · plan `plt_01KT9AZQGV0BRZVSEEMBT0141A` (estado plan: pendiente confirmar en plan UI) |
+| **Cuenta probada** | DNI `28914247` · MOSTO `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ` · roles **usuario + jefe + RRHH** |
+| **Medico_Planta** | Pendiente — ej. LOKITO `per_01KQQJA5Q1VKBTJ74RHQ0HSHSB` (DNI en grilla `1234567`) |
+| **G4** | ☑ **UI** — Titular día 13 Sala: modal sin «Gestionar turno» (portero). ☐ backend explícito |
+| **G2** | ☐ Pendiente cuenta **solo jefe** (RRHH bypassa G2) |
+| **G1** | ☐ Pendiente jefe sin RRHH · ☐ urgencia |
+| **G6** | ☐ Pendiente LOKITO / planta sin `tiene_subordinados` |
+| **G3 opc.** | ☑ Indicio — RRHH abrió gestión CHAPARRO día 19 (wizard A/B/C) |
+| **Estado US-13 ops** | ☐ **Cerrado** ☑ **Smoke parcial** (faltan actores piloto) |
 
-**Notas / hallazgos:**  
+**Notas / hallazgos:** Una sola cuenta RRHH+jefe no alcanza para G1/G2/G6 del protocolo. Completar con LOKITO (planta) y jefe sin claim RRHH si existe. Rotar PIN si se compartió en canal de soporte.
 
 **Firma operador smoke:**  
 

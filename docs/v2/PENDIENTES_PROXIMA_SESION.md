@@ -94,7 +94,7 @@ Checklist extendido: [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHE
 ## Unidad piloto — smoke US-13 post-deploy (ejecución humana)
 
 **Entorno:** https://portal-hospital-v2.web.app · deploy US-13 **2026-06-08** (hosting + functions).  
-**Estado smoke:** ⏳ pendiente ejecución · resultados → § **Acta smoke** en checklist.
+**Estado smoke:** 🟡 **parcial 2026-06-08** (DNI 28914247 / MOSTO — G4 UI OK, G3 indicio) · faltan LOKITO + jefe solo · § acta en checklist.
 
 ### Escenario (mapeo BD documentada)
 
