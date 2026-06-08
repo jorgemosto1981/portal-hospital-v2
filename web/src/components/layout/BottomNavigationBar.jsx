@@ -162,6 +162,16 @@ const ICONS_BY_ID = {
       strokeWidth={1.5}
     />
   ),
+  "grilla-jefe": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.75 4.5h7.5v7.5h-7.5V4.5Zm12.75 0h7.5v7.5h-7.5V4.5Zm-12.75 12h7.5v7.5h-7.5v-7.5Zm12.75 0h7.5v7.5h-7.5v-7.5Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
   rrhh: () => (
     <path
       strokeLinecap="round"

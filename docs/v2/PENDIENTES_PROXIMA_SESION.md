@@ -1,6 +1,6 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ:** **US-13 deploy + smoke** — § **Deploy US-13 — estrategia cero fricción (OFICIAL)** → checklist RRHH. **No** T-05/T-06 hasta smoke verde.  
+> **RETOMAR AQUÍ:** **US-13 ops cerrado 2026-06-08** (smoke piloto prod — acta checklist). Siguiente: **T-05/T-06** F3 turnos compuestos · RFC HLG ⏸ RRHH.  
 > **US-13 código:** ✅ `c15a1a1` (Fase B UI) · `c4753fa` motor · `3ac3e25` batch · `b79b7d1` G6 plan · tests `npm run test:us13-functions` + vitest web.  
 > **Otros:** **T-05/T-06** F3 turnos compuestos · RFC HLG ⏸ espera RRHH  
 > **Hosting prod:** https://portal-hospital-v2.web.app · último deploy **2026-06-08** (`ccc1040` · tag **`v2.6.3-gso-us6`**)  
@@ -94,7 +94,7 @@ Checklist extendido: [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHE
 ## Unidad piloto — smoke US-13 post-deploy (ejecución humana)
 
 **Entorno:** https://portal-hospital-v2.web.app · deploy US-13 **2026-06-08** (hosting + functions).  
-**Estado smoke:** 🟡 **parcial 2026-06-08** (DNI 28914247 / MOSTO — G4 UI OK, G3 indicio) · faltan LOKITO + jefe solo · § acta en checklist.
+**Estado smoke:** 🟢 **cerrado 2026-06-08** — prod piloto Sala jun-26 · G1a/G1b/G2/G4/G6 UI · G2 neg. motor · § acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md).
 
 ### Escenario (mapeo BD documentada)
 
@@ -134,10 +134,10 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 | Test | Fecha | Cuenta (alias) | `per_*` / uid | Resultado | Evidencia / notas |
 |------|-------|----------------|---------------|-----------|-------------------|
-| G4 | | | | ☐ OK ☐ Falla | |
-| G2 | | | | ☐ OK ☐ Falla | |
-| G1a | | | | ☐ OK ☐ Falla | |
-| G1b | | | | ☐ OK ☐ Falla | |
+| G4 | 2026-06-08 | MOSTO + CHAPARRO | self en grilla | ☑ OK ☐ Falla | MOSTO día 13 · CHAPARRO día 1 jefe sin gestionar |
+| G2 | 2026-06-08 | Jefe_Sala | MOSTO día 9 + motor | ☑ OK ☐ Falla | UI feliz · negativo vía `test:us13-functions` |
+| G1a | 2026-06-08 | Jefe_Sala (CHAPARRO) | LOKITO · día 10 | ☑ OK ☐ Falla | Prod · aviso plan habilitado · sin guardado sin urgencia |
+| G1b | 2026-06-08 | Jefe_Sala (CHAPARRO) | LOKITO · 2026-06-02 · flujo C | ☑ OK ☐ Falla | Urgencia + motivo · «Agregar a cambios» OK · sin guardar |
 | G6 | | | | ☐ OK ☐ Falla | |
 | G3 opt. | | | | ☐ OK ☐ Falla | |
 

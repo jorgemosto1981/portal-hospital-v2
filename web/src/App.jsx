@@ -41,6 +41,8 @@ import PlanTurnoServicioPage from "./pages/jefe/PlanTurnoServicioPage.jsx";
 import BandejaTurnosRrhhPage from "./pages/rrhh/BandejaTurnosRrhhPage.jsx";
 import ExploradorTurnosRrhhPage from "./pages/rrhh/ExploradorTurnosRrhhPage.jsx";
 import GrillaOperativaRrhhPage from "./pages/rrhh/GrillaOperativaRrhhPage.jsx";
+import GrillaOperativaJefePage from "./pages/jefe/GrillaOperativaJefePage.jsx";
+import GrillaPortalRedirect from "./features/routing/GrillaPortalRedirect.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import SistemasWeb from "./pages/SistemasWeb.jsx";
 import PerfilUsuario from "./pages/PerfilUsuario.jsx";
@@ -128,9 +130,10 @@ export default function App() {
             <Route path="solicitudes/asuntos-particulares" element={<Solicitud64AAlta />} />
             <Route path="perfil" element={<DatosPersonales />} />
             <Route path="perfil/:personaId" element={<Perfil />} />
-            <Route path="grilla" element={<Navigate to="/portal/rrhh/grilla-operativa" replace />} />
+            <Route path="grilla" element={<GrillaPortalRedirect />} />
             <Route path="jefe/solicitudes" element={<BandejaJefeSolicitudes />} />
             <Route path="jefe/planes-turno" element={<PlanTurnoServicioPage />} />
+            <Route path="jefe/grilla-operativa" element={<GrillaOperativaJefePage />} />
             <Route path="modulos" element={<EstadoModulos />} />
             <Route path="pantallas" element={<PantallasCatalogo />} />
             <Route path="configuracion" element={<Configuracion />} />

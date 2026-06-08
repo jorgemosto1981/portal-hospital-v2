@@ -41,6 +41,13 @@ export const PANTALLAS_CATALOGO = [
     estado: "borrador",
     fuente: "web/src/pages/rrhh/GrillaOperativaRrhhPage.jsx",
   },
+  {
+    id: "grilla-jefe",
+    titulo: "Grilla operativa (jefe)",
+    path: "/portal/jefe/grilla-operativa",
+    estado: "mvp",
+    fuente: "web/src/pages/jefe/GrillaOperativaJefePage.jsx",
+  },
   { id: "onboarding", titulo: "Onboarding wizard", path: "/onboarding", estado: "activo", fuente: "web/src/features/onboarding/OnboardingWizard.jsx" },
   { id: "rrhh-alta", titulo: "RRHH alta agente", path: "/portal/rrhh/alta", estado: "activo", fuente: "web/src/features/rrhh/AltaAgenteRRHH.jsx" },
   {

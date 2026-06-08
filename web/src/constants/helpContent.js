@@ -238,6 +238,7 @@ export const MANUALES_POR_RUTA = {
   "/portal/grilla": MANUAL_GRILLA_OPERATIVA,
 
   "/portal/rrhh/grilla-operativa": MANUAL_GRILLA_OPERATIVA,
+  "/portal/jefe/grilla-operativa": MANUAL_GRILLA_OPERATIVA,
 
   "/portal/rrhh/regimenes-horarios": {
     titulo: "Catálogo de Regímenes Horarios",

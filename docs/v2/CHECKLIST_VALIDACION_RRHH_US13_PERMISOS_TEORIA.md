@@ -224,19 +224,20 @@ Marcar si **siguen vigentes** sin cambio; si no, anotar en notas.
 
 | Campo | Valor |
 | :--- | :--- |
-| **Fecha smoke** | 2026-06-08 (parcial — automatizado + prod) |
+| **Fecha smoke** | 2026-06-08 (prod — hosting grilla jefe + piloto CHAPARRO) |
 | **GDT** | `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` — UI **Sala Internación 1** |
-| **Período** | `2026-06` · plan `plt_01KT9AZQGV0BRZVSEEMBT0141A` (estado plan: pendiente confirmar en plan UI) |
+| **Período** | `2026-06` · plan Sala `plt_01KT9AZQGV0BRZVSEEMBT0141A` · **HABILITADO** (confirmado UI jefe 2026-06-08) |
 | **Cuenta probada** | DNI `28914247` · MOSTO `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ` · roles **usuario + jefe + RRHH** |
-| **Medico_Planta** | Pendiente — ej. LOKITO `per_01KQQJA5Q1VKBTJ74RHQ0HSHSB` (DNI en grilla `1234567`) |
-| **G4** | ☑ **UI** — Titular día 13 Sala: modal sin «Gestionar turno» (portero). ☐ backend explícito |
-| **G2** | ☐ Pendiente cuenta **solo jefe** (RRHH bypassa G2) |
-| **G1** | ☐ Pendiente jefe sin RRHH · ☐ urgencia |
-| **G6** | ☐ Pendiente LOKITO / planta sin `tiene_subordinados` |
+| **Medico_Planta** | DNI `1234567` · LOKITO `per_01KQQJA5Q1VKBTJ74RHQ0HSHSB` · **solo Rol usuario** (3 ítems menú) |
+| **Jefe_Sala** | DNI `27667499` · CHAPARRO `per_01KR3HD24AMJ6YX3N7B3GPAZJ4` · **usuario + jefe** (`tiene_subordinados`, **sin** RRHH) · menú jefe: **Grilla operativa** + Turnos Mensuales + Bandeja solic. |
+| **G4** | ☑ **UI** MOSTO titular día 13: sin «Gestionar turno». ☑ **UI** CHAPARRO jefe → **propio** día **2026-06-01** Sala equipo: detalle día sin «Gestionar turno» (prod 2026-06-08). LOKITO planta: sin grilla titular MVP — motor/tests |
+| **G2** | ☑ **UI** CHAPARRO → MOSTO día 9: «Gestionar turno» visible (jerarquía OK en Sala). ☑ **Negativo** — sin caso UI en piloto; **aceptado vía motor** `NO_ES_SUPERIOR_JERARQUICO` · `test:us13-functions` **30/30** |
+| **G1** | ☑ **G1a UI** — LOKITO: aviso plan **habilitado** en shell; sin envío sin urgencia. ☑ **G1b UI** — CHAPARRO → LOKITO **2026-06-02** · flujo **C** · aviso urgencia · motivo «Smoke G1b…» · **«Agregar a cambios» habilitado** · cancelado sin persistir (prod 2026-06-08) |
+| **G6** | ☑ **UI** LOKITO — sin jefatura en plan. ☑ **UI** CHAPARRO — accede a Turnos Mensuales; plan habilitado **solo lectura** (caso feliz jefe) |
 | **G3 opc.** | ☑ Indicio — RRHH abrió gestión CHAPARRO día 19 (wizard A/B/C) |
-| **Estado US-13 ops** | ☐ **Cerrado** ☑ **Smoke parcial** (faltan actores piloto) |
+| **Estado US-13 ops** | ☑ **Cerrado** (smoke piloto prod 2026-06-08 · G1a/G1b/G2 feliz/G4/G6 UI + G2 neg. motor · G3 indicio) |
 
-**Notas / hallazgos:** Una sola cuenta RRHH+jefe no alcanza para G1/G2/G6 del protocolo. Completar con LOKITO (planta) y jefe sin claim RRHH si existe. Rotar PIN si se compartió en canal de soporte.
+**Notas / hallazgos:** **Hosting 2026-06-08** desplegó ruta `/portal/jefe/grilla-operativa`. Smoke jefe CHAPARRO en Sala jun-26. **G1:** el bloqueo sin urgencia es en **envío** (`PLAN_HABILITADO_REQUIERE_URGENCIA`); la UI abre wizard con aviso ámbar y `requiereUrgenciaG1` en modales A/B/C. G2 negativo UI: hace falta par en GDT con `nivel_jerarquico` ≥ jefe *o* validar solo motor; en piloto CAMPOS día 24 mostró «Gestionar» (indica subordinación HLG OK para CHAPARRO). Modal grilla: cabecera fija intercepta clics en automatización — smoke G1b manual recomendado. Rotar PINs compartidos en soporte.
 
 **Firma operador smoke:**  
 
