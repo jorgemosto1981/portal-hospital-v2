@@ -1,9 +1,80 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ:** **US-6** (indicador ⏳ lazy materialización — escenario G) · luego US-7 / US-11 · RFC HLG ⏸ espera RRHH  
-> **Hosting prod:** https://portal-hospital-v2.web.app · último push sesión 2026-06-06 (`5755b42`)  
+> **RETOMAR AQUÍ:** **US-13** (matriz permisos teoría, P1) · **T-05/T-06** F3 turnos compuestos · RFC HLG ⏸ espera RRHH  
+> **Hosting prod:** https://portal-hospital-v2.web.app · último deploy **2026-06-08** (`ccc1040` · tag **`v2.6.3-gso-us6`**)  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)
+
+---
+
+## CIERRE SESIÓN — US-6 + US-7 + US-11 (2026-06-08)
+
+| Bloque | Estado | Commits / release |
+|--------|--------|-------------------|
+| **US-6** | ✅ QA + hosting | `ccc1040` |
+| **US-7** | ✅ QA + hosting | `ccc1040` |
+| **US-11** | ✅ QA + hosting | `ccc1040` |
+| **Checkpoint pre-implementación** | Tag | `v2.6.2-pre-us6` @ `ca71f0e` |
+| **Release** | Tag | **`v2.6.3-gso-us6`** @ `ccc1040` |
+
+**Entregables sesión**
+
+- **US-6 (G):** `evaluarTeoriaPendienteLazyCelda`, variante chip `teoriaPendiente` (gris), badge **⏳**, modal y leyenda; señales `materializado_lazy` (titular) y `materializacion_grupo.procesados` (equipo).
+- **US-7 (D):** badge **ℹ️** *«Licencia solapada en franco»* en celda, modal y leyenda.
+- **US-11:** toast sector alineado con titular — `mensajeToastMaterializacionGrupo` (*«Turno teórico recalculado al vuelo…»*).
+- Tests vitest: `grillaMesGsoHints.test.js` (US-6/US-7), `grillaMesEquipoDisplay.test.js` (variante).
+
+**QA piloto validado (prod / localhost)**
+
+- Toast US-11 al listar grilla equipo jun-26 Sala — *17 agente-mes*.
+- US-7: día **5** LAO `sol_01KT402…` — modal ℹ️ franco (MOSTO, Sala Internación 1).
+- US-6 ⏳: **no** en día 5 LAO/franco (teoría ya materializada → escenario D, no G); bundle prod confirma strings US-6/7/11 en `index-DyHDRF_6.js`.
+
+**Deploy**
+
+- `npm run build:web` + `firebase deploy --project portal-hospital-v2 --only hosting` — **2026-06-08** (solo hosting; functions sin cambios).
+
+**Última actualización índice:** 2026-06-08 — US-6/7/11 cerrados y publicados en `origin/master`.
+
+---
+
+## CIERRE US-6 — teoría pendiente lazy (escenario G) (2026-06-08)
+
+| Qué | Dónde / evidencia |
+|-----|-------------------|
+| **Escenario G** | Licencia visible + fondo neutro/gris + **⏳** tooltip *«Teoría pendiente de cálculo»* |
+| **Util** | `grillaMesGsoHints.js` — `evaluarTeoriaPendienteLazyCelda`, `COPY_TEORIA_PENDIENTE` |
+| **Chip** | `grillaTurnosVisual.js` — variante `teoriaPendiente`; `varianteCeldaOperativa` prioriza sobre `licencia` |
+| **UI grilla** | `GrillaMesEquipoTabla.jsx`, `GrillaMesTitularCalendario.jsx`, leyenda `GrillaMesLicenciasPanel.jsx` |
+| **Modal** | `DiaGrillaDetalleModal.jsx` — bloque gris ⏳ |
+| **Tests** | `grillaMesGsoHints.test.js` (US-6) — vitest ✅ |
+| **Commit** | `ccc1040` — `feat(gso): US-6 US-7 US-11 teoria pendiente lazy hints y toasts sector` |
+| **Tag / deploy** | `v2.6.3-gso-us6` · https://portal-hospital-v2.web.app — 2026-06-08 |
+
+---
+
+## CIERRE US-7 — licencia en franco (escenario D) (2026-06-08)
+
+| Qué | Dónde / evidencia |
+|-----|-------------------|
+| **Hint ℹ️** | *«Licencia solapada en franco»* con F + código licencia |
+| **Util** | `evaluarLicenciaEnFrancoCelda` en `grillaMesGsoHints.js` |
+| **UI** | Badges celda equipo/titular + bloque modal |
+| **QA manual** | ✅ Día 5 jun-26 MOSTO — LAO sobre franco |
+| **Commit / tag** | `ccc1040` · `v2.6.3-gso-us6` |
+
+---
+
+## CIERRE US-11 — toasts materialización sector (2026-06-08)
+
+| Qué | Dónde / evidencia |
+|-----|-------------------|
+| **Antes** | *«Sector sincronizado (N agente-mes).»* |
+| **Ahora** | *«Turno teórico recalculado al vuelo (N agente-mes en el sector).»* — alineado a copy titular lazy |
+| **Util** | `grillaMaterializacionToast.js` — `mensajeToastMaterializacionGrupo` |
+| **Hook** | `useGrillaMesVista.js` — listado equipo/sector |
+| **QA manual** | ✅ Toast tras materializar grupo jun-26 Sala |
+| **Commit / tag** | `ccc1040` · `v2.6.3-gso-us6` |
 
 ---
 
