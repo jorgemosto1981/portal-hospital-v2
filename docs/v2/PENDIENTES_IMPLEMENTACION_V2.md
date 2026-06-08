@@ -1,9 +1,9 @@
 # Pendientes de implementación — Portal Hospital V2
 
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
-**Última actualización:** 2026-06-08 (**US-6 / US-7 / US-11** cerrados — hosting prod; índice sesión actualizado)  
-**Rama / release:** `master` · tag **`v2.6.3-gso-us6`** (`ccc1040`) · anterior **`v2.6.1-blindaje-gso`** · PR blindaje [#2](https://github.com/jorgemosto1981/portal-hospital-v2/pull/2) · PR US-17 [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3) **mergeado**  
-**Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR US-13 Fase A** (`teoriaPermisosGso.js` + Vitest; SSoT G1–G7 en docs)
+**Última actualización:** 2026-06-08 (**US-13** ✅ código web + functions; pendiente deploy functions + QA RRHH staging)  
+**Rama / release:** `master` · tag **`v2.6.3-gso-us6`** (`ccc1040`) · **US-13** en rama: `c15a1a1`…`b79b7d1` (sin tag aún) · PR blindaje [#2](https://github.com/jorgemosto1981/portal-hospital-v2/pull/2) · PR US-17 [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3) **mergeado**  
+**Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR:** deploy US-13 + checklist RRHH en staging
 
 ---
 
@@ -64,10 +64,10 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | **US-7** | — | **✅ Cerrado** — ℹ️ licencia en franco (escenario D) | `evaluarLicenciaEnFrancoCelda`, grilla + modal |
 | **US-8** | — | **✅ Cerrado** — badge 🔒 + gates modales + copy RRHH tarjeta (`4dcd9b9`) | `grillaGsoSoloLectura.js`, grilla + modales turno |
 | **US-11** | — | **✅ Cerrado** — toast materialización sector alineado a titular | `grillaMaterializacionToast.js`, `useGrillaMesVista.js` |
-| **US-13** | P1 | **SSoT G1–G7 ✅** → Fase A/B/C código | [`MATRIZ_US13_PERMISOS_TEORIA_V2.md`](./MATRIZ_US13_PERMISOS_TEORIA_V2.md) · [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md) |
+| **US-13** | — | **✅ Cerrado (código)** — Fase A/B/C web + functions (`teoriaPermisosGso`, batch, G6 plan); **proceso:** deploy functions + validación [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md) en staging | [`MATRIZ_US13_PERMISOS_TEORIA_V2.md`](./MATRIZ_US13_PERMISOS_TEORIA.md) |
 | **US-17** | — | **✅ Cerrado (código + ops)** — inventario + remediación 2026-06-06; audit prod **0 huecos** | [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md) · [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) |
 
-**Orden sugerido (restante épica GSO):** ~~US-3…US-11~~ ✅ (hosting 2026-06-08) · **US-13** (P1) · RFC HLG warning ⏸ RRHH.
+**Orden sugerido (restante épica GSO):** ~~US-3…US-11~~ ✅ · ~~**US-13**~~ ✅ (código 2026-06-08) · RFC HLG warning ⏸ RRHH · **ops US-13** (deploy + QA RRHH).
 
 **Nota:** Piloto junio Sala **operativo** en BD; §2.1 es **defensa** desplegada ante regresión huecos/blanco. **US-17 global cerrado** 2026-06-06. **US-6 ⏳** en piloto estable suele no verse en LAO/franco ya materializado (QA 2026-06-08 — ver índice sesión).
 
@@ -170,7 +170,7 @@ Ver [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](./ANALISIS_COHERENCIA_ORQU
 
 ## 8. Próxima sesión de código (recomendación)
 
-1. **Código P1:** **US-13** — matriz permisos teoría (doc → código).
+1. **Proceso:** deploy **functions** (US-13) + hosting si aplica · checklist RRHH staging.
 2. **Paralelo:** F3 **T-05/T-06** (editor segmentos) o **FUX-OPT-5** (divergencia plan vs grilla).
 3. **Proceso:** QA formal Multi-HLG §4.2 (ítems 6 y 9 manuales RRHH/jefe).
 4. ~~**GSO US-6 → US-7 → US-11**~~ ✅ 2026-06-08 · ~~**US-17** ops~~ ✅ 2026-06-06 · ~~**US-3/US-14** completos~~ ✅.

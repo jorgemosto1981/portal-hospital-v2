@@ -1,7 +1,7 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ:** **US-13 Fase A (código)** — TDD: crear `web/src/features/grilla/teoriaPermisosGso.js` + `teoriaPermisosGso.test.js` (Vitest) aplicando reglas **G1–G7** de [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md) / § SSoT en [`MATRIZ_US13_PERMISOS_TEORIA_V2.md`](./MATRIZ_US13_PERMISOS_TEORIA_V2.md). Sin UI ni callables hasta verde en tests.  
-> **US-13 docs:** ✅ commit SSoT G1–G7 · go-live día 1 (G7) · luego Fase B UI → Fase C callables.  
+> **RETOMAR AQUÍ:** **US-13 ops** — `firebase deploy` **functions** (+ hosting con `c15a1a1` UI) · ejecutar checklist RRHH en **staging** ([`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md): urgencia G1, jerarquía G2, G4 self, G6 plan).  
+> **US-13 código:** ✅ `c15a1a1` (Fase B UI) · `c4753fa` motor · `3ac3e25` batch · `b79b7d1` G6 plan · tests `npm run test:us13-functions` + vitest web.  
 > **Otros:** **T-05/T-06** F3 turnos compuestos · RFC HLG ⏸ espera RRHH  
 > **Hosting prod:** https://portal-hospital-v2.web.app · último deploy **2026-06-08** (`ccc1040` · tag **`v2.6.3-gso-us6`**)  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
@@ -36,7 +36,7 @@
 
 - `npm run build:web` + `firebase deploy --project portal-hospital-v2 --only hosting` — **2026-06-08** (solo hosting; functions sin cambios).
 
-**Última actualización índice:** 2026-06-08 — Etapa **analítica US-13 cerrada** (SSoT G1–G7); próxima sesión = **Fase A TDD**.
+**Última actualización índice:** 2026-06-08 — **US-13 código cerrado** (Fase A/B/C); próxima = deploy + QA RRHH staging.
 
 ---
 
@@ -47,8 +47,8 @@
 | **Matriz rol × acción × pantalla** | [`MATRIZ_US13_PERMISOS_TEORIA_V2.md`](./MATRIZ_US13_PERMISOS_TEORIA_V2.md) — § Política oficial G1–G7 |
 | **Checklist RRHH (cerrado)** | [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md) |
 | **Commit SSoT** | `docs(gso): oficializar politica de permisos US-13 (G1-G7)` |
-| **Próxima sesión — Fase A** | `teoriaPermisosGso.js` + Vitest; reglas G1–G6 + `esRrhhOperativo` (G3); referencia `grillaGsoSoloLectura.test.js` (functions) |
-| **Después** | Fase B: `grillaGestionTurnoCapabilities`, plan, modales · Fase C: `assertOverrideAuth`, `assertPlanAuth` |
+| **Código (cerrado)** | Web: `teoriaPermisosGso`, capabilities, plan G6, modales urgencia · Functions: motor, batch, `assertPlanTeoriaAuth` |
+| **Próximo (ops)** | Deploy functions · checklist RRHH en staging |
 
 **Fase A — criterios de arranque (TDD)**
 
