@@ -198,6 +198,40 @@ function assertTeoriaOverrideAuth(request, params) {
   }
 }
 
+/**
+ * G6 — guardar / enviar plan mensual (solo jefe o RRHH).
+ *
+ * @param {import("firebase-functions/v2/https").CallableRequest} request
+ * @param {{ planEstado?: string | null; accion: string }} params
+ */
+function assertPlanTeoriaAuth(request, params) {
+  if (!request || !request.auth) {
+    throw new HttpsError("unauthenticated", "Se requiere sesión.");
+  }
+  const p = params && typeof params === "object" ? params : {};
+  const accion = String(p.accion || "").trim();
+  if (!accion) {
+    throw new HttpsError("invalid-argument", "accion de plan requerida.");
+  }
+
+  const actor = actorTeoriaDesdeAuthToken(request.auth.token || {});
+  if (!actor.id) {
+    throw new HttpsError("permission-denied", "Sin persona vinculada.");
+  }
+
+  const resultado = evaluarPermisoTeoria(accion, {
+    actor,
+    planEstado: p.planEstado || "BORRADOR",
+  });
+
+  if (!resultado.permitido) {
+    throw new HttpsError(
+      "permission-denied",
+      resultado.motivoRechazo || MOTIVOS_RECHAZO_TEORIA.ACCION_DESCONOCIDA,
+    );
+  }
+}
+
 module.exports = {
   CANALES_TEORIA,
   MOTIVOS_RECHAZO_TEORIA,
@@ -206,4 +240,5 @@ module.exports = {
   actorTeoriaDesdeAuthToken,
   targetTeoriaDesdePersona,
   assertTeoriaOverrideAuth,
+  assertPlanTeoriaAuth,
 };

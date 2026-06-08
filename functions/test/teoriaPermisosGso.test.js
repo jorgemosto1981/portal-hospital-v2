@@ -11,6 +11,7 @@ const { HttpsError } = require("firebase-functions/v2/https");
 const {
   evaluarPermisoTeoria,
   assertTeoriaOverrideAuth,
+  assertPlanTeoriaAuth,
   CANALES_TEORIA,
   MOTIVOS_RECHAZO_TEORIA,
 } = require("../modules/shared/teoriaPermisosGso");
@@ -238,6 +239,51 @@ describe("US-13 Functions: assertTeoriaOverrideAuth", () => {
       targetNivelJerarquicoEnGrupo: 99,
       planEstado: "HABILITADO",
       esUrgenciaOperativa: false,
+    }));
+  });
+});
+
+describe("US-13 Functions: assertPlanTeoriaAuth (G6)", () => {
+  it("rechaza médico de planta al guardar plan", () => {
+    const req = mockRequest({ persona_id: "per_med", tiene_subordinados: false });
+    assertHttpsError(
+      () => assertPlanTeoriaAuth(req, {
+        planEstado: "BORRADOR",
+        accion: CANALES_TEORIA.GUARDAR_PLAN,
+      }),
+      "permission-denied",
+      MOTIVOS_RECHAZO_TEORIA.SOLO_JEFE_O_RRHH_PUEDE_EDITAR_PLAN,
+    );
+  });
+
+  it("rechaza médico de planta al enviar plan", () => {
+    const req = mockRequest({ persona_id: "per_med", tiene_subordinados: false });
+    assertHttpsError(
+      () => assertPlanTeoriaAuth(req, {
+        planEstado: "BORRADOR",
+        accion: CANALES_TEORIA.ENVIAR_PLAN,
+      }),
+      "permission-denied",
+      MOTIVOS_RECHAZO_TEORIA.SOLO_JEFE_O_RRHH_PUEDE_EDITAR_PLAN,
+    );
+  });
+
+  it("permite jefe con tiene_subordinados", () => {
+    const req = mockRequest({ persona_id: "per_jefe", tiene_subordinados: true });
+    assert.doesNotThrow(() => assertPlanTeoriaAuth(req, {
+      planEstado: "EN_REVISION",
+      accion: CANALES_TEORIA.ENVIAR_PLAN,
+    }));
+  });
+
+  it("permite RRHH operativo", () => {
+    const req = mockRequest({
+      persona_id: "per_rrhh",
+      roles_hlc_vigentes: ["CFG_RRHH"],
+    });
+    assert.doesNotThrow(() => assertPlanTeoriaAuth(req, {
+      planEstado: "BORRADOR",
+      accion: CANALES_TEORIA.GUARDAR_PLAN,
     }));
   });
 });

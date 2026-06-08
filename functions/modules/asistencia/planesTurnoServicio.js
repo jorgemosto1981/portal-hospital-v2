@@ -11,6 +11,7 @@ const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { db, FieldValue } = require("../shared/context");
 const runtimeFlags = require("../shared/runtimeFlags.json");
 const { assertRrhh, assertPlanAuth } = require("../shared/helpers");
+const { assertPlanTeoriaAuth, CANALES_TEORIA } = require("../shared/teoriaPermisosGso");
 const {
   resolverAprobacionPendientePlan,
   assertPlanAprobarORechazar,
@@ -285,7 +286,13 @@ const iniciarIncorporacionPlanMensual = onCall({ invoker: "public" }, async (req
   }
 
   const grupoId = padre.grupo_id;
-  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, grupoId, "guardar");
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
+    await assertPlanAuth(request, grupoId, "guardar");
+    assertPlanTeoriaAuth(request, {
+      planEstado: "BORRADOR",
+      accion: CANALES_TEORIA.GUARDAR_PLAN,
+    });
+  }
 
   await assertSinIncorporacionActiva({
     grupoId,
@@ -358,7 +365,22 @@ const guardarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =
   const modoIncorporacionAgentesNuevos =
     request.data && request.data.modo_incorporacion_agentes_nuevos === true;
   const { grupoId, tipoPlan } = validarDatosBase(datos);
-  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, grupoId, "guardar");
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
+    await assertPlanAuth(request, grupoId, "guardar");
+    let planEstadoG6 = "BORRADOR";
+    const rawPlanId =
+      request.data && typeof request.data.id === "string" ? request.data.id.trim() : "";
+    if (rawPlanId) {
+      const prevG6 = await db.collection(COL_PLANES).doc(rawPlanId).get();
+      if (prevG6.exists) {
+        planEstadoG6 = String(prevG6.data()?.estado || "BORRADOR").trim() || "BORRADOR";
+      }
+    }
+    assertPlanTeoriaAuth(request, {
+      planEstado: planEstadoG6,
+      accion: CANALES_TEORIA.GUARDAR_PLAN,
+    });
+  }
 
   const now = FieldValue.serverTimestamp();
   const uid = (request.auth && request.auth.uid) || "system";
@@ -597,7 +619,13 @@ const enviarPlanTurnoServicio = onCall({ invoker: "public" }, async (request) =>
   if (!preSnap.exists) err("not-found", "[PLT-ENV-002] Plan no encontrado.");
   const prePlan = preSnap.data();
 
-  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) await assertPlanAuth(request, prePlan.grupo_id, "enviar");
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
+    await assertPlanAuth(request, prePlan.grupo_id, "enviar");
+    assertPlanTeoriaAuth(request, {
+      planEstado: prePlan.estado || "BORRADOR",
+      accion: CANALES_TEORIA.ENVIAR_PLAN,
+    });
+  }
 
   const warnings = [];
   let agentesParaEnviar = prePlan.agentes;
