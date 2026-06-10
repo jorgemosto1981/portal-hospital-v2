@@ -33,16 +33,19 @@ export default function GrillaPeriodoLiquidacionAccionesRrhh({
   const [operando, setOperando] = useState(false);
   const [mostrarReabrir, setMostrarReabrir] = useState(false);
   const [motivoReabrir, setMotivoReabrir] = useState("");
+  const [modalCerrar, setModalCerrar] = useState(false);
+  const [checkCierre, setCheckCierre] = useState(false);
 
   const gdtOk = RX_GDT.test(String(grupoId || "").trim());
   const sectorTxt = grupoLabel || grupoId || "sector";
 
-  const handleCerrar = async () => {
-    if (!gdtOk || operando || cerrado) return;
-    const ok = window.confirm(
-      `¿Cerrar liquidación de ${periodoLabel} para ${sectorTxt}? El mes quedará en solo lectura para nuevas solicitudes y cambios de turno.`,
-    );
-    if (!ok) return;
+  const cerrarModalCierre = () => {
+    setModalCerrar(false);
+    setCheckCierre(false);
+  };
+
+  const handleCerrarConfirmado = async () => {
+    if (!gdtOk || operando || cerrado || !checkCierre) return;
     setOperando(true);
     try {
       const res = await callCerrarPeriodoLiquidacion({
@@ -53,6 +56,7 @@ export default function GrillaPeriodoLiquidacionAccionesRrhh({
       });
       const n = res?.data?.actualizados ?? 0;
       toast.success(`Período cerrado (${n} vista(s) actualizadas).`);
+      cerrarModalCierre();
       await onCompletado();
     } catch (e) {
       toast.error(e?.message || "No se pudo cerrar el período.");
@@ -97,50 +101,99 @@ export default function GrillaPeriodoLiquidacionAccionesRrhh({
     );
   }
 
-  const btnBase = compact
-    ? "min-h-9 rounded-lg px-2.5 text-xs font-semibold disabled:opacity-60"
-    : "min-h-11 rounded-xl px-3 text-sm font-semibold disabled:opacity-60";
+  const btnCerrar =
+    "rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-slate-400 hover:text-rose-700 disabled:opacity-50";
+  const btnReabrir =
+    "rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-slate-400 hover:text-violet-800 disabled:opacity-50";
 
   return (
-    <div className={compact ? "space-y-1.5" : "mt-3 space-y-2"}>
+    <div className={compact ? "space-y-1.5" : "mt-1 space-y-2"}>
       {cerrado && !compact ? (
-        <p className="rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-xs text-slate-700">
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
           <span className="font-semibold">Período cerrado</span> — {periodoLabel} · {sectorTxt}. Podés
           consultar la grilla; para altas o cambios, reabrí el período.
         </p>
       ) : null}
       {cerrado && compact ? (
-        <p className="rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-xs text-slate-700">
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
           <span className="font-semibold">Período cerrado</span> — {periodoLabel} · {sectorTxt}.
-          Podés consultar la grilla y operar como RRHH (reapertura o cambios según política).
         </p>
       ) : null}
 
-      <div className={compact ? "flex flex-wrap items-center gap-2" : "flex flex-col gap-2 sm:flex-row"}>
+      <div className={compact ? "flex flex-wrap items-center gap-2" : "flex flex-wrap items-center gap-2"}>
         {!cerrado ? (
           <button
             type="button"
             disabled={operando}
-            onClick={() => void handleCerrar()}
-            className={`${btnBase} border border-amber-400 bg-amber-50 text-amber-950 active:bg-amber-100 ${compact ? "" : "flex-1"}`}
+            onClick={() => setModalCerrar(true)}
+            className={btnCerrar}
           >
-            {operando ? "Procesando…" : compact ? "Cerrar período" : "Cerrar período de liquidación"}
+            {operando ? "Procesando…" : "Cerrar período de liquidación"}
           </button>
         ) : (
           <button
             type="button"
             disabled={operando}
             onClick={() => setMostrarReabrir((v) => !v)}
-            className={`${btnBase} border border-violet-400 bg-violet-50 text-violet-950 active:bg-violet-100 ${compact ? "" : "flex-1"}`}
+            className={btnReabrir}
           >
-            {operando ? "Procesando…" : compact ? "Reabrir período" : "Reabrir período de liquidación"}
+            {operando ? "Procesando…" : "Reabrir período de liquidación"}
           </button>
         )}
       </div>
 
+      {modalCerrar ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-cierre-titulo"
+        >
+          <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
+            <h3 id="modal-cierre-titulo" className="text-base font-semibold text-slate-900">
+              ¿Confirmar cierre de liquidación?
+            </h3>
+            <p className="mt-2 text-sm text-slate-600">
+              {periodoLabel} · {sectorTxt}. El mes quedará en solo lectura para solicitudes y cambios
+              de turno de jefatura.
+            </p>
+            <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
+              <input
+                type="checkbox"
+                checked={checkCierre}
+                onChange={(e) => setCheckCierre(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300"
+              />
+              <span>
+                Entiendo que, una vez cerrado, hará falta una reapertura manual por RRHH para volver a
+                editar.
+              </span>
+            </label>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={operando}
+                onClick={cerrarModalCierre}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={operando || !checkCierre}
+                onClick={() => void handleCerrarConfirmado()}
+                className="rounded-lg bg-rose-700 px-3 py-1.5 text-sm font-semibold text-white disabled:bg-slate-300 disabled:text-slate-500"
+              >
+                Confirmar cierre
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {cerrado && mostrarReabrir ? (
         <div
-          className={`border border-violet-200 bg-white ${compact ? "rounded-lg p-2" : "rounded-xl p-3"}`}
+          className={`border border-slate-200 bg-slate-50 ${compact ? "rounded-lg p-2" : "rounded-xl p-3"}`}
         >
           <label className="block text-xs font-medium text-slate-700">
             Motivo de reapertura (obligatorio)
@@ -158,7 +211,7 @@ export default function GrillaPeriodoLiquidacionAccionesRrhh({
               type="button"
               disabled={operando || motivoReabrir.trim().length < 3}
               onClick={() => void handleReabrir()}
-              className={`${compact ? "min-h-9 text-xs" : "min-h-11 text-sm"} rounded-lg bg-violet-700 px-3 font-semibold text-white disabled:opacity-50`}
+              className="min-h-9 rounded-lg bg-violet-700 px-3 text-xs font-semibold text-white disabled:opacity-50"
             >
               Confirmar reapertura
             </button>
@@ -169,7 +222,7 @@ export default function GrillaPeriodoLiquidacionAccionesRrhh({
                 setMostrarReabrir(false);
                 setMotivoReabrir("");
               }}
-              className={`${compact ? "min-h-9 text-xs" : "min-h-11 text-sm"} rounded-lg border border-slate-300 px-3 text-slate-700`}
+              className="min-h-9 rounded-lg border border-slate-300 px-3 text-xs text-slate-700"
             >
               Cancelar
             </button>

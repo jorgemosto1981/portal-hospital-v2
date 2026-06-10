@@ -2,7 +2,8 @@
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db } = require("../../modules/shared/context");
-const { assertAgenteConPersonaId } = require("../../modules/shared/helpers");
+const { assertAgenteConPersonaId, assertPlanAuth } = require("../../modules/shared/helpers");
+const runtimeFlags = require("../../modules/shared/runtimeFlags.json");
 const { tokenHasRrhhLaborAccess } = require("../../modules/shared/laborProfile");
 const { isPortalRoleUsuario } = require("../../modules/shared/solicitudElegibilidadLaboral");
 const { listarVistaGrillaMesPorGrupo } = require("../../modules/shared/grillaMesAgenteCore");
@@ -31,6 +32,10 @@ const listarVistaGrillaMesPorGrupoCallable = onCall(async (request) => {
   }
   if (!Number.isFinite(anio) || !Number.isFinite(mes)) {
     throw new HttpsError("invalid-argument", "anio y mes son obligatorios.");
+  }
+
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
+    await assertPlanAuth(request, grupoTrabajoId, "leer");
   }
 
   try {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 import { useAuthClaims } from "../auth/useAuthClaims.js";
@@ -33,6 +33,13 @@ import GrillaPeriodoLiquidacionAccionesRrhh from "./GrillaPeriodoLiquidacionAcci
 import { useEstadosPeriodoLiquidacionGrupos } from "./useEstadosPeriodoLiquidacionGrupos.js";
 import { celdaEsIncompletoPlanVis } from "./grillaMesEquipoDisplay.js";
 import { celdaTieneDesalineacionTeoria } from "./grillaMesCellUtils.js";
+import {
+  grillaUsaCatalogoSector,
+  modoGrillaInicialDesdeCapabilities,
+  resolveGrillaOperativaCapabilitiesFromVariant,
+} from "./grillaOperativaCapabilities.js";
+import SelectorFocoGdt from "./SelectorFocoGdt.jsx";
+import { useGrillaMesFocoUrl } from "./useGrillaMesFocoUrl.js";
 
 function parsePeriodo(periodo) {
   const [yyyy, mm] = String(periodo || "").split("-");
@@ -59,10 +66,15 @@ function labelPeriodo(periodo) {
 }
 
 /**
- * @param {{ variant?: "default" | "rrhh" }} props
+ * @param {{
+ *   variant?: "default" | "rrhh";
+ *   capabilities?: import("./grillaOperativaCapabilities.js").GrillaOperativaCapabilities;
+ * }} props
  */
-export default function GrillaMesLicenciasPanel({ variant = "default" }) {
-  const esVistaRrhh = variant === "rrhh";
+export default function GrillaMesLicenciasPanel({ variant = "default", capabilities: capabilitiesProp }) {
+  const capabilities =
+    capabilitiesProp ?? resolveGrillaOperativaCapabilitiesFromVariant(variant);
+  const esVistaRrhh = grillaUsaCatalogoSector(capabilities);
   const abrirAyuda = (termino) => {
     window.dispatchEvent(new CustomEvent("portal-help-open", { detail: { termino } }));
   };
@@ -73,7 +85,15 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
   const bandejaPath = esRrhh ? "/portal/rrhh/solicitudes-articulo" : "/portal/jefe/solicitudes";
   const personaId = String(claims?.persona_id || "").trim();
 
-  const vista = useGrillaMesVista({ personaId, claims, esRrhh, preferSector: esVistaRrhh });
+  const vista = useGrillaMesVista({
+    personaId,
+    claims,
+    esRrhh,
+    preferSector: capabilities.preferModoSector,
+  });
+  const usaFocoEnUrl = capabilities.syncFocoEnUrl;
+  const modoFocoUrl = modoGrillaInicialDesdeCapabilities(capabilities);
+
   const etiquetasPersona = useMemo(() => {
     const map = {};
     for (const fila of vista.filas || []) {
@@ -118,6 +138,72 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
   const [contextoLiquidacion, setContextoLiquidacion] = useState(
     /** @type {{ grupoId: string; periodo: string; label: string } | null} */ (null),
   );
+
+  const abrirGrillaDesdeFocoUrl = useCallback(
+    ({ grupoId, periodo, grupoLabel }) => {
+      if (esRrhh && grupoId) {
+        setContextoLiquidacion({
+          grupoId,
+          periodo,
+          label: grupoLabel,
+        });
+      }
+      setVistaModal({
+        titulo: `${grupoLabel} · ${labelPeriodo(periodo)}`,
+        periodo,
+        modo: modoFocoUrl,
+        grupoId,
+      });
+      void vista.cargar({
+        periodo,
+        modo: modoFocoUrl,
+        grupoId,
+      });
+    },
+    [esRrhh, vista.cargar, modoFocoUrl],
+  );
+
+  const abrirGrillaTitularDesdeFocoUrl = useCallback(
+    ({ periodo }) => {
+      vista.aplicarFocoOperativo({
+        periodo,
+        grupoId: "",
+        modo: GRILLA_MES_MODO.TITULAR,
+      });
+      setVistaModal({
+        titulo: `Titular (mi caso) · ${labelPeriodo(periodo)}`,
+        periodo,
+        modo: GRILLA_MES_MODO.TITULAR,
+        grupoId: "",
+      });
+      void vista.cargar({
+        periodo,
+        modo: GRILLA_MES_MODO.TITULAR,
+        grupoId: "",
+      });
+    },
+    [vista.aplicarFocoOperativo, vista.cargar],
+  );
+
+  const focoUrl = useGrillaMesFocoUrl({
+    enabled: usaFocoEnUrl,
+    origenGrupos: capabilities.origenGrupos,
+    modoFocoEquipo: modoFocoUrl,
+    vista,
+    periodoPorDefecto: vista.periodo,
+    onFocoListoParaCarga: abrirGrillaDesdeFocoUrl,
+  });
+
+  const modalMuestraTitular =
+    vistaModal?.modo === GRILLA_MES_MODO.TITULAR || vista.esModoTitular;
+
+  const grillaTitularAbierta = vistaModal?.modo === GRILLA_MES_MODO.TITULAR;
+
+  useEffect(() => {
+    if (!usaFocoEnUrl || focoUrl.tieneFocoValido || grillaTitularAbierta) return;
+    setVistaModal(null);
+  }, [usaFocoEnUrl, focoUrl.tieneFocoValido, grillaTitularAbierta]);
+
   const outbox = useAsistenciaOutbox({ editorPersonaId: personaId, periodo: vista.periodo });
   const labelGrupoParaOutbox = (grupoId) => {
     const gid = String(grupoId || "").trim();
@@ -218,7 +304,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
   const estadosPeriodo = useEstadosPeriodoLiquidacionGrupos({
     periodos,
     grupos: gruposTarjetas,
-    habilitado: esRrhh && gruposTarjetas.length > 0,
+    habilitado: capabilities.puedeAccionesPeriodoLiquidacion && gruposTarjetas.length > 0,
   });
 
   const refrescarTrasPeriodo = async () => {
@@ -364,16 +450,68 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
     <div className="mt-6 border-t border-slate-200 pt-6">
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <h2 className="text-lg font-semibold text-slate-900">Calendario licencias</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          {esVistaRrhh
-            ? "Todos los sectores activos. Abrí una tarjeta para ver la grilla del mes."
-            : "Seleccioná una tarjeta para abrir la grilla mensual."}
-        </p>
-        {esVistaRrhh && vista.sectorCargando ? (
+        {usaFocoEnUrl ? (
+          <>
+            <p className="mt-1 text-sm text-slate-600">
+              {esVistaRrhh
+                ? "Elegí período y sector. El foco queda en la URL para compartir o refrescar la pantalla."
+                : "Elegí período y grupo de trabajo vigente. El foco queda en la URL para compartir o refrescar."}
+            </p>
+            <div className="mt-3">
+              <SelectorFocoGdt
+                origenGrupos={
+                  capabilities.origenGrupos === "catalogo" ? "catalogo" : "hlg_vigente"
+                }
+                gruposCatalogo={vista.gruposSector}
+                gruposHlg={vista.gruposEquipo}
+                catalogoCargando={vista.sectorCargando}
+                hlgCargando={vista.resolverCargando}
+                grupoIdConfirmado={focoUrl.grupoIdUrl}
+                periodoConfirmado={focoUrl.periodoUrl}
+                periodoPorDefecto={vista.periodo}
+                focoTitularActivo={grillaTitularAbierta}
+                muestraAtajoTitular={capabilities.muestraTarjetaTitular}
+                disabled={vista.loading}
+                onConfirmarCarga={({ grupoId, periodo }) => {
+                  focoUrl.pushFocoToUrl({ grupoId, periodo });
+                }}
+                onVerTitular={({ periodo }) => {
+                  abrirGrillaTitularDesdeFocoUrl({ periodo });
+                  focoUrl.pushFocoTitularToUrl({ periodo });
+                }}
+              />
+            </div>
+            {grillaTitularAbierta ? (
+              <p className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800">
+                Trabajando en: Mi grilla (titular) ·{" "}
+                {labelPeriodo(vistaModal?.periodo || focoUrl.periodoUrl)}
+              </p>
+            ) : focoUrl.tieneFocoValido ? (
+              <p className="mt-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-950">
+                Trabajando en:{" "}
+                {focoUrl.grupoLabelUrl || vista.grupoActivoLabel || focoUrl.grupoIdUrl} ·{" "}
+                {labelPeriodo(focoUrl.periodoUrl)}
+              </p>
+            ) : (
+              <p className="mt-3 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-4 text-sm text-slate-600">
+                {esVistaRrhh
+                  ? "Elegí sector y período, luego pulsá Ver para cargar la grilla."
+                  : "Elegí grupo y período, o usá Mi grilla (titular). Confirmá con Ver."}
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="mt-1 text-sm text-slate-600">
+            {esVistaRrhh
+              ? "Todos los sectores activos. Abrí una tarjeta para ver la grilla del mes."
+              : "Seleccioná una tarjeta para abrir la grilla mensual."}
+          </p>
+        )}
+        {!usaFocoEnUrl && esVistaRrhh && vista.sectorCargando ? (
           <p className="mt-2 text-xs text-slate-500">Cargando sectores…</p>
         ) : null}
-        {esRrhh && !esVistaRrhh && grupoLiquidacionId ? (
-          <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50/50 p-3">
+        {capabilities.puedeAccionesPeriodoLiquidacion && grupoLiquidacionId ? (
+          <div className="mt-3 rounded-lg border border-slate-200 bg-white p-2">
             <GrillaPeriodoLiquidacionAccionesRrhh
               grupoId={grupoLiquidacionId}
               anio={refPeriodoLiquidacion?.anio ?? vista.anio}
@@ -385,6 +523,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
             />
           </div>
         ) : null}
+        {usaFocoEnUrl ? null : (
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
           {periodos.map((periodo, idx) => {
             const titulo = idx === 0 ? "Mes anterior" : idx === 1 ? "Mes actual" : "Mes próximo";
@@ -393,25 +532,27 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{titulo}</p>
                 <p className="text-sm font-medium text-slate-900">{labelPeriodo(periodo)}</p>
                 <div className="mt-2 space-y-2">
-                  <GrillaTarjetaGrupoPeriodo
-                    titulo="Titular (mi caso)"
-                    subtituloPeriodo={labelPeriodo(periodo)}
-                    cerrado={false}
-                    disabled={cargandoTarjeta || vista.gruposEquipo.length === 0}
-                    variante="titular"
-                    onClick={() => {
-                      if (vista.gruposEquipo.length === 0) {
-                        toast.error("Sin cargos vigentes en el mes seleccionado.");
-                        return;
-                      }
-                      seleccionarTarjeta({
-                        periodo,
-                        modo: "TITULAR",
-                        grupoId: "",
-                        titulo: `Titular (mi caso) · ${labelPeriodo(periodo)}`,
-                      });
-                    }}
-                  />
+                  {capabilities.muestraTarjetaTitular ? (
+                    <GrillaTarjetaGrupoPeriodo
+                      titulo="Titular (mi caso)"
+                      subtituloPeriodo={labelPeriodo(periodo)}
+                      cerrado={false}
+                      disabled={cargandoTarjeta || vista.gruposEquipo.length === 0}
+                      variante="titular"
+                      onClick={() => {
+                        if (vista.gruposEquipo.length === 0) {
+                          toast.error("Sin cargos vigentes en el mes seleccionado.");
+                          return;
+                        }
+                        seleccionarTarjeta({
+                          periodo,
+                          modo: "TITULAR",
+                          grupoId: "",
+                          titulo: `Titular (mi caso) · ${labelPeriodo(periodo)}`,
+                        });
+                      }}
+                    />
+                  ) : null}
                   {gruposTarjetas.length === 0 ? (
                     <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500">
                       Sin grupos vigentes.
@@ -427,7 +568,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                         esRrhh={esRrhh}
                         disabled={cargandoTarjeta}
                         onClick={() => {
-                          if (esRrhh) {
+                          if (capabilities.puedeAccionesPeriodoLiquidacion) {
                             setContextoLiquidacion({
                               grupoId: g.id,
                               periodo,
@@ -449,6 +590,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
             );
           })}
         </div>
+        )}
       </div>
 
       {vista.resolverError ? (
@@ -538,7 +680,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default" }) {
                     Cargando grilla...
                   </div>
                 </div>
-              ) : vista.esModoTitular ? (
+              ) : modalMuestraTitular ? (
                 vista.titularCalendarios.length === 0 ? (
                   <p className="mt-8 text-center text-sm text-slate-600">
                     Sin cargos vigentes para este mes.

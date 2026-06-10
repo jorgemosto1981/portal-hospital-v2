@@ -110,15 +110,17 @@ Al cambiar foco, el bounded context cambia (`vis_*`, filas equipo, plan mensual 
 
 ## 5. Orden de implementación acordado (próxima sesión)
 
-**Pregunta abierta al retomar:** ¿primera pantalla **grilla operativa jefe** o **barra de foco unificada en Turnos mensuales**?
+**Decisión 2026-06-10:** **Dos shells + motor compartido** — cerrar **grilla operativa RRHH** (`/portal/rrhh/grilla-operativa`) antes que jefe o Turnos mensuales. El jefe no es “RRHH con filtros”; es otro bounded context (HLg vigente + G2). Contrato de capacidades: `web/src/features/grilla/grillaOperativaCapabilities.js` (`resolveGrillaOperativaCapabilities` desde cada shell).
 
 | Paso | Entregable | Notas |
 |------|------------|--------|
-| **1** | `SelectorFocoGdt` reutilizable | Misma fuente `resolverContextoLaboralSolicitud` |
-| **2** | URL `?grupo_id=&periodo=` en grilla jefe | Paridad con `PlanTurnoServicioPage` |
+| **0** | `GrillaOperativaCapabilities` + shells | ✅ en curso — `GrillaOperativaRrhhPage` / `GrillaOperativaJefePage` pasan `capabilities`; panel deja de inferir liquidación/fichadas solo por claim en ruta jefe |
+| **1** | `SelectorFocoGdt` reutilizable | RRHH: `origenGrupos: "catalogo"` · jefe (después): `"hlg_vigente"` |
+| **2** | URL `?grupo_id=&periodo=` en **grilla RRHH** | Luego paridad en jefe y escritura en Turnos mensuales |
 | **3** | Auto-recarga al cambiar GDT | Quitar fricción botón solo para cambio de grupo |
 | **4** | Cabecera “Trabajando en: {GDT} · {período}” | Contexto visible |
-| **5** | Backend: membresía en `listarVistaGrillaMesPorGrupo` | Paridad US-13 / planes |
+| **5** | Backend: auth en `listarVistaGrillaMesPorGrupo` | ✅ `assertPlanAuth(..., "leer")` (RRHH pasa · jefe exige HLg vigente en el GDT) |
+| **5b** | URL foco shell jefe | ✅ `syncFocoEnUrl` + `SelectorFocoGdt` (`hlg_vigente`) · tarjetas ocultas con foco URL |
 | **6** | (Paralelo o después) Paleta compuesta en `GrillaMensualEditor` | Con GDT ya fijado — épica F3 original |
 
 **Opcional v2:** callable “solo grupos gestión” (intersección HLg + superior jerárquico) — **no existe hoy**.

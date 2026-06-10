@@ -1,4 +1,8 @@
 import GrillaMesLicenciasPanel from "../../features/grilla/GrillaMesLicenciasPanel.jsx";
+import {
+  GRILLA_OPERATIVA_SHELL,
+  resolveGrillaOperativaCapabilities,
+} from "../../features/grilla/grillaOperativaCapabilities.js";
 import Card from "../../components/ui/Card.jsx";
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
@@ -27,7 +31,9 @@ export default function GrillaOperativaJefePage() {
       <p className="mt-1 text-sm text-slate-600">
         Calendario propio y vista de equipo por grupo de trabajo. Período mensual GSO (licencias y gestión del día).
       </p>
-      <GrillaMesLicenciasPanel variant="default" />
+      <GrillaMesLicenciasPanel
+        capabilities={resolveGrillaOperativaCapabilities(GRILLA_OPERATIVA_SHELL.JEFE)}
+      />
     </section>
   );
 }

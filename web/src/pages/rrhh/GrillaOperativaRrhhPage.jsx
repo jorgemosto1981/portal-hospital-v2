@@ -1,4 +1,8 @@
 import GrillaMesLicenciasPanel from "../../features/grilla/GrillaMesLicenciasPanel.jsx";
+import {
+  GRILLA_OPERATIVA_SHELL,
+  resolveGrillaOperativaCapabilities,
+} from "../../features/grilla/grillaOperativaCapabilities.js";
 
 /**
  * Grilla operativa GSO para RRHH (calendario MDC + vista sector).
@@ -11,7 +15,9 @@ export default function GrillaOperativaRrhhPage() {
       <p className="mt-1 text-sm text-slate-600">
         Calendario de licencias y vista por sector. Elegí un grupo de trabajo y el período mensual.
       </p>
-      <GrillaMesLicenciasPanel variant="rrhh" />
+      <GrillaMesLicenciasPanel
+        capabilities={resolveGrillaOperativaCapabilities(GRILLA_OPERATIVA_SHELL.RRHH)}
+      />
     </section>
   );
 }

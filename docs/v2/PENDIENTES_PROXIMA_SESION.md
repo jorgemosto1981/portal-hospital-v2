@@ -3,7 +3,7 @@
 > **RETOMAR AQUÍ:** **T-05 contexto GDT** — implementar selector de foco unificado (paso 1–5 en handoff) · luego paleta segmentos en `GrillaMensualEditor` (épica F3). **Leer primero:** [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
 > **US-13:** ✅ **cerrado ops** 2026-06-08 · commit docs/grilla jefe `0af4b0f` · acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)  
 > **US-13 código (histórico):** `c15a1a1` UI · `c4753fa` motor · `3ac3e25` batch · `b79b7d1` G6 · tests `npm run test:us13-functions` + vitest web.  
-> **Decisión abierta al retomar:** ¿arrancar T-05 en **grilla operativa jefe** o **Turnos mensuales** (barra foco)?  
+> **Decisión T-05 (2026-06-10):** **RRHH grilla operativa primero** (catálogo sector + URL foco) · jefe después · Turnos mensuales tercero · capabilities: `grillaOperativaCapabilities.js`  
 > **Otros:** T-06 help/bandeja · RFC HLG ⏸ RRHH  
 > **Hosting prod:** https://portal-hospital-v2.web.app · último deploy **2026-06-08** (`ccc1040` · tag **`v2.6.3-gso-us6`**)  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  

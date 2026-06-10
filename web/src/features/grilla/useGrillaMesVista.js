@@ -158,6 +158,20 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
     setGrupoId(normalizeGrupoTrabajoId(gdt));
   }, []);
 
+  /** T-05: foco desde URL (sector RRHH) sin pasar por tarjetas. */
+  const aplicarFocoOperativo = useCallback(({ periodo: p, grupoId: gdt = "", modo: m = GRILLA_MES_MODO.SECTOR }) => {
+    setPeriodo(p);
+    setModo(m);
+    setGrupoId(normalizeGrupoTrabajoId(gdt));
+    setError("");
+    if (m === GRILLA_MES_MODO.TITULAR) {
+      setData(null);
+      return;
+    }
+    setData(null);
+    setTitularCalendarios([]);
+  }, []);
+
   const requiereSeleccionGrupo =
     (modo === GRILLA_MES_MODO.EQUIPO && !RX_GDT.test(grupoId))
     || (modo === GRILLA_MES_MODO.SECTOR && !RX_GDT.test(grupoId));
@@ -429,6 +443,7 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
     modo,
     onModoChange,
     aplicarSeleccionDesdeTarjeta,
+    aplicarFocoOperativo,
     grupoId,
     setGrupoId,
     gruposEquipo,
