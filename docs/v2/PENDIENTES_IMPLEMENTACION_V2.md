@@ -2,8 +2,8 @@
 
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
 **Última actualización:** 2026-06-10 (**T-05 (A)** grilla operativa foco URL ✅ `8285283` · **US-13** ✅ ops)  
-**Rama / release:** `master` · tag **`v2.6.3-gso-us6`** (`ccc1040`) · **US-13** en rama: `c15a1a1`…`b79b7d1` (sin tag aún) · PR blindaje [#2](https://github.com/jorgemosto1981/portal-hospital-v2/pull/2) · PR US-17 [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3) **mergeado**  
-**Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR:** deploy US-13 + checklist RRHH en staging
+**Rama / release:** `master` @ `ea25b3f` · tags **`v2.6.3-gso-us6`** · **`v2.6.3-pos-t05-grilla`** (`8285283`)  
+**Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR:** T-05 planes URL · F3 paleta editor · T-06
 
 ---
 
