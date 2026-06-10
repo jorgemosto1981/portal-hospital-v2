@@ -1,6 +1,6 @@
 # Handoff — Sesión 2026-06-08 · Cierre US-13 ops + pausa T-05 (contexto GDT)
 
-**Estado:** **PAUSA** — sin código T-05 en esta sesión; acuerdo de producto y DoR documentados.  
+**Estado:** **T-05 (A) CERRADO** en grilla operativa (2026-06-10 · `8285283` · `v2.6.3-pos-t05-grilla`). **(B)** paleta editor y URL planes — pendiente.  
 **Producción:** https://portal-hospital-v2.web.app  
 **Índice RETOMAR AQUÍ:** [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md)  
 **Handoff US-13 smoke:** commit `0af4b0f` · acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)
@@ -114,11 +114,11 @@ Al cambiar foco, el bounded context cambia (`vis_*`, filas equipo, plan mensual 
 
 | Paso | Entregable | Notas |
 |------|------------|--------|
-| **0** | `GrillaOperativaCapabilities` + shells | ✅ en curso — `GrillaOperativaRrhhPage` / `GrillaOperativaJefePage` pasan `capabilities`; panel deja de inferir liquidación/fichadas solo por claim en ruta jefe |
-| **1** | `SelectorFocoGdt` reutilizable | RRHH: `origenGrupos: "catalogo"` · jefe (después): `"hlg_vigente"` |
-| **2** | URL `?grupo_id=&periodo=` en **grilla RRHH** | Luego paridad en jefe y escritura en Turnos mensuales |
-| **3** | Auto-recarga al cambiar GDT | Quitar fricción botón solo para cambio de grupo |
-| **4** | Cabecera “Trabajando en: {GDT} · {período}” | Contexto visible |
+| **0** | `GrillaOperativaCapabilities` + shells | ✅ `GrillaOperativaRrhhPage` / `GrillaOperativaJefePage` |
+| **1** | `SelectorFocoGdt` reutilizable | ✅ catálogo RRHH · `hlg_vigente` jefe |
+| **2** | URL `?grupo_id=&periodo=` grilla RRHH + jefe | ✅ · **pendiente escritura** Turnos mensuales |
+| **3** | Carga al confirmar foco | ✅ botón **Ver** (no auto al cambiar combo) |
+| **4** | Cabecera “Trabajando en: {GDT} · {período}” | ✅ |
 | **5** | Backend: auth en `listarVistaGrillaMesPorGrupo` | ✅ `assertPlanAuth(..., "leer")` (RRHH pasa · jefe exige HLg vigente en el GDT) |
 | **5b** | URL foco shell jefe | ✅ `syncFocoEnUrl` + `SelectorFocoGdt` (`hlg_vigente`) · tarjetas ocultas con foco URL |
 | **6** | (Paralelo o después) Paleta compuesta en `GrillaMensualEditor` | Con GDT ya fijado — épica F3 original |

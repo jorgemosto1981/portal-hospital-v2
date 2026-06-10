@@ -1,11 +1,10 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ:** **T-05 contexto GDT** — implementar selector de foco unificado (paso 1–5 en handoff) · luego paleta segmentos en `GrillaMensualEditor` (épica F3). **Leer primero:** [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
-> **US-13:** ✅ **cerrado ops** 2026-06-08 · commit docs/grilla jefe `0af4b0f` · acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)  
-> **US-13 código (histórico):** `c15a1a1` UI · `c4753fa` motor · `3ac3e25` batch · `b79b7d1` G6 · tests `npm run test:us13-functions` + vitest web.  
-> **Decisión T-05 (2026-06-10):** **RRHH grilla operativa primero** (catálogo sector + URL foco) · jefe después · Turnos mensuales tercero · capabilities: `grillaOperativaCapabilities.js`  
+> **RETOMAR AQUÍ:** **T-05 (B) paleta segmentos** en `GrillaMensualEditor` (épica F3) · **paridad URL** en `PlanTurnoServicioPage` (escritura `grupo_id`/`periodo`) · deuda: migrar `esRrhh` → `capabilities` en panel/modales. Handoff: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
+> **T-05 (A) grilla operativa:** ✅ **cerrado** 2026-06-10 · commit `8285283` · tag **`v2.6.3-pos-t05-grilla`** · rama `feat/gso-us6-teoria-pendiente`  
+> **US-13:** ✅ **cerrado ops** 2026-06-08 · acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)  
 > **Otros:** T-06 help/bandeja · RFC HLG ⏸ RRHH  
-> **Hosting prod:** https://portal-hospital-v2.web.app · último deploy **2026-06-08** (`ccc1040` · tag **`v2.6.3-gso-us6`**)  
+> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-10** (hosting T-05 + functions `assertPlanAuth`)  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)
 
@@ -42,15 +41,29 @@
 
 ---
 
-## PAUSA SESIÓN — T-05 contexto GDT (2026-06-08)
+## CIERRE SESIÓN — T-05 foco GDT grilla operativa (2026-06-10)
+
+| Qué | Estado |
+|-----|--------|
+| **Capabilities + shells** | `grillaOperativaCapabilities.js` · RRHH catálogo · jefe HLg vigente |
+| **Selector + URL** | `SelectorFocoGdt` · `useGrillaMesFocoUrl` · carga con botón **Ver** (no auto en combo) |
+| **Jefe titular** | Botón **Ver mi grilla (titular)** · sin carga en frío · fix formato modal |
+| **Backend** | `listarVistaGrillaMesPorGrupo` + `assertPlanAuth(..., "leer")` |
+| **Liquidación RRHH** | Botón discreto · modal doble check cierre |
+| **Git** | `8285283` · tag `v2.6.3-pos-t05-grilla` |
+| **Pendiente T-05** | URL foco en **Turnos mensuales** · paleta **F3** en editor · capabilities en modales |
+
+**Última actualización índice:** 2026-06-10 — cierre T-05 (A) grilla operativa.
+
+---
+
+## PAUSA SESIÓN — T-05 contexto GDT (2026-06-08) — histórico
 
 | Qué | Estado |
 |-----|--------|
 | **Handoff detallado** | [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md) |
-| **US-13** | Ops cerrado · `0af4b0f` en remoto |
-| **T-05 operativo** | Acuerdo: selector **foco GDT** (anti mezcla burbujas · G2 acotado) — **parcial en UI** (planes + `GrillaMesSelector`) |
-| **T-05 épica F3** | DoR paleta/segmentos en editor — **sin código** esta sesión |
-| **Próximo paso código** | §5 handoff: `SelectorFocoGdt` + URL + auto-cargar + assert membresía en `listarVistaGrillaMesPorGrupo` |
+| **T-05 operativo grilla** | ✅ Ver § cierre 2026-06-10 arriba |
+| **T-05 épica F3 (B)** | DoR documentado · **sin código** |
 
 ---
 

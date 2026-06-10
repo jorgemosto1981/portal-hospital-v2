@@ -1,7 +1,7 @@
 # Pendientes de implementación — Portal Hospital V2
 
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
-**Última actualización:** 2026-06-08 (**US-13** ✅ código web + functions; pendiente deploy functions + QA RRHH staging)  
+**Última actualización:** 2026-06-10 (**T-05 (A)** grilla operativa foco URL ✅ `8285283` · **US-13** ✅ ops)  
 **Rama / release:** `master` · tag **`v2.6.3-gso-us6`** (`ccc1040`) · **US-13** en rama: `c15a1a1`…`b79b7d1` (sin tag aún) · PR blindaje [#2](https://github.com/jorgemosto1981/portal-hospital-v2/pull/2) · PR US-17 [#3](https://github.com/jorgemosto1981/portal-hospital-v2/pull/3) **mergeado**  
 **Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR:** deploy US-13 + checklist RRHH en staging
 
@@ -98,7 +98,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 
 | Ticket | Entregable | Estado | Referencia |
 |--------|------------|--------|------------|
-| **T-05** | (A) Selector foco **GDT** unificado grilla jefe + planes · (B) paleta segmentos / compuestos `+` en `GrillaMensualEditor` | Pendiente | Handoff [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md) · épica [`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`](./EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md) |
+| **T-05** | (A) Foco GDT grilla RRHH+jefe (`8285283`) · planes URL escritura pendiente · (B) paleta `+` editor | **(A) grilla ✅** · planes/F3 pendiente | Handoff T-05 · épica [`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`](./EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md) |
 | **T-06** | Bandeja + ayuda extendida | Pendiente | `HelpContext`, bandeja |
 | **T-07** | Lecturas `vis_*` + caché RAM catálogo | Pendiente | Optimización; sin outbox |
 | **T-09** | Guías + `helpContent` | Pendiente | Docs UX |
