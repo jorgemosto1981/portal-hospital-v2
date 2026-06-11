@@ -1,7 +1,8 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ:** **T-05 (B) paleta segmentos** en `GrillaMensualEditor` (épica F3) · **paridad URL** en `PlanTurnoServicioPage` (escritura `grupo_id`/`periodo`) · deuda: migrar `esRrhh` → `capabilities` en panel/modales. Handoff: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
-> **T-05 (A) grilla operativa:** ✅ **cerrado** 2026-06-10 · commit `8285283` · tag **`v2.6.3-pos-t05-grilla`** · rama `feat/gso-us6-teoria-pendiente`  
+> **RETOMAR AQUÍ:** **T-05 (B) paleta segmentos** `+` en `GrillaMensualEditor` (épica F3) · deuda: migrar `esRrhh` → `capabilities` en panel/modales. Handoff: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
+> **T-05 (A) foco GDT + URL:** ✅ **cerrado** grilla 2026-06-10 (`8285283`) · ✅ **planes** 2026-06-11 (`usePlanTurnoFocoUrl` · `PlanTurnoServicioPage`) · tag deploy previo **`v2.6.3-pos-t05-grilla`**  
+> **Sesión 2026-06-11:** audit working tree (CRLF) · paridad URL turnos mensuales · QA local Portería jun-26  
 > **US-13:** ✅ **cerrado ops** 2026-06-08 · acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)  
 > **Otros:** T-06 help/bandeja · RFC HLG ⏸ RRHH  
 > **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-10** (hosting T-05 + functions `assertPlanAuth`)  
@@ -51,9 +52,25 @@
 | **Backend** | `listarVistaGrillaMesPorGrupo` + `assertPlanAuth(..., "leer")` |
 | **Liquidación RRHH** | Botón discreto · modal doble check cierre |
 | **Git** | `8285283` · tag `v2.6.3-pos-t05-grilla` |
-| **Pendiente T-05** | URL foco en **Turnos mensuales** · paleta **F3** en editor · capabilities en modales |
+| **Pendiente T-05** | Paleta **F3 (B)** en editor · capabilities en modales |
 
 **Última actualización índice:** 2026-06-10 — cierre T-05 (A) grilla operativa.
+
+---
+
+## CIERRE SESIÓN — T-05 (A) paridad URL Turnos mensuales (2026-06-11)
+
+| Qué | Estado |
+|-----|--------|
+| **Hook** | `usePlanTurnoFocoUrl.js` · reutiliza `buildGrillaFocoSearchParams` |
+| **UI** | `SelectorFocoGdt` + **Ver** · banner «Trabajando en…» · estado vacío sin `grupo_id` |
+| **Carga** | Sin `listarPlanes` / resumen masivo en frío; deep-link + F5 |
+| **Página** | `PlanTurnoServicioPage` (jefe + RRHH mismo shell) |
+| **Audit previo** | Working tree CRLF sin diff real · `git restore .` |
+| **QA local** | RRHH · Portería · `2026-06` |
+| **Siguiente** | **T-05 (B)** paleta compuesta en `GrillaMensualEditor.jsx` |
+
+**Última actualización índice:** 2026-06-11 — T-05 (A) cerrado en todo el portal.
 
 ---
 

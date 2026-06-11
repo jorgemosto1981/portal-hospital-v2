@@ -41,6 +41,8 @@ import {
   copyMotivoRechazoTeoriaUsuario,
   evaluarPermisosPlanMensual,
 } from "../../features/grilla/teoriaPermisosGso.js";
+import SelectorFocoGdt from "../../features/grilla/SelectorFocoGdt.jsx";
+import { usePlanTurnoFocoUrl } from "../../features/planes/usePlanTurnoFocoUrl.js";
 
 function estiloTarjetaGrupo(estado, activo) {
   const baseActivo = activo ? "ring-2 ring-offset-1" : "";
@@ -223,12 +225,14 @@ export default function PlanTurnoServicioPage() {
   const periodosPermitidosInicial = useMemo(() => periodosVentanaJefe(), []);
   const periodoDesdeUrl = String(searchParams.get("periodo") || "").trim();
   const grupoDesdeUrl = String(searchParams.get("grupo_id") || "").trim();
-  const [grupoId, setGrupoId] = useState(() => grupoDesdeUrl);
+  const grupoInicialUrl = /^gdt_/i.test(grupoDesdeUrl) ? grupoDesdeUrl : "";
+  const [grupoId, setGrupoId] = useState(() => grupoInicialUrl);
   const [periodo, setPeriodo] = useState(() =>
     periodoDesdeUrl && periodosPermitidosInicial.includes(periodoDesdeUrl)
       ? periodoDesdeUrl
       : periodosPermitidosInicial[1],
   );
+  const [resumenHabilitado, setResumenHabilitado] = useState(() => Boolean(grupoInicialUrl));
   const [planes, setPlanes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -326,14 +330,16 @@ export default function PlanTurnoServicioPage() {
     return () => { cancelled = true; };
   }, [personaId, esRrhh, periodosPermitidos]);
 
-  const cargar = useCallback(async () => {
-    if (!grupoId.trim()) return;
+  const cargar = useCallback(async (override) => {
+    const gid = String(override?.grupoId ?? grupoId).trim();
+    const per = override?.periodo ?? periodo;
+    if (!gid) return;
     setLoading(true);
     setError("");
     try {
       const res = await callListarPlanesTurnoServicio({
-        grupo_id: grupoId.trim(),
-        periodo: periodo || undefined,
+        grupo_id: gid,
+        periodo: per || undefined,
       });
       setPlanes(res.data?.items || []);
     } catch (e) {
@@ -380,7 +386,53 @@ export default function PlanTurnoServicioPage() {
     setResumenGrupoPeriodo(resumen);
   }, [periodosPermitidos, gruposPorPeriodo]);
 
+  const resolverGrupoLabel = useCallback(
+    (id) => {
+      const g = gruposDisponibles.find((x) => x.id === id);
+      return g?.label || id;
+    },
+    [gruposDisponibles],
+  );
+
+  const onFocoListoParaCarga = useCallback(({ grupoId: gid, periodo: per }) => {
+    setGrupoId(gid);
+    setPeriodo(per);
+    setResumenHabilitado(true);
+  }, []);
+
+  const focoUrl = usePlanTurnoFocoUrl({
+    periodoPorDefecto: periodosPermitidosInicial[1],
+    periodosPermitidos,
+    listaGruposCargando: gruposCargando,
+    resolverGrupoLabel,
+    onFocoListoParaCarga,
+  });
+
+  const gruposCatalogoFoco = useMemo(
+    () =>
+      gruposDisponibles.map((g) => ({
+        id: g.id,
+        nombre: g.label,
+      })),
+    [gruposDisponibles],
+  );
+
+  const gruposHlgFoco = useMemo(
+    () =>
+      (gruposPorPeriodo[focoUrl.periodoUrl] || []).map((g) => ({
+        grupo_de_trabajo_id: g.id,
+        etiqueta_ui: g.label,
+      })),
+    [gruposPorPeriodo, focoUrl.periodoUrl],
+  );
+
   useEffect(() => {
+    if (!resumenHabilitado || !grupoId.trim()) return;
+    void cargar();
+  }, [resumenHabilitado, grupoId, periodo, cargar]);
+
+  useEffect(() => {
+    if (!resumenHabilitado) return;
     let cancel = false;
     (async () => {
       await cargarResumenGrupos();
@@ -389,28 +441,7 @@ export default function PlanTurnoServicioPage() {
     return () => {
       cancel = true;
     };
-  }, [cargarResumenGrupos]);
-
-  useEffect(() => {
-    if (grupoId.trim()) cargar();
-  }, [cargar, grupoId]);
-
-  useEffect(() => {
-    const gruposMesActual = gruposPorPeriodo[periodo] || [];
-    if (!gruposMesActual.length) return;
-    if (grupoId && gruposMesActual.some((g) => g.id === grupoId)) return;
-    const desdeUrl = String(searchParams.get("grupo_id") || "").trim();
-    if (desdeUrl && gruposMesActual.some((g) => g.id === desdeUrl)) {
-      setGrupoId(desdeUrl);
-      return;
-    }
-    setGrupoId(gruposMesActual[0].id);
-  }, [periodo, gruposPorPeriodo, grupoId, searchParams]);
-
-  useEffect(() => {
-    const p = String(searchParams.get("periodo") || "").trim();
-    if (p && periodosPermitidos.includes(p) && p !== periodo) setPeriodo(p);
-  }, [searchParams, periodosPermitidos, periodo]);
+  }, [cargarResumenGrupos, resumenHabilitado]);
 
   const showFeedback = (msg) => {
     setFeedback(msg);
@@ -674,6 +705,8 @@ export default function PlanTurnoServicioPage() {
 
   const seleccionarTarjetaPlan = useCallback(
     async (p, g, esHistorico = false) => {
+      focoUrl.pushFocoToUrl({ grupoId: g.id, periodo: p });
+      setResumenHabilitado(true);
       setPeriodo(p);
       setGrupoId(g.id);
       let meta = resumenGrupoPeriodo[p]?.[g.id];
@@ -748,7 +781,7 @@ export default function PlanTurnoServicioPage() {
       if (!plan) return;
       setPlanOpciones({ plan, estado: plan.estado, grupoLabel: g.label, periodo: p });
     },
-    [resumenGrupoPeriodo, abrirPlanDetalle],
+    [resumenGrupoPeriodo, abrirPlanDetalle, focoUrl.pushFocoToUrl],
   );
 
   if (!esJefe && !esRrhh) {
@@ -774,6 +807,40 @@ export default function PlanTurnoServicioPage() {
         </div>
       </header>
 
+      <Card className="px-4 py-3">
+        <h2 className="mb-1 text-sm font-semibold text-slate-800">Foco de trabajo</h2>
+        <p className="mb-3 text-xs text-slate-600">
+          {esRrhh
+            ? "Elegí sector y período. El foco queda en la URL al pulsá Ver."
+            : "Elegí grupo vigente y período. Confirmá con Ver antes de cargar planes del sector."}
+        </p>
+        <SelectorFocoGdt
+          origenGrupos={esRrhh ? "catalogo" : "hlg_vigente"}
+          gruposCatalogo={gruposCatalogoFoco}
+          gruposHlg={gruposHlgFoco}
+          catalogoCargando={gruposCargando}
+          hlgCargando={gruposCargando}
+          grupoIdConfirmado={focoUrl.grupoIdUrl}
+          periodoConfirmado={focoUrl.periodoUrl}
+          periodoPorDefecto={periodosPermitidos[1]}
+          disabled={loading}
+          onConfirmarCarga={({ grupoId: gid, periodo: per }) => {
+            focoUrl.pushFocoToUrl({ grupoId: gid, periodo: per });
+          }}
+        />
+        {focoUrl.tieneFocoValido ? (
+          <p className="mt-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-950">
+            Trabajando en: {focoUrl.grupoLabelUrl || grupoLabel} · {focoUrl.periodoUrl}
+          </p>
+        ) : (
+          <p className="mt-3 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-4 text-sm text-slate-600">
+            Por favor, elegí un grupo de trabajo y un período, luego pulsá Ver.
+          </p>
+        )}
+      </Card>
+
+      {focoUrl.tieneFocoValido ? (
+      <>
       {/* Filtros */}
       <Card className="px-4 py-3">
         <h2 className="mb-3 text-sm font-semibold text-slate-800">Mis turnos mensuales</h2>
@@ -1084,6 +1151,8 @@ export default function PlanTurnoServicioPage() {
         <Card className="px-4 py-5 text-center">
           <p className="text-sm text-slate-500">Cargando planes...</p>
         </Card>
+      ) : null}
+      </>
       ) : null}
 
       {/* Modal Grilla Mensual / Plan Perpetuo */}

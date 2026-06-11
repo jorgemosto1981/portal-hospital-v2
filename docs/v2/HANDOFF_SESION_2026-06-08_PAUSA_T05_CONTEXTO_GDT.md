@@ -1,6 +1,6 @@
 # Handoff — Sesión 2026-06-08 · Cierre US-13 ops + pausa T-05 (contexto GDT)
 
-**Estado:** **T-05 (A) CERRADO** en grilla operativa (2026-06-10 · `8285283` · `v2.6.3-pos-t05-grilla`). **(B)** paleta editor y URL planes — pendiente.  
+**Estado:** **T-05 (A) CERRADO** grilla (2026-06-10 · `8285283`) + **Turnos mensuales** URL (2026-06-11 · `usePlanTurnoFocoUrl` · `PlanTurnoServicioPage`). **(B)** paleta editor F3 — **siguiente**.  
 **Producción:** https://portal-hospital-v2.web.app  
 **Índice RETOMAR AQUÍ:** [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md)  
 **Handoff US-13 smoke:** commit `0af4b0f` · acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)
@@ -116,7 +116,7 @@ Al cambiar foco, el bounded context cambia (`vis_*`, filas equipo, plan mensual 
 |------|------------|--------|
 | **0** | `GrillaOperativaCapabilities` + shells | ✅ `GrillaOperativaRrhhPage` / `GrillaOperativaJefePage` |
 | **1** | `SelectorFocoGdt` reutilizable | ✅ catálogo RRHH · `hlg_vigente` jefe |
-| **2** | URL `?grupo_id=&periodo=` grilla RRHH + jefe | ✅ · **pendiente escritura** Turnos mensuales |
+| **2** | URL `?grupo_id=&periodo=` grilla RRHH + jefe + **Turnos mensuales** | ✅ `PlanTurnoServicioPage` · `usePlanTurnoFocoUrl` (2026-06-11) |
 | **3** | Carga al confirmar foco | ✅ botón **Ver** (no auto al cambiar combo) |
 | **4** | Cabecera “Trabajando en: {GDT} · {período}” | ✅ |
 | **5** | Backend: auth en `listarVistaGrillaMesPorGrupo` | ✅ `assertPlanAuth(..., "leer")` (RRHH pasa · jefe exige HLg vigente en el GDT) |
