@@ -8,9 +8,24 @@
 > **Otros:** RFC HLG ⏸ RRHH  
 > **Camino A capabilities:** ✅ grilla operativa + turnos mensuales (shells jefe/RRHH · `actorPortalTeoriaDesdeShell`) · merge FF **`master`** `b12ab13` · smoke A–C 2026-06-11  
 > **T-07 caché grilla:** ✅ **`master`** `a5ca021` · `grillaVistaCacheStore` + hit en `useGrillaMesVista` · invalidación outbox · fix race `setData`/doble `cargar` · smoke performance 2026-06-11  
-> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-11** (T-07 `master` @ `a5ca021` · bundle `index-DmfD65xH.js`)  
+> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-11** (`master` @ **`77dee9a`** · código T-07 `a5ca021` · bundle `index-DmfD65xH.js`)  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)
+
+---
+
+## CIERRE SESIÓN — Sprint capabilities + caché grilla (2026-06-11)
+
+| Bloque | Estado | Referencia |
+|--------|--------|------------|
+| **T-06** guardrails US-13 UI | ✅ en `master` | `5c3fd86` · smoke integral hosting |
+| **Camino A** shells / capabilities | ✅ FF `master` | `b12ab13` · `actorPortalTeoriaDesdeShell` · planes `rrhh`/`jefe` · smoke A–C |
+| **T-07** caché RAM vista grilla | ✅ FF `master` | `35dd423` store · `a5ca021` hook + outbox · race `setData`/doble `cargar` · smoke performance |
+| **Índice / deploy** | ✅ | docs `77dee9a` · hosting `index-DmfD65xH.js` |
+
+**Próximo arranque (prioridad abierta):** refinamiento planes · caché catálogo 400+ sectores (opcional) · `esRrhh` periférico fuera de shells GSO.
+
+**Última actualización índice:** 2026-06-11 — cierre sprint T-06 + Camino A + T-07 en `master`.
 
 ---
 
@@ -521,7 +536,8 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 | **F2.6** resolverFijo D2 | ✅ Código | `Number(dia_semana)` + franco sin match |
 | **F2.7** rematerializar UI RRHH | ✅ Código | `RegimenesHorariosPage` + `CalendarioConfig` |
 | **Deploy producción** | ✅ Sesión 01/06 | Ver tabla deploy en [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md) |
-| **F3 T-05..T-07, T-09** | ⏳ Pendiente | UI editor segmentos, help, caché — ver handoff 2026-06-02 |
+| **F3 T-05..T-07** | ✅ Cerrado | T-05 consola/foco · T-06 auditoría RRHH · T-07 caché grilla — `master` `a5ca021` |
+| **F3 T-09** | ⏳ Pendiente | Guías + `helpContent` extendido |
 | **F3 cierre épica** | ✅ Núcleo | Piloto Sala validado · release notes · tag pendiente commit |
 | **F4 Outbox** | ✅ En rama (F-UX.3) | Ver [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) · backlog: [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) |
 

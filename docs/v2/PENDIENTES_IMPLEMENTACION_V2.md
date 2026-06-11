@@ -2,7 +2,7 @@
 
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
 **Última actualización:** 2026-06-11 (**T-07** ✅ caché RAM grilla · **Camino A** ✅ · **T-06** ✅ · **T-05** ✅)  
-**Rama / release:** **`master`** @ `a5ca021` · tags **`v2.6.3-gso-us6`** · **`v2.6.3-pos-t05-grilla`** (`8285283`)  
+**Rama / release:** **`master`** @ `77dee9a` (código T-07 `a5ca021`) · hosting `index-DmfD65xH.js` · tags **`v2.6.3-gso-us6`** · **`v2.6.3-pos-t05-grilla`** (`8285283`)  
 **Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR:** refinamientos planes / deuda periférica
 
 ---
