@@ -149,12 +149,21 @@ export function useGrillaMesFocoUrl({
     onFocoListoParaCarga,
   ]);
 
+  const clearFocoEnUrl = useCallback(() => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("grupo_id");
+    next.delete("modo");
+    setSearchParams(next, { replace: true });
+    ultimoFocoEquipoRef.current = "";
+  }, [searchParams, setSearchParams]);
+
   return {
     grupoIdUrl,
     periodoUrl,
     tieneFocoValido,
     pushFocoToUrl,
     pushFocoTitularToUrl,
+    clearFocoEnUrl,
     grupoLabelUrl,
   };
 }

@@ -426,6 +426,12 @@ export default function PlanTurnoServicioPage() {
     [gruposPorPeriodo, focoUrl.periodoUrl],
   );
 
+  const consolaPanoramaJefe = esJefe && !focoUrl.tieneFocoValido;
+
+  useEffect(() => {
+    if (esJefe) setResumenHabilitado(true);
+  }, [esJefe]);
+
   useEffect(() => {
     if (!resumenHabilitado || !grupoId.trim()) return;
     void cargar();
@@ -812,134 +818,187 @@ export default function PlanTurnoServicioPage() {
         <p className="mb-3 text-xs text-slate-600">
           {esRrhh
             ? "Elegí sector y período. El foco queda en la URL al pulsá Ver."
-            : "Elegí grupo vigente y período. Confirmá con Ver antes de cargar planes del sector."}
+            : consolaPanoramaJefe
+              ? "Consola de tres meses abajo. Para aislar un sector, elegí grupo y período y pulsá Ver."
+              : "Zoom en un sector. Usá Volver a consola para ver los tres horizontes."}
         </p>
-        <SelectorFocoGdt
-          origenGrupos={esRrhh ? "catalogo" : "hlg_vigente"}
-          gruposCatalogo={gruposCatalogoFoco}
-          gruposHlg={gruposHlgFoco}
-          catalogoCargando={gruposCargando}
-          hlgCargando={gruposCargando}
-          grupoIdConfirmado={focoUrl.grupoIdUrl}
-          periodoConfirmado={focoUrl.periodoUrl}
-          periodoPorDefecto={periodosPermitidos[1]}
-          disabled={loading}
-          onConfirmarCarga={({ grupoId: gid, periodo: per }) => {
-            focoUrl.pushFocoToUrl({ grupoId: gid, periodo: per });
-          }}
-        />
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="min-w-0 flex-1">
+            <SelectorFocoGdt
+              origenGrupos={esRrhh ? "catalogo" : "hlg_vigente"}
+              gruposCatalogo={gruposCatalogoFoco}
+              gruposHlg={gruposHlgFoco}
+              catalogoCargando={gruposCargando}
+              hlgCargando={gruposCargando}
+              grupoIdConfirmado={focoUrl.grupoIdUrl}
+              periodoConfirmado={focoUrl.periodoUrl}
+              periodoPorDefecto={periodosPermitidos[1]}
+              disabled={loading}
+              onConfirmarCarga={({ grupoId: gid, periodo: per }) => {
+                focoUrl.pushFocoToUrl({ grupoId: gid, periodo: per });
+              }}
+            />
+          </div>
+          {esJefe && focoUrl.tieneFocoValido ? (
+            <button
+              type="button"
+              onClick={() => {
+                focoUrl.clearFocoEnUrl();
+                setGrupoId("");
+              }}
+              className="h-11 shrink-0 rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Volver a consola
+            </button>
+          ) : null}
+        </div>
         {focoUrl.tieneFocoValido ? (
           <p className="mt-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-950">
             Trabajando en: {focoUrl.grupoLabelUrl || grupoLabel} · {focoUrl.periodoUrl}
           </p>
-        ) : (
+        ) : consolaPanoramaJefe ? null : (
           <p className="mt-3 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-4 text-sm text-slate-600">
             Por favor, elegí un grupo de trabajo y un período, luego pulsá Ver.
           </p>
         )}
       </Card>
 
-      {focoUrl.tieneFocoValido ? (
-      <>
-      {/* Filtros */}
-      <Card className="px-4 py-3">
-        <h2 className="mb-3 text-sm font-semibold text-slate-800">Mis turnos mensuales</h2>
-        <div className="grid gap-3 lg:grid-cols-3">
-          {periodosPermitidos.map((p, idx) => (
-            <section key={p} className="rounded-xl border border-slate-200 bg-white p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                {idx === 0 ? "Mes anterior" : idx === 1 ? "Mes actual" : "Mes siguiente"}
-              </p>
-              <p className="text-sm font-medium text-slate-900">{labelPeriodoCard(p, idx).split(" · ")[1]}</p>
-              <div className="mt-2 space-y-2">
-                {(gruposPorPeriodo[p] || []).length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500">
-                    Sin grupos disponibles.
-                  </p>
-                ) : (
-                  (gruposPorPeriodo[p] || []).map((g) => {
-                    const meta = resumenGrupoPeriodo[p]?.[g.id] || { estado: "SIN_PLAN", cantidad: 0 };
-                    const activo = grupoId === g.id && periodo === p;
-                    const esHistorico = idx === 0;
-                    const borradorRechazado = esHistorico && borradorRechazadoEnItems(meta.items);
-                    const verEquipoSinPlan =
-                      meta.estado === "SIN_PLAN" && !esHistorico && meta.hay_planificados === false;
-                    return (
-                      <button
-                        key={`${p}-${g.id}`}
-                        type="button"
-                        onClick={() => void seleccionarTarjetaPlan(p, g, esHistorico)}
-                        className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${estiloTarjetaMisTurnos(meta.estado, activo, esHistorico, verEquipoSinPlan, borradorRechazado)}`}
-                      >
-                        <span className="font-medium">{g.label}</span>
-                        <span className="text-xs opacity-85">
-                          {iconoEstadoGrupo(meta.estado)}{" "}
-                          {etiquetaEstadoTarjeta(meta.estado, esHistorico, meta.hay_planificados, borradorRechazado)}
-                        </span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </section>
-          ))}
-        </div>
-      </Card>
-
-      {mostrarAprobacionTurnos ? (
+      {consolaPanoramaJefe ? (
         <Card className="px-4 py-3">
-          <h2 className="mb-1 text-sm font-semibold text-slate-800">Aprobación de Turnos Mensuales</h2>
-          <p className="mb-3 text-xs text-slate-600">Bandeja tipo inbox para planes enviados/en revisión de grupos hijos.</p>
+          <h2 className="mb-1 text-sm font-semibold text-slate-800">Consola de triple horizonte</h2>
+          <p className="mb-3 text-xs text-slate-600">
+            Mes anterior (cierre), mes actual (operación) y mes próximo (planificación) de tus grupos vigentes.
+            Pulsá una tarjeta para hacer zoom en ese sector y período.
+          </p>
           <div className="grid gap-3 lg:grid-cols-3">
             {periodosPermitidos.map((p, idx) => (
-              <section key={`inbox-${p}`} className="rounded-xl border border-slate-200 bg-white p-3">
+              <section key={`pan-${p}`} className="rounded-xl border border-slate-200 bg-white p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {idx === 0 ? "Mes anterior" : idx === 1 ? "Mes actual" : "Mes siguiente"}
+                  {["Mes anterior · Cierre", "Mes actual · Operación", "Mes próximo · Planificación"][idx]}
                 </p>
-                <p className="text-sm font-medium text-slate-900">{labelPeriodoCard(p, idx).split(" · ")[1]}</p>
+                <p className="text-sm font-medium text-slate-900">
+                  {labelPeriodoCard(p, idx).split(" · ")[1]}
+                </p>
                 <div className="mt-2 space-y-2">
-                  {(gruposPorPeriodo[p] || [])
-                    .filter((g) => grupoTieneInboxPendiente(resumenGrupoPeriodo[p]?.[g.id]?.items || []))
-                    .map((g) => {
-                      const meta = resumenGrupoPeriodo[p]?.[g.id] || { estado: "SIN_PLAN", cantidad: 0, items: [] };
-                      const estadoInbox = estadoInboxGrupo(meta.items || []);
-                      const esInc = Boolean(
-                        planIncorporacionActivo(meta.items || []) &&
-                          (estadoInbox === "ENVIADO" || estadoInbox === "EN_REVISION"),
-                      );
-                      const activo = grupoId === g.id && periodo === p;
+                  {(gruposPorPeriodo[p] || []).length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500">
+                      Sin grupos disponibles.
+                    </p>
+                  ) : (
+                    (gruposPorPeriodo[p] || []).map((g) => {
+                      const meta = resumenGrupoPeriodo[p]?.[g.id] || { estado: "SIN_PLAN", cantidad: 0 };
+                      const esHistorico = idx === 0;
+                      const borradorRechazado =
+                        esHistorico && borradorRechazadoEnItems(meta.items);
+                      const verEquipoSinPlan =
+                        meta.estado === "SIN_PLAN" && !esHistorico && meta.hay_planificados === false;
                       return (
                         <button
-                          key={`inbox-${p}-${g.id}`}
+                          key={`pan-${p}-${g.id}`}
                           type="button"
-                          onClick={() => void seleccionarTarjetaPlan(p, g, idx === 0)}
-                          className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${estiloTarjetaGrupo(estadoInbox, activo)}`}
+                          onClick={() => void seleccionarTarjetaPlan(p, g, esHistorico)}
+                          className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${estiloTarjetaMisTurnos(
+                            meta.estado,
+                            false,
+                            esHistorico,
+                            verEquipoSinPlan,
+                            borradorRechazado,
+                          )}`}
                         >
-                          <span className="font-medium">
-                            {g.label}
-                            {esInc ? (
-                              <span className="ml-1 text-[10px] font-normal text-amber-800">· Incorp.</span>
-                            ) : null}
-                          </span>
+                          <span className="font-medium">{g.label}</span>
                           <span className="text-xs opacity-85">
-                            {iconoEstadoGrupo(estadoInbox)} {LABEL_ESTADO[estadoInbox] || estadoInbox}
+                            {iconoEstadoGrupo(meta.estado)}{" "}
+                            {etiquetaEstadoTarjeta(
+                              meta.estado,
+                              esHistorico,
+                              meta.hay_planificados,
+                              borradorRechazado,
+                            )}
                           </span>
                         </button>
                       );
-                    })}
-                  {(gruposPorPeriodo[p] || []).filter((g) =>
-                    grupoTieneInboxPendiente(resumenGrupoPeriodo[p]?.[g.id]?.items || []),
-                  ).length === 0 ? (
-                    <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500">
-                      Sin pendientes de aprobación.
-                    </p>
-                  ) : null}
+                    })
+                  )}
                 </div>
               </section>
             ))}
           </div>
         </Card>
       ) : null}
+
+      {focoUrl.tieneFocoValido ? (
+      <>
+      {(() => {
+        const idxFoco = periodosPermitidos.indexOf(periodo);
+        const esHistoricoFoco = idxFoco === 0;
+        const metaFoco = resumenGrupoPeriodo[periodo]?.[grupoId] || {
+          estado: "SIN_PLAN",
+          cantidad: 0,
+          items: planes,
+        };
+        const estadoFoco =
+          metaFoco.items?.length > 0 ? estadoResumenGrupo(metaFoco.items) : metaFoco.estado;
+        const borradorRechazadoFoco =
+          esHistoricoFoco && borradorRechazadoEnItems(metaFoco.items);
+        const verEquipoFoco =
+          estadoFoco === "SIN_PLAN" && !esHistoricoFoco && metaFoco.hay_planificados === false;
+        const etiquetaAccion =
+          estadoFoco === "SIN_PLAN"
+            ? verEquipoFoco
+              ? "Ver equipo del sector"
+              : "Crear turno mensual"
+            : estadoFoco === "BORRADOR" || estadoFoco === "EN_REVISION"
+              ? "Editar plan"
+              : "Gestionar plan";
+        return (
+          <Card className="px-4 py-3">
+            <h2 className="mb-1 text-sm font-semibold text-slate-800">Plan del foco</h2>
+            <p className="mb-3 text-xs text-slate-600">
+              Paridad con grilla operativa: un sector y un período por vista. Cambiá el foco arriba y pulsá
+              Ver para otro mes o grupo.
+            </p>
+            <div
+              className={`flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${estiloTarjetaMisTurnos(
+                estadoFoco,
+                true,
+                esHistoricoFoco,
+                verEquipoFoco,
+                borradorRechazadoFoco,
+              )}`}
+            >
+              <div>
+                <p className="text-sm font-semibold">{grupoLabel}</p>
+                <p className="text-xs opacity-90">
+                  {labelPeriodoCard(periodo, idxFoco >= 0 ? idxFoco : 1).split(" · ")[1]} · {periodo}
+                </p>
+                <p className="mt-1 text-xs font-medium">
+                  {iconoEstadoGrupo(estadoFoco)}{" "}
+                  {etiquetaEstadoTarjeta(
+                    estadoFoco,
+                    esHistoricoFoco,
+                    metaFoco.hay_planificados,
+                    borradorRechazadoFoco,
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={loading || operando}
+                onClick={() =>
+                  void seleccionarTarjetaPlan(
+                    periodo,
+                    { id: grupoId, label: grupoLabel },
+                    esHistoricoFoco,
+                  )
+                }
+                className="h-11 shrink-0 rounded-xl bg-violet-700 px-4 text-sm font-semibold text-white hover:bg-violet-800 disabled:opacity-50"
+              >
+                {etiquetaAccion}
+              </button>
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* Feedback */}
       {grupoId && periodo && resumenGrupoPeriodo[periodo]?.[grupoId]?.requiere_plan_individual ? (
@@ -1153,6 +1212,61 @@ export default function PlanTurnoServicioPage() {
         </Card>
       ) : null}
       </>
+      ) : null}
+
+      {mostrarAprobacionTurnos && (esJefe || focoUrl.tieneFocoValido) ? (
+        <Card className="px-4 py-3">
+          <h2 className="mb-1 text-sm font-semibold text-slate-800">Aprobación de Turnos Mensuales</h2>
+          <p className="mb-3 text-xs text-slate-600">Bandeja tipo inbox para planes enviados/en revisión de grupos hijos.</p>
+          <div className="grid gap-3 lg:grid-cols-3">
+            {periodosPermitidos.map((p, idx) => (
+              <section key={`inbox-${p}`} className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {idx === 0 ? "Mes anterior" : idx === 1 ? "Mes actual" : "Mes siguiente"}
+                </p>
+                <p className="text-sm font-medium text-slate-900">{labelPeriodoCard(p, idx).split(" · ")[1]}</p>
+                <div className="mt-2 space-y-2">
+                  {(gruposPorPeriodo[p] || [])
+                    .filter((g) => grupoTieneInboxPendiente(resumenGrupoPeriodo[p]?.[g.id]?.items || []))
+                    .map((g) => {
+                      const meta = resumenGrupoPeriodo[p]?.[g.id] || { estado: "SIN_PLAN", cantidad: 0, items: [] };
+                      const estadoInbox = estadoInboxGrupo(meta.items || []);
+                      const esInc = Boolean(
+                        planIncorporacionActivo(meta.items || []) &&
+                          (estadoInbox === "ENVIADO" || estadoInbox === "EN_REVISION"),
+                      );
+                      const activo = grupoId === g.id && periodo === p;
+                      return (
+                        <button
+                          key={`inbox-${p}-${g.id}`}
+                          type="button"
+                          onClick={() => void seleccionarTarjetaPlan(p, g, idx === 0)}
+                          className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${estiloTarjetaGrupo(estadoInbox, activo)}`}
+                        >
+                          <span className="font-medium">
+                            {g.label}
+                            {esInc ? (
+                              <span className="ml-1 text-[10px] font-normal text-amber-800">· Incorp.</span>
+                            ) : null}
+                          </span>
+                          <span className="text-xs opacity-85">
+                            {iconoEstadoGrupo(estadoInbox)} {LABEL_ESTADO[estadoInbox] || estadoInbox}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  {(gruposPorPeriodo[p] || []).filter((g) =>
+                    grupoTieneInboxPendiente(resumenGrupoPeriodo[p]?.[g.id]?.items || []),
+                  ).length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500">
+                      Sin pendientes de aprobación.
+                    </p>
+                  ) : null}
+                </div>
+              </section>
+            ))}
+          </div>
+        </Card>
       ) : null}
 
       {/* Modal Grilla Mensual / Plan Perpetuo */}

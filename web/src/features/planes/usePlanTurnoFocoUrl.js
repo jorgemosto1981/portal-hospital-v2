@@ -85,11 +85,19 @@ export function usePlanTurnoFocoUrl({
     onFocoListoParaCarga,
   ]);
 
+  const clearFocoEnUrl = useCallback(() => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("grupo_id");
+    setSearchParams(next, { replace: true });
+    ultimoFocoRef.current = "";
+  }, [searchParams, setSearchParams]);
+
   return {
     grupoIdUrl,
     periodoUrl,
     tieneFocoValido,
     pushFocoToUrl,
+    clearFocoEnUrl,
     grupoLabelUrl,
   };
 }

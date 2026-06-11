@@ -18,6 +18,7 @@ export const GRILLA_OPERATIVA_SHELL = {
  * @property {boolean} puedeAccionesPeriodoLiquidacion — cierre/reapertura período (solo shell RRHH)
  * @property {boolean} puedeVerFichadasReales — capa 4 / modo fichada RRHH en celda y modal
  * @property {boolean} syncFocoEnUrl — T-05: persistir `?grupo_id=&periodo=` (RRHH primero)
+ * @property {boolean} consolaTripleHorizonteEnFrio — jefe: tarjetas M-1/M/M+1 sin `grupo_id` en URL
  * @property {string} rutaFocoBase — base para deep link del foco GDT
  */
 
@@ -30,6 +31,7 @@ const RRHH_CAPABILITIES = {
   puedeAccionesPeriodoLiquidacion: true,
   puedeVerFichadasReales: true,
   syncFocoEnUrl: true,
+  consolaTripleHorizonteEnFrio: false,
   rutaFocoBase: "/portal/rrhh/grilla-operativa",
 };
 
@@ -42,6 +44,7 @@ const JEFE_CAPABILITIES = {
   puedeAccionesPeriodoLiquidacion: false,
   puedeVerFichadasReales: false,
   syncFocoEnUrl: true,
+  consolaTripleHorizonteEnFrio: true,
   rutaFocoBase: "/portal/jefe/grilla-operativa",
 };
 

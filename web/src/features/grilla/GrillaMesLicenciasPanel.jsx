@@ -198,6 +198,11 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
     vistaModal?.modo === GRILLA_MES_MODO.TITULAR || vista.esModoTitular;
 
   const grillaTitularAbierta = vistaModal?.modo === GRILLA_MES_MODO.TITULAR;
+  const mostrarPanoramaJefe =
+    capabilities.consolaTripleHorizonteEnFrio &&
+    !focoUrl.tieneFocoValido &&
+    !grillaTitularAbierta;
+  const mostrarTarjetasHorizonte = !usaFocoEnUrl || mostrarPanoramaJefe;
 
   useEffect(() => {
     if (!usaFocoEnUrl || focoUrl.tieneFocoValido || grillaTitularAbierta) return;
@@ -455,9 +460,12 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
             <p className="mt-1 text-sm text-slate-600">
               {esVistaRrhh
                 ? "Elegí período y sector. El foco queda en la URL para compartir o refrescar la pantalla."
-                : "Elegí período y grupo de trabajo vigente. El foco queda en la URL para compartir o refrescar."}
+                : mostrarPanoramaJefe
+                  ? "Consola de tres meses abajo. Para aislar un sector, elegí grupo y período y pulsá Ver (zoom por URL)."
+                  : "Elegí período y grupo de trabajo vigente. El foco queda en la URL para compartir o refrescar."}
             </p>
-            <div className="mt-3">
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+              <div className="min-w-0 flex-1">
               <SelectorFocoGdt
                 origenGrupos={
                   capabilities.origenGrupos === "catalogo" ? "catalogo" : "hlg_vigente"
@@ -480,6 +488,19 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                   focoUrl.pushFocoTitularToUrl({ periodo });
                 }}
               />
+              </div>
+              {capabilities.consolaTripleHorizonteEnFrio && focoUrl.tieneFocoValido ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    focoUrl.clearFocoEnUrl();
+                    setVistaModal(null);
+                  }}
+                  className="h-11 shrink-0 rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Volver a consola
+                </button>
+              ) : null}
             </div>
             {grillaTitularAbierta ? (
               <p className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800">
@@ -492,7 +513,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                 {focoUrl.grupoLabelUrl || vista.grupoActivoLabel || focoUrl.grupoIdUrl} ·{" "}
                 {labelPeriodo(focoUrl.periodoUrl)}
               </p>
-            ) : (
+            ) : mostrarPanoramaJefe ? null : (
               <p className="mt-3 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-4 text-sm text-slate-600">
                 {esVistaRrhh
                   ? "Elegí sector y período, luego pulsá Ver para cargar la grilla."
@@ -523,10 +544,16 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
             />
           </div>
         ) : null}
-        {usaFocoEnUrl ? null : (
+        {mostrarTarjetasHorizonte ? (
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
           {periodos.map((periodo, idx) => {
-            const titulo = idx === 0 ? "Mes anterior" : idx === 1 ? "Mes actual" : "Mes próximo";
+            const titulo = mostrarPanoramaJefe
+              ? ["Mes anterior · Cierre", "Mes actual · Operación", "Mes próximo · Planificación"][idx]
+              : idx === 0
+                ? "Mes anterior"
+                : idx === 1
+                  ? "Mes actual"
+                  : "Mes próximo";
             return (
               <section key={periodo} className="rounded-xl border border-slate-200 bg-white p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{titulo}</p>
@@ -542,6 +569,11 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                       onClick={() => {
                         if (vista.gruposEquipo.length === 0) {
                           toast.error("Sin cargos vigentes en el mes seleccionado.");
+                          return;
+                        }
+                        if (mostrarPanoramaJefe) {
+                          abrirGrillaTitularDesdeFocoUrl({ periodo });
+                          focoUrl.pushFocoTitularToUrl({ periodo });
                           return;
                         }
                         seleccionarTarjeta({
@@ -568,6 +600,10 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                         esRrhh={esRrhh}
                         disabled={cargandoTarjeta}
                         onClick={() => {
+                          if (mostrarPanoramaJefe) {
+                            focoUrl.pushFocoToUrl({ grupoId: g.id, periodo });
+                            return;
+                          }
                           if (capabilities.puedeAccionesPeriodoLiquidacion) {
                             setContextoLiquidacion({
                               grupoId: g.id,
@@ -590,7 +626,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
             );
           })}
         </div>
-        )}
+        ) : null}
       </div>
 
       {vista.resolverError ? (

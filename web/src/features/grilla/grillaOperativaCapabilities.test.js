@@ -20,6 +20,7 @@ describe("grillaOperativaCapabilities", () => {
     expect(modoGrillaInicialDesdeCapabilities(cap)).toBe(GRILLA_MES_MODO.SECTOR);
     expect(cap.rutaFocoBase).toContain("/rrhh/grilla-operativa");
     expect(cap.syncFocoEnUrl).toBe(true);
+    expect(cap.consolaTripleHorizonteEnFrio).toBe(false);
   });
 
   it("Jefe shell: HLg vigente, sin liquidación ni fichadas reales", () => {
@@ -30,6 +31,7 @@ describe("grillaOperativaCapabilities", () => {
     expect(cap.muestraTarjetaTitular).toBe(true);
     expect(modoGrillaInicialDesdeCapabilities(cap)).toBe(GRILLA_MES_MODO.EQUIPO);
     expect(cap.syncFocoEnUrl).toBe(true);
+    expect(cap.consolaTripleHorizonteEnFrio).toBe(true);
   });
 
   it("variant legacy mapea a shells", () => {

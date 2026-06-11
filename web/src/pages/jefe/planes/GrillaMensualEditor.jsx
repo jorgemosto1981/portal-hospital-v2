@@ -413,6 +413,7 @@ export default function GrillaMensualEditor({
   const [planVersionToken, setPlanVersionToken] = useState(() => plan?.plan_version_token || "");
   const [pintando, setPintando] = useState(false);
   const [indiceAgenteMobile, setIndiceAgenteMobile] = useState(0);
+  const [filaContextoPaleta, setFilaContextoPaleta] = useState("");
   const ultimaCeldaPintadaRef = useRef("");
 
   // Cargar contexto del grupo al montar
@@ -623,15 +624,61 @@ export default function GrillaMensualEditor({
     [agentes, idxRegimenes],
   );
 
+  const regimenHorarioDeFila = useCallback(
+    (filaKey) => {
+      const ag = agentes.find((a) => filaKeyAg(a) === filaKey);
+      return String(ag?.regimen_horario_id || "").trim();
+    },
+    [agentes],
+  );
+
+  const pincelPermitidoEnFila = useCallback(
+    (filaKey) => {
+      if (!paleta || !esFilaEditable(filaKey)) return false;
+      if (paleta === "F") return true;
+      return turnoPermitidoEnRegimenPlan(
+        permitidosPorRegimen,
+        regimenHorarioDeFila(filaKey),
+        paleta,
+      );
+    },
+    [paleta, esFilaEditable, permitidosPorRegimen, regimenHorarioDeFila],
+  );
+
+  const pincelPermitidoEnRegimen = useCallback(
+    (regimenHorarioId, turnoKey) => {
+      if (turnoKey === "F") return true;
+      return turnoPermitidoEnRegimenPlan(permitidosPorRegimen, regimenHorarioId, turnoKey);
+    },
+    [permitidosPorRegimen],
+  );
+
+  const filaContextoEfectiva = useMemo(() => {
+    if (filaContextoPaleta) return filaContextoPaleta;
+    const ag = agentes[indiceAgenteMobile];
+    return ag ? filaKeyAg(ag) : "";
+  }, [filaContextoPaleta, agentes, indiceAgenteMobile]);
+
+  const regimenContextoPaleta = useMemo(
+    () => (filaContextoEfectiva ? regimenHorarioDeFila(filaContextoEfectiva) : ""),
+    [filaContextoEfectiva, regimenHorarioDeFila],
+  );
+
+  useEffect(() => {
+    const ag = agentes[indiceAgenteMobile];
+    if (ag) setFilaContextoPaleta(filaKeyAg(ag));
+  }, [indiceAgenteMobile, agentes]);
+
   const aplicarPincelEnCelda = useCallback((filaKey, ymd) => {
     const ag = agentes.find((a) => filaKeyAg(a) === filaKey);
     const pid = String(ag?.persona_id || "").trim();
     if (esModoIncorporacion && idsAgentesNuevos && pid && !idsAgentesNuevos.has(pid)) return;
     if (!paleta || !esFilaEditable(filaKey)) return;
-    if (
-      paleta !== "F" &&
-      !turnoPermitidoEnRegimenPlan(permitidosPorRegimen, ag?.regimen_horario_id, paleta)
-    ) {
+    if (!pincelPermitidoEnFila(filaKey)) {
+      if (paleta && paleta !== "F" && esFilaEditable(filaKey)) {
+        const lbl = turnosPaleta[paleta]?.label || paleta;
+        setErrLocal(`«${lbl}» no aplica al régimen de esta fila. Elegí otro pincel o otra fila.`);
+      }
       return;
     }
     const key = `${filaKey}:${ymd}:${paleta}`;
@@ -666,7 +713,8 @@ export default function GrillaMensualEditor({
     esModoIncorporacion,
     idsAgentesNuevos,
     agentes,
-    permitidosPorRegimen,
+    pincelPermitidoEnFila,
+    turnosPaleta,
   ]);
 
   const iniciarPintado = useCallback((pid, ymd) => {
@@ -930,19 +978,33 @@ export default function GrillaMensualEditor({
           {hayFilasPlanificadas ? (
             <>
               <span className="text-xs font-medium text-slate-500">Pincel:</span>
-              {Object.entries(turnosPaleta).map(([key, style]) => (
+              {Object.entries(turnosPaleta).map(([key, style]) => {
+                const aplicaContexto =
+                  !regimenContextoPaleta ||
+                  pincelPermitidoEnRegimen(regimenContextoPaleta, key);
+                return (
                 <button
                   key={key}
                   type="button"
-                  title={style.horario ? `${key} · ${style.horario}` : key}
-                  onClick={() => setPaleta(key)}
+                  title={
+                    !aplicaContexto && regimenContextoPaleta
+                      ? `No aplica al régimen de la fila activa`
+                      : style.horario
+                        ? `${key} · ${style.horario}`
+                        : key
+                  }
+                  onClick={() => {
+                    setPaleta(key);
+                    setErrLocal("");
+                  }}
                   className={`rounded-lg px-3 py-1 text-xs font-bold transition ${style.bg} ${style.text} ${
                     paleta === key ? "ring-2 ring-indigo-400 ring-offset-1" : ""
-                  }`}
+                  } ${!aplicaContexto ? "opacity-35 saturate-50" : ""}`}
                 >
                   {style.label}
                 </button>
-              ))}
+              );
+              })}
               <button
                 type="button"
                 onClick={() => setPaleta("F")}
@@ -955,7 +1017,9 @@ export default function GrillaMensualEditor({
               <span className="ml-3 text-xs text-slate-400">
                 {paleta === "F" ? "Franco" : turnosPaleta[paleta]?.label || paleta}
                 {" · "}
-                Solo aplica a filas con régimen planificado
+                {filaContextoEfectiva
+                  ? "Pincel filtrado por la fila bajo el cursor (o agente en móvil)"
+                  : "Solo aplica a filas con régimen planificado"}
               </span>
             </>
           ) : (
@@ -1051,9 +1115,10 @@ export default function GrillaMensualEditor({
                   return (
                     <tr
                       key={filaKey}
+                      onMouseEnter={() => setFilaContextoPaleta(filaKey)}
                       className={`group h-16 ${editable ? "" : "bg-slate-50/80"} ${
                         idxAgente === indiceAgenteMobile ? "table-row md:table-row" : "hidden md:table-row"
-                      }`}
+                      } ${filaKey === filaContextoEfectiva ? "bg-violet-50/40" : ""}`}
                     >
                       <td className={claseCeldaAgenteSticky()}>
                         <span className="block truncate text-xs font-semibold text-slate-800">
@@ -1209,7 +1274,11 @@ export default function GrillaMensualEditor({
                                 onMouseEnter={() => continuarPintado(filaKey, dia.ymd)}
                                 onMouseUp={finalizarPintado}
                                 onClick={(e) => e.preventDefault()}
-                                className="block"
+                                className={`block w-full ${
+                                  paleta && !pincelPermitidoEnFila(filaKey)
+                                    ? "cursor-not-allowed"
+                                    : "cursor-cell"
+                                }`}
                               >
                                 {celContent}
                               </button>
