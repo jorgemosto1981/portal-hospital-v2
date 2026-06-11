@@ -10,7 +10,7 @@ import {
 import PlanGrillaVistaModal from "../../features/planes/PlanGrillaVistaModal.jsx";
 import PlanGrillaAprobadaTable from "../../features/planes/PlanGrillaAprobadaTable.jsx";
 import { useVistaPlanTurno } from "../../features/planes/useVistaPlanTurno.js";
-import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
+import { listarGruposTrabajoCatalogo } from "../../features/catalogo/listarGruposTrabajoCatalogo.js";
 
 function etiquetaGrupo(row) {
   return String(row.nombre || row.codigo || row.titulo || "").trim() || String(row.id || "");
@@ -192,7 +192,7 @@ export default function ExploradorTurnosRrhhPage() {
     if (grupos.length > 0) return;
     setGruposLoading(true);
     try {
-      const rows = await listarColeccionLaboral("grupos_de_trabajo", 800);
+      const rows = await listarGruposTrabajoCatalogo({ limit: 800 });
       const activos = rows.filter((r) => r.activo !== false);
       activos.sort((a, b) => etiquetaGrupo(a).localeCompare(etiquetaGrupo(b), "es"));
       const base = [{ id: GRUPO_TODOS_ID, label: "Todos" }, ...activos.map((r) => ({ id: r.id, label: etiquetaGrupo(r) }))];

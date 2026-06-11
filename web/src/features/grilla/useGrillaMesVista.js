@@ -8,7 +8,10 @@ import {
   callObtenerVistaGrillaMesAgente,
   callResolverContextoLaboralSolicitud,
 } from "../../services/callables.js";
-import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
+import {
+  listarGruposTrabajoCatalogo,
+  peekGruposTrabajoCatalogo,
+} from "../catalogo/listarGruposTrabajoCatalogo.js";
 import { claimsIncludeJefe } from "../routing/portalRole.js";
 import { normalizarPeriodoJefe } from "../jefe/periodoJefe.js";
 import { GRILLA_MES_MODO } from "./GrillaMesSelector.jsx";
@@ -159,14 +162,26 @@ export function useGrillaMesVista({
   useEffect(() => {
     if (!cargaCatalogoSector) return;
     let cancelled = false;
+
+    const aplicarFilasSector = (rows) => {
+      const activos = rows.filter((r) => r.activo !== false);
+      activos.sort((a, b) => etiquetaGrupoSector(a).localeCompare(etiquetaGrupoSector(b), "es"));
+      setGruposSector(activos);
+    };
+
+    const warm = peekGruposTrabajoCatalogo(400);
+    if (warm) {
+      aplicarFilasSector(warm);
+      setSectorCargando(false);
+      return;
+    }
+
     (async () => {
       setSectorCargando(true);
       try {
-        const rows = await listarColeccionLaboral("grupos_de_trabajo", 400);
+        const rows = await listarGruposTrabajoCatalogo({ limit: 400 });
         if (cancelled) return;
-        const activos = rows.filter((r) => r.activo !== false);
-        activos.sort((a, b) => etiquetaGrupoSector(a).localeCompare(etiquetaGrupoSector(b), "es"));
-        setGruposSector(activos);
+        aplicarFilasSector(rows);
       } catch {
         if (!cancelled) setGruposSector([]);
       } finally {

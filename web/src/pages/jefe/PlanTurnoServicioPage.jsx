@@ -23,7 +23,10 @@ import {
 } from "../../features/planes/planRolUtils.js";
 import PlanGrillaAprobadaTable from "../../features/planes/PlanGrillaAprobadaTable.jsx";
 import { useVistaPlanTurno } from "../../features/planes/useVistaPlanTurno.js";
-import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
+import {
+  listarGruposTrabajoCatalogo,
+  peekGruposTrabajoCatalogo,
+} from "../../features/catalogo/listarGruposTrabajoCatalogo.js";
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
 import { claimsIncludeJefe } from "../../features/routing/portalRole.js";
@@ -292,24 +295,38 @@ export default function PlanTurnoServicioPage({
   useEffect(() => {
     if (!personaId) return;
     let cancelled = false;
+
+    const aplicarCatalogoGrupos = (rows) => {
+      const activos = rows.filter((r) => r.activo !== false);
+      activos.sort((a, b) => etiquetaGrupo(a).localeCompare(etiquetaGrupo(b), "es"));
+      const list = activos.map((r) => ({
+        id: r.id,
+        label: etiquetaGrupo(r),
+      }));
+      setGruposDisponibles(list);
+      const byPeriodo = Object.fromEntries(periodosPermitidos.map((p) => [p, list]));
+      setGruposPorPeriodo(byPeriodo);
+    };
+
+    if (cargaCatalogo) {
+      const warm = peekGruposTrabajoCatalogo(400);
+      if (warm) {
+        aplicarCatalogoGrupos(warm);
+        setGruposCargando(false);
+        return () => {
+          cancelled = true;
+        };
+      }
+    }
+
     setGruposCargando(true);
 
     (async () => {
       try {
         if (cargaCatalogo) {
-          const rows = await listarColeccionLaboral("grupos_de_trabajo", 400);
+          const rows = await listarGruposTrabajoCatalogo({ limit: 400 });
           if (cancelled) return;
-          const activos = rows.filter((r) => r.activo !== false);
-          activos.sort((a, b) => etiquetaGrupo(a).localeCompare(etiquetaGrupo(b), "es"));
-          const list = activos.map((r) => ({
-            id: r.id,
-            label: etiquetaGrupo(r),
-          }));
-          setGruposDisponibles(list);
-          const byPeriodo = Object.fromEntries(
-            periodosPermitidos.map((p) => [p, list]),
-          );
-          setGruposPorPeriodo(byPeriodo);
+          aplicarCatalogoGrupos(rows);
         } else {
           if (cancelled) return;
           const byPeriodo = {};
