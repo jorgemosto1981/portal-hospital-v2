@@ -36,16 +36,28 @@ function etiquetaGrupoSector(row) {
 /**
  * Estado y carga unificados calendario GSO (C2c + C2d).
  * Titular y equipo operan sobre un bounded context (gdt) activo.
- * @param {{ personaId: string; claims: Record<string, unknown> | null | undefined; esRrhh: boolean; preferSector?: boolean }} ctx
+ * @param {{
+ *   personaId: string;
+ *   claims: Record<string, unknown> | null | undefined;
+ *   cargaCatalogoSector?: boolean;
+ *   bypassGsoSoloLecturaLocal?: boolean;
+ *   preferSector?: boolean;
+ * }} ctx
  */
-export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = false }) {
+export function useGrillaMesVista({
+  personaId,
+  claims,
+  cargaCatalogoSector = false,
+  bypassGsoSoloLecturaLocal = false,
+  preferSector = false,
+}) {
   const esJefe = claimsIncludeJefe(claims);
   const hoy = new Date();
   const [periodo, setPeriodo] = useState(
     () => `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`,
   );
   const [modo, setModo] = useState(() =>
-    preferSector && esRrhh ? GRILLA_MES_MODO.SECTOR : GRILLA_MES_MODO.EQUIPO,
+    preferSector ? GRILLA_MES_MODO.SECTOR : GRILLA_MES_MODO.EQUIPO,
   );
   const [grupoId, setGrupoId] = useState("");
   const [gruposEquipo, setGruposEquipo] = useState([]);
@@ -108,7 +120,7 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
   }, [recargarGruposEquipo]);
 
   useEffect(() => {
-    if (!esRrhh) return;
+    if (!cargaCatalogoSector) return;
     let cancelled = false;
     (async () => {
       setSectorCargando(true);
@@ -127,7 +139,7 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
     return () => {
       cancelled = true;
     };
-  }, [esRrhh]);
+  }, [cargaCatalogoSector]);
 
   const onModoChange = useCallback(
     (next) => {
@@ -423,7 +435,7 @@ export function useGrillaMesVista({ personaId, claims, esRrhh, preferSector = fa
       }
     : null;
   const gsoEscrituraLocal = gsoPermiteEscritura(periodo, {
-    esRrhh,
+    esRrhh: bypassGsoSoloLecturaLocal,
     periodoCerrado: motivoApi === "periodo_cerrado",
   });
   const gsoEscritura = gsoEscrituraApi || gsoEscrituraLocal;

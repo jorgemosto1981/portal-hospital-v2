@@ -3,7 +3,7 @@ import toast from "react-hot-toast";
 
 import { useAuthClaims } from "../auth/useAuthClaims.js";
 import { useAuthSession } from "../auth/useAuthSession.js";
-import { claimsIncludeJefe, claimsIncludeRrhh } from "../routing/portalRole.js";
+import { claimsIncludeJefe } from "../routing/portalRole.js";
 import DiaGrillaDetalleModal from "./DiaGrillaDetalleModal.jsx";
 import GestionTurnoDiaShell from "./GestionTurnoDiaShell.jsx";
 import ModalCoberturaParcial from "./ModalCoberturaParcial.jsx";
@@ -38,9 +38,14 @@ import { useEstadosPeriodoLiquidacionGrupos } from "./useEstadosPeriodoLiquidaci
 import { celdaEsIncompletoPlanVis } from "./grillaMesEquipoDisplay.js";
 import { celdaTieneDesalineacionTeoria } from "./grillaMesCellUtils.js";
 import {
+  actorPortalTeoriaDesdeGrilla,
+  cargaCatalogoSectorGrilla,
   grillaUsaCatalogoSector,
+  modoFichadaCeldaDesdeCapabilities,
   modoGrillaInicialDesdeCapabilities,
   resolveGrillaOperativaCapabilitiesFromVariant,
+  rutaBandejaSolicitudesGrilla,
+  shellEsGrillaRrhh,
 } from "./grillaOperativaCapabilities.js";
 import SelectorFocoGdt from "./SelectorFocoGdt.jsx";
 import { useGrillaMesFocoUrl } from "./useGrillaMesFocoUrl.js";
@@ -85,15 +90,27 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
   };
   const { user } = useAuthSession();
   const { claims } = useAuthClaims(user);
-  const esRrhh = claimsIncludeRrhh(claims);
   const esJefe = claimsIncludeJefe(claims);
-  const bandejaPath = esRrhh ? "/portal/rrhh/solicitudes-articulo" : "/portal/jefe/solicitudes";
+  const shellRrhh = shellEsGrillaRrhh(capabilities);
+  const bandejaPath = rutaBandejaSolicitudesGrilla(capabilities);
   const personaId = String(claims?.persona_id || "").trim();
+  const modoFichadaCelda = modoFichadaCeldaDesdeCapabilities(capabilities, esJefe);
+
+  const actorTeoriaSesion = useMemo(
+    () =>
+      actorPortalTeoriaDesdeGrilla(capabilities, {
+        personaId,
+        esJefe,
+        nivelJerarquico: null,
+      }),
+    [capabilities, personaId, esJefe],
+  );
 
   const vista = useGrillaMesVista({
     personaId,
     claims,
-    esRrhh,
+    cargaCatalogoSector: cargaCatalogoSectorGrilla(capabilities),
+    bypassGsoSoloLecturaLocal: shellRrhh,
     preferSector: capabilities.preferModoSector,
   });
   const usaFocoEnUrl = capabilities.syncFocoEnUrl;
@@ -146,7 +163,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
 
   const abrirGrillaDesdeFocoUrl = useCallback(
     ({ grupoId, periodo, grupoLabel }) => {
-      if (esRrhh && grupoId) {
+      if (capabilities.puedeAccionesPeriodoLiquidacion && grupoId) {
         setContextoLiquidacion({
           grupoId,
           periodo,
@@ -165,7 +182,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         grupoId,
       });
     },
-    [esRrhh, vista.cargar, modoFocoUrl],
+    [capabilities.puedeAccionesPeriodoLiquidacion, vista.cargar, modoFocoUrl],
   );
 
   const abrirGrillaTitularDesdeFocoUrl = useCallback(
@@ -256,7 +273,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
     if (personaId && diaModal.personaId === personaId) {
       return vacio;
     }
-    if (!vista.gsoPermiteEscritura && !esRrhh) {
+    if (!vista.gsoPermiteEscritura && !shellRrhh) {
       return vacio;
     }
     const targetNivel = resolverNivelJerarquicoEnFilas(
@@ -266,9 +283,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
     );
     const guardrails = evaluarGuardrailsModificacionTeoria({
       usuarioActual: {
-        id: personaId,
-        esJefe,
-        esRrhh,
+        ...actorTeoriaSesion,
         nivelJerarquico: nivelJerarquicoActor,
       },
       agenteTarget: {
@@ -285,8 +300,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
   }, [
     diaModal,
     personaId,
-    esJefe,
-    esRrhh,
+    actorTeoriaSesion,
+    shellRrhh,
     vista.filas,
     vista.gsoPermiteEscritura,
     vista.planMensualEstado,
@@ -350,7 +365,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
   const labelGrupoLiquidacion =
     contextoLiquidacion?.label || vista.grupoActivoLabel || grupoLiquidacionId;
   const periodoLiquidacionCerrado =
-    esRrhh &&
+    capabilities.puedeAccionesPeriodoLiquidacion &&
     grupoLiquidacionId &&
     estadosPeriodo.estaCerrado(periodoLiquidacion, grupoLiquidacionId);
 
@@ -372,20 +387,25 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
   }, [vista.filas, outbox.ops]);
 
   useEffect(() => {
-    if (!esRrhh || !RX_GDT.test(String(vista.grupoId || ""))) return;
+    if (!capabilities.puedeAccionesPeriodoLiquidacion || !RX_GDT.test(String(vista.grupoId || ""))) {
+      return;
+    }
     setContextoLiquidacion({
       grupoId: String(vista.grupoId),
       periodo: vista.periodo,
       label: vista.grupoActivoLabel || String(vista.grupoId),
     });
-  }, [esRrhh, vista.grupoId, vista.periodo, vista.grupoActivoLabel]);
+  }, [
+    capabilities.puedeAccionesPeriodoLiquidacion,
+    vista.grupoId,
+    vista.periodo,
+    vista.grupoActivoLabel,
+  ]);
 
   const guardrailsOutbox = useMemo(() => {
     const loteCap = evaluarGuardrailsModificacionTeoria({
       usuarioActual: {
-        id: personaId,
-        esJefe,
-        esRrhh,
+        ...actorTeoriaSesion,
         nivelJerarquico: nivelJerarquicoActor,
       },
       agenteTarget: { id: "__outbox_lote__", nivelJerarquico: 1 },
@@ -394,15 +414,14 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
     });
     return evaluarGuardrailsAplicarOutbox({
       ops: outbox.ops,
-      esAuditoriaCentral: esRrhh,
+      esAuditoriaCentral: shellRrhh,
       periodoRestringido: periodoGso.cerrado === true || periodoGso.ventanaM1 === true,
       puedeModificarTeoriaLote: loteCap.puedeModificarTeoria,
     });
   }, [
     outbox.ops,
-    personaId,
-    esJefe,
-    esRrhh,
+    actorTeoriaSesion,
+    shellRrhh,
     nivelJerarquicoActor,
     vista.planMensualEstado,
     periodoGso,
@@ -458,7 +477,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
       modo: modoEfectivo,
       grupoId,
     });
-    if (esRrhh && grupoId) {
+    if (capabilities.puedeAccionesPeriodoLiquidacion && grupoId) {
       const g = gruposTarjetas.find((x) => x.id === grupoId);
       setContextoLiquidacion({
         grupoId,
@@ -645,7 +664,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                         subtituloPeriodo={labelPeriodo(periodo)}
                         cerrado={estadosPeriodo.estaCerrado(periodo, g.id)}
                         sinDotacion={estadosPeriodo.estaSinDotacion(periodo, g.id)}
-                        esRrhh={esRrhh}
+                        copyCerradoInstitucional={shellRrhh}
                         disabled={cargandoTarjeta}
                         onClick={() => {
                           if (mostrarPanoramaJefe) {
@@ -741,7 +760,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
               </button>
             </div>
             <div className="min-h-0 flex-1 overflow-auto">
-              {esRrhh && grupoLiquidacionId && refPeriodoLiquidacion ? (
+              {capabilities.puedeAccionesPeriodoLiquidacion && grupoLiquidacionId && refPeriodoLiquidacion ? (
                 <div className="mb-3">
                   <GrillaPeriodoLiquidacionAccionesRrhh
                     grupoId={grupoLiquidacionId}
@@ -895,7 +914,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                   gsoSoloLecturaMotivo={vista.gsoSoloLecturaMotivo}
                   opsOutboxGrupo={opsOutboxGrillaModal}
                   periodoOutbox={periodoGrillaModal}
-                  modoFichada={esRrhh ? "rrhh" : esJefe ? "jefe" : null}
+                  modoFichada={modoFichadaCelda}
                   materializacionGrupoReciente={
                     (vista.data?.materializacion_grupo?.procesados ?? 0) > 0
                   }
@@ -1052,7 +1071,6 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         etiquetasGrupo={etiquetasGrupo}
         vigenteHasta={diaModal?.vigenteHasta ?? null}
         materializadoLazy={diaModal?.materializadoLazy === true}
-        esRrhh={esRrhh}
         puedeVerTramosCrudosFichadas={capabilities.puedeVerTramosCrudosFichadas}
         onAbrirAyuda={abrirAyuda}
         mostrarFichada={capabilities.puedeVerFichadasReales || esJefe}
@@ -1082,7 +1100,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                   requiereUrgenciaG1: capabilitiesDiaModal.requiereUrgencia === true,
                   guardrailNovedadContext: buildGuardrailNovedadContext({
                     puedeModificarTeoria: capabilitiesDiaModal.puedeModificarTeoria,
-                    esAuditoriaCentral: esRrhh,
+                    esAuditoriaCentral: shellRrhh,
                   }),
                 });
               }

@@ -17,7 +17,7 @@ export const GRILLA_MES_MODO = {
  *   gruposSector: Array<{ id: string; nombre?: string; codigo?: string; titulo?: string; activo?: boolean }>;
  *   resolverCargando: boolean;
  *   sectorCargando: boolean;
- *   esRrhh: boolean;
+ *   permiteModoSector?: boolean;
  *   onCargar: () => void;
  *   cargandoDatos: boolean;
  * }} props
@@ -33,13 +33,13 @@ export default function GrillaMesSelector({
   gruposSector,
   resolverCargando,
   sectorCargando,
-  esRrhh,
+  permiteModoSector = false,
   onCargar,
   cargandoDatos,
 }) {
   const muestraGrupoEquipo = modo === GRILLA_MES_MODO.EQUIPO;
   const muestraGrupoTitular = modo === GRILLA_MES_MODO.TITULAR && gruposEquipo.length >= 2;
-  const muestraGrupoSector = modo === GRILLA_MES_MODO.SECTOR && esRrhh;
+  const muestraGrupoSector = modo === GRILLA_MES_MODO.SECTOR && permiteModoSector;
 
   return (
     <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
@@ -62,7 +62,7 @@ export default function GrillaMesSelector({
         >
           <option value={GRILLA_MES_MODO.TITULAR}>Titular (mi caso)</option>
           <option value={GRILLA_MES_MODO.EQUIPO}>Equipo (mi grupo)</option>
-          {esRrhh ? <option value={GRILLA_MES_MODO.SECTOR}>Sector (RRHH)</option> : null}
+          {permiteModoSector ? <option value={GRILLA_MES_MODO.SECTOR}>Sector (RRHH)</option> : null}
         </select>
       </label>
 

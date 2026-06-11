@@ -95,3 +95,55 @@ export function grillaUsaCatalogoSector(cap) {
 export function modoGrillaInicialDesdeCapabilities(cap) {
   return cap.preferModoSector ? GRILLA_MES_MODO.SECTOR : GRILLA_MES_MODO.EQUIPO;
 }
+
+/**
+ * @param {GrillaOperativaCapabilities} cap
+ * @returns {boolean}
+ */
+export function shellEsGrillaRrhh(cap) {
+  return cap.shell === GRILLA_OPERATIVA_SHELL.RRHH;
+}
+
+/**
+ * @param {GrillaOperativaCapabilities} cap
+ * @returns {string}
+ */
+export function rutaBandejaSolicitudesGrilla(cap) {
+  return shellEsGrillaRrhh(cap)
+    ? "/portal/rrhh/solicitudes-articulo"
+    : "/portal/jefe/solicitudes";
+}
+
+/**
+ * Carga catálogo `grupos_de_trabajo` para modo sector (independiente del claim JWT).
+ * @param {GrillaOperativaCapabilities} cap
+ * @returns {boolean}
+ */
+export function cargaCatalogoSectorGrilla(cap) {
+  return cap.origenGrupos === "catalogo";
+}
+
+/**
+ * Actor US-13 / guardrails: RRHH operativo solo en shell RRHH (anti jefe+RRHH en ruta jefe).
+ * @param {GrillaOperativaCapabilities} cap
+ * @param {{ personaId?: string; esJefe?: boolean; nivelJerarquico?: number | null }} sesion
+ */
+export function actorPortalTeoriaDesdeGrilla(cap, sesion = {}) {
+  const esRrhhShell = shellEsGrillaRrhh(cap);
+  return {
+    id: String(sesion.personaId || "").trim() || undefined,
+    esJefe: sesion.esJefe === true && !esRrhhShell,
+    esRrhh: esRrhhShell,
+    nivelJerarquico: sesion.nivelJerarquico ?? 0,
+  };
+}
+
+/**
+ * @param {GrillaOperativaCapabilities} cap
+ * @returns {"rrhh"|"jefe"|null}
+ */
+export function modoFichadaCeldaDesdeCapabilities(cap, esJefeClaim) {
+  if (cap.puedeVerFichadasReales) return "rrhh";
+  if (esJefeClaim) return "jefe";
+  return null;
+}

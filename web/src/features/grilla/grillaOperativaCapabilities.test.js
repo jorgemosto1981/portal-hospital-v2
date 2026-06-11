@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  actorPortalTeoriaDesdeGrilla,
+  cargaCatalogoSectorGrilla,
   GRILLA_OPERATIVA_SHELL,
   grillaUsaCatalogoSector,
+  modoFichadaCeldaDesdeCapabilities,
   modoGrillaInicialDesdeCapabilities,
   resolveGrillaOperativaCapabilities,
   resolveGrillaOperativaCapabilitiesFromVariant,
+  rutaBandejaSolicitudesGrilla,
+  shellEsGrillaRrhh,
 } from "./grillaOperativaCapabilities.js";
 import { GRILLA_MES_MODO } from "./GrillaMesSelector.jsx";
 
@@ -41,5 +46,30 @@ describe("grillaOperativaCapabilities", () => {
   it("variant legacy mapea a shells", () => {
     expect(resolveGrillaOperativaCapabilitiesFromVariant("rrhh").shell).toBe("rrhh");
     expect(resolveGrillaOperativaCapabilitiesFromVariant("default").shell).toBe("jefe");
+  });
+
+  it("helpers shell vs claims cruzados", () => {
+    const rrhh = resolveGrillaOperativaCapabilities(GRILLA_OPERATIVA_SHELL.RRHH);
+    const jefe = resolveGrillaOperativaCapabilities(GRILLA_OPERATIVA_SHELL.JEFE);
+    expect(shellEsGrillaRrhh(rrhh)).toBe(true);
+    expect(shellEsGrillaRrhh(jefe)).toBe(false);
+    expect(cargaCatalogoSectorGrilla(rrhh)).toBe(true);
+    expect(cargaCatalogoSectorGrilla(jefe)).toBe(false);
+    expect(rutaBandejaSolicitudesGrilla(rrhh)).toContain("/rrhh/");
+    expect(rutaBandejaSolicitudesGrilla(jefe)).toContain("/jefe/");
+    expect(modoFichadaCeldaDesdeCapabilities(rrhh, true)).toBe("rrhh");
+    expect(modoFichadaCeldaDesdeCapabilities(jefe, true)).toBe("jefe");
+    const actorJefeShell = actorPortalTeoriaDesdeGrilla(jefe, {
+      personaId: "per_x",
+      esJefe: true,
+    });
+    expect(actorJefeShell.esRrhh).toBe(false);
+    expect(actorJefeShell.esJefe).toBe(true);
+    const actorRrhhShell = actorPortalTeoriaDesdeGrilla(rrhh, {
+      personaId: "per_y",
+      esJefe: true,
+    });
+    expect(actorRrhhShell.esRrhh).toBe(true);
+    expect(actorRrhhShell.esJefe).toBe(false);
   });
 });

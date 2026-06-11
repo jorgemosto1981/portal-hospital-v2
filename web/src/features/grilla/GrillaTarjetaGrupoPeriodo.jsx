@@ -10,7 +10,7 @@ import { copyTarjetaPeriodoCerrado } from "./grillaGsoSoloLectura.js";
  *   disabled?: boolean;
  *   onClick: () => void;
  *   variante?: "titular" | "equipo";
- *   esRrhh?: boolean;
+ *   copyCerradoInstitucional?: boolean;
  * }} props
  */
 
@@ -22,7 +22,7 @@ export default function GrillaTarjetaGrupoPeriodo({
   disabled = false,
   onClick,
   variante = "equipo",
-  esRrhh = false,
+  copyCerradoInstitucional = false,
 }) {
   const baseTitular =
     "border-violet-300 bg-violet-50 text-violet-900 hover:bg-violet-100";
@@ -70,7 +70,7 @@ export default function GrillaTarjetaGrupoPeriodo({
         aria-hidden={!cerrado && !sinDotacion}
       >
         {cerrado
-          ? copyTarjetaPeriodoCerrado(esRrhh)
+          ? copyTarjetaPeriodoCerrado(copyCerradoInstitucional)
           : "Sin dotación · licencias del período anterior conservadas"}
       </span>
     </button>

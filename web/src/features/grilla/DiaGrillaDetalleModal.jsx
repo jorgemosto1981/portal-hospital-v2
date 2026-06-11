@@ -74,7 +74,6 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd) {
  *   desalineacionTooltip?: string;
  *   puedeCorregirPlan?: boolean;
  *   celdaVis?: Record<string, unknown> | null;
- *   esRrhh?: boolean;
  *   puedeVerTramosCrudosFichadas?: boolean;
  *   onAbrirAyuda?: (termino: string) => void;
  *   mostrarFichada?: boolean;
@@ -111,7 +110,6 @@ export default function DiaGrillaDetalleModal({
   desalineacionTooltip = "",
   puedeCorregirPlan = false,
   celdaVis = null,
-  esRrhh = false,
   puedeVerTramosCrudosFichadas = false,
   onAbrirAyuda,
   mostrarFichada = false,
@@ -119,7 +117,7 @@ export default function DiaGrillaDetalleModal({
   vigenteHasta = null,
   materializadoLazy = false,
 }) {
-  const detalleFichadaRrhh = puedeVerTramosCrudosFichadas || esRrhh;
+  const detalleFichadaRrhh = puedeVerTramosCrudosFichadas;
   const resumenFichada = useMemo(
     () => (mostrarFichada && celdaVis ? resumenFichadaModal(celdaVis, { esRrhh: detalleFichadaRrhh }) : null),
     [mostrarFichada, celdaVis, detalleFichadaRrhh],
