@@ -23,6 +23,11 @@ import GrillaTurnosLeyenda from "../../../features/grilla/GrillaTurnosLeyenda.js
 import { ymdDesdeValorLaboral } from "../../datos-laborales/utils.js";
 import { contarHuecosTurnoPlan, tooltipBloqueoHuecosPlan } from "./planHuecosTurnoUtils.js";
 import { filaKeyAg } from "../../../features/grilla/grillaMesFilasUtils.js";
+import {
+  buildPaletaEditorPlanMensual,
+  horarioPlanificadoPorTurnoRegimen,
+  turnoPermitidoEnRegimenPlan,
+} from "../../../features/planes/planPaletaTurnosUtils.js";
 
 const PALETA_COLORES_BASE = [
   { bg: "bg-yellow-300 hover:bg-yellow-400", text: "text-yellow-950" },
@@ -190,16 +195,6 @@ function horarioDerivadoPorDia(regimen, ymd, fechaAncla) {
   return "";
 }
 
-function horarioPlanificadoPorTurno(regimen, turnoId) {
-  const tid = String(turnoId || "").trim();
-  if (!regimen || !tid) return "";
-  const turno = (regimen.turnos_disponibles || []).find(
-    (t) => String(t?.turno_id || t?.id || "").trim() === tid,
-  );
-  if (!turno) return "";
-  return horarioIngresoEgreso(turno);
-}
-
 function obtenerLicenciasDia(contexto, personaId, ymd) {
   const mapPersona = contexto?.licencias_por_persona_ymd?.[personaId];
   const eventos = mapPersona?.[ymd];
@@ -266,27 +261,6 @@ function detalleHorariosRegimen(regimen) {
     }`;
   }
   return resumenRegimenTurnos(regimen);
-}
-
-function buildPaletaDinamica(regimenes) {
-  const turnosUnion = new Map();
-  for (const reg of Object.values(regimenes || {})) {
-    if (!esRegimenPlanificado(reg)) continue;
-    for (const t of reg.turnos_disponibles || []) {
-      const tid = String(t.turno_id || "").trim();
-      if (!tid || turnosUnion.has(tid)) continue;
-      const etiqueta = String(t.etiqueta || "").trim();
-      turnosUnion.set(tid, etiqueta || tid);
-    }
-  }
-  const paleta = {};
-  let idx = 0;
-  for (const [tid, label] of turnosUnion) {
-    const color = PALETA_COLORES_BASE[idx % PALETA_COLORES_BASE.length];
-    paleta[tid] = { ...color, label };
-    idx++;
-  }
-  return paleta;
 }
 
 function crearGrillaLimpia(agentes, dias) {
@@ -475,10 +449,16 @@ export default function GrillaMensualEditor({
 
   const idxRegimenes = useMemo(() => contexto?.regimenes || {}, [contexto]);
 
-  const turnosPaleta = useMemo(() => {
-    if (!contexto?.regimenes) return {};
-    return buildPaletaDinamica(contexto.regimenes);
-  }, [contexto]);
+  const { turnosPaleta, permitidosPorRegimen } = useMemo(() => {
+    if (!contexto?.regimenes) {
+      return { turnosPaleta: {}, permitidosPorRegimen: {} };
+    }
+    return buildPaletaEditorPlanMensual(
+      contexto.regimenes,
+      agentes,
+      PALETA_COLORES_BASE,
+    );
+  }, [contexto, agentes]);
 
   const hayFilasPlanificadas = useMemo(
     () =>
@@ -648,6 +628,12 @@ export default function GrillaMensualEditor({
     const pid = String(ag?.persona_id || "").trim();
     if (esModoIncorporacion && idsAgentesNuevos && pid && !idsAgentesNuevos.has(pid)) return;
     if (!paleta || !esFilaEditable(filaKey)) return;
+    if (
+      paleta !== "F" &&
+      !turnoPermitidoEnRegimenPlan(permitidosPorRegimen, ag?.regimen_horario_id, paleta)
+    ) {
+      return;
+    }
     const key = `${filaKey}:${ymd}:${paleta}`;
     if (ultimaCeldaPintadaRef.current === key) return;
     const enriquecido = agentesEnriquecidos[filaKey];
@@ -672,7 +658,16 @@ export default function GrillaMensualEditor({
       ultimaCeldaPintadaRef.current = key;
       return { ...prev, [filaKey]: { ...prev[filaKey], [ymd]: nueva } };
     });
-  }, [paleta, agentesEnriquecidos, esFilaEditable, contexto, esModoIncorporacion, idsAgentesNuevos, agentes]);
+  }, [
+    paleta,
+    agentesEnriquecidos,
+    esFilaEditable,
+    contexto,
+    esModoIncorporacion,
+    idsAgentesNuevos,
+    agentes,
+    permitidosPorRegimen,
+  ]);
 
   const iniciarPintado = useCallback((pid, ymd) => {
     setPintando(true);
@@ -939,6 +934,7 @@ export default function GrillaMensualEditor({
                 <button
                   key={key}
                   type="button"
+                  title={style.horario ? `${key} · ${style.horario}` : key}
                   onClick={() => setPaleta(key)}
                   className={`rounded-lg px-3 py-1 text-xs font-bold transition ${style.bg} ${style.text} ${
                     paleta === key ? "ring-2 ring-indigo-400 ring-offset-1" : ""
@@ -1098,7 +1094,9 @@ export default function GrillaMensualEditor({
                         const horarioDerivado = !editable
                           ? horarioDerivadoPorDia(regimen, dia.ymd, persona?.regimen_fecha_ancla)
                           : "";
-                        const horarioPlanificado = editable ? horarioPlanificadoPorTurno(regimen, turno) : "";
+                        const horarioPlanificado = editable
+                          ? horarioPlanificadoPorTurnoRegimen(regimen, turno)
+                          : "";
 
                         if (estado === "bloqueado") {
                           return (
