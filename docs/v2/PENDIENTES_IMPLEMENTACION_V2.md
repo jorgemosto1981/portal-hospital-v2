@@ -1,8 +1,8 @@
 # Pendientes de implementación — Portal Hospital V2
 
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
-**Última actualización:** 2026-06-11 (**T-05** foco URL + paleta editor ✅ · **US-13** ✅ ops)  
-**Rama / release:** `feat/gso-us6-teoria-pendiente` · tags **`v2.6.3-gso-us6`** · **`v2.6.3-pos-t05-grilla`** (`8285283`)  
+**Última actualización:** 2026-06-11 (**T-05** foco URL + paleta + consola jefe ✅ en **`master`** · **US-13** ✅ ops)  
+**Rama / release:** **`master`** @ `c27e6d7` · tags **`v2.6.3-gso-us6`** · **`v2.6.3-pos-t05-grilla`** (`8285283`)  
 **Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR:** T-06 · capabilities grilla
 
 ---
@@ -98,7 +98,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 
 | Ticket | Entregable | Estado | Referencia |
 |--------|------------|--------|------------|
-| **T-05** | Foco GDT/URL + paleta compuesta por régimen (`planPaletaTurnosUtils`) | **✅ cerrado** `765a31e` | Handoff T-05 · épica [`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`](./EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md) |
+| **T-05** | Foco GDT/URL + paleta por régimen + consola triple horizonte jefe | **✅ cerrado** `master` `c27e6d7` | Handoff T-05 · épica [`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`](./EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md) |
 | **T-06** | Bandeja + ayuda extendida | Pendiente | `HelpContext`, bandeja |
 | **T-07** | Lecturas `vis_*` + caché RAM catálogo | Pendiente | Optimización; sin outbox |
 | **T-09** | Guías + `helpContent` | Pendiente | Docs UX |

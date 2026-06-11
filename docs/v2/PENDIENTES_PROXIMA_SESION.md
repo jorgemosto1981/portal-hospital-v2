@@ -1,11 +1,11 @@
 # Punto de Continuación — Próxima Sesión
 
 > **RETOMAR AQUÍ:** deuda `esRrhh` → `capabilities` en panel/modales · **T-06** help/bandeja · refinamiento UX opcional planes (bandeja aprobación 3 meses). Handoff: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
-> **T-05 épica foco + paleta:** ✅ **(A)** grilla + planes URL · ✅ **(B)** paleta compuesta por régimen (`765a31e`) · UX pincel contextual + **Plan del foco** (sin grilla 3×mes)  
-> **Sesión 2026-06-11:** audit CRLF · paridad URL · QA Sala jul-26 editor · push `feat/gso-us6-teoria-pendiente`  
+> **T-05 épica foco + paleta:** ✅ **(A)** grilla + planes URL · ✅ **(B)** paleta compuesta por régimen · ✅ **consola triple horizonte jefe** (`c27e6d7` en **`master`**) · UX pincel contextual + **Plan del foco** (sin grilla 3×mes)  
+> **Sesión 2026-06-11:** merge FF `feat/gso-us6-teoria-pendiente` → `master` · hosting prod **`c27e6d7`**  
 > **US-13:** ✅ **cerrado ops** 2026-06-08 · acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)  
 > **Otros:** T-06 help/bandeja · RFC HLG ⏸ RRHH  
-> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-10** (hosting T-05 + functions `assertPlanAuth`)  
+> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-11** (consolidación `master` @ `c27e6d7`)  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)
 
