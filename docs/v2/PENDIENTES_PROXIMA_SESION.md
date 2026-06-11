@@ -1,6 +1,6 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ:** `esRrhh` residual periférico fuera de shells GSO · refinamiento UX opcional bandeja aprobación 3 meses (P2). Handoff: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
+> **RETOMAR AQUÍ:** refinamiento UX opcional bandeja aprobación 3 meses (P2) · siguiente épica según [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md). Handoff: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
 > **T-05 épica foco + paleta:** ✅ **(A)** grilla + planes URL · ✅ **(B)** paleta compuesta por régimen · ✅ **consola triple horizonte jefe** (`c27e6d7` en **`master`**) · UX pincel contextual + **Plan del foco** (sin grilla 3×mes)  
 > **Sesión 2026-06-11:** merge FF `feat/gso-us6-teoria-pendiente` → `master` · hosting prod **`c27e6d7`**  
 > **US-13:** ✅ **cerrado ops** 2026-06-08 · acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)  
@@ -10,7 +10,8 @@
 > **T-07 caché grilla:** ✅ **`master`** `a5ca021` · `grillaVistaCacheStore` + hit en `useGrillaMesVista` · invalidación outbox · fix race `setData`/doble `cargar` · smoke performance 2026-06-11  
 > **T-07b caché catálogo laboral:** ✅ **`master`** `9a5875b` · `catalogoLaboralCacheStore` + `listarGruposTrabajoCatalogo` (coalescing · peek 0 ms · claves `l400`/`l800`) · grilla/planes/explorador · smoke DevTools 2026-06-11  
 > **Camino A planes (refinamiento consola jefe):** ✅ **`master`** `b557d12` · `planRefinamientoConsolaUtils` · acordeón móvil · guardrail outbox grilla/planes · Vitest 16/16 · smoke hosting 2026-06-11  
-> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-11** (`master` @ **`b557d12`** · bundle `index-Beh7bFay.js`)  
+> **Camino B capabilities (saneamiento periférico `esRrhh`):** ✅ **`master`** `f1d7add` (squash) · `portalPerifericoCapabilities` · menú por `pathname` · redirect `last_visited_gso_shell` · `permiteExportarMatrizMacro` · Vitest 16/16 · `claimsIncludeRrhh` solo en `portalRole.js`  
+> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-11** (`master` @ **`f1d7add`** · bundle post-Camino B — ver cierre sesión)  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)
 
@@ -26,9 +27,9 @@
 | **T-07b** caché RAM catálogo `grupos_de_trabajo` | ✅ FF `master` | `9a5875b` · peek + coalescing · smoke DevTools sin duplicados post-primer fetch |
 | **Índice / deploy** | ✅ | código + docs T-07b · hosting `index-BgbIdH8K.js` |
 
-**Próximo arranque (prioridad abierta):** Camino B — `esRrhh` periférico fuera de shells GSO.
+**Próximo arranque (prioridad abierta):** bandeja aprobación 3 meses (P2) u ítem siguiente en backlog SSoT.
 
-**Última actualización índice:** 2026-06-11 — cierre Camino A refinamiento consola planes en `master`.
+**Última actualización índice:** 2026-06-11 — cierre Camino B capabilities periféricas en `master` (`f1d7add`).
 
 ---
 
@@ -40,6 +41,19 @@
 | **Consola fría + bandeja inbox** | ✅ | `ConsolaTripleHorizonteSeccion` · títulos `HORIZONTE_CONSOLA_TITULOS` |
 | **Guardrail outbox al cambiar foco** | ✅ | `useGuardrailOutboxAlCambiarFoco` · grilla + turnos mensuales |
 | **Deploy** | ✅ | `b557d12` · bundle `index-Beh7bFay.js` |
+
+---
+
+## CIERRE SESIÓN — Camino B saneamiento capabilities periféricas (2026-06-11)
+
+| Bloque | Estado | Referencia |
+|--------|--------|------------|
+| **Bandeja / export read-model** | ✅ squash `master` | `portalPerifericoCapabilities` · bandeja por shell GSO |
+| **Redirect grilla + persistencia shell** | ✅ | `portalGsoShellStorage` · `last_visited_gso_shell` · `GrillaPortalRedirect` |
+| **Menú lateral / bottom nav** | ✅ | `shellMenuPortalDesdePathname` · `menuGrupoAcceso` sin `claimsIncludeRrhh` |
+| **Export matriz macro** | ✅ | `permiteExportarMatrizMacro` en `grillaOperativaCapabilities` |
+| **Tests + grep vivo** | ✅ | Vitest 16/16 · `claimsIncludeRrhh` solo `portalRole.js` (+ comentarios) |
+| **Deploy** | ✅ | `f1d7add` · smoke estático bundle (ver deploy del día) |
 
 ---
 
