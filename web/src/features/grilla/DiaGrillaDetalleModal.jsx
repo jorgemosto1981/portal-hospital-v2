@@ -24,6 +24,7 @@ import {
 } from "./grillaMesGsoHints.js";
 import { COPY_BADGE_SOLO_LECTURA_GSO } from "./grillaGsoSoloLectura.js";
 import DiaGrillaAuditoriaTecnicaRrhh from "./DiaGrillaAuditoriaTecnicaRrhh.jsx";
+import GrillaGuardrailTeoriaAviso from "./GrillaGuardrailTeoriaAviso.jsx";
 
 function labelEstado(id) {
   const e = String(id || "");
@@ -60,6 +61,9 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd) {
  *   onAbrirCambioTurno?: () => void;
  *   onAbrirGestionTurno?: () => void;
  *   puedeGestionarTurno?: boolean;
+ *   puedeModificarTeoria?: boolean;
+ *   mensajeBloqueoTeoria?: string | null;
+ *   muestraBadgeBypassRrhh?: boolean;
  *   soloLectura?: boolean;
  *   soloLecturaMensaje?: string | null;
  *   grupoTrabajoId?: string;
@@ -94,6 +98,9 @@ export default function DiaGrillaDetalleModal({
   onAbrirCambioTurno,
   onAbrirGestionTurno,
   puedeGestionarTurno = false,
+  puedeModificarTeoria = false,
+  mensajeBloqueoTeoria = null,
+  muestraBadgeBypassRrhh = false,
   soloLectura = false,
   soloLecturaMensaje = null,
   grupoTrabajoId = "",
@@ -144,6 +151,10 @@ export default function DiaGrillaDetalleModal({
     () => planTurnoCorregirPath(grupoTrabajoId, fechaYmd),
     [grupoTrabajoId, fechaYmd],
   );
+  const accionTeoriaHabilitada = puedeModificarTeoria && !soloLectura;
+  const tituloBloqueoAccion = mensajeBloqueoTeoria || "Acción no permitida para tu rol en este período.";
+  const claseBotonTeoria = (base) =>
+    accionTeoriaHabilitada ? base : `${base} cursor-not-allowed opacity-50`;
   const [solFocus, setSolFocus] = useState("");
   const [resumen, setResumen] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -313,6 +324,10 @@ export default function DiaGrillaDetalleModal({
                 ? "La asistencia registrada no coincide con la jornada teórica vigente. Revisá la solicitud, ajustá el turno del día o derivá la corrección al plan mensual."
                 : "La jornada teórica vigente difiere de la referencia al registrar la licencia. Revisá la solicitud, ajustá el turno del día o derivá la corrección al plan mensual."}
             </p>
+            <GrillaGuardrailTeoriaAviso
+              muestraBadgeBypassRrhh={muestraBadgeBypassRrhh}
+              mensajeBloqueo={!accionTeoriaHabilitada ? mensajeBloqueoTeoria : null}
+            />
             <div className="mt-3 flex flex-col gap-2">
               {resumen?.solicitud_id && bandejaPath ? (
                 <Link
@@ -323,14 +338,19 @@ export default function DiaGrillaDetalleModal({
                   Ir a solicitud en bandeja
                 </Link>
               ) : null}
-              {personaId && fechaYmd && puedeGestionarTurno && onAbrirGestionTurno && !soloLectura ? (
+              {personaId && fechaYmd && onAbrirGestionTurno && !soloLectura ? (
                 <button
                   type="button"
+                  disabled={!accionTeoriaHabilitada}
+                  title={!accionTeoriaHabilitada ? tituloBloqueoAccion : undefined}
                   onClick={() => {
+                    if (!accionTeoriaHabilitada) return;
                     onClose();
                     onAbrirGestionTurno();
                   }}
-                  className="flex min-h-11 w-full touch-manipulation items-center justify-center rounded-xl bg-violet-700 text-sm font-semibold text-white active:bg-violet-800"
+                  className={claseBotonTeoria(
+                    "flex min-h-11 w-full touch-manipulation items-center justify-center rounded-xl bg-violet-700 text-sm font-semibold text-white active:bg-violet-800",
+                  )}
                 >
                   Ajustar turno del día
                 </button>
@@ -591,38 +611,59 @@ export default function DiaGrillaDetalleModal({
             </p>
           </div>
         ) : null}
-        {personaId && fechaYmd && puedeGestionarTurno && onAbrirGestionTurno && !desalineacionTeoria && !soloLectura ? (
+        <GrillaGuardrailTeoriaAviso
+          muestraBadgeBypassRrhh={muestraBadgeBypassRrhh && !desalineacionTeoria}
+          mensajeBloqueo={
+            !accionTeoriaHabilitada && !soloLectura && mensajeBloqueoTeoria ? mensajeBloqueoTeoria : null
+          }
+        />
+        {personaId && fechaYmd && onAbrirGestionTurno && !desalineacionTeoria && !soloLectura ? (
           <button
             type="button"
+            disabled={!accionTeoriaHabilitada}
+            title={!accionTeoriaHabilitada ? tituloBloqueoAccion : undefined}
             onClick={() => {
+              if (!accionTeoriaHabilitada) return;
               onClose();
               onAbrirGestionTurno();
             }}
-            className="mt-4 flex min-h-11 w-full touch-manipulation items-center justify-center rounded-xl bg-violet-700 text-base font-semibold text-white active:bg-violet-800"
+            className={claseBotonTeoria(
+              "mt-4 flex min-h-11 w-full touch-manipulation items-center justify-center rounded-xl bg-violet-700 text-base font-semibold text-white active:bg-violet-800",
+            )}
           >
             Gestionar turno de este día
           </button>
         ) : null}
-        {personaId && fechaYmd && puedeGestionarTurno && onAbrirCobertura && !onAbrirGestionTurno && !soloLectura ? (
+        {personaId && fechaYmd && onAbrirCobertura && !onAbrirGestionTurno && !soloLectura ? (
           <button
             type="button"
+            disabled={!accionTeoriaHabilitada}
+            title={!accionTeoriaHabilitada ? tituloBloqueoAccion : undefined}
             onClick={() => {
+              if (!accionTeoriaHabilitada) return;
               onClose();
               onAbrirCobertura();
             }}
-            className="mt-4 flex min-h-11 w-full items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 text-sm font-semibold text-indigo-800 active:bg-indigo-100"
+            className={claseBotonTeoria(
+              "mt-4 flex min-h-11 w-full items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 text-sm font-semibold text-indigo-800 active:bg-indigo-100",
+            )}
           >
             Cobertura parcial por tramos
           </button>
         ) : null}
-        {personaId && fechaYmd && puedeGestionarTurno && onAbrirCambioTurno && !onAbrirGestionTurno && !soloLectura ? (
+        {personaId && fechaYmd && onAbrirCambioTurno && !onAbrirGestionTurno && !soloLectura ? (
           <button
             type="button"
+            disabled={!accionTeoriaHabilitada}
+            title={!accionTeoriaHabilitada ? tituloBloqueoAccion : undefined}
             onClick={() => {
+              if (!accionTeoriaHabilitada) return;
               onClose();
               onAbrirCambioTurno();
             }}
-            className="mt-2 flex min-h-11 w-full items-center justify-center rounded-xl border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-900 active:bg-amber-100"
+            className={claseBotonTeoria(
+              "mt-2 flex min-h-11 w-full items-center justify-center rounded-xl border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-900 active:bg-amber-100",
+            )}
           >
             Cambio de turno (reemplazo / adicional)
           </button>

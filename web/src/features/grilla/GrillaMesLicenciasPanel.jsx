@@ -11,10 +11,10 @@ import ModalCambioTurnoPropio from "./ModalCambioTurnoPropio.jsx";
 import ModalTurnoAdicional from "./ModalTurnoAdicional.jsx";
 import GrillaOutboxPendientesBanner from "./GrillaOutboxPendientesBanner.jsx";
 import {
-  evaluarCapabilitiesGestionTurno,
   periodoGsoDesdeVista,
   resolverNivelJerarquicoEnFilas,
 } from "./grillaGestionTurnoCapabilities.js";
+import { evaluarGuardrailsModificacionTeoria } from "./grillaGuardrailsTeoriaUi.js";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
 import { GRILLA_MES_MODO } from "./GrillaMesSelector.jsx";
@@ -239,21 +239,28 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
   );
 
   const capabilitiesDiaModal = useMemo(() => {
+    const vacio = {
+      puedeGestionarTurno: false,
+      puedeModificarTeoria: false,
+      requiereUrgencia: false,
+      mensajeBloqueo: null,
+      muestraBadgeBypassRrhh: false,
+    };
     if (!diaModal?.personaId || !diaModal?.fechaYmd) {
-      return { puedeGestionarTurno: false, requiereUrgencia: false, mensajeBloqueo: null };
+      return vacio;
     }
     if (personaId && diaModal.personaId === personaId) {
-      return { puedeGestionarTurno: false, requiereUrgencia: false, mensajeBloqueo: null };
+      return vacio;
     }
     if (!vista.gsoPermiteEscritura && !esRrhh) {
-      return { puedeGestionarTurno: false, requiereUrgencia: false, mensajeBloqueo: null };
+      return vacio;
     }
     const targetNivel = resolverNivelJerarquicoEnFilas(
       vista.filas,
       diaModal.personaId,
       diaModal.filaId,
     );
-    return evaluarCapabilitiesGestionTurno({
+    const guardrails = evaluarGuardrailsModificacionTeoria({
       usuarioActual: {
         id: personaId,
         esJefe,
@@ -267,6 +274,10 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
       estadoPlan: vista.planMensualEstado || "BORRADOR",
       periodoGso,
     });
+    return {
+      ...guardrails,
+      puedeGestionarTurno: guardrails.puedeModificarTeoria,
+    };
   }, [
     diaModal,
     personaId,
@@ -1010,11 +1021,16 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         puedeGestionarTurno={
           capabilitiesDiaModal.puedeGestionarTurno && !diaModal?.incompletoPlan
         }
+        puedeModificarTeoria={
+          capabilitiesDiaModal.puedeModificarTeoria && !diaModal?.incompletoPlan
+        }
+        mensajeBloqueoTeoria={capabilitiesDiaModal.mensajeBloqueo}
+        muestraBadgeBypassRrhh={capabilitiesDiaModal.muestraBadgeBypassRrhh}
         onAbrirGestionTurno={
-          capabilitiesDiaModal.puedeGestionarTurno
-          && diaModal?.personaId
+          diaModal?.personaId
           && diaModal?.fechaYmd
           && diaModal?.grupoTrabajoId
+          && !diaModal?.incompletoPlan
             ? () => {
                 setGestionTurnoShell({
                   personaId: diaModal.personaId,
