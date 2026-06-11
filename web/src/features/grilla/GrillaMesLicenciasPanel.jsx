@@ -1003,8 +1003,10 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         vigenteHasta={diaModal?.vigenteHasta ?? null}
         materializadoLazy={diaModal?.materializadoLazy === true}
         esRrhh={esRrhh}
-        mostrarFichada={esRrhh || esJefe}
-        puedeCorregirPlan={esJefe || esRrhh}
+        puedeVerTramosCrudosFichadas={capabilities.puedeVerTramosCrudosFichadas}
+        onAbrirAyuda={abrirAyuda}
+        mostrarFichada={capabilities.puedeVerFichadasReales || esJefe}
+        puedeCorregirPlan={esJefe || capabilities.puedeAccionesPeriodoLiquidacion}
         puedeGestionarTurno={
           capabilitiesDiaModal.puedeGestionarTurno && !diaModal?.incompletoPlan
         }

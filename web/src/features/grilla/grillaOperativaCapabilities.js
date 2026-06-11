@@ -20,6 +20,7 @@ export const GRILLA_OPERATIVA_SHELL = {
  * @property {boolean} syncFocoEnUrl — T-05: persistir `?grupo_id=&periodo=` (RRHH primero)
  * @property {boolean} consolaTripleHorizonteEnFrio — jefe: tarjetas M-1/M/M+1 sin `grupo_id` en URL
  * @property {boolean} muestraBandejaAuditoriaDiaria — T-06: bandeja alertas sector (solo shell RRHH)
+ * @property {boolean} puedeVerTramosCrudosFichadas — T-06: marcas reloj + auditoría en modal día
  * @property {string} rutaFocoBase — base para deep link del foco GDT
  */
 
@@ -34,6 +35,7 @@ const RRHH_CAPABILITIES = {
   syncFocoEnUrl: true,
   consolaTripleHorizonteEnFrio: false,
   muestraBandejaAuditoriaDiaria: true,
+  puedeVerTramosCrudosFichadas: true,
   rutaFocoBase: "/portal/rrhh/grilla-operativa",
 };
 
@@ -48,6 +50,7 @@ const JEFE_CAPABILITIES = {
   syncFocoEnUrl: true,
   consolaTripleHorizonteEnFrio: true,
   muestraBandejaAuditoriaDiaria: false,
+  puedeVerTramosCrudosFichadas: false,
   rutaFocoBase: "/portal/jefe/grilla-operativa",
 };
 

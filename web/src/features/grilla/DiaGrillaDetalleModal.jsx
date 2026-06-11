@@ -23,6 +23,7 @@ import {
   evaluarTeoriaPendienteLazyCelda,
 } from "./grillaMesGsoHints.js";
 import { COPY_BADGE_SOLO_LECTURA_GSO } from "./grillaGsoSoloLectura.js";
+import DiaGrillaAuditoriaTecnicaRrhh from "./DiaGrillaAuditoriaTecnicaRrhh.jsx";
 
 function labelEstado(id) {
   const e = String(id || "");
@@ -70,6 +71,8 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd) {
  *   puedeCorregirPlan?: boolean;
  *   celdaVis?: Record<string, unknown> | null;
  *   esRrhh?: boolean;
+ *   puedeVerTramosCrudosFichadas?: boolean;
+ *   onAbrirAyuda?: (termino: string) => void;
  *   mostrarFichada?: boolean;
  *   etiquetasGrupo?: Record<string, string>;
  *   vigenteHasta?: string | null;
@@ -102,14 +105,17 @@ export default function DiaGrillaDetalleModal({
   puedeCorregirPlan = false,
   celdaVis = null,
   esRrhh = false,
+  puedeVerTramosCrudosFichadas = false,
+  onAbrirAyuda,
   mostrarFichada = false,
   etiquetasGrupo = {},
   vigenteHasta = null,
   materializadoLazy = false,
 }) {
+  const detalleFichadaRrhh = puedeVerTramosCrudosFichadas || esRrhh;
   const resumenFichada = useMemo(
-    () => (mostrarFichada && celdaVis ? resumenFichadaModal(celdaVis, { esRrhh }) : null),
-    [mostrarFichada, celdaVis, esRrhh],
+    () => (mostrarFichada && celdaVis ? resumenFichadaModal(celdaVis, { esRrhh: detalleFichadaRrhh }) : null),
+    [mostrarFichada, celdaVis, detalleFichadaRrhh],
   );
   const tituloDesalineacion = desalineacionTooltip || "Teoría modificada post-licencia";
   const imputacionExterna = useMemo(
@@ -404,6 +410,16 @@ export default function DiaGrillaDetalleModal({
               ) : null}
             </dl>
           </div>
+        ) : null}
+
+        {puedeVerTramosCrudosFichadas ? (
+          <DiaGrillaAuditoriaTecnicaRrhh
+            celdaVis={celdaVis}
+            turnoTeorico={turnoTeorico}
+            desalineacionTeoria={desalineacionTeoria}
+            desalineacionTooltip={desalineacionTooltip}
+            onAbrirAyuda={onAbrirAyuda}
+          />
         ) : null}
 
         {turnoTeorico && (turnoTeorico.rda_turno_id || turnoTeorico.es_franco || turnoTeorico.capa_teorica) ? (

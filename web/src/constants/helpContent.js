@@ -116,6 +116,21 @@ export const GLOSARIO_COMPLETO = [
       "Diferencia entre la capa teórica y la realidad (fichadas). Puede ser llegada tarde, salida temprana, ausencia o turno extendido. Genera alertas para RRHH.",
   },
   {
+    termino: "Divergencia fichada y licencia (GSO)",
+    definicion:
+      "Inconsistencia detectada en la grilla: el agente tiene licencia aprobada o jornada teórica que no cuadra con las marcas del reloj (presente sin turno esperado, o ausente con jornada laborable). RRHH revisa marcas crudas y la solicitud antes de liquidar.",
+  },
+  {
+    termino: "Fichada impar (reloj)",
+    definicion:
+      "El hardware registró marcas incompletas para el día (por ejemplo entrada sin egreso, o menos marcas que las fichadas esperadas del turno). No implica sanción automática: RRHH contrasta con teoría y justifica o regulariza.",
+  },
+  {
+    termino: "Desalineación teoría post-licencia",
+    definicion:
+      "La jornada teórica vigente en la celda difiere de la referencia que tenía la licencia al aprobarse (cambio de plan, override o materialización tardía). Requiere revisión de solicitud, ajuste de turno o corrección de plan.",
+  },
+  {
     termino: "Franco",
     definicion:
       "Día en que el agente no tiene turno asignado. Puede ser fijo (sábado/domingo en administrativos) o rotativo (según el ciclo o la grilla mensual).",
@@ -231,6 +246,9 @@ const MANUAL_GRILLA_OPERATIVA = {
     "Cobertura Parcial (Tramos)",
     "Cambios Pendientes (Borrador)",
     "Capa teórica",
+    "Divergencia fichada y licencia (GSO)",
+    "Fichada impar (reloj)",
+    "Desalineación teoría post-licencia",
   ],
 };
 
