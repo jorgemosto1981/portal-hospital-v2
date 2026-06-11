@@ -1,6 +1,7 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ:** refinamiento UX opcional bandeja aprobación 3 meses (P2) · siguiente épica según [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md). Handoff sesión: [`HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md`](./HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md) · contexto GDT: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
+> **RETOMAR AQUÍ (épica activa):** **Lineamientos Decreto 1919/89 + afinación motor solicitudes / grilla** — plan [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md) · handoff [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md) · primer paso: redactar `LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md` (Fase 0 doc).  
+> **Paralelo / backlog GSO:** refinamiento UX bandeja aprobación 3 meses (P2) · [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) · handoff Camino B: [`HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md`](./HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md) · GDT: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
 > **T-05 épica foco + paleta:** ✅ **(A)** grilla + planes URL · ✅ **(B)** paleta compuesta por régimen · ✅ **consola triple horizonte jefe** (`c27e6d7` en **`master`**) · UX pincel contextual + **Plan del foco** (sin grilla 3×mes)  
 > **Sesión 2026-06-11:** merge FF `feat/gso-us6-teoria-pendiente` → `master` · hosting prod **`c27e6d7`**  
 > **US-13:** ✅ **cerrado ops** 2026-06-08 · acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)  
@@ -15,6 +16,16 @@
 > **Bloque macro (permisos + perf):** T-06 ✅ · Camino A ✅ · T-07/T-07b ✅ · Camino A planes ✅ · **Camino B ✅** — ver handoff 2026-06-11  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)
+
+---
+
+## ÉPICA ABIERTA — Lineamientos 1919 / motor solicitudes (2026-06-11)
+
+| Bloque | Estado | Referencia |
+|--------|--------|------------|
+| Plan + handoff en repo | ✅ | [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md) · [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md) |
+| `LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md` | ⏳ pendiente | Fase 0 documental (ficha por artículo) |
+| Motor / grilla | ⏳ | Tras Fase 0 o RFC brechas schema §3 del handoff |
 
 ---
 
