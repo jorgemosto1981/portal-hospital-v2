@@ -1,6 +1,7 @@
-# Handoff — Sesión 2026-06-11 · Plan lineamientos Decreto 1919/89 y motor de solicitudes
+# Handoff — Sesión 2026-06-11 · CIERRE plan lineamientos Decreto 1919/89 y motor de solicitudes
 
-**Estado:** **plan documental cerrado** en repo; **implementación pendiente** (etapa 0 = redactar lineamientos por artículo).  
+**Estado:** **sesión de planificación CERRADA** (`master` documental sincronizado). **Épica abierta:** Fase 0 = redactar `LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md`; sin código de motor en esta sesión.  
+**Commit cierre:** `0cfb889` · push `origin/master` (continuidad multi-PC).  
 **Índice RETOMAR AQUÍ:** [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) (bloque épica 1919 / motor licencias).  
 **Plan maestro:** [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md).
 
@@ -69,8 +70,25 @@ git pull origin master
 
 ---
 
-## 6. Changelog
+## 6. Cierre de sesión (checklist)
+
+| Ítem | Estado |
+|------|--------|
+| Análisis normativo vs schema / motores A·B·C | ✅ registrado en plan |
+| Brechas schema priorizadas (RFC) | ✅ §3 |
+| Backlog altas RRHH ordenado | ✅ §4 |
+| Plan + handoff en `docs/v2/` | ✅ |
+| `git push origin master` | ✅ |
+| Fichas por artículo (`LINEAMIENTOS_…md`) | ⏳ próxima sesión |
+| Código motor / grilla | ⏳ tras Fase 0 doc |
+
+**Nada pendiente de commit local** al cerrar esta sesión salvo el bloque documental de cierre (este §6).
+
+---
+
+## 7. Changelog
 
 | Fecha | Cambio |
 |-------|--------|
-| 2026-06-11 | Planificación decreto 1919 vs motores; plan + handoff en repo; push para continuidad multi-PC. |
+| 2026-06-11 | Planificación decreto 1919 vs motores; plan + handoff en repo; push `0cfb889`. |
+| 2026-06-11 | Cierre sesión planificación; épica Fase 0 doc queda como RETOMAR en índice. |

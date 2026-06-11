@@ -1,6 +1,6 @@
 # Plan — Lineamientos Decreto 1919/89 y afinación del motor de solicitudes
 
-**Estado:** acordado en planificación **2026-06-11** (etapa documental; sin código en esta fase).  
+**Estado:** **planificación cerrada** 2026-06-11 · ejecución Fase 0 (lineamientos MD) **pendiente** · sin código en la sesión de cierre.  
 **Fuente normativa:** Decreto 1919/89 (PDF / SIN Santa Fe).  
 **Handoff:** [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md).
 
@@ -10,8 +10,8 @@
 |----|--------|--------|
 | md-lineamientos | Redactar `LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md` (ficha por artículo) | pendiente |
 | cross-links | Actualizar ANEXO_NORMATIVO, MODULO_CONFIGURACION_ARTICULOS, MATRIZ_ESCENARIOS | pendiente |
-| gap-rfc-list | Lista priorizada brechas schema (Art. 14, ámbitos carrera/episodio, plazos horarios, grilla horaria) | pendiente |
-| backlog-articulos | Backlog altas RRHH: 63 → 52/54 → 34–39 → médicas → franquicias horarias | pendiente |
+| gap-rfc-list | Lista priorizada brechas schema (Art. 14, ámbitos carrera/episodio, plazos horarios, grilla horaria) | hecho (handoff §3) |
+| backlog-articulos | Backlog altas RRHH: 63 → 52/54 → 34–39 → médicas → franquicias horarias | hecho (handoff §4) |
 | ayuda-copy | Textos instructivos agente/jefe/RRHH por familia normativa | pendiente |
 | fase-motor-grilla | Al codificar: Fase 1 motor B + Fase 2 grilla; RFC extensiones schema Fase 3 | pendiente |
 

@@ -19,13 +19,16 @@
 
 ---
 
-## ÉPICA ABIERTA — Lineamientos 1919 / motor solicitudes (2026-06-11)
+## CIERRE SESIÓN — Planificación lineamientos 1919 / motor (2026-06-11)
 
 | Bloque | Estado | Referencia |
 |--------|--------|------------|
-| Plan + handoff en repo | ✅ | [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md) · [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md) |
-| `LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md` | ⏳ pendiente | Fase 0 documental (ficha por artículo) |
-| Motor / grilla | ⏳ | Tras Fase 0 o RFC brechas schema §3 del handoff |
+| **Sesión planificación** | ✅ **CERRADA** | [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md) · commit `0cfb889`+ cierre doc |
+| Plan maestro + brechas RFC + backlog RRHH | ✅ | [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md) |
+| **Épica siguiente (Fase 0 doc)** | ⏳ | Redactar `LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md` |
+| Motor solicitudes / grilla | ⏳ | Tras Fase 0 o RFC §3 handoff |
+
+**Última actualización índice (épica 1919):** 2026-06-11 — cierre sesión planificación; RETOMAR arriba.
 
 ---
 
