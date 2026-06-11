@@ -1,12 +1,13 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ:** deuda `esRrhh` residual en tablas/grilla · **T-07** lecturas `vis_*` / caché catálogo · refinamiento UX opcional planes (bandeja aprobación 3 meses). Handoff: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
+> **RETOMAR AQUÍ:** **T-07** lecturas `vis_*` / caché catálogo · refinamiento UX opcional planes (bandeja aprobación 3 meses) · `esRrhh` residual periférico (bandejas/planes fuera de shells GSO). Handoff: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
 > **T-05 épica foco + paleta:** ✅ **(A)** grilla + planes URL · ✅ **(B)** paleta compuesta por régimen · ✅ **consola triple horizonte jefe** (`c27e6d7` en **`master`**) · UX pincel contextual + **Plan del foco** (sin grilla 3×mes)  
 > **Sesión 2026-06-11:** merge FF `feat/gso-us6-teoria-pendiente` → `master` · hosting prod **`c27e6d7`**  
 > **US-13:** ✅ **cerrado ops** 2026-06-08 · acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)  
 > **T-06 auditoría RRHH:** ✅ **épica cerrada** en **`master`** (`5c3fd86`) — bandeja · modal técnico · guardrails US-13 (modal + combo A/B/C + outbox) · smoke integral hosting  
 > **Otros:** RFC HLG ⏸ RRHH  
-> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-11** (T-06 completa `master` @ `5c3fd86` · bundle `index-Br5wVBsP.js`)  
+> **Camino A capabilities:** ✅ grilla operativa + turnos mensuales (shells jefe/RRHH · `actorPortalTeoriaDesdeShell`) · merge FF **`master`** `b12ab13` · smoke A–C 2026-06-11  
+> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-11** (Camino A `master` @ `b12ab13` · bundle `index-CGPzu35J.js`)  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)
 

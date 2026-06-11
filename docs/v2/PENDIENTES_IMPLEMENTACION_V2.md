@@ -1,9 +1,9 @@
 # Pendientes de implementación — Portal Hospital V2
 
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
-**Última actualización:** 2026-06-11 (**T-06** ✅ épica auditoría RRHH + guardrails UI · **T-05** ✅ · **US-13** ops ✅)  
-**Rama / release:** **`master`** @ `5c3fd86` · tags **`v2.6.3-gso-us6`** · **`v2.6.3-pos-t05-grilla`** (`8285283`)  
-**Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR:** T-07 / deuda capabilities grilla
+**Última actualización:** 2026-06-11 (**Camino A** ✅ capabilities shells · **T-06** ✅ · **T-05** ✅ · **US-13** ops ✅)  
+**Rama / release:** **`master`** @ `b12ab13` · tags **`v2.6.3-gso-us6`** · **`v2.6.3-pos-t05-grilla`** (`8285283`)  
+**Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR:** **T-07** caché `vis_*`
 
 ---
 
@@ -100,6 +100,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 |--------|------------|--------|------------|
 | **T-05** | Foco GDT/URL + paleta por régimen + consola triple horizonte jefe | **✅ cerrado** `master` `c27e6d7` | Handoff T-05 · épica [`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`](./EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md) |
 | **T-06** | Bandeja auditoría RRHH + modal técnico + guardrails US-13 (modal, combo A/B/C, outbox) | **✅ cerrado** `master` `5c3fd86` · smoke integral 2026-06-11 | `grillaAuditoriaDiariaResumen`, `grillaGuardrailsTeoriaUi` |
+| **Camino A** | Saneamiento capabilities — grilla + planes por shell (sin `claimsIncludeRrhh` en UI GSO); actor US-13 unificado | **✅ cerrado** `master` `b12ab13` · smoke A–C 2026-06-11 · bundle `index-CGPzu35J.js` | `grillaOperativaCapabilities`, `planesTurnoCapabilities`, `actorPortalTeoriaDesdeShell` |
 | **T-07** | Lecturas `vis_*` + caché RAM catálogo | Pendiente | Optimización; sin outbox |
 | **T-09** | Guías + `helpContent` | Pendiente | Docs UX |
 
