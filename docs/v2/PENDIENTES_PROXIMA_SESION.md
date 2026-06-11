@@ -1,6 +1,6 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ:** refinamiento UX opcional planes (bandeja aprobación 3 meses) · `esRrhh` residual periférico · caché catálogo sector fuera de grilla (opcional). Handoff: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
+> **RETOMAR AQUÍ:** refinamiento UX opcional planes (bandeja aprobación 3 meses) · `esRrhh` residual periférico fuera de shells GSO. Handoff: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
 > **T-05 épica foco + paleta:** ✅ **(A)** grilla + planes URL · ✅ **(B)** paleta compuesta por régimen · ✅ **consola triple horizonte jefe** (`c27e6d7` en **`master`**) · UX pincel contextual + **Plan del foco** (sin grilla 3×mes)  
 > **Sesión 2026-06-11:** merge FF `feat/gso-us6-teoria-pendiente` → `master` · hosting prod **`c27e6d7`**  
 > **US-13:** ✅ **cerrado ops** 2026-06-08 · acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)  
@@ -8,7 +8,8 @@
 > **Otros:** RFC HLG ⏸ RRHH  
 > **Camino A capabilities:** ✅ grilla operativa + turnos mensuales (shells jefe/RRHH · `actorPortalTeoriaDesdeShell`) · merge FF **`master`** `b12ab13` · smoke A–C 2026-06-11  
 > **T-07 caché grilla:** ✅ **`master`** `a5ca021` · `grillaVistaCacheStore` + hit en `useGrillaMesVista` · invalidación outbox · fix race `setData`/doble `cargar` · smoke performance 2026-06-11  
-> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-11** (`master` @ **`77dee9a`** · código T-07 `a5ca021` · bundle `index-DmfD65xH.js`)  
+> **T-07b caché catálogo laboral:** ✅ **`master`** `9a5875b` · `catalogoLaboralCacheStore` + `listarGruposTrabajoCatalogo` (coalescing · peek 0 ms · claves `l400`/`l800`) · grilla/planes/explorador · smoke DevTools 2026-06-11  
+> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-11** (`master` @ **`9a5875b`** · bundle `index-BgbIdH8K.js`)  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)
 
@@ -21,11 +22,12 @@
 | **T-06** guardrails US-13 UI | ✅ en `master` | `5c3fd86` · smoke integral hosting |
 | **Camino A** shells / capabilities | ✅ FF `master` | `b12ab13` · `actorPortalTeoriaDesdeShell` · planes `rrhh`/`jefe` · smoke A–C |
 | **T-07** caché RAM vista grilla | ✅ FF `master` | `35dd423` store · `a5ca021` hook + outbox · race `setData`/doble `cargar` · smoke performance |
-| **Índice / deploy** | ✅ | docs `77dee9a` · hosting `index-DmfD65xH.js` |
+| **T-07b** caché RAM catálogo `grupos_de_trabajo` | ✅ FF `master` | `9a5875b` · peek + coalescing · smoke DevTools sin duplicados post-primer fetch |
+| **Índice / deploy** | ✅ | código + docs T-07b · hosting `index-BgbIdH8K.js` |
 
-**Próximo arranque (prioridad abierta):** refinamiento planes · caché catálogo 400+ sectores (opcional) · `esRrhh` periférico fuera de shells GSO.
+**Próximo arranque (prioridad abierta):** refinamiento planes · `esRrhh` periférico fuera de shells GSO.
 
-**Última actualización índice:** 2026-06-11 — cierre sprint T-06 + Camino A + T-07 en `master`.
+**Última actualización índice:** 2026-06-11 — cierre T-07b catálogo laboral en `master`.
 
 ---
 
@@ -536,7 +538,7 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 | **F2.6** resolverFijo D2 | ✅ Código | `Number(dia_semana)` + franco sin match |
 | **F2.7** rematerializar UI RRHH | ✅ Código | `RegimenesHorariosPage` + `CalendarioConfig` |
 | **Deploy producción** | ✅ Sesión 01/06 | Ver tabla deploy en [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md) |
-| **F3 T-05..T-07** | ✅ Cerrado | T-05 consola/foco · T-06 auditoría RRHH · T-07 caché grilla — `master` `a5ca021` |
+| **F3 T-05..T-07b** | ✅ Cerrado | T-05 consola/foco · T-06 auditoría RRHH · T-07 caché grilla · **T-07b** catálogo laboral — `master` `9a5875b` |
 | **F3 T-09** | ⏳ Pendiente | Guías + `helpContent` extendido |
 | **F3 cierre épica** | ✅ Núcleo | Piloto Sala validado · release notes · tag pendiente commit |
 | **F4 Outbox** | ✅ En rama (F-UX.3) | Ver [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) · backlog: [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) |
