@@ -28,6 +28,7 @@ import { useGrillaMesVista } from "./useGrillaMesVista.js";
 import { aplicarBatchAsistencia } from "../../services/coberturaParcialService.js";
 import { laboralCallableErrorMessage } from "../../pages/datos-laborales/callableErrorMessage.js";
 import { opsOutboxParaGrupo } from "./grillaCeldaOutboxVisual.js";
+import { useGuardrailOutboxAlCambiarFoco } from "../planes/useGuardrailOutboxAlCambiarFoco.js";
 import { mergePersonaLabelsDesdeOps } from "./grillaOutboxLabels.js";
 import { RX_GDT } from "./grillaGrupoUtils.js";
 import { formatearRangoTramoMes, diaFueraVigenciaTramo } from "./grillaMesFilasUtils.js";
@@ -253,6 +254,14 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
   }, [usaFocoEnUrl, focoUrl.tieneFocoValido, grillaTitularAbierta]);
 
   const outbox = useAsistenciaOutbox({ editorPersonaId: personaId, periodo: vista.periodo });
+  const { intentarNavegacionFoco: intentarNavegacionFocoOutbox } = useGuardrailOutboxAlCambiarFoco({
+    ops: outbox.ops,
+    clearOutbox: outbox.clear,
+    focoOrigenExplicito: {
+      grupoId: focoUrl.grupoIdUrl || vista.grupoTrabajoId || "",
+      periodo: focoUrl.periodoUrl || vista.periodo || "",
+    },
+  });
   const labelGrupoParaOutbox = (grupoId) => {
     const gid = String(grupoId || "").trim();
     if (!gid) return "Titular (mi caso)";
@@ -576,7 +585,9 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                 muestraAtajoTitular={capabilities.muestraTarjetaTitular}
                 disabled={vista.loading}
                 onConfirmarCarga={({ grupoId, periodo }) => {
-                  focoUrl.pushFocoToUrl({ grupoId, periodo });
+                  intentarNavegacionFocoOutbox({ grupoId, periodo }, () => {
+                    focoUrl.pushFocoToUrl({ grupoId, periodo });
+                  });
                 }}
                 onVerTitular={({ periodo }) => {
                   abrirGrillaTitularDesdeFocoUrl({ periodo });
@@ -588,8 +599,10 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                 <button
                   type="button"
                   onClick={() => {
-                    focoUrl.clearFocoEnUrl();
-                    setVistaModal(null);
+                    intentarNavegacionFocoOutbox({ grupoId: "", periodo: "" }, () => {
+                      focoUrl.clearFocoEnUrl();
+                      setVistaModal(null);
+                    });
                   }}
                   className="h-11 shrink-0 rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
                 >
@@ -696,7 +709,9 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                         disabled={cargandoTarjeta}
                         onClick={() => {
                           if (mostrarPanoramaJefe) {
-                            focoUrl.pushFocoToUrl({ grupoId: g.id, periodo });
+                            intentarNavegacionFocoOutbox({ grupoId: g.id, periodo }, () => {
+                              focoUrl.pushFocoToUrl({ grupoId: g.id, periodo });
+                            });
                             return;
                           }
                           if (capabilities.puedeAccionesPeriodoLiquidacion) {

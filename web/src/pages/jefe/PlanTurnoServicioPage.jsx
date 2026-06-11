@@ -59,6 +59,9 @@ import {
   indiceHorizonteEnVentana,
   resolverIntencionTarjetaConsola,
 } from "../../features/planes/planRefinamientoConsolaUtils.js";
+import ConsolaTripleHorizonteSeccion from "../../features/planes/ConsolaTripleHorizonteSeccion.jsx";
+import { useGuardrailOutboxAlCambiarFoco } from "../../features/planes/useGuardrailOutboxAlCambiarFoco.js";
+import { useAsistenciaOutbox } from "../../features/grilla/useAsistenciaOutbox.js";
 
 function estiloTarjetaGrupo(estado, activo) {
   const baseActivo = activo ? "ring-2 ring-offset-1" : "";
@@ -467,6 +470,29 @@ export default function PlanTurnoServicioPage({
   const consolaPanoramaJefe =
     capabilities.consolaTripleHorizonteEnFrio && !focoUrl.tieneFocoValido;
 
+  const [consolaColAbierta, setConsolaColAbierta] = useState({
+    0: false,
+    1: true,
+    2: false,
+  });
+  const toggleConsolaCol = useCallback((idx) => {
+    setConsolaColAbierta((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  }, []);
+
+  const periodoOutboxLectura = focoUrl.tieneFocoValido ? periodo : periodosPermitidos[1];
+  const outboxPlanes = useAsistenciaOutbox({
+    editorPersonaId: personaId,
+    periodo: periodoOutboxLectura,
+  });
+  const { intentarNavegacionFoco } = useGuardrailOutboxAlCambiarFoco({
+    ops: outboxPlanes.ops,
+    clearOutbox: outboxPlanes.clear,
+    focoOrigenExplicito: {
+      grupoId: focoUrl.tieneFocoValido ? grupoId || focoUrl.grupoIdUrl : "",
+      periodo: focoUrl.tieneFocoValido ? periodo : "",
+    },
+  });
+
   useEffect(() => {
     if (esJefe) setResumenHabilitado(true);
   }, [esJefe]);
@@ -749,7 +775,9 @@ export default function PlanTurnoServicioPage({
   ]);
 
   const seleccionarTarjetaPlan = useCallback(
-    async (p, g, esHistorico = false) => {
+    (p, g, esHistorico = false) => {
+      intentarNavegacionFoco({ grupoId: g.id, periodo: p }, () => {
+        void (async () => {
       focoUrl.pushFocoToUrl({ grupoId: g.id, periodo: p });
       setResumenHabilitado(true);
       setPeriodo(p);
@@ -887,8 +915,16 @@ export default function PlanTurnoServicioPage({
         default:
           return;
       }
+        })();
+      });
     },
-    [resumenGrupoPeriodo, abrirPlanDetalle, focoUrl.pushFocoToUrl, periodosPermitidos],
+    [
+      resumenGrupoPeriodo,
+      abrirPlanDetalle,
+      focoUrl.pushFocoToUrl,
+      periodosPermitidos,
+      intentarNavegacionFoco,
+    ],
   );
 
   return (
@@ -930,7 +966,9 @@ export default function PlanTurnoServicioPage({
               periodoPorDefecto={periodosPermitidos[1]}
               disabled={loading}
               onConfirmarCarga={({ grupoId: gid, periodo: per }) => {
-                focoUrl.pushFocoToUrl({ grupoId: gid, periodo: per });
+                intentarNavegacionFoco({ grupoId: gid, periodo: per }, () => {
+                  focoUrl.pushFocoToUrl({ grupoId: gid, periodo: per });
+                });
               }}
             />
           </div>
@@ -938,8 +976,10 @@ export default function PlanTurnoServicioPage({
             <button
               type="button"
               onClick={() => {
-                focoUrl.clearFocoEnUrl();
-                setGrupoId("");
+                intentarNavegacionFoco({ grupoId: "", periodo: "" }, () => {
+                  focoUrl.clearFocoEnUrl();
+                  setGrupoId("");
+                });
               }}
               className="h-11 shrink-0 rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
@@ -967,14 +1007,14 @@ export default function PlanTurnoServicioPage({
           </p>
           <div className="grid gap-3 lg:grid-cols-3">
             {periodosPermitidos.map((p, idx) => (
-              <section key={`pan-${p}`} className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {HORIZONTE_CONSOLA_TITULOS[idx]}
-                </p>
-                <p className="text-sm font-medium text-slate-900">
-                  {labelPeriodoCard(p, idx).split(" · ")[1]}
-                </p>
-                <div className="mt-2 space-y-2">
+              <ConsolaTripleHorizonteSeccion
+                key={`pan-${p}`}
+                idx={idx}
+                tituloHorizonte={HORIZONTE_CONSOLA_TITULOS[idx]}
+                subtituloMes={labelPeriodoCard(p, idx).split(" · ")[1]}
+                abierto={Boolean(consolaColAbierta[idx])}
+                onToggle={toggleConsolaCol}
+              >
                   {(gruposPorPeriodo[p] || []).length === 0 ? (
                     <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500">
                       Sin grupos disponibles.
@@ -1014,8 +1054,7 @@ export default function PlanTurnoServicioPage({
                       );
                     })
                   )}
-                </div>
-              </section>
+              </ConsolaTripleHorizonteSeccion>
             ))}
           </div>
         </Card>
@@ -1315,12 +1354,14 @@ export default function PlanTurnoServicioPage({
           <p className="mb-3 text-xs text-slate-600">Bandeja tipo inbox para planes enviados/en revisión de grupos hijos.</p>
           <div className="grid gap-3 lg:grid-cols-3">
             {periodosPermitidos.map((p, idx) => (
-              <section key={`inbox-${p}`} className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {HORIZONTE_CONSOLA_TITULOS[idx]}
-                </p>
-                <p className="text-sm font-medium text-slate-900">{labelPeriodoCard(p, idx).split(" · ")[1]}</p>
-                <div className="mt-2 space-y-2">
+              <ConsolaTripleHorizonteSeccion
+                key={`inbox-${p}`}
+                idx={idx}
+                tituloHorizonte={HORIZONTE_CONSOLA_TITULOS[idx]}
+                subtituloMes={labelPeriodoCard(p, idx).split(" · ")[1]}
+                abierto={Boolean(consolaColAbierta[idx])}
+                onToggle={toggleConsolaCol}
+              >
                   {(gruposPorPeriodo[p] || [])
                     .filter((g) => grupoTieneInboxPendiente(resumenGrupoPeriodo[p]?.[g.id]?.items || []))
                     .map((g) => {
@@ -1357,8 +1398,7 @@ export default function PlanTurnoServicioPage({
                       Sin pendientes de aprobación.
                     </p>
                   ) : null}
-                </div>
-              </section>
+              </ConsolaTripleHorizonteSeccion>
             ))}
           </div>
         </Card>

@@ -158,6 +158,33 @@ export function validarOutboxCoherenteVentana(ops, ventanaTres) {
  * @param {{ grupoId: string; periodo: string }} focoOrigen
  * @param {{ grupoId: string; periodo: string }} focoDestino
  */
+export const COPY_CONFIRMAR_DESCARTE_OUTBOX_AL_CAMBIAR_FOCO =
+  "Tenés cambios pendientes de aplicación en la grilla. Si cambiás de período o sector (o volvés a la consola), perdés las modificaciones locales. ¿Descartar los cambios y continuar?";
+
+/**
+ * @param {Array<Record<string, unknown>>} ops
+ * @returns {{ grupoId: string; periodo: string }}
+ */
+export function inferirFocoDesdeOpsOutbox(ops) {
+  const op = (ops || [])[0];
+  if (!op) return { grupoId: "", periodo: "" };
+  return {
+    grupoId: String(op.grupoId || op.grupo_id || "").trim(),
+    periodo: String(op.periodo || "").trim(),
+  };
+}
+
+/**
+ * @param {{ grupoId?: string; periodo?: string }} focoExplicito
+ * @param {Array<Record<string, unknown>>} ops
+ */
+export function resolverFocoOrigenOutbox(focoExplicito, ops) {
+  const g = String(focoExplicito?.grupoId || "").trim();
+  const p = String(focoExplicito?.periodo || "").trim();
+  if (g && p) return { grupoId: g, periodo: p };
+  return inferirFocoDesdeOpsOutbox(ops);
+}
+
 export function debeAdvertirCambioFocoConOutbox(opsPendientes, focoOrigen, focoDestino) {
   const ops = opsPendientes || [];
   if (!ops.length) return false;

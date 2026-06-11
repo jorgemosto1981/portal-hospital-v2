@@ -5,9 +5,11 @@ import {
   bloqueaCrearPlanHistorico,
   debeAdvertirCambioFocoConOutbox,
   esHorizonteCierre,
+  inferirFocoDesdeOpsOutbox,
   HORIZONTE_CONSOLA_IDX,
   indiceHorizonteEnVentana,
   opsOutboxFueraDeFoco,
+  resolverFocoOrigenOutbox,
   resolverIntencionTarjetaConsola,
   resolverPeriodoFocoEnVentana,
   validarOutboxCoherenteVentana,
@@ -149,6 +151,32 @@ describe("outbox y cambio de foco", () => {
         { grupoId: "gdt_A", periodo: "2026-06" },
       ),
     ).toBe(false);
+  });
+});
+
+describe("resolverFocoOrigenOutbox", () => {
+  it("prioriza foco explícito", () => {
+    expect(
+      resolverFocoOrigenOutbox(
+        { grupoId: "gdt_A", periodo: "2026-06" },
+        [{ grupoId: "gdt_B", periodo: "2026-07" }],
+      ),
+    ).toEqual({ grupoId: "gdt_A", periodo: "2026-06" });
+  });
+
+  it("infiere desde ops si no hay foco", () => {
+    expect(
+      resolverFocoOrigenOutbox(
+        { grupoId: "", periodo: "" },
+        [{ grupo_id: "gdt_X", periodo: "2026-05" }],
+      ),
+    ).toEqual({ grupoId: "gdt_X", periodo: "2026-05" });
+  });
+});
+
+describe("inferirFocoDesdeOpsOutbox", () => {
+  it("vacío sin ops", () => {
+    expect(inferirFocoDesdeOpsOutbox([])).toEqual({ grupoId: "", periodo: "" });
   });
 });
 
