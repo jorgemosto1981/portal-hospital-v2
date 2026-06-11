@@ -6,6 +6,7 @@ import {
   actorTeoriaDesdeSesion,
   evaluarCapabilitiesGestionTurno,
 } from "./grillaGestionTurnoCapabilities.js";
+import { CATALOGO_MOTIVOS_NOVEDAD_GSO } from "./grillaMotivosNovedadCatalogo.js";
 import {
   MOTIVOS_RECHAZO_TEORIA,
   copyMotivoRechazoTeoriaUsuario,
@@ -17,6 +18,12 @@ export const COPY_PERIODO_CERRADO_JEFE =
 
 export const COPY_BADGE_RRHH_BYPASS =
   "Acción con privilegios de Dirección de RRHH (Bypass de Bloqueo)";
+
+export const COPY_OUTBOX_PERIODO_CERRADO =
+  "No se pueden aplicar los cambios: el lote contiene días correspondientes a un período ya cerrado para liquidación.";
+
+export const COPY_OUTBOX_CODIGO_EXCLUSIVO_RRHH =
+  "No se pueden aplicar los cambios: el lote incluye justificaciones exclusivas de RRHH.";
 
 /**
  * @param {string | null | undefined} motivoRechazo
@@ -77,6 +84,64 @@ export function mapearOpcionesNovedadCatalogo(catalogo, ctx) {
       disabled: !codigoPermitido,
     };
   });
+}
+
+/**
+ * @param {Record<string, unknown>} op
+ */
+export function opTieneCodigoNovedadExclusivoRrhh(op) {
+  const motivo = String(op?.motivo || "").trim();
+  const match = motivo.match(/^\[([A-Z0-9_]+)\]/);
+  if (!match) return false;
+  const cod = match[1];
+  return CATALOGO_MOTIVOS_NOVEDAD_GSO.some(
+    (n) => n.codigo === cod && n.requiereAuditoriaCentral === true,
+  );
+}
+
+/**
+ * @param {{
+ *   ops?: Array<Record<string, unknown>>;
+ *   esAuditoriaCentral?: boolean;
+ *   periodoRestringido?: boolean;
+ *   puedeModificarTeoriaLote?: boolean;
+ * }} opts
+ */
+export function evaluarGuardrailsAplicarOutbox(opts) {
+  const ops = Array.isArray(opts?.ops) ? opts.ops : [];
+  const esAuditoriaCentral = opts?.esAuditoriaCentral === true;
+  const periodoRestringido = opts?.periodoRestringido === true;
+  const puedeModificarTeoriaLote = opts?.puedeModificarTeoriaLote !== false;
+
+  if (esAuditoriaCentral) {
+    return {
+      puedeAplicarBatch: true,
+      mensajeBloqueo: null,
+      muestraBadgeBypassRrhh: periodoRestringido,
+    };
+  }
+
+  if (periodoRestringido || !puedeModificarTeoriaLote) {
+    return {
+      puedeAplicarBatch: false,
+      mensajeBloqueo: COPY_OUTBOX_PERIODO_CERRADO,
+      muestraBadgeBypassRrhh: false,
+    };
+  }
+
+  if (ops.some(opTieneCodigoNovedadExclusivoRrhh)) {
+    return {
+      puedeAplicarBatch: false,
+      mensajeBloqueo: COPY_OUTBOX_CODIGO_EXCLUSIVO_RRHH,
+      muestraBadgeBypassRrhh: false,
+    };
+  }
+
+  return {
+    puedeAplicarBatch: true,
+    mensajeBloqueo: null,
+    muestraBadgeBypassRrhh: false,
+  };
 }
 
 export function evaluarGuardrailsModificacionTeoria(opts) {

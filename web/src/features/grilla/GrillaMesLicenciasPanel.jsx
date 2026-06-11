@@ -16,6 +16,7 @@ import {
 } from "./grillaGestionTurnoCapabilities.js";
 import {
   buildGuardrailNovedadContext,
+  evaluarGuardrailsAplicarOutbox,
   evaluarGuardrailsModificacionTeoria,
 } from "./grillaGuardrailsTeoriaUi.js";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
@@ -379,8 +380,40 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
     });
   }, [esRrhh, vista.grupoId, vista.periodo, vista.grupoActivoLabel]);
 
+  const guardrailsOutbox = useMemo(() => {
+    const loteCap = evaluarGuardrailsModificacionTeoria({
+      usuarioActual: {
+        id: personaId,
+        esJefe,
+        esRrhh,
+        nivelJerarquico: nivelJerarquicoActor,
+      },
+      agenteTarget: { id: "__outbox_lote__", nivelJerarquico: 1 },
+      estadoPlan: vista.planMensualEstado || "BORRADOR",
+      periodoGso,
+    });
+    return evaluarGuardrailsAplicarOutbox({
+      ops: outbox.ops,
+      esAuditoriaCentral: esRrhh,
+      periodoRestringido: periodoGso.cerrado === true || periodoGso.ventanaM1 === true,
+      puedeModificarTeoriaLote: loteCap.puedeModificarTeoria,
+    });
+  }, [
+    outbox.ops,
+    personaId,
+    esJefe,
+    esRrhh,
+    nivelJerarquicoActor,
+    vista.planMensualEstado,
+    periodoGso,
+  ]);
+
   const handleAplicarCambios = async () => {
     if (!outbox.hasPending || aplicandoBatch) return;
+    if (!guardrailsOutbox.puedeAplicarBatch) {
+      toast.error(guardrailsOutbox.mensajeBloqueo || "No se pueden aplicar los cambios.");
+      return;
+    }
     setAplicandoBatch(true);
     try {
       const result = await aplicarBatchAsistencia(outbox.ops, {
@@ -672,12 +705,15 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         </div>
       ) : null}
 
-      {outbox.hasPending && vista.gsoPermiteEscritura ? (
+      {outbox.hasPending ? (
         <GrillaOutboxPendientesBanner
           ops={outbox.ops}
           aplicandoBatch={aplicandoBatch}
           personaLabels={etiquetasPersona}
           grupoLabels={etiquetasGrupo}
+          puedeAplicarBatch={guardrailsOutbox.puedeAplicarBatch}
+          mensajeBloqueoBatch={guardrailsOutbox.mensajeBloqueo}
+          muestraBadgeBypassRrhh={guardrailsOutbox.muestraBadgeBypassRrhh}
           onAplicar={() => void handleAplicarCambios()}
           onLimpiar={() => {
             outbox.clear();

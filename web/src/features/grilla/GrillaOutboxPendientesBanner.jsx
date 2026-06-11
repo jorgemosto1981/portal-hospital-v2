@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
+import GrillaGuardrailTeoriaAviso from "./GrillaGuardrailTeoriaAviso.jsx";
+
 import {
   agruparOpsOutboxPorTarjeta,
   agruparOpsOutboxPorTitulo,
@@ -128,6 +130,9 @@ function OutboxOpsPorFuncion({
  *   onLimpiar: () => void;
  *   onQuitarOp?: (opId: string) => void;
  *   onAbrirAyuda?: () => void;
+ *   puedeAplicarBatch?: boolean;
+ *   mensajeBloqueoBatch?: string | null;
+ *   muestraBadgeBypassRrhh?: boolean;
  * }} props
  */
 export default function GrillaOutboxPendientesBanner({
@@ -140,6 +145,9 @@ export default function GrillaOutboxPendientesBanner({
   onLimpiar,
   onQuitarOp,
   onAbrirAyuda,
+  puedeAplicarBatch = true,
+  mensajeBloqueoBatch = null,
+  muestraBadgeBypassRrhh = false,
 }) {
   const count = ops.length;
   const tarjetas = useMemo(() => agruparOpsOutboxPorTarjeta(ops), [ops]);
@@ -185,7 +193,7 @@ export default function GrillaOutboxPendientesBanner({
   };
 
   const handleAplicar = () => {
-    if (aplicandoBatch) return;
+    if (aplicandoBatch || !puedeAplicarBatch) return;
     if (!confirmAplicar) {
       setConfirmLimpiar(false);
       setConfirmRemoveId(null);
@@ -262,12 +270,18 @@ export default function GrillaOutboxPendientesBanner({
         })}
       </div>
 
+      <GrillaGuardrailTeoriaAviso
+        muestraBadgeBypassRrhh={muestraBadgeBypassRrhh}
+        mensajeBloqueo={!puedeAplicarBatch ? mensajeBloqueoBatch : null}
+      />
+
       <div className="mt-2 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={handleAplicar}
-          disabled={aplicandoBatch}
-          className={`min-h-11 rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60 ${
+          disabled={aplicandoBatch || !puedeAplicarBatch}
+          title={!puedeAplicarBatch ? mensajeBloqueoBatch || undefined : undefined}
+          className={`min-h-11 rounded-lg px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 ${
             confirmAplicar
               ? "bg-emerald-700 active:bg-emerald-800"
               : "bg-indigo-700 active:bg-indigo-800"

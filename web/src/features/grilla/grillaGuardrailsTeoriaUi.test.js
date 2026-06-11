@@ -5,8 +5,12 @@ import {
   COPY_BADGE_RRHH_BYPASS,
   COPY_PERIODO_CERRADO_JEFE,
   buildGuardrailNovedadContext,
+  COPY_OUTBOX_CODIGO_EXCLUSIVO_RRHH,
+  COPY_OUTBOX_PERIODO_CERRADO,
+  evaluarGuardrailsAplicarOutbox,
   evaluarGuardrailsModificacionTeoria,
   mapearOpcionesNovedadCatalogo,
+  opTieneCodigoNovedadExclusivoRrhh,
   puedeAsignarCodigoNovedad,
 } from "./grillaGuardrailsTeoriaUi.js";
 
@@ -60,5 +64,42 @@ describe("guardrail combo novedades", () => {
     const ctx = buildGuardrailNovedadContext({ puedeModificarTeoria: true, esAuditoriaCentral: true });
     const mapped = mapearOpcionesNovedadCatalogo(CATALOGO_MOTIVOS_NOVEDAD_GSO, ctx);
     expect(mapped.every((o) => !o.disabled)).toBe(true);
+  });
+});
+
+describe("evaluarGuardrailsAplicarOutbox", () => {
+  it("bloquea jefe con período restringido", () => {
+    const r = evaluarGuardrailsAplicarOutbox({
+      ops: [{ motivo: "[URG_OPE] ok" }],
+      esAuditoriaCentral: false,
+      periodoRestringido: true,
+      puedeModificarTeoriaLote: false,
+    });
+    expect(r.puedeAplicarBatch).toBe(false);
+    expect(r.mensajeBloqueo).toBe(COPY_OUTBOX_PERIODO_CERRADO);
+  });
+
+  it("bloquea jefe si el lote trae código exclusivo RRHH", () => {
+    expect(
+      opTieneCodigoNovedadExclusivoRrhh({ motivo: "[AUD_LIQ] Regularización liquidación (auditoría central): x" }),
+    ).toBe(true);
+    const r = evaluarGuardrailsAplicarOutbox({
+      ops: [{ motivo: "[AUD_LIQ] x" }],
+      esAuditoriaCentral: false,
+      periodoRestringido: false,
+      puedeModificarTeoriaLote: true,
+    });
+    expect(r.puedeAplicarBatch).toBe(false);
+    expect(r.mensajeBloqueo).toBe(COPY_OUTBOX_CODIGO_EXCLUSIVO_RRHH);
+  });
+
+  it("RRHH aplica batch con bypass en período cerrado", () => {
+    const r = evaluarGuardrailsAplicarOutbox({
+      ops: [{ motivo: "[AUD_LIQ] ok" }],
+      esAuditoriaCentral: true,
+      periodoRestringido: true,
+    });
+    expect(r.puedeAplicarBatch).toBe(true);
+    expect(r.muestraBadgeBypassRrhh).toBe(true);
   });
 });
