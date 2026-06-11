@@ -53,6 +53,12 @@ import {
 } from "../../features/grilla/teoriaPermisosGso.js";
 import SelectorFocoGdt from "../../features/grilla/SelectorFocoGdt.jsx";
 import { usePlanTurnoFocoUrl } from "../../features/planes/usePlanTurnoFocoUrl.js";
+import {
+  esHorizonteCierre,
+  HORIZONTE_CONSOLA_TITULOS,
+  indiceHorizonteEnVentana,
+  resolverIntencionTarjetaConsola,
+} from "../../features/planes/planRefinamientoConsolaUtils.js";
 
 function estiloTarjetaGrupo(estado, activo) {
   const baseActivo = activo ? "ring-2 ring-offset-1" : "";
@@ -164,8 +170,9 @@ function labelPeriodoCard(periodo, idx) {
   const [anio, mes] = String(periodo || "").split("-").map(Number);
   const fecha = new Date(anio, (mes || 1) - 1, 1);
   const mesTxt = fecha.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
-  const pref = idx === 0 ? "Mes anterior" : idx === 1 ? "Mes actual" : "Mes siguiente";
-  return `${pref} · ${mesTxt}`;
+  const etiquetaHorizonte = HORIZONTE_CONSOLA_TITULOS[idx] ?? HORIZONTE_CONSOLA_TITULOS[1];
+  const rol = etiquetaHorizonte.split(" · ")[0] || etiquetaHorizonte;
+  return `${rol} · ${mesTxt}`;
 }
 
 function formatDateTime(value) {
@@ -747,6 +754,10 @@ export default function PlanTurnoServicioPage({
       setResumenHabilitado(true);
       setPeriodo(p);
       setGrupoId(g.id);
+
+      const idxHorizonte = indiceHorizonteEnVentana(p, periodosPermitidos);
+      const esHistoricoCol = esHistorico || esHorizonteCierre(idxHorizonte);
+
       let meta = resumenGrupoPeriodo[p]?.[g.id];
       let items = Array.isArray(meta?.items) ? meta.items : [];
       if (!meta || items.length === 0) {
@@ -756,70 +767,128 @@ export default function PlanTurnoServicioPage({
             periodo: p,
           });
           items = res?.data?.items || [];
-          meta = { estado: estadoResumenGrupo(items), cantidad: items.length, items };
+          meta = {
+            ...meta,
+            estado: estadoResumenGrupo(items),
+            cantidad: items.length,
+            items,
+          };
         } catch {
           items = [];
           meta = { estado: "SIN_PLAN", cantidad: 0, items: [] };
         }
       }
 
-      if (esHistorico && (meta.estado === "SIN_PLAN" || items.length === 0)) {
-        showFeedback("Mes anterior en modo histórico: no se pueden crear planes.");
-        return;
-      }
+      const estadoResumen =
+        items.length > 0 ? estadoResumenGrupo(items) : String(meta.estado || "SIN_PLAN");
+      const cantidadItems = items.length;
 
-      if (meta.estado === "SIN_PLAN" || items.length === 0) {
-        let hayPlanificados = meta.hay_planificados === true;
+      if (estadoResumen === "SIN_PLAN" || cantidadItems === 0) {
+        let hayAgentesPlanificados = meta.hay_planificados;
         if (meta.hay_planificados !== true && meta.hay_planificados !== false) {
           try {
             const ctx = await callListarContextoPlanGrupo({ grupo_id: g.id, periodo: p });
-            hayPlanificados = ctx?.data?.hay_agentes_planificados === true;
+            hayAgentesPlanificados = ctx?.data?.hay_agentes_planificados === true;
           } catch {
-            hayPlanificados = false;
+            hayAgentesPlanificados = false;
           }
         }
-        if (!hayPlanificados) {
-          setPlanEdicion({ modoVistaEquipo: true, tipo_plan: "mensual" });
-          return;
+
+        const intencion = resolverIntencionTarjetaConsola({
+          indiceHorizonte: idxHorizonte,
+          estadoResumen: "SIN_PLAN",
+          cantidadItems: 0,
+          hayAgentesPlanificados,
+          principalRechazado: false,
+          incorporacionEditable: false,
+          principalSoloLectura: false,
+        });
+
+        switch (intencion.kind) {
+          case "FEEDBACK_HISTORICO_SIN_PLAN":
+            showFeedback(
+              intencion.mensajeFeedback ||
+                "Mes anterior en modo histórico: no se pueden crear planes.",
+            );
+            return;
+          case "ABRIR_VISTA_EQUIPO":
+            setPlanEdicion({ modoVistaEquipo: true, tipo_plan: "mensual" });
+            return;
+          case "CREAR_PLAN_NUEVO":
+            setPlanEdicion({ nuevo: true, tipo_plan: "mensual" });
+            return;
+          default:
+            return;
         }
-        setPlanEdicion({ nuevo: true, tipo_plan: "mensual" });
-        return;
       }
 
       const principal = planPrincipalCanonico(items);
       const incorporacion = planIncorporacionActivo(items);
       if (!principal && !incorporacion) return;
-      if (esHistorico) {
-        const planRechazado = principal && esBorradorRechazado(principal) ? principal : null;
-        if (planRechazado) {
-          setPlanOpciones({
-            plan: planRechazado,
-            estado: planRechazado.estado,
-            grupoLabel: g.label,
-            periodo: p,
-            mesHistoricoRechazado: true,
-          });
-          return;
-        }
-        if (principal) void abrirPlanDetalle(principal);
-        return;
-      }
-      if (incorporacion && (incorporacion.estado === "BORRADOR" || incorporacion.estado === "EN_REVISION")) {
-        setPlanEdicion({
-          ...incorporacion,
-          agentesNuevos: meta.agentes_nuevos || [],
-        });
-        return;
-      }
-      if (principal && (principal.estado === "HABILITADO" || principal.estado === "CERRADO")) {
-        void abrirPlanDetalle(principal);
-        return;
-      }
+
+      const principalRechazado = Boolean(principal && esBorradorRechazado(principal));
+      const incorporacionEditable = Boolean(
+        !esHistoricoCol &&
+          incorporacion &&
+          (incorporacion.estado === "BORRADOR" || incorporacion.estado === "EN_REVISION"),
+      );
+      const principalSoloLectura = Boolean(
+        principal && (principal.estado === "HABILITADO" || principal.estado === "CERRADO"),
+      );
+
+      const intencion = resolverIntencionTarjetaConsola({
+        indiceHorizonte: idxHorizonte,
+        estadoResumen,
+        cantidadItems,
+        hayAgentesPlanificados: true,
+        principalRechazado,
+        incorporacionEditable,
+        principalSoloLectura,
+      });
+
       const plan = principal || incorporacion;
-      if (!plan) return;
-      setPlanOpciones({ plan, estado: plan.estado, grupoLabel: g.label, periodo: p });
+
+      switch (intencion.kind) {
+        case "MODAL_OPCIONES_RECHAZADO_HISTORICO":
+          if (principalRechazado && principal) {
+            setPlanOpciones({
+              plan: principal,
+              estado: principal.estado,
+              grupoLabel: g.label,
+              periodo: p,
+              mesHistoricoRechazado: true,
+            });
+          }
+          return;
+        case "VER_DETALLE_HISTORICO":
+          if (principal) void abrirPlanDetalle(principal);
+          return;
+        case "EDITAR_INCORPORACION":
+          if (incorporacion) {
+            setPlanEdicion({
+              ...incorporacion,
+              agentesNuevos: meta.agentes_nuevos || [],
+            });
+          }
+          return;
+        case "VER_DETALLE":
+          if (principal) void abrirPlanDetalle(principal);
+          return;
+        case "MODAL_OPCIONES_PLAN":
+          if (plan) {
+            setPlanOpciones({
+              plan,
+              estado: plan.estado,
+              grupoLabel: g.label,
+              periodo: p,
+            });
+          }
+          return;
+        default:
+          return;
+      }
     },
-    [resumenGrupoPeriodo, abrirPlanDetalle, focoUrl.pushFocoToUrl],
+    [resumenGrupoPeriodo, abrirPlanDetalle, focoUrl.pushFocoToUrl, periodosPermitidos],
   );
 
   return (
@@ -900,7 +969,7 @@ export default function PlanTurnoServicioPage({
             {periodosPermitidos.map((p, idx) => (
               <section key={`pan-${p}`} className="rounded-xl border border-slate-200 bg-white p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {["Mes anterior · Cierre", "Mes actual · Operación", "Mes próximo · Planificación"][idx]}
+                  {HORIZONTE_CONSOLA_TITULOS[idx]}
                 </p>
                 <p className="text-sm font-medium text-slate-900">
                   {labelPeriodoCard(p, idx).split(" · ")[1]}
@@ -1248,7 +1317,7 @@ export default function PlanTurnoServicioPage({
             {periodosPermitidos.map((p, idx) => (
               <section key={`inbox-${p}`} className="rounded-xl border border-slate-200 bg-white p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {idx === 0 ? "Mes anterior" : idx === 1 ? "Mes actual" : "Mes siguiente"}
+                  {HORIZONTE_CONSOLA_TITULOS[idx]}
                 </p>
                 <p className="text-sm font-medium text-slate-900">{labelPeriodoCard(p, idx).split(" · ")[1]}</p>
                 <div className="mt-2 space-y-2">
