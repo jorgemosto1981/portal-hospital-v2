@@ -61,7 +61,7 @@ function ModalRechazo({ planId, onConfirm, onCancel }) {
   );
 }
 
-export default function BandejaAprobaciones({ planes, onTransicion, operando, esRrhh, mostrarGrupo }) {
+export default function BandejaAprobaciones({ planes, onTransicion, operando, mostrarGrupo }) {
   const [rechazoModal, setRechazoModal] = useState(null);
   const [planVer, setPlanVer] = useState(null);
 

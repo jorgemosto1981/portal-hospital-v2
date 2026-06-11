@@ -2,9 +2,18 @@ import { useCallback, useEffect, useState } from "react";
 
 import GrillaMesLicenciasPanel from "../features/grilla/GrillaMesLicenciasPanel.jsx";
 import ModalCambioTurno from "../features/grilla/ModalCambioTurno.jsx";
+import { permiteExportarReadModelLaboral } from "../features/routing/portalPerifericoCapabilities.js";
+import { resolveGrillaOperativaCapabilities } from "../features/grilla/grillaOperativaCapabilities.js";
+import { GRILLA_OPERATIVA_SHELL } from "../features/grilla/grillaOperativaCapabilities.js";
 import { listarReadModelLaboralOperativo } from "../services/readModelLaboralService.js";
 
-export default function GrillaOperativa() {
+/**
+ * Laboratorio read-model (no enrutado en App). Exportaciones acotadas por shell explícito.
+ * @param {{ shellExport?: "jefe"|"rrhh" }} [props]
+ */
+export default function GrillaOperativa({ shellExport = GRILLA_OPERATIVA_SHELL.JEFE } = {}) {
+  const capExport = resolveGrillaOperativaCapabilities(shellExport);
+  const puedeExportar = permiteExportarReadModelLaboral(capExport);
   const [tab, setTab] = useState("laboral");
   const [fechaCorte, setFechaCorte] = useState(() => new Date().toISOString().slice(0, 10));
   const [personaId, setPersonaId] = useState("");
@@ -223,12 +232,20 @@ export default function GrillaOperativa() {
       {error ? <p className="mt-3 text-sm text-rose-700">{error}</p> : null}
 
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={exportarJson} className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700">
-          Exportar JSON
-        </button>
-        <button type="button" onClick={exportarCsv} className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700">
-          Exportar CSV
-        </button>
+        {puedeExportar ? (
+          <>
+            <button type="button" onClick={exportarJson} className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700">
+              Exportar JSON
+            </button>
+            <button type="button" onClick={exportarCsv} className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700">
+              Exportar CSV
+            </button>
+          </>
+        ) : (
+          <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            Exportación masiva del read model solo en shell RRHH (capabilities), no por claim JWT.
+          </p>
+        )}
         <span className="rounded-xl bg-slate-100 px-3 py-2 text-xs text-slate-600">
           Filtrados por warning: {itemsFiltrados.length} / base: {items.length}
         </span>

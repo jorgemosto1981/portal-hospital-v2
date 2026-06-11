@@ -1,19 +1,27 @@
-import { rolesHlcFromClaims, claimsIncludeRrhh } from "../../features/routing/portalRole.js";
+import { rolesHlcFromClaims } from "../../features/routing/portalRole.js";
+import {
+  puedeAccederShellGsoJefe,
+  shellMenuPortalDesdePathname,
+} from "../../features/routing/portalPerifericoCapabilities.js";
 
 /**
  * @param {string} grupoId
  * @param {Record<string, unknown> | null | undefined} claims
  * @param {(roles: readonly string[]) => boolean} hasPortalRoles
+ * @param {{ pathname?: string }} [opts]
  */
-export function grupoAccesiblePorClaims(grupoId, claims, hasPortalRoles) {
+export function grupoAccesiblePorClaims(grupoId, claims, hasPortalRoles, opts = {}) {
   const hlc = rolesHlcFromClaims(claims);
+  const shellActiva = shellMenuPortalDesdePathname(opts.pathname);
+
+  if (shellActiva === "jefe" && grupoId === "rrhh") return false;
+  if (shellActiva === "rrhh" && grupoId === "jefe") return false;
+
   switch (grupoId) {
     case "usuario":
       return true;
     case "jefe":
-      if (claimsIncludeRrhh(claims)) return true;
-      if (claims && claims.tiene_subordinados === true) return true;
-      return hasPortalRoles(["jefe"]) || hlc.includes("CFG_JEFE");
+      return puedeAccederShellGsoJefe(claims, hasPortalRoles) || hlc.includes("CFG_JEFE");
     case "rrhh":
       return hasPortalRoles(["rrhh", "admin"]) || hlc.includes("CFG_RRHH");
     case "medico":

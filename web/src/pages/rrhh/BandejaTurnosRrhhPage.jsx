@@ -184,7 +184,6 @@ export default function BandejaTurnosRrhhPage() {
             planes={planesPendientesPagina}
             onTransicion={handleTransicion}
             operando={operando}
-            esRrhh={true}
             mostrarGrupo={true}
           />
           <div className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-xs text-slate-600">

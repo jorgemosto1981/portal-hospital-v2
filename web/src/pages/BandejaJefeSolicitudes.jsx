@@ -6,7 +6,9 @@ import Card from "../components/ui/Card.jsx";
 import BandejaJefeSolicitudDetalle from "../features/solicitudes/BandejaJefeSolicitudDetalle.jsx";
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
-import { claimsIncludeJefe, claimsIncludeRrhh } from "../features/routing/portalRole.js";
+import { PORTAL_FEATURE_SHELL } from "../features/grilla/actorPortalTeoriaDesdeShell.js";
+import { claimsIncludeJefe } from "../features/routing/portalRole.js";
+import { resolveBandejaSolicitudesCapabilities } from "../features/routing/portalPerifericoCapabilities.js";
 import BandejaSolicitudResumenFilas from "../features/solicitudes/BandejaSolicitudResumenFilas.jsx";
 import {
   FILTROS_VISTA_JEFE,
@@ -18,7 +20,7 @@ import { periodosVentanaJefe, rangoFechasVentanaJefe } from "../features/jefe/pe
 export default function BandejaJefeSolicitudes() {
   const { user } = useAuthSession();
   const { claims } = useAuthClaims(user);
-  const esRrhh = claimsIncludeRrhh(claims);
+  const bandejaCap = resolveBandejaSolicitudesCapabilities(PORTAL_FEATURE_SHELL.JEFE);
   const esJefe = claimsIncludeJefe(claims);
   const periodos = periodosVentanaJefe();
   const rango = rangoFechasVentanaJefe();
@@ -86,7 +88,7 @@ export default function BandejaJefeSolicitudes() {
     }
   }
 
-  if (!esJefe && !esRrhh) {
+  if (bandejaCap.requiereClaimJefeEnRuta && !esJefe) {
     return (
       <Card className="mx-auto mt-6 w-full max-w-2xl p-4">
         <p className="text-sm text-slate-700">Sin permisos de jefatura para esta sección.</p>
@@ -103,7 +105,7 @@ export default function BandejaJefeSolicitudes() {
           <span className="ml-1.5 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
             Ventana activa: {periodos[0]} · {periodos[1]} · {periodos[2]}
           </span>
-          {esRrhh ? (
+          {bandejaCap.muestraBadgeSesionRrhh ? (
             <span className="ml-1.5 inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800">
               Sesión RRHH
             </span>

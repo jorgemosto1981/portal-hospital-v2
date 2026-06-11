@@ -2,22 +2,18 @@ import { Navigate } from "react-router-dom";
 
 import { useAuthClaims } from "../auth/useAuthClaims.js";
 import { useAuthSession } from "../auth/useAuthSession.js";
-import { claimsIncludeJefe, claimsIncludeRrhh } from "./portalRole.js";
+import { resolveGrillaPortalRedirectPath } from "./portalPerifericoCapabilities.js";
 import { GateSpinner } from "./RouteGuards.jsx";
 
-/** Atajo `/portal/grilla` → ruta según rol (RRHH vs jefatura). */
+/** Atajo `/portal/grilla` → shell GSO según última visita + gates (sin `claimsIncludeRrhh`). */
 export default function GrillaPortalRedirect() {
   const { user, authPending } = useAuthSession();
-  const { claims, claimsLoading } = useAuthClaims(user);
+  const { claims, claimsLoading, hasPortalRoles } = useAuthClaims(user);
 
   if (authPending || claimsLoading) {
     return <GateSpinner label="Redirigiendo a grilla…" />;
   }
-  if (claimsIncludeRrhh(claims)) {
-    return <Navigate to="/portal/rrhh/grilla-operativa" replace />;
-  }
-  if (claimsIncludeJefe(claims)) {
-    return <Navigate to="/portal/jefe/grilla-operativa" replace />;
-  }
-  return <Navigate to="/portal/home" replace />;
+
+  const destino = resolveGrillaPortalRedirectPath(claims, hasPortalRoles);
+  return <Navigate to={destino} replace />;
 }

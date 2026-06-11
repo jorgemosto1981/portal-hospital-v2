@@ -28,6 +28,7 @@ describe("grillaOperativaCapabilities", () => {
     expect(cap.consolaTripleHorizonteEnFrio).toBe(false);
     expect(cap.muestraBandejaAuditoriaDiaria).toBe(true);
     expect(cap.puedeVerTramosCrudosFichadas).toBe(true);
+    expect(cap.permiteExportarMatrizMacro).toBe(true);
   });
 
   it("Jefe shell: HLg vigente, sin liquidación ni fichadas reales", () => {
@@ -41,6 +42,7 @@ describe("grillaOperativaCapabilities", () => {
     expect(cap.consolaTripleHorizonteEnFrio).toBe(true);
     expect(cap.muestraBandejaAuditoriaDiaria).toBe(false);
     expect(cap.puedeVerTramosCrudosFichadas).toBe(false);
+    expect(cap.permiteExportarMatrizMacro).toBe(false);
   });
 
   it("variant legacy mapea a shells", () => {

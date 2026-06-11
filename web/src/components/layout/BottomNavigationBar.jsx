@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import { GRUPOS_MENU_RAIZ, MODULOS_PORTAL } from "../../constants/modulosEstado.js";
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
@@ -262,6 +263,7 @@ function ChevronIcon({ open }) {
 
 /** Navegación compacta móvil (acordeón por rol) + sidebar en md+. */
 export default function BottomNavigationBar({ activeTab, onTabChange, className = "" }) {
+  const { pathname } = useLocation();
   const { user } = useAuthSession();
   const { hasPortalRoles, claims } = useAuthClaims(user);
   const { puedeSolicitarArticulo } = useArticulosIngresoMenu();
@@ -284,9 +286,10 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
         items: visibleTabs.filter((t) => t.grupo === bloque.id),
       })).filter(
         ({ bloque, items }) =>
-          items.length > 0 && grupoAccesiblePorClaims(bloque.id, claims, hasPortalRoles),
+          items.length > 0 &&
+          grupoAccesiblePorClaims(bloque.id, claims, hasPortalRoles, { pathname }),
       ),
-    [visibleTabs, claims, hasPortalRoles],
+    [visibleTabs, claims, hasPortalRoles, pathname],
   );
 
   const grupoActivo = visibleTabs.find((t) => t.id === activeTab)?.grupo ?? bloquesConItems[0]?.bloque.id ?? null;

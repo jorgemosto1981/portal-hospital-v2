@@ -7,6 +7,10 @@ import { MODULOS_PORTAL, resolverTabPorPath } from "../../constants/modulosEstad
 import { useAuthSession } from "../auth/useAuthSession.js";
 import { useAuthClaims } from "../auth/useAuthClaims.js";
 import { ArticulosIngresoProvider } from "../solicitudes/ArticulosIngresoProvider.jsx";
+import {
+  shellGsoDesdePathname,
+  writeLastVisitedGsoShell,
+} from "./portalGsoShellStorage.js";
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
 
@@ -22,6 +26,11 @@ export default function PortalLayout() {
   const activeTab = resolverTabPorPath(location.pathname);
   const [helpAbierto, setHelpAbierto] = useState(false);
   const [helpFocoTermino, setHelpFocoTermino] = useState("");
+
+  useEffect(() => {
+    const shell = shellGsoDesdePathname(location.pathname);
+    if (shell) writeLastVisitedGsoShell(shell);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handler = (ev) => {
