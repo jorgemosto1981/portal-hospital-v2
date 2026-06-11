@@ -24,6 +24,9 @@ import {
 } from "./grillaGsoSoloLectura.js";
 import { errorMotivoTeoriaOverride } from "./teoriaPermisosGso.js";
 import UrgenciaG1AvisoModal from "./UrgenciaG1AvisoModal.jsx";
+import GrillaMotivoNovedadSection from "./GrillaMotivoNovedadSection.jsx";
+import { componerMotivoNovedadGso } from "./grillaMotivosNovedadCatalogo.js";
+import { buildGuardrailNovedadContext } from "./grillaGuardrailsTeoriaUi.js";
 
 /**
  * Flujo B — cambio de turno propio (origen → destino, aditivo, franco en origen).
@@ -37,6 +40,7 @@ import UrgenciaG1AvisoModal from "./UrgenciaG1AvisoModal.jsx";
  *   onCerrar: () => void;
  *   onAgregarOutbox: (op: Record<string, unknown>) => void;
  *   requiereUrgenciaG1?: boolean;
+ *   guardrailNovedadContext?: import("./grillaGuardrailsTeoriaUi.js").GuardrailNovedadContext;
  * }} props
  */
 export default function ModalCambioTurnoPropio({
@@ -44,6 +48,7 @@ export default function ModalCambioTurnoPropio({
   fechaOrigenYmd,
   personaNombre,
   requiereUrgenciaG1 = false,
+  guardrailNovedadContext = buildGuardrailNovedadContext({ puedeModificarTeoria: true }),
   grupoId,
   periodo,
   opsPendientes,
@@ -54,7 +59,8 @@ export default function ModalCambioTurnoPropio({
   const [capaOrigen, setCapaOrigen] = useState(null);
   const [segmentosOrigen, setSegmentosOrigen] = useState([]);
   const [seleccionados, setSeleccionados] = useState(() => new Set());
-  const [motivo, setMotivo] = useState("");
+  const [codigoNovedadId, setCodigoNovedadId] = useState("");
+  const [motivoDetalle, setMotivoDetalle] = useState("");
   const [cargandoOrigen, setCargandoOrigen] = useState(true);
   const [errorOrigen, setErrorOrigen] = useState("");
   /** Solo turnos del régimen del agente (`turnos_disponibles` del plan). */
@@ -276,6 +282,11 @@ export default function ModalCambioTurnoPropio({
       setErrorSubmit("Seleccioná al menos un tramo del día origen.");
       return;
     }
+    if (!codigoNovedadId) {
+      setErrorSubmit("Elegí el tipo de novedad.");
+      return;
+    }
+    const motivo = componerMotivoNovedadGso(codigoNovedadId, motivoDetalle);
     const errMotivo = errorMotivoTeoriaOverride(motivo, requiereUrgenciaG1);
     if (errMotivo) {
       setErrorSubmit(errMotivo);
@@ -529,25 +540,15 @@ export default function ModalCambioTurnoPropio({
               ) : null}
             </section>
 
-            <section>
-              <h3 className="text-sm font-semibold text-slate-800">
-                4. Motivo
-                <span className="font-normal text-rose-700"> *</span>
-              </h3>
-              <textarea
-                rows={2}
-                maxLength={500}
-                required
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                placeholder={
-                  requiereUrgenciaG1
-                    ? "Justificá la urgencia operativa (obligatorio)…"
-                    : "Motivo operativo (obligatorio)…"
-                }
-                className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
-              />
-            </section>
+            <GrillaMotivoNovedadSection
+              guardrailContext={guardrailNovedadContext}
+              codigoNovedadId={codigoNovedadId}
+              onCodigoNovedadIdChange={setCodigoNovedadId}
+              motivoDetalle={motivoDetalle}
+              onMotivoDetalleChange={setMotivoDetalle}
+              requiereUrgenciaG1={requiereUrgenciaG1}
+              tituloSeccion="4. Motivo"
+            />
           </div>
         )}
 
@@ -576,6 +577,7 @@ export default function ModalCambioTurnoPropio({
               operando
               || cargandoOrigen
               || soloLecturaInfo.activo
+              || !guardrailNovedadContext.puedeModificarTeoria
               || sinRegimen
               || segmentosOrigen.length === 0
               || seleccionados.size === 0

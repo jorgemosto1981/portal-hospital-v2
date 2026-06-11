@@ -21,6 +21,9 @@ import {
 } from "./grillaGsoSoloLectura.js";
 import { errorMotivoTeoriaOverride } from "./teoriaPermisosGso.js";
 import UrgenciaG1AvisoModal from "./UrgenciaG1AvisoModal.jsx";
+import GrillaMotivoNovedadSection from "./GrillaMotivoNovedadSection.jsx";
+import { componerMotivoNovedadGso } from "./grillaMotivosNovedadCatalogo.js";
+import { buildGuardrailNovedadContext } from "./grillaGuardrailsTeoriaUi.js";
 
 /**
  * Flujo C — horas adicionales (RFC §3.3). Solo turno régimen + motivo.
@@ -36,6 +39,7 @@ import UrgenciaG1AvisoModal from "./UrgenciaG1AvisoModal.jsx";
  *   onRegistrado?: () => void;
  *   onAgregarOutbox: (op: Record<string, unknown>) => void;
  *   requiereUrgenciaG1?: boolean;
+ *   guardrailNovedadContext?: import("./grillaGuardrailsTeoriaUi.js").GuardrailNovedadContext;
  * }} props
  */
 export default function ModalTurnoAdicional({
@@ -43,6 +47,7 @@ export default function ModalTurnoAdicional({
   personaNombre,
   fechaYmd,
   requiereUrgenciaG1 = false,
+  guardrailNovedadContext = buildGuardrailNovedadContext({ puedeModificarTeoria: true }),
   grupoId,
   periodo,
   opsPendientes = [],
@@ -61,7 +66,8 @@ export default function ModalTurnoAdicional({
   const [expectedVersionToken, setExpectedVersionToken] = useState("");
   const [soloLecturaInfo, setSoloLecturaInfo] = useState({ activo: false, detalle: "" });
   const [turnoId, setTurnoId] = useState("");
-  const [motivo, setMotivo] = useState("");
+  const [codigoNovedadId, setCodigoNovedadId] = useState("");
+  const [motivoDetalle, setMotivoDetalle] = useState("");
 
   const etiquetaTurno = useCallback(
     (id) => {
@@ -153,6 +159,8 @@ export default function ModalTurnoAdicional({
   const esFeriado = estadoPrevioActual.es_feriado === true;
   const esNoLaborable = estadoPrevioActual.es_no_laborable === true;
 
+  const motivoCompuestoPreview = componerMotivoNovedadGso(codigoNovedadId, motivoDetalle);
+
   const validacion = useMemo(() => {
     if (!turnoId || cargando) return null;
     return validarAdicionalTurno({
@@ -163,7 +171,7 @@ export default function ModalTurnoAdicional({
       periodo,
       turnosPorId: turnosRegimen,
       opsPendientes,
-      motivo,
+      motivo: motivoCompuestoPreview,
     });
   }, [
     turnoId,
@@ -174,7 +182,7 @@ export default function ModalTurnoAdicional({
     periodo,
     turnosRegimen,
     opsPendientes,
-    motivo,
+    motivoCompuestoPreview,
   ]);
 
   const etiquetaAdicional = turnoId
@@ -183,6 +191,11 @@ export default function ModalTurnoAdicional({
 
   const handleSubmit = async () => {
     setErrorSubmit("");
+    if (!codigoNovedadId) {
+      setErrorSubmit("Elegí el tipo de novedad.");
+      return;
+    }
+    const motivo = componerMotivoNovedadGso(codigoNovedadId, motivoDetalle);
     const errMotivo = errorMotivoTeoriaOverride(motivo, requiereUrgenciaG1);
     if (errMotivo) {
       setErrorSubmit(errMotivo);
@@ -327,25 +340,15 @@ export default function ModalTurnoAdicional({
               )}
             </section>
 
-            <section>
-              <h3 className="text-sm font-semibold text-slate-800">
-                Motivo
-                <span className="font-normal text-rose-700"> *</span>
-              </h3>
-              <textarea
-                rows={2}
-                maxLength={500}
-                required
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                placeholder={
-                  requiereUrgenciaG1
-                    ? "Justificá la urgencia operativa (obligatorio)…"
-                    : "Motivo operativo (obligatorio)…"
-                }
-                className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-              />
-            </section>
+            <GrillaMotivoNovedadSection
+              guardrailContext={guardrailNovedadContext}
+              codigoNovedadId={codigoNovedadId}
+              onCodigoNovedadIdChange={setCodigoNovedadId}
+              motivoDetalle={motivoDetalle}
+              onMotivoDetalleChange={setMotivoDetalle}
+              requiereUrgenciaG1={requiereUrgenciaG1}
+              classNameRing="focus-visible:ring-blue-500/40"
+            />
 
             {validacion && !validacion.ok && validacion.error ? (
               <p className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1.5 text-xs text-rose-900">
@@ -380,6 +383,7 @@ export default function ModalTurnoAdicional({
               operando
               || cargando
               || soloLecturaInfo.activo
+              || !guardrailNovedadContext.puedeModificarTeoria
               || Boolean(errorCarga)
               || !opciones.length
               || !validacion?.ok

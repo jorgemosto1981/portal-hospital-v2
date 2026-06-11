@@ -24,6 +24,9 @@ import {
 } from "./grillaGsoSoloLectura.js";
 import { errorMotivoTeoriaOverride } from "./teoriaPermisosGso.js";
 import UrgenciaG1AvisoModal from "./UrgenciaG1AvisoModal.jsx";
+import GrillaMotivoNovedadSection from "./GrillaMotivoNovedadSection.jsx";
+import { componerMotivoNovedadGso } from "./grillaMotivosNovedadCatalogo.js";
+import { buildGuardrailNovedadContext } from "./grillaGuardrailsTeoriaUi.js";
 
 /**
  * Flujo A — intercambio de guardia bilateral (RFC §3.1).
@@ -39,6 +42,7 @@ import UrgenciaG1AvisoModal from "./UrgenciaG1AvisoModal.jsx";
  *   onDesactualizado?: () => void;
  *   onAgregarOutbox: (op: Record<string, unknown>) => void;
  *   requiereUrgenciaG1?: boolean;
+ *   guardrailNovedadContext?: import("./grillaGuardrailsTeoriaUi.js").GuardrailNovedadContext;
  * }} props
  */
 export default function ModalCoberturaParcial({
@@ -46,6 +50,7 @@ export default function ModalCoberturaParcial({
   personaOrigenLabel,
   fechaYmd,
   requiereUrgenciaG1 = false,
+  guardrailNovedadContext = buildGuardrailNovedadContext({ puedeModificarTeoria: true }),
   grupoId,
   periodo,
   opsPendientes = [],
@@ -70,7 +75,8 @@ export default function ModalCoberturaParcial({
   const [selDestino, setSelDestino] = useState(() => new Set());
   const [personaDestinoId, setPersonaDestinoId] = useState("");
   const [fechaDestinoYmd, setFechaDestinoYmd] = useState(fechaYmd);
-  const [motivo, setMotivo] = useState("");
+  const [codigoNovedadId, setCodigoNovedadId] = useState("");
+  const [motivoDetalle, setMotivoDetalle] = useState("");
 
   const rangoMes = useMemo(() => rangoFechasMes(periodo), [periodo]);
   const segmentosCedidosOrigen = useMemo(() => [...selOrigen], [selOrigen]);
@@ -269,6 +275,11 @@ export default function ModalCoberturaParcial({
 
   const handleSubmit = async () => {
     setErrorSubmit("");
+    if (!codigoNovedadId) {
+      setErrorSubmit("Elegí el tipo de novedad.");
+      return;
+    }
+    const motivo = componerMotivoNovedadGso(codigoNovedadId, motivoDetalle);
     const errMotivo = errorMotivoTeoriaOverride(motivo, requiereUrgenciaG1);
     if (errMotivo) {
       setErrorSubmit(errMotivo);
@@ -540,25 +551,15 @@ export default function ModalCoberturaParcial({
               ) : null}
             </section>
 
-            <section>
-              <h3 className="text-sm font-semibold text-slate-800">
-                3. Motivo
-                <span className="font-normal text-rose-700"> *</span>
-              </h3>
-              <textarea
-                rows={2}
-                maxLength={500}
-                required
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                placeholder={
-                  requiereUrgenciaG1
-                    ? "Justificá la urgencia operativa (obligatorio)…"
-                    : "Motivo operativo (obligatorio)…"
-                }
-                className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
-              />
-            </section>
+            <GrillaMotivoNovedadSection
+              guardrailContext={guardrailNovedadContext}
+              codigoNovedadId={codigoNovedadId}
+              onCodigoNovedadIdChange={setCodigoNovedadId}
+              motivoDetalle={motivoDetalle}
+              onMotivoDetalleChange={setMotivoDetalle}
+              requiereUrgenciaG1={requiereUrgenciaG1}
+              tituloSeccion="3. Motivo"
+            />
             </>
             ) : null}
           </div>
@@ -590,6 +591,7 @@ export default function ModalCoberturaParcial({
               operando
               || cargandoOrigen
               || soloLecturaInfo.activo
+              || !guardrailNovedadContext.puedeModificarTeoria
               || Boolean(errorOrigen)
               || !regimenHorarioOrigenId
               || !personaDestinoId

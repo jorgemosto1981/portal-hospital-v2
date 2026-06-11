@@ -14,7 +14,10 @@ import {
   periodoGsoDesdeVista,
   resolverNivelJerarquicoEnFilas,
 } from "./grillaGestionTurnoCapabilities.js";
-import { evaluarGuardrailsModificacionTeoria } from "./grillaGuardrailsTeoriaUi.js";
+import {
+  buildGuardrailNovedadContext,
+  evaluarGuardrailsModificacionTeoria,
+} from "./grillaGuardrailsTeoriaUi.js";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
 import { GRILLA_MES_MODO } from "./GrillaMesSelector.jsx";
@@ -1041,6 +1044,10 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                   grupoLabel: diaModal.grupoLabel,
                   turnoTeorico: diaModal.turnoTeorico,
                   requiereUrgenciaG1: capabilitiesDiaModal.requiereUrgencia === true,
+                  guardrailNovedadContext: buildGuardrailNovedadContext({
+                    puedeModificarTeoria: capabilitiesDiaModal.puedeModificarTeoria,
+                    esAuditoriaCentral: esRrhh,
+                  }),
                 });
               }
             : undefined
@@ -1077,6 +1084,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                 personaOrigenLabel: ctx.personaLabel || ctx.personaId,
                 fechaYmd: ctx.fechaYmd,
                 requiereUrgenciaG1: urgenciaG1,
+                guardrailNovedadContext: ctx.guardrailNovedadContext,
               });
               return;
             }
@@ -1087,6 +1095,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                 personaNombre: ctx.personaLabel || "",
                 grupoId: ctx.grupoTrabajoId,
                 requiereUrgenciaG1: urgenciaG1,
+                guardrailNovedadContext: ctx.guardrailNovedadContext,
               });
               return;
             }
@@ -1098,6 +1107,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                 grupoId: ctx.grupoTrabajoId,
                 turnoVisInicial: ctx.turnoTeorico ?? null,
                 requiereUrgenciaG1: urgenciaG1,
+                guardrailNovedadContext: ctx.guardrailNovedadContext,
               });
             }
           }}
@@ -1110,6 +1120,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
           personaOrigenLabel={coberturaModal.personaOrigenLabel}
           fechaYmd={coberturaModal.fechaYmd}
           requiereUrgenciaG1={coberturaModal.requiereUrgenciaG1 === true}
+          guardrailNovedadContext={coberturaModal.guardrailNovedadContext}
           grupoId={diaModal?.grupoTrabajoId || vista.grupoActivoId}
           periodo={vista.periodo}
           opsPendientes={outbox.ops}
@@ -1130,6 +1141,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
           fechaOrigenYmd={cambioTurnoPropioModal.fechaOrigenYmd}
           personaNombre={cambioTurnoPropioModal.personaNombre}
           requiereUrgenciaG1={cambioTurnoPropioModal.requiereUrgenciaG1 === true}
+          guardrailNovedadContext={cambioTurnoPropioModal.guardrailNovedadContext}
           grupoId={cambioTurnoPropioModal.grupoId}
           periodo={vista.periodo}
           opsPendientes={outbox.ops}
@@ -1151,6 +1163,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
           personaNombre={turnoAdicionalModal.personaNombre}
           fechaYmd={turnoAdicionalModal.fechaYmd}
           requiereUrgenciaG1={turnoAdicionalModal.requiereUrgenciaG1 === true}
+          guardrailNovedadContext={turnoAdicionalModal.guardrailNovedadContext}
           grupoId={turnoAdicionalModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId || ""}
           periodo={vista.periodo}
           opsPendientes={outbox.ops}

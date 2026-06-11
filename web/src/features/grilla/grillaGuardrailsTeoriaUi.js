@@ -35,6 +35,50 @@ export function copyGuardrailModificacionTeoria(motivoRechazo, esJefe = false) {
 /**
  * @param {Parameters<typeof evaluarCapabilitiesGestionTurno>[0]} opts
  */
+/**
+ * @typedef {Object} GuardrailNovedadContext
+ * @property {boolean} puedeModificarTeoria
+ * @property {boolean} esAuditoriaCentral — RRHH operativo
+ */
+
+/**
+ * @param {{ puedeModificarTeoria?: boolean; esAuditoriaCentral?: boolean }} [partial]
+ * @returns {GuardrailNovedadContext}
+ */
+export function buildGuardrailNovedadContext(partial = {}) {
+  return {
+    puedeModificarTeoria: partial.puedeModificarTeoria === true,
+    esAuditoriaCentral: partial.esAuditoriaCentral === true,
+  };
+}
+
+/**
+ * @param {{ requiereAuditoriaCentral?: boolean } | null | undefined} novedad
+ * @param {GuardrailNovedadContext} ctx
+ */
+export function puedeAsignarCodigoNovedad(novedad, ctx) {
+  if (!novedad || !ctx) return false;
+  if (!ctx.puedeModificarTeoria) return false;
+  if (ctx.esAuditoriaCentral) return true;
+  return novedad.requiereAuditoriaCentral !== true;
+}
+
+/**
+ * @param {Array<{ id: string; codigo: string; label: string; requiereAuditoriaCentral?: boolean }>} catalogo
+ * @param {GuardrailNovedadContext} ctx
+ */
+export function mapearOpcionesNovedadCatalogo(catalogo, ctx) {
+  const lista = Array.isArray(catalogo) ? catalogo : [];
+  return lista.map((nov) => {
+    const codigoPermitido = puedeAsignarCodigoNovedad(nov, ctx);
+    return {
+      ...nov,
+      codigoPermitido,
+      disabled: !codigoPermitido,
+    };
+  });
+}
+
 export function evaluarGuardrailsModificacionTeoria(opts) {
   const cap = evaluarCapabilitiesGestionTurno(opts);
   const actor = actorTeoriaDesdeSesion(opts?.usuarioActual || {});
