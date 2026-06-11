@@ -138,6 +138,13 @@ export const MODULOS_PORTAL = [
     parentMenuId: "bandeja-turnos-raiz-rrhh",
   },
   {
+    id: "planes-turno-rrhh",
+    label: "Turnos Mensuales",
+    path: "/portal/rrhh/planes-turno",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
     id: "grilla",
     label: "Grilla operativa",
     path: "/portal/rrhh/grilla-operativa",
@@ -244,6 +251,7 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh/grilla-operativa")) return "grilla";
   if (pathname.startsWith("/portal/jefe/grilla-operativa")) return "grilla-jefe";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla-jefe";
+  if (pathname.startsWith("/portal/rrhh/planes-turno")) return "planes-turno-rrhh";
   if (pathname.startsWith("/portal/jefe/planes-turno")) return "planes-turno-jefe";
   if (pathname.startsWith("/portal/jefe/solicitudes")) return "bandeja-solicitudes-jefe";
   if (pathname.startsWith("/portal/solicitudes")) return "ticketera";

@@ -50,6 +50,7 @@ import {
 import SelectorFocoGdt from "./SelectorFocoGdt.jsx";
 import { useGrillaMesFocoUrl } from "./useGrillaMesFocoUrl.js";
 import GrillaRrhhBandejaAuditoriaDiaria from "./GrillaRrhhBandejaAuditoriaDiaria.jsx";
+import { resolvePlanesTurnoCapabilities } from "../planes/planesTurnoCapabilities.js";
 
 function parsePeriodo(periodo) {
   const [yyyy, mm] = String(periodo || "").split("-");
@@ -95,6 +96,10 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
   const bandejaPath = rutaBandejaSolicitudesGrilla(capabilities);
   const personaId = String(claims?.persona_id || "").trim();
   const modoFichadaCelda = modoFichadaCeldaDesdeCapabilities(capabilities, esJefe);
+  const rutaPlanTurnoBase = useMemo(
+    () => resolvePlanesTurnoCapabilities(capabilities.shell).rutaFocoBase,
+    [capabilities.shell],
+  );
 
   const actorTeoriaSesion = useMemo(
     () =>
@@ -1075,6 +1080,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         onAbrirAyuda={abrirAyuda}
         mostrarFichada={capabilities.puedeVerFichadasReales || esJefe}
         puedeCorregirPlan={esJefe || capabilities.puedeAccionesPeriodoLiquidacion}
+        rutaPlanTurnoBase={rutaPlanTurnoBase}
         puedeGestionarTurno={
           capabilitiesDiaModal.puedeGestionarTurno && !diaModal?.incompletoPlan
         }

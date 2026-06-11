@@ -26,7 +26,14 @@ import { useVistaPlanTurno } from "../../features/planes/useVistaPlanTurno.js";
 import { listarColeccionLaboral } from "../../services/datosLaboralesService.js";
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
-import { claimsIncludeJefe, claimsIncludeRrhh } from "../../features/routing/portalRole.js";
+import { claimsIncludeJefe } from "../../features/routing/portalRole.js";
+import {
+  actorPortalTeoriaDesdePlanes,
+  cargaCatalogoGruposPlanes,
+  PLANES_TURNO_SHELL,
+  resolvePlanesTurnoCapabilities,
+  shellEsPlanesRrhh,
+} from "../../features/planes/planesTurnoCapabilities.js";
 import GrillaMensualEditor from "./planes/GrillaMensualEditor.jsx";
 import {
   contarHuecosEnPlanMensual,
@@ -212,15 +219,24 @@ function labelActorHistorial(h) {
   return "Usuario del sistema";
 }
 
-export default function PlanTurnoServicioPage() {
+/**
+ * @param {{ capabilities?: import("../../features/planes/planesTurnoCapabilities.js").PlanesTurnoCapabilities }} props
+ */
+export default function PlanTurnoServicioPage({
+  capabilities: capabilitiesProp,
+}) {
+  const capabilities =
+    capabilitiesProp ?? resolvePlanesTurnoCapabilities(PLANES_TURNO_SHELL.JEFE);
   const [searchParams] = useSearchParams();
   const { user } = useAuthSession();
   const { claims } = useAuthClaims(user);
-  const esRrhh = claimsIncludeRrhh(claims);
   const esJefe = claimsIncludeJefe(claims);
   const tieneGruposHijos = claims?.tiene_subordinados === true;
-  const mostrarAprobacionTurnos = esRrhh || (esJefe && tieneGruposHijos);
+  const mostrarAprobacionTurnos =
+    capabilities.puedeVerBandejaAprobacionMasiva
+    || (capabilities.shell === PLANES_TURNO_SHELL.JEFE && esJefe && tieneGruposHijos);
   const personaId = String(claims?.persona_id || "").trim();
+  const cargaCatalogo = cargaCatalogoGruposPlanes(capabilities);
 
   const periodosPermitidosInicial = useMemo(() => periodosVentanaJefe(), []);
   const periodoDesdeUrl = String(searchParams.get("periodo") || "").trim();
@@ -249,12 +265,10 @@ export default function PlanTurnoServicioPage() {
 
   const actorTeoriaPlan = useMemo(
     () =>
-      actorTeoriaDesdePortal({
-        id: personaId,
-        esJefe,
-        esRrhh,
-      }),
-    [personaId, esJefe, esRrhh],
+      actorTeoriaDesdePortal(
+        actorPortalTeoriaDesdePlanes(capabilities, { personaId, esJefe }),
+      ),
+    [capabilities, personaId, esJefe],
   );
 
   const permisosPlan = useCallback(
@@ -282,7 +296,7 @@ export default function PlanTurnoServicioPage() {
 
     (async () => {
       try {
-        if (esRrhh) {
+        if (cargaCatalogo) {
           const rows = await listarColeccionLaboral("grupos_de_trabajo", 400);
           if (cancelled) return;
           const activos = rows.filter((r) => r.activo !== false);
@@ -328,7 +342,7 @@ export default function PlanTurnoServicioPage() {
     })();
 
     return () => { cancelled = true; };
-  }, [personaId, esRrhh, periodosPermitidos]);
+  }, [personaId, cargaCatalogo, periodosPermitidos]);
 
   const cargar = useCallback(async (override) => {
     const gid = String(override?.grupoId ?? grupoId).trim();
@@ -426,7 +440,8 @@ export default function PlanTurnoServicioPage() {
     [gruposPorPeriodo, focoUrl.periodoUrl],
   );
 
-  const consolaPanoramaJefe = esJefe && !focoUrl.tieneFocoValido;
+  const consolaPanoramaJefe =
+    capabilities.consolaTripleHorizonteEnFrio && !focoUrl.tieneFocoValido;
 
   useEffect(() => {
     if (esJefe) setResumenHabilitado(true);
@@ -790,14 +805,6 @@ export default function PlanTurnoServicioPage() {
     [resumenGrupoPeriodo, abrirPlanDetalle, focoUrl.pushFocoToUrl],
   );
 
-  if (!esJefe && !esRrhh) {
-    return (
-      <Card className="px-4 py-6">
-        <p className="text-sm text-slate-700">Sin permisos de jefatura para esta sección.</p>
-      </Card>
-    );
-  }
-
   return (
     <div className="min-h-[calc(100dvh-6rem)] space-y-4 bg-slate-50 pb-6 md:pb-8">
       <header className="rounded-2xl border border-slate-100 bg-white px-4 py-5 shadow-sm md:px-6">
@@ -816,7 +823,7 @@ export default function PlanTurnoServicioPage() {
       <Card className="px-4 py-3">
         <h2 className="mb-1 text-sm font-semibold text-slate-800">Foco de trabajo</h2>
         <p className="mb-3 text-xs text-slate-600">
-          {esRrhh
+          {shellEsPlanesRrhh(capabilities)
             ? "Elegí sector y período. El foco queda en la URL al pulsá Ver."
             : consolaPanoramaJefe
               ? "Consola de tres meses abajo. Para aislar un sector, elegí grupo y período y pulsá Ver."
@@ -825,7 +832,9 @@ export default function PlanTurnoServicioPage() {
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
           <div className="min-w-0 flex-1">
             <SelectorFocoGdt
-              origenGrupos={esRrhh ? "catalogo" : "hlg_vigente"}
+              origenGrupos={
+                capabilities.origenGrupos === "catalogo" ? "catalogo" : "hlg_vigente"
+              }
               gruposCatalogo={gruposCatalogoFoco}
               gruposHlg={gruposHlgFoco}
               catalogoCargando={gruposCargando}
@@ -839,7 +848,7 @@ export default function PlanTurnoServicioPage() {
               }}
             />
           </div>
-          {esJefe && focoUrl.tieneFocoValido ? (
+          {capabilities.muestraBotonVolverConsola && focoUrl.tieneFocoValido ? (
             <button
               type="button"
               onClick={() => {

@@ -37,7 +37,8 @@ import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
 import SeguimientoEnrolamientoUsuariosRRHH from "./pages/SeguimientoEnrolamientoUsuariosRRHH.jsx";
 import CalendarioConfig from "./pages/rrhh/CalendarioConfig.jsx";
 import RegimenesHorariosPage from "./pages/rrhh/RegimenesHorariosPage.jsx";
-import PlanTurnoServicioPage from "./pages/jefe/PlanTurnoServicioPage.jsx";
+import PlanTurnoServicioJefePage from "./pages/jefe/PlanTurnoServicioJefePage.jsx";
+import PlanTurnoServicioRrhhPage from "./pages/rrhh/PlanTurnoServicioRrhhPage.jsx";
 import BandejaTurnosRrhhPage from "./pages/rrhh/BandejaTurnosRrhhPage.jsx";
 import ExploradorTurnosRrhhPage from "./pages/rrhh/ExploradorTurnosRrhhPage.jsx";
 import GrillaOperativaRrhhPage from "./pages/rrhh/GrillaOperativaRrhhPage.jsx";
@@ -132,7 +133,7 @@ export default function App() {
             <Route path="perfil/:personaId" element={<Perfil />} />
             <Route path="grilla" element={<GrillaPortalRedirect />} />
             <Route path="jefe/solicitudes" element={<BandejaJefeSolicitudes />} />
-            <Route path="jefe/planes-turno" element={<PlanTurnoServicioPage />} />
+            <Route path="jefe/planes-turno" element={<PlanTurnoServicioJefePage />} />
             <Route path="jefe/grilla-operativa" element={<GrillaOperativaJefePage />} />
             <Route path="modulos" element={<EstadoModulos />} />
             <Route path="pantallas" element={<PantallasCatalogo />} />
@@ -149,6 +150,7 @@ export default function App() {
               <Route path="rrhh/bandeja-turnos" element={<BandejaTurnosRrhhPage />} />
               <Route path="rrhh/explorador-turnos" element={<ExploradorTurnosRrhhPage />} />
               <Route path="rrhh/grilla-operativa" element={<GrillaOperativaRrhhPage />} />
+              <Route path="rrhh/planes-turno" element={<PlanTurnoServicioRrhhPage />} />
               <Route path="rrhh/lao-checkin" element={<LaoCheckinRRHH />} />
               <Route path="rrhh/configuracion-articulos" element={<ArticuloListadoGrilla />} />
               <Route

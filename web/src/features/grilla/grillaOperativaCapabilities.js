@@ -1,3 +1,4 @@
+import { actorPortalTeoriaDesdeShell } from "./actorPortalTeoriaDesdeShell.js";
 import { GRILLA_MES_MODO } from "./GrillaMesSelector.jsx";
 
 /** Identificador de shell (ruta / menú), no del claim JWT. */
@@ -129,13 +130,12 @@ export function cargaCatalogoSectorGrilla(cap) {
  * @param {{ personaId?: string; esJefe?: boolean; nivelJerarquico?: number | null }} sesion
  */
 export function actorPortalTeoriaDesdeGrilla(cap, sesion = {}) {
-  const esRrhhShell = shellEsGrillaRrhh(cap);
-  return {
-    id: String(sesion.personaId || "").trim() || undefined,
-    esJefe: sesion.esJefe === true && !esRrhhShell,
-    esRrhh: esRrhhShell,
-    nivelJerarquico: sesion.nivelJerarquico ?? 0,
-  };
+  return actorPortalTeoriaDesdeShell({
+    shell: cap.shell,
+    personaId: sesion.personaId,
+    esJefeClaim: sesion.esJefe,
+    nivelJerarquico: sesion.nivelJerarquico,
+  });
 }
 
 /**

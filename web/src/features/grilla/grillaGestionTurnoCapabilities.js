@@ -6,6 +6,7 @@ import { MOTIVO_PERIODO_CERRADO, MOTIVO_VENTANA_MES_ANTERIOR } from "./grillaGso
 import {
   CANALES_TEORIA,
   MOTIVOS_RECHAZO_TEORIA,
+  actorTeoriaDesdePortal,
   evaluarPermisoTeoria,
   esRrhhOperativo,
 } from "./teoriaPermisosGso.js";
@@ -67,13 +68,13 @@ export function periodoGsoDesdeVista(vistaGso) {
  */
 export function actorTeoriaDesdeSesion(usuarioActual) {
   const u = usuarioActual && typeof usuarioActual === "object" ? usuarioActual : {};
-  const esRrhh = u.esRrhh === true;
+  const portal = actorTeoriaDesdePortal({
+    id: u.id,
+    esJefe: u.esJefe,
+    esRrhh: u.esRrhh,
+  });
   return {
-    id: String(u.id || "").trim() || undefined,
-    esJefe: u.esJefe === true,
-    esRrhh,
-    esRrhhAdmin: esRrhh,
-    esRrhhLabor: esRrhh,
+    ...portal,
     nivelJerarquico: parseNivelJerarquico(u.nivelJerarquico) ?? 0,
   };
 }

@@ -35,7 +35,7 @@ function labelEstado(id) {
   return e || "—";
 }
 
-function planTurnoCorregirPath(grupoTrabajoId, fechaYmd) {
+function planTurnoCorregirPath(grupoTrabajoId, fechaYmd, rutaBase = "/portal/jefe/planes-turno") {
   const g = String(grupoTrabajoId || "").trim();
   const ymd = String(fechaYmd || "").trim();
   const periodo = ymd.length >= 7 ? ymd.slice(0, 7) : "";
@@ -43,7 +43,8 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd) {
   if (g) params.set("grupo_id", g);
   if (periodo) params.set("periodo", periodo);
   const q = params.toString();
-  return `/portal/jefe/planes-turno${q ? `?${q}` : ""}`;
+  const base = String(rutaBase || "/portal/jefe/planes-turno").replace(/\?.*$/, "");
+  return `${base}${q ? `?${q}` : ""}`;
 }
 
 /**
@@ -73,6 +74,7 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd) {
  *   desalineacionTeoria?: boolean;
  *   desalineacionTooltip?: string;
  *   puedeCorregirPlan?: boolean;
+ *   rutaPlanTurnoBase?: string;
  *   celdaVis?: Record<string, unknown> | null;
  *   puedeVerTramosCrudosFichadas?: boolean;
  *   onAbrirAyuda?: (termino: string) => void;
@@ -109,6 +111,7 @@ export default function DiaGrillaDetalleModal({
   desalineacionTeoria = false,
   desalineacionTooltip = "",
   puedeCorregirPlan = false,
+  rutaPlanTurnoBase = "/portal/jefe/planes-turno",
   celdaVis = null,
   puedeVerTramosCrudosFichadas = false,
   onAbrirAyuda,
@@ -146,8 +149,8 @@ export default function DiaGrillaDetalleModal({
     [celdaVis, eventos],
   );
   const corregirPlanTo = useMemo(
-    () => planTurnoCorregirPath(grupoTrabajoId, fechaYmd),
-    [grupoTrabajoId, fechaYmd],
+    () => planTurnoCorregirPath(grupoTrabajoId, fechaYmd, rutaPlanTurnoBase),
+    [grupoTrabajoId, fechaYmd, rutaPlanTurnoBase],
   );
   const accionTeoriaHabilitada = puedeModificarTeoria && !soloLectura;
   const tituloBloqueoAccion = mensajeBloqueoTeoria || "Acción no permitida para tu rol en este período.";

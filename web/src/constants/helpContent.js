@@ -306,6 +306,24 @@ export const MANUALES_POR_RUTA = {
     ],
   },
 
+  "/portal/rrhh/planes-turno": {
+    titulo: "Planificación de Turnos del Servicio",
+    rol: "RRHH",
+    pasos: [
+      {
+        titulo: "Foco sector y mes",
+        contenido:
+          "Elegí un grupo de trabajo del catálogo institucional y el período. El foco queda en la URL para compartir o refrescar.",
+      },
+      {
+        titulo: "Permisos institucionales",
+        contenido:
+          "Desde esta ruta RRHH aplican las reglas de auditoría central (G3) y la bandeja masiva de aprobación cuando corresponda.",
+      },
+    ],
+    terminos: ["Plan mensual", "GDT", "Habilitado", "BORRADOR"],
+  },
+
   "/portal/jefe/planes-turno": {
     titulo: "Planificación de Turnos del Servicio",
     rol: "Jefe de servicio",
