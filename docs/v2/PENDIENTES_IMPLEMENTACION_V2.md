@@ -2,7 +2,7 @@
 
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
 **Última actualización:** 2026-06-11 (**Camino B** ✅ periférico · **Camino A planes** ✅ · **T-07b** ✅ · **T-07** ✅ · capabilities GSO ✅ · **T-06** ✅ · **T-05** ✅)  
-**Rama / release:** **`master`** @ `f1d7add` · hosting post-Camino B (ver índice sesión) · tags **`v2.6.3-gso-us6`** · **`v2.6.3-pos-t05-grilla`** (`8285283`)  
+**Rama / release:** **`master`** @ `e442ca5` · hosting **`index-CCAzVApV.js`** (2026-06-11) · handoff [`HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md`](./HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md) · tags **`v2.6.3-gso-us6`** · **`v2.6.3-pos-t05-grilla`** (`8285283`)  
 **Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR:** bandeja aprobación 3 meses (P2) / backlog §3
 
 ---
@@ -104,7 +104,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | **T-07** | Caché RAM vista grilla (`vis_*` read model) + invalidación outbox | **✅ cerrado** `master` `a5ca021` · smoke 2026-06-11 · bundle `index-DmfD65xH.js` · race `setData`/doble `cargar` | `grillaCacheMemoryStore`, `useGrillaMesVista` |
 | **T-07b** | Caché RAM catálogo `grupos_de_trabajo` (TTL 30 min · coalescing · peek · claves por `limit`) | **✅ cerrado** `master` `9a5875b` · smoke DevTools 2026-06-11 · bundle `index-BgbIdH8K.js` | `catalogoLaboralCacheStore`, `listarGruposTrabajoCatalogo` |
 | **Camino A planes** | Refinamiento consola triple horizonte jefe — intenciones puras · acordeón responsive · guardrail outbox | **✅ cerrado** `master` `b557d12` (squash) · smoke hosting 2026-06-11 · bundle `index-Beh7bFay.js` · Vitest 16/16 | `planRefinamientoConsolaUtils`, `ConsolaTripleHorizonteSeccion`, `useGuardrailOutboxAlCambiarFoco` |
-| **Camino B** | Saneamiento capabilities periféricas — sin `claimsIncludeRrhh` en UI viva; menú por ruta; redirect grilla por última shell GSO; export matriz macro homogéneo | **✅ cerrado** `master` `f1d7add` (squash) · Vitest 16/16 · grep vivo → solo `portalRole.js` | `portalPerifericoCapabilities`, `portalGsoShellStorage`, `menuGrupoAcceso`, `permiteExportarMatrizMacro` |
+| **Camino B** | Saneamiento capabilities periféricas — sin `claimsIncludeRrhh` en UI viva; menú por ruta; redirect grilla por última shell GSO; export matriz macro homogéneo | **✅ cerrado** `master` `f1d7add` (squash) · deploy `index-CCAzVApV.js` · Vitest 16/16 · grep vivo → solo `portalRole.js` | `portalPerifericoCapabilities`, `portalGsoShellStorage`, `menuGrupoAcceso`, `permiteExportarMatrizMacro` |
 | **T-09** | Guías + `helpContent` | Pendiente | Docs UX |
 
 ---
