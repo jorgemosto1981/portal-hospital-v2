@@ -40,6 +40,7 @@ import {
 } from "./grillaOperativaCapabilities.js";
 import SelectorFocoGdt from "./SelectorFocoGdt.jsx";
 import { useGrillaMesFocoUrl } from "./useGrillaMesFocoUrl.js";
+import GrillaRrhhBandejaAuditoriaDiaria from "./GrillaRrhhBandejaAuditoriaDiaria.jsx";
 
 function parsePeriodo(periodo) {
   const [yyyy, mm] = String(periodo || "").split("-");
@@ -821,6 +822,19 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                   periodoLabel={labelPeriodo(vistaModal.periodo)}
                 />
               ) : (
+                <>
+                  {capabilities.muestraBandejaAuditoriaDiaria && modalEsSector ? (
+                    <GrillaRrhhBandejaAuditoriaDiaria
+                      filas={vista.filas}
+                      anio={parsePeriodo(vistaModal.periodo)?.anio ?? vista.anio}
+                      mes={parsePeriodo(vistaModal.periodo)?.mes ?? vista.mes}
+                      grupoSeleccionado={grupoLiquidacionId || vista.grupoId}
+                      materializacionGrupoReciente={
+                        (vista.data?.materializacion_grupo?.procesados ?? 0) > 0
+                      }
+                      onAbrirDia={(payload) => setDiaModal(payload)}
+                    />
+                  ) : null}
                 <GrillaMesEquipoTabla
                   anio={parsePeriodo(vistaModal.periodo)?.anio ?? vista.anio}
                   mes={parsePeriodo(vistaModal.periodo)?.mes ?? vista.mes}
@@ -873,6 +887,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                     })
                   }
                 />
+                </>
               )}
             </div>
             <div className="mt-2 border-t border-slate-200 pt-2 text-xs text-slate-700">
