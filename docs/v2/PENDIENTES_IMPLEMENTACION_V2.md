@@ -1,9 +1,9 @@
 # Pendientes de implementación — Portal Hospital V2
 
 **SSoT backlog código/producto** (qué **falta implementar** o cerrar en proceso).  
-**Última actualización:** 2026-06-11 (**T-07b** ✅ caché catálogo laboral · **T-07** ✅ · **Camino A** ✅ · **T-06** ✅ · **T-05** ✅)  
-**Rama / release:** **`master`** @ `9a5875b` · hosting `index-BgbIdH8K.js` · tags **`v2.6.3-gso-us6`** · **`v2.6.3-pos-t05-grilla`** (`8285283`)  
-**Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR:** refinamientos planes / `esRrhh` periférico
+**Última actualización:** 2026-06-11 (**Camino A planes** ✅ consola jefe · **T-07b** ✅ · **T-07** ✅ · capabilities ✅ · **T-06** ✅ · **T-05** ✅)  
+**Rama / release:** **`master`** @ `b557d12` · hosting `index-Beh7bFay.js` · tags **`v2.6.3-gso-us6`** · **`v2.6.3-pos-t05-grilla`** (`8285283`)  
+**Sesión / continuidad:** índice [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · **RETOMAR:** `esRrhh` periférico (Camino B)
 
 ---
 
@@ -103,6 +103,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | **Camino A** | Saneamiento capabilities — grilla + planes por shell (sin `claimsIncludeRrhh` en UI GSO); actor US-13 unificado | **✅ cerrado** `master` `b12ab13` · smoke A–C 2026-06-11 · bundle `index-CGPzu35J.js` | `grillaOperativaCapabilities`, `planesTurnoCapabilities`, `actorPortalTeoriaDesdeShell` |
 | **T-07** | Caché RAM vista grilla (`vis_*` read model) + invalidación outbox | **✅ cerrado** `master` `a5ca021` · smoke 2026-06-11 · bundle `index-DmfD65xH.js` · race `setData`/doble `cargar` | `grillaCacheMemoryStore`, `useGrillaMesVista` |
 | **T-07b** | Caché RAM catálogo `grupos_de_trabajo` (TTL 30 min · coalescing · peek · claves por `limit`) | **✅ cerrado** `master` `9a5875b` · smoke DevTools 2026-06-11 · bundle `index-BgbIdH8K.js` | `catalogoLaboralCacheStore`, `listarGruposTrabajoCatalogo` |
+| **Camino A planes** | Refinamiento consola triple horizonte jefe — intenciones puras · acordeón responsive · guardrail outbox | **✅ cerrado** `master` `b557d12` (squash) · smoke hosting 2026-06-11 · bundle `index-Beh7bFay.js` · Vitest 16/16 | `planRefinamientoConsolaUtils`, `ConsolaTripleHorizonteSeccion`, `useGuardrailOutboxAlCambiarFoco` |
 | **T-09** | Guías + `helpContent` | Pendiente | Docs UX |
 
 ---
