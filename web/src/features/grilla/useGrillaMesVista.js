@@ -27,6 +27,43 @@ import {
 } from "./grillaMaterializacionToast.js";
 import { normalizarFilasGrillaEquipo } from "./grillaMesFilasUtils.js";
 import { hlgSegmentosTitularMes } from "./grillaTitularTramosMes.js";
+import {
+  buildGrillaVistaCacheKey,
+  grillaVistaCacheStore,
+} from "./grillaCacheMemoryStore.js";
+
+/**
+ * @param {{
+ *   kind: "grupo" | "titular";
+ *   data: Record<string, unknown> | null;
+ *   titularCalendarios?: unknown[];
+ *   titularHlgRows?: unknown[];
+ *   titularHlgListo?: boolean;
+ * }} entry
+ * @param {{
+ *   setData: (v: unknown) => void;
+ *   setTitularCalendarios: (v: unknown[]) => void;
+ *   setTitularHlgRows: (v: unknown[]) => void;
+ *   setTitularHlgListo: (v: boolean) => void;
+ *   setError: (v: string) => void;
+ *   setLoading: (v: boolean) => void;
+ * }} sinks
+ */
+function hidratarVistaGrillaDesdeCache(entry, sinks) {
+  sinks.setError("");
+  sinks.setLoading(false);
+  if (entry.kind === "titular") {
+    sinks.setTitularCalendarios(entry.titularCalendarios || []);
+    sinks.setTitularHlgRows(entry.titularHlgRows || []);
+    sinks.setTitularHlgListo(entry.titularHlgListo !== false);
+    sinks.setData(entry.data);
+    return;
+  }
+  sinks.setTitularCalendarios([]);
+  sinks.setTitularHlgRows([]);
+  sinks.setTitularHlgListo(false);
+  sinks.setData(entry.data);
+}
 
 function etiquetaGrupoSector(row) {
   const nombre = String(row.nombre || row.codigo || row.titulo || "").trim();
@@ -160,8 +197,6 @@ export function useGrillaMesVista({
   const aplicarSeleccionDesdeTarjeta = useCallback(({ periodo: p, modo: m, grupoId: gdt = "" }) => {
     setPeriodo(p);
     setModo(m);
-    setData(null);
-    setTitularCalendarios([]);
     setError("");
     if (m === GRILLA_MES_MODO.TITULAR) {
       setGrupoId("");
@@ -178,10 +213,8 @@ export function useGrillaMesVista({
     setError("");
     if (m === GRILLA_MES_MODO.TITULAR) {
       setData(null);
-      return;
+      setTitularCalendarios([]);
     }
-    setData(null);
-    setTitularCalendarios([]);
   }, []);
 
   const requiereSeleccionGrupo =
@@ -198,7 +231,7 @@ export function useGrillaMesVista({
   }, [modo, gruposEquipo, gruposSector, grupoId]);
 
   /**
-   * @param {{ periodo?: string; modo?: string; grupoId?: string } | void} override
+   * @param {{ periodo?: string; modo?: string; grupoId?: string; bypassCache?: boolean } | void} override
    */
   const cargar = useCallback(async (override) => {
     const periodoEff = override?.periodo ?? periodo;
@@ -214,6 +247,44 @@ export function useGrillaMesVista({
     if (override?.modo && override.modo !== modo) setModo(override.modo);
     if (override?.grupoId != null && grupoEff !== normalizeGrupoTrabajoId(grupoId)) {
       setGrupoId(grupoEff);
+    }
+
+    const cacheKey = buildGrillaVistaCacheKey({
+      grupoTrabajoId: modoEff === GRILLA_MES_MODO.TITULAR ? "" : grupoEff,
+      anio: anioEff,
+      mes: mesEff,
+      modo: modoEff,
+      personaId,
+    });
+    const bypassCache = override?.bypassCache === true;
+    if (!bypassCache && grillaVistaCacheStore.has(cacheKey)) {
+      const cached = grillaVistaCacheStore.get(cacheKey);
+      if (cached && typeof cached === "object" && "kind" in cached) {
+        const filasLista = cached.data?.filas;
+        const filasConDatos = Array.isArray(filasLista) && filasLista.length > 0;
+        const grupoSinDotacion =
+          cached.kind === "grupo" && cached.data?.total_personas === 0;
+        const titularOk =
+          cached.kind === "titular"
+          && Array.isArray(cached.titularCalendarios)
+          && cached.titularCalendarios.length > 0;
+        const cacheUtil =
+          cached.kind === "grupo"
+            ? filasConDatos || grupoSinDotacion
+            : titularOk || filasConDatos;
+        if (cacheUtil) {
+          hidratarVistaGrillaDesdeCache(cached, {
+            setData,
+            setTitularCalendarios,
+            setTitularHlgRows,
+            setTitularHlgListo,
+            setError,
+            setLoading,
+          });
+          return;
+        }
+        grillaVistaCacheStore.delete(cacheKey);
+      }
     }
 
     setLoading(true);
@@ -333,7 +404,7 @@ export function useGrillaMesVista({
 
         setTitularCalendarios(resultados);
         const algunoSoloLectura = resultados.some((cal) => cal.gso_solo_lectura === true);
-        setData({
+        const titularData = {
           ok: true,
           modo: GRILLA_MES_MODO.TITULAR,
           fecha_corte: fechaCorteFinMesDesdePeriodo(periodoEff),
@@ -352,6 +423,14 @@ export function useGrillaMesVista({
             grupo_trabajo_id: cal.grupo_trabajo_id,
             grupo_label: cal.grupo_label,
           })),
+        };
+        setData(titularData);
+        grillaVistaCacheStore.set(cacheKey, {
+          kind: "titular",
+          data: titularData,
+          titularCalendarios: resultados,
+          titularHlgRows: hlgRows,
+          titularHlgListo: true,
         });
         return;
       }
@@ -395,13 +474,22 @@ export function useGrillaMesVista({
       } catch {
         planMensualEstado = null;
       }
-      setData(payload ? {
-        ...payload,
-        modo: modoEff,
-        periodo: periodoEff,
-        plan_mensual_estado: planMensualEstado,
-        filas: normalizarFilasGrillaEquipo(payload.filas),
-      } : null);
+      const vistaData = payload
+        ? {
+            ...payload,
+            modo: modoEff,
+            periodo: periodoEff,
+            plan_mensual_estado: planMensualEstado,
+            filas: normalizarFilasGrillaEquipo(payload.filas),
+          }
+        : null;
+      setData(vistaData);
+      if (vistaData) {
+        grillaVistaCacheStore.set(cacheKey, {
+          kind: "grupo",
+          data: vistaData,
+        });
+      }
     } catch (e) {
       setData(null);
       setError(e?.message || "No se pudo cargar la grilla.");

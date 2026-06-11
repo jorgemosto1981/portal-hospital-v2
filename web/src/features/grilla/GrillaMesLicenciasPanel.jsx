@@ -51,6 +51,7 @@ import SelectorFocoGdt from "./SelectorFocoGdt.jsx";
 import { useGrillaMesFocoUrl } from "./useGrillaMesFocoUrl.js";
 import GrillaRrhhBandejaAuditoriaDiaria from "./GrillaRrhhBandejaAuditoriaDiaria.jsx";
 import { resolvePlanesTurnoCapabilities } from "../planes/planesTurnoCapabilities.js";
+import { grillaVistaCacheStore } from "./grillaCacheMemoryStore.js";
 
 function parsePeriodo(periodo) {
   const [yyyy, mm] = String(periodo || "").split("-");
@@ -74,6 +75,21 @@ function labelPeriodo(periodo) {
     month: "long",
     year: "numeric",
   });
+}
+
+function invalidarCacheGrillaTrasMutacion({ ops, periodo, gdtActivo, grupoIdVista }) {
+  const periodoInv = String(periodo || "").trim();
+  if (!periodoInv) return;
+  const grupos = new Set();
+  const gdt = String(gdtActivo || grupoIdVista || "").trim();
+  if (gdt) grupos.add(gdt);
+  for (const op of ops || []) {
+    const og = String(op.grupoId || "").trim();
+    if (og) grupos.add(og);
+  }
+  for (const gid of grupos) {
+    grillaVistaCacheStore.invalidateGrupoPeriodo(gid, periodoInv);
+  }
 }
 
 /**
@@ -445,13 +461,25 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         periodo: vista.periodo,
       });
       toast.success(`Cambios aplicados: ${result?.aplicadas ?? outbox.count}.`);
+      invalidarCacheGrillaTrasMutacion({
+        ops: outbox.ops,
+        periodo: vista.periodo,
+        gdtActivo: gdtGrillaModal,
+        grupoIdVista: vista.grupoId,
+      });
       outbox.clear();
-      await vista.cargar();
+      await vista.cargar({ bypassCache: true });
     } catch (e) {
       const msg = laboralCallableErrorMessage(e, "No se pudo aplicar el batch.");
       if (msg.includes("ASI-CONC")) {
         toast.error("La grilla cambió. Se conservaron tus pendientes para reintentar.");
-        await vista.cargar();
+        invalidarCacheGrillaTrasMutacion({
+          ops: outbox.ops,
+          periodo: vista.periodo,
+          gdtActivo: gdtGrillaModal,
+          grupoIdVista: vista.grupoId,
+        });
+        await vista.cargar({ bypassCache: true });
       } else if (msg.includes("ASI-GSO")) {
         toast.error("Mes anterior en solo lectura. No se pueden aplicar cambios.");
       } else if (msg.includes("ASI-PER")) {
@@ -516,12 +544,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
       (listoTitular || String(vista.grupoId || "") === grupoNormalizado);
     if (!listo) return;
     setCargaPendienteKey("");
-    void vista.cargar({
-      periodo: periodoTarget,
-      modo: modoTarget,
-      grupoId: grupoNormalizado,
-    });
-  }, [cargaPendienteKey, vista.periodo, vista.modo, vista.grupoId, vista.cargar]);
+  }, [cargaPendienteKey, vista.periodo, vista.modo, vista.grupoId]);
 
   return (
     <div className="mt-6 border-t border-slate-200 pt-6">
