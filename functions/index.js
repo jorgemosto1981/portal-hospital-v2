@@ -61,6 +61,7 @@ const descartarMarcaHuerfanaReloj = require("./onCall/fichadas/descartarMarcaHue
 const guardarEnrolamientoRelojPersona = require("./onCall/fichadas/guardarEnrolamientoRelojPersona");
 const listarEnrolamientoRelojPorPersona = require("./onCall/fichadas/listarEnrolamientoRelojPorPersona");
 const guardarCfgRelojBiometrico = require("./onCall/fichadas/guardarCfgRelojBiometrico");
+const listarCfgRelojBiometrico = require("./onCall/fichadas/listarCfgRelojBiometrico");
 const listarRosterParaFichadas = require("./onCall/fichadas/listarRosterParaFichadas");
 const colaRematerializacionTriggers = require("./triggers/onColaRematerializacionAsistencia");
 
@@ -115,6 +116,7 @@ module.exports = {
   ...guardarEnrolamientoRelojPersona,
   ...listarEnrolamientoRelojPorPersona,
   ...guardarCfgRelojBiometrico,
+  ...listarCfgRelojBiometrico,
   ...listarRosterParaFichadas,
   ...colaRematerializacionTriggers,
 };

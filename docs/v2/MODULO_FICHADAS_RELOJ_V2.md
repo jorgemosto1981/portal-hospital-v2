@@ -1,6 +1,7 @@
 # Módulo Fichadas Reloj V2 — RFC diseño e implementación
 
-**Estado:** Módulo **cerrado en `master`** (commit `f7b0102`): fases A–**G**, ABM relojes, **relojes universales** (`grupo_trabajo_id` null), roster global (`listarRosterParaFichadas`), caché `sessionStorage` en carga manual, asistente de máscaras + **parser dinámico** (`mascara_tokens`). Plan Cursor **terminado** (§18).  
+**Estado:** Módulo **cerrado en `master`** (commit `f7b0102`): fases A–**G**, ABM relojes, **relojes universales**, roster global, caché carga manual, parser `mascara_tokens`. Plan Cursor fichadas **terminado** (§18).  
+**Rama activa colisión grilla (2026-06-12):** `feature/grilla-fase1-colision` — motor `analitica_cumplimiento`, outbox post-import, F-UX; **mantenimiento + QA** antes de merge. Ver §14 y [`HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md`](./HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md).  
 **Plan maestro:** `módulo_fichadas_reloj_551a3612.plan.md` (Cursor).  
 **Relación:** [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](./MANUAL_CAPAS_ORQUESTACION_BORRADOR.md), [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md), [`EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md`](./EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md), US-15 capa 4 en `vis_*`.
 
@@ -207,3 +208,26 @@ Para validar la integridad del módulo completo tras el despliegue en cualquier 
 | UI import | Envía `reloj_id` en preview; playground ABM usa el mismo parser |
 
 Deploy functions afectadas: `previsualizarImportFichadasReloj`, `aplicarImportFichadasReloj` (ya incluidas en §8).
+
+## 14. Integración grilla — colisión teoría ↔ real (rama `feature/grilla-fase1-colision`)
+
+| Pieza | Rol |
+|-------|-----|
+| `guardarCapaFichadaDia` / `aplicarImportFichadasReloj` | Escriben `vis_*.dias.{DD}.fichadas_reales` (capa 4); encolan `cola_rematerializacion_asistencia` |
+| `onColaRematerializacionAsistencia` | Dispara `materializarTurnoTeoricoDia` → `calcularDeltasCumplimiento` |
+| `asi_*` / `vis_*` | `analitica_cumplimiento` (+ `analitica_cumplimiento_por_grupo` en asi) |
+| `grillaVisSanitizeGso` | Jefe: sin `fichadas_reales`; **sí** `analitica_cumplimiento` |
+| Callables aux QA (2026-06) | `listarEnrolamientoRelojPorPersona`, `listarCfgRelojBiometrico`, `listarRosterParaFichadas` |
+
+**Próximo paso operativo:** checklist QA §3 en handoff 2026-06-12 (todos los caminos de ingreso + visualización) **antes** de seguir épica Decreto 1919.
+
+### 14.1 Rutas UI fichadas (recordatorio)
+
+| Ruta | Uso |
+|------|-----|
+| `/portal/rrhh/fichadas-relojes` | ABM `cfg_reloj_biometrico` |
+| `/portal/rrhh/fichadas-enrolamiento` | Alta `rpe_*` |
+| `/portal/rrhh/fichadas-enrolamientos-consulta` | Consulta por DNI / `per_*` |
+| `/portal/rrhh/fichadas-import` | Import TXT |
+| `/portal/rrhh/fichadas-carga-manual` | Teclado RRHH (`?gdt_id=` opcional desde grilla) |
+| Grilla modal día | ABM RRHH «Agregar marcas» + enlace carga manual |

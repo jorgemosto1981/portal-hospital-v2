@@ -14,6 +14,12 @@ export function laboralCallableErrorMessage(err, fallback = "Error en la operaci
     if (/^\[VAL-HLG-DES-500\]/i.test(err?.message || "")) {
       return msg.replace(/^\[VAL-HLG-DES-500\]\s*/i, "");
     }
+    if (!msg || /^internal$/i.test(msg)) {
+      return "Error interno del servidor. Si acaba de publicarse una función nueva, esperá 1–2 min y reintentá; si persiste, avisá a sistemas.";
+    }
+  }
+  if (code === "functions/not-found" || code === "not-found") {
+    return "Función no disponible en el entorno (deploy pendiente). Contactá a sistemas.";
   }
   return msg;
 }

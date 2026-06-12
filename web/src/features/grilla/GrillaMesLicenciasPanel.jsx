@@ -27,6 +27,8 @@ import { useAsistenciaOutbox } from "./useAsistenciaOutbox.js";
 import { useGrillaMesVista } from "./useGrillaMesVista.js";
 import { aplicarBatchAsistencia } from "../../services/coberturaParcialService.js";
 import { laboralCallableErrorMessage } from "../../pages/datos-laborales/callableErrorMessage.js";
+import { callObtenerVistaGrillaMesAgente } from "../../services/callables.js";
+import { diaMesKeyDesdeFechaYmd } from "../fichadas/cargaManual/fichadasCargaManualUtils.js";
 import { opsOutboxParaGrupo } from "./grillaCeldaOutboxVisual.js";
 import { useGuardrailOutboxAlCambiarFoco } from "../planes/useGuardrailOutboxAlCambiarFoco.js";
 import { mergePersonaLabelsDesdeOps } from "./grillaOutboxLabels.js";
@@ -415,6 +417,32 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
     }
     return mergePersonaLabelsDesdeOps(outbox.ops, base);
   }, [vista.filas, outbox.ops]);
+
+  const onFichadaGuardadaEnModal = useCallback(async () => {
+    const snap = diaModal;
+    await vista.cargar({ bypassCache: true });
+    if (!snap?.personaId || !snap?.fechaYmd) return;
+    const gdt = String(snap.grupoTrabajoId || gdtGrillaModal || "").trim();
+    if (!/^gdt_/i.test(gdt)) return;
+    try {
+      const [y, m] = snap.fechaYmd.split("-").map(Number);
+      const res = await callObtenerVistaGrillaMesAgente({
+        persona_id: snap.personaId,
+        grupo_trabajo_id: gdt,
+        anio: y,
+        mes: m,
+      });
+      const dias = res.data?.dias && typeof res.data.dias === "object" ? res.data.dias : {};
+      const dk = diaMesKeyDesdeFechaYmd(snap.fechaYmd);
+      const celdaVis = (dk && dias[dk]) || snap.celdaVis;
+      setDiaModal((prev) => {
+        if (!prev || prev.personaId !== snap.personaId || prev.fechaYmd !== snap.fechaYmd) return prev;
+        return { ...prev, celdaVis };
+      });
+    } catch {
+      /* la grilla ya se recargó; el modal conserva el snapshot anterior */
+    }
+  }, [diaModal, vista, gdtGrillaModal]);
 
   useEffect(() => {
     if (!capabilities.puedeAccionesPeriodoLiquidacion || !RX_GDT.test(String(vista.grupoId || ""))) {
@@ -1116,9 +1144,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         materializadoLazy={diaModal?.materializadoLazy === true}
         puedeVerTramosCrudosFichadas={capabilities.puedeVerTramosCrudosFichadas}
         puedeEditarFichadasReales={capabilities.puedeEditarFichadasReales}
-        onFichadaGuardada={async () => {
-          await vista.cargar({ bypassCache: true });
-        }}
+        onFichadaGuardada={onFichadaGuardadaEnModal}
         onAbrirAyuda={abrirAyuda}
         mostrarFichada={capabilities.puedeVerFichadasReales || esJefe}
         puedeCorregirPlan={esJefe || capabilities.puedeAccionesPeriodoLiquidacion}

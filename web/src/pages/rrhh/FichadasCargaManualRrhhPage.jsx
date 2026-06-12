@@ -21,16 +21,25 @@ export default function FichadasCargaManualRrhhPage() {
   const gdtUrl = String(params.get("gdt_id") || params.get("grupo_trabajo_id") || "").trim();
   const personaUrl = String(params.get("persona_id") || "").trim();
   const fechaUrl = String(params.get("fecha_ymd") || "").trim();
+  const relojUrl = String(params.get("reloj_id") || "").trim();
 
-  const [relojId, setRelojId] = useState("");
+  const [relojId, setRelojId] = useState(() => (/^rel_/i.test(relojUrl) ? relojUrl : ""));
   const [fechaSticky, setFechaSticky] = useState(fechaUrl || "");
   const [deshaciendo, setDeshaciendo] = useState(false);
 
   const visCacheRef = useRef(new Map());
 
-  const { relojes, politica, grupoTrabajoId: gdtReloj, esRelojUniversal, loading: loadingCfg } =
-    useRelojConfigCache(relojId);
+  const {
+    relojes,
+    politica,
+    grupoTrabajoId: gdtReloj,
+    esRelojUniversal,
+    loading: loadingCfg,
+    error: cfgError,
+    recargar: recargarRelojes,
+  } = useRelojConfigCache(relojId);
   const grupoTrabajoId = gdtUrl || gdtReloj;
+  const sectorDesdeEnlace = /^gdt_/i.test(gdtUrl);
 
   const { roster, loading: rosterLoading, error: rosterError, modoGlobal } = useCargaManualRoster({
     relojId,
@@ -51,8 +60,18 @@ export default function FichadasCargaManualRrhhPage() {
   }, [rosterError]);
 
   useEffect(() => {
+    if (cfgError) toast.error(cfgError, { duration: 8000 });
+  }, [cfgError]);
+
+  useEffect(() => {
     if (!relojId && relojes.length === 1) setRelojId(String(relojes[0].id));
   }, [relojes, relojId]);
+
+  useEffect(() => {
+    if (/^rel_/i.test(relojUrl) && relojes.some((r) => String(r.id) === relojUrl)) {
+      setRelojId(relojUrl);
+    }
+  }, [relojUrl, relojes]);
 
   const personaInicial = useMemo(() => {
     if (!/^per_/i.test(personaUrl)) return null;
@@ -161,7 +180,10 @@ export default function FichadasCargaManualRrhhPage() {
     ? "Universal (destino por agente)"
     : grupoTrabajoId || "—";
 
-  const formDisabled = !relojId || (!modoGlobal && !/^gdt_/i.test(grupoTrabajoId));
+  const relojSectorialListo = Boolean(relojId) && /^gdt_/i.test(gdtReloj);
+  const relojUniversalListo = Boolean(relojId) && esRelojUniversal;
+  const sectorEnlaceListo = sectorDesdeEnlace && /^gdt_/i.test(grupoTrabajoId);
+  const formDisabled = !(relojUniversalListo || relojSectorialListo || sectorEnlaceListo);
 
   return (
     <div className="min-h-[calc(100dvh-6rem)] space-y-4 bg-slate-50 px-3 py-5 pb-28 md:px-6">
@@ -179,12 +201,14 @@ export default function FichadasCargaManualRrhhPage() {
         <label className="block text-sm font-medium text-slate-700">
           Reloj / sector (config §15.1B)
           <select
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100"
             value={relojId}
             onChange={(e) => setRelojId(e.target.value)}
             disabled={loadingCfg}
           >
-            <option value="">— Seleccionar —</option>
+            <option value="">
+              {loadingCfg ? "Cargando relojes…" : "— Seleccionar reloj —"}
+            </option>
             {relojes.map((r) => {
               const g = String(r.grupo_trabajo_id || r.grupo_id || "").trim();
               const suf = g ? "" : " · universal";
@@ -197,12 +221,37 @@ export default function FichadasCargaManualRrhhPage() {
             })}
           </select>
         </label>
+        {cfgError ? (
+          <p className="text-xs text-rose-700">
+            {cfgError}{" "}
+            <button type="button" className="font-semibold underline" onClick={() => recargarRelojes()}>
+              Reintentar
+            </button>
+          </p>
+        ) : null}
         <p className="text-xs text-slate-500">
           Grupo: <span className="font-mono">{grupoLabel}</span>
           {gdtUrl ? " (desde enlace grilla)" : ""} · Umbral duplicados: {politica.umbral_duplicado_minutos} min
           {rosterLoading ? " · Cargando roster…" : ` · ${roster.length} agentes`}
           {modoGlobal ? " · caché sesión (GLOBAL)" : ""}
         </p>
+        {formDisabled ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+            {sectorEnlaceListo
+              ? "Cargando roster del sector desde el enlace de la grilla…"
+              : "Seleccioná un reloj arriba (sectorial o universal) para habilitar agente, fecha e ingreso/egreso."}
+            {relojes.length === 0 && !loadingCfg && !sectorEnlaceListo ? (
+              <>
+                {" "}
+                No hay relojes activos.{" "}
+                <Link to="/portal/rrhh/fichadas-relojes" className="font-semibold text-violet-800 underline">
+                  Alta de relojes biométricos
+                </Link>
+                .
+              </>
+            ) : null}
+          </p>
+        ) : null}
       </Card>
 
       <Card className="p-4">

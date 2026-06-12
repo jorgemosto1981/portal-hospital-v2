@@ -46,12 +46,32 @@ export function useCargaManualRoster({ relojId, grupoTrabajoId, fechaYmd }) {
       return;
     }
 
+    const fechaRef = /^\d{4}-\d{2}-\d{2}$/.test(fechaYmd) ? fechaYmd : "";
+
     if (modoSector) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaYmd)) {
-        setRoster([]);
+      if (!fechaRef) {
+        setLoading(true);
+        try {
+          const res = await callListarRosterParaFichadas({
+            grupo_trabajo_id: grupoTrabajoId,
+            reloj_id: relojId,
+          });
+          const agentes = (res.data?.agentes || []).map((a) => ({
+            persona_id: a.persona_id,
+            label: a.label,
+            dni: a.dni || "",
+            grupo_trabajo_id: a.grupo_trabajo_id || "",
+          }));
+          setRoster(agentes);
+        } catch (e) {
+          setError(e?.message || "No se pudo cargar el roster del sector.");
+          setRoster([]);
+        } finally {
+          setLoading(false);
+        }
         return;
       }
-      const [y, m] = fechaYmd.split("-").map(Number);
+      const [y, m] = fechaRef.split("-").map(Number);
       const cacheKey = `${CACHE_PREFIX}${grupoTrabajoId}_${y}-${String(m).padStart(2, "0")}`;
       const cached = sessionStorage.getItem(cacheKey);
       if (cached) {
@@ -82,7 +102,7 @@ export function useCargaManualRoster({ relojId, grupoTrabajoId, fechaYmd }) {
       return;
     }
 
-    const cacheKey = `${CACHE_PREFIX}GLOBAL`;
+    const cacheKey = `${CACHE_PREFIX}GLOBAL_${relojId}_${fechaRef || "hoy"}`;
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) {
       try {
@@ -98,6 +118,7 @@ export function useCargaManualRoster({ relojId, grupoTrabajoId, fechaYmd }) {
       const res = await callListarRosterParaFichadas({
         grupo_trabajo_id: "GLOBAL",
         reloj_id: relojId,
+        ...(fechaRef ? { fecha_ymd: fechaRef } : {}),
       });
       const agentes = (res.data?.agentes || []).map((a) => ({
         persona_id: a.persona_id,

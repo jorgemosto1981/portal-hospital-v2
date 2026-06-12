@@ -112,10 +112,38 @@ async function guardarCfgRelojBiometrico(db, params, actor) {
   return { ok: true, reloj_id: id, creado: !exists };
 }
 
+/**
+ * Listado para pantallas fichadas (carga manual / import).
+ *
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {{ incluir_inactivos?: boolean }} [params]
+ */
+async function listarCfgRelojBiometrico(db, params = {}) {
+  const incluir_inactivos = params.incluir_inactivos === true;
+  const snap = await db.collection(COL_CFG).get();
+  const items = snap.docs
+    .map((doc) => {
+      const d = doc.data() || {};
+      return {
+        id: doc.id,
+        nombre: String(d.nombre || doc.id).trim(),
+        grupo_trabajo_id: d.grupo_trabajo_id ?? null,
+        numero_reloj: d.numero_reloj ?? "",
+        mascara_tokens: d.mascara_tokens ?? MASCARA_DEFAULT,
+        politica_validacion: d.politica_validacion ?? null,
+        activo: d.activo !== false,
+      };
+    })
+    .filter((r) => incluir_inactivos || r.activo)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  return { ok: true, items };
+}
+
 module.exports = {
   COL_CFG,
   MASCARA_DEFAULT,
   POLITICAS_DUPLICADOS,
   validarPayloadCfgReloj,
   guardarCfgRelojBiometrico,
+  listarCfgRelojBiometrico,
 };

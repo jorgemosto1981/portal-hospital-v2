@@ -17,7 +17,7 @@ export default function FichadasConsultaEnrolamientoRrhhPage() {
   const buscar = useCallback(async () => {
     const q = personaIdInput.trim();
     if (!q) {
-      toast.error("Ingresá un persona_id (per_*).");
+      toast.error("Ingresá DNI o persona_id (per_*).");
       return;
     }
     setBuscando(true);
@@ -62,7 +62,7 @@ export default function FichadasConsultaEnrolamientoRrhhPage() {
             persona_id
             <input
               className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-sm"
-              placeholder="per_…"
+              placeholder="DNI o per_…"
               value={personaIdInput}
               onChange={(e) => setPersonaIdInput(e.target.value)}
               autoComplete="off"

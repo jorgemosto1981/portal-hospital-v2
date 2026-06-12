@@ -60,7 +60,11 @@ export default function DiaGrillaFichadaRrhhPanel({
           toast.error(data.mensaje || "No se pudo guardar la fichada.");
           return;
         }
-        toast.success(data?.write_skipped ? "Sin cambios." : "Fichada actualizada.");
+        if (data?.write_skipped) {
+          toast("El servidor no detectó cambios (marcas ya iguales o alineación sin delta).", { icon: "ℹ️" });
+        } else {
+          toast.success("Fichada actualizada.");
+        }
         setMotivoModal(null);
         setMarcaSueltas("");
         await onGuardado?.();

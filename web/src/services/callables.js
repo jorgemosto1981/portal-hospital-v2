@@ -507,3 +507,8 @@ export function callGuardarCapaFichadaDia(data) {
 export function callGuardarCfgRelojBiometrico(data) {
   return httpsCallable(getFunctionsV2(), "guardarCfgRelojBiometrico", { timeout: 60000 })(data);
 }
+
+/** Listado cfg_reloj_biometrico para carga manual / import (RRHH). */
+export function callListarCfgRelojBiometrico(data = {}) {
+  return httpsCallable(getFunctionsV2(), "listarCfgRelojBiometrico")(data);
+}

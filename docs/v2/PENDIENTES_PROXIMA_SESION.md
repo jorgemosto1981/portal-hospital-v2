@@ -1,6 +1,7 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (épica activa):** **Lineamientos Decreto 1919/89 + afinación motor solicitudes / grilla** — plan [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md) · handoff [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md) · primer paso: redactar `LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md` (Fase 0 doc).  
+> **RETOMAR AQUÍ (prioridad inmediata — 2026-06-12):** **QA integral ingreso fichadas + cruce teoría ↔ real** en rama **`feature/grilla-fase1-colision`** antes de continuar el plan Decreto 1919. Handoff: [`HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md`](./HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md) · checklist §3 (manual menú, grilla modal, import TXT, render post-carga, analítica jefe/RRHH).  
+> **Épica en pausa (tras QA):** **Lineamientos Decreto 1919/89 + motor solicitudes / grilla** — [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md) · [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md).  
 > **Paralelo / backlog GSO:** refinamiento UX bandeja aprobación 3 meses (P2) · [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) · handoff Camino B: [`HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md`](./HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md) · GDT: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
 > **T-05 épica foco + paleta:** ✅ **(A)** grilla + planes URL · ✅ **(B)** paleta compuesta por régimen · ✅ **consola triple horizonte jefe** (`c27e6d7` en **`master`**) · UX pincel contextual + **Plan del foco** (sin grilla 3×mes)  
 > **Sesión 2026-06-11:** merge FF `feat/gso-us6-teoria-pendiente` → `master` · hosting prod **`c27e6d7`**  
@@ -16,6 +17,19 @@
 > **Bloque macro (permisos + perf):** T-06 ✅ · Camino A ✅ · T-07/T-07b ✅ · Camino A planes ✅ · **Camino B ✅** — ver handoff 2026-06-11  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)
+
+---
+
+## PAUSA — QA fichadas + colisión grilla (2026-06-12)
+
+| Bloque | Estado | Referencia |
+|--------|--------|------------|
+| Motor analítico + outbox + F-UX | ✅ en rama | `feature/grilla-fase1-colision` · commits `4f2324b` … `f5f184c` + fix fichadas sesión 12/06 |
+| **Gate QA ingreso fichadas** | ⏳ **SIGUIENTE SESIÓN** | [`HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md`](./HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md) §3 |
+| Merge a `master` | ⛔ bloqueado | Hasta cerrar checklist QA |
+| Decreto 1919 / plan motor | ⏸ | Retomar tras gate |
+
+**Hosting prod:** despliegues parciales desde rama (F-UX + fixes UI); functions colisión/outbox/fichadas en `southamerica-east1`.
 
 ---
 
