@@ -82,8 +82,12 @@ export default function FichadasRelojesRrhhPage() {
         <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Relojes biométricos</h1>
         <p className="text-sm text-slate-500">
           Alta y configuración de equipos (sector, máscara TXT, política de duplicados).{" "}
+          <Link to="/portal/rrhh/fichadas-enrolamiento" className="text-blue-600 hover:underline">
+            Enrolar tarjeta ↔ persona
+          </Link>
+          {" · "}
           <Link to="/portal/rrhh/fichadas-import" className="text-blue-600 hover:underline">
-            Ir a import TXT
+            Import TXT
           </Link>
         </p>
       </header>

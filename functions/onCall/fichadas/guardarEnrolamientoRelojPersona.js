@@ -26,7 +26,10 @@ const guardarEnrolamientoRelojPersonaCallable = onCall(async (request) => {
       },
     );
     if (!result.ok) {
-      throw new HttpsError("invalid-argument", result.mensaje || "Enrolamiento inválido.");
+      throw new HttpsError("invalid-argument", result.mensaje || "Enrolamiento inválido.", {
+        codigo: result.codigo,
+        requiere_seleccion: result.requiere_seleccion,
+      });
     }
     return result;
   } catch (err) {

@@ -167,6 +167,14 @@ export const MODULOS_PORTAL = [
     parentMenuId: "fichadas-reloj-raiz",
   },
   {
+    id: "fichadas-enrolamiento",
+    label: "Enrolamiento",
+    path: "/portal/rrhh/fichadas-enrolamiento",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "fichadas-reloj-raiz",
+  },
+  {
     id: "fichadas-import",
     label: "Import TXT",
     path: "/portal/rrhh/fichadas-import",
@@ -220,11 +228,36 @@ export const MODULOS_PORTAL = [
     grupo: "rrhh",
   },
   {
+    id: "rrhh-notif-datos",
+    label: "Notif. datos pers.",
+    path: "/portal/rrhh/notificaciones-datos-personales",
+    estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "rrhh",
+    parentMenuId: "rrhh",
+  },
+  {
+    id: "rrhh-seg-enrol-portal",
+    label: "Enrol. portal",
+    path: "/portal/rrhh/seguimiento-enrolamiento",
+    estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "rrhh",
+    parentMenuId: "rrhh",
+  },
+  {
     id: "alta-agente-guia",
     label: "Alta agente (guía)",
     path: "/portal/rrhh/alta-agente",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
+    parentMenuId: "rrhh",
+  },
+  {
+    id: "lao-checkin-rrhh",
+    label: "Check-in LAO",
+    path: "/portal/rrhh/lao-checkin",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "checkin-saldos",
   },
   {
     id: "configuracion",
@@ -277,25 +310,28 @@ export const MODULOS_V2_ESTADO = [
  */
 export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh/solicitudes-articulo")) return "bandeja-solicitudes-rrhh";
-  if (pathname.startsWith("/portal/rrhh/checkin-saldos") || pathname.startsWith("/portal/rrhh/lao-checkin")) {
-    return "checkin-saldos";
-  }
+  if (pathname.startsWith("/portal/rrhh/lao-checkin")) return "lao-checkin-rrhh";
+  if (pathname.startsWith("/portal/rrhh/checkin-saldos")) return "checkin-saldos";
+  if (pathname.startsWith("/portal/rrhh/notificaciones-datos-personales")) return "rrhh-notif-datos";
+  if (pathname.startsWith("/portal/rrhh/seguimiento-enrolamiento")) return "rrhh-seg-enrol-portal";
+  if (pathname.startsWith("/portal/rrhh/alta-agente")) return "alta-agente-guia";
+  if (pathname.startsWith("/portal/rrhh/antiguedad")) return "antiguedad";
   if (pathname.startsWith("/portal/rrhh/configuracion-articulos")) return "articulos-cfg";
   if (pathname.startsWith("/portal/rrhh/calendario-institucional")) return "calendario-institucional";
   if (pathname.startsWith("/portal/rrhh/regimenes-horarios")) return "regimenes-horarios";
   if (pathname.startsWith("/portal/rrhh/explorador-turnos")) return "bandeja-turnos-explorador-rrhh";
   if (pathname.startsWith("/portal/rrhh/bandeja-turnos")) return "bandeja-turnos-evaluador-rrhh";
-  if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
-  if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
   if (pathname.startsWith("/portal/rrhh/fichadas-carga-manual")) return "fichadas-carga-manual";
   if (pathname.startsWith("/portal/rrhh/fichadas-relojes")) return "fichadas-relojes";
+  if (pathname.startsWith("/portal/rrhh/fichadas-enrolamiento")) return "fichadas-enrolamiento";
   if (pathname.startsWith("/portal/rrhh/fichadas-import")) return "fichadas-import";
   if (pathname.startsWith("/portal/rrhh/fichadas-huerfanas")) return "fichadas-huerfanas";
-  if (pathname.startsWith("/portal/rrhh/fichadas-enrolamiento")) return "fichadas-huerfanas";
   if (pathname.startsWith("/portal/rrhh/grilla-operativa")) return "grilla";
+  if (pathname.startsWith("/portal/rrhh/planes-turno")) return "planes-turno-rrhh";
+  if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
+  if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
   if (pathname.startsWith("/portal/jefe/grilla-operativa")) return "grilla-jefe";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla-jefe";
-  if (pathname.startsWith("/portal/rrhh/planes-turno")) return "planes-turno-rrhh";
   if (pathname.startsWith("/portal/jefe/planes-turno")) return "planes-turno-jefe";
   if (pathname.startsWith("/portal/jefe/solicitudes")) return "bandeja-solicitudes-jefe";
   if (pathname.startsWith("/portal/solicitudes")) return "ticketera";
