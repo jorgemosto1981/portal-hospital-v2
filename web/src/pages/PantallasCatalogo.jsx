@@ -9,8 +9,8 @@ export default function PantallasCatalogo() {
         <Card className="px-4 py-5 md:px-6">
           <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Menú de pantallas</h1>
           <p className="mt-2 text-sm text-slate-600">
-            Mapa de rutas del código web. Los enlaces llevan a la <strong>rama inicial</strong> por rol RRHH (entrada de
-            sección), excepto pantallas RRHH operativas habilitadas para acceso directo.
+            Mapa de rutas del código web. Cada tarjeta abre la <strong>ruta real</strong> de la pantalla (salvo el demo de
+            legajo por id, que entra por alta RRHH).
           </p>
           <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
             Referencia de estado: <strong>activo</strong> = ruta principal; <strong>activo-soporte</strong> =

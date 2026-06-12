@@ -3,29 +3,13 @@
  * (sin saltar a subpantallas). Las rutas “reales” siguen en `path` para referencia.
  */
 export const RRHH_RAMA_INICIAL_PORTAL = "/portal/rrhh/alta";
-const RRHH_RUTAS_DIRECTAS_HABILITADAS = new Set([
-  "/portal/rrhh/notificaciones-datos-personales",
-  "/portal/rrhh/seguimiento-enrolamiento",
-  "/portal/rrhh/fichadas-relojes",
-  "/portal/rrhh/fichadas-import",
-  "/portal/rrhh/fichadas-huerfanas",
-  "/portal/rrhh/fichadas-enrolamiento",
-  "/portal/rrhh/fichadas-carga-manual",
-]);
 
 /**
  * @param {{ path: string, id?: string }} p — ítem de {@link PANTALLAS_CATALOGO}
- * @returns {string} destino del enlace “Abrir” para flujo RRHH
+ * @returns {string} destino del enlace “Abrir” (ruta real salvo demo legajo)
  */
 export function pathCatalogoRrhh(p) {
   const raw = typeof p.path === "string" ? p.path : "";
-  if (
-    raw.startsWith("/portal/rrhh/") &&
-    raw !== RRHH_RAMA_INICIAL_PORTAL &&
-    !RRHH_RUTAS_DIRECTAS_HABILITADAS.has(raw)
-  ) {
-    return RRHH_RAMA_INICIAL_PORTAL;
-  }
   if (p.id === "perfil-legajo") {
     return RRHH_RAMA_INICIAL_PORTAL;
   }
@@ -43,8 +27,15 @@ export const PANTALLAS_CATALOGO = [
     id: "grilla",
     titulo: "Grilla operativa",
     path: "/portal/rrhh/grilla-operativa",
-    estado: "borrador",
+    estado: "mvp",
     fuente: "web/src/pages/rrhh/GrillaOperativaRrhhPage.jsx",
+  },
+  {
+    id: "ticketera",
+    titulo: "Solicitudes (ticketera)",
+    path: "/portal/solicitudes",
+    estado: "mvp",
+    fuente: "web/src/pages/TicketeraHub.jsx",
   },
   {
     id: "fichadas-relojes",
@@ -52,6 +43,13 @@ export const PANTALLAS_CATALOGO = [
     path: "/portal/rrhh/fichadas-relojes",
     estado: "mvp",
     fuente: "web/src/pages/rrhh/FichadasRelojesRrhhPage.jsx",
+  },
+  {
+    id: "fichadas-enrolamiento",
+    titulo: "Fichadas — enrolamiento tarjeta ↔ persona",
+    path: "/portal/rrhh/fichadas-enrolamiento",
+    estado: "mvp",
+    fuente: "web/src/pages/rrhh/FichadasEnrolamientoRrhhPage.jsx",
   },
   {
     id: "fichadas-import",
@@ -83,6 +81,97 @@ export const PANTALLAS_CATALOGO = [
   },
   { id: "onboarding", titulo: "Onboarding wizard", path: "/onboarding", estado: "activo", fuente: "web/src/features/onboarding/OnboardingWizard.jsx" },
   { id: "rrhh-alta", titulo: "RRHH alta agente", path: "/portal/rrhh/alta", estado: "activo", fuente: "web/src/features/rrhh/AltaAgenteRRHH.jsx" },
+  {
+    id: "rrhh-alta-agente-guia",
+    titulo: "RRHH alta agente (guía onboarding)",
+    path: "/portal/rrhh/alta-agente",
+    estado: "mvp",
+    fuente: "web/src/pages/AltaAgenteOnboardingRRHH.jsx",
+  },
+  {
+    id: "rrhh-antiguedad",
+    titulo: "RRHH antigüedad",
+    path: "/portal/rrhh/antiguedad",
+    estado: "mvp",
+    fuente: "web/src/pages/Antiguedad.jsx",
+  },
+  {
+    id: "bandeja-solicitudes-rrhh",
+    titulo: "RRHH bandeja solicitudes artículo",
+    path: "/portal/rrhh/solicitudes-articulo",
+    estado: "mvp",
+    fuente: "web/src/pages/BandejaRrhhSolicitudes.jsx",
+  },
+  {
+    id: "checkin-saldos",
+    titulo: "RRHH check-in saldos agente",
+    path: "/portal/rrhh/checkin-saldos",
+    estado: "mvp",
+    fuente: "web/src/pages/CheckinSaldosAgente.jsx",
+  },
+  {
+    id: "lao-checkin-rrhh",
+    titulo: "RRHH check-in LAO",
+    path: "/portal/rrhh/lao-checkin",
+    estado: "mvp",
+    fuente: "web/src/pages/LaoCheckinRRHH.jsx",
+  },
+  {
+    id: "calendario-institucional",
+    titulo: "RRHH calendario institucional",
+    path: "/portal/rrhh/calendario-institucional",
+    estado: "mvp",
+    fuente: "web/src/pages/rrhh/CalendarioConfig.jsx",
+  },
+  {
+    id: "regimenes-horarios",
+    titulo: "RRHH regímenes horarios",
+    path: "/portal/rrhh/regimenes-horarios",
+    estado: "mvp",
+    fuente: "web/src/pages/rrhh/RegimenesHorariosPage.jsx",
+  },
+  {
+    id: "bandeja-turnos-evaluador",
+    titulo: "RRHH bandeja turnos (evaluador)",
+    path: "/portal/rrhh/bandeja-turnos",
+    estado: "mvp",
+    fuente: "web/src/pages/rrhh/BandejaTurnosRrhhPage.jsx",
+  },
+  {
+    id: "explorador-turnos-rrhh",
+    titulo: "RRHH explorador turnos",
+    path: "/portal/rrhh/explorador-turnos",
+    estado: "mvp",
+    fuente: "web/src/pages/rrhh/ExploradorTurnosRrhhPage.jsx",
+  },
+  {
+    id: "planes-turno-rrhh",
+    titulo: "RRHH planes turno mensual",
+    path: "/portal/rrhh/planes-turno",
+    estado: "mvp",
+    fuente: "web/src/pages/rrhh/PlanTurnoServicioRrhhPage.jsx",
+  },
+  {
+    id: "articulos-cfg",
+    titulo: "RRHH configuración artículos",
+    path: "/portal/rrhh/configuracion-articulos",
+    estado: "mvp",
+    fuente: "web/src/pages/ArticuloListadoGrilla.jsx",
+  },
+  {
+    id: "planes-turno-jefe",
+    titulo: "Jefe planes turno mensual",
+    path: "/portal/jefe/planes-turno",
+    estado: "mvp",
+    fuente: "web/src/pages/jefe/PlanTurnoServicioJefePage.jsx",
+  },
+  {
+    id: "bandeja-solicitudes-jefe",
+    titulo: "Jefe bandeja solicitudes",
+    path: "/portal/jefe/solicitudes",
+    estado: "mvp",
+    fuente: "web/src/pages/BandejaJefeSolicitudes.jsx",
+  },
   {
     id: "rrhh-notif-datos",
     titulo: "RRHH notificaciones datos personales",

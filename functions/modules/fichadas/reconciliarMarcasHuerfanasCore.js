@@ -7,6 +7,7 @@ const { alinearMarcasConTeoriaEnCalendario } = require("../shared/fichadasAlinea
 const { evaluarDeltaCeldaDia } = require("../shared/fichadasDeltaCeldaDia");
 const { marcasDesdeFichadasRealesExistentes } = require("./fichadasMarcasUtils");
 const { assertPeriodoNoCerrado } = require("../asistencia/asistenciaPeriodoLiquidacion");
+const { idsGdtsVigentesPersonaEnFecha } = require("./fichadasMultiCargoUniversal");
 
 const COL_FMH = "fichadas_marca_huerfana";
 const COL_VIS = "vistas_grilla_mes_agente";
@@ -69,14 +70,44 @@ function fmhAMarcasCrudas(fmhDocs) {
  * @param {Array<object>} marcas
  */
 function agruparMarcasPorVisPeriodo(marcas, persona_id, grupo_trabajo_id) {
-  /** @type {Map<string, { anio: number, mes: number, marcas: object[] }>} */
+  /** @type {Map<string, { anio: number, mes: number, grupo_trabajo_id: string, marcas: object[] }>} */
   const map = new Map();
   for (const m of marcas) {
     const { anio, mes } = anioMesDesdeYmd(m.fecha_ymd);
     if (!Number.isFinite(anio) || !Number.isFinite(mes)) continue;
     const visId = buildVisDocumentId(persona_id, `${anio}-${String(mes).padStart(2, "0")}-01`, grupo_trabajo_id);
-    if (!map.has(visId)) map.set(visId, { anio, mes, marcas: [] });
+    if (!map.has(visId)) {
+      map.set(visId, { anio, mes, grupo_trabajo_id, marcas: [] });
+    }
     map.get(visId).marcas.push(m);
+  }
+  return map;
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {string} persona_id
+ * @param {Array<object>} marcas
+ */
+async function agruparMarcasPorVisMultiCargo(db, persona_id, marcas) {
+  /** @type {Map<string, { anio: number, mes: number, grupo_trabajo_id: string, marcas: object[] }>} */
+  const map = new Map();
+  const cache = new Map();
+  for (const m of marcas) {
+    const gdts = await idsGdtsVigentesPersonaEnFecha(db, persona_id, m.fecha_ymd, cache);
+    for (const grupo_trabajo_id of gdts) {
+      const { anio, mes } = anioMesDesdeYmd(m.fecha_ymd);
+      if (!Number.isFinite(anio) || !Number.isFinite(mes)) continue;
+      const visId = buildVisDocumentId(
+        persona_id,
+        `${anio}-${String(mes).padStart(2, "0")}-01`,
+        grupo_trabajo_id,
+      );
+      if (!map.has(visId)) {
+        map.set(visId, { anio, mes, grupo_trabajo_id, marcas: [] });
+      }
+      map.get(visId).marcas.push(m);
+    }
   }
   return map;
 }
@@ -90,35 +121,50 @@ async function reconciliarMarcasHuerfanasReloj(db, params) {
   const grupo_trabajo_id = String(params.grupo_trabajo_id || "").trim();
   const reloj_id = String(params.reloj_id || "").trim();
   const numero_tarjeta = String(params.numero_tarjeta || "").trim();
+  const multi_cargo_universal = params.multi_cargo_universal === true;
 
-  if (!/^per_/i.test(persona_id) || !/^gdt_/i.test(grupo_trabajo_id)) {
-    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "persona_id y grupo_trabajo_id inválidos." };
+  if (!/^per_/i.test(persona_id)) {
+    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "persona_id inválido." };
+  }
+  if (!multi_cargo_universal && !/^gdt_/i.test(grupo_trabajo_id)) {
+    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "grupo_trabajo_id inválido." };
   }
 
   const listado = await listarMarcasHuerfanasPendientes(db, { reloj_id, numero_tarjeta });
   if (!listado.ok) return listado;
   if (listado.marcas.length === 0) {
-    return { ok: true, procesadas: 0, vis_actualizados: 0, write_skipped: 0 };
+    return { ok: true, procesadas: 0, vis_actualizados: 0, write_skipped: 0, fmh_resueltas: 0 };
   }
 
   const marcas = fmhAMarcasCrudas(listado.marcas);
-  const porVis = agruparMarcasPorVisPeriodo(marcas, persona_id, grupo_trabajo_id);
+  const porVis = multi_cargo_universal
+    ? await agruparMarcasPorVisMultiCargo(db, persona_id, marcas)
+    : agruparMarcasPorVisPeriodo(marcas, persona_id, grupo_trabajo_id);
+
+  if (multi_cargo_universal && porVis.size === 0) {
+    return {
+      ok: false,
+      codigo: "SIN_GRUPO_VIGENTE",
+      mensaje: "No hay grupos de trabajo vigentes en las fechas de las marcas huérfanas.",
+    };
+  }
 
   let visActualizados = 0;
   let writeSkipped = 0;
   const fmhResueltos = [];
 
   for (const [visId, bucket] of porVis.entries()) {
-    const { anio, mes, marcas: marcasVis } = bucket;
+    const { anio, mes, marcas: marcasVis, grupo_trabajo_id: gdtBucket } = bucket;
+    const gdtVis = String(gdtBucket || grupo_trabajo_id || "").trim();
     const fechas = [...new Set(marcasVis.map((m) => m.fecha_ymd))];
 
     for (const fecha_ymd of fechas) {
-      await assertPeriodoNoCerrado(db, persona_id, fecha_ymd, grupo_trabajo_id);
+      await assertPeriodoNoCerrado(db, persona_id, fecha_ymd, gdtVis);
     }
 
     const vista = await leerVistaGrillaMesAgente(db, {
       personaId: persona_id,
-      grupoTrabajoId: grupo_trabajo_id,
+      grupoTrabajoId: gdtVis,
       anio,
       mes,
     });
@@ -208,7 +254,7 @@ async function reconciliarMarcasHuerfanasReloj(db, params) {
         {
           dias: diasTx,
           persona_id,
-          grupo_de_trabajo_id: grupo_trabajo_id,
+          grupo_de_trabajo_id: gdtVis,
           anio,
           mes,
         },

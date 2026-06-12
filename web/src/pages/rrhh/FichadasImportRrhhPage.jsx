@@ -144,6 +144,10 @@ export default function FichadasImportRrhhPage() {
             Configurar relojes
           </Link>
           {" · "}
+          <Link to="/portal/rrhh/fichadas-enrolamiento" className="text-blue-600 hover:underline">
+            Enrolamiento tarjeta ↔ persona
+          </Link>
+          {" · "}
           <Link to="/portal/rrhh/fichadas-huerfanas" className="text-blue-600 hover:underline">
             Bandeja huérfanas
           </Link>

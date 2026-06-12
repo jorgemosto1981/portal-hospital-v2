@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -8,7 +8,7 @@ import {
   callBuscarPersonasCheckinRrhh,
   callGuardarEnrolamientoRelojPersona,
 } from "../../services/callables.js";
-import { listarColeccion } from "../../services/configuracionCatalogosService.js";
+import { laboralCallableErrorMessage } from "../datos-laborales/callableErrorMessage.js";
 
 export default function FichadasEnrolamientoRrhhPage() {
   const [params] = useSearchParams();
@@ -22,8 +22,6 @@ export default function FichadasEnrolamientoRrhhPage() {
   const [busqueda, setBusqueda] = useState("");
   const [personas, setPersonas] = useState([]);
   const [personaId, setPersonaId] = useState("");
-  const [grupoManual, setGrupoManual] = useState("");
-  const [grupos, setGrupos] = useState([]);
   const [buscando, setBuscando] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
@@ -33,22 +31,6 @@ export default function FichadasEnrolamientoRrhhPage() {
   );
   const grupoReloj = String(relojSel?.grupo_trabajo_id || relojSel?.grupo_id || "").trim();
   const relojUniversal = Boolean(relojSel) && !/^gdt_/i.test(grupoReloj);
-  const grupoId = grupoReloj || grupoManual;
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const items = await listarColeccion("grupos_de_trabajo");
-        if (alive) setGrupos(Array.isArray(items) ? items : []);
-      } catch {
-        if (alive) setGrupos([]);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   const buscarPersonas = useCallback(async () => {
     const q = busqueda.trim();
@@ -68,12 +50,8 @@ export default function FichadasEnrolamientoRrhhPage() {
   }, [busqueda]);
 
   const guardar = useCallback(async () => {
-    if (!relojId || !numeroTarjeta.trim() || !personaId || !/^gdt_/i.test(grupoId)) {
-      toast.error(
-        relojUniversal
-          ? "Completá reloj, tarjeta, persona y grupo del agente (sector destino)."
-          : "Completá reloj, tarjeta, persona y grupo del reloj.",
-      );
+    if (!relojId || !numeroTarjeta.trim() || !personaId) {
+      toast.error("Completá reloj, tarjeta y persona.");
       return;
     }
     setGuardando(true);
@@ -82,21 +60,21 @@ export default function FichadasEnrolamientoRrhhPage() {
         reloj_id: relojId,
         numero_tarjeta: numeroTarjeta.trim(),
         persona_id: personaId,
-        grupo_trabajo_id: grupoId,
       });
       const rec = res.data?.reconciliacion;
+      const gdt = res.data?.grupo_trabajo_id;
       toast.success(
         rec
-          ? `Enrolamiento guardado · ${rec.fmh_resueltas ?? 0} huérfanas reconciliadas · ${rec.vis_actualizados ?? 0} vis`
-          : "Enrolamiento guardado.",
+          ? `Enrolamiento guardado${gdt ? ` (${gdt})` : ""} · ${rec.fmh_resueltas ?? 0} huérfanas reconciliadas · ${rec.vis_actualizados ?? 0} vis`
+          : `Enrolamiento guardado${gdt ? ` · grupo ${gdt}` : ""}.`,
         { duration: 6000 },
       );
     } catch (e) {
-      toast.error(e?.message || "Error al guardar enrolamiento.");
+      toast.error(laboralCallableErrorMessage(e, "Error al guardar enrolamiento."), { duration: 8000 });
     } finally {
       setGuardando(false);
     }
-  }, [relojId, numeroTarjeta, personaId, grupoId, relojUniversal]);
+  }, [relojId, numeroTarjeta, personaId]);
 
   return (
     <div className="min-h-[calc(100dvh-6rem)] space-y-4 bg-slate-50 px-3 py-5 pb-24 md:px-6">
@@ -137,32 +115,15 @@ export default function FichadasEnrolamientoRrhhPage() {
         <p className="text-xs text-slate-500">
           {relojUniversal ? (
             <>
-              Reloj <strong>universal</strong> — indicá el grupo del agente (destino de marcas).
+              Reloj <strong>universal</strong> — al importar o reconciliar, las marcas se replican en cada{" "}
+              <strong>vis_*</strong> de los grupos con HLG vigente del agente en la fecha de la fichada.
             </>
           ) : (
             <>
-              Grupo trabajo (desde cfg reloj): <span className="font-mono">{grupoReloj || "—"}</span>
+              Sector de marcas: <span className="font-mono">{grupoReloj || "—"}</span> (configuración del reloj).
             </>
           )}
         </p>
-
-        {relojUniversal ? (
-          <label className="block text-sm font-medium text-slate-700">
-            Grupo del agente (sector destino)
-            <select
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-              value={grupoManual}
-              onChange={(e) => setGrupoManual(e.target.value)}
-            >
-              <option value="">— Seleccionar gdt —</option>
-              {grupos.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.nombre || g.id}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
 
         <div className="flex gap-2">
           <input

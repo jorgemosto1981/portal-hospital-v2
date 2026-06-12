@@ -13,6 +13,10 @@ const {
   claveVisImportMarca,
   detectarDuplicadosProbablesEnLote,
 } = require("../shared/fichadasValidacionMarcas");
+const {
+  relojEsUniversalPorGrupoCfg,
+  expandirMarcasPorEnrolamientoYMultiCargo,
+} = require("./fichadasMultiCargoUniversal");
 const { buildEventoV21, persistEventoV21 } = require("../shared/eventosV2");
 const {
   marcasDesdeFichadasRealesExistentes,
@@ -316,7 +320,7 @@ async function guardarCapaFichadaDia(db, params, actor) {
 
 async function cargarMapaEnrolamientoReloj(db, reloj_id) {
   const snap = await db.collection(COL_RPE).where("reloj_id", "==", reloj_id).get();
-  /** @type {Map<string, { persona_id: string, grupo_trabajo_id: string }>} */
+  /** @type {Map<string, { persona_id: string, grupo_trabajo_id: string | null, multi_cargo_universal?: boolean }>} */
   const map = new Map();
   for (const doc of snap.docs) {
     const d = doc.data() || {};
@@ -324,9 +328,16 @@ async function cargarMapaEnrolamientoReloj(db, reloj_id) {
     const tarjeta = String(d.numero_tarjeta || "").trim();
     const pid = String(d.persona_id || "").trim();
     const gdt = String(d.grupo_trabajo_id || "").trim();
-    if (tarjeta && pid && /^gdt_/i.test(gdt)) {
-      map.set(tarjeta, { persona_id: pid, grupo_trabajo_id: gdt });
+    if (!tarjeta || !/^per_/i.test(pid)) continue;
+    if (d.multi_cargo_universal === true || !/^gdt_/i.test(gdt)) {
+      map.set(tarjeta, {
+        persona_id: pid,
+        grupo_trabajo_id: /^gdt_/i.test(gdt) ? gdt : null,
+        multi_cargo_universal: d.multi_cargo_universal === true || !/^gdt_/i.test(gdt),
+      });
+      continue;
     }
+    map.set(tarjeta, { persona_id: pid, grupo_trabajo_id: gdt, multi_cargo_universal: false });
   }
   return map;
 }
@@ -399,21 +410,12 @@ async function aplicarImportFichadasReloj(db, params, actor) {
     umbral_duplicado_minutos: params.umbral_duplicado_minutos,
   });
 
-  const huerfanas = [];
-  const conPersona = [];
-
-  for (const linea of conAdvertencias) {
-    const enrol = enrolMap.get(linea.numero_tarjeta);
-    if (!enrol?.persona_id || !enrol.grupo_trabajo_id) {
-      huerfanas.push(linea);
-      continue;
-    }
-    conPersona.push({
-      ...linea,
-      persona_id: enrol.persona_id,
-      grupo_trabajo_id: enrol.grupo_trabajo_id,
-    });
-  }
+  const relojUniversal = relojEsUniversalPorGrupoCfg(relojGrupoCfg);
+  const { conPersona, huerfanas } = await expandirMarcasPorEnrolamientoYMultiCargo(db, {
+    marcas: conAdvertencias,
+    enrolMap,
+    relojUniversal,
+  });
 
   const porVis = agruparMarcasPorClaveVis(conPersona, (m) =>
     claveVisImportMarca(m, { persona_id: m.persona_id, grupo_trabajo_id: m.grupo_trabajo_id }),
