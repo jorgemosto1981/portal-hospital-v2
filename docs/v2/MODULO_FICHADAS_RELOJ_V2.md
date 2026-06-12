@@ -116,6 +116,7 @@ Verificar en consola Firestore que los índices de `fichadas_marca_huerfana` est
 | Ruta | Pantalla |
 |------|----------|
 | `/portal/rrhh/fichadas-import` | Subida TXT, preview, checkboxes duplicados, apply |
+| `/portal/rrhh/fichadas-relojes` | ABM `cfg_reloj_biometrico` (callable `guardarCfgRelojBiometrico`) |
 | `/portal/rrhh/fichadas-huerfanas` | Bandeja `fmh_*` índice `(reloj_id, estado, fecha_ymd)` |
 | `/portal/rrhh/fichadas-enrolamiento` | Alta `rpe_*` + reconciliar |
 

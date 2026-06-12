@@ -138,6 +138,10 @@ export default function FichadasImportRrhhPage() {
         <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Importar fichadas (TXT)</h1>
         <p className="text-sm text-slate-500">
           Preview en memoria · apply atómico.{" "}
+          <Link to="/portal/rrhh/fichadas-relojes" className="text-blue-600 hover:underline">
+            Configurar relojes
+          </Link>
+          {" · "}
           <Link to="/portal/rrhh/fichadas-huerfanas" className="text-blue-600 hover:underline">
             Bandeja huérfanas
           </Link>

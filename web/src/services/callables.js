@@ -492,3 +492,8 @@ export function callReconciliarMarcasHuerfanasReloj(data) {
 export function callGuardarCapaFichadaDia(data) {
   return httpsCallable(getFunctionsV2(), "guardarCapaFichadaDia", { timeout: 120000 })(data);
 }
+
+/** Alta/edición cfg_reloj_biometrico (solo RRHH, Admin SDK). */
+export function callGuardarCfgRelojBiometrico(data) {
+  return httpsCallable(getFunctionsV2(), "guardarCfgRelojBiometrico", { timeout: 60000 })(data);
+}

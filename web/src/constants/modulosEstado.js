@@ -154,9 +154,17 @@ export const MODULOS_PORTAL = [
   {
     id: "fichadas-reloj-raiz",
     label: "Fichadas reloj",
-    path: "/portal/rrhh/fichadas-import",
+    path: "/portal/rrhh/fichadas-relojes",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
+  },
+  {
+    id: "fichadas-relojes",
+    label: "Relojes",
+    path: "/portal/rrhh/fichadas-relojes",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "fichadas-reloj-raiz",
   },
   {
     id: "fichadas-import",
@@ -280,6 +288,7 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
   if (pathname.startsWith("/portal/rrhh/fichadas-carga-manual")) return "fichadas-carga-manual";
+  if (pathname.startsWith("/portal/rrhh/fichadas-relojes")) return "fichadas-relojes";
   if (pathname.startsWith("/portal/rrhh/fichadas-import")) return "fichadas-import";
   if (pathname.startsWith("/portal/rrhh/fichadas-huerfanas")) return "fichadas-huerfanas";
   if (pathname.startsWith("/portal/rrhh/fichadas-enrolamiento")) return "fichadas-huerfanas";

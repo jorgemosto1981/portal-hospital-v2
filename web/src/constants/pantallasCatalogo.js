@@ -6,6 +6,7 @@ export const RRHH_RAMA_INICIAL_PORTAL = "/portal/rrhh/alta";
 const RRHH_RUTAS_DIRECTAS_HABILITADAS = new Set([
   "/portal/rrhh/notificaciones-datos-personales",
   "/portal/rrhh/seguimiento-enrolamiento",
+  "/portal/rrhh/fichadas-relojes",
   "/portal/rrhh/fichadas-import",
   "/portal/rrhh/fichadas-huerfanas",
   "/portal/rrhh/fichadas-enrolamiento",
@@ -44,6 +45,13 @@ export const PANTALLAS_CATALOGO = [
     path: "/portal/rrhh/grilla-operativa",
     estado: "borrador",
     fuente: "web/src/pages/rrhh/GrillaOperativaRrhhPage.jsx",
+  },
+  {
+    id: "fichadas-relojes",
+    titulo: "Fichadas — relojes biométricos",
+    path: "/portal/rrhh/fichadas-relojes",
+    estado: "mvp",
+    fuente: "web/src/pages/rrhh/FichadasRelojesRrhhPage.jsx",
   },
   {
     id: "fichadas-import",
