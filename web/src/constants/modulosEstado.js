@@ -152,6 +152,45 @@ export const MODULOS_PORTAL = [
     grupo: "rrhh",
   },
   {
+    id: "fichadas-reloj-raiz",
+    label: "Fichadas reloj",
+    path: "/portal/rrhh/fichadas-relojes",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
+    id: "fichadas-relojes",
+    label: "Relojes",
+    path: "/portal/rrhh/fichadas-relojes",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "fichadas-reloj-raiz",
+  },
+  {
+    id: "fichadas-import",
+    label: "Import TXT",
+    path: "/portal/rrhh/fichadas-import",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "fichadas-reloj-raiz",
+  },
+  {
+    id: "fichadas-huerfanas",
+    label: "Huérfanas",
+    path: "/portal/rrhh/fichadas-huerfanas",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "fichadas-reloj-raiz",
+  },
+  {
+    id: "fichadas-carga-manual",
+    label: "Carga manual",
+    path: "/portal/rrhh/fichadas-carga-manual",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "fichadas-reloj-raiz",
+  },
+  {
     id: "grilla-jefe",
     label: "Grilla operativa",
     path: "/portal/jefe/grilla-operativa",
@@ -248,6 +287,11 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh/bandeja-turnos")) return "bandeja-turnos-evaluador-rrhh";
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
+  if (pathname.startsWith("/portal/rrhh/fichadas-carga-manual")) return "fichadas-carga-manual";
+  if (pathname.startsWith("/portal/rrhh/fichadas-relojes")) return "fichadas-relojes";
+  if (pathname.startsWith("/portal/rrhh/fichadas-import")) return "fichadas-import";
+  if (pathname.startsWith("/portal/rrhh/fichadas-huerfanas")) return "fichadas-huerfanas";
+  if (pathname.startsWith("/portal/rrhh/fichadas-enrolamiento")) return "fichadas-huerfanas";
   if (pathname.startsWith("/portal/rrhh/grilla-operativa")) return "grilla";
   if (pathname.startsWith("/portal/jefe/grilla-operativa")) return "grilla-jefe";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla-jefe";

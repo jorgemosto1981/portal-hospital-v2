@@ -1115,6 +1115,10 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         vigenteHasta={diaModal?.vigenteHasta ?? null}
         materializadoLazy={diaModal?.materializadoLazy === true}
         puedeVerTramosCrudosFichadas={capabilities.puedeVerTramosCrudosFichadas}
+        puedeEditarFichadasReales={capabilities.puedeEditarFichadasReales}
+        onFichadaGuardada={async () => {
+          await vista.cargar({ bypassCache: true });
+        }}
         onAbrirAyuda={abrirAyuda}
         mostrarFichada={capabilities.puedeVerFichadasReales || esJefe}
         puedeCorregirPlan={esJefe || capabilities.puedeAccionesPeriodoLiquidacion}

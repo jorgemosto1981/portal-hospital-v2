@@ -373,6 +373,20 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    /** Módulo fichadas reloj V2 — solo Cloud Functions (Admin SDK). */
+    match /cfg_reloj_biometrico/{docId} {
+      allow read, write: if false;
+    }
+    match /reloj_persona_enrolamiento/{docId} {
+      allow read, write: if false;
+    }
+    match /fichadas_marca_huerfana/{docId} {
+      allow read, write: if false;
+    }
+    match /fichadas_import_lote/{docId} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

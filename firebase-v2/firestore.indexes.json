@@ -76,6 +76,25 @@
       ]
     },
     {
+      "collectionGroup": "fichadas_marca_huerfana",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "reloj_id", "order": "ASCENDING" },
+        { "fieldPath": "numero_tarjeta", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "fecha_ymd", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "fichadas_marca_huerfana",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "reloj_id", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "fecha_ymd", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "eventos_por_modulo",
       "queryScope": "COLLECTION",
       "fields": [

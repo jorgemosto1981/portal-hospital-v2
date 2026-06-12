@@ -6,6 +6,11 @@ export const RRHH_RAMA_INICIAL_PORTAL = "/portal/rrhh/alta";
 const RRHH_RUTAS_DIRECTAS_HABILITADAS = new Set([
   "/portal/rrhh/notificaciones-datos-personales",
   "/portal/rrhh/seguimiento-enrolamiento",
+  "/portal/rrhh/fichadas-relojes",
+  "/portal/rrhh/fichadas-import",
+  "/portal/rrhh/fichadas-huerfanas",
+  "/portal/rrhh/fichadas-enrolamiento",
+  "/portal/rrhh/fichadas-carga-manual",
 ]);
 
 /**
@@ -40,6 +45,34 @@ export const PANTALLAS_CATALOGO = [
     path: "/portal/rrhh/grilla-operativa",
     estado: "borrador",
     fuente: "web/src/pages/rrhh/GrillaOperativaRrhhPage.jsx",
+  },
+  {
+    id: "fichadas-relojes",
+    titulo: "Fichadas — relojes biométricos",
+    path: "/portal/rrhh/fichadas-relojes",
+    estado: "mvp",
+    fuente: "web/src/pages/rrhh/FichadasRelojesRrhhPage.jsx",
+  },
+  {
+    id: "fichadas-import",
+    titulo: "Fichadas — import TXT",
+    path: "/portal/rrhh/fichadas-import",
+    estado: "mvp",
+    fuente: "web/src/pages/rrhh/FichadasImportRrhhPage.jsx",
+  },
+  {
+    id: "fichadas-huerfanas",
+    titulo: "Fichadas — huérfanas",
+    path: "/portal/rrhh/fichadas-huerfanas",
+    estado: "mvp",
+    fuente: "web/src/pages/rrhh/FichadasHuerfanasRrhhPage.jsx",
+  },
+  {
+    id: "fichadas-carga-manual",
+    titulo: "Fichadas — carga manual",
+    path: "/portal/rrhh/fichadas-carga-manual",
+    estado: "mvp",
+    fuente: "web/src/pages/rrhh/FichadasCargaManualRrhhPage.jsx",
   },
   {
     id: "grilla-jefe",

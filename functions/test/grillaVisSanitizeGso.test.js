@@ -13,7 +13,8 @@ describe("grillaVisSanitizeGso (UX-6)", () => {
       "09": {
         rda_ingreso: "06:00",
         fichadas_esperadas: 2,
-        fichadas_reales: [{ hora: "06:05" }],
+        tipo_dia: "laborable",
+        fichadas_reales: [{ ingreso: "06:05", egreso: "14:00" }],
         fichadas: [{ tipo: "ingreso" }],
         capa_realidad: { ok: true },
         divergencias: [{ codigo: "X" }],
@@ -26,6 +27,8 @@ describe("grillaVisSanitizeGso (UX-6)", () => {
     assert.equal("capa_realidad" in dias["09"], false);
     assert.equal("divergencias" in dias["09"], false);
     assert.equal(dias["09"].fichada_presencia, "presente");
+    assert.equal(dias["09"].estado_fichada_jefe, "OK");
+    assert.equal("fichadas_borradas" in dias["09"], false);
   });
 
   it("expone fichada_presencia ausente sin horarios crudos", () => {
@@ -38,6 +41,7 @@ describe("grillaVisSanitizeGso (UX-6)", () => {
       },
     });
     assert.equal(dias["10"].fichada_presencia, "ausente");
+    assert.equal(dias["10"].estado_fichada_jefe, "ALERTA");
     assert.equal("fichadas_reales" in dias["10"], false);
   });
 

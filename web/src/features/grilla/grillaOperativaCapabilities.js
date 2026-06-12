@@ -22,6 +22,7 @@ export const GRILLA_OPERATIVA_SHELL = {
  * @property {boolean} consolaTripleHorizonteEnFrio — jefe: tarjetas M-1/M/M+1 sin `grupo_id` en URL
  * @property {boolean} muestraBandejaAuditoriaDiaria — T-06: bandeja alertas sector (solo shell RRHH)
  * @property {boolean} puedeVerTramosCrudosFichadas — T-06: marcas reloj + auditoría en modal día
+ * @property {boolean} puedeEditarFichadasReales — ABM capa real vía guardarCapaFichadaDia (shell RRHH)
  * @property {boolean} permiteExportarMatrizMacro — export read model / reportes institucionales
  * @property {string} rutaFocoBase — base para deep link del foco GDT
  */
@@ -38,6 +39,7 @@ const RRHH_CAPABILITIES = {
   consolaTripleHorizonteEnFrio: false,
   muestraBandejaAuditoriaDiaria: true,
   puedeVerTramosCrudosFichadas: true,
+  puedeEditarFichadasReales: true,
   permiteExportarMatrizMacro: true,
   rutaFocoBase: "/portal/rrhh/grilla-operativa",
 };
@@ -54,6 +56,7 @@ const JEFE_CAPABILITIES = {
   consolaTripleHorizonteEnFrio: true,
   muestraBandejaAuditoriaDiaria: false,
   puedeVerTramosCrudosFichadas: false,
+  puedeEditarFichadasReales: false,
   permiteExportarMatrizMacro: false,
   rutaFocoBase: "/portal/jefe/grilla-operativa",
 };

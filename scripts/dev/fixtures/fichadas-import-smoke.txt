@@ -1,0 +1,6 @@
+# Smoke Fase D — duplicado probable + huérfana
+# Tarjeta 00123: dos marcas a 1 min (política EXCLUIR_SEGUNDA)
+00123 12/06/26 06:05 001 01
+00123 12/06/26 06:06 001 01
+# Tarjeta 00999: sin enrolamiento → bandeja huérfanas tras apply
+00999 12/06/26 08:00 001 02

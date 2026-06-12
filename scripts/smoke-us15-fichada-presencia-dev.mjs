@@ -8,11 +8,16 @@
  *   node scripts/smoke-us15-fichada-presencia-dev.mjs ... --modo=ausente
  *   node scripts/smoke-us15-fichada-presencia-dev.mjs ... --modo=revert --apply
  *   node scripts/smoke-us15-fichada-presencia-dev.mjs ... --modo=presente --apply
+ *   node scripts/smoke-us15-fichada-presencia-dev.mjs ... --modo=impar --apply
+ *   node scripts/smoke-us15-fichada-presencia-dev.mjs ... --payload='[{"ingreso":"08:00","egreso":"16:00"}]' --apply
  *
  * --modo:
  *   presente  → fichadas_reales con horarios de prueba
  *   ausente   → fichadas_reales: [] (capa 4 cargada, sin fichada)
+ *   impar     → una marca sin egreso (auditoría fichada impar)
+ *   fuera_turno → marcas diurnas en día con turno nocturno (solo visual RRHH)
  *   revert    → elimina fichadas_reales del día (estado previo a la prueba)
+ * --payload   → JSON array; si se pasa, se usa en lugar del payload del modo (salvo revert)
  */
 import "./load-env-v2.mjs";
 import { existsSync, readFileSync } from "node:fs";
@@ -30,6 +35,7 @@ const { buildVisDocumentId, diaMesKeyDesdeYmd } = require(
 const {
   resolverFichadaPresencia,
   evaluarContradiccionFichadaTeoria,
+  celdaEsperaFichada,
 } = require(join(repoRoot, "functions/modules/shared/grillaFichadaPresencia.js"));
 const { sanitizarDiasVisGso } = require(
   join(repoRoot, "functions/modules/asistencia/grillaVisSanitizeGso.js"),
@@ -57,6 +63,7 @@ function parseArgs(argv) {
     fecha: "",
     modo: "presente",
     apply: false,
+    payloadRaw: "",
   };
   for (const arg of argv.slice(2)) {
     if (arg === "--apply") out.apply = true;
@@ -65,6 +72,7 @@ function parseArgs(argv) {
     else if (arg.startsWith("--gdt=")) out.gdt = arg.slice(6).trim();
     else if (arg.startsWith("--fecha=")) out.fecha = arg.slice(8).trim();
     else if (arg.startsWith("--modo=")) out.modo = arg.slice(7).trim().toLowerCase();
+    else if (arg.startsWith("--payload=")) out.payloadRaw = arg.slice(10).trim();
   }
   return out;
 }
@@ -73,9 +81,30 @@ const FICHADAS_PRESENTE = [
   { ingreso: "06:05", egreso: "14:02" },
 ];
 
-function payloadFichadas(modo) {
+const FICHADAS_IMPAR = [{ ingreso: "08:00" }];
+const FICHADAS_FUERA_TURNO = [{ ingreso: "10:00", egreso: "18:00" }];
+
+function parsePayloadRaw(raw) {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      console.error("--payload debe ser un array JSON");
+      process.exit(1);
+    }
+    return parsed;
+  } catch (e) {
+    console.error("--payload JSON inválido:", e instanceof Error ? e.message : e);
+    process.exit(1);
+  }
+}
+
+function payloadFichadas(modo, payloadOverride) {
+  if (payloadOverride != null) return payloadOverride;
   if (modo === "presente") return FICHADAS_PRESENTE;
   if (modo === "ausente") return [];
+  if (modo === "impar") return FICHADAS_IMPAR;
+  if (modo === "fuera_turno") return FICHADAS_FUERA_TURNO;
   return null;
 }
 
@@ -100,7 +129,8 @@ if (!pid && args.dni) {
   pid = snap.docs[0].id;
 }
 
-const modosValidos = new Set(["presente", "ausente", "revert"]);
+const payloadOverride = parsePayloadRaw(args.payloadRaw);
+const modosValidos = new Set(["presente", "ausente", "impar", "fuera_turno", "revert"]);
 if (
   !/^per_/i.test(pid)
   || !/^gdt_/i.test(args.gdt)
@@ -108,10 +138,12 @@ if (
   || !modosValidos.has(args.modo)
 ) {
   console.error(
-    "Uso: --persona=per_*|--dni=... --gdt=gdt_* --fecha=YYYY-MM-DD --modo=presente|ausente|revert [--apply]",
+    "Uso: --persona=per_*|--dni=... --gdt=gdt_* --fecha=YYYY-MM-DD --modo=presente|ausente|impar|fuera_turno|revert [--payload='[...]'] [--apply]",
   );
   process.exit(1);
 }
+
+const fichadasPatch = args.modo === "revert" ? null : payloadFichadas(args.modo, payloadOverride);
 
 const diaKey = diaMesKeyDesdeYmd(args.fecha);
 const visId = buildVisDocumentId(pid, args.fecha, args.gdt);
@@ -129,7 +161,7 @@ const celdaSimulada = { ...celdaAntes };
 if (args.modo === "revert") {
   delete celdaSimulada.fichadas_reales;
 } else {
-  celdaSimulada.fichadas_reales = payloadFichadas(args.modo);
+  celdaSimulada.fichadas_reales = fichadasPatch;
 }
 
 const presenciaRrhh = resolverFichadaPresencia(celdaSimulada);
@@ -150,9 +182,10 @@ const reporte = {
   fichada_presencia_jefe: celdaJefe.fichada_presencia ?? null,
   sin_fichadas_reales_en_jefe: !("fichadas_reales" in celdaJefe),
   contradiccion_teoria: contradiccion.contradictorio ? contradiccion.tooltip : null,
+  celda_espera_fichada: celdaEsperaFichada(celdaSimulada),
   patch_desc: args.modo === "revert"
     ? `dias.${diaKey}.fichadas_reales → DELETE`
-    : `dias.${diaKey}.fichadas_reales → ${JSON.stringify(payloadFichadas(args.modo))}`,
+    : `dias.${diaKey}.fichadas_reales → ${JSON.stringify(fichadasPatch)}`,
 };
 
 console.log(JSON.stringify(reporte, null, 2));
@@ -165,7 +198,7 @@ if (!args.apply) {
 if (args.modo === "revert") {
   await visRef.update({ [`dias.${diaKey}.fichadas_reales`]: FieldValue.delete() });
 } else {
-  await visRef.update({ [`dias.${diaKey}.fichadas_reales`]: payloadFichadas(args.modo) });
+  await visRef.update({ [`dias.${diaKey}.fichadas_reales`]: fichadasPatch });
 }
 
 console.log("\nAplicado. Validá en grilla (RRHH/jefe) el día", args.fecha, "— badge P/A esperado:", presenciaRrhh);

@@ -34,6 +34,10 @@ const FILES_TO_SYNC = [
   "horarioInstitucionalDisplay.js",
   "grillaTeoriaDesalineacion.js",
   "grillaFichadaPresencia.js",
+  "fichadasDeltaCeldaDia.js",
+  "fichadasValidacionMarcas.js",
+  "fichadasAlineacionTeoria.js",
+  "grillaFichadaEstadoJefe.js",
 ];
 
 function esmToCjs(source, filename) {

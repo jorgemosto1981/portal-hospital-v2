@@ -460,3 +460,40 @@ export function callRematerializarPostCalendario(data) {
 export function callRematerializarPostRegimen(data) {
   return httpsCallable(getFunctionsV2(), "rematerializarPostRegimen", { timeout: 540000 })(data);
 }
+
+/** Preview import TXT fichadas — solo memoria (Fase D). */
+export function callPrevisualizarImportFichadasReloj(data) {
+  return httpsCallable(getFunctionsV2(), "previsualizarImportFichadasReloj", { timeout: 120000 })(data);
+}
+
+/** Apply import TXT fichadas (map-reduce vis_*). */
+export function callAplicarImportFichadasReloj(data) {
+  return httpsCallable(getFunctionsV2(), "aplicarImportFichadasReloj", { timeout: 300000 })(data);
+}
+
+/** Bandeja marcas huérfanas — índice (reloj_id, estado, fecha_ymd). */
+export function callListarMarcasHuerfanasReloj(data) {
+  return httpsCallable(getFunctionsV2(), "listarMarcasHuerfanasReloj")(data);
+}
+
+export function callDescartarMarcaHuerfanaReloj(data) {
+  return httpsCallable(getFunctionsV2(), "descartarMarcaHuerfanaReloj")(data);
+}
+
+export function callGuardarEnrolamientoRelojPersona(data) {
+  return httpsCallable(getFunctionsV2(), "guardarEnrolamientoRelojPersona", { timeout: 300000 })(data);
+}
+
+export function callReconciliarMarcasHuerfanasReloj(data) {
+  return httpsCallable(getFunctionsV2(), "reconciliarMarcasHuerfanasReloj", { timeout: 300000 })(data);
+}
+
+/** Capa fichada día (ABM / carga manual / undo). */
+export function callGuardarCapaFichadaDia(data) {
+  return httpsCallable(getFunctionsV2(), "guardarCapaFichadaDia", { timeout: 120000 })(data);
+}
+
+/** Alta/edición cfg_reloj_biometrico (solo RRHH, Admin SDK). */
+export function callGuardarCfgRelojBiometrico(data) {
+  return httpsCallable(getFunctionsV2(), "guardarCfgRelojBiometrico", { timeout: 60000 })(data);
+}

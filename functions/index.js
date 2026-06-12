@@ -52,6 +52,14 @@ const cambiosTurno = require("./modules/asistencia/cambiosTurno");
 const rematerializacion = require("./modules/asistencia/rematerializacion");
 const { materializacionVentanaDia5Scheduled } = require("./onSchedule/materializacionVentanaDia5");
 const { ejecutarMaterializacionVentanaDia5 } = require("./onCall/grilla/ejecutarMaterializacionVentanaDia5");
+const reconciliarMarcasHuerfanasReloj = require("./onCall/fichadas/reconciliarMarcasHuerfanasReloj");
+const guardarCapaFichadaDia = require("./onCall/fichadas/guardarCapaFichadaDia");
+const aplicarImportFichadasReloj = require("./onCall/fichadas/aplicarImportFichadasReloj");
+const previsualizarImportFichadasReloj = require("./onCall/fichadas/previsualizarImportFichadasReloj");
+const listarMarcasHuerfanasReloj = require("./onCall/fichadas/listarMarcasHuerfanasReloj");
+const descartarMarcaHuerfanaReloj = require("./onCall/fichadas/descartarMarcaHuerfanaReloj");
+const guardarEnrolamientoRelojPersona = require("./onCall/fichadas/guardarEnrolamientoRelojPersona");
+const guardarCfgRelojBiometrico = require("./onCall/fichadas/guardarCfgRelojBiometrico");
 
 module.exports = {
   ...login,
@@ -95,4 +103,12 @@ module.exports = {
   ...rematerializacion,
   materializacionVentanaDia5Scheduled,
   ejecutarMaterializacionVentanaDia5,
+  ...reconciliarMarcasHuerfanasReloj,
+  ...guardarCapaFichadaDia,
+  ...aplicarImportFichadasReloj,
+  ...previsualizarImportFichadasReloj,
+  ...listarMarcasHuerfanasReloj,
+  ...descartarMarcaHuerfanaReloj,
+  ...guardarEnrolamientoRelojPersona,
+  ...guardarCfgRelojBiometrico,
 };

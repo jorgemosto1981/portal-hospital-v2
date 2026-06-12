@@ -12,6 +12,8 @@ const {
   resolverFichadaPresencia,
   evaluarContradiccionFichadaTeoria,
   lineasHorarioFichadaReal,
+  celdaTieneFichadaImpar,
+  contarMarcasFichadaReal,
 } = require(
   join(dirname(fileURLToPath(import.meta.url)), "../modules/shared/grillaFichadaPresencia.js"),
 );
@@ -71,6 +73,24 @@ describe("grillaFichadaPresencia (US-15)", () => {
       fichadas_reales: [],
     });
     assert.equal(r.contradictorio, true);
+  });
+
+  it("contarMarcasFichadaReal cuenta ingreso+egreso en un ítem", () => {
+    assert.equal(
+      contarMarcasFichadaReal([{ ingreso: "06:05", egreso: "14:02" }]),
+      2,
+    );
+  });
+
+  it("celdaTieneFichadaImpar: par completo en un registro no es impar", () => {
+    assert.equal(
+      celdaTieneFichadaImpar({
+        tipo_dia: "laborable",
+        fichadas_esperadas: 2,
+        fichadas_reales: [{ ingreso: "06:05", egreso: "14:02" }],
+      }),
+      false,
+    );
   });
 
   it("lineasHorarioFichadaReal formatea pares y hora suelta", () => {
