@@ -140,6 +140,14 @@ ALLOW_FIRESTORE_SEED_V2=true npm run seed:fichadas-reloj
 
 Crea `rel_hospital_central_01` (política configurable) y `rel_hospital_central_02` (`BLOQUEAR_APLICAR`). TXT de humo: `scripts/dev/fixtures/fichadas-import-smoke.txt`. Variable `FICHADAS_SEED_GDT_ID` (default `gdt_seed_demo_cfg`).
 
+**PR #5 (Fase D):** base apilada `feature/modulo-fichadas-faseC` hasta merge de PR #4; luego `git rebase origin/master` y retarget a `master`.
+
+## 10. Gate Fase E (carga manual)
+
+No abrir implementación Fase E hasta merge de PR #5 en `master`. Palabra clave operativa: *«¡Mergeado, Armando! Habilitá la Fase E»*.
+
+Directrices (plan §5): flujo teclado Persona→Fecha→Ingreso→Egreso (`guardarCapaFichadaDia`, `CARGA_MANUAL`, fecha sticky); aviso duplicado no bloqueante + segundo Enter confirma; cola sesión (~20) con undo/borrado lógico.
+
 ---
 
-*Documento vivo — Fases E–F pendientes.*
+*Documento vivo — Fase F (semáforo Jefe) pendiente.*
