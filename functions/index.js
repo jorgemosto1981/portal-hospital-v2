@@ -55,6 +55,10 @@ const { ejecutarMaterializacionVentanaDia5 } = require("./onCall/grilla/ejecutar
 const reconciliarMarcasHuerfanasReloj = require("./onCall/fichadas/reconciliarMarcasHuerfanasReloj");
 const guardarCapaFichadaDia = require("./onCall/fichadas/guardarCapaFichadaDia");
 const aplicarImportFichadasReloj = require("./onCall/fichadas/aplicarImportFichadasReloj");
+const previsualizarImportFichadasReloj = require("./onCall/fichadas/previsualizarImportFichadasReloj");
+const listarMarcasHuerfanasReloj = require("./onCall/fichadas/listarMarcasHuerfanasReloj");
+const descartarMarcaHuerfanaReloj = require("./onCall/fichadas/descartarMarcaHuerfanaReloj");
+const guardarEnrolamientoRelojPersona = require("./onCall/fichadas/guardarEnrolamientoRelojPersona");
 
 module.exports = {
   ...login,
@@ -101,4 +105,8 @@ module.exports = {
   ...reconciliarMarcasHuerfanasReloj,
   ...guardarCapaFichadaDia,
   ...aplicarImportFichadasReloj,
+  ...previsualizarImportFichadasReloj,
+  ...listarMarcasHuerfanasReloj,
+  ...descartarMarcaHuerfanaReloj,
+  ...guardarEnrolamientoRelojPersona,
 };

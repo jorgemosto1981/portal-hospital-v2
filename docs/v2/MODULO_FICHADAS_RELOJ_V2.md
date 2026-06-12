@@ -1,6 +1,6 @@
 # Módulo Fichadas Reloj V2 — RFC diseño e implementación
 
-**Estado:** Fase C en curso (`feature/modulo-fichadas-faseC`). Fases A–B aprobadas.  
+**Estado:** Backend A–C en `master`; **Fase D** UI (import preview, huérfanas, enrolamiento) en rama `feature/modulo-fichadas-faseD`.  
 **Plan maestro:** `módulo_fichadas_reloj_551a3612.plan.md` (Cursor).  
 **Relación:** [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](./MANUAL_CAPAS_ORQUESTACION_BORRADOR.md), [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md), [`EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md`](./EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md), US-15 capa 4 en `vis_*`.
 
@@ -31,7 +31,8 @@
 | **A** | RFC + `fichadasValidacionMarcas.js` + `fichadasDeltaCeldaDia.js` + tests |
 | **B** | `fichadasAlineacionTeoria.js`, callable `reconciliarMarcasHuerfanasReloj` |
 | **C** (actual) | `guardarCapaFichadaDia` + `aplicarImportFichadasReloj` + índices `fmh_*` |
-| **D–F** | UI relojes, carga manual, ABM grilla, semáforo Jefe |
+| **D** (actual) | UI import TXT + preview + bandeja huérfanas + enrolamiento |
+| **E–F** | Carga manual, ABM grilla, semáforo Jefe |
 
 ## 2. Entradas capa 4
 
@@ -96,4 +97,49 @@ npm run test:fichadas-faseA
 
 ---
 
-*Documento vivo: las secciones 4–5 se expandirán en Fases B–C según el plan maestro.*
+## 8. Go-live backend (post-merge PR #4)
+
+Orden obligatorio en Firebase (índices antes que callables que consultan `fmh_*`):
+
+```bash
+git checkout master
+git pull origin master
+npm run test:fichadas-modulo
+npm run firebase:deploy:firestore
+npm run firebase:deploy:functions -- --only functions:guardarCapaFichadaDia,functions:aplicarImportFichadasReloj,functions:reconciliarMarcasHuerfanasReloj
+```
+
+Verificar en consola Firestore que los índices de `fichadas_marca_huerfana` estén **Enabled** antes del deploy de functions.
+
+## 9. Fase D — UI RRHH (implementado)
+
+| Ruta | Pantalla |
+|------|----------|
+| `/portal/rrhh/fichadas-import` | Subida TXT, preview, checkboxes duplicados, apply |
+| `/portal/rrhh/fichadas-huerfanas` | Bandeja `fmh_*` índice `(reloj_id, estado, fecha_ymd)` |
+| `/portal/rrhh/fichadas-enrolamiento` | Alta `rpe_*` + reconciliar |
+
+| Callable | Notas |
+|----------|--------|
+| `previsualizarImportFichadasReloj` | 0 I/O Firestore; enrolamiento vía payload cliente |
+| `listarMarcasHuerfanasReloj` | Query indexada bandeja |
+| `descartarMarcaHuerfanaReloj` | `DESCARTADA` + motivo |
+| `guardarEnrolamientoRelojPersona` | `rpe_*` + `reconciliarMarcasHuerfanasReloj` |
+
+Deploy Fase D (añadir a §8):
+
+```bash
+npm run firebase:deploy:functions -- --only functions:previsualizarImportFichadasReloj,functions:listarMarcasHuerfanasReloj,functions:descartarMarcaHuerfanaReloj,functions:guardarEnrolamientoRelojPersona
+```
+
+### Semilla dev (reloj testigo)
+
+```bash
+ALLOW_FIRESTORE_SEED_V2=true npm run seed:fichadas-reloj
+```
+
+Crea `rel_hospital_central_01` (política configurable) y `rel_hospital_central_02` (`BLOQUEAR_APLICAR`). TXT de humo: `scripts/dev/fixtures/fichadas-import-smoke.txt`. Variable `FICHADAS_SEED_GDT_ID` (default `gdt_seed_demo_cfg`).
+
+---
+
+*Documento vivo — Fases E–F pendientes.*

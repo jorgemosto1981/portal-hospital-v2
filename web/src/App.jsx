@@ -42,6 +42,9 @@ import PlanTurnoServicioRrhhPage from "./pages/rrhh/PlanTurnoServicioRrhhPage.js
 import BandejaTurnosRrhhPage from "./pages/rrhh/BandejaTurnosRrhhPage.jsx";
 import ExploradorTurnosRrhhPage from "./pages/rrhh/ExploradorTurnosRrhhPage.jsx";
 import GrillaOperativaRrhhPage from "./pages/rrhh/GrillaOperativaRrhhPage.jsx";
+import FichadasImportRrhhPage from "./pages/rrhh/FichadasImportRrhhPage.jsx";
+import FichadasHuerfanasRrhhPage from "./pages/rrhh/FichadasHuerfanasRrhhPage.jsx";
+import FichadasEnrolamientoRrhhPage from "./pages/rrhh/FichadasEnrolamientoRrhhPage.jsx";
 import GrillaOperativaJefePage from "./pages/jefe/GrillaOperativaJefePage.jsx";
 import GrillaPortalRedirect from "./features/routing/GrillaPortalRedirect.jsx";
 import Inicio from "./pages/Inicio.jsx";
@@ -160,6 +163,9 @@ export default function App() {
               <Route path="rrhh/configuracion-articulos/:articuloId" element={<ArticuloConfiguracion />} />
               <Route path="rrhh/notificaciones-datos-personales" element={<NotificacionesEventosDatosPersonalesRRHH />} />
               <Route path="rrhh/seguimiento-enrolamiento" element={<SeguimientoEnrolamientoUsuariosRRHH />} />
+              <Route path="rrhh/fichadas-import" element={<FichadasImportRrhhPage />} />
+              <Route path="rrhh/fichadas-huerfanas" element={<FichadasHuerfanasRrhhPage />} />
+              <Route path="rrhh/fichadas-enrolamiento" element={<FichadasEnrolamientoRrhhPage />} />
             </Route>
           </Route>
         </Route>

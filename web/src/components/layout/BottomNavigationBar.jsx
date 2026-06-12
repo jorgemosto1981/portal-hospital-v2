@@ -163,6 +163,36 @@ const ICONS_BY_ID = {
       strokeWidth={1.5}
     />
   ),
+  "fichadas-reloj-raiz": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 6v6h4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
+  "fichadas-import": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125V5.25a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 5.25v13.5A2.25 2.25 0 0 0 6 21h7.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
+  "fichadas-huerfanas": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9 12.75 11.25 15 15 9.75M12 9v.01M12 12h.01M12 15h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
   "grilla-jefe": () => (
     <path
       strokeLinecap="round"

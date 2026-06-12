@@ -123,6 +123,8 @@ const CFG_COLECCIONES_RRHH = new Set([
   COL_PERSONAS,
   COL_EVENTOS,
   "historial_laboral_cargos",
+  "cfg_reloj_biometrico",
+  "reloj_persona_enrolamiento",
 ]);
 
 module.exports = {
