@@ -33,6 +33,7 @@ import GrillaFichadaEstadoJefeBadge from "./GrillaFichadaEstadoJefeBadge.jsx";
 import { estadoFichadaJefeDesdeCelda } from "./grillaFichadaEstadoJefeDisplay.js";
 import { visualCeldaOutboxPendiente } from "./grillaCeldaOutboxVisual.js";
 import { diaFueraTramoHlg } from "./grillaMesFilasUtils.js";
+import DiaGrillaCelda from "./DiaGrillaCelda.jsx";
 
 function contenidoCeldaOperativa({
   tieneLicencia,
@@ -59,6 +60,7 @@ function contenidoCeldaOperativa({
   licenciaEnFrancoTooltip,
   soloLecturaGrilla,
   soloLecturaTooltip,
+  celdaVis,
 }) {
   const fichadasMostrar = outboxVisual?.fichadasPreview ?? fichadasN;
   const alertaTitle = desalineacionTooltip || "Teoría modificada post-licencia";
@@ -149,6 +151,7 @@ function contenidoCeldaOperativa({
   ) : fichadaPresencia ? (
     <GrillaFichadaPresenciaBadge presencia={fichadaPresencia} className="mt-px" compacto />
   ) : null;
+  const badgeAnalitica = <DiaGrillaCelda celdaVis={celdaVis} className="mt-px" />;
   const enlaceManual = enlaceCargaManualHref ? (
     <Link
       to={enlaceCargaManualHref}
@@ -185,6 +188,7 @@ function contenidoCeldaOperativa({
         <span className="mt-0.5 flex flex-col items-center gap-px">
           {badge}
           {badgeFichada}
+          {badgeAnalitica}
           {enlaceManual}
           {diffBlock}
         </span>
@@ -203,6 +207,7 @@ function contenidoCeldaOperativa({
           {filaBadges}
           {badge}
           {badgeFichada}
+          {badgeAnalitica}
           {enlaceManual}
           {diffBlock}
           <span className="text-[7px] font-bold text-fuchsia-950">{licenciaCod.slice(0, 4)}</span>
@@ -220,6 +225,7 @@ function contenidoCeldaOperativa({
         ) : null}
         {badge}
         {badgeFichada}
+        {badgeAnalitica}
         {enlaceManual}
       </span>
     );
@@ -230,6 +236,7 @@ function contenidoCeldaOperativa({
         <span className="text-[7px] font-bold leading-tight text-rose-950">Sin turno</span>
         {badge}
         {badgeFichada}
+        {badgeAnalitica}
         {enlaceManual}
       </span>
     );
@@ -241,6 +248,7 @@ function contenidoCeldaOperativa({
         {filaBadges}
         {badge}
         {badgeFichada}
+        {badgeAnalitica}
         {enlaceManual}
         {diffBlock}
       </span>
@@ -621,6 +629,7 @@ export default function GrillaMesEquipoTabla({
                               licenciaEnFrancoTooltip: licenciaFranco.tooltip,
                               soloLecturaGrilla: soloLectura.activo,
                               soloLecturaTooltip: soloLectura.tooltip,
+                              celdaVis: cell,
                             })}
                           </GrillaTurnosCeldaChip>
                         </GrillaMesCeldaLicencia>

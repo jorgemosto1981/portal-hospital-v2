@@ -11,6 +11,7 @@ import { claseFondoCeldaCalendarioTitular } from "./grillaTurnosVisual.js";
 import { celdaTieneJornadaVis, celdaEsIncompletoPlanVis, textoHorarioTurno } from "./grillaMesEquipoDisplay.js";
 import { titularDiaAsignadoAGrupo } from "./grillaTitularAsignacionDia.js";
 import GrillaFichadasEsperadasBadge from "./GrillaFichadasEsperadasBadge.jsx";
+import DiaGrillaCelda from "./DiaGrillaCelda.jsx";
 import { fichadasEsperadasDesdeCeldaVis, titleFichadasEsperadas } from "./grillaFichadasEsperadasDisplay.js";
 import { diaFueraVigenciaTramo } from "./grillaMesFilasUtils.js";
 
@@ -257,6 +258,7 @@ export default function GrillaMesTitularCalendario({
                   <span className={`${CLASE_CHIP} flex flex-col items-center tabular-nums ${chipTurno} ${tachado}`}>
                     <span>{turnoLabel}</span>
                     <GrillaFichadasEsperadasBadge valor={fichadasN} />
+                    <DiaGrillaCelda celdaVis={cell} />
                   </span>
                 ) : null}
                 {esFranco && !tieneLicencia && !esFeriado ? (

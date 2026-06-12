@@ -26,6 +26,7 @@ import { COPY_BADGE_SOLO_LECTURA_GSO } from "./grillaGsoSoloLectura.js";
 import DiaGrillaAuditoriaTecnicaRrhh from "./DiaGrillaAuditoriaTecnicaRrhh.jsx";
 import DiaGrillaFichadaRrhhPanel from "./DiaGrillaFichadaRrhhPanel.jsx";
 import GrillaGuardrailTeoriaAviso from "./GrillaGuardrailTeoriaAviso.jsx";
+import DiaGrillaAuditoriaCumplimientoHorario from "./DiaGrillaAuditoriaCumplimientoHorario.jsx";
 
 function hrefFichadasCargaManual({ personaId, fechaYmd, grupoTrabajoId }) {
   const params = new URLSearchParams();
@@ -465,6 +466,11 @@ export default function DiaGrillaDetalleModal({
             </dl>
           </div>
         ) : null}
+
+        <DiaGrillaAuditoriaCumplimientoHorario
+          celdaVis={celdaVis}
+          esRrhhLabor={detalleFichadaRrhh}
+        />
 
         {puedeEditarFichadasReales ? (
           <DiaGrillaFichadaRrhhPanel
