@@ -30,6 +30,8 @@ const { logger } = require("firebase-functions/v2");
 const { hldHlgFechaInicioYmd, hldHlgFechaFinYmd } = require("../shared/fechaLaboralYmd");
 const { hlgVigenteOperativaEnGrilla } = require("../shared/solicitudHlgVigencia");
 const { planHabilitadoDesdeQuerySnapshot } = require("./planGrupoAgentesNuevos");
+const { enriquecerLimitesCumplimientoEnCapa } = require("../shared/capaTeoricaLimitesCumplimiento");
+const { calcularDeltasCumplimiento } = require("../shared/calcularDeltasCumplimiento");
 
 const COL_HLG = "historial_laboral_grupos";
 const COL_GDT = "grupos_de_trabajo";
@@ -222,6 +224,44 @@ function fichadasEsperadasVisDesdeCapa(capaTeorica) {
 /**
  * Escribe slice de capa teórica en capa_teorica_por_grupo[gdt] (T1 dot-path).
  */
+/**
+ * Persiste analitica_cumplimiento en asi_* y vis_* (read model) para un gdt/día.
+ */
+async function persistirAnaliticaCumplimientoDia({
+  asiRef,
+  visRef,
+  gdt,
+  diaKey,
+  fechaYmd,
+  capaEscrita,
+  regimenDoc,
+}) {
+  if (!asiRef || !visRef || !/^gdt_/i.test(String(gdt || ""))) return null;
+  const visSnap = await visRef.get();
+  const diasVis =
+    visSnap.exists && visSnap.data()?.dias && typeof visSnap.data().dias === "object"
+      ? visSnap.data().dias
+      : {};
+  const celdaRaw = diasVis[diaKey] || {};
+  const capaEnriquecida = enriquecerLimitesCumplimientoEnCapa(capaEscrita, regimenDoc);
+  const celdaCtx = {
+    ...celdaRaw,
+    tipo_dia: celdaRaw.tipo_dia ?? capaEnriquecida.tipo_dia,
+    fichadas_esperadas: celdaRaw.fichadas_esperadas ?? capaEnriquecida.fichadas_esperadas,
+    fichadas_reales: celdaRaw.fichadas_reales,
+    rda_turno_id: celdaRaw.rda_turno_id,
+    rda_ingreso: celdaRaw.rda_ingreso,
+    rda_egreso: celdaRaw.rda_egreso,
+  };
+  const analitica = calcularDeltasCumplimiento(celdaCtx, capaEnriquecida, {
+    fecha_ymd: fechaYmd,
+    ahora_evaluacion_ms: Date.now(),
+  });
+  await asiRef.set({ [`analitica_cumplimiento_por_grupo.${gdt}`]: analitica }, { merge: true });
+  await visRef.set({ [`dias.${diaKey}.analitica_cumplimiento`]: analitica }, { merge: true });
+  return analitica;
+}
+
 function encolarCapaTeoricaPorGrupo(batch, asiRef, asiSnap, gdtId, capaSlice, personaId, fechaYmd) {
   const pathKey = `capa_teorica_por_grupo.${gdtId}`;
   if (asiSnap.exists) {
@@ -1344,18 +1384,21 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
   }));
 
   const planEntry = base.planCache;
-  const capaSlice = {
-    ...capaSegmentada,
-    es_nocturno: false,
-    origen: reemplazos.length > 0 ? "override" : base.mejorResolucion.origen,
-    regimen_horario_id: planEntry?.plan?.agentes?.find((a) => a.persona_id === personaId)?.regimen_horario_id
-      || base.mejorHlg.regimen_horario_id,
-    hlg_id: base.mejorHlg.id,
-    grupo_de_trabajo_id: gdt,
-    plan_id: base.mejorResolucion.plan_id || planEntry?.planId || null,
-    posicion_ciclo: base.mejorResolucion.posicion_ciclo ?? null,
-    materializado_en: new Date().toISOString(),
-  };
+  const capaSlice = enriquecerLimitesCumplimientoEnCapa(
+    {
+      ...capaSegmentada,
+      es_nocturno: false,
+      origen: reemplazos.length > 0 ? "override" : base.mejorResolucion.origen,
+      regimen_horario_id: planEntry?.plan?.agentes?.find((a) => a.persona_id === personaId)?.regimen_horario_id
+        || base.mejorHlg.regimen_horario_id,
+      hlg_id: base.mejorHlg.id,
+      grupo_de_trabajo_id: gdt,
+      plan_id: base.mejorResolucion.plan_id || planEntry?.planId || null,
+      posicion_ciclo: base.mejorResolucion.posicion_ciclo ?? null,
+      materializado_en: new Date().toISOString(),
+    },
+    base.regimenDoc,
+  );
 
   const batch = db.batch();
   encolarCapaTeoricaPorGrupo(batch, asiRef, asiSnap, gdt, capaSlice, personaId, fechaYmd);
@@ -1454,6 +1497,25 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
       } else {
         throw e;
       }
+    }
+
+    try {
+      await persistirAnaliticaCumplimientoDia({
+        asiRef,
+        visRef,
+        gdt,
+        diaKey,
+        fechaYmd,
+        capaEscrita,
+        regimenDoc: base.regimenDoc,
+      });
+    } catch (e) {
+      logger.error("persistirAnaliticaCumplimientoDia ERROR", {
+        personaId,
+        fechaYmd,
+        grupoId: gdt,
+        error: String(e),
+      });
     }
   }
 

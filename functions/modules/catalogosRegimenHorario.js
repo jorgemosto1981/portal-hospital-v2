@@ -99,6 +99,10 @@ function validarComunes(d) {
     notas_rrhh: typeof d.notas_rrhh === "string" && d.notas_rrhh.trim() ? d.notas_rrhh.trim().slice(0, 500) : null,
     horas_extra_max_semanal: typeof d.horas_extra_max_semanal === "number" ? d.horas_extra_max_semanal : null,
     horas_extra_max_mensual: typeof d.horas_extra_max_mensual === "number" ? d.horas_extra_max_mensual : null,
+    tolerancia_debitohorario_minutos:
+      typeof d.tolerancia_debitohorario_minutos === "number"
+        ? Math.min(180, Math.max(0, Math.trunc(d.tolerancia_debitohorario_minutos)))
+        : 30,
   };
 }
 

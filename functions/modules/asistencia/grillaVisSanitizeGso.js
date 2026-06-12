@@ -3,7 +3,8 @@
 const { resolverFichadaPresencia } = require("../shared/grillaFichadaPresencia");
 const { evaluarEstadoFichadaJefe } = require("../shared/grillaFichadaEstadoJefe");
 
-/** Campos de capa 4 / reloj que GSO jefe no debe recibir por API (UX-6 / §14). */
+/** Campos de capa 4 / reloj que GSO jefe no debe recibir por API (UX-6 / §14).
+ *  `analitica_cumplimiento` se conserva (minutos de tardanza / ausencia, sin marcas crudas). */
 const CAMPOS_SOLO_RRHH_EN_DIA = [
   "fichadas_reales",
   "fichadas",

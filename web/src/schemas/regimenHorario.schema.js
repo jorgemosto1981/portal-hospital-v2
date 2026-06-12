@@ -114,6 +114,8 @@ const camposComunesSchema = z.object({
   notas_rrhh: z.string().max(500).nullable().default(null),
   horas_extra_max_semanal: z.number().min(0).nullable().default(null),
   horas_extra_max_mensual: z.number().min(0).nullable().default(null),
+  /** Cortesía de déficit horario diario (categoría débito de tiempo). */
+  tolerancia_debitohorario_minutos: z.number().int().min(0).max(180).default(30),
 });
 
 export const regimenFijoSchema = camposComunesSchema

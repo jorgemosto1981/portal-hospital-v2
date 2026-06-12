@@ -15,6 +15,7 @@ describe("grillaVisSanitizeGso (UX-6)", () => {
         fichadas_esperadas: 2,
         tipo_dia: "laborable",
         fichadas_reales: [{ ingreso: "06:05", egreso: "14:00" }],
+        analitica_cumplimiento: { version: 1, disciplina: { tardanza_minutos: 5 } },
         fichadas: [{ tipo: "ingreso" }],
         capa_realidad: { ok: true },
         divergencias: [{ codigo: "X" }],
@@ -23,6 +24,7 @@ describe("grillaVisSanitizeGso (UX-6)", () => {
     assert.equal(dias["09"].fichadas_esperadas, 2);
     assert.equal(dias["09"].rda_ingreso, "06:00");
     assert.equal("fichadas_reales" in dias["09"], false);
+    assert.equal(dias["09"].analitica_cumplimiento?.disciplina?.tardanza_minutos, 5);
     assert.equal("fichadas" in dias["09"], false);
     assert.equal("capa_realidad" in dias["09"], false);
     assert.equal("divergencias" in dias["09"], false);
