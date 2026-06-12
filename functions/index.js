@@ -52,6 +52,9 @@ const cambiosTurno = require("./modules/asistencia/cambiosTurno");
 const rematerializacion = require("./modules/asistencia/rematerializacion");
 const { materializacionVentanaDia5Scheduled } = require("./onSchedule/materializacionVentanaDia5");
 const { ejecutarMaterializacionVentanaDia5 } = require("./onCall/grilla/ejecutarMaterializacionVentanaDia5");
+const reconciliarMarcasHuerfanasReloj = require("./onCall/fichadas/reconciliarMarcasHuerfanasReloj");
+const guardarCapaFichadaDia = require("./onCall/fichadas/guardarCapaFichadaDia");
+const aplicarImportFichadasReloj = require("./onCall/fichadas/aplicarImportFichadasReloj");
 
 module.exports = {
   ...login,
@@ -95,4 +98,7 @@ module.exports = {
   ...rematerializacion,
   materializacionVentanaDia5Scheduled,
   ejecutarMaterializacionVentanaDia5,
+  ...reconciliarMarcasHuerfanasReloj,
+  ...guardarCapaFichadaDia,
+  ...aplicarImportFichadasReloj,
 };
