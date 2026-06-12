@@ -1,6 +1,6 @@
 # Módulo Fichadas Reloj V2 — RFC diseño e implementación
 
-**Estado:** Módulo **cerrado en `master`** (commit `ff779f6`): fases A–F, ABM relojes, **relojes universales** (`grupo_trabajo_id` null), roster global (`listarRosterParaFichadas`), caché `sessionStorage` en carga manual, asistente de máscaras en ABM.  
+**Estado:** Módulo **cerrado en `master`** (commit `f7b0102`): fases A–**G**, ABM relojes, **relojes universales** (`grupo_trabajo_id` null), roster global (`listarRosterParaFichadas`), caché `sessionStorage` en carga manual, asistente de máscaras + **parser dinámico** (`mascara_tokens`). Plan Cursor **terminado** (§18).  
 **Plan maestro:** `módulo_fichadas_reloj_551a3612.plan.md` (Cursor).  
 **Relación:** [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](./MANUAL_CAPAS_ORQUESTACION_BORRADOR.md), [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md), [`EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md`](./EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md), US-15 capa 4 en `vis_*`.
 
