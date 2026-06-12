@@ -18,6 +18,26 @@ describe("celdaTieneFichadaImpar", () => {
     ).toBe(true);
   });
 
+  it("no marca impar con ingreso y egreso en un solo registro (2 marcas)", () => {
+    expect(
+      celdaTieneFichadaImpar({
+        tipo_dia: "laborable",
+        fichadas_esperadas: 2,
+        fichadas_reales: [{ ingreso: "06:05", egreso: "14:02" }],
+      }),
+    ).toBe(false);
+  });
+
+  it("no marca impar con par repartido en dos registros", () => {
+    expect(
+      celdaTieneFichadaImpar({
+        tipo_dia: "laborable",
+        fichadas_esperadas: 2,
+        fichadas_reales: [{ ingreso: "06:05" }, { egreso: "14:02" }],
+      }),
+    ).toBe(false);
+  });
+
   it("ignora celda sin capa fichada", () => {
     expect(
       celdaTieneFichadaImpar({

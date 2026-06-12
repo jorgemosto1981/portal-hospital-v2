@@ -151,6 +151,15 @@ Crea `rel_hospital_central_01` (política configurable) y `rel_hospital_central_
 - Callable: `guardarCapaFichadaDia` (`AGREGAR_MARCAS` / undo `REEMPLAZAR_MARCAS`, `CARGA_MANUAL`).
 - Tests: `web/src/features/fichadas/cargaManual/fichadasCargaManualUtils.test.js`.
 
+## 11. Gate Fase F (cierre)
+
+| Entrega | Detalle |
+|---------|---------|
+| Enlace grilla RRHH | Celda «Manual» + modal → `/portal/rrhh/fichadas-carga-manual?persona_id&fecha_ymd&gdt_id` |
+| ABM modal RRHH | `DiaGrillaFichadaRrhhPanel` → `guardarCapaFichadaDia` (`AGREGAR_MARCAS`, `BORRAR_FILA`, `BORRAR_CAPA`); historial `fichadas_borradas` lazy |
+| Semáforo Jefe | `shared/utils/grillaFichadaEstadoJefe.js` + `grillaVisSanitizeGso` en listado GSO; badge en celda; modal abstracto sin horas ni ABM |
+| Tests | `grillaFichadaEstadoJefe.test.js`, `grillaVisSanitizeGso.test.js` en `npm run test:fichadas-modulo` |
+
 ---
 
-*Documento vivo — Fase F (semáforo Jefe) pendiente.*
+*Documento vivo — módulo fichadas reloj V2 cerrado en Fase F.*

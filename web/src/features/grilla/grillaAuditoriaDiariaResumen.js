@@ -1,9 +1,11 @@
 import {
   celdaEsperaFichada,
   celdaTieneCapaFichadaCargada,
+  celdaTieneFichadaImpar,
   evaluarContradiccionFichadaTeoria,
-  parseFichadasRealesCelda,
 } from "../../../../shared/utils/grillaFichadaPresencia.js";
+
+export { celdaTieneFichadaImpar };
 import { fichadasEsperadasDesdeCeldaVis } from "./grillaFichadasEsperadasDisplay.js";
 import { celdaEsIncompletoPlanVis, celdaTieneJornadaVis } from "./grillaMesEquipoDisplay.js";
 import {
@@ -26,33 +28,6 @@ const PRIORIDAD_TIPO = {
   fichada_inconsistente: 2,
   teoria_pendiente: 3,
 };
-
-/**
- * Fichada con entrada sin salida (o marcas insuficientes vs expectativa).
- * @param {Record<string, unknown>|null|undefined} celda
- */
-export function celdaTieneFichadaImpar(celda) {
-  if (!celda || typeof celda !== "object") return false;
-  if (!celdaTieneCapaFichadaCargada(celda)) return false;
-  if (!celdaEsperaFichada(celda)) return false;
-
-  const fichadas = parseFichadasRealesCelda(celda);
-  if (fichadas.length === 0) return false;
-
-  for (const f of fichadas) {
-    const ingreso = String(f.ingreso || f.hora_ingreso || "").trim();
-    const egreso = String(f.egreso || f.hora_egreso || "").trim();
-    if (ingreso && !egreso) return true;
-    if (egreso && !ingreso) return true;
-  }
-
-  const esperadas = Number(celda.fichadas_esperadas);
-  if (Number.isFinite(esperadas) && esperadas >= 2 && fichadas.length > 0 && fichadas.length < esperadas) {
-    return true;
-  }
-
-  return false;
-}
 
 /**
  * @param {Record<string, unknown>} cell

@@ -26,7 +26,11 @@ import GrillaTurnosCeldaChip from "./GrillaTurnosCeldaChip.jsx";
 import GrillaFichadasEsperadasBadge from "./GrillaFichadasEsperadasBadge.jsx";
 import GrillaFichadaPresenciaBadge from "./GrillaFichadaPresenciaBadge.jsx";
 import { fichadasEsperadasDesdeCeldaVis, titleFichadasEsperadas } from "./grillaFichadasEsperadasDisplay.js";
+import { Link } from "react-router-dom";
+
 import { fichadaPresenciaDesdeCeldaVis, titleFichadaPresencia } from "./grillaFichadaPresenciaDisplay.js";
+import GrillaFichadaEstadoJefeBadge from "./GrillaFichadaEstadoJefeBadge.jsx";
+import { estadoFichadaJefeDesdeCelda } from "./grillaFichadaEstadoJefeDisplay.js";
 import { visualCeldaOutboxPendiente } from "./grillaCeldaOutboxVisual.js";
 import { diaFueraTramoHlg } from "./grillaMesFilasUtils.js";
 
@@ -39,6 +43,8 @@ function contenidoCeldaOperativa({
   turnoText,
   fichadasN,
   fichadaPresencia,
+  estadoFichadaJefe,
+  enlaceCargaManualHref,
   outboxVisual,
   esIncompletoPlan,
   desalineacionTeoria,
@@ -133,8 +139,25 @@ function contenidoCeldaOperativa({
       className="mt-px"
     />
   );
-  const badgeFichada = fichadaPresencia ? (
+  const badgeFichada = estadoFichadaJefe ? (
+    <GrillaFichadaEstadoJefeBadge
+      estado={estadoFichadaJefe.estado}
+      tooltip={estadoFichadaJefe.tooltip}
+      className="mt-px"
+      compacto
+    />
+  ) : fichadaPresencia ? (
     <GrillaFichadaPresenciaBadge presencia={fichadaPresencia} className="mt-px" compacto />
+  ) : null;
+  const enlaceManual = enlaceCargaManualHref ? (
+    <Link
+      to={enlaceCargaManualHref}
+      onClick={(e) => e.stopPropagation()}
+      className="mt-px block text-center text-[6px] font-semibold leading-tight text-violet-800 underline"
+      title="Cargar fichada manual"
+    >
+      Manual
+    </Link>
   ) : null;
   const diffBlock = outboxVisual?.pending && (outboxVisual.diffOut || outboxVisual.diffIn) ? (
     <span className="mt-px text-[6px] leading-tight">
@@ -162,6 +185,7 @@ function contenidoCeldaOperativa({
         <span className="mt-0.5 flex flex-col items-center gap-px">
           {badge}
           {badgeFichada}
+          {enlaceManual}
           {diffBlock}
         </span>
       </span>
@@ -179,6 +203,7 @@ function contenidoCeldaOperativa({
           {filaBadges}
           {badge}
           {badgeFichada}
+          {enlaceManual}
           {diffBlock}
           <span className="text-[7px] font-bold text-fuchsia-950">{licenciaCod.slice(0, 4)}</span>
         </span>
@@ -195,6 +220,7 @@ function contenidoCeldaOperativa({
         ) : null}
         {badge}
         {badgeFichada}
+        {enlaceManual}
       </span>
     );
   }
@@ -204,6 +230,7 @@ function contenidoCeldaOperativa({
         <span className="text-[7px] font-bold leading-tight text-rose-950">Sin turno</span>
         {badge}
         {badgeFichada}
+        {enlaceManual}
       </span>
     );
   }
@@ -214,6 +241,7 @@ function contenidoCeldaOperativa({
         {filaBadges}
         {badge}
         {badgeFichada}
+        {enlaceManual}
         {diffBlock}
       </span>
     </span>
@@ -454,11 +482,27 @@ export default function GrillaMesEquipoTabla({
                     if (esIncompletoPlan) {
                       titleParts.push("Laborable sin turno (corregir plan del mes)");
                     }
-                    const fichadaPresencia = modoFichada
-                      ? fichadaPresenciaDesdeCeldaVis(cell, { esRrhh: modoFichada === "rrhh" })
-                      : null;
-                    const fichadaTitle = titleFichadaPresencia(fichadaPresencia);
+                    const estadoFichadaJefe =
+                      modoFichada === "jefe" ? estadoFichadaJefeDesdeCelda(cell) : null;
+                    const fichadaPresencia =
+                      modoFichada === "rrhh"
+                        ? fichadaPresenciaDesdeCeldaVis(cell, { esRrhh: true })
+                        : null;
+                    const fichadaTitle = estadoFichadaJefe
+                      ? estadoFichadaJefe.tooltip
+                      : titleFichadaPresencia(fichadaPresencia);
                     if (fichadaTitle) titleParts.push(fichadaTitle);
+                    const enlaceCargaManualHref =
+                      modoFichada === "rrhh" && tieneDatos
+                        ? (() => {
+                            const p = new URLSearchParams();
+                            p.set("persona_id", String(fila.persona_id || ""));
+                            p.set("fecha_ymd", fechaYmd);
+                            const gdt = grupoSeleccionado || cellGdt || "";
+                            if (gdt) p.set("gdt_id", gdt);
+                            return `/portal/rrhh/fichadas-carga-manual?${p.toString()}`;
+                          })()
+                        : null;
                     if (desalineacionTeoria && desalineacionTooltip) {
                       titleParts.push(desalineacionTooltip);
                     }
@@ -561,6 +605,8 @@ export default function GrillaMesEquipoTabla({
                               turnoText,
                               fichadasN,
                               fichadaPresencia,
+                              estadoFichadaJefe,
+                              enlaceCargaManualHref,
                               esIncompletoPlan,
                               outboxVisual,
                               desalineacionTeoria,

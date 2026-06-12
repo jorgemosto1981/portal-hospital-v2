@@ -1,22 +1,36 @@
 "use strict";
 
 const { resolverFichadaPresencia } = require("../shared/grillaFichadaPresencia");
+const { evaluarEstadoFichadaJefe } = require("../shared/grillaFichadaEstadoJefe");
 
-/** Campos de capa 4 / reloj que GSO jefe no debe recibir por API (UX-6). */
+/** Campos de capa 4 / reloj que GSO jefe no debe recibir por API (UX-6 / §14). */
 const CAMPOS_SOLO_RRHH_EN_DIA = [
   "fichadas_reales",
   "fichadas",
   "capa_realidad",
   "divergencias",
+  "fichadas_borradas",
+  "advertencias_fichada_abiertas",
+  "resuelto_rrhh",
+  "resuelto_rrhh_por_persona_id",
+  "resuelto_rrhh_motivo_corto",
+  "fichadas_reales_version",
 ];
 
-function sanitizarCeldaDiaGso(cell) {
+/**
+ * @param {object} cell
+ * @param {object} [context]
+ */
+function sanitizarCeldaDiaGso(cell, context = {}) {
   if (!cell || typeof cell !== "object") return cell;
+  const semaforo = evaluarEstadoFichadaJefe(cell, context);
   const presencia = resolverFichadaPresencia(cell);
   const out = { ...cell };
   for (const k of CAMPOS_SOLO_RRHH_EN_DIA) {
     if (k in out) delete out[k];
   }
+  out.estado_fichada_jefe = semaforo.estado_fichada_jefe;
+  out.estado_fichada_jefe_tooltip = semaforo.tooltip;
   if (presencia != null) {
     out.fichada_presencia = presencia;
   }

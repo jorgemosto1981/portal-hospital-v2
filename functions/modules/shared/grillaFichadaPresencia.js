@@ -53,6 +53,48 @@ function celdaTieneRegistroFichada(celda) {
 }
 
 /**
+ * Cuenta marcas de reloj (no filas del array): ingreso + egreso por ítem, o `hora` suelta.
+ * @param {Array<Record<string, unknown>>} fichadas
+ */
+function contarMarcasFichadaReal(fichadas) {
+  if (!Array.isArray(fichadas)) return 0;
+  let n = 0;
+  for (const f of fichadas) {
+    if (!f || typeof f !== "object") continue;
+    const ingreso = String(f.ingreso || f.hora_ingreso || "").trim();
+    const egreso = String(f.egreso || f.hora_egreso || "").trim();
+    const hora = String(f.hora || "").trim();
+    if (ingreso) n += 1;
+    if (egreso) n += 1;
+    if (!ingreso && !egreso && hora) n += 1;
+  }
+  return n;
+}
+
+/**
+ * Fichada con marcas insuficientes vs `fichadas_esperadas` (capa teórica).
+ * @param {Record<string, unknown>|null|undefined} celda
+ */
+function celdaTieneFichadaImpar(celda) {
+  if (!celda || typeof celda !== "object") return false;
+  if (!celdaTieneCapaFichadaCargada(celda)) return false;
+  if (!celdaEsperaFichada(celda)) return false;
+
+  const fichadas = parseFichadasRealesCelda(celda);
+  if (fichadas.length === 0) return false;
+
+  const marcas = contarMarcasFichadaReal(fichadas);
+  if (marcas === 0) return false;
+
+  const esperadas = Number(celda.fichadas_esperadas);
+  if (Number.isFinite(esperadas) && esperadas >= 1 && marcas < esperadas) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * True si la celda trae capa 4 materializada (aunque esté vacía).
  * Sin este indicador no inferimos ausente — capa 4 puede no existir aún en prod.
  * @param {Record<string, unknown>|null|undefined} celda
@@ -172,4 +214,4 @@ function evaluarContradiccionFichadaTeoria(celda) {
   return { contradictorio: false };
 }
 
-module.exports = { parseFichadasRealesCelda, celdaTieneRegistroFichada, celdaTieneCapaFichadaCargada, celdaEsperaFichada, resolverFichadaPresencia, lineasHorarioFichadaReal, evaluarContradiccionFichadaTeoria };
+module.exports = { parseFichadasRealesCelda, celdaTieneRegistroFichada, contarMarcasFichadaReal, celdaTieneFichadaImpar, celdaTieneCapaFichadaCargada, celdaEsperaFichada, resolverFichadaPresencia, lineasHorarioFichadaReal, evaluarContradiccionFichadaTeoria };

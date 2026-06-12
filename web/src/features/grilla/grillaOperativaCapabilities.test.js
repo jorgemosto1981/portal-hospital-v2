@@ -28,6 +28,7 @@ describe("grillaOperativaCapabilities", () => {
     expect(cap.consolaTripleHorizonteEnFrio).toBe(false);
     expect(cap.muestraBandejaAuditoriaDiaria).toBe(true);
     expect(cap.puedeVerTramosCrudosFichadas).toBe(true);
+    expect(cap.puedeEditarFichadasReales).toBe(true);
     expect(cap.permiteExportarMatrizMacro).toBe(true);
   });
 
@@ -42,6 +43,7 @@ describe("grillaOperativaCapabilities", () => {
     expect(cap.consolaTripleHorizonteEnFrio).toBe(true);
     expect(cap.muestraBandejaAuditoriaDiaria).toBe(false);
     expect(cap.puedeVerTramosCrudosFichadas).toBe(false);
+    expect(cap.puedeEditarFichadasReales).toBe(false);
     expect(cap.permiteExportarMatrizMacro).toBe(false);
   });
 

@@ -26,7 +26,7 @@
     "test:fichadas-faseA": "node scripts/sync-shared-to-functions.mjs && node --test functions/test/fichadasFaseA.test.js",
     "test:fichadas-faseB": "node scripts/sync-shared-to-functions.mjs && node --test functions/test/fichadasFaseB.test.js",
     "test:fichadas-faseC": "node scripts/sync-shared-to-functions.mjs && node --test functions/test/fichadasFaseC.test.js",
-    "test:fichadas-modulo": "node scripts/sync-shared-to-functions.mjs && node --test functions/test/fichadasFaseA.test.js functions/test/fichadasFaseB.test.js functions/test/fichadasFaseC.test.js functions/test/fichadasFaseD.test.js",
+    "test:fichadas-modulo": "node scripts/sync-shared-to-functions.mjs && node --test functions/test/fichadasFaseA.test.js functions/test/fichadasFaseB.test.js functions/test/fichadasFaseC.test.js functions/test/fichadasFaseD.test.js functions/test/grillaFichadaEstadoJefe.test.js functions/test/grillaVisSanitizeGso.test.js",
     "test:grilla-sanitize-gso": "node --test functions/test/grillaVisSanitizeGso.test.js",
     "smoke:us15-fichada-presencia": "node scripts/smoke-us15-fichada-presencia-dev.mjs",
     "smoke:us3-fanout-68b": "node scripts/smoke-us3-fanout-68b-dev.mjs",

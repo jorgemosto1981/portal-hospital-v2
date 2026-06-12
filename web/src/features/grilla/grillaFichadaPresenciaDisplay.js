@@ -3,6 +3,7 @@ import {
   parseFichadasRealesCelda,
   resolverFichadaPresencia,
 } from "../../../../shared/utils/grillaFichadaPresencia.js";
+import { etiquetaEstadoFichadaJefe } from "./grillaFichadaEstadoJefeDisplay.js";
 
 export { lineasHorarioFichadaReal, parseFichadasRealesCelda, resolverFichadaPresencia };
 
@@ -52,10 +53,30 @@ export function resumenFichadaModal(cell, opts = {}) {
     };
   }
 
+  const estadoJefe = cell?.estado_fichada_jefe ? String(cell.estado_fichada_jefe) : null;
+  const textoEstado =
+    estadoJefe === "ALERTA"
+      ? "Sin conformidad"
+      : estadoJefe
+        ? etiquetaEstadoFichadaJefe(estadoJefe) || "Registrado"
+        : presencia === "presente"
+          ? "Registrado"
+          : presencia === "ausente"
+            ? "Sin registro"
+            : "Registrado";
+
   return {
     modo: "jefe",
     presencia,
+    estadoJefe,
+    textoEstado,
+    tooltipJefe: cell?.estado_fichada_jefe_tooltip,
     horarios: [],
-    tieneRegistro: presencia === "presente",
+    tieneRegistro:
+      estadoJefe === "OK" ||
+      estadoJefe === "RRHH_RESUELTO" ||
+      estadoJefe === "RRHH_PENDIENTE" ||
+      presencia === "presente",
+    esAlerta: estadoJefe === "ALERTA" || presencia === "ausente",
   };
 }

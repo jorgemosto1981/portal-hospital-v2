@@ -24,7 +24,20 @@ import {
 } from "./grillaMesGsoHints.js";
 import { COPY_BADGE_SOLO_LECTURA_GSO } from "./grillaGsoSoloLectura.js";
 import DiaGrillaAuditoriaTecnicaRrhh from "./DiaGrillaAuditoriaTecnicaRrhh.jsx";
+import DiaGrillaFichadaRrhhPanel from "./DiaGrillaFichadaRrhhPanel.jsx";
 import GrillaGuardrailTeoriaAviso from "./GrillaGuardrailTeoriaAviso.jsx";
+
+function hrefFichadasCargaManual({ personaId, fechaYmd, grupoTrabajoId }) {
+  const params = new URLSearchParams();
+  const pid = String(personaId || "").trim();
+  const ymd = String(fechaYmd || "").trim();
+  const gdt = String(grupoTrabajoId || "").trim();
+  if (pid) params.set("persona_id", pid);
+  if (ymd) params.set("fecha_ymd", ymd);
+  if (gdt) params.set("gdt_id", gdt);
+  const q = params.toString();
+  return `/portal/rrhh/fichadas-carga-manual${q ? `?${q}` : ""}`;
+}
 
 function labelEstado(id) {
   const e = String(id || "");
@@ -77,6 +90,8 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd, rutaBase = "/portal/jef
  *   rutaPlanTurnoBase?: string;
  *   celdaVis?: Record<string, unknown> | null;
  *   puedeVerTramosCrudosFichadas?: boolean;
+ *   puedeEditarFichadasReales?: boolean;
+ *   onFichadaGuardada?: () => void | Promise<void>;
  *   onAbrirAyuda?: (termino: string) => void;
  *   mostrarFichada?: boolean;
  *   etiquetasGrupo?: Record<string, string>;
@@ -114,6 +129,8 @@ export default function DiaGrillaDetalleModal({
   rutaPlanTurnoBase = "/portal/jefe/planes-turno",
   celdaVis = null,
   puedeVerTramosCrudosFichadas = false,
+  puedeEditarFichadasReales = false,
+  onFichadaGuardada,
   onAbrirAyuda,
   mostrarFichada = false,
   etiquetasGrupo = {},
@@ -405,16 +422,32 @@ export default function DiaGrillaDetalleModal({
           </div>
         ) : null}
 
-        {resumenFichada && (resumenFichada.tieneRegistro || resumenFichada.presencia === "ausente") ? (
+        {resumenFichada &&
+        (resumenFichada.modo === "jefe" ||
+          resumenFichada.tieneRegistro ||
+          resumenFichada.presencia === "ausente" ||
+          resumenFichada.esAlerta) ? (
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600">
-              {resumenFichada.modo === "rrhh" ? "Fichada real" : "Asistencia"}
-            </h4>
+            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                {resumenFichada.modo === "rrhh" ? "Fichada real" : "Asistencia"}
+              </h4>
+              {puedeEditarFichadasReales && personaId && fechaYmd && grupoTrabajoId ? (
+                <Link
+                  to={hrefFichadasCargaManual({ personaId, fechaYmd, grupoTrabajoId })}
+                  className="text-[11px] font-semibold text-violet-800 underline"
+                >
+                  Cargar fichada manual
+                </Link>
+              ) : null}
+            </div>
             <dl className="space-y-1 text-xs">
               <div className="flex gap-2">
                 <dt className="font-medium text-slate-500">Estado:</dt>
-                <dd className="font-bold text-slate-800">
-                  {titleFichadaPresencia(resumenFichada.presencia) || "Sin registro"}
+                <dd className="font-bold text-slate-800" title={resumenFichada.tooltipJefe || undefined}>
+                  {resumenFichada.modo === "jefe"
+                    ? resumenFichada.textoEstado || "Registrado"
+                    : titleFichadaPresencia(resumenFichada.presencia) || "Sin registro"}
                 </dd>
               </div>
               {resumenFichada.modo === "rrhh" && resumenFichada.horarios.length > 0 ? (
@@ -431,6 +464,17 @@ export default function DiaGrillaDetalleModal({
               ) : null}
             </dl>
           </div>
+        ) : null}
+
+        {puedeEditarFichadasReales ? (
+          <DiaGrillaFichadaRrhhPanel
+            personaId={String(personaId || "")}
+            fechaYmd={String(fechaYmd || "")}
+            grupoTrabajoId={String(grupoTrabajoId || "")}
+            celdaVis={celdaVis}
+            soloLectura={soloLectura}
+            onGuardado={onFichadaGuardada}
+          />
         ) : null}
 
         {puedeVerTramosCrudosFichadas ? (
