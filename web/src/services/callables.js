@@ -487,3 +487,8 @@ export function callGuardarEnrolamientoRelojPersona(data) {
 export function callReconciliarMarcasHuerfanasReloj(data) {
   return httpsCallable(getFunctionsV2(), "reconciliarMarcasHuerfanasReloj", { timeout: 300000 })(data);
 }
+
+/** Capa fichada día (ABM / carga manual / undo). */
+export function callGuardarCapaFichadaDia(data) {
+  return httpsCallable(getFunctionsV2(), "guardarCapaFichadaDia", { timeout: 120000 })(data);
+}

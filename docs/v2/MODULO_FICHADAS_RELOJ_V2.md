@@ -142,11 +142,14 @@ Crea `rel_hospital_central_01` (política configurable) y `rel_hospital_central_
 
 **PR #5 (Fase D):** base apilada `feature/modulo-fichadas-faseC` hasta merge de PR #4; luego `git rebase origin/master` y retarget a `master`.
 
-## 10. Gate Fase E (carga manual)
+## 10. Fase E — Carga manual (implementado)
 
-No abrir implementación Fase E hasta merge de PR #5 en `master`. Palabra clave operativa: *«¡Mergeado, Armando! Habilitá la Fase E»*.
+| Ruta | Comportamiento |
+|------|----------------|
+| `/portal/rrhh/fichadas-carga-manual` | Teclado Persona→Fecha→Ingreso→Egreso; `useRelojConfigCache` §15.1B; query `?persona_id&fecha_ymd&gdt_id` |
 
-Directrices (plan §5): flujo teclado Persona→Fecha→Ingreso→Egreso (`guardarCapaFichadaDia`, `CARGA_MANUAL`, fecha sticky); aviso duplicado no bloqueante + segundo Enter confirma; cola sesión (~20) con undo/borrado lógico.
+- Callable: `guardarCapaFichadaDia` (`AGREGAR_MARCAS` / undo `REEMPLAZAR_MARCAS`, `CARGA_MANUAL`).
+- Tests: `web/src/features/fichadas/cargaManual/fichadasCargaManualUtils.test.js`.
 
 ---
 

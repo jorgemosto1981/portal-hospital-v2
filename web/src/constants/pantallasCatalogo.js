@@ -9,6 +9,7 @@ const RRHH_RUTAS_DIRECTAS_HABILITADAS = new Set([
   "/portal/rrhh/fichadas-import",
   "/portal/rrhh/fichadas-huerfanas",
   "/portal/rrhh/fichadas-enrolamiento",
+  "/portal/rrhh/fichadas-carga-manual",
 ]);
 
 /**
@@ -57,6 +58,13 @@ export const PANTALLAS_CATALOGO = [
     path: "/portal/rrhh/fichadas-huerfanas",
     estado: "mvp",
     fuente: "web/src/pages/rrhh/FichadasHuerfanasRrhhPage.jsx",
+  },
+  {
+    id: "fichadas-carga-manual",
+    titulo: "Fichadas — carga manual",
+    path: "/portal/rrhh/fichadas-carga-manual",
+    estado: "mvp",
+    fuente: "web/src/pages/rrhh/FichadasCargaManualRrhhPage.jsx",
   },
   {
     id: "grilla-jefe",

@@ -183,6 +183,16 @@ const ICONS_BY_ID = {
       strokeWidth={1.5}
     />
   ),
+  "fichadas-carga-manual": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.75 4.5h16.5m-16.5 4.5H12m0 0V3.75M12 9h7.5m-7.5 4.5h16.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
   "fichadas-huerfanas": () => (
     <path
       strokeLinecap="round"
