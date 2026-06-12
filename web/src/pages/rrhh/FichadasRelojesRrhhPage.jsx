@@ -133,7 +133,11 @@ export default function FichadasRelojesRrhhPage() {
                           {r.nombre || r.id}
                           <div className="font-mono text-[10px] text-slate-400">{r.id}</div>
                         </td>
-                        <td className="px-3 py-2 font-mono text-xs">{r.grupo_trabajo_id || "—"}</td>
+                        <td className="px-3 py-2 font-mono text-xs">
+                          {r.grupo_trabajo_id || (
+                            <span className="text-emerald-700">Universal</span>
+                          )}
+                        </td>
                         <td className="px-3 py-2 text-xs">
                           {pol.duplicados || "—"} · {pol.umbral_duplicado_minutos ?? 2} min
                         </td>

@@ -106,7 +106,7 @@ git checkout master
 git pull origin master
 npm run test:fichadas-modulo
 npm run firebase:deploy:firestore
-npm run firebase:deploy:functions -- --only functions:guardarCapaFichadaDia,functions:aplicarImportFichadasReloj,functions:reconciliarMarcasHuerfanasReloj
+npm run firebase:deploy:functions -- --only functions:listarColeccion,functions:guardarCapaFichadaDia,functions:aplicarImportFichadasReloj,functions:reconciliarMarcasHuerfanasReloj,functions:previsualizarImportFichadasReloj,functions:listarMarcasHuerfanasReloj,functions:descartarMarcaHuerfanaReloj,functions:guardarEnrolamientoRelojPersona,functions:guardarCfgRelojBiometrico
 ```
 
 Verificar en consola Firestore que los índices de `fichadas_marca_huerfana` estén **Enabled** antes del deploy de functions.

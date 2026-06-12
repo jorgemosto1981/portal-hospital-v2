@@ -54,6 +54,7 @@ export function useRelojConfigCache(relojId) {
   }, [reloj]);
 
   const grupoTrabajoId = String(reloj?.grupo_trabajo_id || reloj?.grupo_id || "").trim();
+  const esRelojUniversal = Boolean(reloj) && !/^gdt_/i.test(grupoTrabajoId);
 
-  return { relojes, reloj, politica, grupoTrabajoId, loading, error };
+  return { relojes, reloj, politica, grupoTrabajoId, esRelojUniversal, loading, error };
 }

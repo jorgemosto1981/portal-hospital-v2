@@ -471,6 +471,11 @@ export function callAplicarImportFichadasReloj(data) {
   return httpsCallable(getFunctionsV2(), "aplicarImportFichadasReloj", { timeout: 300000 })(data);
 }
 
+/** Roster agentes para carga manual (sector o GLOBAL con enrolamiento). */
+export function callListarRosterParaFichadas(data) {
+  return httpsCallable(getFunctionsV2(), "listarRosterParaFichadas", { timeout: 120000 })(data);
+}
+
 /** Bandeja marcas huérfanas — índice (reloj_id, estado, fecha_ymd). */
 export function callListarMarcasHuerfanasReloj(data) {
   return httpsCallable(getFunctionsV2(), "listarMarcasHuerfanasReloj")(data);

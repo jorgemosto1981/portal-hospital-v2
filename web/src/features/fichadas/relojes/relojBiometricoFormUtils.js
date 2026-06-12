@@ -39,9 +39,10 @@ export function estadoFormDesdeReloj(reloj) {
  * @param {ReturnType<typeof estadoFormDesdeReloj>} form
  */
 export function payloadGuardarDesdeForm(form) {
+  const gdtTrim = form.grupo_trabajo_id.trim();
   const base = {
     nombre: form.nombre.trim(),
-    grupo_trabajo_id: form.grupo_trabajo_id.trim(),
+    grupo_trabajo_id: gdtTrim || null,
     numero_reloj: form.numero_reloj.trim(),
     mascara_tokens: form.mascara_tokens.trim() || MASCARA_RELOJ_DEFAULT,
     politica_validacion: {

@@ -4,7 +4,7 @@ import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
  * @param {{
  *   opciones: Array<{ persona_id: string; label: string; dni?: string }>;
  *   value: { persona_id: string; label: string } | null;
- *   onSelect: (p: { persona_id: string; label: string }) => void;
+ *   onSelect: (p: { persona_id: string; label: string; grupo_trabajo_id?: string }) => void;
  *   onClear: () => void;
  *   onEnterAdvance?: () => void;
  *   disabled?: boolean;
@@ -25,13 +25,22 @@ const PersonaTypeahead = forwardRef(function PersonaTypeahead(
     const q = query.trim().toLowerCase();
     if (!q) return opciones.slice(0, 12);
     return opciones
-      .filter((o) => o.label.toLowerCase().includes(q) || String(o.dni || "").includes(q))
+      .filter(
+        (o) =>
+          o.label.toLowerCase().includes(q) ||
+          String(o.dni || "").includes(q) ||
+          o.persona_id.toLowerCase().includes(q),
+      )
       .slice(0, 12);
   }, [opciones, query]);
 
   const pick = useCallback(
     (o) => {
-      onSelect({ persona_id: o.persona_id, label: o.label });
+      onSelect({
+        persona_id: o.persona_id,
+        label: o.label,
+        grupo_trabajo_id: o.grupo_trabajo_id,
+      });
       setQuery(o.label);
     },
     [onSelect],

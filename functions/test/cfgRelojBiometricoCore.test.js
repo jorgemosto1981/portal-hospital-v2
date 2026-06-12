@@ -24,6 +24,15 @@ describe("validarPayloadCfgReloj", () => {
     assert.equal(r.payload.politica_validacion.umbral_duplicado_minutos, 5);
   });
 
+  it("acepta reloj universal sin grupo_trabajo_id", () => {
+    const r = validarPayloadCfgReloj({
+      nombre: "Central",
+      grupo_trabajo_id: null,
+    });
+    assert.equal(r.ok, true);
+    assert.equal(r.payload.grupo_trabajo_id, null);
+  });
+
   it("exige rel_* en actualización", () => {
     const r = validarPayloadCfgReloj({
       reloj_id: "bad_id",

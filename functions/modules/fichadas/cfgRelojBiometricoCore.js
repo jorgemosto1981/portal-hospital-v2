@@ -25,8 +25,12 @@ function validarPayloadCfgReloj(params) {
     return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "El nombre del reloj es obligatorio." };
   }
 
-  const grupo_trabajo_id = String(params.grupo_trabajo_id || params.grupo_id || "").trim();
-  if (!/^gdt_/i.test(grupo_trabajo_id)) {
+  const gdtRaw = params.grupo_trabajo_id ?? params.grupo_id ?? "";
+  const grupo_trabajo_id =
+    gdtRaw === null || gdtRaw === undefined || String(gdtRaw).trim() === ""
+      ? null
+      : String(gdtRaw).trim();
+  if (grupo_trabajo_id != null && !/^gdt_/i.test(grupo_trabajo_id)) {
     return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "grupo_trabajo_id inválido (gdt_*)." };
   }
 
@@ -67,13 +71,15 @@ async function guardarCfgRelojBiometrico(db, params, actor) {
   if (!val.ok) return val;
 
   const { payload } = val;
-  const gdtSnap = await db.collection(COL_GRUPOS).doc(payload.grupo_trabajo_id).get();
-  if (!gdtSnap.exists) {
-    return {
-      ok: false,
-      codigo: "GRUPO_INEXISTENTE",
-      mensaje: `El grupo ${payload.grupo_trabajo_id} no existe.`,
-    };
+  if (payload.grupo_trabajo_id) {
+    const gdtSnap = await db.collection(COL_GRUPOS).doc(payload.grupo_trabajo_id).get();
+    if (!gdtSnap.exists) {
+      return {
+        ok: false,
+        codigo: "GRUPO_INEXISTENTE",
+        mensaje: `El grupo ${payload.grupo_trabajo_id} no existe.`,
+      };
+    }
   }
 
   const id = payload.reloj_id || `rel_${ulid()}`;
@@ -87,7 +93,7 @@ async function guardarCfgRelojBiometrico(db, params, actor) {
   const doc = {
     id,
     nombre: payload.nombre,
-    grupo_trabajo_id: payload.grupo_trabajo_id,
+    grupo_trabajo_id: payload.grupo_trabajo_id ?? null,
     numero_reloj: payload.numero_reloj,
     mascara_tokens: payload.mascara_tokens,
     politica_validacion: payload.politica_validacion,

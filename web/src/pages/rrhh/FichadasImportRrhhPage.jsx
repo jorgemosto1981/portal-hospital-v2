@@ -45,6 +45,7 @@ export default function FichadasImportRrhhPage() {
   );
   const politica = useMemo(() => politicaDesdeReloj(relojSel), [relojSel]);
   const grupoId = String(relojSel?.grupo_trabajo_id || relojSel?.grupo_id || "").trim();
+  const relojUniversal = Boolean(relojSel) && !/^gdt_/i.test(grupoId);
 
   const onArchivo = useCallback((e) => {
     const file = e.target.files?.[0];
@@ -92,8 +93,8 @@ export default function FichadasImportRrhhPage() {
   }, [relojId, contenidoTxt, enrolPorReloj, politica]);
 
   const aplicarLote = useCallback(async () => {
-    if (!preview || !grupoId) {
-      toast.error("Falta grupo de trabajo del reloj o preview.");
+    if (!preview || !relojId) {
+      toast.error("Falta reloj o preview.");
       return;
     }
     if (preview.resumen?.bloquear_aplicar) {
@@ -109,7 +110,7 @@ export default function FichadasImportRrhhPage() {
     try {
       const res = await callAplicarImportFichadasReloj({
         reloj_id: relojId,
-        grupo_trabajo_id: grupoId,
+        ...(grupoId ? { grupo_trabajo_id: grupoId } : {}),
         contenido_txt: txtLimpio,
         umbral_duplicado_minutos: politica.umbral,
       });
@@ -174,7 +175,11 @@ export default function FichadasImportRrhhPage() {
         </label>
         {relojSel ? (
           <p className="text-xs text-slate-500">
-            Grupo: <span className="font-mono">{grupoId || "sin gdt en cfg"}</span> · Política duplicados:{" "}
+            Grupo:{" "}
+            <span className="font-mono">
+              {relojUniversal ? "Universal (destino por enrolamiento)" : grupoId || "sin gdt en cfg"}
+            </span>{" "}
+            · Política duplicados:{" "}
             <strong>{politica.duplicados}</strong> · Umbral {politica.umbral} min
           </p>
         ) : null}
@@ -204,7 +209,7 @@ export default function FichadasImportRrhhPage() {
             className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium disabled:opacity-50"
             onClick={aplicarLote}
             disabled={
-              aplicando || !preview || preview.resumen?.bloquear_aplicar || !grupoId
+              aplicando || !preview || preview.resumen?.bloquear_aplicar || !relojId
             }
           >
             {aplicando ? "Aplicando…" : "Aplicar lote"}

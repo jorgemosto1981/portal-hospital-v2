@@ -1,3 +1,4 @@
+import MascaraAyudaPanel from "./components/MascaraAyudaPanel.jsx";
 import {
   MASCARA_RELOJ_DEFAULT,
   POLITICAS_DUPLICADOS_OPCIONES,
@@ -50,15 +51,14 @@ export default function RelojBiometricoForm({
       </label>
 
       <label className="block text-sm font-medium text-slate-700">
-        Grupo de trabajo (sector)
+        Grupo de trabajo (sector, opcional)
         <select
-          required
           className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
           value={form.grupo_trabajo_id}
           onChange={(e) => onChange({ grupo_trabajo_id: e.target.value })}
           disabled={guardando}
         >
-          <option value="">— Seleccionar gdt —</option>
+          <option value="">— Universal (todo el hospital) —</option>
           {grupos.map((g) => (
             <option key={g.id} value={g.id}>
               {g.nombre || g.id}
@@ -79,19 +79,26 @@ export default function RelojBiometricoForm({
         />
       </label>
 
-      <label className="block text-sm font-medium text-slate-700">
-        Máscara de línea TXT
-        <input
-          type="text"
-          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-xs"
-          value={form.mascara_tokens}
-          onChange={(e) => onChange({ mascara_tokens: e.target.value })}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-slate-700">
+          Máscara de línea TXT
+          <input
+            type="text"
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-xs"
+            value={form.mascara_tokens}
+            onChange={(e) => onChange({ mascara_tokens: e.target.value })}
+            disabled={guardando}
+          />
+          <span className="mt-1 block text-[11px] text-slate-500">
+            Por defecto: {MASCARA_RELOJ_DEFAULT}. Abrí el asistente para probar una línea real del archivo.
+          </span>
+        </label>
+        <MascaraAyudaPanel
+          mascaraActual={form.mascara_tokens}
+          onUsarMascara={(mascara) => onChange({ mascara_tokens: mascara })}
           disabled={guardando}
         />
-        <span className="mt-1 block text-[11px] text-slate-500">
-          Por defecto: {MASCARA_RELOJ_DEFAULT} (T=tarjeta, D=fecha, H=hora, R/C=códigos reloj).
-        </span>
-      </label>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm font-medium text-slate-700">

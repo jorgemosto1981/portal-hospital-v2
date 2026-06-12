@@ -316,13 +316,17 @@ async function guardarCapaFichadaDia(db, params, actor) {
 
 async function cargarMapaEnrolamientoReloj(db, reloj_id) {
   const snap = await db.collection(COL_RPE).where("reloj_id", "==", reloj_id).get();
+  /** @type {Map<string, { persona_id: string, grupo_trabajo_id: string }>} */
   const map = new Map();
   for (const doc of snap.docs) {
     const d = doc.data() || {};
     if (d.activo === false) continue;
     const tarjeta = String(d.numero_tarjeta || "").trim();
     const pid = String(d.persona_id || "").trim();
-    if (tarjeta && pid) map.set(tarjeta, pid);
+    const gdt = String(d.grupo_trabajo_id || "").trim();
+    if (tarjeta && pid && /^gdt_/i.test(gdt)) {
+      map.set(tarjeta, { persona_id: pid, grupo_trabajo_id: gdt });
+    }
   }
   return map;
 }
@@ -359,12 +363,20 @@ async function insertarMarcasHuerfanasBatch(db, lineas, reloj_id, import_lote_id
  */
 async function aplicarImportFichadasReloj(db, params, actor) {
   const reloj_id = String(params.reloj_id || "").trim();
-  const grupo_trabajo_id = String(params.grupo_trabajo_id || "").trim();
+  let grupo_trabajo_id = String(params.grupo_trabajo_id || "").trim();
   let contenido_txt = typeof params.contenido_txt === "string" ? params.contenido_txt : "";
   const import_lote_id = typeof params.import_lote_id === "string" ? params.import_lote_id.trim() : "";
 
-  if (!/^rel_/i.test(reloj_id) || !/^gdt_/i.test(grupo_trabajo_id)) {
-    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "reloj_id o grupo_trabajo_id inválidos." };
+  if (!/^rel_/i.test(reloj_id)) {
+    return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "reloj_id inválido." };
+  }
+
+  const relojSnap = await db.collection("cfg_reloj_biometrico").doc(reloj_id).get();
+  const relojGrupoCfg = relojSnap.exists
+    ? String(relojSnap.get("grupo_trabajo_id") || "").trim()
+    : "";
+  if (!grupo_trabajo_id && relojGrupoCfg) {
+    grupo_trabajo_id = relojGrupoCfg;
   }
 
   if (import_lote_id && !contenido_txt) {
@@ -388,16 +400,20 @@ async function aplicarImportFichadasReloj(db, params, actor) {
   const conPersona = [];
 
   for (const linea of conAdvertencias) {
-    const pid = enrolMap.get(linea.numero_tarjeta);
-    if (!pid) {
+    const enrol = enrolMap.get(linea.numero_tarjeta);
+    if (!enrol?.persona_id || !enrol.grupo_trabajo_id) {
       huerfanas.push(linea);
       continue;
     }
-    conPersona.push({ ...linea, persona_id: pid, grupo_trabajo_id });
+    conPersona.push({
+      ...linea,
+      persona_id: enrol.persona_id,
+      grupo_trabajo_id: enrol.grupo_trabajo_id,
+    });
   }
 
   const porVis = agruparMarcasPorClaveVis(conPersona, (m) =>
-    claveVisImportMarca(m, { persona_id: m.persona_id, grupo_trabajo_id }),
+    claveVisImportMarca(m, { persona_id: m.persona_id, grupo_trabajo_id: m.grupo_trabajo_id }),
   );
 
   let visTocados = 0;
@@ -407,11 +423,13 @@ async function aplicarImportFichadasReloj(db, params, actor) {
   for (const [visKey, marcasVis] of porVis.entries()) {
     const sample = marcasVis[0];
     const persona_id = sample.persona_id;
+    const gdtDestino = String(sample.grupo_trabajo_id || "").trim();
+    if (!/^gdt_/i.test(gdtDestino)) continue;
     const { anio, mes } = anioMesDesdeYmd(sample.fecha_ymd);
-    const visId = buildVisDocumentId(persona_id, `${anio}-${String(mes).padStart(2, "0")}-01`, grupo_trabajo_id);
+    const visId = buildVisDocumentId(persona_id, `${anio}-${String(mes).padStart(2, "0")}-01`, gdtDestino);
 
     for (const f of [...new Set(marcasVis.map((m) => m.fecha_ymd))]) {
-      await assertPeriodoNoCerrado(db, persona_id, f, grupo_trabajo_id);
+      await assertPeriodoNoCerrado(db, persona_id, f, gdtDestino);
     }
 
     let skippedTx = false;
@@ -439,7 +457,7 @@ async function aplicarImportFichadasReloj(db, params, actor) {
       const alineado = alinearMarcasConTeoriaEnCalendario({ marcas: marcasMerge, celdas_por_fecha });
       const updatePayload = {
         persona_id,
-        grupo_de_trabajo_id: grupo_trabajo_id,
+        grupo_de_trabajo_id: gdtDestino,
         anio,
         mes,
       };
@@ -483,7 +501,7 @@ async function aplicarImportFichadasReloj(db, params, actor) {
         actor_persona_id: actor.actor_persona_id,
         accion: "aplicar_import_fichadas",
         fecha_ymd: marcasVis[0].fecha_ymd,
-        grupo_trabajo_id,
+        grupo_trabajo_id: gdtDestino,
         motivo: `Import lote ${import_lote_id || "directo"}`,
         origen: "IMPORT_TXT",
       });

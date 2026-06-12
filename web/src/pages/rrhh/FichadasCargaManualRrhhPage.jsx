@@ -12,13 +12,9 @@ import {
   leerVersionCelda,
 } from "../../features/fichadas/cargaManual/fichadasCargaManualUtils.js";
 import { useCargaManualCola } from "../../features/fichadas/cargaManual/useCargaManualCola.js";
+import { useCargaManualRoster } from "../../features/fichadas/cargaManual/useCargaManualRoster.js";
 import { useRelojConfigCache } from "../../features/fichadas/cargaManual/useRelojConfigCache.js";
-import { normalizarFilasGrillaEquipo } from "../../features/grilla/grillaMesFilasUtils.js";
-import {
-  callGuardarCapaFichadaDia,
-  callListarVistaGrillaMesPorGrupo,
-  callObtenerVistaGrillaMesAgente,
-} from "../../services/callables.js";
+import { callGuardarCapaFichadaDia, callObtenerVistaGrillaMesAgente } from "../../services/callables.js";
 
 export default function FichadasCargaManualRrhhPage() {
   const [params] = useSearchParams();
@@ -28,14 +24,19 @@ export default function FichadasCargaManualRrhhPage() {
 
   const [relojId, setRelojId] = useState("");
   const [fechaSticky, setFechaSticky] = useState(fechaUrl || "");
-  const [roster, setRoster] = useState([]);
-  const [rosterLoading, setRosterLoading] = useState(false);
   const [deshaciendo, setDeshaciendo] = useState(false);
 
   const visCacheRef = useRef(new Map());
 
-  const { relojes, politica, grupoTrabajoId: gdtReloj, loading: loadingCfg } = useRelojConfigCache(relojId);
+  const { relojes, politica, grupoTrabajoId: gdtReloj, esRelojUniversal, loading: loadingCfg } =
+    useRelojConfigCache(relojId);
   const grupoTrabajoId = gdtUrl || gdtReloj;
+
+  const { roster, loading: rosterLoading, error: rosterError, modoGlobal } = useCargaManualRoster({
+    relojId,
+    grupoTrabajoId,
+    fechaYmd: fechaSticky,
+  });
 
   const {
     colaItems,
@@ -44,6 +45,10 @@ export default function FichadasCargaManualRrhhPage() {
     quitarMarcasColaEntrada,
     removeById,
   } = useCargaManualCola();
+
+  useEffect(() => {
+    if (rosterError) toast.error(rosterError);
+  }, [rosterError]);
 
   useEffect(() => {
     if (!relojId && relojes.length === 1) setRelojId(String(relojes[0].id));
@@ -55,65 +60,26 @@ export default function FichadasCargaManualRrhhPage() {
     return {
       persona_id: personaUrl,
       label: row?.label || personaUrl,
+      grupo_trabajo_id: row?.grupo_trabajo_id || grupoTrabajoId || "",
     };
-  }, [personaUrl, roster]);
+  }, [personaUrl, roster, grupoTrabajoId]);
 
-  const cargarRoster = useCallback(async () => {
-    if (!/^gdt_/i.test(grupoTrabajoId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaSticky)) {
-      setRoster([]);
-      return;
-    }
-    const [y, m] = fechaSticky.split("-").map(Number);
-    setRosterLoading(true);
-    try {
-      const res = await callListarVistaGrillaMesPorGrupo({
-        grupo_trabajo_id: grupoTrabajoId,
-        anio: y,
-        mes: m,
-      });
-      const filas = normalizarFilasGrillaEquipo(res.data?.filas || res.data?.items || []);
-      const map = new Map();
-      for (const f of filas) {
-        const pid = String(f.persona_id || "").trim();
-        if (!pid || map.has(pid)) continue;
-        const nombre = [f.apellido, f.nombre].filter(Boolean).join(", ");
-        const label =
-          nombre ||
-          f.persona_label ||
-          f.persona_nombre ||
-          f.agente_nombre ||
-          pid;
-        map.set(pid, {
-          persona_id: pid,
-          label: String(label),
-          dni: f.dni ? String(f.dni) : "",
-        });
-      }
-      setRoster([...map.values()].sort((a, b) => a.label.localeCompare(b.label, "es")));
-    } catch (e) {
-      toast.error(e?.message || "No se pudo cargar el roster del grupo.");
-      setRoster([]);
-    } finally {
-      setRosterLoading(false);
-    }
-  }, [grupoTrabajoId, fechaSticky]);
-
-  useEffect(() => {
-    cargarRoster();
-  }, [cargarRoster]);
-
-  const cacheKey = (persona_id, fecha_ymd) => `${persona_id}|${fecha_ymd}|${grupoTrabajoId}`;
+  const cacheKey = (persona_id, fecha_ymd, gdt) => `${persona_id}|${fecha_ymd}|${gdt}`;
 
   const getVisCelda = useCallback(
     async (persona_id, fecha_ymd, opts = {}) => {
-      const key = cacheKey(persona_id, fecha_ymd);
+      const gdt = String(opts.grupo_trabajo_id || grupoTrabajoId || "").trim();
+      if (!/^gdt_/i.test(gdt)) {
+        throw new Error("Grupo de trabajo del agente no disponible.");
+      }
+      const key = cacheKey(persona_id, fecha_ymd, gdt);
       if (!opts.force && visCacheRef.current.has(key)) {
         return visCacheRef.current.get(key);
       }
       const [y, m] = fecha_ymd.split("-").map(Number);
       const res = await callObtenerVistaGrillaMesAgente({
         persona_id,
-        grupo_trabajo_id: grupoTrabajoId,
+        grupo_trabajo_id: gdt,
         anio: y,
         mes: m,
       });
@@ -130,12 +96,10 @@ export default function FichadasCargaManualRrhhPage() {
     [grupoTrabajoId],
   );
 
-  const setVisCeldaCache = useCallback(
-    (persona_id, fecha_ymd, celda) => {
-      visCacheRef.current.set(cacheKey(persona_id, fecha_ymd), celda);
-    },
-    [grupoTrabajoId],
-  );
+  const setVisCeldaCache = useCallback((persona_id, fecha_ymd, celda, gdt) => {
+    const gdtKey = String(gdt || grupoTrabajoId || "").trim();
+    visCacheRef.current.set(cacheKey(persona_id, fecha_ymd, gdtKey), celda);
+  }, [grupoTrabajoId]);
 
   const deshacerEntrada = useCallback(
     async (entry) => {
@@ -155,7 +119,7 @@ export default function FichadasCargaManualRrhhPage() {
         });
         quitarMarcasColaEntrada(entry);
         removeById(entry.id);
-        visCacheRef.current.delete(cacheKey(entry.persona_id, entry.fecha_ymd));
+        visCacheRef.current.delete(cacheKey(entry.persona_id, entry.fecha_ymd, entry.grupo_trabajo_id));
         toast.success("Deshacer aplicado (snapshot restaurado).");
       } catch (e) {
         toast.error(e?.message || "No se pudo deshacer.");
@@ -193,6 +157,12 @@ export default function FichadasCargaManualRrhhPage() {
     [pushGuardado],
   );
 
+  const grupoLabel = modoGlobal || esRelojUniversal
+    ? "Universal (destino por agente)"
+    : grupoTrabajoId || "—";
+
+  const formDisabled = !relojId || (!modoGlobal && !/^gdt_/i.test(grupoTrabajoId));
+
   return (
     <div className="min-h-[calc(100dvh-6rem)] space-y-4 bg-slate-50 px-3 py-5 pb-28 md:px-6">
       <header>
@@ -215,23 +185,29 @@ export default function FichadasCargaManualRrhhPage() {
             disabled={loadingCfg}
           >
             <option value="">— Seleccionar —</option>
-            {relojes.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.nombre || r.id}
-              </option>
-            ))}
+            {relojes.map((r) => {
+              const g = String(r.grupo_trabajo_id || r.grupo_id || "").trim();
+              const suf = g ? "" : " · universal";
+              return (
+                <option key={r.id} value={r.id}>
+                  {r.nombre || r.id}
+                  {suf}
+                </option>
+              );
+            })}
           </select>
         </label>
         <p className="text-xs text-slate-500">
-          Grupo: <span className="font-mono">{grupoTrabajoId || "—"}</span>
+          Grupo: <span className="font-mono">{grupoLabel}</span>
           {gdtUrl ? " (desde enlace grilla)" : ""} · Umbral duplicados: {politica.umbral_duplicado_minutos} min
-          {rosterLoading ? " · Cargando roster…" : ` · ${roster.length} agentes en mes`}
+          {rosterLoading ? " · Cargando roster…" : ` · ${roster.length} agentes`}
+          {modoGlobal ? " · caché sesión (GLOBAL)" : ""}
         </p>
       </Card>
 
       <Card className="p-4">
         <FichadasCargaManualTeclado
-          grupoTrabajoId={grupoTrabajoId}
+          grupoTrabajoIdSector={grupoTrabajoId}
           umbralMinutos={politica.umbral_duplicado_minutos}
           roster={roster}
           fechaSticky={fechaSticky}
@@ -241,7 +217,7 @@ export default function FichadasCargaManualRrhhPage() {
           setVisCeldaCache={setVisCeldaCache}
           marcasColaSesion={marcasColaSesion}
           onGuardadoOk={onGuardadoOk}
-          disabled={!grupoTrabajoId}
+          disabled={formDisabled}
         />
       </Card>
 

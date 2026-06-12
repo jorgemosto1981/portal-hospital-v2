@@ -60,6 +60,7 @@ const listarMarcasHuerfanasReloj = require("./onCall/fichadas/listarMarcasHuerfa
 const descartarMarcaHuerfanaReloj = require("./onCall/fichadas/descartarMarcaHuerfanaReloj");
 const guardarEnrolamientoRelojPersona = require("./onCall/fichadas/guardarEnrolamientoRelojPersona");
 const guardarCfgRelojBiometrico = require("./onCall/fichadas/guardarCfgRelojBiometrico");
+const listarRosterParaFichadas = require("./onCall/fichadas/listarRosterParaFichadas");
 
 module.exports = {
   ...login,
@@ -111,4 +112,5 @@ module.exports = {
   ...descartarMarcaHuerfanaReloj,
   ...guardarEnrolamientoRelojPersona,
   ...guardarCfgRelojBiometrico,
+  ...listarRosterParaFichadas,
 };

@@ -15,9 +15,9 @@ import { callGuardarCapaFichadaDia } from "../../../services/callables.js";
 
 /**
  * @param {{
- *   grupoTrabajoId: string;
+ *   grupoTrabajoIdSector: string;
  *   umbralMinutos: number;
- *   roster: Array<{ persona_id: string; label: string; dni?: string }>;
+ *   roster: Array<{ persona_id: string; label: string; dni?: string; grupo_trabajo_id?: string }>;
  *   fechaSticky: string;
  *   onFechaStickyChange: (f: string) => void;
  *   personaInicial: { persona_id: string; label: string } | null;
@@ -28,8 +28,15 @@ import { callGuardarCapaFichadaDia } from "../../../services/callables.js";
  *   disabled?: boolean;
  * }} props
  */
+function gdtParaPersona(persona, grupoTrabajoIdSector) {
+  const delAgente = String(persona?.grupo_trabajo_id || "").trim();
+  if (/^gdt_/i.test(delAgente)) return delAgente;
+  const fijo = String(grupoTrabajoIdSector || "").trim();
+  return /^gdt_/i.test(fijo) ? fijo : "";
+}
+
 export default function FichadasCargaManualTeclado({
-  grupoTrabajoId,
+  grupoTrabajoIdSector,
   umbralMinutos,
   roster,
   fechaSticky,
@@ -71,18 +78,20 @@ export default function FichadasCargaManualTeclado({
     focoPersona();
   }, [focoPersona]);
 
+  const gdtActivo = gdtParaPersona(persona, grupoTrabajoIdSector);
+
   const recargarVis = useCallback(async () => {
-    if (!persona?.persona_id || !fecha || !grupoTrabajoId) {
+    if (!persona?.persona_id || !fecha || !/^gdt_/i.test(gdtActivo)) {
       setVisMarcas([]);
       return;
     }
     try {
-      const celda = await getVisCelda(persona.persona_id, fecha);
+      const celda = await getVisCelda(persona.persona_id, fecha, { grupo_trabajo_id: gdtActivo });
       setVisMarcas(marcasInstantesDesdeFichadasReales(celda.fichadas_reales, fecha));
     } catch {
       setVisMarcas([]);
     }
-  }, [persona?.persona_id, fecha, grupoTrabajoId, getVisCelda]);
+  }, [persona?.persona_id, fecha, gdtActivo, getVisCelda]);
 
   useEffect(() => {
     recargarVis();
@@ -115,8 +124,9 @@ export default function FichadasCargaManualTeclado({
   }, [ingreso, egreso, actualizarCercania]);
 
   const ejecutarGuardado = useCallback(async () => {
-    if (!persona?.persona_id || !/^gdt_/i.test(grupoTrabajoId) || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-      toast.error("Completá agente, grupo y fecha.");
+    const gdt = gdtParaPersona(persona, grupoTrabajoIdSector);
+    if (!persona?.persona_id || !/^gdt_/i.test(gdt) || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      toast.error("Completá agente (con sector), grupo del reloj si aplica, y fecha.");
       return;
     }
     const ing = normalizarHoraHmInput(ingreso);
@@ -138,7 +148,7 @@ export default function FichadasCargaManualTeclado({
     try {
       const res = await callGuardarCapaFichadaDia({
         persona_id: persona.persona_id,
-        grupo_trabajo_id: grupoTrabajoId,
+        grupo_trabajo_id: gdt,
         fecha_ymd: fecha,
         accion: "AGREGAR_MARCAS",
         marcas,
@@ -156,8 +166,8 @@ export default function FichadasCargaManualTeclado({
         });
       }
 
-      const celdaNueva = await getVisCelda(persona.persona_id, fecha, { force: true });
-      setVisCeldaCache(persona.persona_id, fecha, celdaNueva);
+      const celdaNueva = await getVisCelda(persona.persona_id, fecha, { force: true, grupo_trabajo_id: gdt });
+      setVisCeldaCache(persona.persona_id, fecha, celdaNueva, gdt);
 
       onGuardadoOk({
         id: `${Date.now()}_${persona.persona_id}`,
@@ -166,7 +176,7 @@ export default function FichadasCargaManualTeclado({
         fecha_ymd: fecha,
         ingreso: ing,
         egreso: egr,
-        grupo_trabajo_id: grupoTrabajoId,
+        grupo_trabajo_id: gdt,
         snapshotFichadas: snapshotAntes,
         versionAntes,
         versionDespues: celdaNueva.version,
@@ -188,7 +198,7 @@ export default function FichadasCargaManualTeclado({
     }
   }, [
     persona,
-    grupoTrabajoId,
+    grupoTrabajoIdSector,
     fecha,
     ingreso,
     egreso,
