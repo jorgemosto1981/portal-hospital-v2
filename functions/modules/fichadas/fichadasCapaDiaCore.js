@@ -4,6 +4,7 @@ const { ulid } = require("ulid");
 const { FieldValue } = require("firebase-admin/firestore");
 const { buildVisDocumentId, diaMesKeyDesdeYmd } = require("../shared/mdcRdaDocumentIds");
 const { assertPeriodoNoCerrado } = require("../asistencia/asistenciaPeriodoLiquidacion");
+const { encolarRematerializacionAsistenciaLote } = require("../asistencia/colaRematerializacionAsistenciaCore");
 const { alinearMarcasConTeoriaDia, alinearMarcasConTeoriaEnCalendario } = require("../shared/fichadasAlineacionTeoria");
 const { evaluarDeltaCeldaDia } = require("../shared/fichadasDeltaCeldaDia");
 const { segmentarOperacionesFirestore } = require("../shared/fichadasDeltaCeldaDia");
@@ -309,6 +310,15 @@ async function guardarCapaFichadaDia(db, params, actor) {
     origen,
   });
 
+  await encolarRematerializacionAsistenciaLote(db, [
+    {
+      persona_id,
+      gdt_id: grupo_trabajo_id,
+      fecha_ymd,
+      origen: "guardar_capa_fichada_dia",
+    },
+  ]);
+
   return {
     ok: true,
     write_skipped: false,
@@ -424,6 +434,8 @@ async function aplicarImportFichadasReloj(db, params, actor) {
   let visTocados = 0;
   let writeSkipped = 0;
   const evtIds = [];
+  /** @type {Array<{ persona_id: string, gdt_id: string, fecha_ymd: string, origen: string }>} */
+  const colaRematItems = [];
 
   for (const [visKey, marcasVis] of porVis.entries()) {
     const sample = marcasVis[0];
@@ -510,7 +522,19 @@ async function aplicarImportFichadasReloj(db, params, actor) {
         motivo: `Import lote ${import_lote_id || "directo"}`,
         origen: "IMPORT_TXT",
       });
+      for (const f of [...new Set(marcasVis.map((m) => m.fecha_ymd))]) {
+        colaRematItems.push({
+          persona_id,
+          gdt_id: gdtDestino,
+          fecha_ymd: f,
+          origen: "aplicar_import_fichadas",
+        });
+      }
     }
+  }
+
+  if (colaRematItems.length) {
+    await encolarRematerializacionAsistenciaLote(db, colaRematItems);
   }
 
   const huerfanasInsertadas = huerfanas.length

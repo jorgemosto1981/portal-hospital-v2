@@ -175,6 +175,14 @@ export const MODULOS_PORTAL = [
     parentMenuId: "fichadas-reloj-raiz",
   },
   {
+    id: "fichadas-consulta-enrolamiento",
+    label: "Consulta enrolados",
+    path: "/portal/rrhh/fichadas-consulta-enrolamiento",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "fichadas-reloj-raiz",
+  },
+  {
     id: "fichadas-import",
     label: "Import TXT",
     path: "/portal/rrhh/fichadas-import",
@@ -323,6 +331,7 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh/bandeja-turnos")) return "bandeja-turnos-evaluador-rrhh";
   if (pathname.startsWith("/portal/rrhh/fichadas-carga-manual")) return "fichadas-carga-manual";
   if (pathname.startsWith("/portal/rrhh/fichadas-relojes")) return "fichadas-relojes";
+  if (pathname.startsWith("/portal/rrhh/fichadas-consulta-enrolamiento")) return "fichadas-consulta-enrolamiento";
   if (pathname.startsWith("/portal/rrhh/fichadas-enrolamiento")) return "fichadas-enrolamiento";
   if (pathname.startsWith("/portal/rrhh/fichadas-import")) return "fichadas-import";
   if (pathname.startsWith("/portal/rrhh/fichadas-huerfanas")) return "fichadas-huerfanas";

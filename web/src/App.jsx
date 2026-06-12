@@ -45,6 +45,7 @@ import GrillaOperativaRrhhPage from "./pages/rrhh/GrillaOperativaRrhhPage.jsx";
 import FichadasImportRrhhPage from "./pages/rrhh/FichadasImportRrhhPage.jsx";
 import FichadasHuerfanasRrhhPage from "./pages/rrhh/FichadasHuerfanasRrhhPage.jsx";
 import FichadasEnrolamientoRrhhPage from "./pages/rrhh/FichadasEnrolamientoRrhhPage.jsx";
+import FichadasConsultaEnrolamientoRrhhPage from "./pages/rrhh/FichadasConsultaEnrolamientoRrhhPage.jsx";
 import FichadasCargaManualRrhhPage from "./pages/rrhh/FichadasCargaManualRrhhPage.jsx";
 import FichadasRelojesRrhhPage from "./pages/rrhh/FichadasRelojesRrhhPage.jsx";
 import GrillaOperativaJefePage from "./pages/jefe/GrillaOperativaJefePage.jsx";
@@ -169,6 +170,7 @@ export default function App() {
               <Route path="rrhh/fichadas-import" element={<FichadasImportRrhhPage />} />
               <Route path="rrhh/fichadas-huerfanas" element={<FichadasHuerfanasRrhhPage />} />
               <Route path="rrhh/fichadas-enrolamiento" element={<FichadasEnrolamientoRrhhPage />} />
+              <Route path="rrhh/fichadas-consulta-enrolamiento" element={<FichadasConsultaEnrolamientoRrhhPage />} />
               <Route path="rrhh/fichadas-carga-manual" element={<FichadasCargaManualRrhhPage />} />
             </Route>
           </Route>

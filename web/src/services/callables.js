@@ -489,6 +489,11 @@ export function callGuardarEnrolamientoRelojPersona(data) {
   return httpsCallable(getFunctionsV2(), "guardarEnrolamientoRelojPersona", { timeout: 300000 })(data);
 }
 
+/** Consulta enrolamientos tarjeta ↔ persona por persona_id (sin listar colección completa). */
+export function callListarEnrolamientoRelojPorPersona(data) {
+  return httpsCallable(getFunctionsV2(), "listarEnrolamientoRelojPorPersona")(data);
+}
+
 export function callReconciliarMarcasHuerfanasReloj(data) {
   return httpsCallable(getFunctionsV2(), "reconciliarMarcasHuerfanasReloj", { timeout: 300000 })(data);
 }

@@ -386,6 +386,9 @@ service cloud.firestore {
     match /fichadas_import_lote/{docId} {
       allow read, write: if false;
     }
+    match /cola_rematerializacion_asistencia/{docId} {
+      allow read, write: if false;
+    }
 
     match /{document=**} {
       allow read, write: if false;

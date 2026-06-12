@@ -52,6 +52,13 @@ export const PANTALLAS_CATALOGO = [
     fuente: "web/src/pages/rrhh/FichadasEnrolamientoRrhhPage.jsx",
   },
   {
+    id: "fichadas-consulta-enrolamiento",
+    titulo: "Fichadas — consulta enrolamientos por persona",
+    path: "/portal/rrhh/fichadas-consulta-enrolamiento",
+    estado: "mvp",
+    fuente: "web/src/pages/rrhh/FichadasConsultaEnrolamientoRrhhPage.jsx",
+  },
+  {
     id: "fichadas-import",
     titulo: "Fichadas — import TXT",
     path: "/portal/rrhh/fichadas-import",

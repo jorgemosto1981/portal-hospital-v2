@@ -8,6 +8,7 @@ const { evaluarDeltaCeldaDia } = require("../shared/fichadasDeltaCeldaDia");
 const { marcasDesdeFichadasRealesExistentes } = require("./fichadasMarcasUtils");
 const { assertPeriodoNoCerrado } = require("../asistencia/asistenciaPeriodoLiquidacion");
 const { idsGdtsVigentesPersonaEnFecha } = require("./fichadasMultiCargoUniversal");
+const { encolarRematerializacionAsistenciaLote } = require("../asistencia/colaRematerializacionAsistenciaCore");
 
 const COL_FMH = "fichadas_marca_huerfana";
 const COL_VIS = "vistas_grilla_mes_agente";
@@ -152,6 +153,8 @@ async function reconciliarMarcasHuerfanasReloj(db, params) {
   let visActualizados = 0;
   let writeSkipped = 0;
   const fmhResueltos = [];
+  /** @type {Array<{ persona_id: string, gdt_id: string, fecha_ymd: string, origen: string }>} */
+  const colaRematItems = [];
 
   for (const [visId, bucket] of porVis.entries()) {
     const { anio, mes, marcas: marcasVis, grupo_trabajo_id: gdtBucket } = bucket;
@@ -267,6 +270,14 @@ async function reconciliarMarcasHuerfanasReloj(db, params) {
       writeSkipped += 1;
     } else {
       visActualizados += 1;
+      for (const fecha_ymd of fechas) {
+        colaRematItems.push({
+          persona_id,
+          gdt_id: gdtVis,
+          fecha_ymd,
+          origen: "guardar_enrolamiento_reconciliar",
+        });
+      }
     }
 
     for (const m of marcasVis) {
@@ -289,6 +300,10 @@ async function reconciliarMarcasHuerfanasReloj(db, params) {
       });
     }
     await batch.commit();
+  }
+
+  if (colaRematItems.length) {
+    await encolarRematerializacionAsistenciaLote(db, colaRematItems);
   }
 
   return {
