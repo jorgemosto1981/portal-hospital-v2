@@ -33,10 +33,11 @@
 | **C** (actual) | `guardarCapaFichadaDia` + `aplicarImportFichadasReloj` + índices `fmh_*` |
 | **D** (actual) | UI import TXT + preview + bandeja huérfanas + enrolamiento |
 | **E–F** | Carga manual, ABM grilla, semáforo Jefe |
+| **G** | Máscara por reloj en preview/apply (`mascara_tokens` desde `cfg_*`) |
 
 ## 2. Entradas capa 4
 
-- **Import TXT** — máscara genérica `TTTTT DD/MM/YY HH:MM RRR CC` (tokens configurables en `cfg_reloj_biometrico` en fases posteriores).
+- **Import TXT** — parser según `cfg_reloj_biometrico.mascara_tokens` (`shared/utils/mascaraTokensReloj.js` + `parseTxtRelojBiometrico`); default `TTTTT DD/MM/YY HH:MM RRR CC`.
 - **Carga manual RRHH** — `/portal/rrhh/fichadas-carga-manual`.
 - **ABM grilla RRHH** — `guardarCapaFichadaDia` desde modal día.
 
@@ -167,7 +168,7 @@ Crea `rel_hospital_central_01` (política configurable) y `rel_hospital_central_
 
 Para validar la integridad del módulo completo tras el despliegue en cualquier entorno (staging/producción), QA o infraestructura ejecuta este protocolo de tres pasos.
 
-**Suite automatizada previa:** `npm run test:fichadas-modulo` (32 tests, incl. `cfgRelojBiometricoCore`, parser, map-reduce, semáforo jefe).
+**Suite automatizada previa:** `npm run test:fichadas-modulo` (33 tests, incl. máscara compacta Fase G, `cfgRelojBiometricoCore`, map-reduce, semáforo jefe).
 
 **Hosting de referencia:** [https://portal-hospital-v2.web.app](https://portal-hospital-v2.web.app)
 
@@ -194,3 +195,15 @@ Para validar la integridad del módulo completo tras el despliegue en cualquier 
 ---
 
 **Tablero cerrado.** Repositorio `master` (`ff779f6`), tests fichadas 32/32, functions en `southamerica-east1`, hosting actualizado. Documento de referencia para validación rápida en producción.
+
+## 13. Fase G — Máscara por reloj en import (implementado)
+
+| Artefacto | Detalle |
+|-----------|---------|
+| `shared/utils/mascaraTokensReloj.js` | Segmentación de tokens + `extraerCamposSegunMascara` |
+| `fichadasValidacionMarcas.js` | `parseLineaRelojBiometrico` / `parseTxtRelojBiometrico` con `opts.mascara_tokens` |
+| `aplicarImportFichadasReloj` | Lee `mascara_tokens` del doc `cfg_reloj_biometrico` |
+| `previsualizarImportFichadasReloj` | 1 lectura de cfg si viene `reloj_id` en el payload |
+| UI import | Envía `reloj_id` en preview; playground ABM usa el mismo parser |
+
+Deploy functions afectadas: `previsualizarImportFichadasReloj`, `aplicarImportFichadasReloj` (ya incluidas en §8).

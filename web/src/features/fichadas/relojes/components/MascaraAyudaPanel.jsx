@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { parseLineaRelojBiometrico } from "../../../../../../shared/utils/fichadasValidacionMarcas.js";
-import { MASCARA_RELOJ_DEFAULT } from "../relojBiometricoFormUtils.js";
 import {
   CATALOGO_TOKENS_MASCARA,
   EJEMPLOS_MASCARA_RAPIDOS,
+  MASCARA_RELOJ_DEFAULT,
   extraerCamposSegunMascara,
 } from "../mascaraTokensParse.js";
 
@@ -31,9 +31,10 @@ export default function MascaraAyudaPanel({ mascaraActual = "", onUsarMascara, d
     [lineaPrueba, mascaraPrueba],
   );
 
-  const parserServidor = useMemo(() => parseLineaRelojBiometrico(lineaPrueba), [lineaPrueba]);
-
-  const mascaraEsDefault = mascaraPrueba.replace(/\s+/g, " ").trim() === MASCARA_RELOJ_DEFAULT;
+  const parserServidor = useMemo(
+    () => parseLineaRelojBiometrico(lineaPrueba, { mascara_tokens: mascaraPrueba }),
+    [lineaPrueba, mascaraPrueba],
+  );
 
   const aplicarEjemplo = useCallback((ej) => {
     setLineaPrueba(ej.linea);
@@ -168,11 +169,10 @@ export default function MascaraAyudaPanel({ mascaraActual = "", onUsarMascara, d
               parserServidor.ok ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"
             }`}
           >
-            <p className="font-medium text-slate-800">Import en servidor (formato estándar actual)</p>
+            <p className="font-medium text-slate-800">Mismo parser que import / apply en servidor</p>
             <p className="mt-1 text-slate-600">
-              El parser de producción acepta hoy líneas con espacios:{" "}
-              <span className="font-mono">{MASCARA_RELOJ_DEFAULT}</span>
-              {!mascaraEsDefault ? " (tu máscara de prueba es distinta; guardala como referencia operativa)." : null}
+              Usa la máscara de prueba de arriba (default del hospital:{" "}
+              <span className="font-mono">{MASCARA_RELOJ_DEFAULT}</span>).
             </p>
             {parserServidor.ok ? (
               <p className="mt-2 font-mono text-emerald-800">

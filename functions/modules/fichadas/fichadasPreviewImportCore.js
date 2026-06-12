@@ -32,6 +32,7 @@ function incluirPorDefectoEnApply(fila, politica) {
  * @param {number} [params.umbral_duplicado_minutos]
  * @param {string} [params.politica_duplicados]
  * @param {Record<string, { persona_id?: string, persona_label?: string }>} [params.enrolamiento_por_tarjeta]
+ * @param {string} [params.mascara_tokens]
  */
 function previsualizarImportFichadasReloj(params) {
   const contenido_txt = typeof params.contenido_txt === "string" ? params.contenido_txt : "";
@@ -51,7 +52,9 @@ function previsualizarImportFichadasReloj(params) {
     return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "contenido_txt vacío." };
   }
 
-  const parseadas = parseTxtRelojBiometrico(contenido_txt);
+  const mascara_tokens =
+    typeof params.mascara_tokens === "string" ? params.mascara_tokens.trim() : "";
+  const parseadas = parseTxtRelojBiometrico(contenido_txt, { mascara_tokens });
   const okLines = parseadas.filter((l) => l.ok);
   const conDup = detectarDuplicadosProbablesEnLote(okLines, { umbral_duplicado_minutos: umbral });
 

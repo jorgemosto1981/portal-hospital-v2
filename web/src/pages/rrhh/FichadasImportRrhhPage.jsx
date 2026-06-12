@@ -74,6 +74,7 @@ export default function FichadasImportRrhhPage() {
         enrolamiento_por_tarjeta = enriquecerEnrolamientoConPersonas(tarjetasMap, personas);
       }
       const res = await callPrevisualizarImportFichadasReloj({
+        reloj_id: relojId,
         contenido_txt: contenidoTxt,
         umbral_duplicado_minutos: politica.umbral,
         politica_duplicados: politica.duplicados,

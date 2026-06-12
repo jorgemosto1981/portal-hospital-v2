@@ -390,7 +390,10 @@ async function aplicarImportFichadasReloj(db, params, actor) {
     return { ok: false, codigo: "PARAMS_INVALIDOS", mensaje: "contenido_txt vacío." };
   }
 
-  const parseadas = parseTxtRelojBiometrico(contenido_txt).filter((l) => l.ok);
+  const mascara_tokens = relojSnap.exists
+    ? String(relojSnap.get("mascara_tokens") || "").trim()
+    : "";
+  const parseadas = parseTxtRelojBiometrico(contenido_txt, { mascara_tokens }).filter((l) => l.ok);
   const enrolMap = await cargarMapaEnrolamientoReloj(db, reloj_id);
   const conAdvertencias = detectarDuplicadosProbablesEnLote(parseadas, {
     umbral_duplicado_minutos: params.umbral_duplicado_minutos,

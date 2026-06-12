@@ -7,8 +7,15 @@ import {
   civilDateInZonaToUtcAnchorMs,
   ZONA_HORARIA_INSTITUCIONAL,
 } from "./fechaInstitucionalBa.js";
+import {
+  MASCARA_RELOJ_DEFAULT,
+  esMascaraParserV1,
+  extraerCamposSegunMascara,
+  normalizarMascaraTokens,
+} from "./mascaraTokensReloj.js";
 
 export { ZONA_HORARIA_INSTITUCIONAL };
+export { MASCARA_RELOJ_DEFAULT, normalizarMascaraTokens, esMascaraParserV1, extraerCamposSegunMascara };
 
 export const DEFAULT_UMBRAL_DUPLICADO_MINUTOS = 2;
 export const CODIGO_AVISO_MARCA_DUPLICADA_PROBABLE = "MARCA_DUPLICADA_PROBABLE";
@@ -68,30 +75,13 @@ export function instanteMarcaInstitucionalMs(fecha_ymd, hora_hm) {
   return anchor + (hora.h * 60 + hora.min) * 60 * 1000;
 }
 
-/**
- * @param {string} linea
- * @param {object} [opts]
- * @param {number} [opts.numero_linea]
- */
-export function parseLineaRelojBiometrico(linea, opts = {}) {
-  const numero_linea = opts.numero_linea ?? null;
-  const raw = String(linea ?? "").trim();
-  if (!raw) {
-    return {
-      ok: false,
-      codigo: CODIGO_ERROR_LINEA_INVALIDA,
-      mensaje: "Línea vacía",
-      numero_linea,
-      linea_raw: raw,
-    };
-  }
-
+function parseLineaRelojMascaraV1Regex(linea, numero_linea, raw) {
   const m = raw.match(REGEX_LINEA_MASCARA_V1);
   if (!m) {
     return {
       ok: false,
       codigo: CODIGO_ERROR_LINEA_INVALIDA,
-      mensaje: "Formato esperado: TTTTT DD/MM/YY HH:MM RRR CC",
+      mensaje: `Formato esperado: ${MASCARA_RELOJ_DEFAULT}`,
       numero_linea,
       linea_raw: raw,
     };
@@ -135,17 +125,83 @@ export function parseLineaRelojBiometrico(linea, opts = {}) {
   };
 }
 
+function parseLineaRelojConMascaraTokens(linea, numero_linea, raw, mascara_tokens) {
+  const extraccion = extraerCamposSegunMascara(raw, mascara_tokens);
+  if (!extraccion.ok) {
+    const detalle = extraccion.errores[0] || "Línea no coincide con la máscara del reloj.";
+    return {
+      ok: false,
+      codigo: CODIGO_ERROR_LINEA_INVALIDA,
+      mensaje: detalle,
+      numero_linea,
+      linea_raw: raw,
+    };
+  }
+  const c = extraccion.campos;
+  const instante_ms = instanteMarcaInstitucionalMs(c.fecha_ymd, c.hora_hm);
+  if (instante_ms == null) {
+    return {
+      ok: false,
+      codigo: CODIGO_ERROR_LINEA_INVALIDA,
+      mensaje: "No se pudo normalizar instante institucional",
+      numero_linea,
+      linea_raw: raw,
+    };
+  }
+  return {
+    ok: true,
+    numero_linea,
+    linea_raw: raw,
+    numero_tarjeta: c.numero_tarjeta,
+    fecha_ymd: c.fecha_ymd,
+    hora_hm: c.hora_hm,
+    numero_reloj: String(c.numero_reloj || "").trim(),
+    codigo_dispositivo: String(c.codigo_funcion || "").trim(),
+    instante_ms,
+    zona_horaria: ZONA_HORARIA_INSTITUCIONAL,
+  };
+}
+
+/**
+ * @param {string} linea
+ * @param {object} [opts]
+ * @param {number} [opts.numero_linea]
+ * @param {string} [opts.mascara_tokens]
+ */
+export function parseLineaRelojBiometrico(linea, opts = {}) {
+  const numero_linea = opts.numero_linea ?? null;
+  const raw = String(linea ?? "").trim();
+  if (!raw) {
+    return {
+      ok: false,
+      codigo: CODIGO_ERROR_LINEA_INVALIDA,
+      mensaje: "Línea vacía",
+      numero_linea,
+      linea_raw: raw,
+    };
+  }
+
+  const mascara = normalizarMascaraTokens(opts.mascara_tokens);
+  if (esMascaraParserV1(mascara)) {
+    return parseLineaRelojMascaraV1Regex(linea, numero_linea, raw);
+  }
+  return parseLineaRelojConMascaraTokens(linea, numero_linea, raw, mascara);
+}
+
 /**
  * @param {string} contenidoTxt
+ * @param {object} [opts]
+ * @param {string} [opts.mascara_tokens]
  */
-export function parseTxtRelojBiometrico(contenidoTxt) {
+export function parseTxtRelojBiometrico(contenidoTxt, opts = {}) {
   const lineas = String(contenidoTxt ?? "").split(/\r?\n/);
+  const parseOpts = { mascara_tokens: opts.mascara_tokens };
   /** @type {Array<ReturnType<typeof parseLineaRelojBiometrico>>} */
   const resultado = [];
   for (let i = 0; i < lineas.length; i += 1) {
     const trimmed = lineas[i].trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
-    resultado.push(parseLineaRelojBiometrico(trimmed, { numero_linea: i + 1 }));
+    resultado.push(parseLineaRelojBiometrico(trimmed, { ...parseOpts, numero_linea: i + 1 }));
   }
   return resultado;
 }

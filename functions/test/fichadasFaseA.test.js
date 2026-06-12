@@ -46,6 +46,16 @@ describe("parseLineaRelojBiometrico", () => {
     const r = parseLineaRelojBiometrico("solo texto");
     assert.equal(r.ok, false);
   });
+
+  it("parsea máscara compacta cfg_reloj (Fase G)", () => {
+    const mascara = "TTTTTDDMMYYHHMMRRR";
+    const r = parseLineaRelojBiometrico("998231206261430001", { mascara_tokens: mascara });
+    assert.equal(r.ok, true);
+    assert.equal(r.numero_tarjeta, "99823");
+    assert.equal(r.fecha_ymd, "2026-06-12");
+    assert.equal(r.hora_hm, "14:30");
+    assert.equal(r.numero_reloj, "001");
+  });
 });
 
 describe("detectarDuplicadosProbablesEnLote", () => {

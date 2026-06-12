@@ -35,6 +35,7 @@ const FILES_TO_SYNC = [
   "grillaTeoriaDesalineacion.js",
   "grillaFichadaPresencia.js",
   "fichadasDeltaCeldaDia.js",
+  "mascaraTokensReloj.js",
   "fichadasValidacionMarcas.js",
   "fichadasAlineacionTeoria.js",
   "grillaFichadaEstadoJefe.js",
