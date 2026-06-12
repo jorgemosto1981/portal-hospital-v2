@@ -1,6 +1,6 @@
 # Módulo Fichadas Reloj V2 — RFC diseño e implementación
 
-**Estado:** Backend A–C en `master`; **Fase D** UI (import preview, huérfanas, enrolamiento) en rama `feature/modulo-fichadas-faseD`.  
+**Estado:** Módulo **cerrado en `master`** (commit `ff779f6`): fases A–F, ABM relojes, **relojes universales** (`grupo_trabajo_id` null), roster global (`listarRosterParaFichadas`), caché `sessionStorage` en carga manual, asistente de máscaras en ABM.  
 **Plan maestro:** `módulo_fichadas_reloj_551a3612.plan.md` (Cursor).  
 **Relación:** [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](./MANUAL_CAPAS_ORQUESTACION_BORRADOR.md), [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md), [`EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md`](./EXPECTATIVAS_FICHADA_SALIDA_MOMENTANEA_V2.md), US-15 capa 4 en `vis_*`.
 
@@ -106,7 +106,7 @@ git checkout master
 git pull origin master
 npm run test:fichadas-modulo
 npm run firebase:deploy:firestore
-npm run firebase:deploy:functions -- --only functions:listarColeccion,functions:guardarCapaFichadaDia,functions:aplicarImportFichadasReloj,functions:reconciliarMarcasHuerfanasReloj,functions:previsualizarImportFichadasReloj,functions:listarMarcasHuerfanasReloj,functions:descartarMarcaHuerfanaReloj,functions:guardarEnrolamientoRelojPersona,functions:guardarCfgRelojBiometrico
+npm run firebase:deploy:functions -- --only functions:listarColeccion,functions:guardarCapaFichadaDia,functions:aplicarImportFichadasReloj,functions:reconciliarMarcasHuerfanasReloj,functions:previsualizarImportFichadasReloj,functions:listarMarcasHuerfanasReloj,functions:descartarMarcaHuerfanaReloj,functions:guardarEnrolamientoRelojPersona,functions:guardarCfgRelojBiometrico,functions:listarRosterParaFichadas
 ```
 
 Verificar en consola Firestore que los índices de `fichadas_marca_huerfana` estén **Enabled** antes del deploy de functions.
@@ -163,4 +163,34 @@ Crea `rel_hospital_central_01` (política configurable) y `rel_hospital_central_
 
 ---
 
-*Documento vivo — módulo fichadas reloj V2 cerrado en Fase F.*
+## 12. Checklist de certificación en marcha blanca (smoke test)
+
+Para validar la integridad del módulo completo tras el despliegue en cualquier entorno (staging/producción), QA o infraestructura ejecuta este protocolo de tres pasos.
+
+**Suite automatizada previa:** `npm run test:fichadas-modulo` (32 tests, incl. `cfgRelojBiometricoCore`, parser, map-reduce, semáforo jefe).
+
+**Hosting de referencia:** [https://portal-hospital-v2.web.app](https://portal-hospital-v2.web.app)
+
+### 12.1 Validación del fierro universal y asistente de máscaras
+
+- **Ruta:** `/portal/rrhh/fichadas-relojes`
+- **Acción:** Crear o editar un dispositivo. Dejar el campo «Grupo de trabajo» vacío (opción *Universal*).
+- **Prueba del playground:** En el panel de ayuda, pegar la línea testigo `998231206261430001` y la máscara `TTTTTDDMMYYHHMMRRR`. Verificar extracción en vivo (tarjeta `99823`, hora `14:30`). Presionar «Usar esta máscara en el formulario» y guardar.
+- **Éxito:** `guardarCfgRelojBiometrico` responde OK y el listado muestra el tag **Universal**.
+
+### 12.2 Procesamiento masivo e inyección dinámica (lote mezclado)
+
+- **Ruta:** `/portal/rrhh/fichadas-import`
+- **Acción:** Seleccionar el reloj universal y arrastrar un `.txt` con tarjetas de distintos sectores (ej. Guardia y Terapia). Previsualizar y aplicar el lote.
+- **Éxito:** `aplicarImportFichadasReloj` resuelve `gdtDestino` por enrolamiento (`rpe_*`). Las marcas no se agrupan en un sector ficticio del reloj; impactan en los `vis_*` de cada servicio según el grupo del agente.
+
+### 12.3 Carga manual sin latencia (roster global en caché)
+
+- **Ruta:** `/portal/rrhh/fichadas-carga-manual`
+- **Acción:** Seleccionar el reloj universal. En DevTools → Network, verificar **una** llamada a `listarRosterParaFichadas` con scope global (`grupo_trabajo_id: GLOBAL` o equivalente).
+- **Prueba de tipeo:** Escribir en el campo Persona; las sugerencias del typeahead deben ser instantáneas (filtro en memoria).
+- **Éxito:** Tras la carga inicial, la UI usa `sessionStorage` (`roster_fichadas_GLOBAL`) sin round-trip por tecla. Guardado en ráfaga con Enter; `Ctrl+Z` deshace el último ítem de la cola de sesión vía `REEMPLAZAR_MARCAS`.
+
+---
+
+**Tablero cerrado.** Repositorio `master` (`ff779f6`), tests fichadas 32/32, functions en `southamerica-east1`, hosting actualizado. Documento de referencia para validación rápida en producción.
