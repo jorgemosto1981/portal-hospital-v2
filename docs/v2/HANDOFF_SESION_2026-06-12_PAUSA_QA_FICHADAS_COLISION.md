@@ -50,6 +50,22 @@
 
 Validar en **https://portal-hospital-v2.web.app** con usuario RRHH y, donde aplique, Jefe. Agente piloto habitual: **MOSTO** DNI `28914247` · Sala Internación 1 · turno M 06:00–14:00.
 
+### Acta parcial 2026-06-12 (sesión retomo)
+
+| Bloque | Estado | Notas |
+|--------|--------|-------|
+| 3.1 Catálogo y enrolamiento | ✅ OK | Validado por usuario |
+| 3.2 Import TXT | 🔧 fix local | Input nativo Windows confundía con “sin función”; botón explícito + hint flujo Previsualizar |
+| 3.2 Carga manual menú | 🔧 fix local | Enter en Egreso fallaba en reloj universal: `getVisCelda` sin `gdt` del agente → error silencioso |
+| 3.2 Carga manual desde grilla | 🔧 fix local | Guardaba pero grilla no refrescaba (caché T-07); invalidación post-guardado |
+| 3.2 ABM modal «Agregar horas» | 🔧 fix local | Modal OK; tabla grilla sin refresh/invalidación caché |
+| 3.3 Render post-carga | 🔧 revalidar | Sin F:n; horario **real celeste** en celda RRHH; teórico solo en modal; analítica async ~1–2 min |
+| 3.4 Cruce teoría ↔ real | ⏳ matriz | [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) — escenarios B/P/C |
+
+**Fixes sesión 12/06:** persistencia fichadas, bloqueo cola, motor fuera de turno, visual real/teórico — ver [`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md).
+
+**Deploy hosting:** realizado (F-UX visual). Cambios backend adicionales pueden requerir `npm run firebase:deploy:functions` tras commit.
+
 ### 3.1 Catálogo y enrolamiento
 
 - [ ] **RRHH → Relojes biométricos:** listado carga; alta/edición reloj sectorial y universal.
@@ -116,9 +132,11 @@ Deploy si hubo cambios solo locales: `npm run build:web` + `npm run firebase:dep
 ## 6. Referencias cruzadas
 
 - RFC fichadas: [`MODULO_FICHADAS_RELOJ_V2.md`](./MODULO_FICHADAS_RELOJ_V2.md) §14 (colisión + mantenimiento).
+- **Matriz QA escenarios:** [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md).
+- Cierre sesión: [`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md).
 - Índice continuidad: [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) (bloque 2026-06-12).
 - Motor colisión (código): `shared/utils/calcularDeltasCumplimiento.js`, `functions/modules/asistencia/rdaTurnoTeoricoWorker.js` (`persistirAnaliticaCumplimientoDia`), `cola_rematerializacion_asistencia`.
 
 ---
 
-**Última actualización:** 2026-06-12 — pausa explícita con gate QA fichadas.
+**Última actualización:** 2026-06-12 — cierre sesión; matriz QA + handoff cierre; próxima sesión validar escenarios B/P/C.

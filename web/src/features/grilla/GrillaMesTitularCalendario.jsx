@@ -10,9 +10,7 @@ import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 import { claseFondoCeldaCalendarioTitular } from "./grillaTurnosVisual.js";
 import { celdaTieneJornadaVis, celdaEsIncompletoPlanVis, textoHorarioTurno } from "./grillaMesEquipoDisplay.js";
 import { titularDiaAsignadoAGrupo } from "./grillaTitularAsignacionDia.js";
-import GrillaFichadasEsperadasBadge from "./GrillaFichadasEsperadasBadge.jsx";
 import DiaGrillaCelda from "./DiaGrillaCelda.jsx";
-import { fichadasEsperadasDesdeCeldaVis, titleFichadasEsperadas } from "./grillaFichadasEsperadasDisplay.js";
 import { diaFueraVigenciaTramo } from "./grillaMesFilasUtils.js";
 
 const DIAS_SEMANA = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -195,9 +193,6 @@ export default function GrillaMesTitularCalendario({
           if (tieneLicencia) titleParts.push(`Licencia: ${labelLicencia}`);
           if (esFeriado && tipoEvento) titleParts.push(etiquetaInstitucional(tipoEvento));
           if (turnoLabel && !esNoLaborable) titleParts.push(turnoLabel);
-          const fichadasN = fichadasEsperadasDesdeCeldaVis(cell);
-          const fichadasTitle = titleFichadasEsperadas(fichadasN);
-          if (fichadasTitle) titleParts.push(fichadasTitle);
           if (esIncompletoPlan) titleParts.push("Laborable sin turno (corregir plan del mes)");
           if (desalineacionTeoria && desalineacion.tooltip) {
             titleParts.push(desalineacion.tooltip);
@@ -257,7 +252,6 @@ export default function GrillaMesTitularCalendario({
                 {turnoLabel && !esFranco && !esFeriado ? (
                   <span className={`${CLASE_CHIP} flex flex-col items-center tabular-nums ${chipTurno} ${tachado}`}>
                     <span>{turnoLabel}</span>
-                    <GrillaFichadasEsperadasBadge valor={fichadasN} />
                     <DiaGrillaCelda celdaVis={cell} />
                   </span>
                 ) : null}

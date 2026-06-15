@@ -15,7 +15,7 @@ export default function GrillaFichadaPresenciaBadge({ presencia, className = "",
     <span
       className={[
         "rounded font-bold leading-tight text-white tabular-nums",
-        compacto ? "px-0.5 text-[6px]" : "px-1 text-[7px]",
+        compacto ? "px-0.5 text-[8px]" : "px-1 text-[9px]",
         color,
         className,
       ].join(" ")}

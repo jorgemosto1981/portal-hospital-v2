@@ -10,6 +10,7 @@ const COL_PLANES = "planes_turno_servicio";
 const { planHabilitadoDesdeQuerySnapshot } = require("../asistencia/planGrupoAgentesNuevos");
 const { hlgCuentaParaSolapeOperativo } = require("../laboral/hlgValidacionesCore");
 const { derivarCargaSemanalDesdeRegimen } = require("../catalogosShared");
+const { fusionarDiasDesdeClavesPlanas } = require("./visCeldaFusionLectura");
 const {
   hlgSegmentosMes,
   filtrarDiasPorTramo,
@@ -286,7 +287,7 @@ async function leerVistaGrillaMesAgente(db, { personaId, grupoTrabajoId, anio, m
     grupo_trabajo_id: String(data.grupo_de_trabajo_id || gdt),
     anio: data.anio ?? y,
     mes: data.mes ?? m,
-    dias: data.dias && typeof data.dias === "object" ? data.dias : {},
+    dias: fusionarDiasDesdeClavesPlanas(data),
     metadata: data.metadata || null,
     estado_periodo_liquidacion_id: data.estado_periodo_liquidacion_id || null,
   };

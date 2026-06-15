@@ -179,6 +179,43 @@ function lineasHorarioFichadaReal(fichadas) {
 }
 
 /**
+ * Texto compacto para celda grilla (mismo estilo que horario teórico).
+ * @param {Array<Record<string, unknown>>} fichadas
+ * @returns {string}
+ */
+function textoHorarioFichadaReal(fichadas) {
+  if (!Array.isArray(fichadas) || fichadas.length === 0) return "";
+
+  const partes = [];
+  for (const f of fichadas) {
+    if (!f || typeof f !== "object") continue;
+    const ingreso = String(f.ingreso || f.hora_ingreso || "").trim();
+    const egreso = String(f.egreso || f.hora_egreso || "").trim();
+    const hora = String(f.hora || "").trim();
+
+    if (ingreso && egreso) {
+      partes.push(`${ingreso}–${egreso}`);
+      continue;
+    }
+    if (hora) {
+      partes.push(hora);
+      continue;
+    }
+    if (ingreso) partes.push(ingreso);
+    else if (egreso) partes.push(egreso);
+  }
+  return partes.join(" · ");
+}
+
+/**
+ * @param {Record<string, unknown>|null|undefined} celda
+ * @returns {string}
+ */
+function textoHorarioFichadaRealDesdeCelda(celda) {
+  return textoHorarioFichadaReal(parseFichadasRealesCelda(celda));
+}
+
+/**
  * Q9-4 B: fichada contradice teoría vigente (con licencia en celda).
  * @param {Record<string, unknown>|null|undefined} celda
  * @returns {{ contradictorio: boolean; motivo?: string; tooltip?: string }}
@@ -214,4 +251,4 @@ function evaluarContradiccionFichadaTeoria(celda) {
   return { contradictorio: false };
 }
 
-module.exports = { parseFichadasRealesCelda, celdaTieneRegistroFichada, contarMarcasFichadaReal, celdaTieneFichadaImpar, celdaTieneCapaFichadaCargada, celdaEsperaFichada, resolverFichadaPresencia, lineasHorarioFichadaReal, evaluarContradiccionFichadaTeoria };
+module.exports = { parseFichadasRealesCelda, celdaTieneRegistroFichada, contarMarcasFichadaReal, celdaTieneFichadaImpar, celdaTieneCapaFichadaCargada, celdaEsperaFichada, resolverFichadaPresencia, lineasHorarioFichadaReal, textoHorarioFichadaReal, textoHorarioFichadaRealDesdeCelda, evaluarContradiccionFichadaTeoria };

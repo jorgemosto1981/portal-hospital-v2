@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -38,6 +38,13 @@ export default function FichadasImportRrhhPage() {
   const [incluirPorLinea, setIncluirPorLinea] = useState({});
   const [procesando, setProcesando] = useState(false);
   const [aplicando, setAplicando] = useState(false);
+  const [leyendoArchivo, setLeyendoArchivo] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const lineasTxt = useMemo(
+    () => contenidoTxt.split(/\r?\n/).filter((l) => String(l).trim()).length,
+    [contenidoTxt],
+  );
 
   const relojSel = useMemo(
     () => relojes.find((r) => String(r.id) === relojId) || null,
@@ -51,11 +58,22 @@ export default function FichadasImportRrhhPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setArchivoNombre(file.name);
+    setLeyendoArchivo(true);
     const reader = new FileReader();
     reader.onload = () => {
-      setContenidoTxt(typeof reader.result === "string" ? reader.result : "");
+      const text = typeof reader.result === "string" ? reader.result : "";
+      setContenidoTxt(text);
       setPreview(null);
       setIncluirPorLinea({});
+      setLeyendoArchivo(false);
+      const lineas = text.split(/\r?\n/).filter((l) => String(l).trim()).length;
+      toast.success(`Archivo listo: ${lineas} línea(s). Elegí reloj y pulsá Previsualizar.`);
+    };
+    reader.onerror = () => {
+      setLeyendoArchivo(false);
+      setArchivoNombre("");
+      setContenidoTxt("");
+      toast.error("No se pudo leer el archivo TXT.");
     };
     reader.readAsText(file, "UTF-8");
   }, []);
@@ -189,16 +207,37 @@ export default function FichadasImportRrhhPage() {
           </p>
         ) : null}
 
-        <label className="block text-sm font-medium text-slate-700">
-          Archivo .txt
+        <div className="space-y-2">
+          <span className="block text-sm font-medium text-slate-700">Archivo .txt</span>
           <input
+            ref={fileInputRef}
             type="file"
             accept=".txt,text/plain"
-            className="mt-1 w-full text-sm"
+            className="sr-only"
             onChange={onArchivo}
           />
-          {archivoNombre ? <span className="mt-1 block text-xs text-slate-500">{archivoNombre}</span> : null}
-        </label>
+          <button
+            type="button"
+            className="min-h-11 w-full touch-manipulation rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-left text-sm font-medium text-slate-800 active:bg-slate-50"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={leyendoArchivo}
+          >
+            {leyendoArchivo
+              ? "Leyendo archivo…"
+              : archivoNombre
+                ? `Cambiar archivo · ${archivoNombre}`
+                : "Seleccionar archivo .txt"}
+          </button>
+          {contenidoTxt.trim() ? (
+            <p className="text-xs text-slate-500">
+              {lineasTxt} línea(s) en memoria · elegí reloj y pulsá <strong>Previsualizar</strong>.
+            </p>
+          ) : (
+            <p className="text-xs text-slate-500">
+              El archivo no se sube solo: tras seleccionarlo, usá Previsualizar y luego Aplicar lote.
+            </p>
+          )}
+        </div>
 
         <div className="flex flex-wrap gap-2">
           <button

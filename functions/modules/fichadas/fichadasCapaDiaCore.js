@@ -5,6 +5,8 @@ const { FieldValue } = require("firebase-admin/firestore");
 const { buildVisDocumentId, diaMesKeyDesdeYmd } = require("../shared/mdcRdaDocumentIds");
 const { assertPeriodoNoCerrado } = require("../asistencia/asistenciaPeriodoLiquidacion");
 const { encolarRematerializacionAsistenciaLote } = require("../asistencia/colaRematerializacionAsistenciaCore");
+const { actualizarAnaliticaCumplimientoTrasFichada } = require("../shared/analiticaCumplimientoTrasFichada");
+const { leerCeldaVisDiaFusionada } = require("../shared/visCeldaFusionLectura");
 const { alinearMarcasConTeoriaDia, alinearMarcasConTeoriaEnCalendario } = require("../shared/fichadasAlineacionTeoria");
 const { evaluarDeltaCeldaDia } = require("../shared/fichadasDeltaCeldaDia");
 const { segmentarOperacionesFirestore } = require("../shared/fichadasDeltaCeldaDia");
@@ -40,6 +42,32 @@ const ACCIONES_VALIDAS = new Set([
   "BORRAR_CAPA",
   "BORRAR_FILA",
 ]);
+
+/**
+ * `set(merge)` interpreta `dias.18.campo` como clave literal; `update` anida en `dias`.
+ * @param {import("firebase-admin/firestore").Transaction} tx
+ * @param {import("firebase-admin/firestore").DocumentReference} ref
+ * @param {boolean} existeDoc
+ * @param {Record<string, unknown>} updatePayload
+ */
+function escribirPatchVisDia(tx, ref, existeDoc, updatePayload) {
+  if (existeDoc) {
+    tx.update(ref, updatePayload);
+    return;
+  }
+  const dias = {};
+  const top = {};
+  for (const [key, value] of Object.entries(updatePayload)) {
+    const m = key.match(/^dias\.([^\.]+)\.(.+)$/);
+    if (m) {
+      if (!dias[m[1]]) dias[m[1]] = {};
+      dias[m[1]][m[2]] = value;
+    } else {
+      top[key] = value;
+    }
+  }
+  tx.set(ref, { ...top, dias }, { merge: true });
+}
 
 function anioMesDesdeYmd(fechaYmd) {
   const ymd = String(fechaYmd || "").slice(0, 10);
@@ -222,13 +250,14 @@ async function guardarCapaFichadaDia(db, params, actor) {
   const evtId = `evt_${ulid()}`;
   let writeSkipped = false;
   let versionNueva = null;
+  let celdaParaAnalitica = null;
 
   await db.runTransaction(async (tx) => {
     const ref = db.collection(COL_VIS).doc(visId);
     const snap = await tx.get(ref);
     const data = snap.exists ? snap.data() || {} : {};
     const dias = data.dias && typeof data.dias === "object" ? data.dias : {};
-    const celdaAntes = dias[diaKey] || {};
+    const celdaAntes = leerCeldaVisDiaFusionada(data, diaKey);
 
     validarVersionCeldaFichada(celdaAntes, version_esperada);
 
@@ -289,9 +318,16 @@ async function guardarCapaFichadaDia(db, params, actor) {
       updatePayload[`dias.${diaKey}.resuelto_rrhh_motivo_corto`] = patch.celdaNueva.resuelto_rrhh_motivo_corto;
     }
 
-    tx.set(ref, updatePayload, { merge: true });
+    escribirPatchVisDia(tx, ref, snap.exists, updatePayload);
     const { leerVersionCeldaFichada } = require("./fichadasMarcasUtils");
     versionNueva = leerVersionCeldaFichada(celdaAntes) + 1;
+    celdaParaAnalitica = {
+      ...celdaAntes,
+      fichadas_reales: patch.celdaNueva.fichadas_reales,
+      advertencias_fichada_abiertas: patch.celdaNueva.advertencias_fichada_abiertas,
+      fichadas_borradas: patch.celdaNueva.fichadas_borradas,
+      resuelto_rrhh: patch.celdaNueva.resuelto_rrhh,
+    };
   });
 
   if (writeSkipped) {
@@ -318,6 +354,19 @@ async function guardarCapaFichadaDia(db, params, actor) {
       origen: "guardar_capa_fichada_dia",
     },
   ]);
+
+  try {
+    await actualizarAnaliticaCumplimientoTrasFichada(db, {
+      persona_id,
+      grupo_trabajo_id,
+      fecha_ymd,
+      vis_id: visId,
+      dia_key: diaKey,
+      celda_override: celdaParaAnalitica,
+    });
+  } catch (err) {
+    console.error("actualizarAnaliticaCumplimientoTrasFichada", err);
+  }
 
   return {
     ok: true,
@@ -502,7 +551,7 @@ async function aplicarImportFichadasReloj(db, params, actor) {
         skippedTx = true;
         return;
       }
-      tx.set(ref, updatePayload, { merge: true });
+      escribirPatchVisDia(tx, ref, snap.exists, updatePayload);
     });
 
     if (skippedTx) {

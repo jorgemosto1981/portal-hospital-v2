@@ -27,6 +27,29 @@ function normalizarTipoDia(raw) {
 }
 
 /**
+ * Empareja marcas sueltas (`hora_hm` / `hora`) en tramos ingreso→egreso.
+ * @param {Array<{ instante_ms: number, fecha_ymd: string, hora_hm: string }>} sueltas
+ * @param {string} fechaDefault
+ */
+function tramosDesdeMarcasSueltas(sueltas, fechaDefault) {
+  const ordenadas = [...sueltas]
+    .filter((m) => Number.isFinite(m.instante_ms))
+    .sort((a, b) => a.instante_ms - b.instante_ms);
+  /** @type {{ ingreso_ms: number, egreso_ms: number }[]} */
+  const tramos = [];
+  for (let i = 0; i < ordenadas.length; i += 2) {
+    const ing = ordenadas[i];
+    const egr = ordenadas[i + 1];
+    if (!ing) continue;
+    if (!egr) break;
+    if (egr.instante_ms > ing.instante_ms) {
+      tramos.push({ ingreso_ms: ing.instante_ms, egreso_ms: egr.instante_ms });
+    }
+  }
+  return tramos;
+}
+
+/**
  * @param {Record<string, unknown>|null|undefined} celdaVis
  * @param {string} fechaYmd
  */
@@ -39,12 +62,16 @@ export function extraerTramosFichadaDesdeCelda(celdaVis, fechaYmd) {
   const ingresos = [];
   /** @type {number[]} */
   const egresos = [];
+  /** @type {Array<{ instante_ms: number, fecha_ymd: string, hora_hm: string }>} */
+  const marcasSueltas = [];
 
   for (const f of filas) {
     if (!f || typeof f !== "object") continue;
     const ingHm = String(f.ingreso || f.hora_ingreso || "").trim();
     const egrHm = String(f.egreso || f.hora_egreso || "").trim();
+    const horaHm = String(f.hora_hm || f.hora || "").trim();
     const fYmd = String(f.fecha_ymd || f.fecha || fecha).slice(0, 10) || fecha;
+
     if (ingHm) {
       const ms = instanteMarcaInstitucionalMs(fYmd, ingHm);
       if (ms != null) ingresos.push(ms);
@@ -60,6 +87,22 @@ export function extraerTramosFichadaDesdeCelda(celdaVis, fechaYmd) {
       if (msIn != null && msOut != null && msOut > msIn) {
         tramos.push({ ingreso_ms: msIn, egreso_ms: msOut });
       }
+      continue;
+    }
+    if (horaHm && !ingHm && !egrHm) {
+      const ms = instanteMarcaInstitucionalMs(fYmd, horaHm);
+      if (ms != null) {
+        marcasSueltas.push({ instante_ms: ms, fecha_ymd: fYmd, hora_hm: horaHm });
+      }
+    }
+  }
+
+  if (tramos.length === 0 && marcasSueltas.length >= 2) {
+    const tramosSueltas = tramosDesdeMarcasSueltas(marcasSueltas, fecha);
+    tramos.push(...tramosSueltas);
+    for (const t of tramosSueltas) {
+      ingresos.push(t.ingreso_ms);
+      egresos.push(t.egreso_ms);
     }
   }
 
@@ -68,8 +111,52 @@ export function extraerTramosFichadaDesdeCelda(celdaVis, fechaYmd) {
   return { tramos, ingresos, egresos, filasCount: filas.length };
 }
 
-function derivarAlertas(disciplina, debito, ausencia_automatica) {
+/**
+ * Minutos de intersección entre tramos de fichada y ventana teórica nominal.
+ * @param {Array<{ ingreso_ms: number, egreso_ms: number }>} tramos
+ * @param {number|null} ventanaInicioMs
+ * @param {number|null} ventanaFinMs
+ */
+export function minutosSolapeTramosConVentanaTeorica(tramos, ventanaInicioMs, ventanaFinMs) {
+  if (
+    !Array.isArray(tramos) ||
+    tramos.length === 0 ||
+    !Number.isFinite(ventanaInicioMs) ||
+    !Number.isFinite(ventanaFinMs) ||
+    ventanaFinMs <= ventanaInicioMs
+  ) {
+    return 0;
+  }
+  let total = 0;
+  for (const t of tramos) {
+    const inicio = Math.max(t.ingreso_ms, ventanaInicioMs);
+    const fin = Math.min(t.egreso_ms, ventanaFinMs);
+    total += diffMinutos(inicio, fin);
+  }
+  return total;
+}
+
+/** Umbral mínimo de solape (min) para considerar fichada alineada al turno teórico. */
+const SOLAPE_MIN_FUERA_TURNO_MIN = 30;
+
+/**
+ * @param {Array<{ ingreso_ms: number, egreso_ms: number }>} tramos
+ * @param {number} carga_teorica_minutos
+ * @param {number|null} ventanaInicioMs
+ * @param {number|null} ventanaFinMs
+ */
+export function evaluarFichadaFueraTurnoTeorico(tramos, carga_teorica_minutos, ventanaInicioMs, ventanaFinMs) {
+  if (!tramos.length || !Number.isFinite(carga_teorica_minutos) || carga_teorica_minutos <= 0) {
+    return { fuera_turno: false, solape_minutos: 0 };
+  }
+  const solape = minutosSolapeTramosConVentanaTeorica(tramos, ventanaInicioMs, ventanaFinMs);
+  const umbral = Math.max(SOLAPE_MIN_FUERA_TURNO_MIN, Math.round(carga_teorica_minutos * 0.25));
+  return { fuera_turno: solape < umbral, solape_minutos: solape, umbral_minutos: umbral };
+}
+
+function derivarAlertas(disciplina, debito, ausencia_automatica, fichadaFueraTurno) {
   const alertas = [];
+  if (fichadaFueraTurno) alertas.push("FICHADA_FUERA_TURNO_TEORICO");
   if (disciplina.tardanza_minutos > 0) alertas.push("TARDANZA_PUNITIVA");
   if (disciplina.salida_anticipada_minutos > 0) alertas.push("SALIDA_ANTICIPADA");
   if (disciplina.fuera_de_margen && !alertas.length) alertas.push("FUERA_MARGEN_HORARIO");
@@ -107,6 +194,58 @@ export function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}
 
   const { tramos, ingresos, egresos, filasCount } = extraerTramosFichadaDesdeCelda(celdaVis, fechaYmd);
 
+  const celda = celdaVis && typeof celdaVis === "object" ? celdaVis : {};
+  const turnoTeoricoId = String(celda.rda_turno_id || capa.turno_id || capa.turno_compuesto_id || "").trim();
+
+  const fueraTurno =
+    filasCount > 0 && carga_teorica_minutos > 0
+      ? evaluarFichadaFueraTurnoTeorico(
+          tramos,
+          carga_teorica_minutos,
+          ingresoNominalMs,
+          egresoNominalMs,
+        )
+      : { fuera_turno: false, solape_minutos: 0, umbral_minutos: 0 };
+
+  if (fueraTurno.fuera_turno) {
+    let carga_real_bruta = 0;
+    for (const t of tramos) carga_real_bruta += diffMinutos(t.ingreso_ms, t.egreso_ms);
+
+    const disciplina = {
+      fuera_de_margen: false,
+      tardanza_minutos: 0,
+      salida_anticipada_minutos: 0,
+      ingreso_nominal_iso: capa.ingreso_nominal_iso ?? null,
+      ingreso_limite_con_gracia_iso: capa.ingreso_limite_con_gracia_iso ?? null,
+      egreso_nominal_iso: capa.egreso_nominal_iso ?? null,
+      egreso_limite_con_gracia_iso: capa.egreso_limite_con_gracia_iso ?? null,
+    };
+    const debito_tiempo = {
+      incumplimiento_carga_horaria: false,
+      carga_teorica_minutos,
+      carga_real_minutos: carga_real_bruta,
+      deficit_minutos: 0,
+      tolerancia_debitohorario_minutos,
+      calculo_suspendido: true,
+      motivo_calculo_suspendido: "FICHADA_FUERA_TURNO_TEORICO",
+    };
+
+    return {
+      version: ANALITICA_VERSION,
+      fichada_fuera_turno_teorico: true,
+      fichada_fuera_turno_detalle: {
+        turno_teorico_id: turnoTeoricoId || null,
+        solape_minutos: fueraTurno.solape_minutos,
+        umbral_solape_minutos: fueraTurno.umbral_minutos,
+      },
+      disciplina,
+      debito_tiempo,
+      ausencia_automatica: false,
+      alertas_activas: ["FICHADA_FUERA_TURNO_TEORICO"],
+      horas_regulares_efectivas: null,
+    };
+  }
+
   let tardanza_minutos = 0;
   let salida_anticipada_minutos = 0;
   let fuera_de_margen = false;
@@ -136,7 +275,6 @@ export function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}
   const incumplimiento_carga_horaria =
     carga_teorica_minutos > 0 && deficit_minutos > tolerancia_debitohorario_minutos;
 
-  const celda = celdaVis && typeof celdaVis === "object" ? celdaVis : {};
   const tipoDia = normalizarTipoDia(celda.tipo_dia ?? capa.tipo_dia);
   const diaLaborable = tipoDia === "laborable" || tipoDia === "guardia" || celdaEsperaFichada(celda);
 
@@ -166,7 +304,7 @@ export function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}
     tolerancia_debitohorario_minutos,
   };
 
-  const alertas_activas = derivarAlertas(disciplina, debito_tiempo, ausencia_automatica);
+  const alertas_activas = derivarAlertas(disciplina, debito_tiempo, ausencia_automatica, false);
 
   return {
     version: ANALITICA_VERSION,

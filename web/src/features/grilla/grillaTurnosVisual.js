@@ -15,6 +15,7 @@ export const NO_ASIGNADO_STYLE = { bg: "bg-slate-400 hover:bg-slate-500", text: 
 export const LICENCIA_STYLE = { bg: "bg-fuchsia-300", text: "text-fuchsia-950" };
 export const INSTITUCIONAL_STYLE = { bg: "bg-amber-300", text: "text-amber-950" };
 export const LABORABLE_STYLE = { bg: "bg-green-300", text: "text-green-950", hover: "hover:bg-green-400" };
+export const FICHADA_REAL_STYLE = { bg: "bg-sky-100", text: "text-sky-950", hover: "hover:bg-sky-200" };
 
 export const CHIP_BASE =
   "mx-auto flex h-12 w-14 items-center justify-center rounded border border-slate-400 px-0.5 font-semibold leading-tight shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]";
@@ -23,6 +24,7 @@ const VARIANTES_CHIP = {
   franco: FRANCO_STYLE,
   noLaborable: NO_LABORABLE_STYLE,
   laborable: LABORABLE_STYLE,
+  fichadaReal: FICHADA_REAL_STYLE,
   licencia: LICENCIA_STYLE,
   institucional: INSTITUCIONAL_STYLE,
   bloqueado: BLOQUEADO_STYLE,

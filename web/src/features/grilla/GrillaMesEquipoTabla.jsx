@@ -23,12 +23,13 @@ import {
   claseFondoCeldaCalendarioTitular,
 } from "./grillaTurnosVisual.js";
 import GrillaTurnosCeldaChip from "./GrillaTurnosCeldaChip.jsx";
-import GrillaFichadasEsperadasBadge from "./GrillaFichadasEsperadasBadge.jsx";
 import GrillaFichadaPresenciaBadge from "./GrillaFichadaPresenciaBadge.jsx";
-import { fichadasEsperadasDesdeCeldaVis, titleFichadasEsperadas } from "./grillaFichadasEsperadasDisplay.js";
-import { Link } from "react-router-dom";
-
-import { fichadaPresenciaDesdeCeldaVis, titleFichadaPresencia } from "./grillaFichadaPresenciaDisplay.js";
+import { fichadasEsperadasDesdeCeldaVis } from "./grillaFichadasEsperadasDisplay.js";
+import {
+  fichadaPresenciaDesdeCeldaVis,
+  titleFichadaPresencia,
+  textoHorarioFichadaRealDesdeCelda,
+} from "./grillaFichadaPresenciaDisplay.js";
 import GrillaFichadaEstadoJefeBadge from "./GrillaFichadaEstadoJefeBadge.jsx";
 import { estadoFichadaJefeDesdeCelda } from "./grillaFichadaEstadoJefeDisplay.js";
 import { visualCeldaOutboxPendiente } from "./grillaCeldaOutboxVisual.js";
@@ -42,10 +43,9 @@ function contenidoCeldaOperativa({
   esFranco,
   esNoLaborable,
   turnoText,
-  fichadasN,
+  mostrarFichadaReal = false,
   fichadaPresencia,
   estadoFichadaJefe,
-  enlaceCargaManualHref,
   outboxVisual,
   esIncompletoPlan,
   desalineacionTeoria,
@@ -62,7 +62,6 @@ function contenidoCeldaOperativa({
   soloLecturaTooltip,
   celdaVis,
 }) {
-  const fichadasMostrar = outboxVisual?.fichadasPreview ?? fichadasN;
   const alertaTitle = desalineacionTooltip || "Teoría modificada post-licencia";
   const badgeAlerta = desalineacionTeoria ? (
     <span
@@ -134,13 +133,6 @@ function contenidoCeldaOperativa({
         {badgeSoloLectura}
       </span>
     ) : null;
-  const badge = (
-    <GrillaFichadasEsperadasBadge
-      valor={fichadasMostrar}
-      preview={outboxVisual?.fichadasEsPreview === true}
-      className="mt-px"
-    />
-  );
   const badgeFichada = estadoFichadaJefe ? (
     <GrillaFichadaEstadoJefeBadge
       estado={estadoFichadaJefe.estado}
@@ -148,20 +140,10 @@ function contenidoCeldaOperativa({
       className="mt-px"
       compacto
     />
-  ) : fichadaPresencia ? (
+  ) : mostrarFichadaReal ? null : fichadaPresencia ? (
     <GrillaFichadaPresenciaBadge presencia={fichadaPresencia} className="mt-px" compacto />
   ) : null;
   const badgeAnalitica = <DiaGrillaCelda celdaVis={celdaVis} className="mt-px" />;
-  const enlaceManual = enlaceCargaManualHref ? (
-    <Link
-      to={enlaceCargaManualHref}
-      onClick={(e) => e.stopPropagation()}
-      className="mt-px block text-center text-[6px] font-semibold leading-tight text-violet-800 underline"
-      title="Cargar fichada manual"
-    >
-      Manual
-    </Link>
-  ) : null;
   const diffBlock = outboxVisual?.pending && (outboxVisual.diffOut || outboxVisual.diffIn) ? (
     <span className="mt-px text-[6px] leading-tight">
       {outboxVisual.diffOut ? (
@@ -186,17 +168,17 @@ function contenidoCeldaOperativa({
         ) : null}
         <span className={clasesTextoCelda(outboxVisual.lineaExtra)}>{outboxVisual.lineaExtra}</span>
         <span className="mt-0.5 flex flex-col items-center gap-px">
-          {badge}
           {badgeFichada}
           {badgeAnalitica}
-          {enlaceManual}
           {diffBlock}
         </span>
       </span>
     );
   }
 
-  const turnoMostrar = outboxVisual?.turnoText ?? turnoText;
+  const turnoMostrar = mostrarFichadaReal
+    ? turnoText
+    : outboxVisual?.turnoText ?? turnoText;
   if (tieneLicencia && (tieneTurno || esFranco || esNoLaborable)) {
     return (
       <span className="flex w-full flex-col items-center justify-center leading-none">
@@ -205,10 +187,7 @@ function contenidoCeldaOperativa({
         </span>
         <span className="mt-0.5 flex flex-col items-center gap-px">
           {filaBadges}
-          {badge}
-          {badgeFichada}
           {badgeAnalitica}
-          {enlaceManual}
           {diffBlock}
           <span className="text-[7px] font-bold text-fuchsia-950">{licenciaCod.slice(0, 4)}</span>
         </span>
@@ -223,10 +202,7 @@ function contenidoCeldaOperativa({
         {esIncompletoPlan ? (
           <span className="text-[6px] font-semibold text-rose-800">Plan incompleto</span>
         ) : null}
-        {badge}
-        {badgeFichada}
         {badgeAnalitica}
-        {enlaceManual}
       </span>
     );
   }
@@ -234,10 +210,7 @@ function contenidoCeldaOperativa({
     return (
       <span className="flex flex-col items-center justify-center leading-none">
         <span className="text-[7px] font-bold leading-tight text-rose-950">Sin turno</span>
-        {badge}
-        {badgeFichada}
         {badgeAnalitica}
-        {enlaceManual}
       </span>
     );
   }
@@ -246,10 +219,7 @@ function contenidoCeldaOperativa({
       <span className={clasesTextoCelda(turnoMostrar)}>{turnoMostrar}</span>
       <span className="mt-0.5 flex flex-col items-center gap-px">
         {filaBadges}
-        {badge}
-        {badgeFichada}
         {badgeAnalitica}
-        {enlaceManual}
         {diffBlock}
       </span>
     </span>
@@ -412,6 +382,10 @@ export default function GrillaMesEquipoTabla({
                       personaLabels: { [personaIdFila]: personaLabel },
                     });
                     const turnoText = outboxVisual?.turnoText ?? textoHorarioTurno(cell);
+                    const textoFichadaReal =
+                      modoFichada === "rrhh" ? textoHorarioFichadaRealDesdeCelda(cell) : "";
+                    const mostrarFichadaReal = Boolean(textoFichadaReal);
+                    const horarioCelda = mostrarFichadaReal ? textoFichadaReal : turnoText;
                     const jornadaVis = celdaTieneJornadaVis(cell);
                     const tipoDiaVis = String(cell.tipo_dia || "")
                       .trim()
@@ -481,11 +455,13 @@ export default function GrillaMesEquipoTabla({
                         tipoInstCel === "feriado" ? "Feriado" : tipoInstCel === "asueto" ? "Asueto" : "Día institucional",
                       );
                     }
-                    if (turnoText) titleParts.push(turnoText);
+                    if (mostrarFichadaReal) {
+                      titleParts.push(textoFichadaReal);
+                    } else if (turnoText) {
+                      titleParts.push(turnoText);
+                    }
                     if (licenciaCod) titleParts.push(`Licencia: ${licenciaCod}`);
                     const fichadasN = fichadasEsperadasDesdeCeldaVis(cell);
-                    const fichadasTitle = titleFichadasEsperadas(fichadasN);
-                    if (fichadasTitle) titleParts.push(fichadasTitle);
                     if (outboxVisual?.tooltip) titleParts.unshift(outboxVisual.tooltip);
                     if (esIncompletoPlan) {
                       titleParts.push("Laborable sin turno (corregir plan del mes)");
@@ -500,17 +476,6 @@ export default function GrillaMesEquipoTabla({
                       ? estadoFichadaJefe.tooltip
                       : titleFichadaPresencia(fichadaPresencia);
                     if (fichadaTitle) titleParts.push(fichadaTitle);
-                    const enlaceCargaManualHref =
-                      modoFichada === "rrhh" && tieneDatos
-                        ? (() => {
-                            const p = new URLSearchParams();
-                            p.set("persona_id", String(fila.persona_id || ""));
-                            p.set("fecha_ymd", fechaYmd);
-                            const gdt = grupoSeleccionado || cellGdt || "";
-                            if (gdt) p.set("gdt_id", gdt);
-                            return `/portal/rrhh/fichadas-carga-manual?${p.toString()}`;
-                          })()
-                        : null;
                     if (desalineacionTeoria && desalineacionTooltip) {
                       titleParts.push(desalineacionTooltip);
                     }
@@ -530,14 +495,16 @@ export default function GrillaMesEquipoTabla({
                       titleParts.push(soloLectura.tooltip);
                     }
 
-                    const variant = varianteCeldaOperativa({
-                      tieneLicencia,
-                      esNoLaborable,
-                      esFranco,
-                      tieneTurno: tieneTurno || jornadaVis,
-                      esIncompletoPlan: esIncompletoPlan && !tieneLicencia,
-                      teoriaPendienteLazy: teoriaPendiente.activo,
-                    });
+                    const variant = mostrarFichadaReal && !tieneLicencia
+                      ? "fichadaReal"
+                      : varianteCeldaOperativa({
+                          tieneLicencia,
+                          esNoLaborable,
+                          esFranco,
+                          tieneTurno: tieneTurno || jornadaVis,
+                          esIncompletoPlan: esIncompletoPlan && !tieneLicencia,
+                          teoriaPendienteLazy: teoriaPendiente.activo,
+                        });
 
                     return (
                       <td
@@ -610,11 +577,10 @@ export default function GrillaMesEquipoTabla({
                               tieneTurno,
                               esFranco,
                               esNoLaborable,
-                              turnoText,
-                              fichadasN,
+                              turnoText: horarioCelda,
+                              mostrarFichadaReal,
                               fichadaPresencia,
                               estadoFichadaJefe,
-                              enlaceCargaManualHref,
                               esIncompletoPlan,
                               outboxVisual,
                               desalineacionTeoria,

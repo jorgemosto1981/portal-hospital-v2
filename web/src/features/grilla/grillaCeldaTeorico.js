@@ -285,7 +285,5 @@ function armarLineaResumen(p) {
       : "";
   if (hs && !partes.some((x) => x.includes(" h"))) partes.push(hs);
 
-  if (p.fichadas != null && p.fichadas >= 0) partes.push(`F:${p.fichadas}`);
-
   return partes.filter(Boolean).join(" · ");
 }

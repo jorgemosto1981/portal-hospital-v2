@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 import MobileLayout from "../../components/layout/MobileLayout.jsx";
 import HelpDrawer, { HelpFab } from "../../components/ui/HelpDrawer.jsx";
 import { MODULOS_PORTAL, resolverTabPorPath } from "../../constants/modulosEstado.js";
+import {
+  consultarBloqueoColaPendiente,
+  intentarBloquearNavegacionPortal,
+} from "../fichadas/cargaManual/cargaManualNavigationGuard.js";
 import { useAuthSession } from "../auth/useAuthSession.js";
 import { useAuthClaims } from "../auth/useAuthClaims.js";
 import { ArticulosIngresoProvider } from "../solicitudes/ArticulosIngresoProvider.jsx";
@@ -48,7 +53,13 @@ export default function PortalLayout() {
         activeTab={activeTab}
         onTabChange={(nextTab) => {
           const m = MODULOS_PORTAL.find((x) => x.id === nextTab);
-          if (m) navigate(m.path);
+          if (!m) return;
+          if (intentarBloquearNavegacionPortal(m.path)) {
+            const { mensaje } = consultarBloqueoColaPendiente();
+            toast.error(mensaje, { duration: 5000 });
+            return;
+          }
+          navigate(m.path);
         }}
         devBypassAuth={BYPASS_AUTH && !user}
       >

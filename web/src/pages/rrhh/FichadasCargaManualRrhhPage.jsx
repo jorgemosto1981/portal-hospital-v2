@@ -4,17 +4,23 @@ import toast from "react-hot-toast";
 
 import Card from "../../components/ui/Card.jsx";
 import FichadasColaDiaTabla from "../../features/fichadas/cargaManual/FichadasColaDiaTabla.jsx";
-import FichadasCargaManualTeclado, {
-  marcasPayloadDesdeFichadasReales,
-} from "../../features/fichadas/cargaManual/FichadasCargaManualTeclado.jsx";
+import FichadasCargaManualTeclado from "../../features/fichadas/cargaManual/FichadasCargaManualTeclado.jsx";
 import {
   diaMesKeyDesdeFechaYmd,
   leerVersionCelda,
+  marcasCandidatasCargaManual,
+  marcasInstantesDesdeFichadasReales,
+  marcasPayloadDesdeFichadasReales,
 } from "../../features/fichadas/cargaManual/fichadasCargaManualUtils.js";
-import { useCargaManualCola } from "../../features/fichadas/cargaManual/useCargaManualCola.js";
+import { useBloqueoSalidaColaPendiente } from "../../features/fichadas/cargaManual/useBloqueoSalidaColaPendiente.js";
+import {
+  MAX_COLA_PENDIENTE,
+  useCargaManualCola,
+} from "../../features/fichadas/cargaManual/useCargaManualCola.js";
 import { useCargaManualRoster } from "../../features/fichadas/cargaManual/useCargaManualRoster.js";
 import { useRelojConfigCache } from "../../features/fichadas/cargaManual/useRelojConfigCache.js";
 import { callGuardarCapaFichadaDia, callObtenerVistaGrillaMesAgente } from "../../services/callables.js";
+import { grillaVistaCacheStore } from "../../features/grilla/grillaCacheMemoryStore.js";
 
 export default function FichadasCargaManualRrhhPage() {
   const [params] = useSearchParams();
@@ -26,6 +32,7 @@ export default function FichadasCargaManualRrhhPage() {
   const [relojId, setRelojId] = useState(() => (/^rel_/i.test(relojUrl) ? relojUrl : ""));
   const [fechaSticky, setFechaSticky] = useState(fechaUrl || "");
   const [deshaciendo, setDeshaciendo] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
   const visCacheRef = useRef(new Map());
 
@@ -49,11 +56,18 @@ export default function FichadasCargaManualRrhhPage() {
 
   const {
     colaItems,
-    pushGuardado,
+    pendientesCount,
+    colaLlena,
+    tienePendientes,
+    pushPendiente,
+    marcarEnviado,
     marcasColaSesion,
     quitarMarcasColaEntrada,
     removeById,
+    pendientesEnOrdenEnvio,
   } = useCargaManualCola();
+
+  useBloqueoSalidaColaPendiente(tienePendientes);
 
   useEffect(() => {
     if (rosterError) toast.error(rosterError);
@@ -120,9 +134,108 @@ export default function FichadasCargaManualRrhhPage() {
     visCacheRef.current.set(cacheKey(persona_id, fecha_ymd, gdtKey), celda);
   }, [grupoTrabajoId]);
 
+  const invalidarGrillaTrasEnvio = useCallback((entry) => {
+    const gdt = String(entry.grupo_trabajo_id || "").trim();
+    const partes = String(entry.fecha_ymd || "").split("-");
+    if (/^gdt_/i.test(gdt) && partes.length === 3) {
+      grillaVistaCacheStore.invalidateGrupoPeriodo(gdt, `${partes[0]}-${partes[1]}`);
+    }
+  }, []);
+
+  const verificarMarcasPersistidas = useCallback((entry, fichadasReales) => {
+    const esperadas = marcasCandidatasCargaManual(entry.fecha_ymd, entry.ingreso, entry.egreso);
+    const guardadas = marcasInstantesDesdeFichadasReales(fichadasReales, entry.fecha_ymd);
+    const faltan = esperadas.filter(
+      (e) => !guardadas.some((g) => g.hora_hm === e.hora_hm),
+    );
+    if (faltan.length) {
+      throw new Error(
+        `El servidor no reflejó las marcas (${faltan.map((m) => m.hora_hm).join(", ")}). Reintentá o avisá a sistemas.`,
+      );
+    }
+  }, []);
+
+  const enviarUnPendiente = useCallback(
+    async (entry) => {
+      const marcas = [];
+      if (entry.ingreso) marcas.push({ hora_hm: entry.ingreso });
+      if (entry.egreso) marcas.push({ hora_hm: entry.egreso });
+
+      const celdaAntes = await getVisCelda(entry.persona_id, entry.fecha_ymd, {
+        force: true,
+        grupo_trabajo_id: entry.grupo_trabajo_id,
+      });
+      const snapshotAntes = JSON.parse(JSON.stringify(celdaAntes.fichadas_reales || []));
+      const versionAntes = celdaAntes.version;
+
+      const res = await callGuardarCapaFichadaDia({
+        persona_id: entry.persona_id,
+        grupo_trabajo_id: entry.grupo_trabajo_id,
+        fecha_ymd: entry.fecha_ymd,
+        accion: "AGREGAR_MARCAS",
+        marcas,
+        motivo: "Carga manual RRHH",
+        origen: "CARGA_MANUAL",
+        version_esperada: versionAntes,
+      });
+      const d = res.data || {};
+      if (d.write_skipped) {
+        throw new Error(
+          `Sin cambios en servidor para ${entry.persona_label} ${entry.fecha_ymd} (marcas idénticas).`,
+        );
+      }
+
+      const celdaNueva = await getVisCelda(entry.persona_id, entry.fecha_ymd, {
+        force: true,
+        grupo_trabajo_id: entry.grupo_trabajo_id,
+      });
+      verificarMarcasPersistidas(entry, celdaNueva.fichadas_reales);
+      setVisCeldaCache(entry.persona_id, entry.fecha_ymd, celdaNueva, entry.grupo_trabajo_id);
+      invalidarGrillaTrasEnvio(entry);
+
+      marcarEnviado(entry.id, {
+        snapshotFichadas: snapshotAntes,
+        versionAntes,
+        versionDespues: celdaNueva.version,
+      });
+    },
+    [getVisCelda, setVisCeldaCache, invalidarGrillaTrasEnvio, marcarEnviado, verificarMarcasPersistidas],
+  );
+
+  const enviarCola = useCallback(async () => {
+    const lote = pendientesEnOrdenEnvio();
+    if (!lote.length) {
+      toast.error("No hay registros pendientes.");
+      return;
+    }
+    setEnviando(true);
+    let ok = 0;
+    try {
+      for (const entry of lote) {
+        await enviarUnPendiente(entry);
+        ok += 1;
+      }
+      toast.success(`Lote enviado: ${ok} registro(s) persistidos.`);
+    } catch (e) {
+      toast.error(e?.message || "Error al enviar el lote.");
+      if (ok > 0) {
+        toast(`${ok} registro(s) ya enviados antes del error.`, { icon: "ℹ️" });
+      }
+    } finally {
+      setEnviando(false);
+    }
+  }, [pendientesEnOrdenEnvio, enviarUnPendiente]);
+
   const deshacerEntrada = useCallback(
     async (entry) => {
       if (!entry) return;
+      if (entry.estado === "pendiente") {
+        quitarMarcasColaEntrada(entry);
+        removeById(entry.id);
+        toast.success("Registro quitado de la cola.");
+        return;
+      }
+
       setDeshaciendo(true);
       try {
         const marcas = marcasPayloadDesdeFichadasReales(entry.snapshotFichadas);
@@ -139,6 +252,7 @@ export default function FichadasCargaManualRrhhPage() {
         quitarMarcasColaEntrada(entry);
         removeById(entry.id);
         visCacheRef.current.delete(cacheKey(entry.persona_id, entry.fecha_ymd, entry.grupo_trabajo_id));
+        invalidarGrillaTrasEnvio(entry);
         toast.success("Deshacer aplicado (snapshot restaurado).");
       } catch (e) {
         toast.error(e?.message || "No se pudo deshacer.");
@@ -146,7 +260,7 @@ export default function FichadasCargaManualRrhhPage() {
         setDeshaciendo(false);
       }
     },
-    [quitarMarcasColaEntrada, removeById],
+    [quitarMarcasColaEntrada, removeById, invalidarGrillaTrasEnvio],
   );
 
   const deshacerUltimo = useCallback(async () => {
@@ -169,13 +283,6 @@ export default function FichadasCargaManualRrhhPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [deshacerUltimo]);
 
-  const onGuardadoOk = useCallback(
-    (entry) => {
-      pushGuardado(entry);
-    },
-    [pushGuardado],
-  );
-
   const grupoLabel = modoGlobal || esRelojUniversal
     ? "Universal (destino por agente)"
     : grupoTrabajoId || "—";
@@ -190,12 +297,24 @@ export default function FichadasCargaManualRrhhPage() {
       <header>
         <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Carga manual de fichadas</h1>
         <p className="text-sm text-slate-500">
-          Data-entry por teclado ·{" "}
-          <Link to="/portal/rrhh/fichadas-import" className="text-blue-600 hover:underline">
-            Import TXT
-          </Link>
+          Precarga en cola (máx. {MAX_COLA_PENDIENTE}) · luego{" "}
+          <strong className="text-violet-800">Enviar</strong> ·{" "}
+          {tienePendientes ? (
+            <span className="font-medium text-amber-800">no podés salir con pendientes</span>
+          ) : (
+            <Link to="/portal/rrhh/fichadas-import" className="text-blue-600 hover:underline">
+              Import TXT
+            </Link>
+          )}
         </p>
       </header>
+
+      {tienePendientes ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950">
+          Tenés registros sin enviar. Completá el lote con <strong>Enviar</strong> o quitá cada fila antes de
+          cambiar de pantalla.
+        </div>
+      ) : null}
 
       <Card className="space-y-3 p-4">
         <label className="block text-sm font-medium text-slate-700">
@@ -204,7 +323,8 @@ export default function FichadasCargaManualRrhhPage() {
             className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100"
             value={relojId}
             onChange={(e) => setRelojId(e.target.value)}
-            disabled={loadingCfg}
+            disabled={loadingCfg || tienePendientes}
+            title={tienePendientes ? "Enviá o quitá la cola antes de cambiar reloj" : undefined}
           >
             <option value="">
               {loadingCfg ? "Cargando relojes…" : "— Seleccionar reloj —"}
@@ -263,16 +383,24 @@ export default function FichadasCargaManualRrhhPage() {
           onFechaStickyChange={setFechaSticky}
           personaInicial={personaInicial}
           getVisCelda={getVisCelda}
-          setVisCeldaCache={setVisCeldaCache}
           marcasColaSesion={marcasColaSesion}
-          onGuardadoOk={onGuardadoOk}
+          onAgregarPendiente={pushPendiente}
+          colaLlena={colaLlena}
           disabled={formDisabled}
         />
       </Card>
 
       <Card className="space-y-3 p-4">
         <h2 className="text-sm font-semibold text-slate-800">Cola del día (sesión)</h2>
-        <FichadasColaDiaTabla items={colaItems} onDeshacer={deshacerEntrada} deshaciendo={deshaciendo} />
+        <FichadasColaDiaTabla
+          items={colaItems}
+          pendientesCount={pendientesCount}
+          maxPendientes={MAX_COLA_PENDIENTE}
+          onDeshacer={deshacerEntrada}
+          onEnviar={enviarCola}
+          enviando={enviando}
+          deshaciendo={deshaciendo}
+        />
       </Card>
     </div>
   );

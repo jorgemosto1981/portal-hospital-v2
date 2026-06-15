@@ -73,6 +73,7 @@ export function microBadgesAnalitica(analitica) {
  */
 export function analiticaTieneContenidoVisible(analitica) {
   if (!analitica) return false;
+  if (analitica.fichada_fuera_turno_teorico === true) return true;
   const { disciplina, debito } = microBadgesAnalitica(analitica);
   if (disciplina || debito) return true;
   if (analitica.ausencia_automatica === true) return true;
@@ -86,7 +87,19 @@ export function analiticaTieneContenidoVisible(analitica) {
  * @param {Record<string, unknown> | null} analitica
  */
 export function tarjetasAuditoriaCumplimientoJefe(analitica) {
-  if (!analitica) return { disciplina: null, debito: null, ausencia: null };
+  if (!analitica) return { disciplina: null, debito: null, ausencia: null, fueraTurno: null };
+
+  if (analitica.fichada_fuera_turno_teorico === true) {
+    const turno = String(analitica.fichada_fuera_turno_detalle?.turno_teorico_id || "").trim();
+    const suf = turno ? ` (turno ${turno})` : "";
+    return {
+      disciplina: null,
+      debito: null,
+      ausencia: null,
+      fueraTurno:
+        `Fichada fuera del turno teórico asignado${suf}. Las marcas no coinciden con la jornada planificada; revisar plan u override antes de evaluar débito.`,
+    };
+  }
 
   const disciplina = analitica.disciplina && typeof analitica.disciplina === "object"
     ? analitica.disciplina
@@ -127,7 +140,7 @@ export function tarjetasAuditoriaCumplimientoJefe(analitica) {
       "Ausencia automática: sin fichadas registradas y transcurrida la ventana institucional de espera.";
   }
 
-  return { disciplina: tarjetaDisciplina, debito: tarjetaDebito, ausencia };
+  return { disciplina: tarjetaDisciplina, debito: tarjetaDebito, ausencia, fueraTurno: null };
 }
 
 /**
@@ -135,8 +148,27 @@ export function tarjetasAuditoriaCumplimientoJefe(analitica) {
  *
  * @param {Record<string, unknown> | null} analitica
  */
-export function lineasAuditoriaCumplimientoRrhh(analitica) {
+export function lineasAuditoriaCumplimientoRrhh(analitica, ctx = {}) {
   if (!analitica) return [];
+  if (analitica.fichada_fuera_turno_teorico === true) {
+    const turno = String(
+      analitica.fichada_fuera_turno_detalle?.turno_teorico_id || ctx.turnoTeoricoId || "",
+    ).trim();
+    const horario = String(ctx.horarioTeorico || "").trim();
+    const marcas = String(ctx.horarioFichada || "").trim();
+    const partes = [
+      "Fichada fuera del turno teórico",
+      turno ? `turno ${turno}` : "",
+      horario ? `teoría ${horario}` : "",
+      marcas ? `marcas ${marcas}` : "",
+    ].filter(Boolean);
+    const solape = Number(analitica.fichada_fuera_turno_detalle?.solape_minutos);
+    const det =
+      Number.isFinite(solape) && solape >= 0
+        ? ` Solape con ventana teórica: ${solape} min — débito/disciplina suspendidos.`
+        : " Débito/disciplina suspendidos — revisar plan u override.";
+    return [`${partes.join(" · ")}.${det}`];
+  }
   const disciplina = analitica.disciplina && typeof analitica.disciplina === "object"
     ? analitica.disciplina
     : {};

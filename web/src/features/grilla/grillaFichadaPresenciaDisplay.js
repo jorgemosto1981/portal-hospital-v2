@@ -2,11 +2,18 @@ import {
   lineasHorarioFichadaReal,
   parseFichadasRealesCelda,
   resolverFichadaPresencia,
+  textoHorarioFichadaReal,
+  textoHorarioFichadaRealDesdeCelda,
 } from "../../../../shared/utils/grillaFichadaPresencia.js";
 import { etiquetaEstadoFichadaJefe } from "./grillaFichadaEstadoJefeDisplay.js";
 
-export { lineasHorarioFichadaReal, parseFichadasRealesCelda, resolverFichadaPresencia };
-
+export {
+  lineasHorarioFichadaReal,
+  parseFichadasRealesCelda,
+  resolverFichadaPresencia,
+  textoHorarioFichadaReal,
+  textoHorarioFichadaRealDesdeCelda,
+};
 /**
  * @param {Record<string, unknown>|null|undefined} cell
  * @param {{ esRrhh?: boolean; esTitular?: boolean }} [opts]

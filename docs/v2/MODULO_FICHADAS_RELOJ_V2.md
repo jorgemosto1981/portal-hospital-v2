@@ -218,6 +218,7 @@ Deploy functions afectadas: `previsualizarImportFichadasReloj`, `aplicarImportFi
 | `asi_*` / `vis_*` | `analitica_cumplimiento` (+ `analitica_cumplimiento_por_grupo` en asi) |
 | `grillaVisSanitizeGso` | Jefe: sin `fichadas_reales`; **sí** `analitica_cumplimiento` |
 | Callables aux QA (2026-06) | `listarEnrolamientoRelojPorPersona`, `listarCfgRelojBiometrico`, `listarRosterParaFichadas` |
+| **Matriz escenarios QA** | [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) — alineación, presencia, cumplimiento, visual, acciones |
 
 **Próximo paso operativo:** checklist QA §3 en handoff 2026-06-12 (todos los caminos de ingreso + visualización) **antes** de seguir épica Decreto 1919.
 

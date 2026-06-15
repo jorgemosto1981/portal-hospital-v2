@@ -1,9 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
-const MAX_COLA = 20;
+/** Máximo de registros pendientes de envío en la cola de sesión. */
+export const MAX_COLA_PENDIENTE = 10;
+const MAX_HISTORIAL_ENVIADOS = 20;
 
 /**
- * Cola de sesión (últimos guardados) para undo y cercanía en memoria.
+ * Cola de sesión: precarga local (pendiente) + historial enviado (para deshacer en servidor).
  */
 export function useCargaManualCola() {
   const [items, setItems] = useState([]);
@@ -12,13 +14,20 @@ export function useCargaManualCola() {
 
   const claveDia = (persona_id, fecha_ymd) => `${persona_id}|${fecha_ymd}`;
 
+  const pendientes = useMemo(
+    () => items.filter((x) => x.estado === "pendiente"),
+    [items],
+  );
+
+  const colaLlena = pendientes.length >= MAX_COLA_PENDIENTE;
+  const tienePendientes = pendientes.length > 0;
+
   const marcasColaSesion = useCallback(
     (persona_id, fecha_ymd) => marcasColaPorDia.get(claveDia(persona_id, fecha_ymd)) || [],
     [marcasColaPorDia],
   );
 
-  const pushGuardado = useCallback((entry) => {
-    setItems((prev) => [entry, ...prev].slice(0, MAX_COLA));
+  const agregarMarcasColaDia = useCallback((entry) => {
     const key = claveDia(entry.persona_id, entry.fecha_ymd);
     setMarcasColaPorDia((prev) => {
       const next = new Map(prev);
@@ -29,14 +38,38 @@ export function useCargaManualCola() {
     });
   }, []);
 
-  const popUltimo = useCallback(() => {
-    let removed = null;
+  const pushPendiente = useCallback((entry) => {
     setItems((prev) => {
-      if (!prev.length) return prev;
-      removed = prev[0];
-      return prev.slice(1);
+      const pend = prev.filter((x) => x.estado === "pendiente");
+      if (pend.length >= MAX_COLA_PENDIENTE) return prev;
+      const enviados = prev.filter((x) => x.estado === "enviado");
+      const nuevo = {
+        ...entry,
+        estado: "pendiente",
+        agregado_en_label:
+          entry.agregado_en_label ||
+          new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
+      };
+      return [nuevo, ...pend, ...enviados].slice(0, MAX_COLA_PENDIENTE + MAX_HISTORIAL_ENVIADOS);
     });
-    return removed;
+    agregarMarcasColaDia(entry);
+  }, [agregarMarcasColaDia]);
+
+  const marcarEnviado = useCallback((id, datosEnvio) => {
+    setItems((prev) =>
+      prev.map((x) =>
+        x.id === id
+          ? {
+              ...x,
+              ...datosEnvio,
+              estado: "enviado",
+              guardado_en_label:
+                datosEnvio.guardado_en_label ||
+                new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
+            }
+          : x,
+      ),
+    );
   }, []);
 
   const removeById = useCallback((id) => {
@@ -53,17 +86,28 @@ export function useCargaManualCola() {
         const idx = arr.findIndex((x) => x.instante_ms === m.instante_ms);
         if (idx >= 0) arr.splice(idx, 1);
       }
-      next.set(key, arr);
+      if (arr.length === 0) next.delete(key);
+      else next.set(key, arr);
       return next;
     });
   }, []);
 
+  const pendientesEnOrdenEnvio = useCallback(
+    () => [...pendientes].reverse(),
+    [pendientes],
+  );
+
   return {
     colaItems: items,
-    pushGuardado,
-    popUltimo,
+    pendientes,
+    pendientesCount: pendientes.length,
+    colaLlena,
+    tienePendientes,
+    pushPendiente,
+    marcarEnviado,
     marcasColaSesion,
     quitarMarcasColaEntrada,
     removeById,
+    pendientesEnOrdenEnvio,
   };
-}
+};

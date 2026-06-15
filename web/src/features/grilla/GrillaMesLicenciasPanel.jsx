@@ -420,9 +420,23 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
 
   const onFichadaGuardadaEnModal = useCallback(async () => {
     const snap = diaModal;
-    await vista.cargar({ bypassCache: true });
+    const gdt = String(snap?.grupoTrabajoId || gdtGrillaModal || "").trim();
+    const periodoInv = vistaModal?.periodo || periodoGrillaModal;
+    if (/^gdt_/i.test(gdt) && periodoInv) {
+      invalidarCacheGrillaTrasMutacion({
+        ops: [],
+        periodo: periodoInv,
+        gdtActivo: gdt,
+        grupoIdVista: vistaModal?.grupoId || vista.grupoId,
+      });
+    }
+    await vista.cargar({
+      bypassCache: true,
+      periodo: vistaModal?.periodo,
+      modo: vistaModal?.modo,
+      grupoId: vistaModal?.grupoId ?? gdt,
+    });
     if (!snap?.personaId || !snap?.fechaYmd) return;
-    const gdt = String(snap.grupoTrabajoId || gdtGrillaModal || "").trim();
     if (!/^gdt_/i.test(gdt)) return;
     try {
       const [y, m] = snap.fechaYmd.split("-").map(Number);
@@ -442,7 +456,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
     } catch {
       /* la grilla ya se recargó; el modal conserva el snapshot anterior */
     }
-  }, [diaModal, vista, gdtGrillaModal]);
+  }, [diaModal, vista, gdtGrillaModal, vistaModal, periodoGrillaModal]);
 
   useEffect(() => {
     if (!capabilities.puedeAccionesPeriodoLiquidacion || !RX_GDT.test(String(vista.grupoId || ""))) {
@@ -1061,12 +1075,6 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                     ×
                   </span>
                   Sin asignación al grupo en esa fecha
-                </span>
-                <span>
-                  <span className="mr-1 inline-flex h-3 min-w-[1.1rem] items-center justify-center rounded bg-indigo-900 px-0.5 text-[8px] font-bold text-white align-middle">
-                    F:n
-                  </span>
-                  Fichadas esperadas (jornada)
                 </span>
                 <span>
                   <span className="mr-1 inline-block h-3 w-5 rounded ring-2 ring-amber-500 align-middle" />

@@ -12,6 +12,7 @@ const {
   resolverFichadaPresencia,
   evaluarContradiccionFichadaTeoria,
   lineasHorarioFichadaReal,
+  textoHorarioFichadaReal,
   celdaTieneFichadaImpar,
   contarMarcasFichadaReal,
 } = require(
@@ -99,5 +100,19 @@ describe("grillaFichadaPresencia (US-15)", () => {
       { tipo: "ingreso", hora: "06:05" },
     ]);
     assert.deepEqual(lineas, ["06:00 – 14:00", "ingreso: 06:05"]);
+  });
+
+  it("textoHorarioFichadaReal compacto para celda", () => {
+    assert.equal(
+      textoHorarioFichadaReal([{ ingreso: "06:05", egreso: "13:01" }]),
+      "06:05–13:01",
+    );
+    assert.equal(
+      textoHorarioFichadaReal([
+        { ingreso: "06:00", egreso: "14:00" },
+        { ingreso: "22:00", egreso: "06:00" },
+      ]),
+      "06:00–14:00 · 22:00–06:00",
+    );
   });
 });

@@ -24,21 +24,9 @@ import {
 } from "./grillaMesGsoHints.js";
 import { COPY_BADGE_SOLO_LECTURA_GSO } from "./grillaGsoSoloLectura.js";
 import DiaGrillaAuditoriaTecnicaRrhh from "./DiaGrillaAuditoriaTecnicaRrhh.jsx";
-import DiaGrillaFichadaRrhhPanel from "./DiaGrillaFichadaRrhhPanel.jsx";
+import DiaGrillaFichadaAbmPanel from "./DiaGrillaFichadaAbmPanel.jsx";
 import GrillaGuardrailTeoriaAviso from "./GrillaGuardrailTeoriaAviso.jsx";
 import DiaGrillaAuditoriaCumplimientoHorario from "./DiaGrillaAuditoriaCumplimientoHorario.jsx";
-
-function hrefFichadasCargaManual({ personaId, fechaYmd, grupoTrabajoId }) {
-  const params = new URLSearchParams();
-  const pid = String(personaId || "").trim();
-  const ymd = String(fechaYmd || "").trim();
-  const gdt = String(grupoTrabajoId || "").trim();
-  if (pid) params.set("persona_id", pid);
-  if (ymd) params.set("fecha_ymd", ymd);
-  if (gdt) params.set("gdt_id", gdt);
-  const q = params.toString();
-  return `/portal/rrhh/fichadas-carga-manual${q ? `?${q}` : ""}`;
-}
 
 function labelEstado(id) {
   const e = String(id || "");
@@ -180,11 +168,15 @@ export default function DiaGrillaDetalleModal({
   const [tarjetasGestion, setTarjetasGestion] = useState(/** @type {Array<ReturnType<typeof tarjetaResumenOverride>>} */ ([]));
   const [pendientesCola, setPendientesCola] = useState(/** @type {string[]} */ ([]));
   const [loadingGestion, setLoadingGestion] = useState(false);
+  const [fichadaAbmVista, setFichadaAbmVista] = useState(/** @type {null | 'menu' | 'agregar' | 'borrar' | 'modificar'} */ (null));
+  const fichadaAbmActivo = fichadaAbmVista != null;
+  const puedeAbrirFichadaAbm = puedeEditarFichadasReales && !soloLectura && personaId && fechaYmd && grupoTrabajoId;
 
   useEffect(() => {
     if (!open) {
       setSolFocus("");
       setResumen(null);
+      setFichadaAbmVista(null);
       return;
     }
     const first = Array.isArray(eventos) && eventos[0] ? String(eventos[0].solicitud_id || "") : "";
@@ -429,19 +421,9 @@ export default function DiaGrillaDetalleModal({
           resumenFichada.presencia === "ausente" ||
           resumenFichada.esAlerta) ? (
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-                {resumenFichada.modo === "rrhh" ? "Fichada real" : "Asistencia"}
-              </h4>
-              {puedeEditarFichadasReales && personaId && fechaYmd && grupoTrabajoId ? (
-                <Link
-                  to={hrefFichadasCargaManual({ personaId, fechaYmd, grupoTrabajoId })}
-                  className="text-[11px] font-semibold text-violet-800 underline"
-                >
-                  Cargar fichada manual
-                </Link>
-              ) : null}
-            </div>
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600">
+              {resumenFichada.modo === "rrhh" ? "Fichada real" : "Asistencia"}
+            </h4>
             <dl className="space-y-1 text-xs">
               <div className="flex gap-2">
                 <dt className="font-medium text-slate-500">Estado:</dt>
@@ -470,20 +452,11 @@ export default function DiaGrillaDetalleModal({
         <DiaGrillaAuditoriaCumplimientoHorario
           celdaVis={celdaVis}
           esRrhhLabor={detalleFichadaRrhh}
+          turnoTeorico={turnoTeorico}
+          horariosFichada={resumenFichada?.horarios || []}
         />
 
-        {puedeEditarFichadasReales ? (
-          <DiaGrillaFichadaRrhhPanel
-            personaId={String(personaId || "")}
-            fechaYmd={String(fechaYmd || "")}
-            grupoTrabajoId={String(grupoTrabajoId || "")}
-            celdaVis={celdaVis}
-            soloLectura={soloLectura}
-            onGuardado={onFichadaGuardada}
-          />
-        ) : null}
-
-        {puedeVerTramosCrudosFichadas ? (
+        {!fichadaAbmActivo && puedeVerTramosCrudosFichadas ? (
           <DiaGrillaAuditoriaTecnicaRrhh
             celdaVis={celdaVis}
             turnoTeorico={turnoTeorico}
@@ -668,7 +641,7 @@ export default function DiaGrillaDetalleModal({
             !accionTeoriaHabilitada && !soloLectura && mensajeBloqueoTeoria ? mensajeBloqueoTeoria : null
           }
         />
-        {personaId && fechaYmd && onAbrirGestionTurno && !desalineacionTeoria && !soloLectura ? (
+        {personaId && fechaYmd && onAbrirGestionTurno && !desalineacionTeoria && !soloLectura && !fichadaAbmActivo ? (
           <button
             type="button"
             disabled={!accionTeoriaHabilitada}
@@ -720,7 +693,7 @@ export default function DiaGrillaDetalleModal({
           </button>
         ) : null}
 
-        {resumen?.solicitud_id && bandejaPath && !desalineacionTeoria ? (
+        {resumen?.solicitud_id && bandejaPath && !desalineacionTeoria && !fichadaAbmActivo ? (
           <Link
             to={`${bandejaPath}?sol_id=${encodeURIComponent(resumen.solicitud_id)}`}
             onClick={onClose}
@@ -728,6 +701,30 @@ export default function DiaGrillaDetalleModal({
           >
             Ver solicitud en bandeja
           </Link>
+        ) : null}
+
+        {puedeAbrirFichadaAbm && !fichadaAbmActivo ? (
+          <button
+            type="button"
+            onClick={() => setFichadaAbmVista("menu")}
+            className="mt-2 flex min-h-11 w-full touch-manipulation items-center justify-center rounded-xl border border-violet-300 bg-violet-50 text-sm font-semibold text-violet-900 active:bg-violet-100"
+          >
+            Fichadas ABM
+          </button>
+        ) : null}
+
+        {fichadaAbmActivo && puedeAbrirFichadaAbm ? (
+          <DiaGrillaFichadaAbmPanel
+            personaId={String(personaId || "")}
+            fechaYmd={String(fechaYmd || "")}
+            grupoTrabajoId={String(grupoTrabajoId || "")}
+            celdaVis={celdaVis}
+            soloLectura={soloLectura}
+            vista={fichadaAbmVista}
+            onVistaChange={setFichadaAbmVista}
+            onCerrar={() => setFichadaAbmVista(null)}
+            onGuardado={onFichadaGuardada}
+          />
         ) : null}
       </div>
     </div>

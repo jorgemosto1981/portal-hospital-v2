@@ -1,7 +1,8 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (prioridad inmediata — 2026-06-12):** **QA integral ingreso fichadas + cruce teoría ↔ real** en rama **`feature/grilla-fase1-colision`** antes de continuar el plan Decreto 1919. Handoff: [`HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md`](./HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md) · checklist §3 (manual menú, grilla modal, import TXT, render post-carga, analítica jefe/RRHH).  
-> **Épica en pausa (tras QA):** **Lineamientos Decreto 1919/89 + motor solicitudes / grilla** — [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md) · [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md).  
+> **RETOMAR AQUÍ (prioridad inmediata — próxima sesión):** **Matriz QA caso a caso** teoría ↔ real — [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) · cierre sesión [`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md) · checklist origen [`HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md`](./HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md) §3.  
+> **Rama:** `feature/grilla-fase1-colision` · **Gate merge `master`:** ⛔ hasta columnas QA de la matriz en verde.  
+> **Épica en pausa (tras gate):** **Lineamientos Decreto 1919/89 + motor solicitudes / grilla** — [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md) · [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md).  
 > **Paralelo / backlog GSO:** refinamiento UX bandeja aprobación 3 meses (P2) · [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) · handoff Camino B: [`HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md`](./HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md) · GDT: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
 > **T-05 épica foco + paleta:** ✅ **(A)** grilla + planes URL · ✅ **(B)** paleta compuesta por régimen · ✅ **consola triple horizonte jefe** (`c27e6d7` en **`master`**) · UX pincel contextual + **Plan del foco** (sin grilla 3×mes)  
 > **Sesión 2026-06-11:** merge FF `feat/gso-us6-teoria-pendiente` → `master` · hosting prod **`c27e6d7`**  
@@ -20,16 +21,18 @@
 
 ---
 
-## PAUSA — QA fichadas + colisión grilla (2026-06-12)
+## PAUSA — QA fichadas + colisión grilla (2026-06-12) — CERRADA SESIÓN
 
 | Bloque | Estado | Referencia |
 |--------|--------|------------|
-| Motor analítico + outbox + F-UX | ✅ en rama | `feature/grilla-fase1-colision` · commits `4f2324b` … `f5f184c` + fix fichadas sesión 12/06 |
-| **Gate QA ingreso fichadas** | ⏳ **SIGUIENTE SESIÓN** | [`HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md`](./HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md) §3 |
-| Merge a `master` | ⛔ bloqueado | Hasta cerrar checklist QA |
+| Motor analítico + outbox + F-UX | ✅ en rama | `feature/grilla-fase1-colision` |
+| Fixes sesión 12/06 (persistencia, analítica, UI real/teórico) | ✅ código local + hosting | [`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md) |
+| **Matriz escenarios teoría ↔ real** | ✅ documentada | [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) |
+| **QA caso a caso (B/P/C)** | ⏳ **SIGUIENTE SESIÓN** | Matriz columnas QA + handoff §3 |
+| Merge a `master` | ⛔ bloqueado | Hasta matriz crítica en verde |
 | Decreto 1919 / plan motor | ⏸ | Retomar tras gate |
 
-**Hosting prod:** despliegues parciales desde rama (F-UX + fixes UI); functions colisión/outbox/fichadas en `southamerica-east1`.
+**Hosting prod:** https://portal-hospital-v2.web.app — deploy hosting sesión 12/06 (sin F:n · horario real celeste).
 
 ---
 

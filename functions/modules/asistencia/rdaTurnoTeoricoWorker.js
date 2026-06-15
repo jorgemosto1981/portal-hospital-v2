@@ -32,6 +32,7 @@ const { hlgVigenteOperativaEnGrilla } = require("../shared/solicitudHlgVigencia"
 const { planHabilitadoDesdeQuerySnapshot } = require("./planGrupoAgentesNuevos");
 const { enriquecerLimitesCumplimientoEnCapa } = require("../shared/capaTeoricaLimitesCumplimiento");
 const { calcularDeltasCumplimiento } = require("../shared/calcularDeltasCumplimiento");
+const { leerCeldaVisDiaFusionada } = require("../shared/visCeldaFusionLectura");
 
 const COL_HLG = "historial_laboral_grupos";
 const COL_GDT = "grupos_de_trabajo";
@@ -238,11 +239,7 @@ async function persistirAnaliticaCumplimientoDia({
 }) {
   if (!asiRef || !visRef || !/^gdt_/i.test(String(gdt || ""))) return null;
   const visSnap = await visRef.get();
-  const diasVis =
-    visSnap.exists && visSnap.data()?.dias && typeof visSnap.data().dias === "object"
-      ? visSnap.data().dias
-      : {};
-  const celdaRaw = diasVis[diaKey] || {};
+  const celdaRaw = leerCeldaVisDiaFusionada(visSnap.exists ? visSnap.data() || {} : {}, diaKey);
   const capaEnriquecida = enriquecerLimitesCumplimientoEnCapa(capaEscrita, regimenDoc);
   const celdaCtx = {
     ...celdaRaw,

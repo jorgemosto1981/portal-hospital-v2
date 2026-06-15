@@ -80,6 +80,44 @@ describe("calcularDeltasCumplimiento (Fase 1 colisión)", () => {
     assert.ok(r.alertas_activas.includes("DEFICIT_HORARIO_GRAVE"));
   });
 
+  it("débito de tiempo: marcas hora_hm sueltas (carga manual sin teoría)", () => {
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([{ hora_hm: "06:00" }, { hora_hm: "13:01" }]),
+      {
+        ...CAPA_ENRIQUECIDA,
+        ingreso_nominal_iso: "2026-06-15T06:00:00-03:00",
+        ingreso_limite_con_gracia_iso: "2026-06-15T06:15:00-03:00",
+        egreso_nominal_iso: "2026-06-15T14:00:00-03:00",
+        egreso_limite_con_gracia_iso: "2026-06-15T13:50:00-03:00",
+      },
+      { fecha_ymd: "2026-06-15" },
+    );
+    assert.equal(r.debito_tiempo.carga_real_minutos, 421);
+    assert.equal(r.debito_tiempo.deficit_minutos, 59);
+    assert.equal(r.debito_tiempo.incumplimiento_carga_horaria, true);
+  });
+
+  it("fichada fuera del turno teórico (N vs marcas diurnas)", () => {
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([{ ingreso: "05:35", egreso: "13:55", fecha_ymd: "2026-06-18" }]),
+      {
+        tipo_dia: "laborable",
+        turno_id: "N",
+        carga_horaria_diaria_minutos: 480,
+        tolerancia_debitohorario_minutos: 30,
+        ingreso_nominal_iso: "2026-06-19T01:00:00.000Z",
+        ingreso_limite_con_gracia_iso: "2026-06-19T01:00:00.000Z",
+        egreso_nominal_iso: "2026-06-19T09:00:00.000Z",
+        egreso_limite_con_gracia_iso: "2026-06-19T09:00:00.000Z",
+      },
+      { fecha_ymd: "2026-06-18" },
+    );
+    assert.equal(r.fichada_fuera_turno_teorico, true);
+    assert.equal(r.debito_tiempo.calculo_suspendido, true);
+    assert.equal(r.debito_tiempo.incumplimiento_carga_horaria, false);
+    assert.ok(r.alertas_activas.includes("FICHADA_FUERA_TURNO_TEORICO"));
+  });
+
   it("ausencia automática en backfill cuando supera límite de ingreso + 120 min", () => {
     const umbralMs = instanteMarcaInstitucionalMs(FECHA, "10:10");
     const r = calcularDeltasCumplimiento(

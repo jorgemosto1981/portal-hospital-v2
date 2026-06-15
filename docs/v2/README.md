@@ -18,7 +18,11 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | **[`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md)** | **RETOMAR AQUÍ** — cierre hito Multi-HLG: strip 244 `asi_*`, PR pendiente, Paso 4 QA |
 | **[`HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md`](./HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md)** | Incidente escenario Z + limpieza quirúrgica documentada |
 | [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) | Grilla aprobada VER plan; matriz control turno |
-| [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) | **Índice corto** → [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) |
+| [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) | **Índice corto** → [`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md) |
+| **[`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md)** | **RETOMAR QA** — escenarios teoría ↔ real (alineación, presencia, cumplimiento, visual, acciones) |
+| **[`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md)** | Cierre sesión 2026-06-12 — fichadas + colisión + visual celda |
+| [`HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md`](./HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md) | Checklist §3 QA ingreso fichadas (rama `feature/grilla-fase1-colision`) |
+| [`MODULO_FICHADAS_RELOJ_V2.md`](./MODULO_FICHADAS_RELOJ_V2.md) | Módulo fichadas A–G + §14 colisión analítica |
 | **[`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md)** | **Cierre US-17** — remediación 135→0 huecos, R0/R2, audit prod |
 | **[`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)** | Inventario planes HABILITADO + guía severidad RRHH |
 | **[`MANIFIESTO_REIMPACTO_INTEGRIDAD_PLAN_REGIMEN_2026.md`](./MANIFIESTO_REIMPACTO_INTEGRIDAD_PLAN_REGIMEN_2026.md)** | Integridad plan ↔ régimen (R0–R4) |

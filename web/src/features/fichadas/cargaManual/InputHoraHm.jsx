@@ -18,7 +18,7 @@ const InputHoraHm = forwardRef(function InputHoraHm(
 ) {
   const onKeyDown = useCallback(
     (e) => {
-      if (e.key === "Enter") {
+      if (e.key === "Enter" || e.key === "NumpadEnter") {
         e.preventDefault();
         onEnter?.();
       }
