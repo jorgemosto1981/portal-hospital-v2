@@ -41,6 +41,9 @@ const FILES_TO_SYNC = [
   "grillaFichadaEstadoJefe.js",
   "capaTeoricaLimitesCumplimiento.js",
   "calcularDeltasCumplimiento.js",
+  "licenciaCubreDiaFichada.js",
+  "validacionFichadaDiaFingerprint.js",
+  "resolverValidacionFichadaDia.js",
   "visCeldaFusionLectura.js",
 ];
 
