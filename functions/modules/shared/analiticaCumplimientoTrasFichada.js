@@ -5,6 +5,10 @@ const { enriquecerLimitesCumplimientoEnCapa } = require("./capaTeoricaLimitesCum
 const { leerCeldaVisDiaFusionada } = require("./visCeldaFusionLectura");
 const { resolverCapaTeoricaGrupo } = require("./capaTeoricaPorGrupoCore");
 const { buildAsiDocumentId } = require("./mdcRdaDocumentIds");
+const {
+  buildFirestorePatchValidacionFichadaDia,
+  ejecutarAnaliticaYValidacionFichadaDia,
+} = require("./validacionFichadaDiaPersistencia");
 
 const COL_VIS = "vistas_grilla_mes_agente";
 const COL_ASISTENCIA = "asistencia_diaria";
@@ -52,12 +56,19 @@ async function actualizarAnaliticaCumplimientoTrasFichada(db, params) {
     rda_egreso: celdaRaw.rda_egreso,
   };
 
-  const analitica = calcularDeltasCumplimiento(celdaCtx, capaEnriquecida, {
+  const { analitica, resolverOut } = ejecutarAnaliticaYValidacionFichadaDia({
+    celdaCtx,
+    celdaRaw,
+    capaEnriquecida,
     fecha_ymd,
-    ahora_evaluacion_ms: Date.now(),
+    forzar_recalculo: params.forzar_recalculo === true,
   });
 
-  await visRef.update({ [`dias.${diaKey}.analitica_cumplimiento`]: analitica });
+  const visUpdate = { [`dias.${diaKey}.analitica_cumplimiento`]: analitica };
+  const valPatch = buildFirestorePatchValidacionFichadaDia(diaKey, resolverOut);
+  if (valPatch) Object.assign(visUpdate, valPatch);
+
+  await visRef.update(visUpdate);
 
   if (asiDocId) {
     const asiRef = db.collection(COL_ASISTENCIA).doc(asiDocId);
@@ -67,7 +78,7 @@ async function actualizarAnaliticaCumplimientoTrasFichada(db, params) {
     }
   }
 
-  return analitica;
+  return { analitica, validacion: resolverOut };
 }
 
 module.exports = { actualizarAnaliticaCumplimientoTrasFichada };

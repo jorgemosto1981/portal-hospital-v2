@@ -1,7 +1,7 @@
 "use strict";
 
 const { resolverFichadaPresencia } = require("../shared/grillaFichadaPresencia");
-const { evaluarEstadoFichadaJefe } = require("../shared/grillaFichadaEstadoJefe");
+const { compactarValidacionParaListado } = require("../shared/resolverValidacionFichadaDia");
 
 /** Campos de capa 4 / reloj que GSO jefe no debe recibir por API (UX-6 / §14).
  *  `analitica_cumplimiento` se conserva (minutos de tardanza / ausencia, sin marcas crudas). */
@@ -16,22 +16,36 @@ const CAMPOS_SOLO_RRHH_EN_DIA = [
   "resuelto_rrhh_por_persona_id",
   "resuelto_rrhh_motivo_corto",
   "fichadas_reales_version",
+  "estado_fichada_jefe",
+  "estado_fichada_jefe_tooltip",
 ];
 
 /**
- * @param {object} cell
- * @param {object} [context]
+ * @param {Record<string, unknown>|null|undefined} cell
  */
-function sanitizarCeldaDiaGso(cell, context = {}) {
+function proyectarValidacionFichadaListado(cell) {
+  if (!cell || typeof cell !== "object") return null;
+  const raw = cell.validacion_fichada_dia;
+  if (!raw || typeof raw !== "object") return null;
+  return compactarValidacionParaListado(raw);
+}
+
+/**
+ * @param {object} cell
+ */
+function sanitizarCeldaDiaGso(cell) {
   if (!cell || typeof cell !== "object") return cell;
-  const semaforo = evaluarEstadoFichadaJefe(cell, context);
   const presencia = resolverFichadaPresencia(cell);
   const out = { ...cell };
   for (const k of CAMPOS_SOLO_RRHH_EN_DIA) {
     if (k in out) delete out[k];
   }
-  out.estado_fichada_jefe = semaforo.estado_fichada_jefe;
-  out.estado_fichada_jefe_tooltip = semaforo.tooltip;
+  const validacionListado = proyectarValidacionFichadaListado(cell);
+  if (validacionListado) {
+    out.validacion_fichada_dia = validacionListado;
+  } else if ("validacion_fichada_dia" in out) {
+    delete out.validacion_fichada_dia;
+  }
   if (presencia != null) {
     out.fichada_presencia = presencia;
   }
@@ -83,4 +97,5 @@ module.exports = {
   sanitizarVistaGrillaMesAgenteGso,
   sanitizarListadoGrillaGrupoGso,
   CAMPOS_SOLO_RRHH_EN_DIA,
+  proyectarValidacionFichadaListado,
 };

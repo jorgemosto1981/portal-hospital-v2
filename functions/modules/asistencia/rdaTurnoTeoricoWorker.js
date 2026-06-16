@@ -31,8 +31,11 @@ const { hldHlgFechaInicioYmd, hldHlgFechaFinYmd } = require("../shared/fechaLabo
 const { hlgVigenteOperativaEnGrilla } = require("../shared/solicitudHlgVigencia");
 const { planHabilitadoDesdeQuerySnapshot } = require("./planGrupoAgentesNuevos");
 const { enriquecerLimitesCumplimientoEnCapa } = require("../shared/capaTeoricaLimitesCumplimiento");
-const { calcularDeltasCumplimiento } = require("../shared/calcularDeltasCumplimiento");
 const { leerCeldaVisDiaFusionada } = require("../shared/visCeldaFusionLectura");
+const {
+  buildFirestorePatchValidacionFichadaDia,
+  ejecutarAnaliticaYValidacionFichadaDia,
+} = require("../shared/validacionFichadaDiaPersistencia");
 
 const COL_HLG = "historial_laboral_grupos";
 const COL_GDT = "grupos_de_trabajo";
@@ -250,12 +253,18 @@ async function persistirAnaliticaCumplimientoDia({
     rda_ingreso: celdaRaw.rda_ingreso,
     rda_egreso: celdaRaw.rda_egreso,
   };
-  const analitica = calcularDeltasCumplimiento(celdaCtx, capaEnriquecida, {
+  const { analitica, resolverOut } = ejecutarAnaliticaYValidacionFichadaDia({
+    celdaCtx,
+    celdaRaw,
+    capaEnriquecida,
     fecha_ymd: fechaYmd,
-    ahora_evaluacion_ms: Date.now(),
   });
+  const visPayload = { [`dias.${diaKey}.analitica_cumplimiento`]: analitica };
+  const valPatch = buildFirestorePatchValidacionFichadaDia(diaKey, resolverOut);
+  if (valPatch) Object.assign(visPayload, valPatch);
+
   await asiRef.set({ [`analitica_cumplimiento_por_grupo.${gdt}`]: analitica }, { merge: true });
-  await visRef.set({ [`dias.${diaKey}.analitica_cumplimiento`]: analitica }, { merge: true });
+  await visRef.set(visPayload, { merge: true });
   return analitica;
 }
 
