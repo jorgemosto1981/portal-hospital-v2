@@ -17,6 +17,7 @@ import {
 import { mergePersonaLabelsDesdeOps } from "./grillaOutboxLabels.js";
 import { horarioOperativoDesdeCeldaVis } from "./grillaHorarioInstitucional.js";
 import { resumenFichadaModal, titleFichadaPresencia } from "./grillaFichadaPresenciaDisplay.js";
+import GrillaFichadaEstadoJefeBadge from "./GrillaFichadaEstadoJefeBadge.jsx";
 import {
   evaluarImputacionExternaCelda,
   evaluarLicenciaEnFrancoCelda,
@@ -29,6 +30,7 @@ import DiaGrillaFichadaAbmPanel from "./DiaGrillaFichadaAbmPanel.jsx";
 import GrillaGuardrailTeoriaAviso from "./GrillaGuardrailTeoriaAviso.jsx";
 import DiaGrillaAuditoriaCumplimientoHorario from "./DiaGrillaAuditoriaCumplimientoHorario.jsx";
 import DiaGrillaValidacionFichadaAlertas from "./DiaGrillaValidacionFichadaAlertas.jsx";
+import DiaGrillaResultadoCumplimientoJefe from "./DiaGrillaResultadoCumplimientoJefe.jsx";
 import { diaMesKeyDesdeFechaYmd } from "../fichadas/cargaManual/fichadasCargaManualUtils.js";
 
 function labelEstado(id) {
@@ -459,49 +461,67 @@ export default function DiaGrillaDetalleModal({
         ) : null}
 
         {resumenFichada &&
+        !detalleFichadaRrhh &&
         (resumenFichada.modo === "jefe" ||
           resumenFichada.tieneRegistro ||
           resumenFichada.presencia === "ausente" ||
           resumenFichada.esAlerta) ? (
-          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600">
-              {resumenFichada.modo === "rrhh" ? "Fichada real" : "Asistencia"}
-            </h4>
-            <dl className="space-y-1 text-xs">
-              <div className="flex gap-2">
-                <dt className="font-medium text-slate-500">Estado:</dt>
-                <dd className="font-bold text-slate-800" title={resumenFichada.tooltipJefe || undefined}>
-                  {resumenFichada.modo === "jefe"
-                    ? resumenFichada.textoEstado || "Registrado"
-                    : titleFichadaPresencia(resumenFichada.presencia) || "Sin registro"}
-                </dd>
-              </div>
-              {resumenFichada.modo === "rrhh" && resumenFichada.horarios.length > 0 ? (
-                <div className="flex gap-2">
-                  <dt className="shrink-0 font-medium text-slate-500">Horarios:</dt>
-                  <dd className="text-slate-700">
-                    <ul className="space-y-0.5">
-                      {resumenFichada.horarios.map((linea) => (
-                        <li key={linea}>{linea}</li>
-                      ))}
-                    </ul>
-                  </dd>
-                </div>
+          <div
+            className={[
+              "mt-3 rounded-lg border p-3",
+              resumenFichada.modo === "jefe" && resumenFichada.estadoJefe === "VERDE"
+                ? "border-emerald-200 bg-emerald-50/80"
+                : resumenFichada.modo === "jefe" && resumenFichada.estadoJefe === "ROJO"
+                  ? "border-rose-200 bg-rose-50/80"
+                  : resumenFichada.modo === "jefe" && resumenFichada.estadoJefe === "AMARILLO"
+                    ? "border-amber-200 bg-amber-50/70"
+                    : "border-slate-200 bg-slate-50",
+            ].join(" ")}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                {resumenFichada.modo === "rrhh" ? "Fichada real" : "Asistencia del día"}
+              </h4>
+              {resumenFichada.modo === "jefe" && resumenFichada.estadoJefe ? (
+                <GrillaFichadaEstadoJefeBadge
+                  estado={resumenFichada.estadoJefe}
+                  tooltip={resumenFichada.tooltipJefe || ""}
+                />
               ) : null}
-            </dl>
+            </div>
+            <p className="mt-2 text-sm font-medium leading-snug text-slate-900">
+              {resumenFichada.modo === "jefe"
+                ? resumenFichada.textoEstado || "Sin evaluación"
+                : titleFichadaPresencia(resumenFichada.presencia) || "Sin registro"}
+            </p>
+            {resumenFichada.modo === "rrhh" && resumenFichada.horarios.length > 0 ? (
+              <ul className="mt-2 space-y-0.5 text-xs text-slate-700">
+                {resumenFichada.horarios.map((linea) => (
+                  <li key={linea}>{linea}</li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         ) : null}
 
-        <DiaGrillaValidacionFichadaAlertas celdaVis={celdaVisEfectiva} />
+        {detalleFichadaRrhh ? null : <DiaGrillaValidacionFichadaAlertas celdaVis={celdaVisEfectiva} />}
+
+        {!detalleFichadaRrhh && mostrarFichada ? (
+          <DiaGrillaResultadoCumplimientoJefe celdaVis={celdaVisEfectiva} />
+        ) : null}
 
         <DiaGrillaAuditoriaCumplimientoHorario
           celdaVis={celdaVisEfectiva}
           esRrhhLabor={detalleFichadaRrhh}
+          mostrarFichada={mostrarFichada}
           turnoTeorico={turnoTeorico}
-          horariosFichada={resumenFichada?.horarios || []}
+          resumenFichada={resumenFichada}
+          desalineacionTeoria={desalineacionTeoria}
+          desalineacionTooltip={desalineacionTooltip}
+          onAbrirAyuda={onAbrirAyuda}
         />
 
-        {!fichadaAbmActivo && puedeVerTramosCrudosFichadas ? (
+        {!fichadaAbmActivo && puedeVerTramosCrudosFichadas && !mostrarFichada ? (
           <DiaGrillaAuditoriaTecnicaRrhh
             celdaVis={celdaVisEfectiva}
             turnoTeorico={turnoTeorico}
@@ -511,7 +531,9 @@ export default function DiaGrillaDetalleModal({
           />
         ) : null}
 
-        {turnoTeorico && (turnoTeorico.rda_turno_id || turnoTeorico.es_franco || turnoTeorico.capa_teorica) ? (
+        {turnoTeorico &&
+        !(detalleFichadaRrhh && mostrarFichada) &&
+        (turnoTeorico.rda_turno_id || turnoTeorico.es_franco || turnoTeorico.capa_teorica) ? (
           <div className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 p-3">
             <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600">Turno teorico</h4>
             <dl className="space-y-1 text-xs">

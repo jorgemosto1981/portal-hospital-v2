@@ -56,6 +56,28 @@ describe("varianteCeldaOperativa incompleto", () => {
   });
 });
 
+describe("varianteCeldaOperativa semáforo jefe", () => {
+  it("licencia pisa color de semáforo", () => {
+    expect(
+      varianteCeldaOperativa({
+        tieneLicencia: true,
+        estadoSemaforoFichada: "ROJO",
+        tieneTurno: true,
+      }),
+    ).toBe("licencia");
+  });
+
+  it("sin licencia usa variante semáforo", () => {
+    expect(
+      varianteCeldaOperativa({
+        tieneLicencia: false,
+        estadoSemaforoFichada: "VERDE",
+        tieneTurno: true,
+      }),
+    ).toBe("semaforoVerde");
+  });
+});
+
 describe("textoHorarioTurno hueco", () => {
   it("laborable sin jornada no produce texto turno", () => {
     const cell = { tipo_dia: "laborable" };

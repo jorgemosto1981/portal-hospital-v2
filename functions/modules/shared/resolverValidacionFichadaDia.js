@@ -37,6 +37,7 @@ const HERRAMIENTA_POR_CODIGO = {
   MARCA_IMPAR: "DERIVAR_RRHH_MARCA_MANUAL",
   FICHADA_FUERA_TURNO_TEORICO: "CAMBIO_INTERCAMBIO_TURNO_EXISTENTE",
   TARDANZA_PUNITIVA: "SOLICITAR_LICENCIA_FRANQUICIA",
+  INGRESO_ANTICIPADO: "SOLICITAR_LICENCIA_FRANQUICIA",
   SALIDA_ANTICIPADA: "SOLICITAR_LICENCIA_FRANQUICIA",
   DEFICIT_HORARIO_GRAVE: "SOLICITAR_LICENCIA_FRANQUICIA",
   FUERA_MARGEN_HORARIO: "SOLICITAR_LICENCIA_FRANQUICIA",
@@ -46,7 +47,8 @@ const HERRAMIENTA_POR_CODIGO = {
 
 const TEXTO_ALERTA = {
   TARDANZA_PUNITIVA: "Ingreso fuera del margen de cortesía del régimen.",
-  SALIDA_ANTICIPADA: "Egreso antes del margen teórico.",
+  INGRESO_ANTICIPADO: "Ingreso antes del horario nominal del turno.",
+  SALIDA_ANTICIPADA: "Egreso antes del horario nominal del turno.",
   DEFICIT_HORARIO_GRAVE: "Déficit de carga horaria por encima de la tolerancia de débito.",
   FICHADA_FUERA_TURNO_TEORICO: "Marcas no coinciden con la ventana del turno teórico.",
   FUERA_MARGEN_HORARIO: "Horario fuera de los márgenes de tolerancia.",
@@ -77,6 +79,10 @@ function textoHumanoAlerta(codigo, analitica) {
   if (codigo === "TARDANZA_PUNITIVA") {
     const m = Number(analitica?.disciplina?.tardanza_minutos) || 0;
     return m > 0 ? `Tardanza: ${m} min respecto al ingreso nominal.` : TEXTO_ALERTA[codigo];
+  }
+  if (codigo === "INGRESO_ANTICIPADO") {
+    const m = Number(analitica?.disciplina?.ingreso_anticipado_minutos) || 0;
+    return m > 0 ? `Ingreso anticipado: ${m} min.` : TEXTO_ALERTA[codigo];
   }
   if (codigo === "SALIDA_ANTICIPADA") {
     const m = Number(analitica?.disciplina?.salida_anticipada_minutos) || 0;
@@ -109,6 +115,9 @@ function alertasSemanticasDesdeCodigos(codigos, analitica) {
     if (c === "TARDANZA_PUNITIVA") {
       alerta.minutos_desvio = Number(analitica?.disciplina?.tardanza_minutos) || 0;
     }
+    if (c === "INGRESO_ANTICIPADO") {
+      alerta.minutos_desvio = Number(analitica?.disciplina?.ingreso_anticipado_minutos) || 0;
+    }
     if (c === "SALIDA_ANTICIPADA") {
       alerta.minutos_desvio = Number(analitica?.disciplina?.salida_anticipada_minutos) || 0;
     }
@@ -138,13 +147,6 @@ function derivarCodigosAlerta(celda, analitica) {
     codigos.push("AUSENCIA_SIN_MARCAS");
   }
 
-  const advertencias = Array.isArray(celda.advertencias_fichada_abiertas)
-    ? celda.advertencias_fichada_abiertas.filter(Boolean)
-    : [];
-  if (advertencias.length > 0 && !codigos.length) {
-    codigos.push("FUERA_MARGEN_HORARIO");
-  }
-
   return codigos;
 }
 
@@ -154,7 +156,6 @@ function derivarCodigosAlerta(celda, analitica) {
  * @param {string} estado_semaforo
  */
 function textoResumenValidacion(celda, analitica, estado_semaforo) {
-  if (celda.resuelto_rrhh === true) return "Revisado y saneado por RRHH.";
   if (estado_semaforo === ESTADO_SEMAFORO.VERDE) return "Asistencia conforme al turno teórico.";
   if (estado_semaforo === ESTADO_SEMAFORO.ROJO) {
     if (analitica.ausencia_automatica) return "Ausencia sin marcas (ventana de evaluación cerrada).";
@@ -180,8 +181,6 @@ function mapearEstadoSemaforo(celda, analitica) {
   if (capa && espera && !tieneMarcas) {
     return ESTADO_SEMAFORO.AMARILLO;
   }
-
-  if (celda.resuelto_rrhh === true && tieneMarcas) return ESTADO_SEMAFORO.VERDE;
 
   const codigos = derivarCodigosAlerta(celda, analitica);
   const divergenciaAnalitica = (Array.isArray(analitica.alertas_activas) && analitica.alertas_activas.length > 0)

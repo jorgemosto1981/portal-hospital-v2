@@ -124,6 +124,67 @@ describe("resolverValidacionFichadaDia (Fase F)", () => {
     assert.equal(r.validacion_fichada_dia.estado_semaforo, ESTADO_SEMAFORO.VERDE);
   });
 
+  it("AMARILLO: resuelto_rrhh no debe ocultar incumplimiento", () => {
+    const r = resolverValidacionFichadaDia({
+      celda: celdaLaborable({
+        resuelto_rrhh: true,
+        fichadas_reales: [{ ingreso: "08:00", egreso: "15:00", fecha_ymd: FECHA }],
+      }),
+      capaTeoricaGrupo: CAPA,
+      fecha_ymd: FECHA,
+      ahora_evaluacion_ms: instanteMarcaInstitucionalMs(FECHA, "18:00"),
+      analitica_existente: {
+        version: 1,
+        alertas_activas: ["SALIDA_ANTICIPADA"],
+        disciplina: { salida_anticipada_minutos: 60 },
+        fichada_fuera_turno_teorico: false,
+        ausencia_automatica: false,
+      },
+    });
+    assert.equal(r.accion, "write");
+    assert.equal(r.validacion_fichada_dia.estado_semaforo, ESTADO_SEMAFORO.AMARILLO);
+    assert.match(r.validacion_fichada_dia.texto_resumen, /Egreso antes del horario nominal/);
+  });
+
+  it("VERDE: advertencias abiertas sin alertas punitivas no fuerzan AMARILLO", () => {
+    const r = resolverValidacionFichadaDia({
+      celda: celdaLaborable({
+        fichadas_reales: [{ ingreso: "06:05", egreso: "13:45", fecha_ymd: FECHA }],
+        advertencias_fichada_abiertas: ["FUERA_DE_MARGEN_TECNICO"],
+      }),
+      capaTeoricaGrupo: {
+        ...CAPA,
+        ingreso_nominal_iso: "2026-06-12T06:00:00-03:00",
+        ingreso_limite_con_gracia_iso: "2026-06-12T06:00:00-03:00",
+        egreso_nominal_iso: "2026-06-12T14:00:00-03:00",
+        egreso_limite_con_gracia_iso: "2026-06-12T14:00:00-03:00",
+      },
+      fecha_ymd: FECHA,
+      ahora_evaluacion_ms: instanteMarcaInstitucionalMs(FECHA, "18:00"),
+      analitica_existente: {
+        version: 1,
+        disciplina: {
+          fuera_de_margen: false,
+          tardanza_minutos: 5,
+          salida_anticipada_minutos: 15,
+          ingreso_anticipado_minutos: 0,
+        },
+        debito_tiempo: {
+          incumplimiento_carga_horaria: false,
+          carga_teorica_minutos: 480,
+          carga_real_minutos: 460,
+          deficit_minutos: 20,
+          tolerancia_debitohorario_minutos: 30,
+        },
+        alertas_activas: [],
+        fichada_fuera_turno_teorico: false,
+        ausencia_automatica: false,
+      },
+    });
+    assert.equal(r.accion, "write");
+    assert.equal(r.validacion_fichada_dia.estado_semaforo, ESTADO_SEMAFORO.VERDE);
+  });
+
   it("skip: eval_estable y mismo fingerprint", () => {
     const first = resolverValidacionFichadaDia({
       celda: celdaLaborable({

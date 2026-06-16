@@ -40,6 +40,7 @@
     "test:blindaje-gso-dry-run": "node --test functions/test/blindajeGsoUs9Us10.dryRun.test.js",
     "audit:us17-planes-huecos": "node scripts/audit-planes-habilitados-huecos-us17.mjs",
     "audit:hlg-vigencia-grupo": "node scripts/audit-hlg-vigencia-grupo.mjs",
+    "db:backfill-fase-f-validacion": "node scripts/sync-shared-to-functions.mjs && node scripts/backfill_fase_f_validacion.mjs",
     "db:reimpact-plan-mensual-r2": "node scripts/reimpact-plan-mensual-r2.mjs",
     "db:reimpact-plan-mensual-r2:apply": "node scripts/reimpact-plan-mensual-r2.mjs --apply",
     "test:batch-asistencia-normalize": "node --test functions/test/batchAsistenciaNormalize.test.js",

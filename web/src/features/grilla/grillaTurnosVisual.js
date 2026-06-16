@@ -20,6 +20,10 @@ export const FICHADA_REAL_STYLE = { bg: "bg-sky-100", text: "text-sky-950", hove
 export const CHIP_BASE =
   "mx-auto flex h-12 w-14 items-center justify-center rounded border border-slate-400 px-0.5 font-semibold leading-tight shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]";
 
+/** Chip a ancho/alto de la celda (semáforo jefe). */
+export const CLASE_CHIP_RELLENO_CELDA =
+  "mx-0 flex h-12 w-full min-w-0 max-w-none items-center justify-center rounded-none border-0 px-0.5 font-semibold leading-tight shadow-none";
+
 const VARIANTES_CHIP = {
   franco: FRANCO_STYLE,
   noLaborable: NO_LABORABLE_STYLE,
@@ -36,12 +40,31 @@ const VARIANTES_CHIP = {
   },
   futuroGris: { bg: "bg-slate-100 hover:bg-slate-200", text: "text-slate-500" },
   teoriaPendiente: { bg: "bg-slate-200 hover:bg-slate-300", text: "text-slate-800" },
+  semaforoVerde: { bg: "bg-emerald-300", text: "text-emerald-950", hover: "hover:bg-emerald-400" },
+  semaforoAmarillo: { bg: "bg-amber-300", text: "text-amber-950", hover: "hover:bg-amber-400" },
+  semaforoRojo: { bg: "bg-rose-300", text: "text-rose-950", hover: "hover:bg-rose-400" },
 };
 
 /** @param {keyof typeof VARIANTES_CHIP} variant */
 export function claseChipVariante(variant, extra = "") {
   const s = VARIANTES_CHIP[variant] || VARIANTES_CHIP.vacio;
-  return `${CHIP_BASE} ${s.bg} ${s.text} ${extra}`.trim();
+  const hover = s.hover ? ` ${s.hover}` : "";
+  return `${CHIP_BASE} ${s.bg}${hover} ${s.text} ${extra}`.trim();
+}
+
+/**
+ * Chip en grilla operativa equipo (opción relleno total de celda).
+ * @param {keyof typeof VARIANTES_CHIP} variant
+ * @param {{ relleno?: boolean, extra?: string }} [opts]
+ */
+export function claseChipEquipoOperativa(variant, opts = {}) {
+  const { relleno = false, extra = "" } = opts;
+  const s = VARIANTES_CHIP[variant] || VARIANTES_CHIP.vacio;
+  const hover = s.hover ? ` ${s.hover}` : "";
+  if (relleno) {
+    return `${CLASE_CHIP_RELLENO_CELDA} ${s.bg}${hover} ${s.text} ${extra}`.trim();
+  }
+  return claseChipVariante(variant, extra);
 }
 
 /** @param {{ esFinde?: boolean, esFeriado?: boolean }} p */
@@ -184,6 +207,29 @@ export function varianteCeldaMensual({
 }
 
 /**
+ * @param {"VERDE"|"AMARILLO"|"ROJO"|string|null|undefined} estado
+ * @returns {keyof typeof VARIANTES_CHIP|null}
+ */
+export function varianteChipDesdeSemaforoFichada(estado) {
+  const e = String(estado || "").trim();
+  if (e === "VERDE") return "semaforoVerde";
+  if (e === "AMARILLO") return "semaforoAmarillo";
+  if (e === "ROJO") return "semaforoRojo";
+  return null;
+}
+
+/**
+ * Fondo de `<td>` en grilla jefe cuando el semáforo pinta la celda entera (sin licencia).
+ * @param {"VERDE"|"AMARILLO"|"ROJO"|string|null|undefined} estado
+ */
+export function claseFondoTdJefeSemaforo(estado) {
+  const v = varianteChipDesdeSemaforoFichada(estado);
+  if (!v) return null;
+  const s = VARIANTES_CHIP[v];
+  return `border border-slate-300 p-0 align-middle ${s.bg}`;
+}
+
+/**
  * @param {{
  *   tieneLicencia?: boolean;
  *   esNoLaborable?: boolean;
@@ -192,6 +238,8 @@ export function varianteCeldaMensual({
  *   esIncompletoPlan?: boolean;
  *   teoriaPendienteLazy?: boolean;
  *   soloInstitucional?: boolean;
+ *   esFuturoGris?: boolean;
+ *   estadoSemaforoFichada?: string|null;
  * }} p
  */
 export function varianteCeldaOperativa({
@@ -202,11 +250,14 @@ export function varianteCeldaOperativa({
   esIncompletoPlan,
   teoriaPendienteLazy,
   esFuturoGris,
+  estadoSemaforoFichada,
 }) {
   if (esFuturoGris) return "futuroGris";
   if (teoriaPendienteLazy && tieneLicencia) return "teoriaPendiente";
   if (tieneLicencia) return "licencia";
   if (esIncompletoPlan) return "incompletoPlan";
+  const vSem = varianteChipDesdeSemaforoFichada(estadoSemaforoFichada);
+  if (vSem) return vSem;
   if (tieneTurno) return "laborable";
   if (esNoLaborable) return "noLaborable";
   if (esFranco) return "franco";

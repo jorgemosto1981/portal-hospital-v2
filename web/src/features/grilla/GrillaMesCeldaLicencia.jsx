@@ -15,6 +15,7 @@ import { lineasTooltipCelda, estiloVisualCelda } from "./grillaMesCellUtils.js";
  *   onClick?: () => void;
  *   className?: string;
  *   children: import("react").ReactNode;
+ *   celdaRellena?: boolean;
  * }} props
  */
 export default function GrillaMesCeldaLicencia({
@@ -27,6 +28,7 @@ export default function GrillaMesCeldaLicencia({
   disabled,
   onClick,
   className = "",
+  celdaRellena = false,
   children,
 }) {
   const [hover, setHover] = useState(false);
@@ -47,7 +49,7 @@ export default function GrillaMesCeldaLicencia({
         disabled={disabled}
         onClick={onClick}
         className={[
-          "h-full w-full",
+          celdaRellena ? "min-h-12 w-full rounded-none p-0" : "h-full w-full",
           visualClass,
           tiene ? "cursor-pointer hover:ring-2 hover:ring-violet-400 hover:ring-offset-1" : "",
           className,

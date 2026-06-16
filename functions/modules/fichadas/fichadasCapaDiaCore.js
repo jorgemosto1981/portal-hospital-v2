@@ -1,7 +1,7 @@
 "use strict";
 
 const { ulid } = require("ulid");
-const { FieldValue } = require("firebase-admin/firestore");
+const { FieldValue, Timestamp } = require("firebase-admin/firestore");
 const { buildVisDocumentId, diaMesKeyDesdeYmd } = require("../shared/mdcRdaDocumentIds");
 const { assertPeriodoNoCerrado } = require("../asistencia/asistenciaPeriodoLiquidacion");
 const { encolarRematerializacionAsistenciaLote } = require("../asistencia/colaRematerializacionAsistenciaCore");
@@ -188,7 +188,7 @@ function construirPatchCeldaDia({
     borradas.push({
       marcas_snapshot: snapshotBorrado || celdaAntes.fichadas_reales,
       borrado_por_persona_id: actor_persona_id,
-      borrado_en: FieldValue.serverTimestamp(),
+      borrado_en: Timestamp.now(),
       motivo: String(motivo || "").trim() || "sin motivo",
       origen_borrado: origen === "CARGA_MANUAL" ? "CARGA_MANUAL" : "GRILLA_ABM",
     });

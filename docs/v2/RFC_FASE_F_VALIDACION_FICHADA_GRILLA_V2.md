@@ -281,7 +281,7 @@ Función pura en `shared/utils` (nombre definitivo en implementación), criterio
 |------|------------|--------|
 | **A** | Tests auto ✅; QA manual matriz (solo matemática base, §10) | En curso (humano) |
 | **B** | **Este RFC** | **Aprobado** 2026-06-16 |
-| **C** | Código: motor, persistencia, sanitize, UI, régimen §6.2, tests, backfill piloto | **En cola** (ejecutar en Agent) |
+| **C** | Código: motor, persistencia, sanitize, UI, régimen §6.2, tests, backfill piloto | **En progreso** — backfill jun-26 2026-06-16; QA día a día pendiente · [`HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md`](./HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md) |
 | **D** | Retroticket, `editable_por_jefe`, ticketera | Backlog |
 
 ---
@@ -321,4 +321,4 @@ Validar en navegador / consola / modal RRHH:
 
 ---
 
-**Última actualización:** 2026-06-16 — RFC aprobado; iniciar implementación Fase C.
+**Última actualización:** 2026-06-16 — Fase C en rama; backfill piloto ejecutado; pausa QA teoría vs real (handoff 2026-06-16).

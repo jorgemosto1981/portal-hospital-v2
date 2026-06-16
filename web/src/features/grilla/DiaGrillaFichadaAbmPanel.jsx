@@ -27,8 +27,8 @@ function marcasPayloadDesdeFilas(filas) {
     const ing = row.ingreso ? String(row.ingreso).trim() : "";
     const egr = row.egreso ? String(row.egreso).trim() : "";
     const hm = row.hora_hm ? String(row.hora_hm).trim() : "";
-    if (ing) marcas.push({ hora_hm: ing });
-    if (egr) marcas.push({ hora_hm: egr });
+    if (ing) marcas.push({ hora_hm: ing, rol: "ingreso" });
+    if (egr) marcas.push({ hora_hm: egr, rol: "egreso" });
     if (hm && !ing && !egr) marcas.push({ hora_hm: hm });
   }
   return marcas.filter((m) => m.hora_hm);
@@ -59,7 +59,8 @@ export default function DiaGrillaFichadaAbmPanel({
   onGuardado,
 }) {
   const [motivoModal, setMotivoModal] = useState(null);
-  const [marcaSueltas, setMarcaSueltas] = useState("");
+  const [ingresoAlta, setIngresoAlta] = useState("");
+  const [egresoAlta, setEgresoAlta] = useState("");
   const [filaEditIdx, setFilaEditIdx] = useState(0);
   const [ingresoEdit, setIngresoEdit] = useState("");
   const [egresoEdit, setEgresoEdit] = useState("");
@@ -92,7 +93,8 @@ export default function DiaGrillaFichadaAbmPanel({
           toast.success("Fichada actualizada.");
         }
         setMotivoModal(null);
-        setMarcaSueltas("");
+        setIngresoAlta("");
+        setEgresoAlta("");
         await onGuardado?.();
         onVistaChange("menu");
       } catch (e) {
@@ -123,18 +125,20 @@ export default function DiaGrillaFichadaAbmPanel({
   };
 
   const agregarMarcas = async () => {
-    const partes = String(marcaSueltas || "")
-      .split(/[\s,;]+/)
-      .map(normalizarHm)
-      .filter(Boolean);
-    if (!partes.length) {
-      toast.error("Indicá al menos una hora (HH:MM).");
+    const ing = normalizarHm(ingresoAlta);
+    const egr = normalizarHm(egresoAlta);
+    if (!ing && !egr) {
+      toast.error("Indicá al menos ingreso o egreso (HH:MM).");
       return;
     }
+    /** @type {Array<{ hora_hm: string; rol?: string }>} */
+    const marcas = [];
+    if (ing) marcas.push({ hora_hm: ing, rol: "ingreso" });
+    if (egr) marcas.push({ hora_hm: egr, rol: "egreso" });
     await ejecutar({
       accion: "AGREGAR_MARCAS",
       motivo: "Alta desde grilla RRHH",
-      marcas: partes.map((hora_hm) => ({ hora_hm })),
+      marcas,
     });
   };
 
@@ -221,16 +225,36 @@ export default function DiaGrillaFichadaAbmPanel({
 
       {vista === "agregar" ? (
         <div className="space-y-3 text-sm">
-          <p className="text-xs text-slate-600">Ingresá horas en formato HH:MM, separadas por espacio.</p>
-          <input
-            type="text"
-            inputMode="numeric"
-            className="w-full rounded-xl border border-slate-300 px-3 py-2 font-mono text-sm"
-            placeholder="06:05 14:00"
-            value={marcaSueltas}
-            onChange={(e) => setMarcaSueltas(e.target.value)}
-            disabled={guardando}
-          />
+          <p className="text-xs text-slate-600">
+            Ingreso y egreso en formato HH:MM. Si el egreso es del día siguiente (turno noche), cargá
+            igual la hora de egreso; el sistema la imputa al cierre del turno.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs font-medium text-slate-700">
+              Ingreso
+              <input
+                type="text"
+                inputMode="numeric"
+                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono text-sm"
+                placeholder="HH:MM"
+                value={ingresoAlta}
+                onChange={(e) => setIngresoAlta(e.target.value)}
+                disabled={guardando}
+              />
+            </label>
+            <label className="text-xs font-medium text-slate-700">
+              Egreso
+              <input
+                type="text"
+                inputMode="numeric"
+                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono text-sm"
+                placeholder="HH:MM"
+                value={egresoAlta}
+                onChange={(e) => setEgresoAlta(e.target.value)}
+                disabled={guardando}
+              />
+            </label>
+          </div>
           <button
             type="button"
             disabled={guardando}

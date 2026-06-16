@@ -18,10 +18,11 @@ function marcasDesdeFichadasRealesExistentes(fichadas_reales, fecha_ymd) {
       });
     }
     if (egr) {
+      const fEgr = String(row.fecha_egreso_ymd || row.fecha_egreso || fecha_ymd).slice(0, 10);
       out.push({
-        fecha_ymd,
+        fecha_ymd: fEgr,
         hora_hm: egr,
-        instante_ms: instanteMarcaInstitucionalMs(fecha_ymd, egr),
+        instante_ms: instanteMarcaInstitucionalMs(fEgr, egr),
       });
     }
     if (hm && !ing && !egr) {
@@ -41,10 +42,13 @@ function marcasDesdePayloadHoras(marcas, fecha_ymd) {
     .map((m) => {
       const hora_hm = String(m?.hora_hm || "").trim();
       if (!hora_hm) return null;
+      const rolRaw = String(m?.rol || m?.rol_asignado || "").trim().toLowerCase();
+      const rol_asignado = rolRaw === "ingreso" || rolRaw === "egreso" ? rolRaw : undefined;
       return {
         fecha_ymd,
         hora_hm,
         instante_ms: instanteMarcaInstitucionalMs(fecha_ymd, hora_hm),
+        ...(rol_asignado ? { rol_asignado } : {}),
       };
     })
     .filter(Boolean);

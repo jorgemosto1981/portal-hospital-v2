@@ -1,7 +1,8 @@
 # Matriz fichada teórica ↔ real — V2
 
-> **Estado:** SSoT para QA caso a caso (sesión 2026-06-12).  
+> **Estado:** SSoT para QA caso a caso — **siguiente sesión: día por día teoría vs real** (2026-06-16).  
 > **Rama:** `feature/grilla-fase1-colision` · **Prod:** https://portal-hospital-v2.web.app  
+> **Handoff activo:** [`HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md`](./HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md)  
 > **Relación:** [`MODULO_FICHADAS_RELOJ_V2.md`](./MODULO_FICHADAS_RELOJ_V2.md) §14 · [`HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md`](./HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md) §3 · código: `shared/utils/calcularDeltasCumplimiento.js`, `fichadasAlineacionTeoria.js`, `grillaFichadaPresencia.js`, `grillaFichadaEstadoJefe.js`
 
 ---
@@ -102,6 +103,7 @@ Parámetros habituales: tolerancia débito default **30 min**; ausencia automát
 | C8 | **Marcas sueltas (`hora_hm`)** | Pares emparejados 2 en 2 (carga manual) | según C3–C7 | según motor | Real celeste | ⏳ |
 | C9 | **Fuera de turno teórico** | Solape &lt; umbral — ej. teoría N 22:00–06:00, marcas 05:35–13:55 | `FICHADA_FUERA_TURNO_TEORICO` | Sin déficit absurdo | Real celeste; modal explica | ⏳ |
 | C10 | **Ausencia automática** | Sin fichadas + laborable + pasó límite + 120 min | `AUSENCIA_AUTOMATICA` | — | Teórico verde (sin real) | ⏳ |
+| C11 | **M+N mismo día** | Solo fichada tramo M; N sin marcas (`calculo_por_segmentos`) | tardanza M + ausente N | **▼ Nm** por tramo (no `-Σm` en celda) | Real celeste parcial | ⏳ LOKITO día 14 |
 
 ### Casos verificados en BD (scripts sesión 12/06)
 
@@ -109,6 +111,7 @@ Parámetros habituales: tolerancia débito default **30 min**; ausencia automát
 |-----|--------|------|----------------|------------|
 | 15 | M 06:00–14:00 | 06:00–13:01 | real 421m, déficit **59m** | ✅ recálculo script |
 | 18 | N 22:00–06:00 | 05:35–13:55 | `fichada_fuera_turno_teorico`, sin déficit 480 | ✅ recálculo script |
+| 14 | M+N | 07:00–14:00 | ▼60m (M) + ▼480m (N); modal déficit 540m | ⏳ backfill 2026-06-16 |
 
 ---
 

@@ -1,7 +1,7 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (prioridad inmediata — próxima sesión):** **Matriz QA caso a caso** teoría ↔ real — [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) · cierre sesión [`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md) · checklist origen [`HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md`](./HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md) §3.  
-> **Rama:** `feature/grilla-fase1-colision` · **Gate merge `master`:** ⛔ hasta columnas QA de la matriz en verde.  
+> **RETOMAR AQUÍ (prioridad inmediata — próxima sesión):** **Continuamos revisando fichadas día por día de teoría vs real** — [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) · handoff [`HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md`](./HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md) · checklist origen [`HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md`](./HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md) §3.  
+> **Rama:** `feature/grilla-fase1-colision` · **Gate merge `master`:** ⛔ hasta columnas QA de la matriz en verde · **Fase F** código + backfill piloto jun-26 ejecutado 2026-06-16.  
 > **Épica en pausa (tras gate):** **Lineamientos Decreto 1919/89 + motor solicitudes / grilla** — [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md) · [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md).  
 > **Paralelo / backlog GSO:** refinamiento UX bandeja aprobación 3 meses (P2) · [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) · handoff Camino B: [`HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md`](./HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md) · GDT: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
 > **T-05 épica foco + paleta:** ✅ **(A)** grilla + planes URL · ✅ **(B)** paleta compuesta por régimen · ✅ **consola triple horizonte jefe** (`c27e6d7` en **`master`**) · UX pincel contextual + **Plan del foco** (sin grilla 3×mes)  
@@ -21,18 +21,28 @@
 
 ---
 
-## PAUSA — QA fichadas + colisión grilla (2026-06-12) — CERRADA SESIÓN
+## PAUSA — QA fichadas teoría vs real (2026-06-16)
+
+| Bloque | Estado | Referencia |
+|--------|--------|------------|
+| Fase F semáforo + validación persistida | ✅ en rama | [`RFC_FASE_F_VALIDACION_FICHADA_GRILLA_V2.md`](./RFC_FASE_F_VALIDACION_FICHADA_GRILLA_V2.md) |
+| M+N incumplimiento por tramo (celda ▼×2) | ✅ código + tests | handoff 2026-06-16 |
+| Backfill piloto `2026-06` Sala | ✅ ejecutado | `npm run db:backfill-fase-f-validacion` |
+| **QA día a día teoría ↔ real** | ⏳ **SIGUIENTE SESIÓN** | [`HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md`](./HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md) |
+| Deploy hosting (badges por segmento) | ⏳ revalidar en prod | Tras `git pull` en otra PC |
+| Merge a `master` | ⛔ bloqueado | Hasta matriz crítica en verde |
+
+**Hosting prod:** https://portal-hospital-v2.web.app — confirmar bundle con `disciplinaLista` / dos ▼ en LOKITO día 14.
+
+---
+
+## PAUSA — QA fichadas + colisión grilla (2026-06-12) — histórico
 
 | Bloque | Estado | Referencia |
 |--------|--------|------------|
 | Motor analítico + outbox + F-UX | ✅ en rama | `feature/grilla-fase1-colision` |
-| Fixes sesión 12/06 (persistencia, analítica, UI real/teórico) | ✅ código local + hosting | [`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md) |
+| Fixes sesión 12/06 (persistencia, analítica, UI real/teórico) | ✅ | [`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md) |
 | **Matriz escenarios teoría ↔ real** | ✅ documentada | [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) |
-| **QA caso a caso (B/P/C)** | ⏳ **SIGUIENTE SESIÓN** | Matriz columnas QA + handoff §3 |
-| Merge a `master` | ⛔ bloqueado | Hasta matriz crítica en verde |
-| Decreto 1919 / plan motor | ⏸ | Retomar tras gate |
-
-**Hosting prod:** https://portal-hospital-v2.web.app — deploy hosting sesión 12/06 (sin F:n · horario real celeste).
 
 ---
 

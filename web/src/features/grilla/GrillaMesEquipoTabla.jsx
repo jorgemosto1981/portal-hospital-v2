@@ -21,6 +21,7 @@ import {
   claseCeldaAgenteSticky,
   clasesTextoCelda,
   claseFondoCeldaCalendarioTitular,
+  claseFondoTdJefeSemaforo,
 } from "./grillaTurnosVisual.js";
 import GrillaTurnosCeldaChip from "./GrillaTurnosCeldaChip.jsx";
 import GrillaFichadaPresenciaBadge from "./GrillaFichadaPresenciaBadge.jsx";
@@ -65,6 +66,9 @@ function contenidoCeldaOperativa({
   soloLecturaGrilla,
   soloLecturaTooltip,
   celdaVis,
+  ocultarMicroAnalitica = false,
+  modoFichadaRrhh = false,
+  omitirBadgeSemaforo = false,
 }) {
   const alertaTitle = desalineacionTooltip || "Teoría modificada post-licencia";
   const badgeAlerta = desalineacionTeoria ? (
@@ -137,17 +141,28 @@ function contenidoCeldaOperativa({
         {badgeSoloLectura}
       </span>
     ) : null;
-  const badgeFichada = estadoFichadaJefe ? (
+  const badgeFichada = omitirBadgeSemaforo || !estadoFichadaJefe ? (
+    mostrarFichadaReal ? null : fichadaPresencia ? (
+      <GrillaFichadaPresenciaBadge presencia={fichadaPresencia} className="mt-px" compacto />
+    ) : null
+  ) : (
     <GrillaFichadaEstadoJefeBadge
       estado={estadoFichadaJefe.estado}
       tooltip={estadoFichadaJefe.tooltip}
       className="mt-px"
       compacto
     />
-  ) : mostrarFichadaReal ? null : fichadaPresencia ? (
-    <GrillaFichadaPresenciaBadge presencia={fichadaPresencia} className="mt-px" compacto />
-  ) : null;
-  const badgeAnalitica = <DiaGrillaCelda celdaVis={celdaVis} className="mt-px" />;
+  );
+  const badgeAnalitica = ocultarMicroAnalitica ? null : (
+    <DiaGrillaCelda celdaVis={celdaVis} className="mt-px" modoRrhh={modoFichadaRrhh} />
+  );
+  const filaInferiorCelda = (
+    <span className="mt-0.5 flex flex-col items-center gap-px">
+      {filaBadges}
+      {badgeFichada}
+      {badgeAnalitica}
+    </span>
+  );
   const diffBlock = outboxVisual?.pending && (outboxVisual.diffOut || outboxVisual.diffIn) ? (
     <span className="mt-px text-[6px] leading-tight">
       {outboxVisual.diffOut ? (
@@ -172,8 +187,7 @@ function contenidoCeldaOperativa({
         ) : null}
         <span className={clasesTextoCelda(outboxVisual.lineaExtra)}>{outboxVisual.lineaExtra}</span>
         <span className="mt-0.5 flex flex-col items-center gap-px">
-          {badgeFichada}
-          {badgeAnalitica}
+          {filaInferiorCelda}
           {diffBlock}
         </span>
       </span>
@@ -190,8 +204,7 @@ function contenidoCeldaOperativa({
           {turnoMostrar || (esNoLaborable ? "NL" : "F")}
         </span>
         <span className="mt-0.5 flex flex-col items-center gap-px">
-          {filaBadges}
-          {badgeAnalitica}
+          {filaInferiorCelda}
           {diffBlock}
           <span className="text-[7px] font-bold text-fuchsia-950">{licenciaCod.slice(0, 4)}</span>
         </span>
@@ -201,12 +214,11 @@ function contenidoCeldaOperativa({
   if (tieneLicencia) {
     return (
       <span className="flex flex-col items-center">
-        {filaBadges}
+        {filaInferiorCelda}
         <span className={clasesTextoCelda(licenciaCod)}>{licenciaCod.slice(0, 4)}</span>
         {esIncompletoPlan ? (
           <span className="text-[6px] font-semibold text-rose-800">Plan incompleto</span>
         ) : null}
-        {badgeAnalitica}
       </span>
     );
   }
@@ -214,7 +226,7 @@ function contenidoCeldaOperativa({
     return (
       <span className="flex flex-col items-center justify-center leading-none">
         <span className="text-[7px] font-bold leading-tight text-rose-950">Sin turno</span>
-        {badgeAnalitica}
+        {filaInferiorCelda}
       </span>
     );
   }
@@ -222,8 +234,7 @@ function contenidoCeldaOperativa({
     <span className="flex flex-col items-center justify-center leading-none">
       <span className={clasesTextoCelda(turnoMostrar)}>{turnoMostrar}</span>
       <span className="mt-0.5 flex flex-col items-center gap-px">
-        {filaBadges}
-        {badgeAnalitica}
+        {filaInferiorCelda}
         {diffBlock}
       </span>
     </span>
@@ -470,8 +481,8 @@ export default function GrillaMesEquipoTabla({
                     if (esIncompletoPlan) {
                       titleParts.push("Laborable sin turno (corregir plan del mes)");
                     }
-                    const semaforoFichada =
-                      modoFichada === "jefe" ? semaforoFichadaDesdeCelda(cell, { fechaYmd }) : null;
+                    // En RRHH queremos que el semáforo (AMARILLO/ROJO) tenga prioridad sobre el chip "Fichada real".
+                    const semaforoFichada = semaforoFichadaDesdeCelda(cell, { fechaYmd });
                     const esFuturoGrisJefe =
                       modoFichada === "jefe" && celdaEsDiaFuturoInstitucional(fechaYmd);
                     const fichadaPresencia =
@@ -501,28 +512,47 @@ export default function GrillaMesEquipoTabla({
                       titleParts.push(soloLectura.tooltip);
                     }
 
-                    const variant = mostrarFichadaReal && !tieneLicencia
-                      ? "fichadaReal"
-                      : varianteCeldaOperativa({
-                          tieneLicencia,
-                          esNoLaborable,
-                          esFranco,
-                          tieneTurno: tieneTurno || jornadaVis,
-                          esIncompletoPlan: esIncompletoPlan && !tieneLicencia,
-                          teoriaPendienteLazy: teoriaPendiente.activo,
-                          esFuturoGris: esFuturoGrisJefe,
-                        });
+                    const estadoSemaforoCelda = semaforoFichada?.estado ? semaforoFichada.estado : null;
+                    const pintarCeldaSemaforoJefe =
+                      modoFichada === "jefe" && Boolean(estadoSemaforoCelda) && !esFuturoGrisJefe;
+
+                    const puedeMostrarChipFichadaReal =
+                      modoFichada !== "rrhh" ||
+                      !estadoSemaforoCelda ||
+                      estadoSemaforoCelda === "VERDE";
+
+                    // Si el semáforo del jefe aplica a la celda, priorizamos su color incluso si hay "licencia".
+                    // Así evitamos que el chip/licencia fucsia oculte el fondo VERDE/AMARILLO/ROJO.
+                    const tieneLicenciaParaVariant =
+                      modoFichada === "jefe" && pintarCeldaSemaforoJefe ? false : tieneLicencia;
+
+                    const variant =
+                      (mostrarFichadaReal && puedeMostrarChipFichadaReal && !tieneLicenciaParaVariant)
+                        ? "fichadaReal"
+                        : varianteCeldaOperativa({
+                            tieneLicencia: tieneLicenciaParaVariant,
+                            esNoLaborable,
+                            esFranco,
+                            tieneTurno: tieneTurno || jornadaVis,
+                            esIncompletoPlan: esIncompletoPlan && !tieneLicencia,
+                            teoriaPendienteLazy: teoriaPendiente.activo,
+                            esFuturoGris: esFuturoGrisJefe,
+                            estadoSemaforoFichada: estadoSemaforoCelda,
+                          });
+
+                    const claseTd =
+                      pintarCeldaSemaforoJefe && estadoSemaforoCelda
+                        ? claseFondoTdJefeSemaforo(estadoSemaforoCelda)
+                        : `${claseFondoCeldaCalendarioTitular({
+                            esFinde: col.esFinde,
+                            esFeriado: Boolean(tipoInstCol),
+                            esNoLaborable,
+                            esFranco,
+                            esLaborable: jornadaVis || tieneTurno,
+                          })} px-0.5 py-0.5 align-middle`;
 
                     return (
-                      <td
-                        key={dia}
-                        className={`${claseFondoCeldaCalendarioTitular({
-                          esFinde: col.esFinde,
-                          esFeriado: Boolean(tipoInstCol),
-                          esNoLaborable,
-                          esLaborable: jornadaVis || tieneTurno,
-                        })} px-0.5 py-0.5 align-middle`}
-                      >
+                      <td key={dia} className={claseTd}>
                         <GrillaMesCeldaLicencia
                           eventos={Array.isArray(eventos) ? eventos : []}
                           celdaVis={cell}
@@ -531,6 +561,7 @@ export default function GrillaMesEquipoTabla({
                           grupoVistaId={grupoSeleccionado || undefined}
                           etiquetasGrupo={etiquetasGrupo}
                           disabled={!tieneDatos}
+                          celdaRellena={pintarCeldaSemaforoJefe}
                           onClick={() =>
                             tieneDatos &&
                             onCeldaClick({
@@ -571,11 +602,16 @@ export default function GrillaMesEquipoTabla({
                               },
                             })
                           }
-                          className="flex w-full items-center justify-center py-0.5"
+                          className={
+                            pintarCeldaSemaforoJefe
+                              ? "block w-full p-0"
+                              : "flex w-full items-center justify-center py-0.5"
+                          }
                           title={titleParts.join(" · ") || undefined}
                         >
                           <GrillaTurnosCeldaChip
                             variant={variant}
+                            rellenoCelda={pintarCeldaSemaforoJefe}
                             className={[
                               outboxVisual?.pending ? "ring-2 ring-amber-500 ring-offset-0" : "",
                               esFuturoGrisJefe ? CLASE_CELDA_FUTURO_GRIS : "",
@@ -592,7 +628,8 @@ export default function GrillaMesEquipoTabla({
                               turnoText: horarioCelda,
                               mostrarFichadaReal,
                               fichadaPresencia,
-                              estadoFichadaJefe: semaforoFichada,
+                              estadoFichadaJefe:
+                                modoFichada === "jefe" && pintarCeldaSemaforoJefe ? semaforoFichada : tieneLicencia ? null : semaforoFichada,
                               esIncompletoPlan,
                               outboxVisual,
                               desalineacionTeoria,
@@ -608,6 +645,9 @@ export default function GrillaMesEquipoTabla({
                               soloLecturaGrilla: soloLectura.activo,
                               soloLecturaTooltip: soloLectura.tooltip,
                               celdaVis: cell,
+                              ocultarMicroAnalitica: modoFichada === "jefe",
+                              modoFichadaRrhh: modoFichada === "rrhh",
+                              omitirBadgeSemaforo: pintarCeldaSemaforoJefe,
                             })}
                           </GrillaTurnosCeldaChip>
                         </GrillaMesCeldaLicencia>

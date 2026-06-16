@@ -139,4 +139,4 @@ Deploy si hubo cambios solo locales: `npm run build:web` + `npm run firebase:dep
 
 ---
 
-**Última actualización:** 2026-06-12 — cierre sesión; matriz QA + handoff cierre; próxima sesión validar escenarios B/P/C.
+**Última actualización:** 2026-06-16 — superseded por [`HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md`](./HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md) (Fase F + QA día a día).

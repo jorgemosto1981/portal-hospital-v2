@@ -19,7 +19,7 @@ const {
   CODIGO_NOCTURNIDAD_AMBIGUA,
 } = require(join(sharedDir, "fichadasAlineacionTeoria.js"));
 
-const { parseLineaRelojBiometrico } = require(join(sharedDir, "fichadasValidacionMarcas.js"));
+const { parseLineaRelojBiometrico, instanteMarcaInstitucionalMs } = require(join(sharedDir, "fichadasValidacionMarcas.js"));
 
 describe("celdaTeoriaCruzaMedianoche", () => {
   it("detecta turno noche 22:00–06:00", () => {
@@ -71,6 +71,41 @@ describe("nocturnidad D+1 → D", () => {
     });
     assert.equal(r.fichadas_reales[0].ingreso, "22:02");
     assert.equal(r.fichadas_reales[0].egreso, "06:05");
+  });
+});
+
+describe("alinearMarcasConTeoriaDia — manual noche mismo día", () => {
+  it("interpreta 21:00 y 05:05 como ingreso noche y egreso madrugada D+1", () => {
+    const celda = { tipo_dia: "laborable", rda_ingreso: "22:00", rda_egreso: "06:00", fichadas_esperadas: 2 };
+    const marcas = [
+      { fecha_ymd: "2026-06-13", hora_hm: "21:00", instante_ms: instanteMarcaInstitucionalMs("2026-06-13", "21:00") },
+      { fecha_ymd: "2026-06-13", hora_hm: "05:05", instante_ms: instanteMarcaInstitucionalMs("2026-06-13", "05:05") },
+    ];
+    const r = alinearMarcasConTeoriaDia({
+      marcas,
+      celda_teoria: celda,
+      fecha_ymd: "2026-06-13",
+    });
+    assert.equal(r.fichadas_reales.length, 1);
+    assert.equal(r.fichadas_reales[0].ingreso, "21:00");
+    assert.equal(r.fichadas_reales[0].egreso, "05:05");
+    assert.equal(r.fichadas_reales[0].fecha_egreso_ymd, "2026-06-14");
+  });
+
+  it("interpreta 05:35 y 06:38 mismo día como ingreso/egreso cronológico (M+T+N 06–06)", () => {
+    const celda = { tipo_dia: "laborable", rda_ingreso: "06:00", rda_egreso: "06:00", fichadas_esperadas: 2 };
+    const marcas = [
+      { fecha_ymd: "2026-06-13", hora_hm: "05:35", instante_ms: instanteMarcaInstitucionalMs("2026-06-13", "05:35") },
+      { fecha_ymd: "2026-06-13", hora_hm: "06:38", instante_ms: instanteMarcaInstitucionalMs("2026-06-13", "06:38") },
+    ];
+    const r = alinearMarcasConTeoriaDia({
+      marcas,
+      celda_teoria: celda,
+      fecha_ymd: "2026-06-13",
+    });
+    assert.equal(r.fichadas_reales[0].ingreso, "05:35");
+    assert.equal(r.fichadas_reales[0].egreso, "06:38");
+    assert.equal(r.fichadas_reales[0].fecha_egreso_ymd, undefined);
   });
 });
 

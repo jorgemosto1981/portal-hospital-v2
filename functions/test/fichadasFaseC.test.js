@@ -69,6 +69,8 @@ describe("construirPatchCeldaDia — dirty check / evt", () => {
     assert.equal(patch.write_skipped, false);
     assert.equal(patch.celdaNueva.fichadas_reales.length, 0);
     assert.equal(patch.celdaNueva.fichadas_borradas.length, 1);
+    const borrado = patch.celdaNueva.fichadas_borradas[0];
+    assert.ok(borrado.borrado_en && typeof borrado.borrado_en.toDate === "function");
   });
 });
 

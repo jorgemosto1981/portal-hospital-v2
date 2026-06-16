@@ -13,6 +13,8 @@ const { instanteMarcaInstitucionalMs } = require("./fichadasValidacionMarcas");
 const CODIGO_NOCTURNIDAD_AMBIGUA = "NOCTURNIDAD_AMBIGUA";
 
 const UMBRAL_EQUIDISTANCIA_MS = 60 * 1000;
+/** Separación en reloj (mismo día) por debajo de esto → ingreso/egreso en orden cronológico, no noche. */
+const UMBRAL_PAR_MISMO_DIA_MIN = 12 * 60;
 
 /**
  * @param {string|null|undefined} hm
@@ -230,19 +232,78 @@ function asignarRolesPorProximidad(marcas, anclas) {
 }
 
 /**
- * @param {Array<{ rol_asignado: string, hora_hm: string, advertencias?: string[] }>} asignadas
+ * ABM grilla: marcas con rol explícito (ingreso / egreso).
+ *
+ * @param {Array<object>} marcas
  */
-function armarFichadasRealesDesdeRoles(asignadas) {
+function asignarRolesDesdeMarcasConRolExplicito(marcas) {
+  if (marcas.length !== 2) return null;
+  const ing = marcas.find((m) => m.rol_asignado === "ingreso");
+  const egr = marcas.find((m) => m.rol_asignado === "egreso");
+  if (!ing || !egr) return null;
+  return [
+    { ...ing, rol_asignado: "ingreso", advertencias: [] },
+    { ...egr, rol_asignado: "egreso", advertencias: [] },
+  ];
+}
+
+/**
+ * Dos marcas en el mismo día calendario D con turno que cruza medianoche.
+ * Tramo corto en el mismo día (ej. 05:35–06:38) → ingreso/egreso cronológico.
+ * Tramo largo (ej. 05:05 y 21:00) → tarde ingreso, madrugada egreso (D+1).
+ *
+ * @param {Array<object>} marcas
+ * @param {string} fecha_ymd
+ */
+function asignarRolesDosMarcasTurnoNoche(marcas, fecha_ymd) {
+  const sorted = [...marcas]
+    .filter((m) => Number.isFinite(Number(m.instante_ms)))
+    .sort((a, b) => Number(a.instante_ms) - Number(b.instante_ms));
+  if (sorted.length !== 2) return null;
+  const dia = String(fecha_ymd || "").trim();
+  if (!dia || sorted.some((m) => String(m.fecha_ymd || "").trim() !== dia)) return null;
+  const [early, late] = sorted;
+  const earlyMin = parseHmMinutos(early.hora_hm);
+  const lateMin = parseHmMinutos(late.hora_hm);
+  if (earlyMin == null || lateMin == null) return null;
+  const gapMin = lateMin - earlyMin;
+  if (gapMin <= UMBRAL_PAR_MISMO_DIA_MIN) {
+    return [
+      { ...early, rol_asignado: "ingreso", advertencias: [] },
+      { ...late, rol_asignado: "egreso", advertencias: [] },
+    ];
+  }
+  return [
+    { ...late, rol_asignado: "ingreso", advertencias: [] },
+    { ...early, rol_asignado: "egreso", advertencias: [] },
+  ];
+}
+
+/**
+ * @param {Array<{ rol_asignado: string, hora_hm: string, advertencias?: string[] }>} asignadas
+ * @param {string} fecha_ymd
+ * @param {Record<string, unknown>|null|undefined} celda
+ */
+function armarFichadasRealesDesdeRoles(asignadas, fecha_ymd, celda) {
   const ingresos = asignadas.filter((a) => a.rol_asignado === "ingreso").map((a) => a.hora_hm);
   const egresos = asignadas.filter((a) => a.rol_asignado === "egreso").map((a) => a.hora_hm);
   const pares = [];
   const n = Math.max(ingresos.length, egresos.length);
+  const cruza = celdaTeoriaCruzaMedianoche(celda);
   for (let i = 0; i < n; i += 1) {
     const ingreso = ingresos[i] || null;
     const egreso = egresos[i] || null;
-    if (ingreso && egreso) pares.push({ ingreso, egreso });
-    else if (ingreso) pares.push({ ingreso, egreso: null });
-    else if (egreso) pares.push({ ingreso: null, egreso });
+    if (ingreso && egreso) {
+      /** @type {Record<string, string>} */
+      const fila = { ingreso, egreso, fecha_ymd };
+      const ingMin = parseHmMinutos(ingreso);
+      const egrMin = parseHmMinutos(egreso);
+      if (cruza && ingMin != null && egrMin != null && egrMin <= ingMin) {
+        fila.fecha_egreso_ymd = diaSiguienteYmd(fecha_ymd);
+      }
+      pares.push(fila);
+    } else if (ingreso) pares.push({ ingreso, egreso: null, fecha_ymd });
+    else if (egreso) pares.push({ ingreso: null, egreso, fecha_ymd });
   }
   return pares.filter((p) => p.ingreso || p.egreso);
 }
@@ -286,12 +347,17 @@ function alinearMarcasConTeoriaDia(params) {
     };
   }
 
-  const asignadas = asignarRolesPorProximidad(delDia, anclas);
+  const asignadasExplicitas = asignarRolesDesdeMarcasConRolExplicito(delDia);
+  const asignadasNoche =
+    !asignadasExplicitas && celdaTeoriaCruzaMedianoche(celda)
+      ? asignarRolesDosMarcasTurnoNoche(delDia, fecha_ymd)
+      : null;
+  const asignadas = asignadasExplicitas || asignadasNoche || asignarRolesPorProximidad(delDia, anclas);
   for (const a of asignadas) {
     for (const adv of a.advertencias || []) advertenciasGlobales.add(adv);
   }
 
-  const fichadas_reales = armarFichadasRealesDesdeRoles(asignadas);
+  const fichadas_reales = armarFichadasRealesDesdeRoles(asignadas, fecha_ymd, celda);
 
   return {
     ok: true,

@@ -20,6 +20,9 @@ const {
 
 const ANALITICA_VERSION = 1;
 
+/** Solape mínimo (min) para asignar una fichada a un tramo teórico del día. */
+const UMBRAL_EMPAREJAR_SEGMENTO_MIN = 15;
+
 function msDesdeIso(iso) {
   const ms = new Date(String(iso || "")).getTime();
   return Number.isFinite(ms) ? ms : null;
@@ -123,6 +126,148 @@ function extraerTramosFichadaDesdeCelda(celdaVis, fechaYmd) {
 }
 
 /**
+ * Ventanas teóricas por segmento (día con huecos / M+N).
+ *
+ * @param {Record<string, unknown>} capa
+ * @param {number} tolIn
+ * @param {number} tolOut
+ */
+function ventanasTeoricasPorSegmento(capa, tolIn, tolOut) {
+  if (capa.tiene_huecos !== true) return [];
+  const segmentos = Array.isArray(capa.segmentos) ? capa.segmentos : [];
+  if (segmentos.length < 2) return [];
+
+  return segmentos
+    .map((seg) => {
+      if (!seg || typeof seg !== "object") return null;
+      const ingreso_nominal_ms = msDesdeIso(seg.ingreso_iso);
+      const egreso_nominal_ms = msDesdeIso(seg.egreso_iso);
+      if (ingreso_nominal_ms == null || egreso_nominal_ms == null) return null;
+      const ingreso_limite_ms = ingreso_nominal_ms + Math.max(0, tolIn) * 60_000;
+      const egreso_limite_ms = egreso_nominal_ms - Math.max(0, tolOut) * 60_000;
+      return {
+        segmento_id: String(seg.segmento_id || "").trim() || null,
+        ingreso_nominal_ms,
+        egreso_nominal_ms,
+        ingreso_limite_ms,
+        egreso_limite_ms,
+        carga_minutos: diffMinutos(ingreso_nominal_ms, egreso_nominal_ms),
+      };
+    })
+    .filter(Boolean);
+}
+
+/**
+ * @param {Array<{ ingreso_ms: number, egreso_ms: number }>} tramos
+ * @param {Array<{ ingreso_nominal_ms: number, egreso_nominal_ms: number }>} ventanas
+ */
+function emparejarTramosConVentanasSegmento(tramos, ventanas) {
+  const usados = new Set();
+  return ventanas.map((ventana) => {
+    let mejorIdx = -1;
+    let mejorSolape = 0;
+    for (let i = 0; i < tramos.length; i += 1) {
+      if (usados.has(i)) continue;
+      const solape = minutosSolapeTramosConVentanaTeorica(
+        [tramos[i]],
+        ventana.ingreso_nominal_ms,
+        ventana.egreso_nominal_ms,
+      );
+      if (solape > mejorSolape) {
+        mejorSolape = solape;
+        mejorIdx = i;
+      }
+    }
+    if (mejorIdx >= 0 && mejorSolape >= UMBRAL_EMPAREJAR_SEGMENTO_MIN) {
+      usados.add(mejorIdx);
+      return { ventana, tramo: tramos[mejorIdx] };
+    }
+    return { ventana, tramo: null };
+  });
+}
+
+/**
+ * Disciplina horaria y resumen por tramo cuando hay ≥2 segmentos con huecos.
+ *
+ * @param {Array<{ ingreso_ms: number, egreso_ms: number }>} tramos
+ * @param {ReturnType<typeof ventanasTeoricasPorSegmento>} ventanas
+ */
+function calcularDisciplinaPorSegmentos(tramos, ventanas) {
+  const pares = emparejarTramosConVentanasSegmento(tramos, ventanas);
+  let tardanza_minutos = 0;
+  let salida_anticipada_minutos = 0;
+  let ingreso_anticipado_minutos = 0;
+  /** @type {Array<Record<string, unknown>>} */
+  const segmentos_cumplimiento = [];
+
+  for (const { ventana, tramo } of pares) {
+    let segTard = 0;
+    let segSal = 0;
+    let segIngAnt = 0;
+    if (tramo) {
+      if (tramo.ingreso_ms > ventana.ingreso_limite_ms) {
+        segTard = diffMinutos(ventana.ingreso_nominal_ms, tramo.ingreso_ms);
+      } else if (tramo.ingreso_ms < ventana.ingreso_nominal_ms) {
+        segIngAnt = diffMinutos(tramo.ingreso_ms, ventana.ingreso_nominal_ms);
+      }
+      if (tramo.egreso_ms < ventana.egreso_limite_ms) {
+        segSal = diffMinutos(tramo.egreso_ms, ventana.egreso_nominal_ms);
+      }
+      tardanza_minutos += segTard;
+      salida_anticipada_minutos += segSal;
+      ingreso_anticipado_minutos += segIngAnt;
+    }
+    segmentos_cumplimiento.push({
+      segmento_id: ventana.segmento_id,
+      cubierto: Boolean(tramo),
+      carga_teorica_minutos: ventana.carga_minutos,
+      tardanza_minutos: segTard,
+      salida_anticipada_minutos: segSal,
+      ingreso_anticipado_minutos: segIngAnt,
+    });
+  }
+
+  return {
+    tardanza_minutos,
+    salida_anticipada_minutos,
+    ingreso_anticipado_minutos,
+    segmentos_cumplimiento,
+    calculo_por_segmentos: true,
+  };
+}
+
+/**
+ * Minutos de incumplimiento por tramo para badge de celda (no sumar M+N en un solo chip).
+ *
+ * @param {Array<Record<string, unknown>>} segmentos
+ * @param {number} tolerancia_debitohorario_minutos
+ */
+function enriquecerIncumplimientoCeldaPorSegmento(segmentos, tolerancia_debitohorario_minutos) {
+  if (!Array.isArray(segmentos)) return [];
+  return segmentos.map((seg) => {
+    const cubierto = seg.cubierto === true;
+    const carga = Math.trunc(Number(seg.carga_teorica_minutos) || 0);
+    const tard = Math.trunc(Number(seg.tardanza_minutos) || 0);
+    const sal = Math.trunc(Number(seg.salida_anticipada_minutos) || 0);
+    const punt = disciplinaHorariaEsIncumplimiento(tard, sal, tolerancia_debitohorario_minutos);
+    let incumplimiento_celda_minutos = 0;
+    /** @type {string|null} */
+    let incumplimiento_celda_tipo = null;
+    if (!cubierto && carga > 0) {
+      incumplimiento_celda_minutos = carga;
+      incumplimiento_celda_tipo = "ausente_tramo";
+    } else if (punt.salida_anticipada_punitiva_min > 0) {
+      incumplimiento_celda_minutos = punt.salida_anticipada_punitiva_min;
+      incumplimiento_celda_tipo = "salida";
+    } else if (punt.tardanza_punitiva_min > 0) {
+      incumplimiento_celda_minutos = punt.tardanza_punitiva_min;
+      incumplimiento_celda_tipo = "tardanza";
+    }
+    return { ...seg, incumplimiento_celda_minutos, incumplimiento_celda_tipo };
+  });
+}
+
+/**
  * Minutos de intersección entre tramos de fichada y ventana teórica nominal.
  * @param {Array<{ ingreso_ms: number, egreso_ms: number }>} tramos
  * @param {number|null} ventanaInicioMs
@@ -177,11 +322,62 @@ function evaluarFichadaFueraTurnoTeorico(
   return { fuera_turno: solape < umbral, solape_minutos: solape, umbral_minutos: umbral };
 }
 
+/**
+ * Tardanza / salida anticipada solo son falta si superan la tolerancia de débito del régimen.
+ * El ingreso anticipado no es incumplimiento.
+ *
+ * @param {number} tardanza_minutos
+ * @param {number} salida_anticipada_minutos
+ * @param {number} tolerancia_debitohorario_minutos
+ */
+function disciplinaHorariaEsIncumplimiento(
+  tardanza_minutos,
+  salida_anticipada_minutos,
+  tolerancia_debitohorario_minutos,
+) {
+  const tol = Number.isFinite(Number(tolerancia_debitohorario_minutos))
+    && Number(tolerancia_debitohorario_minutos) >= 0
+    ? Math.trunc(Number(tolerancia_debitohorario_minutos))
+    : DEFAULT_TOLERANCIA_DEBITOHORARIO_MIN;
+  const tard = Math.max(0, Math.trunc(Number(tardanza_minutos) || 0));
+  const sal = Math.max(0, Math.trunc(Number(salida_anticipada_minutos) || 0));
+  return {
+    tardanza_punitiva_min: tard > tol ? tard : 0,
+    salida_anticipada_punitiva_min: sal > tol ? sal : 0,
+    hay_incumplimiento: tard > tol || sal > tol,
+  };
+}
+
+/**
+ * @param {Record<string, unknown>|null|undefined} analitica
+ */
+function disciplinaHorariaIncumplimientoDesdeAnalitica(analitica) {
+  const d = analitica?.disciplina && typeof analitica.disciplina === "object" ? analitica.disciplina : {};
+  const deb = analitica?.debito_tiempo && typeof analitica.debito_tiempo === "object"
+    ? analitica.debito_tiempo
+    : {};
+  const tolRaw = Number(deb.tolerancia_debitohorario_minutos);
+  const tol = Number.isFinite(tolRaw) && tolRaw >= 0
+    ? Math.trunc(tolRaw)
+    : DEFAULT_TOLERANCIA_DEBITOHORARIO_MIN;
+  return disciplinaHorariaEsIncumplimiento(
+    d.tardanza_minutos,
+    d.salida_anticipada_minutos,
+    tol,
+  );
+}
+
 function derivarAlertas(disciplina, debito, ausencia_automatica, fichadaFueraTurno) {
   const alertas = [];
   if (fichadaFueraTurno) alertas.push("FICHADA_FUERA_TURNO_TEORICO");
-  if (disciplina.tardanza_minutos > 0) alertas.push("TARDANZA_PUNITIVA");
-  if (disciplina.salida_anticipada_minutos > 0) alertas.push("SALIDA_ANTICIPADA");
+  const tol = Number(debito.tolerancia_debitohorario_minutos);
+  const { tardanza_punitiva_min, salida_anticipada_punitiva_min } = disciplinaHorariaEsIncumplimiento(
+    disciplina.tardanza_minutos,
+    disciplina.salida_anticipada_minutos,
+    tol,
+  );
+  if (tardanza_punitiva_min > 0) alertas.push("TARDANZA_PUNITIVA");
+  if (salida_anticipada_punitiva_min > 0) alertas.push("SALIDA_ANTICIPADA");
   if (disciplina.fuera_de_margen && !alertas.length) alertas.push("FUERA_MARGEN_HORARIO");
   if (debito.incumplimiento_carga_horaria) alertas.push("DEFICIT_HORARIO_GRAVE");
   if (ausencia_automatica) alertas.push("AUSENCIA_AUTOMATICA");
@@ -235,6 +431,10 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
   const celda = celdaVis && typeof celdaVis === "object" ? celdaVis : {};
   const turnoTeoricoId = String(celda.rda_turno_id || capa.turno_id || capa.turno_compuesto_id || "").trim();
 
+  const tolIn = Number(capa.tolerancia_ingreso_dia_min) || 0;
+  const tolOut = Number(capa.tolerancia_egreso_dia_min) || 0;
+  const ventanasSegmento = ventanasTeoricasPorSegmento(capa, tolIn, tolOut);
+
   const fueraTurno =
     filasCount > 0 && carga_teorica_minutos > 0
       ? evaluarFichadaFueraTurnoTeorico(
@@ -257,6 +457,7 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
       fuera_de_margen: false,
       tardanza_minutos: 0,
       salida_anticipada_minutos: 0,
+      ingreso_anticipado_minutos: 0,
       ingreso_nominal_iso: capa.ingreso_nominal_iso ?? null,
       ingreso_limite_con_gracia_iso: capa.ingreso_limite_con_gracia_iso ?? null,
       egreso_nominal_iso: capa.egreso_nominal_iso ?? null,
@@ -290,23 +491,43 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
 
   let tardanza_minutos = 0;
   let salida_anticipada_minutos = 0;
+  let ingreso_anticipado_minutos = 0;
   let fuera_de_margen = false;
+  let calculo_por_segmentos = false;
+  /** @type {Array<Record<string, unknown>>|undefined} */
+  let segmentos_cumplimiento;
 
-  if (ingresos.length > 0 && ingresoLimiteMs != null && ingresoNominalMs != null) {
+  if (ventanasSegmento.length >= 2 && tramos.length > 0) {
+    const porSeg = calcularDisciplinaPorSegmentos(tramos, ventanasSegmento);
+    tardanza_minutos = porSeg.tardanza_minutos;
+    salida_anticipada_minutos = porSeg.salida_anticipada_minutos;
+    ingreso_anticipado_minutos = porSeg.ingreso_anticipado_minutos;
+    segmentos_cumplimiento = enriquecerIncumplimientoCeldaPorSegmento(
+      porSeg.segmentos_cumplimiento,
+      tolerancia_debitohorario_minutos,
+    );
+    calculo_por_segmentos = true;
+  } else if (ingresos.length > 0 && ingresoNominalMs != null && ingresoLimiteMs != null) {
     const primeraEntrada = ingresos[0];
     if (primeraEntrada > ingresoLimiteMs) {
-      fuera_de_margen = true;
       tardanza_minutos = diffMinutos(ingresoNominalMs, primeraEntrada);
+    } else if (primeraEntrada < ingresoNominalMs) {
+      ingreso_anticipado_minutos = diffMinutos(primeraEntrada, ingresoNominalMs);
     }
   }
 
-  if (egresos.length > 0 && egresoLimiteMs != null) {
+  if (!calculo_por_segmentos && egresos.length > 0 && egresoLimiteMs != null && egresoNominalMs != null) {
     const ultimaSalida = egresos[egresos.length - 1];
     if (ultimaSalida < egresoLimiteMs) {
-      fuera_de_margen = true;
-      salida_anticipada_minutos = diffMinutos(ultimaSalida, egresoLimiteMs);
+      salida_anticipada_minutos = diffMinutos(ultimaSalida, egresoNominalMs);
     }
   }
+
+  fuera_de_margen = disciplinaHorariaEsIncumplimiento(
+    tardanza_minutos,
+    salida_anticipada_minutos,
+    tolerancia_debitohorario_minutos,
+  ).hay_incumplimiento;
 
   let carga_real_minutos = 0;
   for (const t of tramos) {
@@ -332,6 +553,7 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
     fuera_de_margen,
     tardanza_minutos,
     salida_anticipada_minutos,
+    ingreso_anticipado_minutos,
     ingreso_nominal_iso: capa.ingreso_nominal_iso ?? null,
     ingreso_limite_con_gracia_iso: capa.ingreso_limite_con_gracia_iso ?? null,
     egreso_nominal_iso: capa.egreso_nominal_iso ?? null,
@@ -350,6 +572,7 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
 
   return {
     version: ANALITICA_VERSION,
+    ...(calculo_por_segmentos ? { calculo_por_segmentos: true, segmentos_cumplimiento } : {}),
     disciplina,
     debito_tiempo,
     ausencia_automatica,
@@ -358,4 +581,4 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
   };
 }
 
-module.exports = { extraerTramosFichadaDesdeCelda, minutosSolapeTramosConVentanaTeorica, evaluarFichadaFueraTurnoTeorico, calcularDeltasCumplimiento };
+module.exports = { extraerTramosFichadaDesdeCelda, enriquecerIncumplimientoCeldaPorSegmento, minutosSolapeTramosConVentanaTeorica, evaluarFichadaFueraTurnoTeorico, disciplinaHorariaEsIncumplimiento, disciplinaHorariaIncumplimientoDesdeAnalitica, calcularDeltasCumplimiento };

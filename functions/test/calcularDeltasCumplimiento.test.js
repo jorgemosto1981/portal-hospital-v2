@@ -58,10 +58,10 @@ describe("calcularDeltasCumplimiento (Fase 1 colisión)", () => {
     assert.equal(r.alertas_activas.length, 0);
   });
 
-  it("tardanza punitiva: un minuto después del límite con gracia", () => {
+  it("tardanza punitiva: supera tolerancia de débito del régimen", () => {
     const r = calcularDeltasCumplimiento(
       celdaConFichadas([{ ingreso: "08:11", egreso: "16:00", fecha_ymd: FECHA }]),
-      CAPA_ENRIQUECIDA,
+      { ...CAPA_ENRIQUECIDA, tolerancia_debitohorario_minutos: 10 },
       { fecha_ymd: FECHA },
     );
     assert.equal(r.disciplina.fuera_de_margen, true);
@@ -175,5 +175,104 @@ describe("calcularDeltasCumplimiento (Fase 1 colisión)", () => {
       ahora_evaluacion_ms: umbralMs,
     });
     assert.equal(antes120.ausencia_automatica, false);
+  });
+
+  it("salida e ingreso anticipados: métricas vs nominal; alerta solo salida > tolerancia débito", () => {
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([{ ingreso: "05:00", egreso: "13:00", fecha_ymd: FECHA }]),
+      {
+        ...CAPA_ENRIQUECIDA,
+        ingreso_nominal_iso: "2026-06-12T06:00:00-03:00",
+        ingreso_limite_con_gracia_iso: "2026-06-12T06:15:00-03:00",
+        egreso_nominal_iso: "2026-06-12T14:00:00-03:00",
+        egreso_limite_con_gracia_iso: "2026-06-12T13:45:00-03:00",
+      },
+      { fecha_ymd: FECHA },
+    );
+    assert.equal(r.disciplina.fuera_de_margen, true);
+    assert.equal(r.disciplina.ingreso_anticipado_minutos, 60);
+    assert.equal(r.disciplina.salida_anticipada_minutos, 60);
+    assert.equal(r.alertas_activas.includes("INGRESO_ANTICIPADO"), false);
+    assert.ok(r.alertas_activas.includes("SALIDA_ANTICIPADA"));
+  });
+
+  it("desvíos menores o iguales a tolerancia de débito: sin alertas de disciplina", () => {
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([{ ingreso: "06:05", egreso: "13:45", fecha_ymd: FECHA }]),
+      {
+        ...CAPA_ENRIQUECIDA,
+        carga_horaria_diaria_minutos: 480,
+        tolerancia_debitohorario_minutos: 30,
+        ingreso_nominal_iso: "2026-06-12T06:00:00-03:00",
+        ingreso_limite_con_gracia_iso: "2026-06-12T06:00:00-03:00",
+        egreso_nominal_iso: "2026-06-12T14:00:00-03:00",
+        egreso_limite_con_gracia_iso: "2026-06-12T14:00:00-03:00",
+      },
+      { fecha_ymd: FECHA },
+    );
+    assert.equal(r.disciplina.tardanza_minutos, 5);
+    assert.equal(r.disciplina.salida_anticipada_minutos, 15);
+    assert.equal(r.disciplina.fuera_de_margen, false);
+    assert.equal(r.debito_tiempo.deficit_minutos, 20);
+    assert.equal(r.debito_tiempo.incumplimiento_carga_horaria, false);
+    assert.equal(r.alertas_activas.length, 0);
+  });
+
+  it("salida anticipada: minutos vs egreso nominal (no restar gracia del cómputo)", () => {
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([{ ingreso: "08:00", egreso: "15:40", fecha_ymd: FECHA }]),
+      CAPA_ENRIQUECIDA,
+      { fecha_ymd: FECHA },
+    );
+    assert.equal(r.disciplina.salida_anticipada_minutos, 20);
+    assert.equal(r.disciplina.fuera_de_margen, false);
+    assert.equal(r.alertas_activas.includes("SALIDA_ANTICIPADA"), false);
+  });
+
+  it("M+N con huecos: solo mañana fichada — tardanza en M, sin salida falsa de 960 min", () => {
+    const FECHA_MN = "2026-06-14";
+    const capaMn = {
+      tipo_dia: "laborable",
+      tiene_huecos: true,
+      carga_horaria_diaria_minutos: 960,
+      horas_teoricas_totales: 16,
+      tolerancia_debitohorario_minutos: 30,
+      tolerancia_ingreso_dia_min: 0,
+      tolerancia_egreso_dia_min: 0,
+      ingreso_nominal_iso: "2026-06-14T09:00:00.000Z",
+      ingreso_limite_con_gracia_iso: "2026-06-14T09:00:00.000Z",
+      egreso_nominal_iso: "2026-06-15T09:00:00.000Z",
+      egreso_limite_con_gracia_iso: "2026-06-15T09:00:00.000Z",
+      segmentos: [
+        {
+          segmento_id: "M",
+          ingreso_iso: "2026-06-14T09:00:00.000Z",
+          egreso_iso: "2026-06-14T17:00:00.000Z",
+        },
+        {
+          segmento_id: "N",
+          ingreso_iso: "2026-06-15T01:00:00.000Z",
+          egreso_iso: "2026-06-15T09:00:00.000Z",
+        },
+      ],
+    };
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([{ ingreso: "07:00", egreso: "14:00", fecha_ymd: FECHA_MN }]),
+      capaMn,
+      { fecha_ymd: FECHA_MN },
+    );
+    assert.equal(r.calculo_por_segmentos, true);
+    assert.equal(r.disciplina.tardanza_minutos, 60);
+    assert.equal(r.disciplina.salida_anticipada_minutos, 0);
+    assert.equal(r.debito_tiempo.carga_real_minutos, 420);
+    assert.equal(r.debito_tiempo.deficit_minutos, 540);
+    assert.equal(r.debito_tiempo.incumplimiento_carga_horaria, true);
+    const noche = r.segmentos_cumplimiento?.find((s) => s.segmento_id === "N");
+    assert.equal(noche?.cubierto, false);
+    assert.equal(noche?.incumplimiento_celda_minutos, 480);
+    assert.equal(noche?.incumplimiento_celda_tipo, "ausente_tramo");
+    const manana = r.segmentos_cumplimiento?.find((s) => s.segmento_id === "M");
+    assert.equal(manana?.incumplimiento_celda_minutos, 60);
+    assert.equal(manana?.incumplimiento_celda_tipo, "tardanza");
   });
 });

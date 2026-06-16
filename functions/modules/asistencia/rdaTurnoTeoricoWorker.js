@@ -258,6 +258,7 @@ async function persistirAnaliticaCumplimientoDia({
     celdaRaw,
     capaEnriquecida,
     fecha_ymd: fechaYmd,
+    forzar_recalculo: true,
   });
   const visPayload = { [`dias.${diaKey}.analitica_cumplimiento`]: analitica };
   const valPatch = buildFirestorePatchValidacionFichadaDia(diaKey, resolverOut);
@@ -865,6 +866,7 @@ async function materializarTurnoMesBatch({
 
   const batch = db.batch();
   const visDias = {};
+  const pendientesValidacionFichada = [];
   let diasProcesados = 0;
 
   const visDocIdPre = buildVisDocumentId(personaId, `${anio}-${String(mes).padStart(2, "0")}-01`, gdt);
@@ -1067,6 +1069,14 @@ async function materializarTurnoMesBatch({
     visDias[`dias.${diaKey}.grupo_de_trabajo_id`] = gdtOperativo;
     visDias[`dias.${diaKey}.etiqueta_grupo_corta`] = etqCache.get(gdtOperativo) || gdtOperativo;
 
+    pendientesValidacionFichada.push({
+      fechaYmd,
+      diaKey,
+      capaSlice,
+      regimenDoc,
+      asiRef,
+    });
+
     diasProcesados++;
   }
 
@@ -1114,6 +1124,31 @@ async function materializarTurnoMesBatch({
         await ensureEstadoPeriodoLiquidacionAbierto(visRef);
       } else {
         throw e;
+      }
+    }
+
+    for (const item of pendientesValidacionFichada) {
+      const capaEscrita = resolverCapaTeoricaGrupo(
+        { capa_teorica_por_grupo: { [gdt]: item.capaSlice } },
+        gdt,
+      ) || item.capaSlice;
+      try {
+        await persistirAnaliticaCumplimientoDia({
+          asiRef: item.asiRef,
+          visRef,
+          gdt,
+          diaKey: item.diaKey,
+          fechaYmd: item.fechaYmd,
+          capaEscrita,
+          regimenDoc: item.regimenDoc,
+        });
+      } catch (e) {
+        logger.error("persistirAnaliticaCumplimientoDia ERROR", {
+          personaId,
+          fechaYmd: item.fechaYmd,
+          grupoId: gdt,
+          error: String(e),
+        });
       }
     }
   }

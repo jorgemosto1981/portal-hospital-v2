@@ -2,6 +2,8 @@
  * Alertas semánticas de validación fichada (lazy — solo en modal, no en listado).
  */
 
+import { etiquetaHerramientaSugerida } from "./validacionFichadaAlertasUi.js";
+
 /**
  * @param {{ celdaVis?: Record<string, unknown> | null }} props
  */
@@ -11,20 +13,25 @@ export default function DiaGrillaValidacionFichadaAlertas({ celdaVis }) {
   if (alertas.length === 0) return null;
 
   return (
-    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-900">
-        Detalle asistencia
-      </h4>
-      <ul className="mt-2 space-y-2 text-xs text-slate-800">
-        {alertas.map((a) => {
+    <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+      <h4 className="text-sm font-semibold text-slate-900">Qué revisar</h4>
+      <p className="mt-0.5 text-xs text-slate-500">
+        Resumen operativo del día (sin repetir cifras técnicas de liquidación).
+      </p>
+      <ul className="mt-3 space-y-2">
+        {alertas.map((a, idx) => {
           const codigo = String(a?.codigo || "");
-          const key = codigo || String(a?.texto_humano || Math.random());
+          const key = codigo || `alerta-${idx}`;
+          const accion = etiquetaHerramientaSugerida(a?.herramienta_sugerida);
           return (
-            <li key={key} className="rounded border border-amber-100 bg-white/70 px-2 py-1.5">
-              <p className="font-medium text-amber-950">{a?.texto_humano || codigo}</p>
-              {a?.herramienta_sugerida ? (
-                <p className="mt-0.5 text-[10px] text-slate-500">
-                  Acción sugerida: {String(a.herramienta_sugerida).replace(/_/g, " ")}
+            <li
+              key={key}
+              className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-800"
+            >
+              <p className="font-medium leading-snug text-slate-900">{a?.texto_humano || codigo}</p>
+              {accion ? (
+                <p className="mt-1 text-xs text-indigo-800">
+                  Siguiente paso: <span className="font-medium">{accion}</span>
                 </p>
               ) : null}
             </li>
