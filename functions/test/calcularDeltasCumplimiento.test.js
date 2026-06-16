@@ -11,6 +11,9 @@ const require = createRequire(import.meta.url);
 const { calcularDeltasCumplimiento } = require(
   join(dirname(fileURLToPath(import.meta.url)), "../modules/shared/calcularDeltasCumplimiento.js"),
 );
+const { enriquecerLimitesCumplimientoEnCapa } = require(
+  join(dirname(fileURLToPath(import.meta.url)), "../modules/shared/capaTeoricaLimitesCumplimiento.js"),
+);
 const { instanteMarcaInstitucionalMs } = require(
   join(dirname(fileURLToPath(import.meta.url)), "../modules/shared/fichadasValidacionMarcas.js"),
 );
@@ -22,6 +25,9 @@ const CAPA_ENRIQUECIDA = {
   tipo_dia: "laborable",
   carga_horaria_diaria_minutos: 480,
   tolerancia_debitohorario_minutos: 30,
+  ventana_ausencia_automatica_min: 120,
+  umbral_solape_fuera_turno_min: 30,
+  umbral_solape_fuera_turno_pct: 25,
   ingreso_nominal_iso: "2026-06-12T08:00:00-03:00",
   ingreso_limite_con_gracia_iso: "2026-06-12T08:10:00-03:00",
   egreso_nominal_iso: "2026-06-12T16:00:00-03:00",
@@ -105,6 +111,8 @@ describe("calcularDeltasCumplimiento (Fase 1 colisión)", () => {
         turno_id: "N",
         carga_horaria_diaria_minutos: 480,
         tolerancia_debitohorario_minutos: 30,
+        umbral_solape_fuera_turno_min: 30,
+        umbral_solape_fuera_turno_pct: 25,
         ingreso_nominal_iso: "2026-06-19T01:00:00.000Z",
         ingreso_limite_con_gracia_iso: "2026-06-19T01:00:00.000Z",
         egreso_nominal_iso: "2026-06-19T09:00:00.000Z",
@@ -134,5 +142,38 @@ describe("calcularDeltasCumplimiento (Fase 1 colisión)", () => {
       { fecha_ymd: FECHA, ahora_evaluacion_ms: umbralMs - 60_000 },
     );
     assert.equal(antes.ausencia_automatica, false);
+  });
+
+  it("ausencia automática respeta ventana_ausencia_automatica_min de capa enriquecida", () => {
+    const capaBase = {
+      horas_teoricas_totales: 8,
+      ingreso_teorico_final: "2026-06-12T08:00:00-03:00",
+      egreso_teorico_final: "2026-06-12T16:00:00-03:00",
+    };
+    const regimen = { ventana_ausencia_automatica_min: 60, tolerancia_debitohorario_minutos: 30 };
+    const turno = { tolerancia_ingreso_min: 10, tolerancia_egreso_min: 10 };
+    const regimenConTurno = {
+      ...regimen,
+      turnos_disponibles: [{ turno_id: "M", ...turno }],
+    };
+    const capa60 = enriquecerLimitesCumplimientoEnCapa(capaBase, regimenConTurno);
+    assert.equal(capa60.ventana_ausencia_automatica_min, 60);
+
+    const umbralMs = instanteMarcaInstitucionalMs(FECHA, "09:10");
+    const conVentana60 = calcularDeltasCumplimiento(celdaConFichadas([]), capa60, {
+      fecha_ymd: FECHA,
+      ahora_evaluacion_ms: umbralMs,
+    });
+    assert.equal(conVentana60.ausencia_automatica, true);
+
+    const capa120 = enriquecerLimitesCumplimientoEnCapa(capaBase, {
+      ...regimenConTurno,
+      ventana_ausencia_automatica_min: 120,
+    });
+    const antes120 = calcularDeltasCumplimiento(celdaConFichadas([]), capa120, {
+      fecha_ymd: FECHA,
+      ahora_evaluacion_ms: umbralMs,
+    });
+    assert.equal(antes120.ausencia_automatica, false);
   });
 });

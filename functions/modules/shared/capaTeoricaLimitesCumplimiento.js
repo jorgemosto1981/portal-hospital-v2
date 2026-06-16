@@ -11,6 +11,30 @@ const { civilDateInZonaToUtcAnchorMs } = require("./fechaInstitucionalBa");
 
 const DEFAULT_TOLERANCIA_DEBITOHORARIO_MIN = 30;
 
+/** Fallback si `cfg_regimen_horario` aún no define el campo (materialización Fase F). */
+const DEFAULT_VENTANA_AUSENCIA_AUTOMATICA_MIN = 120;
+const DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_MIN = 30;
+const DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_PCT = 25;
+
+/**
+ * Resuelve umbral numérico: slice ya materializado → turno → régimen → default.
+ *
+ * @param {Record<string, unknown>} capaBase
+ * @param {Record<string, unknown>|null|undefined} regimen
+ * @param {Record<string, unknown>|null|undefined} turno
+ * @param {string} campo
+ * @param {number} fallback
+ */
+function resolverUmbralCumplimientoMaterializado(capaBase, regimen, turno, campo, fallback) {
+  const fromCapa = Number(capaBase?.[campo]);
+  if (Number.isFinite(fromCapa) && fromCapa >= 0) return Math.trunc(fromCapa);
+  const fromTurno = Number(turno?.[campo]);
+  if (Number.isFinite(fromTurno) && fromTurno >= 0) return Math.trunc(fromTurno);
+  const fromReg = Number(regimen?.[campo]);
+  if (Number.isFinite(fromReg) && fromReg >= 0) return Math.trunc(fromReg);
+  return fallback;
+}
+
 /**
  * @param {string} iso
  * @param {number} deltaMin — positivo suma, negativo resta
@@ -76,6 +100,28 @@ function enriquecerLimitesCumplimientoEnCapa(capa, regimen) {
   const ingreso_nominal_iso = base.ingreso_teorico_final ? String(base.ingreso_teorico_final) : null;
   const egreso_nominal_iso = base.egreso_teorico_final ? String(base.egreso_teorico_final) : null;
 
+  const ventana_ausencia_automatica_min = resolverUmbralCumplimientoMaterializado(
+    base,
+    regimen,
+    turno,
+    "ventana_ausencia_automatica_min",
+    DEFAULT_VENTANA_AUSENCIA_AUTOMATICA_MIN,
+  );
+  const umbral_solape_fuera_turno_min = resolverUmbralCumplimientoMaterializado(
+    base,
+    regimen,
+    turno,
+    "umbral_solape_fuera_turno_min",
+    DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_MIN,
+  );
+  const umbral_solape_fuera_turno_pct = resolverUmbralCumplimientoMaterializado(
+    base,
+    regimen,
+    turno,
+    "umbral_solape_fuera_turno_pct",
+    DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_PCT,
+  );
+
   return {
     ...base,
     carga_horaria_diaria_minutos,
@@ -86,6 +132,9 @@ function enriquecerLimitesCumplimientoEnCapa(capa, regimen) {
     ingreso_limite_con_gracia_iso: ingreso_nominal_iso ? isoMasMinutos(ingreso_nominal_iso, tolIn) : null,
     egreso_nominal_iso,
     egreso_limite_con_gracia_iso: egreso_nominal_iso ? isoMasMinutos(egreso_nominal_iso, -tolOut) : null,
+    ventana_ausencia_automatica_min,
+    umbral_solape_fuera_turno_min,
+    umbral_solape_fuera_turno_pct,
   };
 }
 
@@ -101,4 +150,4 @@ function isoInstitucionalDesdeYmdHm(fechaYmd, hhmm) {
   return new Date(anchor + (h * 60 + mi) * 60_000).toISOString();
 }
 
-module.exports = { DEFAULT_TOLERANCIA_DEBITOHORARIO_MIN, isoMasMinutos, resolverTurnoRegimenParaTolerancias, enriquecerLimitesCumplimientoEnCapa, isoInstitucionalDesdeYmdHm };
+module.exports = { DEFAULT_TOLERANCIA_DEBITOHORARIO_MIN, DEFAULT_VENTANA_AUSENCIA_AUTOMATICA_MIN, DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_MIN, DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_PCT, resolverUmbralCumplimientoMaterializado, isoMasMinutos, resolverTurnoRegimenParaTolerancias, enriquecerLimitesCumplimientoEnCapa, isoInstitucionalDesdeYmdHm };

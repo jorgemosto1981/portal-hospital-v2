@@ -4,9 +4,13 @@
 
 import { parseFichadasRealesCelda, celdaEsperaFichada } from "./grillaFichadaPresencia.js";
 import { instanteMarcaInstitucionalMs } from "./fichadasValidacionMarcas.js";
-import { DEFAULT_TOLERANCIA_DEBITOHORARIO_MIN } from "./capaTeoricaLimitesCumplimiento.js";
+import {
+  DEFAULT_TOLERANCIA_DEBITOHORARIO_MIN,
+  DEFAULT_VENTANA_AUSENCIA_AUTOMATICA_MIN,
+  DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_MIN,
+  DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_PCT,
+} from "./capaTeoricaLimitesCumplimiento.js";
 
-const AUSENCIA_VENTANA_MIN = 120;
 const ANALITICA_VERSION = 1;
 
 function msDesdeIso(iso) {
@@ -136,21 +140,33 @@ export function minutosSolapeTramosConVentanaTeorica(tramos, ventanaInicioMs, ve
   return total;
 }
 
-/** Umbral mínimo de solape (min) para considerar fichada alineada al turno teórico. */
-const SOLAPE_MIN_FUERA_TURNO_MIN = 30;
-
 /**
  * @param {Array<{ ingreso_ms: number, egreso_ms: number }>} tramos
  * @param {number} carga_teorica_minutos
  * @param {number|null} ventanaInicioMs
  * @param {number|null} ventanaFinMs
+ * @param {{ umbral_solape_fuera_turno_min?: number, umbral_solape_fuera_turno_pct?: number }} [umbralesSolape]
  */
-export function evaluarFichadaFueraTurnoTeorico(tramos, carga_teorica_minutos, ventanaInicioMs, ventanaFinMs) {
+export function evaluarFichadaFueraTurnoTeorico(
+  tramos,
+  carga_teorica_minutos,
+  ventanaInicioMs,
+  ventanaFinMs,
+  umbralesSolape = {},
+) {
   if (!tramos.length || !Number.isFinite(carga_teorica_minutos) || carga_teorica_minutos <= 0) {
-    return { fuera_turno: false, solape_minutos: 0 };
+    return { fuera_turno: false, solape_minutos: 0, umbral_minutos: 0 };
   }
   const solape = minutosSolapeTramosConVentanaTeorica(tramos, ventanaInicioMs, ventanaFinMs);
-  const umbral = Math.max(SOLAPE_MIN_FUERA_TURNO_MIN, Math.round(carga_teorica_minutos * 0.25));
+  const minBaseRaw = Number(umbralesSolape.umbral_solape_fuera_turno_min);
+  const minBase = Number.isFinite(minBaseRaw) && minBaseRaw >= 0
+    ? Math.trunc(minBaseRaw)
+    : DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_MIN;
+  const pctRaw = Number(umbralesSolape.umbral_solape_fuera_turno_pct);
+  const pct = Number.isFinite(pctRaw) && pctRaw >= 0
+    ? Math.trunc(pctRaw)
+    : DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_PCT;
+  const umbral = Math.max(minBase, Math.round(carga_teorica_minutos * (pct / 100)));
   return { fuera_turno: solape < umbral, solape_minutos: solape, umbral_minutos: umbral };
 }
 
@@ -192,6 +208,21 @@ export function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}
     ? Math.trunc(tolDebitoRaw)
     : DEFAULT_TOLERANCIA_DEBITOHORARIO_MIN;
 
+  const ventanaAusenciaRaw = Number(capa.ventana_ausencia_automatica_min);
+  const ventana_ausencia_automatica_min = Number.isFinite(ventanaAusenciaRaw) && ventanaAusenciaRaw >= 0
+    ? Math.trunc(ventanaAusenciaRaw)
+    : DEFAULT_VENTANA_AUSENCIA_AUTOMATICA_MIN;
+
+  const umbralSolapeMinRaw = Number(capa.umbral_solape_fuera_turno_min);
+  const umbral_solape_fuera_turno_min = Number.isFinite(umbralSolapeMinRaw) && umbralSolapeMinRaw >= 0
+    ? Math.trunc(umbralSolapeMinRaw)
+    : DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_MIN;
+
+  const umbralSolapePctRaw = Number(capa.umbral_solape_fuera_turno_pct);
+  const umbral_solape_fuera_turno_pct = Number.isFinite(umbralSolapePctRaw) && umbralSolapePctRaw >= 0
+    ? Math.trunc(umbralSolapePctRaw)
+    : DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_PCT;
+
   const { tramos, ingresos, egresos, filasCount } = extraerTramosFichadaDesdeCelda(celdaVis, fechaYmd);
 
   const celda = celdaVis && typeof celdaVis === "object" ? celdaVis : {};
@@ -204,6 +235,10 @@ export function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}
           carga_teorica_minutos,
           ingresoNominalMs,
           egresoNominalMs,
+          {
+            umbral_solape_fuera_turno_min,
+            umbral_solape_fuera_turno_pct,
+          },
         )
       : { fuera_turno: false, solape_minutos: 0, umbral_minutos: 0 };
 
@@ -280,7 +315,7 @@ export function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}
 
   let ausencia_automatica = false;
   if (filasCount === 0 && diaLaborable && ingresoLimiteMs != null) {
-    const umbralAusencia = ingresoLimiteMs + AUSENCIA_VENTANA_MIN * 60_000;
+    const umbralAusencia = ingresoLimiteMs + ventana_ausencia_automatica_min * 60_000;
     if (ahoraMs >= umbralAusencia) {
       ausencia_automatica = true;
     }
