@@ -31,7 +31,11 @@ import {
   textoHorarioFichadaRealDesdeCelda,
 } from "./grillaFichadaPresenciaDisplay.js";
 import GrillaFichadaEstadoJefeBadge from "./GrillaFichadaEstadoJefeBadge.jsx";
-import { estadoFichadaJefeDesdeCelda } from "./grillaFichadaEstadoJefeDisplay.js";
+import {
+  celdaEsDiaFuturoInstitucional,
+  CLASE_CELDA_FUTURO_GRIS,
+  semaforoFichadaDesdeCelda,
+} from "./grillaFichadaEstadoJefeDisplay.js";
 import { visualCeldaOutboxPendiente } from "./grillaCeldaOutboxVisual.js";
 import { diaFueraTramoHlg } from "./grillaMesFilasUtils.js";
 import DiaGrillaCelda from "./DiaGrillaCelda.jsx";
@@ -466,14 +470,16 @@ export default function GrillaMesEquipoTabla({
                     if (esIncompletoPlan) {
                       titleParts.push("Laborable sin turno (corregir plan del mes)");
                     }
-                    const estadoFichadaJefe =
-                      modoFichada === "jefe" ? estadoFichadaJefeDesdeCelda(cell) : null;
+                    const semaforoFichada =
+                      modoFichada === "jefe" ? semaforoFichadaDesdeCelda(cell, { fechaYmd }) : null;
+                    const esFuturoGrisJefe =
+                      modoFichada === "jefe" && celdaEsDiaFuturoInstitucional(fechaYmd);
                     const fichadaPresencia =
                       modoFichada === "rrhh"
                         ? fichadaPresenciaDesdeCeldaVis(cell, { esRrhh: true })
                         : null;
-                    const fichadaTitle = estadoFichadaJefe
-                      ? estadoFichadaJefe.tooltip
+                    const fichadaTitle = semaforoFichada
+                      ? semaforoFichada.tooltip
                       : titleFichadaPresencia(fichadaPresencia);
                     if (fichadaTitle) titleParts.push(fichadaTitle);
                     if (desalineacionTeoria && desalineacionTooltip) {
@@ -504,6 +510,7 @@ export default function GrillaMesEquipoTabla({
                           tieneTurno: tieneTurno || jornadaVis,
                           esIncompletoPlan: esIncompletoPlan && !tieneLicencia,
                           teoriaPendienteLazy: teoriaPendiente.activo,
+                          esFuturoGris: esFuturoGrisJefe,
                         });
 
                     return (
@@ -569,7 +576,12 @@ export default function GrillaMesEquipoTabla({
                         >
                           <GrillaTurnosCeldaChip
                             variant={variant}
-                            className={outboxVisual?.pending ? "ring-2 ring-amber-500 ring-offset-0" : ""}
+                            className={[
+                              outboxVisual?.pending ? "ring-2 ring-amber-500 ring-offset-0" : "",
+                              esFuturoGrisJefe ? CLASE_CELDA_FUTURO_GRIS : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
                           >
                             {contenidoCeldaOperativa({
                               tieneLicencia,
@@ -580,7 +592,7 @@ export default function GrillaMesEquipoTabla({
                               turnoText: horarioCelda,
                               mostrarFichadaReal,
                               fichadaPresencia,
-                              estadoFichadaJefe,
+                              estadoFichadaJefe: semaforoFichada,
                               esIncompletoPlan,
                               outboxVisual,
                               desalineacionTeoria,

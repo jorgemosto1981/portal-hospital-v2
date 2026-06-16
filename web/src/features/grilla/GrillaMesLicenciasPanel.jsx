@@ -54,7 +54,7 @@ import SelectorFocoGdt from "./SelectorFocoGdt.jsx";
 import { useGrillaMesFocoUrl } from "./useGrillaMesFocoUrl.js";
 import GrillaRrhhBandejaAuditoriaDiaria from "./GrillaRrhhBandejaAuditoriaDiaria.jsx";
 import { resolvePlanesTurnoCapabilities } from "../planes/planesTurnoCapabilities.js";
-import { grillaVistaCacheStore } from "./grillaCacheMemoryStore.js";
+import { grillaVistaCacheStore, invalidarCacheGrillaTrasMutacion } from "./grillaCacheMemoryStore.js";
 
 function parsePeriodo(periodo) {
   const [yyyy, mm] = String(periodo || "").split("-");
@@ -78,21 +78,6 @@ function labelPeriodo(periodo) {
     month: "long",
     year: "numeric",
   });
-}
-
-function invalidarCacheGrillaTrasMutacion({ ops, periodo, gdtActivo, grupoIdVista }) {
-  const periodoInv = String(periodo || "").trim();
-  if (!periodoInv) return;
-  const grupos = new Set();
-  const gdt = String(gdtActivo || grupoIdVista || "").trim();
-  if (gdt) grupos.add(gdt);
-  for (const op of ops || []) {
-    const og = String(op.grupoId || "").trim();
-    if (og) grupos.add(og);
-  }
-  for (const gid of grupos) {
-    grillaVistaCacheStore.invalidateGrupoPeriodo(gid, periodoInv);
-  }
 }
 
 /**
@@ -445,6 +430,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         grupo_trabajo_id: gdt,
         anio: y,
         mes: m,
+        dia_key: dk,
       });
       const dias = res.data?.dias && typeof res.data.dias === "object" ? res.data.dias : {};
       const dk = diaMesKeyDesdeFechaYmd(snap.fechaYmd);

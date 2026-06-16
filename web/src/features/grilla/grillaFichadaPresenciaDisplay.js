@@ -5,7 +5,7 @@ import {
   textoHorarioFichadaReal,
   textoHorarioFichadaRealDesdeCelda,
 } from "../../../../shared/utils/grillaFichadaPresencia.js";
-import { etiquetaEstadoFichadaJefe } from "./grillaFichadaEstadoJefeDisplay.js";
+import { etiquetaEstadoSemaforoFichada } from "./grillaFichadaEstadoJefeDisplay.js";
 
 export {
   lineasHorarioFichadaReal,
@@ -60,30 +60,49 @@ export function resumenFichadaModal(cell, opts = {}) {
     };
   }
 
+  const validacion = cell?.validacion_fichada_dia;
+  const semaforo = validacion?.estado_semaforo ? String(validacion.estado_semaforo) : null;
   const estadoJefe = cell?.estado_fichada_jefe ? String(cell.estado_fichada_jefe) : null;
+
+  const textoDesdeSemaforo = semaforo
+    ? validacion?.texto_resumen || etiquetaEstadoSemaforoFichada(semaforo) || "Registrado"
+    : null;
+
   const textoEstado =
-    estadoJefe === "ALERTA"
+    textoDesdeSemaforo ||
+    (estadoJefe === "ALERTA"
       ? "Sin conformidad"
       : estadoJefe
-        ? etiquetaEstadoFichadaJefe(estadoJefe) || "Registrado"
+        ? etiquetaEstadoSemaforoFichada(
+            { OK: "VERDE", ALERTA: "ROJO", RRHH_PENDIENTE: "AMARILLO", RRHH_RESUELTO: "VERDE" }[
+              estadoJefe
+            ] || estadoJefe,
+          ) || "Registrado"
         : presencia === "presente"
           ? "Registrado"
           : presencia === "ausente"
             ? "Sin registro"
-            : "Registrado";
+            : "Registrado");
+
+  const tooltipJefe = validacion?.texto_resumen
+    ? String(validacion.texto_resumen)
+    : cell?.estado_fichada_jefe_tooltip;
+
+  const esAlertaSemaforo = semaforo === "AMARILLO" || semaforo === "ROJO";
 
   return {
     modo: "jefe",
     presencia,
-    estadoJefe,
+    estadoJefe: semaforo || estadoJefe,
     textoEstado,
-    tooltipJefe: cell?.estado_fichada_jefe_tooltip,
+    tooltipJefe,
     horarios: [],
     tieneRegistro:
+      semaforo === "VERDE" ||
       estadoJefe === "OK" ||
       estadoJefe === "RRHH_RESUELTO" ||
       estadoJefe === "RRHH_PENDIENTE" ||
       presencia === "presente",
-    esAlerta: estadoJefe === "ALERTA" || presencia === "ausente",
+    esAlerta: esAlertaSemaforo || estadoJefe === "ALERTA" || presencia === "ausente",
   };
 }

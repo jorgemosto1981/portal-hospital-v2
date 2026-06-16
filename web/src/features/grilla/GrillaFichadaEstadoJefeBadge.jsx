@@ -1,7 +1,7 @@
 import {
-  clasesBadgeEstadoFichadaJefe,
-  etiquetaEstadoFichadaJefe,
-  simboloEstadoFichadaJefe,
+  clasesBadgeSemaforoFichada,
+  etiquetaEstadoSemaforoFichada,
+  simboloEstadoSemaforoFichada,
 } from "./grillaFichadaEstadoJefeDisplay.js";
 
 /**
@@ -18,15 +18,15 @@ export default function GrillaFichadaEstadoJefeBadge({
   className = "",
   compacto = false,
 }) {
-  const simbolo = simboloEstadoFichadaJefe(estado);
+  const simbolo = simboloEstadoSemaforoFichada(estado);
   if (!simbolo) return null;
-  const title = tooltip || etiquetaEstadoFichadaJefe(estado) || "";
+  const title = tooltip || etiquetaEstadoSemaforoFichada(estado) || "";
   return (
     <span
       className={[
         "inline-flex items-center justify-center rounded ring-1 font-bold leading-none",
         compacto ? "h-3 min-w-[0.75rem] px-0.5 text-[7px]" : "h-4 min-w-[1rem] px-1 text-[8px]",
-        clasesBadgeEstadoFichadaJefe(estado),
+        clasesBadgeSemaforoFichada(estado),
         className,
       ].join(" ")}
       title={title}

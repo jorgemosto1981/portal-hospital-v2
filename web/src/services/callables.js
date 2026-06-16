@@ -272,11 +272,13 @@ export function callObtenerVistaGrillaMesAgente(data) {
   if (!/^per_/i.test(persona_id)) {
     return Promise.reject(new Error("persona_id inválido para la vista mensual."));
   }
+  const dia_key = String(payload.dia_key || "").trim();
   return httpsCallable(getFunctionsV2(), "obtenerVistaGrillaMesAgente")({
     persona_id,
     anio: Number(payload.anio),
     mes: Number(payload.mes),
     grupo_trabajo_id: gdt,
+    ...(dia_key ? { dia_key } : {}),
   });
 }
 

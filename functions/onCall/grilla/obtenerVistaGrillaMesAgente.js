@@ -66,7 +66,29 @@ const obtenerVistaGrillaMesAgenteCallable = onCall(async (request) => {
     metadata: result.metadata || null,
   };
 
-  return esRrhhLabor ? payload : sanitizarVistaGrillaMesAgenteGso(payload);
+  if (esRrhhLabor) return payload;
+
+  const diaKeyDetalle = String(d.dia_key || "").trim();
+  const sanitized = sanitizarVistaGrillaMesAgenteGso(payload);
+  if (diaKeyDetalle && payload.dias && typeof payload.dias === "object") {
+    const rawVal = payload.dias[diaKeyDetalle]?.validacion_fichada_dia;
+    const celdaSan = sanitized.dias?.[diaKeyDetalle];
+    if (
+      rawVal &&
+      typeof rawVal === "object" &&
+      Array.isArray(rawVal.alertas_semanticas) &&
+      celdaSan?.validacion_fichada_dia
+    ) {
+      sanitized.dias[diaKeyDetalle] = {
+        ...celdaSan,
+        validacion_fichada_dia: {
+          ...celdaSan.validacion_fichada_dia,
+          alertas_semanticas: rawVal.alertas_semanticas,
+        },
+      };
+    }
+  }
+  return sanitized;
 });
 
 module.exports = { obtenerVistaGrillaMesAgente: obtenerVistaGrillaMesAgenteCallable };

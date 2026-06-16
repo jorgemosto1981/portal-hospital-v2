@@ -34,6 +34,7 @@ const VARIANTES_CHIP = {
     bg: "bg-rose-100 hover:bg-rose-200 bg-[repeating-linear-gradient(-45deg,transparent,transparent_3px,rgba(244,63,94,0.15)_3px,rgba(244,63,94,0.15)_6px)]",
     text: "text-rose-950",
   },
+  futuroGris: { bg: "bg-slate-100 hover:bg-slate-200", text: "text-slate-500" },
   teoriaPendiente: { bg: "bg-slate-200 hover:bg-slate-300", text: "text-slate-800" },
 };
 
@@ -200,7 +201,9 @@ export function varianteCeldaOperativa({
   tieneTurno,
   esIncompletoPlan,
   teoriaPendienteLazy,
+  esFuturoGris,
 }) {
+  if (esFuturoGris) return "futuroGris";
   if (teoriaPendienteLazy && tieneLicencia) return "teoriaPendiente";
   if (tieneLicencia) return "licencia";
   if (esIncompletoPlan) return "incompletoPlan";

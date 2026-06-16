@@ -6,6 +6,7 @@ import {
   callListarOverridesTurno,
   callObtenerResumenSolicitudArticuloGrilla,
   callRegistrarConsultaGestionTurnoGrilla,
+  callObtenerVistaGrillaMesAgente,
 } from "../../services/callables.js";
 import {
   lineasPendienteEnCola,
@@ -27,6 +28,8 @@ import DiaGrillaAuditoriaTecnicaRrhh from "./DiaGrillaAuditoriaTecnicaRrhh.jsx";
 import DiaGrillaFichadaAbmPanel from "./DiaGrillaFichadaAbmPanel.jsx";
 import GrillaGuardrailTeoriaAviso from "./GrillaGuardrailTeoriaAviso.jsx";
 import DiaGrillaAuditoriaCumplimientoHorario from "./DiaGrillaAuditoriaCumplimientoHorario.jsx";
+import DiaGrillaValidacionFichadaAlertas from "./DiaGrillaValidacionFichadaAlertas.jsx";
+import { diaMesKeyDesdeFechaYmd } from "../fichadas/cargaManual/fichadasCargaManualUtils.js";
 
 function labelEstado(id) {
   const e = String(id || "");
@@ -127,9 +130,49 @@ export default function DiaGrillaDetalleModal({
   materializadoLazy = false,
 }) {
   const detalleFichadaRrhh = puedeVerTramosCrudosFichadas;
+  const [celdaVisDetalle, setCeldaVisDetalle] = useState(celdaVis);
+  useEffect(() => {
+    setCeldaVisDetalle(celdaVis);
+  }, [celdaVis, open, fechaYmd, personaId]);
+
+  useEffect(() => {
+    if (!open || !mostrarFichada || detalleFichadaRrhh) return;
+    const pid = String(personaId || "").trim();
+    const gdt = String(grupoTrabajoId || "").trim();
+    const ymd = String(fechaYmd || "").slice(0, 10);
+    if (!/^per_/i.test(pid) || !/^gdt_/i.test(gdt) || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const [y, m] = ymd.split("-").map(Number);
+        const diaKey = diaMesKeyDesdeFechaYmd(ymd);
+        const res = await callObtenerVistaGrillaMesAgente({
+          persona_id: pid,
+          grupo_trabajo_id: gdt,
+          anio: y,
+          mes: m,
+          dia_key: diaKey,
+        });
+        if (cancelled) return;
+        const dias = res.data?.dias && typeof res.data.dias === "object" ? res.data.dias : {};
+        const fresca = diaKey && dias[diaKey] ? dias[diaKey] : null;
+        if (fresca && typeof fresca === "object") {
+          setCeldaVisDetalle((prev) => ({ ...(prev || {}), ...fresca }));
+        }
+      } catch {
+        /* listado sigue siendo fuente; modal sin alertas lazy */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, mostrarFichada, detalleFichadaRrhh, personaId, grupoTrabajoId, fechaYmd]);
+
+  const celdaVisEfectiva = celdaVisDetalle || celdaVis;
   const resumenFichada = useMemo(
-    () => (mostrarFichada && celdaVis ? resumenFichadaModal(celdaVis, { esRrhh: detalleFichadaRrhh }) : null),
-    [mostrarFichada, celdaVis, detalleFichadaRrhh],
+    () => (mostrarFichada && celdaVisEfectiva ? resumenFichadaModal(celdaVisEfectiva, { esRrhh: detalleFichadaRrhh }) : null),
+    [mostrarFichada, celdaVisEfectiva, detalleFichadaRrhh],
   );
   const tituloDesalineacion = desalineacionTooltip || "Teoría modificada post-licencia";
   const imputacionExterna = useMemo(
@@ -449,8 +492,10 @@ export default function DiaGrillaDetalleModal({
           </div>
         ) : null}
 
+        <DiaGrillaValidacionFichadaAlertas celdaVis={celdaVisEfectiva} />
+
         <DiaGrillaAuditoriaCumplimientoHorario
-          celdaVis={celdaVis}
+          celdaVis={celdaVisEfectiva}
           esRrhhLabor={detalleFichadaRrhh}
           turnoTeorico={turnoTeorico}
           horariosFichada={resumenFichada?.horarios || []}
@@ -458,7 +503,7 @@ export default function DiaGrillaDetalleModal({
 
         {!fichadaAbmActivo && puedeVerTramosCrudosFichadas ? (
           <DiaGrillaAuditoriaTecnicaRrhh
-            celdaVis={celdaVis}
+            celdaVis={celdaVisEfectiva}
             turnoTeorico={turnoTeorico}
             desalineacionTeoria={desalineacionTeoria}
             desalineacionTooltip={desalineacionTooltip}
@@ -718,7 +763,7 @@ export default function DiaGrillaDetalleModal({
             personaId={String(personaId || "")}
             fechaYmd={String(fechaYmd || "")}
             grupoTrabajoId={String(grupoTrabajoId || "")}
-            celdaVis={celdaVis}
+            celdaVis={celdaVisEfectiva}
             soloLectura={soloLectura}
             vista={fichadaAbmVista}
             onVistaChange={setFichadaAbmVista}

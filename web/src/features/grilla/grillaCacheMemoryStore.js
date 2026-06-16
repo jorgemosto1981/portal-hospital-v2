@@ -155,3 +155,22 @@ export function createGrillaCacheMemoryStore(options = {}) {
 
 /** Store singleton de la app (compartido entre montajes del panel). */
 export const grillaVistaCacheStore = createGrillaCacheMemoryStore();
+
+/**
+ * Tras mutación de fichadas / teoría / outbox — misma política que el panel GSO.
+ * @param {{ ops?: Array<{ grupoId?: string }>; periodo?: string; gdtActivo?: string; grupoIdVista?: string }} params
+ */
+export function invalidarCacheGrillaTrasMutacion(params) {
+  const periodoInv = String(params.periodo || "").trim();
+  if (!periodoInv) return;
+  const grupos = new Set();
+  const gdt = String(params.gdtActivo || params.grupoIdVista || "").trim();
+  if (gdt) grupos.add(gdt);
+  for (const op of params.ops || []) {
+    const og = String(op.grupoId || "").trim();
+    if (og) grupos.add(og);
+  }
+  for (const gid of grupos) {
+    grillaVistaCacheStore.invalidateGrupoPeriodo(gid, periodoInv);
+  }
+}
