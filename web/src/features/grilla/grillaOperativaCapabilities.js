@@ -20,7 +20,6 @@ export const GRILLA_OPERATIVA_SHELL = {
  * @property {boolean} puedeVerFichadasReales — capa 4 / modo fichada RRHH en celda y modal
  * @property {boolean} syncFocoEnUrl — T-05: persistir `?grupo_id=&periodo=` (RRHH primero)
  * @property {boolean} consolaTripleHorizonteEnFrio — jefe: tarjetas M-1/M/M+1 sin `grupo_id` en URL
- * @property {boolean} muestraBandejaAuditoriaDiaria — T-06: bandeja alertas sector (solo shell RRHH)
  * @property {boolean} puedeVerTramosCrudosFichadas — T-06: marcas reloj + auditoría en modal día
  * @property {boolean} puedeEditarFichadasReales — ABM capa real vía guardarCapaFichadaDia (shell RRHH)
  * @property {boolean} permiteExportarMatrizMacro — export read model / reportes institucionales
@@ -37,7 +36,6 @@ const RRHH_CAPABILITIES = {
   puedeVerFichadasReales: true,
   syncFocoEnUrl: true,
   consolaTripleHorizonteEnFrio: false,
-  muestraBandejaAuditoriaDiaria: true,
   puedeVerTramosCrudosFichadas: true,
   puedeEditarFichadasReales: true,
   permiteExportarMatrizMacro: true,
@@ -54,7 +52,6 @@ const JEFE_CAPABILITIES = {
   puedeVerFichadasReales: false,
   syncFocoEnUrl: true,
   consolaTripleHorizonteEnFrio: true,
-  muestraBandejaAuditoriaDiaria: false,
   puedeVerTramosCrudosFichadas: false,
   puedeEditarFichadasReales: false,
   permiteExportarMatrizMacro: false,

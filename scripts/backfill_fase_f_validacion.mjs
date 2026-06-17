@@ -230,7 +230,7 @@ async function refrescarAnaliticaValidacionVisMes(db, grupoId, anio, mes) {
         rda_egreso: celdaRaw.rda_egreso,
       };
 
-      const { analitica, resolverOut } = ejecutarAnaliticaYValidacionFichadaDia({
+      const { analitica, resolverOut, presentacion_compuesto } = ejecutarAnaliticaYValidacionFichadaDia({
         celdaCtx,
         celdaRaw,
         capaEnriquecida,
@@ -239,7 +239,12 @@ async function refrescarAnaliticaValidacionVisMes(db, grupoId, anio, mes) {
       });
       if (!analitica) continue;
 
-      const visUpdate = { [`dias.${diaKey}.analitica_cumplimiento`]: analitica };
+      const visUpdate = {
+        [`dias.${diaKey}.analitica_cumplimiento`]: analitica,
+        [`dias.${diaKey}.presentacion_compuesto`]: presentacion_compuesto && typeof presentacion_compuesto === "object"
+          ? presentacion_compuesto
+          : FieldValue.delete(),
+      };
       await visDoc.ref.update(visUpdate);
 
       const valPath = dotPathValidacionFichadaDia(diaKey);

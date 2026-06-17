@@ -82,6 +82,8 @@ function initFromItem(item) {
     notas_rrhh: item.notas_rrhh || "",
     horas_extra_max_semanal: item.horas_extra_max_semanal ?? "",
     horas_extra_max_mensual: item.horas_extra_max_mensual ?? "",
+    analisis_carga_horaria_total_habilitado: item.analisis_carga_horaria_total_habilitado !== false,
+    tolerancia_debitohorario_minutos: item.tolerancia_debitohorario_minutos ?? 30,
     tipo_contrato_ids: item.tipo_contrato_ids || null,
     dias: item.dias || diasFijosDefault(),
     ciclo: item.ciclo || cicloRotativoDefault(),
@@ -98,6 +100,8 @@ function blankState() {
     carga_horaria_semanal_teorica: "",
     impacta_calendario_institucional: true,
     notas_rrhh: "", horas_extra_max_semanal: "", horas_extra_max_mensual: "",
+    analisis_carga_horaria_total_habilitado: true,
+    tolerancia_debitohorario_minutos: 30,
     tipo_contrato_ids: null,
     dias: diasFijosDefault(),
     ciclo: cicloRotativoDefault(),
@@ -441,6 +445,9 @@ export default function RegimenHorarioForm({ modo, item, guardando, onGuardar, o
       notas_rrhh: form.notas_rrhh.trim() || null,
       horas_extra_max_semanal: form.horas_extra_max_semanal === "" ? null : Number(form.horas_extra_max_semanal),
       horas_extra_max_mensual: form.horas_extra_max_mensual === "" ? null : Number(form.horas_extra_max_mensual),
+      analisis_carga_horaria_total_habilitado: form.analisis_carga_horaria_total_habilitado !== false,
+      tolerancia_debitohorario_minutos:
+        form.tolerancia_debitohorario_minutos === "" ? 30 : Number(form.tolerancia_debitohorario_minutos),
       tipo_contrato_ids: form.tipo_contrato_ids,
     };
 
@@ -556,6 +563,37 @@ export default function RegimenHorarioForm({ modo, item, guardando, onGuardar, o
             onChange={(v) => set("notas_rrhh", v)}
             placeholder="Notas internas opcionales…"
           />
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Carga horaria total (jornada)
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Compara minutos teóricos del día vs suma de fichadas. Independiente de tolerancias de ingreso/egreso por turno.
+            </p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+              <label className="flex min-h-11 touch-manipulation items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={form.analisis_carga_horaria_total_habilitado !== false}
+                  onChange={(e) => set("analisis_carga_horaria_total_habilitado", e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300"
+                />
+                Análisis de carga horaria total
+              </label>
+              <InputField
+                label="Tolerancia máxima de déficit (min)"
+                value={form.tolerancia_debitohorario_minutos}
+                onChange={(v) => set("tolerancia_debitohorario_minutos", v === "" ? "" : Number(v))}
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max="180"
+                disabled={form.analisis_carga_horaria_total_habilitado === false}
+                className="w-full sm:w-48"
+              />
+            </div>
+          </div>
 
           {/* Selector tipo_patron */}
           <div className="space-y-2">

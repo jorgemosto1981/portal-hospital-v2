@@ -21,7 +21,9 @@ const { enriquecerLimitesCumplimientoEnCapa } = require(
 const TOL_REGIMEN = {
   tolerancia_debitohorario_minutos: 30,
   turnos_disponibles: [
-    { turno_id: "M", tolerancia_ingreso_min: 15, tolerancia_egreso_min: 15 },
+    { turno_id: "M", tolerancia_ingreso_min: 25, tolerancia_egreso_min: 25 },
+    { turno_id: "T", tolerancia_ingreso_min: 25, tolerancia_egreso_min: 25 },
+    { turno_id: "N", tolerancia_ingreso_min: 25, tolerancia_egreso_min: 25 },
   ],
 };
 
@@ -113,6 +115,21 @@ describe("resolverPresentacionCompuestoCelda", () => {
     assert.equal(n?.estado_tramo, "ausente");
     assert.equal(n?.fichada_label, null);
     assert.equal(n?.badge_label, "AUSENTE");
+  });
+
+  it("QA-C1: fichada 24h — N presente dentro de cortesía (salida 25m, tol 30)", () => {
+    const FECHA = "2026-06-13";
+    const pres = resolverDesdeFichadas(FECHA, [
+      {
+        ingreso: "06:38",
+        egreso: "05:35",
+        fecha_ymd: FECHA,
+        fecha_egreso_ymd: "2026-06-14",
+      },
+    ]);
+    const n = pres.filas.find((f) => f.segmento_id === "N");
+    assert.equal(n?.estado_tramo, "presente");
+    assert.equal(n?.badge_label, null);
   });
 
   it("QA-C1: fichada 24h — tres filas con proyección, sin AUSENTE en M/T/N", () => {

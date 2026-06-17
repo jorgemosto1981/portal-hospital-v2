@@ -53,6 +53,8 @@ function construirPartesFingerprintValidacionFichada({
       umbral_solape_fuera_turno_pct: capa.umbral_solape_fuera_turno_pct ?? null,
       ingreso_limite_con_gracia_iso: capa.ingreso_limite_con_gracia_iso ?? null,
       egreso_limite_con_gracia_iso: capa.egreso_limite_con_gracia_iso ?? null,
+      analisis_carga_horaria_total_habilitado: capa.analisis_carga_horaria_total_habilitado !== false,
+      tolerancia_debitohorario_minutos: capa.tolerancia_debitohorario_minutos ?? null,
     },
     fichadas_reales: c.fichadas_reales ?? c.fichadas ?? null,
     resuelto_rrhh: c.resuelto_rrhh === true,

@@ -212,6 +212,13 @@ export default function RegimenHorarioDetalle({ item, onCerrar, onEditar }) {
         <div className="border-b border-slate-100 px-5 py-3">
           <div className="flex flex-wrap gap-4 text-xs text-slate-600">
             <span>Carga semanal: <strong>{item.carga_horaria_semanal_teorica ?? "—"}hs</strong></span>
+            <span>
+              Análisis carga total:{" "}
+              <strong>{item.analisis_carga_horaria_total_habilitado === false ? "No" : "Sí"}</strong>
+              {item.analisis_carga_horaria_total_habilitado !== false && (
+                <> · tol. déficit <strong>{item.tolerancia_debitohorario_minutos ?? 30} min</strong></>
+              )}
+            </span>
             <span>Calendario inst.: <strong>{item.impacta_calendario_institucional !== false ? "Sí" : "No"}</strong></span>
             {item.notas_rrhh && <span className="italic text-slate-400">Nota: {item.notas_rrhh}</span>}
           </div>

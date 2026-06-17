@@ -43,6 +43,36 @@ export function parseFichadasRealesCelda(celda) {
 }
 
 /**
+ * Marca(s) HH:mm de un ítem `fichadas_reales` (ingreso + egreso, sin recalcular).
+ * @param {Record<string, unknown>|null|undefined} item
+ * @returns {string[]}
+ */
+export function marcasHhmmDesdeItemFichada(item) {
+  if (!item || typeof item !== "object") return [];
+  const ingreso = String(item.ingreso || item.hora_ingreso || "").trim();
+  const egreso = String(item.egreso || item.hora_egreso || "").trim();
+  const hora = String(item.hora || item.hora_hm || "").trim();
+  const out = [];
+  if (ingreso) out.push(ingreso);
+  if (egreso) out.push(egreso);
+  if (!ingreso && !egreso && hora) out.push(hora);
+  return out;
+}
+
+/**
+ * Todas las marcas HH:mm del día en orden (lectura de `fichadas_reales`).
+ * @param {Record<string, unknown>|null|undefined} celda
+ * @returns {string[]}
+ */
+export function todasMarcasHhmmDesdeCelda(celda) {
+  const marcas = [];
+  for (const f of parseFichadasRealesCelda(celda)) {
+    marcas.push(...marcasHhmmDesdeItemFichada(f));
+  }
+  return marcas;
+}
+
+/**
  * @param {Record<string, unknown>|null|undefined} celda
  */
 export function celdaTieneRegistroFichada(celda) {

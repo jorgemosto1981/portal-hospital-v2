@@ -36,3 +36,32 @@ export function leerCeldaVisDiaFusionada(data, diaKey) {
   const celda = dias[dk];
   return celda && typeof celda === "object" ? celda : {};
 }
+
+/**
+ * Sub-objeto materializado `presentacion_compuesto` (RFC filas celda).
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ * @returns {{ version?: number|null, turno_compuesto_id?: string|null, filas: Array<Record<string, unknown>> }|null}
+ */
+export function leerPresentacionCompuestoDesdeCelda(celdaVis) {
+  if (!celdaVis || typeof celdaVis !== "object") return null;
+  const raw = celdaVis.presentacion_compuesto;
+  if (!raw || typeof raw !== "object") return null;
+  const filas = Array.isArray(raw.filas)
+    ? raw.filas.filter((f) => f && typeof f === "object")
+    : [];
+  if (!filas.length) return null;
+  return {
+    version: raw.version ?? null,
+    turno_compuesto_id: raw.turno_compuesto_id ?? null,
+    filas,
+  };
+}
+
+/**
+ * Filas listas para iterar en UI (array vacío si no hay matriz compuesta).
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ * @returns {Array<Record<string, unknown>>}
+ */
+export function filasPresentacionCompuestoDesdeCelda(celdaVis) {
+  return leerPresentacionCompuestoDesdeCelda(celdaVis)?.filas ?? [];
+}

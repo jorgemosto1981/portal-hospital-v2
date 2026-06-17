@@ -99,7 +99,7 @@ Tests: `npm run test:validaciones-plan-turno`, `npm run test:blindaje-gso-dry-ru
 | Ticket | Entregable | Estado | Referencia |
 |--------|------------|--------|------------|
 | **T-05** | Foco GDT/URL + paleta por régimen + consola triple horizonte jefe | **✅ cerrado** `master` `c27e6d7` | Handoff T-05 · épica [`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`](./EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md) |
-| **T-06** | Bandeja auditoría RRHH + modal técnico + guardrails US-13 (modal, combo A/B/C, outbox) | **✅ cerrado** `master` `5c3fd86` · smoke integral 2026-06-11 | `grillaAuditoriaDiariaResumen`, `grillaGuardrailsTeoriaUi` |
+| **T-06** | Modal técnico + guardrails US-13 (modal, combo A/B/C, outbox) | **✅ cerrado** · bandeja «Auditoría diaria del sector» **retirada** 2026-06-17 (grilla visual) | `grillaGuardrailsTeoriaUi`, `grillaAuditoriaModalTecnica` |
 | **Camino A** | Saneamiento capabilities — grilla + planes por shell (sin `claimsIncludeRrhh` en UI GSO); actor US-13 unificado | **✅ cerrado** `master` `b12ab13` · smoke A–C 2026-06-11 · bundle `index-CGPzu35J.js` | `grillaOperativaCapabilities`, `planesTurnoCapabilities`, `actorPortalTeoriaDesdeShell` |
 | **T-07** | Caché RAM vista grilla (`vis_*` read model) + invalidación outbox | **✅ cerrado** `master` `a5ca021` · smoke 2026-06-11 · bundle `index-DmfD65xH.js` · race `setData`/doble `cargar` | `grillaCacheMemoryStore`, `useGrillaMesVista` |
 | **T-07b** | Caché RAM catálogo `grupos_de_trabajo` (TTL 30 min · coalescing · peek · claves por `limit`) | **✅ cerrado** `master` `9a5875b` · smoke DevTools 2026-06-11 · bundle `index-BgbIdH8K.js` | `catalogoLaboralCacheStore`, `listarGruposTrabajoCatalogo` |

@@ -137,6 +137,7 @@ function enriquecerLimitesCumplimientoEnCapa(capa, regimen) {
   const env = envelopeTeoricoDesdeCapa(base);
   const horas = Number(env.horas_desde_segmentos ?? base.horas_teoricas_totales);
   const carga_horaria_diaria_minutos = Number.isFinite(horas) && horas > 0 ? Math.round(horas * 60) : 0;
+  const analisis_carga_horaria_total_habilitado = regimen?.analisis_carga_horaria_total_habilitado !== false;
   const rawTol = Number(regimen?.tolerancia_debitohorario_minutos);
   const tolerancia_debitohorario_minutos = Number.isFinite(rawTol) && rawTol >= 0
     ? Math.trunc(rawTol)
@@ -174,6 +175,7 @@ function enriquecerLimitesCumplimientoEnCapa(capa, regimen) {
   return {
     ...base,
     carga_horaria_diaria_minutos,
+    analisis_carga_horaria_total_habilitado,
     tolerancia_debitohorario_minutos,
     tolerancia_ingreso_dia_min: tolIn,
     tolerancia_egreso_dia_min: tolOut,

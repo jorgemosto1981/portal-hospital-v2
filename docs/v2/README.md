@@ -20,8 +20,10 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) | Grilla aprobada VER plan; matriz control turno |
 | [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) | **Índice corto** → [`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md) |
 | **[`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md)** | **RETOMAR QA** — escenarios teoría ↔ real (alineación, presencia, cumplimiento, visual, acciones) |
-| [`RFC_CUMPLIMIENTO_TURNO_COMPUESTO_FILAS_CELDA.md`](./RFC_CUMPLIMIENTO_TURNO_COMPUESTO_FILAS_CELDA.md) | **Aprobado** — matriz N filas; `presentacion_compuesto` en `vis_*`; Fase 3 UI pendiente |
-| **[`HANDOFF_SESION_2026-06-17_PAUSA_PRESENTACION_COMPUESTO_FILAS_CELDA.md`](./HANDOFF_SESION_2026-06-17_PAUSA_PRESENTACION_COMPUESTO_FILAS_CELDA.md)** | **RETOMAR AQUÍ** — pausa post motor + presentación; siguiente: UI grilla/modal |
+| [`RFC_CUMPLIMIENTO_TURNO_COMPUESTO_FILAS_CELDA.md`](./RFC_CUMPLIMIENTO_TURNO_COMPUESTO_FILAS_CELDA.md) | **Aprobado** — matriz N filas; `presentacion_compuesto` en `vis_*`; UI grilla ✅ |
+| [`RFC_ANALISIS_CARGA_HORARIA_TOTAL_REGIMEN_V2.md`](./RFC_ANALISIS_CARGA_HORARIA_TOTAL_REGIMEN_V2.md) | **Aprobado** — tilde + tolerancia débito por régimen; F1–F4 piloto ✅ |
+| **[`HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md`](./HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md)** | **RETOMAR AQUÍ** — cierre análisis carga + grilla M/T/N + backfill piloto |
+| [`HANDOFF_SESION_2026-06-17_PAUSA_PRESENTACION_COMPUESTO_FILAS_CELDA.md`](./HANDOFF_SESION_2026-06-17_PAUSA_PRESENTACION_COMPUESTO_FILAS_CELDA.md) | Pausa previa motor + presentación (supersedido por cierre arriba) |
 | **[`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md)** | Cierre sesión 2026-06-12 — fichadas + colisión + visual celda |
 | [`HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md`](./HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md) | Checklist §3 QA ingreso fichadas (rama `feature/grilla-fase1-colision`) |
 | [`MODULO_FICHADAS_RELOJ_V2.md`](./MODULO_FICHADAS_RELOJ_V2.md) | Módulo fichadas A–G + §14 colisión analítica |

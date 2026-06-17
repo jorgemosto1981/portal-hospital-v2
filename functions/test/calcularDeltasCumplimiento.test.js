@@ -24,7 +24,10 @@ const FECHA = "2026-06-12";
 const CAPA_ENRIQUECIDA = {
   tipo_dia: "laborable",
   carga_horaria_diaria_minutos: 480,
+  analisis_carga_horaria_total_habilitado: true,
   tolerancia_debitohorario_minutos: 30,
+  tolerancia_ingreso_dia_min: 10,
+  tolerancia_egreso_dia_min: 10,
   ventana_ausencia_automatica_min: 120,
   umbral_solape_fuera_turno_min: 30,
   umbral_solape_fuera_turno_pct: 25,
@@ -196,13 +199,14 @@ describe("calcularDeltasCumplimiento (Fase 1 colisión)", () => {
     assert.ok(r.alertas_activas.includes("SALIDA_ANTICIPADA"));
   });
 
-  it("desvíos menores o iguales a tolerancia de débito: sin alertas de disciplina", () => {
+  it("desvíos menores o iguales a tolerancia de turno (dim A): sin alertas de disciplina", () => {
     const r = calcularDeltasCumplimiento(
       celdaConFichadas([{ ingreso: "06:05", egreso: "13:45", fecha_ymd: FECHA }]),
       {
         ...CAPA_ENRIQUECIDA,
         carga_horaria_diaria_minutos: 480,
-        tolerancia_debitohorario_minutos: 30,
+        tolerancia_ingreso_dia_min: 30,
+        tolerancia_egreso_dia_min: 30,
         ingreso_nominal_iso: "2026-06-12T06:00:00-03:00",
         ingreso_limite_con_gracia_iso: "2026-06-12T06:00:00-03:00",
         egreso_nominal_iso: "2026-06-12T14:00:00-03:00",
@@ -218,15 +222,15 @@ describe("calcularDeltasCumplimiento (Fase 1 colisión)", () => {
     assert.equal(r.alertas_activas.length, 0);
   });
 
-  it("salida anticipada: minutos vs egreso nominal (no restar gracia del cómputo)", () => {
+  it("salida anticipada: minutos vs egreso nominal (dim A — supera tolerancia egreso del turno)", () => {
     const r = calcularDeltasCumplimiento(
       celdaConFichadas([{ ingreso: "08:00", egreso: "15:40", fecha_ymd: FECHA }]),
       CAPA_ENRIQUECIDA,
       { fecha_ymd: FECHA },
     );
     assert.equal(r.disciplina.salida_anticipada_minutos, 20);
-    assert.equal(r.disciplina.fuera_de_margen, false);
-    assert.equal(r.alertas_activas.includes("SALIDA_ANTICIPADA"), false);
+    assert.equal(r.disciplina.fuera_de_margen, true);
+    assert.ok(r.alertas_activas.includes("SALIDA_ANTICIPADA"));
   });
 
   it("M+N con huecos: solo mañana fichada — tardanza en M, sin salida falsa de 960 min", () => {
@@ -315,7 +319,7 @@ describe("calcularDeltasCumplimiento (Fase 1 colisión)", () => {
     );
   });
 
-  it("M+N con huecos: solo noche fichada — ausente M + salida N en badges de celda", () => {
+  it("M+N con huecos: solo noche fichada — ausente M; N salida 25m con badge (tol egreso 15)", () => {
     const FECHA_N = "2026-06-15";
     const capaMn = {
       tipo_dia: "laborable",
@@ -360,6 +364,7 @@ describe("calcularDeltasCumplimiento (Fase 1 colisión)", () => {
     assert.equal(manana?.incumplimiento_celda_minutos, 480);
     assert.equal(manana?.incumplimiento_celda_tipo, "ausente_tramo");
     const noche = r.segmentos_cumplimiento?.find((s) => s.segmento_id === "N");
+    assert.equal(noche?.salida_anticipada_minutos, 25);
     assert.equal(noche?.incumplimiento_celda_minutos, 25);
     assert.equal(noche?.incumplimiento_celda_tipo, "salida");
   });
@@ -625,5 +630,115 @@ describe("Motor cumplimiento turnos compuestos — cobertura Fase A/B (RFC filas
 
     assert.equal(n?.cubierto, false);
     assert.equal(n?.incumplimiento_celda_tipo, "ausente_tramo");
+  });
+
+  it("M+T un tramo: persiste tardanza y salida punitivas en el mismo segmento", () => {
+    const capaMt = enriquecerLimitesCumplimientoEnCapa(
+      {
+        tipo_dia: "laborable",
+        turno_compuesto_id: "M+T",
+        horas_teoricas_totales: 16,
+        segmentos: [
+          { segmento_id: "M", ingreso_iso: `${FECHA}T09:00:00.000Z`, egreso_iso: `${FECHA}T17:00:00.000Z` },
+          { segmento_id: "T", ingreso_iso: `${FECHA}T17:00:00.000Z`, egreso_iso: `${FECHA}T01:00:00.000Z` },
+        ],
+        ingreso_teorico_final: `${FECHA}T09:00:00.000Z`,
+        egreso_teorico_final: `${FECHA}T01:00:00.000Z`,
+      },
+      TOL_REGIMEN,
+    );
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([{ ingreso: "08:15", egreso: "12:30", fecha_ymd: FECHA }]),
+      capaMt,
+      { fecha_ymd: FECHA },
+    );
+    assert.equal(r.calculo_por_segmentos, true);
+    const m = seg(r, "M");
+    const t = seg(r, "T");
+    assert.equal(m?.tardanza_minutos, 135);
+    assert.equal(m?.salida_anticipada_minutos, 90);
+    assert.equal(m?.incumplimiento_celda_tardanza_minutos, 135);
+    assert.equal(m?.incumplimiento_celda_salida_minutos, 90);
+    assert.equal(t?.cubierto, false);
+  });
+
+  it("T+N un tramo: tardanza y salida punitivas en T; N ausente (análogo M+T CAMPOS d8)", () => {
+    const FECHA_TN = "2026-06-08";
+    const [y, m, d] = FECHA_TN.split("-").map(Number);
+    const next = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+    const TOL_TN = {
+      tolerancia_debitohorario_minutos: 35,
+      turnos_disponibles: [
+        { turno_id: "T", tolerancia_ingreso_min: 25, tolerancia_egreso_min: 25 },
+        { turno_id: "N", tolerancia_ingreso_min: 25, tolerancia_egreso_min: 25 },
+      ],
+    };
+    const capaTn = enriquecerLimitesCumplimientoEnCapa(
+      {
+        tipo_dia: "laborable",
+        turno_compuesto_id: "T+N",
+        horas_teoricas_totales: 16,
+        segmentos: [
+          {
+            segmento_id: "T",
+            ingreso_iso: `${FECHA_TN}T17:00:00.000Z`,
+            egreso_iso: `${next}T01:00:00.000Z`,
+          },
+          {
+            segmento_id: "N",
+            ingreso_iso: `${next}T01:00:00.000Z`,
+            egreso_iso: `${next}T09:00:00.000Z`,
+          },
+        ],
+        ingreso_teorico_final: `${FECHA_TN}T17:00:00.000Z`,
+        egreso_teorico_final: `${next}T09:00:00.000Z`,
+      },
+      TOL_TN,
+    );
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([{ ingreso: "16:15", egreso: "20:30", fecha_ymd: FECHA_TN }]),
+      capaTn,
+      { fecha_ymd: FECHA_TN },
+    );
+    assert.equal(r.calculo_por_segmentos, true);
+    const t = seg(r, "T");
+    const n = seg(r, "N");
+    assert.equal(t?.tardanza_minutos, 135);
+    assert.equal(t?.salida_anticipada_minutos, 90);
+    assert.equal(t?.incumplimiento_celda_tardanza_minutos, 135);
+    assert.equal(t?.incumplimiento_celda_salida_minutos, 90);
+    assert.equal(t?.cubierto, true);
+    assert.equal(n?.cubierto, false);
+    assert.equal(n?.incumplimiento_celda_tipo, "ausente_tramo");
+  });
+
+  it("dim B OFF: déficit grave sin incumplimiento contractual", () => {
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([{ ingreso: "08:00", egreso: "14:00", fecha_ymd: FECHA }]),
+      { ...CAPA_ENRIQUECIDA, analisis_carga_horaria_total_habilitado: false },
+      { fecha_ymd: FECHA },
+    );
+    assert.equal(r.debito_tiempo.carga_teorica_minutos, 480);
+    assert.equal(r.debito_tiempo.carga_real_minutos, 360);
+    assert.equal(r.debito_tiempo.deficit_minutos, 120);
+    assert.equal(r.debito_tiempo.incumplimiento_carga_horaria, false);
+    assert.equal(r.debito_tiempo.calculo_suspendido, true);
+    assert.equal(r.debito_tiempo.motivo_calculo_suspendido, "ANALISIS_CARGA_HORARIA_DESHABILITADO");
+    assert.ok(!r.alertas_activas.includes("DEFICIT_HORARIO_GRAVE"));
+  });
+
+  it("dim B ON: déficit dentro de tolerancia configurable (40 min, tol 45)", () => {
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([{ ingreso: "08:00", egreso: "15:20", fecha_ymd: FECHA }]),
+      {
+        ...CAPA_ENRIQUECIDA,
+        analisis_carga_horaria_total_habilitado: true,
+        tolerancia_debitohorario_minutos: 45,
+      },
+      { fecha_ymd: FECHA },
+    );
+    assert.equal(r.debito_tiempo.deficit_minutos, 40);
+    assert.equal(r.debito_tiempo.incumplimiento_carga_horaria, false);
+    assert.ok(!r.alertas_activas.includes("DEFICIT_HORARIO_GRAVE"));
   });
 });

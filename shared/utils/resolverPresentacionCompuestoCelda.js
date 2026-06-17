@@ -4,7 +4,10 @@
 
 import { capaMaterializadaConSegmentosMultiples } from "./capaTeoricaLimitesCumplimiento.js";
 import {
+  badgesDisciplinaDesdeSegmentoAnalitica,
+  disciplinaHorariaEsIncumplimientoPorMargen,
   extraerTramosFichadaDesdeCelda,
+  segmentoTieneIncumplimientoDisciplina,
 } from "./calcularDeltasCumplimiento.js";
 import { isoToHhmmInstitucional, rangoHhmmLabel } from "./horarioInstitucionalDisplay.js";
 
@@ -34,50 +37,41 @@ function recortePresenciaEnVentanaNominal(tramos, ingreso_nominal_ms, egreso_nom
   return { ingreso_ms, egreso_ms };
 }
 
-function formatearMinutosJornada(minutos) {
-  const m = Math.trunc(Number(minutos) || 0);
-  const h = Math.floor(m / 60);
-  const r = m % 60;
-  if (h > 0 && r > 0) return `${h}h ${r}m`;
-  if (h > 0) return `${h}h`;
-  return `${r}m`;
-}
-
-function labelBadgeMinutosCelda(minutos) {
-  const raw = Math.trunc(Number(minutos) || 0);
-  if (raw <= 0) return null;
-  const cuerpo = raw >= 60 ? formatearMinutosJornada(raw) : `${raw}m`;
-  return `▼ ${cuerpo}`;
-}
-
 /**
+ * Presente / parcial / ausente por tramo (dimensión A — disciplina horaria del segmento).
+ * No usa tolerancia de débito del régimen (dimensión B).
+ *
  * @param {Record<string, unknown>} seg
+ * @param {number} tolerancia_ingreso_min
+ * @param {number} tolerancia_egreso_min
  * @returns {"presente"|"parcial"|"ausente"}
  */
-function estadoTramoDesdeSegmentoAnalitica(seg) {
+function estadoTramoDesdeSegmentoAnalitica(seg, tolerancia_ingreso_min, tolerancia_egreso_min) {
   if (seg.cubierto !== true) return "ausente";
-  const cob = Math.trunc(Number(seg.cobertura_minutos) || 0);
-  const carga = Math.trunc(Number(seg.carga_teorica_minutos) || 0);
-  if (carga > 0 && cob < carga) return "parcial";
+  if (segmentoTieneIncumplimientoDisciplina(seg)) return "parcial";
+  const punt = disciplinaHorariaEsIncumplimientoPorMargen(
+    seg.tardanza_minutos,
+    seg.salida_anticipada_minutos,
+    tolerancia_ingreso_min,
+    tolerancia_egreso_min,
+  );
+  if (punt.hay_incumplimiento) return "parcial";
   return "presente";
 }
 
 /**
  * @param {Record<string, unknown>} seg
  */
-function badgeDesdeSegmentoAnalitica(seg) {
-  const tipo = String(seg.incumplimiento_celda_tipo || "").trim();
-  const min = Math.trunc(Number(seg.incumplimiento_celda_minutos) || 0);
-  if (tipo === "ausente_tramo") {
-    return { badge_label: "AUSENTE", badge_tipo: "ausente_tramo" };
+function badgesDesdeSegmentoAnalitica(seg) {
+  const badges = badgesDisciplinaDesdeSegmentoAnalitica(seg);
+  if (!badges.length) {
+    return { badges: [], badge_label: null, badge_tipo: null };
   }
-  if (min <= 0 || !tipo) {
-    return { badge_label: null, badge_tipo: null };
-  }
-  if (tipo === "tardanza" || tipo === "salida") {
-    return { badge_label: labelBadgeMinutosCelda(min), badge_tipo: tipo };
-  }
-  return { badge_label: labelBadgeMinutosCelda(min), badge_tipo: tipo };
+  return {
+    badges,
+    badge_label: badges[0].label,
+    badge_tipo: badges[0].tipo,
+  };
 }
 
 /**
@@ -98,6 +92,8 @@ export function resolverPresentacionCompuestoCelda(celdaVis, capaTeorica, analit
   if (segsCapa.length < 2) return null;
 
   const segsAnal = Array.isArray(anal.segmentos_cumplimiento) ? anal.segmentos_cumplimiento : [];
+  const tolIn = Number(capa.tolerancia_ingreso_dia_min) || 0;
+  const tolOut = Number(capa.tolerancia_egreso_dia_min) || 0;
   const fechaYmd = String(opts.fecha_ymd || capa.fecha_base || "").slice(0, 10);
   const { tramos } = extraerTramosFichadaDesdeCelda(celdaVis, fechaYmd);
 
@@ -115,7 +111,7 @@ export function resolverPresentacionCompuestoCelda(celdaVis, capaTeorica, analit
       isoToHhmmInstitucional(segCapa.egreso_iso),
     );
 
-    const estado_tramo = estadoTramoDesdeSegmentoAnalitica(segAnal);
+    const estado_tramo = estadoTramoDesdeSegmentoAnalitica(segAnal, tolIn, tolOut);
     /** @type {string|null} */
     let fichada_label = null;
     if (estado_tramo !== "ausente" && ingreso_nominal_ms != null && egreso_nominal_ms != null) {
@@ -133,7 +129,7 @@ export function resolverPresentacionCompuestoCelda(celdaVis, capaTeorica, analit
       }
     }
 
-    const { badge_label, badge_tipo } = badgeDesdeSegmentoAnalitica(segAnal);
+    const { badge_label, badge_tipo, badges } = badgesDesdeSegmentoAnalitica(segAnal);
 
     return {
       segmento_id,
@@ -143,6 +139,7 @@ export function resolverPresentacionCompuestoCelda(celdaVis, capaTeorica, analit
       estado_tramo,
       badge_label,
       badge_tipo,
+      badges,
       cobertura_minutos: Math.trunc(Number(segAnal.cobertura_minutos) || 0),
       carga_teorica_minutos: Math.trunc(Number(segAnal.carga_teorica_minutos) || 0),
     };

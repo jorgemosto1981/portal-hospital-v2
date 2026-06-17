@@ -114,7 +114,12 @@ const camposComunesSchema = z.object({
   notas_rrhh: z.string().max(500).nullable().default(null),
   horas_extra_max_semanal: z.number().min(0).nullable().default(null),
   horas_extra_max_mensual: z.number().min(0).nullable().default(null),
-  /** Cortesía de déficit horario diario (categoría débito de tiempo). */
+  /**
+   * Dimensión B — compara minutos teóricos de la jornada vs suma de fichadas (RFC análisis carga horaria total).
+   * Independiente de tolerancia_ingreso/egreso por turno (dimensión A).
+   */
+  analisis_carga_horaria_total_habilitado: z.boolean().default(true),
+  /** Tolerancia máxima de déficit diario (min) cuando el análisis B está habilitado. */
   tolerancia_debitohorario_minutos: z.number().int().min(0).max(180).default(30),
 });
 

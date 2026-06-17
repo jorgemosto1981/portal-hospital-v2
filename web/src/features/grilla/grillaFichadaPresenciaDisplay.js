@@ -6,6 +6,11 @@ import {
   textoHorarioFichadaRealDesdeCelda,
 } from "../../../../shared/utils/grillaFichadaPresencia.js";
 import { etiquetaEstadoSemaforoFichada } from "./grillaFichadaEstadoJefeDisplay.js";
+import {
+  esPresentacionPorPisos,
+  filasPresentacionOperativaDesdeCelda,
+  lineasDesdePresentacionCompuesto,
+} from "./grillaPresentacionCompuestoUi.js";
 
 export {
   lineasHorarioFichadaReal,
@@ -49,14 +54,21 @@ export function titleFichadaPresencia(presencia) {
 export function resumenFichadaModal(cell, opts = {}) {
   const fichadas = parseFichadasRealesCelda(cell);
   const presencia = resolverFichadaPresencia(cell);
-  const horarios = lineasHorarioFichadaReal(fichadas);
+  const filasCompuesto = filasPresentacionOperativaDesdeCelda(cell);
+  const matrizCompuesta = esPresentacionPorPisos(filasCompuesto);
+  const horarios = matrizCompuesta
+    ? lineasDesdePresentacionCompuesto(filasCompuesto)
+    : lineasHorarioFichadaReal(fichadas);
 
   if (opts.esRrhh) {
     return {
       modo: "rrhh",
       presencia,
       horarios,
-      tieneRegistro: fichadas.length > 0,
+      filasPresentacionCompuesto: matrizCompuesta ? filasCompuesto : null,
+      tieneRegistro: matrizCompuesta
+        ? filasCompuesto.some((f) => String(f.fichada_label || "").trim())
+        : fichadas.length > 0,
     };
   }
 
@@ -97,6 +109,7 @@ export function resumenFichadaModal(cell, opts = {}) {
     textoEstado,
     tooltipJefe,
     horarios: [],
+    filasPresentacionCompuesto: matrizCompuesta ? filasCompuesto : null,
     tieneRegistro:
       semaforo === "VERDE" ||
       estadoJefe === "OK" ||

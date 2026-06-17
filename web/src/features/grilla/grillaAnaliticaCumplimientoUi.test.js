@@ -143,7 +143,7 @@ describe("grillaAnaliticaCumplimientoUi", () => {
     expect(b.disciplinaLista?.map((x) => x.label)).toEqual(["▼ 1h", "AUSENTE"]);
   });
 
-  it("M+N solo noche: dos ▼ (ausente M + salida N) sin chip -490m aunque falte flag calculo_por_segmentos", () => {
+  it("M+N solo noche: AUSENTE en M; N con salida 25m sin badge (dentro cortesía)", () => {
     const analitica = {
       segmentos_cumplimiento: [
         {
@@ -171,11 +171,10 @@ describe("grillaAnaliticaCumplimientoUi", () => {
     };
     expect(listaBadgesIncumplimientoPorSegmentoCelda(analitica)?.map((x) => x.label)).toEqual([
       "AUSENTE",
-      "▼ 25m",
     ]);
     const b = microBadgesAnaliticaRrhh(analitica, null);
     expect(b.debito).toBeNull();
-    expect(b.disciplinaLista?.map((x) => x.label)).toEqual(["AUSENTE", "▼ 25m"]);
+    expect(b.disciplinaLista?.map((x) => x.label)).toEqual(["AUSENTE"]);
   });
 
   it("sin marcas en celda laborable: chip AUSENTE sin déficit agregado", () => {
@@ -257,6 +256,42 @@ describe("grillaAnaliticaCumplimientoUi", () => {
     ]);
     const b = microBadgesAnalitica(null, { celdaVis: celda });
     expect(b.disciplinaLista?.map((x) => x.label)).toEqual(["AUSENTE", "AUSENTE"]);
+  });
+
+  it("M+T+N: no muestra déficit agregado en copy RRHH (evaluación por tramo)", () => {
+    const lineas = lineasDisciplinaTeoriaVsRealRrhh({
+      calculo_por_segmentos: true,
+      segmentos_cumplimiento: [
+        { segmento_id: "M", cubierto: true, carga_teorica_minutos: 480 },
+        { segmento_id: "T", cubierto: true, carga_teorica_minutos: 480 },
+        { segmento_id: "N", cubierto: true, carga_teorica_minutos: 480 },
+      ],
+      disciplina: { tardanza_minutos: 38, fuera_de_margen: true },
+      debito_tiempo: {
+        incumplimiento_carga_horaria: true,
+        deficit_minutos: 55,
+        tolerancia_debitohorario_minutos: 30,
+      },
+    });
+    expect(lineas.some((l) => l.includes("Carga horaria: déficit"))).toBe(false);
+    expect(lineas.some((l) => l.includes("Ingreso tardío: 38 min"))).toBe(true);
+  });
+
+  it("déficit jornada simple: tolerancia solo si está materializada en analítica", () => {
+    const conTol = lineasDisciplinaTeoriaVsRealRrhh({
+      debito_tiempo: {
+        incumplimiento_carga_horaria: true,
+        deficit_minutos: 55,
+        tolerancia_debitohorario_minutos: 45,
+      },
+    });
+    expect(conTol.some((l) => l.includes("45 min"))).toBe(true);
+
+    const sinTol = lineasDisciplinaTeoriaVsRealRrhh({
+      debito_tiempo: { incumplimiento_carga_horaria: true, deficit_minutos: 55 },
+    });
+    expect(sinTol.some((l) => l.includes("Carga horaria: déficit"))).toBe(true);
+    expect(sinTol.some((l) => l.includes("tolerancia"))).toBe(false);
   });
 
   it("disciplina RRHH: desvíos dentro de tolerancia de débito no son incumplimiento", () => {

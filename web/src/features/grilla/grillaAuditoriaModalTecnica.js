@@ -1,9 +1,9 @@
 import {
   celdaTieneCapaFichadaCargada,
+  celdaTieneFichadaImpar,
   evaluarContradiccionFichadaTeoria,
   parseFichadasRealesCelda,
 } from "../../../../shared/utils/grillaFichadaPresencia.js";
-import { celdaTieneFichadaImpar } from "./grillaAuditoriaDiariaResumen.js";
 import { horarioOperativoDesdeCeldaVis } from "./grillaHorarioInstitucional.js";
 
 /**

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { diasEnMes, etiquetaCelda, celdaTieneDesalineacionTeoria } from "./grillaMesCellUtils.js";
 import {
   evaluarImputacionExternaCelda,
@@ -30,6 +31,25 @@ import {
   titleFichadaPresencia,
   textoHorarioFichadaRealDesdeCelda,
 } from "./grillaFichadaPresenciaDisplay.js";
+import {
+  esMatrizPresentacionCompuesta,
+  esPresentacionPorPisos,
+  filaGrillaTieneTurnoCompuesto,
+  filasPresentacionOperativaDesdeCelda,
+  lineasDesdePresentacionCompuesto,
+  tablaNecesitaColumnasFichadaAnchas,
+  ALTURA_CHIP_GRILLA_COMPUESTO,
+  ALTURA_CHIP_GRILLA_SIMPLE,
+  ALTURA_FILA_GRILLA_COMPUESTO,
+  ALTURA_FILA_GRILLA_SIMPLE,
+  CLASE_CHIP_IMPORTANTE_COMPUESTO,
+  ANCHO_MIN_COL_DIA_FICHADA,
+  CLASE_CHIP_ANCHO_FICHADA,
+  CLASE_CHIP_ANCHO_CELDA_DIA,
+  CLASE_CHIP_MARCO_CELDA_DIA,
+  CLASE_TD_DIA_FICHADA,
+} from "./grillaPresentacionCompuestoUi.js";
+import GrillaPresentacionCompuestoFilas from "./GrillaPresentacionCompuestoFilas.jsx";
 import GrillaFichadaEstadoJefeBadge from "./GrillaFichadaEstadoJefeBadge.jsx";
 import {
   celdaEsDiaFuturoInstitucional,
@@ -66,6 +86,10 @@ function contenidoCeldaOperativa({
   soloLecturaGrilla,
   soloLecturaTooltip,
   celdaVis,
+  filasPresentacionCompuesto = null,
+  matrizPresentacionCompuesta = false,
+  usaPresentacionPisos = false,
+  pisoCompuestoGrande = false,
   ocultarMicroAnalitica = false,
   modoFichadaRrhh = false,
   omitirBadgeSemaforo = false,
@@ -152,9 +176,10 @@ function contenidoCeldaOperativa({
         compacto
       />
     );
-  const badgeAnalitica = ocultarMicroAnalitica ? null : (
-    <DiaGrillaCelda celdaVis={celdaVis} className="mt-px" modoRrhh={modoFichadaRrhh} />
-  );
+  const badgeAnalitica =
+    usaPresentacionPisos || ocultarMicroAnalitica ? null : (
+      <DiaGrillaCelda celdaVis={celdaVis} className="mt-px" modoRrhh={modoFichadaRrhh} />
+    );
   const filaInferiorCelda =
     celdaFuturaSinFichada
       ? null
@@ -194,6 +219,30 @@ function contenidoCeldaOperativa({
           {filaInferiorCelda}
           {diffBlock}
         </span>
+      </span>
+    );
+  }
+
+  if (
+    usaPresentacionPisos &&
+    Array.isArray(filasPresentacionCompuesto) &&
+    filasPresentacionCompuesto.length > 0 &&
+    !soloTeoriaFuturo
+  ) {
+    return (
+      <span className="flex h-full w-full flex-col leading-none">
+        <GrillaPresentacionCompuestoFilas
+          filas={filasPresentacionCompuesto}
+          mostrarBadges
+          pisoGrande={pisoCompuestoGrande}
+          className="flex-1"
+        />
+        {filaInferiorCelda || diffBlock ? (
+          <span className="mt-px flex flex-col items-center gap-px">
+            {filaInferiorCelda}
+            {diffBlock}
+          </span>
+        ) : null}
       </span>
     );
   }
@@ -307,6 +356,11 @@ export default function GrillaMesEquipoTabla({
   const totalDias = diasEnMes(anio, mes);
   const columnas = columnasCalendario(anio, mes);
   const institucionalPorDia = institucionalPorDiaEnFilas(filas, totalDias);
+  const columnasFichadaAnchas = useMemo(
+    () => tablaNecesitaColumnasFichadaAnchas(filas, modoFichada),
+    [filas, modoFichada],
+  );
+  const claseAnchoColDia = columnasFichadaAnchas ? ANCHO_MIN_COL_DIA_FICHADA : "min-w-[2.5rem]";
 
   return (
     <div className="mt-4 overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm">
@@ -317,7 +371,7 @@ export default function GrillaMesEquipoTabla({
             {columnas.map((c) => (
               <th
                 key={`ds-${c.dia}`}
-                className={`min-w-[2.5rem] h-9 ${claseFondoColumna({
+                className={`${claseAnchoColDia} h-9 ${claseFondoColumna({
                   esFinde: c.esFinde,
                   esFeriado: Boolean(institucionalPorDia[c.dia]),
                 })}`}
@@ -333,7 +387,7 @@ export default function GrillaMesEquipoTabla({
             {columnas.map((c) => (
               <th
                 key={c.dia}
-                className={`min-w-[2.5rem] h-9 ${claseFondoColumna({
+                className={`${claseAnchoColDia} h-9 ${claseFondoColumna({
                   esFinde: c.esFinde,
                   esFeriado: Boolean(institucionalPorDia[c.dia]),
                 })}`}
@@ -358,8 +412,11 @@ export default function GrillaMesEquipoTabla({
               const filaId = String(fila.fila_id || fila.persona_id || "");
               const personaLabel = String(fila.persona_label || fila.persona_id || "");
               const hlgIdFila = String(fila.hlg_id || "").trim() || undefined;
+              const filaCompuesta = filaGrillaTieneTurnoCompuesto(fila);
+              const alturaFila = filaCompuesta ? ALTURA_FILA_GRILLA_COMPUESTO : ALTURA_FILA_GRILLA_SIMPLE;
+              const alturaChip = filaCompuesta ? ALTURA_CHIP_GRILLA_COMPUESTO : ALTURA_CHIP_GRILLA_SIMPLE;
               return (
-                <tr key={filaId} className="h-16 align-middle">
+                <tr key={filaId} className={`${alturaFila} align-middle`}>
                   <td className={claseCeldaAgenteSticky()}>
                     <span className="block truncate text-[11px] font-semibold leading-snug text-slate-800">
                       {personaLabel}
@@ -372,13 +429,13 @@ export default function GrillaMesEquipoTabla({
                     const tipoInstCol = institucionalPorDia[dia];
 
                     if (fueraTramo) {
+                      const claseTdFuera = columnasFichadaAnchas
+                        ? `${claseFondoCeldaCalendarioTitular({ sinAsignacionGrupo: true })} ${CLASE_TD_DIA_FICHADA}`
+                        : `${claseFondoCeldaCalendarioTitular({ sinAsignacionGrupo: true })} px-0.5 py-0.5 align-middle`;
                       return (
-                        <td
-                          key={dia}
-                          className={`${claseFondoCeldaCalendarioTitular({ sinAsignacionGrupo: true })} px-0.5 py-0.5 align-middle`}
-                        >
+                        <td key={dia} className={claseTdFuera}>
                           <div
-                            className="mx-auto h-12 w-14"
+                            className={`mx-auto w-full max-w-none ${alturaChip}`}
                             aria-hidden="true"
                             title="No efectivo en este tramo"
                           />
@@ -394,9 +451,16 @@ export default function GrillaMesEquipoTabla({
                       const otroLabel = cell.etiqueta_grupo_corta || cellGdt;
                       const corta = otroLabel.length > 5 ? otroLabel.slice(0, 4) + "…" : otroLabel;
                       return (
-                        <td key={dia} className="border border-slate-300 bg-slate-100 p-0 align-middle">
+                        <td
+                          key={dia}
+                          className={
+                            columnasFichadaAnchas
+                              ? `border border-slate-300 bg-slate-100 ${CLASE_TD_DIA_FICHADA}`
+                              : "border border-slate-300 bg-slate-100 p-0 align-middle"
+                          }
+                        >
                           <div
-                            className="mx-auto flex h-12 w-14 items-center justify-center"
+                            className={`mx-auto flex w-full max-w-none items-center justify-center ${alturaChip}`}
                             title={`Asignado a ${otroLabel}`}
                           >
                             <span className="text-[7px] text-slate-400">{corta}</span>
@@ -419,10 +483,21 @@ export default function GrillaMesEquipoTabla({
                       grupoId: grupoSeleccionado || cellGdt || "",
                       personaLabels: { [personaIdFila]: personaLabel },
                     });
+                    const filasPresentacion = filasPresentacionOperativaDesdeCelda(cell);
+                    const matrizPresentacionCompuesta = esMatrizPresentacionCompuesta(filasPresentacion);
+                    const usaPresentacionPisos = esPresentacionPorPisos(filasPresentacion);
                     const turnoText = outboxVisual?.turnoText ?? textoHorarioTurno(cell);
                     const textoFichadaReal =
-                      modoFichada === "rrhh" ? textoHorarioFichadaRealDesdeCelda(cell) : "";
-                    const mostrarFichadaReal = Boolean(textoFichadaReal) && !esFuturoGris;
+                      !usaPresentacionPisos ? textoHorarioFichadaRealDesdeCelda(cell) : "";
+                    const mostrarFichadaReal =
+                      !esFuturoGris &&
+                      (usaPresentacionPisos
+                        ? filasPresentacion.some(
+                            (f) =>
+                              String(f.fichada_label || "").trim() ||
+                              String(f.badge_label || "").trim(),
+                          )
+                        : Boolean(textoFichadaReal));
                     const horarioCelda = mostrarFichadaReal ? textoFichadaReal : turnoText;
                     const jornadaVis = celdaTieneJornadaVis(cell);
                     const tipoDiaVis = String(cell.tipo_dia || "")
@@ -494,7 +569,13 @@ export default function GrillaMesEquipoTabla({
                       );
                     }
                     if (mostrarFichadaReal) {
-                      titleParts.push(textoFichadaReal);
+                      if (usaPresentacionPisos) {
+                        titleParts.push(
+                          lineasDesdePresentacionCompuesto(filasPresentacion).join(" | "),
+                        );
+                      } else {
+                        titleParts.push(textoFichadaReal);
+                      }
                     } else if (turnoText) {
                       titleParts.push(turnoText);
                     }
@@ -538,10 +619,14 @@ export default function GrillaMesEquipoTabla({
                       ? estadoSemaforoPinturaCeldaJefe(semaforoFichada.estado, cell, fechaYmd)
                       : null;
                     const pintarCeldaSemaforoJefe =
-                      modoFichada === "jefe" && Boolean(estadoSemaforoCelda) && !esFuturoGris;
+                      modoFichada === "jefe" &&
+                      Boolean(estadoSemaforoCelda) &&
+                      !esFuturoGris &&
+                      !usaPresentacionPisos;
 
                     const puedeMostrarChipFichadaReal =
-                      modoFichada !== "rrhh" ||
+                      usaPresentacionPisos ||
+                      modoFichada === "rrhh" ||
                       !estadoSemaforoCelda ||
                       estadoSemaforoCelda === "VERDE";
 
@@ -551,31 +636,40 @@ export default function GrillaMesEquipoTabla({
                       modoFichada === "jefe" && pintarCeldaSemaforoJefe ? false : tieneLicencia;
 
                     const variant =
-                      (mostrarFichadaReal && puedeMostrarChipFichadaReal && !tieneLicenciaParaVariant)
-                        ? "fichadaReal"
-                        : varianteCeldaOperativa({
-                            tieneLicencia: tieneLicenciaParaVariant,
-                            esNoLaborable,
-                            esFranco,
-                            tieneTurno: tieneTurno || jornadaVis,
-                            esIncompletoPlan: esIncompletoPlan && !tieneLicencia,
-                            teoriaPendienteLazy: teoriaPendiente.activo,
-                            esFuturoGris,
-                            estadoSemaforoFichada: esFuturoGris
-                              ? null
-                              : estadoSemaforoPinturaCeldaJefe(semaforoFichada?.estado, cell, fechaYmd),
-                          });
+                      usaPresentacionPisos
+                        ? "vacio"
+                        : (mostrarFichadaReal && puedeMostrarChipFichadaReal && !tieneLicenciaParaVariant)
+                          ? "fichadaReal"
+                          : varianteCeldaOperativa({
+                              tieneLicencia: tieneLicenciaParaVariant,
+                              esNoLaborable,
+                              esFranco,
+                              tieneTurno: tieneTurno || jornadaVis,
+                              esIncompletoPlan: esIncompletoPlan && !tieneLicencia,
+                              teoriaPendienteLazy: teoriaPendiente.activo,
+                              esFuturoGris,
+                              estadoSemaforoFichada: esFuturoGris
+                                ? null
+                                : estadoSemaforoPinturaCeldaJefe(semaforoFichada?.estado, cell, fechaYmd),
+                            });
 
-                    const claseTd =
+                    const claseTdBase =
                       pintarCeldaSemaforoJefe && estadoSemaforoCelda
                         ? claseFondoTdJefeSemaforo(estadoSemaforoCelda)
-                        : `${claseFondoCeldaCalendarioTitular({
+                        : claseFondoCeldaCalendarioTitular({
                             esFinde: col.esFinde,
                             esFeriado: Boolean(tipoInstCol),
                             esNoLaborable,
                             esFranco,
                             esLaborable: jornadaVis || tieneTurno,
-                          })} px-0.5 py-0.5 align-middle`;
+                          });
+                    const claseTdPadding =
+                      columnasFichadaAnchas && !pintarCeldaSemaforoJefe
+                        ? CLASE_TD_DIA_FICHADA
+                        : pintarCeldaSemaforoJefe && estadoSemaforoCelda
+                          ? "p-0 align-middle"
+                          : "px-0.5 py-0.5 align-middle";
+                    const claseTd = [claseTdBase, claseTdPadding].filter(Boolean).join(" ");
 
                     return (
                       <td key={dia} className={claseTd}>
@@ -631,7 +725,9 @@ export default function GrillaMesEquipoTabla({
                           className={
                             pintarCeldaSemaforoJefe
                               ? "block w-full p-0"
-                              : "flex w-full items-center justify-center py-0.5"
+                              : usaPresentacionPisos
+                                ? "block w-full p-0"
+                                : "flex w-full items-center justify-center py-0.5"
                           }
                           title={titleParts.join(" · ") || undefined}
                         >
@@ -640,6 +736,18 @@ export default function GrillaMesEquipoTabla({
                             rellenoCelda={pintarCeldaSemaforoJefe}
                             className={[
                               outboxVisual?.pending ? "ring-2 ring-amber-500 ring-offset-0" : "",
+                              columnasFichadaAnchas && !pintarCeldaSemaforoJefe
+                                ? CLASE_CHIP_MARCO_CELDA_DIA
+                                : "",
+                              columnasFichadaAnchas ? "!text-[9px]" : "",
+                              columnasFichadaAnchas && !usaPresentacionPisos
+                                ? CLASE_CHIP_ANCHO_CELDA_DIA
+                                : "",
+                              filaCompuesta ? CLASE_CHIP_IMPORTANTE_COMPUESTO : "",
+                              usaPresentacionPisos ? `${CLASE_CHIP_ANCHO_FICHADA} !p-0` : "",
+                              usaPresentacionPisos && !matrizPresentacionCompuesta
+                                ? CLASE_CHIP_IMPORTANTE_COMPUESTO
+                                : "",
                             ]
                               .filter(Boolean)
                               .join(" ")}
@@ -670,6 +778,12 @@ export default function GrillaMesEquipoTabla({
                               soloLecturaGrilla: soloLectura.activo,
                               soloLecturaTooltip: soloLectura.tooltip,
                               celdaVis: cell,
+                              filasPresentacionCompuesto: usaPresentacionPisos
+                                ? filasPresentacion
+                                : null,
+                              matrizPresentacionCompuesta,
+                              usaPresentacionPisos,
+                              pisoCompuestoGrande: filaCompuesta || usaPresentacionPisos,
                               ocultarMicroAnalitica:
                                 (modoFichada === "jefe" && !ausenteSinMarcasPasada) || esFuturoGris,
                               modoFichadaRrhh: modoFichada === "rrhh",

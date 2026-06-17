@@ -31,6 +31,7 @@ import GrillaGuardrailTeoriaAviso from "./GrillaGuardrailTeoriaAviso.jsx";
 import DiaGrillaAuditoriaCumplimientoHorario from "./DiaGrillaAuditoriaCumplimientoHorario.jsx";
 import DiaGrillaValidacionFichadaAlertas from "./DiaGrillaValidacionFichadaAlertas.jsx";
 import DiaGrillaResultadoCumplimientoJefe from "./DiaGrillaResultadoCumplimientoJefe.jsx";
+import GrillaPresentacionCompuestoFilas from "./GrillaPresentacionCompuestoFilas.jsx";
 import { diaMesKeyDesdeFechaYmd } from "../fichadas/cargaManual/fichadasCargaManualUtils.js";
 
 function labelEstado(id) {
@@ -494,7 +495,15 @@ export default function DiaGrillaDetalleModal({
                 ? resumenFichada.textoEstado || "Sin evaluación"
                 : titleFichadaPresencia(resumenFichada.presencia) || "Sin registro"}
             </p>
-            {resumenFichada.modo === "rrhh" && resumenFichada.horarios.length > 0 ? (
+            {Array.isArray(resumenFichada.filasPresentacionCompuesto) &&
+            resumenFichada.filasPresentacionCompuesto.length > 0 ? (
+              <div className="mt-2">
+                <GrillaPresentacionCompuestoFilas
+                  filas={resumenFichada.filasPresentacionCompuesto}
+                  tamano="modal"
+                />
+              </div>
+            ) : resumenFichada.modo === "rrhh" && resumenFichada.horarios.length > 0 ? (
               <ul className="mt-2 space-y-0.5 text-xs text-slate-700">
                 {resumenFichada.horarios.map((linea) => (
                   <li key={linea}>{linea}</li>

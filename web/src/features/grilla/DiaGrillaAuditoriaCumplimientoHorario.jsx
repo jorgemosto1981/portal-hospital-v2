@@ -31,6 +31,12 @@ import {
 import { titleFichadaPresencia } from "./grillaFichadaPresenciaDisplay.js";
 
 import { textoHorarioFichadaRealDesdeCelda } from "../../../../shared/utils/grillaFichadaPresencia.js";
+import {
+  esPresentacionPorPisos,
+  filasPresentacionOperativaDesdeCelda,
+  lineasDesdePresentacionCompuesto,
+} from "./grillaPresentacionCompuestoUi.js";
+import GrillaPresentacionCompuestoFilas from "./GrillaPresentacionCompuestoFilas.jsx";
 
 
 
@@ -118,19 +124,22 @@ export default function DiaGrillaAuditoriaCumplimientoHorario({
 
   const presencia = resumenFichada?.presencia;
 
+  const filasPresentacion = useMemo(
+    () => filasPresentacionOperativaDesdeCelda(celdaVis),
+    [celdaVis],
+  );
+  const matrizPresentacion = esPresentacionPorPisos(filasPresentacion);
+
   const horarioReal = useMemo(() => {
-
+    if (matrizPresentacion) {
+      return lineasDesdePresentacionCompuesto(filasPresentacion).join(" | ");
+    }
     const desdeCelda = textoHorarioFichadaRealDesdeCelda(celdaVis);
-
     if (desdeCelda) return desdeCelda;
-
     const lineas = resumenFichada?.horarios;
-
     if (Array.isArray(lineas) && lineas.length > 0) return lineas.join(" · ");
-
     return null;
-
-  }, [celdaVis, resumenFichada]);
+  }, [celdaVis, resumenFichada, matrizPresentacion, filasPresentacion]);
 
   const lineasDisciplina = useMemo(
     () => lineasDisciplinaTeoriaVsRealRrhh(analitica, { presencia, celdaVis }),
@@ -239,7 +248,14 @@ export default function DiaGrillaAuditoriaCumplimientoHorario({
 
             <p className="mt-1.5 text-sm font-medium text-slate-900">{tituloPresencia}</p>
 
-            {horarioReal ? (
+            {matrizPresentacion ? (
+              <div className="mt-2">
+                <GrillaPresentacionCompuestoFilas
+                  filas={filasPresentacion}
+                  tamano="modal"
+                />
+              </div>
+            ) : horarioReal ? (
 
               <p className="mt-1 font-mono text-sm text-slate-800">{horarioReal}</p>
 

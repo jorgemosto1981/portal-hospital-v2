@@ -382,38 +382,141 @@ function calcularDisciplinaPorSegmentos(tramos, ventanas) {
  * Minutos de incumplimiento por tramo para badge de celda (no sumar M+N en un solo chip).
  *
  * @param {Array<Record<string, unknown>>} segmentos
- * @param {number} tolerancia_debitohorario_minutos
+ * @param {number} tolerancia_ingreso_min
+ * @param {number} tolerancia_egreso_min
  */
-function enriquecerIncumplimientoCeldaPorSegmento(segmentos, tolerancia_debitohorario_minutos) {
+function enriquecerIncumplimientoCeldaPorSegmento(
+  segmentos,
+  tolerancia_ingreso_min,
+  tolerancia_egreso_min,
+) {
   if (!Array.isArray(segmentos)) return [];
   return segmentos.map((seg) => {
     const cubierto = seg.cubierto === true;
     const carga = Math.trunc(Number(seg.carga_teorica_minutos) || 0);
     const tard = Math.trunc(Number(seg.tardanza_minutos) || 0);
     const sal = Math.trunc(Number(seg.salida_anticipada_minutos) || 0);
-    const punt = disciplinaHorariaEsIncumplimiento(tard, sal, tolerancia_debitohorario_minutos);
+    const punt = disciplinaHorariaEsIncumplimientoPorMargen(
+      tard,
+      sal,
+      tolerancia_ingreso_min,
+      tolerancia_egreso_min,
+    );
     let incumplimiento_celda_minutos = 0;
     /** @type {string|null} */
     let incumplimiento_celda_tipo = null;
+    let incumplimiento_celda_tardanza_minutos = 0;
+    let incumplimiento_celda_salida_minutos = 0;
     if (!cubierto && carga > 0) {
       incumplimiento_celda_minutos = carga;
       incumplimiento_celda_tipo = "ausente_tramo";
-    } else if (punt.salida_anticipada_punitiva_min > 0) {
-      incumplimiento_celda_minutos = punt.salida_anticipada_punitiva_min;
-      incumplimiento_celda_tipo = "salida";
-    } else if (punt.tardanza_punitiva_min > 0) {
-      incumplimiento_celda_minutos = punt.tardanza_punitiva_min;
-      incumplimiento_celda_tipo = "tardanza";
-    } else if (cubierto && sal > 0) {
-      // Badge por tramo (M+N): mostrar desvío aunque no supere tol. global de alertas
-      incumplimiento_celda_minutos = sal;
-      incumplimiento_celda_tipo = "salida";
-    } else if (cubierto && tard > 0) {
-      incumplimiento_celda_minutos = tard;
-      incumplimiento_celda_tipo = "tardanza";
+    } else {
+      if (punt.tardanza_punitiva_min > 0) {
+        incumplimiento_celda_tardanza_minutos = punt.tardanza_punitiva_min;
+      }
+      if (punt.salida_anticipada_punitiva_min > 0) {
+        incumplimiento_celda_salida_minutos = punt.salida_anticipada_punitiva_min;
+      }
+      if (punt.salida_anticipada_punitiva_min > 0) {
+        incumplimiento_celda_minutos = punt.salida_anticipada_punitiva_min;
+        incumplimiento_celda_tipo = "salida";
+      } else if (punt.tardanza_punitiva_min > 0) {
+        incumplimiento_celda_minutos = punt.tardanza_punitiva_min;
+        incumplimiento_celda_tipo = "tardanza";
+      }
     }
-    return { ...seg, incumplimiento_celda_minutos, incumplimiento_celda_tipo };
+    return {
+      ...seg,
+      incumplimiento_celda_minutos,
+      incumplimiento_celda_tipo,
+      incumplimiento_celda_tardanza_minutos,
+      incumplimiento_celda_salida_minutos,
+    };
   });
+}
+
+function formatearMinutosJornadaBadge(minutos) {
+  const m = Math.trunc(Number(minutos) || 0);
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  if (h > 0 && r > 0) return `${h}h ${r}m`;
+  if (h > 0) return `${h}h`;
+  return `${r}m`;
+}
+
+/** Badge ▼ por minutos punitivos de disciplina (celda compuesta). */
+function labelBadgeDisciplinaMinutosCelda(minutos) {
+  const raw = Math.trunc(Number(minutos) || 0);
+  if (raw <= 0) return null;
+  const cuerpo = raw >= 60 ? formatearMinutosJornadaBadge(raw) : `${raw}m`;
+  return `▼ ${cuerpo}`;
+}
+
+/**
+ * Tardanza y salida punitivas materializadas en un segmento (dim A).
+ * @param {Record<string, unknown>|null|undefined} seg
+ */
+function incumplimientosDisciplinaDesdeSegmento(seg) {
+  if (!seg || typeof seg !== "object") {
+    return { ausente_tramo: false, tardanza_min: 0, salida_min: 0 };
+  }
+  const tipo = String(seg.incumplimiento_celda_tipo || "").trim();
+  if (tipo === "ausente_tramo") {
+    return { ausente_tramo: true, tardanza_min: 0, salida_min: 0 };
+  }
+  let tard = Math.trunc(Number(seg.incumplimiento_celda_tardanza_minutos) || 0);
+  let sal = Math.trunc(Number(seg.incumplimiento_celda_salida_minutos) || 0);
+  const legacy = Math.trunc(Number(seg.incumplimiento_celda_minutos) || 0);
+  if (!tard && tipo === "tardanza" && legacy > 0) tard = legacy;
+  if (!sal && tipo === "salida" && legacy > 0) sal = legacy;
+  return { ausente_tramo: false, tardanza_min: tard, salida_min: sal };
+}
+
+/**
+ * @param {Record<string, unknown>|null|undefined} seg
+ * @param {{ tolerancia_ingreso_min?: number, tolerancia_egreso_min?: number }} [opts]
+ * @returns {Array<{ label: string, tipo: string }>}
+ */
+function badgesDisciplinaDesdeSegmentoAnalitica(seg, opts = {}) {
+  const inc = incumplimientosDisciplinaDesdeSegmento(seg);
+  if (inc.ausente_tramo) return [{ label: "AUSENTE", tipo: "ausente_tramo" }];
+  let tard = inc.tardanza_min;
+  let sal = inc.salida_min;
+  const needsTard = tard <= 0 && Math.trunc(Number(seg?.tardanza_minutos) || 0) > 0;
+  const needsSal = sal <= 0 && Math.trunc(Number(seg?.salida_anticipada_minutos) || 0) > 0;
+  const materializadoDual =
+    seg
+    && typeof seg === "object"
+    && "incumplimiento_celda_tardanza_minutos" in seg
+    && "incumplimiento_celda_salida_minutos" in seg;
+  if (!materializadoDual && (needsTard || needsSal)) {
+    const punt = disciplinaHorariaEsIncumplimientoPorMargen(
+      seg?.tardanza_minutos,
+      seg?.salida_anticipada_minutos,
+      opts.tolerancia_ingreso_min,
+      opts.tolerancia_egreso_min,
+    );
+    if (needsTard) tard = punt.tardanza_punitiva_min;
+    if (needsSal) sal = punt.salida_anticipada_punitiva_min;
+  }
+  /** @type {Array<{ label: string, tipo: string }>} */
+  const badges = [];
+  if (tard > 0) {
+    const label = labelBadgeDisciplinaMinutosCelda(tard);
+    if (label) badges.push({ label, tipo: "tardanza" });
+  }
+  if (sal > 0) {
+    const label = labelBadgeDisciplinaMinutosCelda(sal);
+    if (label) badges.push({ label, tipo: "salida" });
+  }
+  return badges;
+}
+
+/** @param {Record<string, unknown>|null|undefined} seg */
+function segmentoTieneIncumplimientoDisciplina(seg) {
+  const inc = incumplimientosDisciplinaDesdeSegmento(seg);
+  if (inc.ausente_tramo) return true;
+  return inc.tardanza_min > 0 || inc.salida_min > 0;
 }
 
 /**
@@ -472,29 +575,49 @@ function evaluarFichadaFueraTurnoTeorico(
 }
 
 /**
- * Tardanza / salida anticipada solo son falta si superan la tolerancia de débito del régimen.
- * El ingreso anticipado no es incumplimiento.
+ * Tardanza / salida anticipada punitiva según márgenes de ingreso/egreso del turno (dimensión A).
  *
  * @param {number} tardanza_minutos
  * @param {number} salida_anticipada_minutos
- * @param {number} tolerancia_debitohorario_minutos
+ * @param {number} tolerancia_ingreso_min
+ * @param {number} [tolerancia_egreso_min]
+ */
+function disciplinaHorariaEsIncumplimientoPorMargen(
+  tardanza_minutos,
+  salida_anticipada_minutos,
+  tolerancia_ingreso_min,
+  tolerancia_egreso_min,
+) {
+  const ti = Number.isFinite(Number(tolerancia_ingreso_min)) && Number(tolerancia_ingreso_min) >= 0
+    ? Math.trunc(Number(tolerancia_ingreso_min))
+    : 0;
+  const to = Number.isFinite(Number(tolerancia_egreso_min)) && Number(tolerancia_egreso_min) >= 0
+    ? Math.trunc(Number(tolerancia_egreso_min))
+    : ti;
+  const tard = Math.max(0, Math.trunc(Number(tardanza_minutos) || 0));
+  const sal = Math.max(0, Math.trunc(Number(salida_anticipada_minutos) || 0));
+  return {
+    tardanza_punitiva_min: tard > ti ? tard : 0,
+    salida_anticipada_punitiva_min: sal > to ? sal : 0,
+    hay_incumplimiento: tard > ti || sal > to,
+  };
+}
+
+/**
+ * @deprecated Usar {@link disciplinaHorariaEsIncumplimientoPorMargen} con tolerancias de turno.
+ * Mantiene firma legacy (un solo umbral para ingreso y egreso).
  */
 function disciplinaHorariaEsIncumplimiento(
   tardanza_minutos,
   salida_anticipada_minutos,
   tolerancia_debitohorario_minutos,
 ) {
-  const tol = Number.isFinite(Number(tolerancia_debitohorario_minutos))
-    && Number(tolerancia_debitohorario_minutos) >= 0
-    ? Math.trunc(Number(tolerancia_debitohorario_minutos))
-    : DEFAULT_TOLERANCIA_DEBITOHORARIO_MIN;
-  const tard = Math.max(0, Math.trunc(Number(tardanza_minutos) || 0));
-  const sal = Math.max(0, Math.trunc(Number(salida_anticipada_minutos) || 0));
-  return {
-    tardanza_punitiva_min: tard > tol ? tard : 0,
-    salida_anticipada_punitiva_min: sal > tol ? sal : 0,
-    hay_incumplimiento: tard > tol || sal > tol,
-  };
+  return disciplinaHorariaEsIncumplimientoPorMargen(
+    tardanza_minutos,
+    salida_anticipada_minutos,
+    tolerancia_debitohorario_minutos,
+    tolerancia_debitohorario_minutos,
+  );
 }
 
 /**
@@ -502,6 +625,16 @@ function disciplinaHorariaEsIncumplimiento(
  */
 function disciplinaHorariaIncumplimientoDesdeAnalitica(analitica) {
   const d = analitica?.disciplina && typeof analitica.disciplina === "object" ? analitica.disciplina : {};
+  const tolIn = Number(d.tolerancia_ingreso_dia_min);
+  const tolOut = Number(d.tolerancia_egreso_dia_min);
+  if (Number.isFinite(tolIn) && Number.isFinite(tolOut)) {
+    return disciplinaHorariaEsIncumplimientoPorMargen(
+      d.tardanza_minutos,
+      d.salida_anticipada_minutos,
+      tolIn,
+      tolOut,
+    );
+  }
   const deb = analitica?.debito_tiempo && typeof analitica.debito_tiempo === "object"
     ? analitica.debito_tiempo
     : {};
@@ -516,14 +649,14 @@ function disciplinaHorariaIncumplimientoDesdeAnalitica(analitica) {
   );
 }
 
-function derivarAlertas(disciplina, debito, ausencia_automatica, fichadaFueraTurno) {
+function derivarAlertas(disciplina, debito, ausencia_automatica, fichadaFueraTurno, tolIn, tolOut) {
   const alertas = [];
   if (fichadaFueraTurno) alertas.push("FICHADA_FUERA_TURNO_TEORICO");
-  const tol = Number(debito.tolerancia_debitohorario_minutos);
-  const { tardanza_punitiva_min, salida_anticipada_punitiva_min } = disciplinaHorariaEsIncumplimiento(
+  const { tardanza_punitiva_min, salida_anticipada_punitiva_min } = disciplinaHorariaEsIncumplimientoPorMargen(
     disciplina.tardanza_minutos,
     disciplina.salida_anticipada_minutos,
-    tol,
+    tolIn,
+    tolOut,
   );
   if (tardanza_punitiva_min > 0) alertas.push("TARDANZA_PUNITIVA");
   if (salida_anticipada_punitiva_min > 0) alertas.push("SALIDA_ANTICIPADA");
@@ -559,6 +692,8 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
   const tolerancia_debitohorario_minutos = Number.isFinite(tolDebitoRaw) && tolDebitoRaw >= 0
     ? Math.trunc(tolDebitoRaw)
     : DEFAULT_TOLERANCIA_DEBITOHORARIO_MIN;
+
+  const analisis_carga_horaria_total_habilitado = capa.analisis_carga_horaria_total_habilitado !== false;
 
   const ventanaAusenciaRaw = Number(capa.ventana_ausencia_automatica_min);
   const ventana_ausencia_automatica_min = Number.isFinite(ventanaAusenciaRaw) && ventanaAusenciaRaw >= 0
@@ -655,7 +790,8 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
     ingreso_anticipado_minutos = porSeg.ingreso_anticipado_minutos;
     segmentos_cumplimiento = enriquecerIncumplimientoCeldaPorSegmento(
       porSeg.segmentos_cumplimiento,
-      tolerancia_debitohorario_minutos,
+      tolIn,
+      tolOut,
     );
     calculo_por_segmentos = true;
   } else if (ingresos.length > 0 && ingresoNominalMs != null && ingresoLimiteMs != null) {
@@ -674,10 +810,11 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
     }
   }
 
-  fuera_de_margen = disciplinaHorariaEsIncumplimiento(
+  fuera_de_margen = disciplinaHorariaEsIncumplimientoPorMargen(
     tardanza_minutos,
     salida_anticipada_minutos,
-    tolerancia_debitohorario_minutos,
+    tolIn,
+    tolOut,
   ).hay_incumplimiento;
 
   let carga_real_minutos = 0;
@@ -686,8 +823,20 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
   }
 
   const deficit_minutos = Math.max(0, carga_teorica_minutos - carga_real_minutos);
-  const incumplimiento_carga_horaria =
-    carga_teorica_minutos > 0 && deficit_minutos > tolerancia_debitohorario_minutos;
+  let incumplimiento_carga_horaria = false;
+  /** @type {boolean|undefined} */
+  let calculo_suspendido;
+  /** @type {string|undefined} */
+  let motivo_calculo_suspendido;
+
+  if (!analisis_carga_horaria_total_habilitado) {
+    incumplimiento_carga_horaria = false;
+    calculo_suspendido = true;
+    motivo_calculo_suspendido = "ANALISIS_CARGA_HORARIA_DESHABILITADO";
+  } else {
+    incumplimiento_carga_horaria =
+      carga_teorica_minutos > 0 && deficit_minutos > tolerancia_debitohorario_minutos;
+  }
 
   const tipoDia = normalizarTipoDia(celda.tipo_dia ?? capa.tipo_dia);
   const diaLaborable = tipoDia === "laborable" || tipoDia === "guardia" || celdaEsperaFichada(celda);
@@ -705,6 +854,8 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
     tardanza_minutos,
     salida_anticipada_minutos,
     ingreso_anticipado_minutos,
+    tolerancia_ingreso_dia_min: tolIn,
+    tolerancia_egreso_dia_min: tolOut,
     ingreso_nominal_iso: capa.ingreso_nominal_iso ?? null,
     ingreso_limite_con_gracia_iso: capa.ingreso_limite_con_gracia_iso ?? null,
     egreso_nominal_iso: capa.egreso_nominal_iso ?? null,
@@ -713,13 +864,24 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
 
   const debito_tiempo = {
     incumplimiento_carga_horaria,
+    analisis_carga_horaria_total_habilitado,
     carga_teorica_minutos,
     carga_real_minutos,
     deficit_minutos,
     tolerancia_debitohorario_minutos,
+    ...(calculo_suspendido === true
+      ? { calculo_suspendido: true, motivo_calculo_suspendido }
+      : {}),
   };
 
-  const alertas_activas = derivarAlertas(disciplina, debito_tiempo, ausencia_automatica, false);
+  const alertas_activas = derivarAlertas(
+    disciplina,
+    debito_tiempo,
+    ausencia_automatica,
+    false,
+    tolIn,
+    tolOut,
+  );
 
   return {
     version: ANALITICA_VERSION,
@@ -732,4 +894,4 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
   };
 }
 
-module.exports = { extraerTramosFichadaDesdeCelda, enriquecerIncumplimientoCeldaPorSegmento, minutosSolapeTramosConVentanaTeorica, evaluarFichadaFueraTurnoTeorico, disciplinaHorariaEsIncumplimiento, disciplinaHorariaIncumplimientoDesdeAnalitica, calcularDeltasCumplimiento };
+module.exports = { extraerTramosFichadaDesdeCelda, enriquecerIncumplimientoCeldaPorSegmento, labelBadgeDisciplinaMinutosCelda, incumplimientosDisciplinaDesdeSegmento, badgesDisciplinaDesdeSegmentoAnalitica, segmentoTieneIncumplimientoDisciplina, minutosSolapeTramosConVentanaTeorica, evaluarFichadaFueraTurnoTeorico, disciplinaHorariaEsIncumplimientoPorMargen, disciplinaHorariaEsIncumplimiento, disciplinaHorariaIncumplimientoDesdeAnalitica, calcularDeltasCumplimiento };
