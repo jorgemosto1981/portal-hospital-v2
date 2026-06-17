@@ -514,3 +514,116 @@ describe("calcularDeltasCumplimiento (Fase 1 colisión)", () => {
     assert.equal(r.alertas_activas?.includes("TARDANZA_PUNITIVA"), false);
   });
 });
+
+describe("Motor cumplimiento turnos compuestos — cobertura Fase A/B (RFC filas celda)", () => {
+  const TOL_REGIMEN = {
+    tolerancia_debitohorario_minutos: 30,
+    turnos_disponibles: [
+      { turno_id: "M", tolerancia_ingreso_min: 15, tolerancia_egreso_min: 15 },
+    ],
+  };
+
+  /** M+T+N continuo 06:00→06:00 (ISO Z = 09:00 / 17:00 / +1d…) para `fechaYmd` laboral. */
+  function capaMtnContinuaEnriquecida(fechaYmd) {
+    const f = String(fechaYmd).slice(0, 10);
+    const [y, m, d] = f.split("-").map(Number);
+    const next = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+    return enriquecerLimitesCumplimientoEnCapa(
+      {
+        tipo_dia: "laborable",
+        tiene_huecos: false,
+        turno_compuesto_id: "M+T+N",
+        horas_teoricas_totales: 24,
+        segmentos: [
+          {
+            segmento_id: "M",
+            ingreso_iso: `${f}T09:00:00.000Z`,
+            egreso_iso: `${f}T17:00:00.000Z`,
+          },
+          {
+            segmento_id: "T",
+            ingreso_iso: `${f}T17:00:00.000Z`,
+            egreso_iso: `${next}T01:00:00.000Z`,
+          },
+          {
+            segmento_id: "N",
+            ingreso_iso: `${next}T01:00:00.000Z`,
+            egreso_iso: `${next}T09:00:00.000Z`,
+          },
+        ],
+        ingreso_teorico_final: `${f}T09:00:00.000Z`,
+        egreso_teorico_final: `${next}T09:00:00.000Z`,
+      },
+      TOL_REGIMEN,
+    );
+  }
+
+  function seg(r, id) {
+    return r.segmentos_cumplimiento?.find((s) => s.segmento_id === id);
+  }
+
+  it("QA-C1: fichada 24h continua (06:38→05:35+1) — M/T/N cubiertos (solape >50%), déficit ~63 min", () => {
+    const FECHA = "2026-06-13";
+    const capa = capaMtnContinuaEnriquecida(FECHA);
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([
+        {
+          ingreso: "06:38",
+          egreso: "05:35",
+          fecha_ymd: FECHA,
+          fecha_egreso_ymd: "2026-06-14",
+        },
+      ]),
+      capa,
+      { fecha_ymd: FECHA },
+    );
+
+    assert.equal(r.calculo_por_segmentos, true);
+    const m = seg(r, "M");
+    const t = seg(r, "T");
+    const n = seg(r, "N");
+    assert.equal(m?.cubierto, true, "M debe estar cubierto por cobertura, no ausente_tramo");
+    assert.equal(t?.cubierto, true, "T debe estar cubierto");
+    assert.equal(n?.cubierto, true, "N debe estar cubierto");
+    assert.notEqual(m?.incumplimiento_celda_tipo, "ausente_tramo");
+    assert.notEqual(t?.incumplimiento_celda_tipo, "ausente_tramo");
+    assert.notEqual(n?.incumplimiento_celda_tipo, "ausente_tramo");
+    assert.equal(r.debito_tiempo?.deficit_minutos, 63);
+    assert.equal(m?.tardanza_minutos, 38);
+    assert.equal(n?.salida_anticipada_minutos, 25);
+    assert.equal(r.alertas_activas?.includes("TARDANZA_PUNITIVA"), true);
+  });
+
+  it("QA-C5: fichada 06:00→18:30 — M OK, T parcial (>50%), N ausente", () => {
+    const FECHA = "2026-06-13";
+    const capa = capaMtnContinuaEnriquecida(FECHA);
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([
+        {
+          ingreso: "06:00",
+          egreso: "18:30",
+          fecha_ymd: FECHA,
+          fecha_egreso_ymd: FECHA,
+        },
+      ]),
+      capa,
+      { fecha_ymd: FECHA },
+    );
+
+    assert.equal(r.calculo_por_segmentos, true);
+    const m = seg(r, "M");
+    const t = seg(r, "T");
+    const n = seg(r, "N");
+
+    assert.equal(m?.cubierto, true);
+    assert.equal(m?.tardanza_minutos, 0);
+    assert.notEqual(m?.incumplimiento_celda_tipo, "ausente_tramo");
+
+    assert.equal(t?.cubierto, true);
+    assert.equal(t?.salida_anticipada_minutos, 210);
+    assert.notEqual(t?.incumplimiento_celda_tipo, "ausente_tramo");
+
+    assert.equal(n?.cubierto, false);
+    assert.equal(n?.incumplimiento_celda_tipo, "ausente_tramo");
+  });
+});

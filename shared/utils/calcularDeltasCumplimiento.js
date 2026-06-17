@@ -16,6 +16,8 @@ const ANALITICA_VERSION = 1;
 
 /** Solape mínimo (min) para asignar una fichada a un tramo teórico del día. */
 const UMBRAL_EMPAREJAR_SEGMENTO_MIN = 15;
+/** Cobertura mínima de la ventana nominal para considerar el segmento presente (RFC filas celda). */
+const UMBRAL_COBERTURA_SEGMENTO_RATIO = 0.5;
 const DURACION_TRAMO_PUNTUAL_MS = 60_000;
 const MARGEN_INGRESO_PUNTUAL_MS = 20 * 60_000;
 
@@ -233,40 +235,127 @@ function tramoCuentaComoCubiertoEnSegmento(tramo, ventana) {
 }
 
 /**
- * Disciplina horaria y resumen por tramo cuando hay ≥2 segmentos con huecos.
+ * Recorte de presencia real dentro de la ventana nominal del segmento (unión de tramos).
+ *
+ * @param {Array<{ ingreso_ms: number, egreso_ms: number }>} tramos
+ * @param {{ ingreso_nominal_ms: number, egreso_nominal_ms: number }} ventana
+ */
+function recortePresenciaEnVentanaNominal(tramos, ventana) {
+  let ingreso_ms = null;
+  let egreso_ms = null;
+  for (const t of tramos) {
+    const inicio = Math.max(t.ingreso_ms, ventana.ingreso_nominal_ms);
+    const fin = Math.min(t.egreso_ms, ventana.egreso_nominal_ms);
+    if (fin <= inicio) continue;
+    if (ingreso_ms == null || inicio < ingreso_ms) ingreso_ms = inicio;
+    if (egreso_ms == null || fin > egreso_ms) egreso_ms = fin;
+  }
+  if (ingreso_ms == null || egreso_ms == null) return null;
+  return { ingreso_ms, egreso_ms };
+}
+
+/**
+ * Marca puntual al ingreso nominal del segmento (ingreso sin egreso / tramo ≤2 min).
+ *
+ * @param {Array<{ ingreso_ms: number, egreso_ms: number }>} tramos
+ * @param {{ ingreso_nominal_ms: number, egreso_nominal_ms: number }} ventana
+ */
+function hayMarcaPuntualAlIngresoSegmento(tramos, ventana) {
+  for (const t of tramos) {
+    const durMs = t.egreso_ms - t.ingreso_ms;
+    const ingresoEnVentana =
+      t.ingreso_ms >= ventana.ingreso_nominal_ms - MARGEN_INGRESO_PUNTUAL_MS
+      && t.ingreso_ms <= ventana.ingreso_nominal_ms + MARGEN_INGRESO_PUNTUAL_MS;
+    if (!ingresoEnVentana) continue;
+    if (durMs <= 2 * 60_000) return true;
+    const solape = minutosSolapeTramosConVentanaTeorica(
+      [t],
+      ventana.ingreso_nominal_ms,
+      ventana.egreso_nominal_ms,
+    );
+    if (solape > 0) return true;
+  }
+  return false;
+}
+
+/**
+ * @param {Array<{ ingreso_ms: number, egreso_ms: number }>} tramos
+ * @param {{ ingreso_nominal_ms: number, egreso_nominal_ms: number, ingreso_limite_ms: number, egreso_limite_ms: number, carga_minutos: number, segmento_id: string|null }} ventana
+ */
+function segmentoCubiertoPorCobertura(tramos, ventana) {
+  const carga = Math.trunc(Number(ventana.carga_minutos) || 0);
+  if (carga <= 0) return false;
+  const minutosCubiertos = minutosSolapeTramosConVentanaTeorica(
+    tramos,
+    ventana.ingreso_nominal_ms,
+    ventana.egreso_nominal_ms,
+  );
+  const ratio = minutosCubiertos / carga;
+  if (ratio >= UMBRAL_COBERTURA_SEGMENTO_RATIO) return true;
+  return hayMarcaPuntualAlIngresoSegmento(tramos, ventana);
+}
+
+/**
+ * Disciplina en un segmento usando presencia recortada a la ventana nominal.
+ *
+ * @param {{ ingreso_ms: number, egreso_ms: number }} recorte
+ * @param {{ ingreso_nominal_ms: number, egreso_nominal_ms: number, ingreso_limite_ms: number, egreso_limite_ms: number }} ventana
+ */
+function disciplinaDesdeRecorteEnVentana(recorte, ventana) {
+  let segTard = 0;
+  let segSal = 0;
+  let segIngAnt = 0;
+  if (recorte.ingreso_ms > ventana.ingreso_limite_ms) {
+    segTard = diffMinutos(ventana.ingreso_nominal_ms, recorte.ingreso_ms);
+  } else if (recorte.ingreso_ms < ventana.ingreso_nominal_ms) {
+    segIngAnt = diffMinutos(recorte.ingreso_ms, ventana.ingreso_nominal_ms);
+  }
+  if (recorte.egreso_ms < ventana.egreso_limite_ms) {
+    segSal = diffMinutos(recorte.egreso_ms, ventana.egreso_nominal_ms);
+  }
+  return { segTard, segSal, segIngAnt };
+}
+
+/**
+ * Disciplina horaria y resumen por tramo (≥2 segmentos): cobertura por intersección + umbral 50%.
  *
  * @param {Array<{ ingreso_ms: number, egreso_ms: number }>} tramos
  * @param {ReturnType<typeof ventanasTeoricasPorSegmento>} ventanas
  */
 function calcularDisciplinaPorSegmentos(tramos, ventanas) {
-  const pares = emparejarTramosConVentanasSegmento(tramos, ventanas);
   let tardanza_minutos = 0;
   let salida_anticipada_minutos = 0;
   let ingreso_anticipado_minutos = 0;
   /** @type {Array<Record<string, unknown>>} */
   const segmentos_cumplimiento = [];
 
-  for (const { ventana, tramo } of pares) {
+  for (const ventana of ventanas) {
+    const minutosCubiertos = minutosSolapeTramosConVentanaTeorica(
+      tramos,
+      ventana.ingreso_nominal_ms,
+      ventana.egreso_nominal_ms,
+    );
+    const cubierto = segmentoCubiertoPorCobertura(tramos, ventana);
     let segTard = 0;
     let segSal = 0;
     let segIngAnt = 0;
-    if (tramo) {
-      if (tramo.ingreso_ms > ventana.ingreso_limite_ms) {
-        segTard = diffMinutos(ventana.ingreso_nominal_ms, tramo.ingreso_ms);
-      } else if (tramo.ingreso_ms < ventana.ingreso_nominal_ms) {
-        segIngAnt = diffMinutos(tramo.ingreso_ms, ventana.ingreso_nominal_ms);
+    if (cubierto) {
+      const recorte = recortePresenciaEnVentanaNominal(tramos, ventana);
+      if (recorte) {
+        const d = disciplinaDesdeRecorteEnVentana(recorte, ventana);
+        segTard = d.segTard;
+        segSal = d.segSal;
+        segIngAnt = d.segIngAnt;
+        tardanza_minutos += segTard;
+        salida_anticipada_minutos += segSal;
+        ingreso_anticipado_minutos += segIngAnt;
       }
-      if (tramo.egreso_ms < ventana.egreso_limite_ms) {
-        segSal = diffMinutos(tramo.egreso_ms, ventana.egreso_nominal_ms);
-      }
-      tardanza_minutos += segTard;
-      salida_anticipada_minutos += segSal;
-      ingreso_anticipado_minutos += segIngAnt;
     }
     segmentos_cumplimiento.push({
       segmento_id: ventana.segmento_id,
-      cubierto: tramoCuentaComoCubiertoEnSegmento(tramo, ventana),
+      cubierto,
       carga_teorica_minutos: ventana.carga_minutos,
+      cobertura_minutos: minutosCubiertos,
       tardanza_minutos: segTard,
       salida_anticipada_minutos: segSal,
       ingreso_anticipado_minutos: segIngAnt,
