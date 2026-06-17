@@ -254,7 +254,7 @@ async function persistirAnaliticaCumplimientoDia({
     rda_ingreso: celdaRaw.rda_ingreso,
     rda_egreso: celdaRaw.rda_egreso,
   };
-  const { analitica, resolverOut } = ejecutarAnaliticaYValidacionFichadaDia({
+  const { analitica, resolverOut, presentacion_compuesto } = ejecutarAnaliticaYValidacionFichadaDia({
     celdaCtx,
     celdaRaw,
     capaEnriquecida,
@@ -264,6 +264,7 @@ async function persistirAnaliticaCumplimientoDia({
   if (String(resolverOut?.motivo || "") === "dia_futuro") {
     const visPayload = {
       [`dias.${diaKey}.analitica_cumplimiento`]: FieldValue.delete(),
+      [`dias.${diaKey}.presentacion_compuesto`]: FieldValue.delete(),
     };
     const valPatch = buildFirestorePatchValidacionFichadaDia(diaKey, resolverOut);
     if (valPatch) Object.assign(visPayload, valPatch);
@@ -280,7 +281,7 @@ async function persistirAnaliticaCumplimientoDia({
   } else {
     await asiRef.set({ [asiAnaliticaPath]: analitica }, { merge: true });
   }
-  await aplicarAnaliticaValidacionVisDia(visRef, diaKey, analitica, resolverOut);
+  await aplicarAnaliticaValidacionVisDia(visRef, diaKey, analitica, resolverOut, presentacion_compuesto);
   return analitica;
 }
 

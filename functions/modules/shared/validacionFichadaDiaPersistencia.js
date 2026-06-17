@@ -1,6 +1,7 @@
 "use strict";
 
 const { calcularDeltasCumplimiento } = require("./calcularDeltasCumplimiento");
+const { resolverPresentacionCompuestoCelda } = require("./resolverPresentacionCompuestoCelda");
 const { resolverValidacionFichadaDia } = require("./resolverValidacionFichadaDia");
 const { obtenerYmdHoyInstitucional } = require("./fechaInstitucionalBa.js");
 const { FieldValue, FieldPath } = require("firebase-admin/firestore");
@@ -39,11 +40,17 @@ function buildFirestorePatchValidacionFichadaDia(diaKey, resolverResult) {
  * @param {Record<string, unknown>|null} analitica
  * @param {{ accion?: string, validacion_fichada_dia?: object }|null|undefined} resolverOut
  */
-async function aplicarAnaliticaValidacionVisDia(visRef, diaKey, analitica, resolverOut) {
+async function aplicarAnaliticaValidacionVisDia(visRef, diaKey, analitica, resolverOut, presentacionCompuesto) {
   const dk = String(diaKey || "").trim();
   if (!visRef || !dk) return;
 
   const visPayload = { [`dias.${dk}.analitica_cumplimiento`]: analitica };
+  const presPath = `dias.${dk}.presentacion_compuesto`;
+  if (presentacionCompuesto && typeof presentacionCompuesto === "object") {
+    visPayload[presPath] = presentacionCompuesto;
+  } else {
+    visPayload[presPath] = FieldValue.delete();
+  }
   const valPatch = buildFirestorePatchValidacionFichadaDia(dk, resolverOut);
   if (valPatch) Object.assign(visPayload, valPatch);
 
@@ -112,7 +119,14 @@ function ejecutarAnaliticaYValidacionFichadaDia(params) {
     forzar_recalculo: params.forzar_recalculo === true,
   });
 
-  return { analitica, resolverOut };
+  const presentacion_compuesto = resolverPresentacionCompuestoCelda(
+    celdaCtx,
+    capaEnriquecida,
+    analitica,
+    { fecha_ymd },
+  );
+
+  return { analitica, resolverOut, presentacion_compuesto };
 }
 
 module.exports = {

@@ -56,7 +56,7 @@ async function actualizarAnaliticaCumplimientoTrasFichada(db, params) {
     rda_egreso: celdaRaw.rda_egreso,
   };
 
-  const { analitica, resolverOut } = ejecutarAnaliticaYValidacionFichadaDia({
+  const { analitica, resolverOut, presentacion_compuesto } = ejecutarAnaliticaYValidacionFichadaDia({
     celdaCtx,
     celdaRaw,
     capaEnriquecida,
@@ -64,7 +64,7 @@ async function actualizarAnaliticaCumplimientoTrasFichada(db, params) {
     forzar_recalculo: params.forzar_recalculo === true,
   });
 
-  await aplicarAnaliticaValidacionVisDia(visRef, diaKey, analitica, resolverOut);
+  await aplicarAnaliticaValidacionVisDia(visRef, diaKey, analitica, resolverOut, presentacion_compuesto);
 
   if (asiDocId) {
     const asiRef = db.collection(COL_ASISTENCIA).doc(asiDocId);
