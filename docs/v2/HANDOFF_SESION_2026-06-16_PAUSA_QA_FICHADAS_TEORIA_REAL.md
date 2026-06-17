@@ -42,7 +42,13 @@ Handoff: docs/v2/HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md
 
 **Motivo producto:** licencias futuras pueden cubrir solo un tramo (N) y dejar M como franquicia horaria — el motor ya separa por `segmentos_cumplimiento`.
 
-**Pendiente matriz:** CHAPARRO M+T+N 06:38–05:05 (¿24h continuo vs segmentos en capa?).
+**CHAPARRO junio Sala (M+T+N continuo):** días **13–15** revisados en grilla — ver tabla §3 casos verificados.
+
+| Agente | Día | Teoría | Real | Esperado | QA |
+|--------|-----|--------|------|----------|-----|
+| CHAPARRO `per_01KR3HD24AMJ6YX3N7B3GPAZJ4` | **13** | M+T+N 06:00–06:00 | 06:38–05:35 | ▼38m tardanza | ✅ 2026-06-17 |
+| CHAPARRO | **14** | idem | 06:35–05:40 | Modal ingreso tardío 35m; celda ▼35m | ✅ 2026-06-17 |
+| CHAPARRO | **15** | idem | ABM 05:45–04:00 | ▼120m salida anticipada | ✅ 2026-06-17 |
 
 ---
 

@@ -7,7 +7,7 @@ const { assertPeriodoNoCerrado } = require("../asistencia/asistenciaPeriodoLiqui
 const { encolarRematerializacionAsistenciaLote } = require("../asistencia/colaRematerializacionAsistenciaCore");
 const { actualizarAnaliticaCumplimientoTrasFichada } = require("../shared/analiticaCumplimientoTrasFichada");
 const { leerCeldaVisDiaFusionada } = require("../shared/visCeldaFusionLectura");
-const { alinearMarcasConTeoriaDia, alinearMarcasConTeoriaEnCalendario } = require("../shared/fichadasAlineacionTeoria");
+const { alinearMarcasConTeoriaDia, alinearMarcasConTeoriaEnCalendario, agregarTramoAbmAFichadasExistentes } = require("../shared/fichadasAlineacionTeoria");
 const { evaluarDeltaCeldaDia } = require("../shared/fichadasDeltaCeldaDia");
 const { segmentarOperacionesFirestore } = require("../shared/fichadasDeltaCeldaDia");
 const {
@@ -277,15 +277,31 @@ async function guardarCapaFichadaDia(db, params, actor) {
     );
     const celdaPlus = celdaPlusKey ? dias[celdaPlusKey] : null;
 
-    const alineado =
-      prep.borrarCapa && prep.marcasCrudas.length === 0
-        ? { fichadas_reales: [], advertencias_fichada_abiertas: [] }
-        : alinearMarcasConTeoriaDia({
-          marcas: prep.marcasCrudas,
-          celda_teoria: celdaAntes,
-          celda_teoria_dia_siguiente: celdaPlus,
+    const appendedAbm =
+      accion === "AGREGAR_MARCAS"
+        ? agregarTramoAbmAFichadasExistentes(
+          celdaAntes.fichadas_reales,
+          params.marcas,
           fecha_ymd,
-        });
+          celdaAntes,
+        )
+        : null;
+
+    const alineado =
+      appendedAbm
+        ? {
+          ok: true,
+          fichadas_reales: appendedAbm,
+          advertencias_fichada_abiertas: [],
+        }
+        : prep.borrarCapa && prep.marcasCrudas.length === 0
+          ? { fichadas_reales: [], advertencias_fichada_abiertas: [] }
+          : alinearMarcasConTeoriaDia({
+            marcas: prep.marcasCrudas,
+            celda_teoria: celdaAntes,
+            celda_teoria_dia_siguiente: celdaPlus,
+            fecha_ymd,
+          });
 
     const patch = construirPatchCeldaDia({
       celdaAntes,

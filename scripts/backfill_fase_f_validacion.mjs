@@ -9,6 +9,7 @@
  *   node scripts/backfill_fase_f_validacion.mjs
  *   node scripts/backfill_fase_f_validacion.mjs --gdt=gdt_... --periodo=2026-06
  *   node scripts/backfill_fase_f_validacion.mjs --solo-auditoria --gdt=gdt_... --periodo=2026-06
+ *   node scripts/backfill_fase_f_validacion.mjs --gdt=gdt_... --persona=per_... --fecha=2026-06-14
  */
 import "./load-env-v2.mjs";
 import { existsSync, readFileSync } from "node:fs";
@@ -49,11 +50,15 @@ function parseArgs(argv) {
     gdt: "",
     periodo: "",
     soloAuditoria: false,
+    persona: "",
+    fecha: "",
   };
   for (const arg of argv.slice(2)) {
     if (arg === "--solo-auditoria") out.soloAuditoria = true;
     if (arg.startsWith("--gdt=")) out.gdt = arg.slice(6).trim();
     if (arg.startsWith("--periodo=")) out.periodo = arg.slice(10).trim();
+    if (arg.startsWith("--persona=")) out.persona = arg.slice(10).trim();
+    if (arg.startsWith("--fecha=")) out.fecha = arg.slice(8).trim();
   }
   return out;
 }
@@ -188,6 +193,24 @@ async function refrescarAnaliticaValidacionVisMes(db, grupoId, anio, mes) {
 
       const diaNum = String(diaKey).replace(/^d/i, "");
       const fechaYmd = `${anio}-${String(mes).padStart(2, "0")}-${String(diaNum).padStart(2, "0")}`;
+      const { obtenerYmdHoyInstitucional } = require(
+        join(repoRoot, "functions/modules/shared/fechaInstitucionalBa.js"),
+      );
+      if (fechaYmd > obtenerYmdHoyInstitucional()) {
+        const valPath = dotPathValidacionFichadaDia(diaKey);
+        const purge = {};
+        if (celdaRaw.analitica_cumplimiento) {
+          purge[`dias.${diaKey}.analitica_cumplimiento`] = FieldValue.delete();
+        }
+        if (celdaRaw.validacion_fichada_dia) {
+          purge[valPath] = FieldValue.delete();
+        }
+        if (Object.keys(purge).length > 0) {
+          await visDoc.ref.update(purge);
+          celdasRefrescadas += 1;
+        }
+        continue;
+      }
       const asiId = buildAsiDocumentId(personaId, fechaYmd);
       if (!asiId) continue;
 
@@ -214,6 +237,7 @@ async function refrescarAnaliticaValidacionVisMes(db, grupoId, anio, mes) {
         fecha_ymd: fechaYmd,
         forzar_recalculo: true,
       });
+      if (!analitica) continue;
 
       const visUpdate = { [`dias.${diaKey}.analitica_cumplimiento`]: analitica };
       await visDoc.ref.update(visUpdate);
@@ -238,6 +262,56 @@ async function refrescarAnaliticaValidacionVisMes(db, grupoId, anio, mes) {
   return celdasRefrescadas;
 }
 
+/**
+ * Una celda: rematerializa teoría del día + analítica + validacion_fichada_dia.
+ */
+async function backfillValidacionUnaCelda(db, grupoId, personaId, fechaYmd) {
+  const {
+    materializarTurnoTeoricoDia,
+    recalcularAnaliticaValidacionFichadaTrasTeoria,
+  } = require(join(repoRoot, "functions/modules/asistencia/rdaTurnoTeoricoWorker.js"));
+  const { buildVisDocumentId, diaMesKeyDesdeYmd } = require(
+    join(repoRoot, "functions/modules/shared/mdcRdaDocumentIds.js"),
+  );
+  const { leerCeldaVisDiaFusionada } = require(
+    join(repoRoot, "functions/modules/shared/visCeldaFusionLectura.js"),
+  );
+
+  console.log("\n[celda] materializarTurnoTeoricoDia…");
+  const mat = await materializarTurnoTeoricoDia({
+    personaId,
+    grupoId,
+    fechaYmd,
+  });
+  console.log(mat);
+
+  console.log("[celda] recalcularAnaliticaValidacionFichadaTrasTeoria…");
+  const rec = await recalcularAnaliticaValidacionFichadaTrasTeoria({
+    personaId,
+    grupoId,
+    fechaYmd,
+  });
+  console.log(rec);
+
+  const visId = buildVisDocumentId(personaId, fechaYmd, grupoId);
+  const visSnap = await db.collection(COL_VIS).doc(visId).get();
+  const diaKey = diaMesKeyDesdeYmd(fechaYmd);
+  const celda = visSnap.exists ? leerCeldaVisDiaFusionada(visSnap.data(), diaKey) : null;
+  const val = celda?.validacion_fichada_dia;
+  const analitica = celda?.analitica_cumplimiento;
+
+  return {
+    vis_id: visId,
+    dia_key: diaKey,
+    materializacion: mat,
+    recalculo: rec,
+    estado_semaforo: val?.estado_semaforo ?? null,
+    alertas: val?.alertas_semanticas ?? null,
+    texto_resumen: val?.texto_resumen ?? null,
+    fichada_fuera_turno: analitica?.fichada_fuera_turno_teorico === true,
+  };
+}
+
 function initFirebaseAdmin() {
   const gac = loadGacPath();
   if (!gac || !existsSync(gac)) {
@@ -257,11 +331,30 @@ function initFirebaseAdmin() {
 
 const args = parseArgs(process.argv);
 const grupoId = args.gdt || GRUPO_ID;
-const periodoStr = args.periodo || `${ANIO}-${String(MES).padStart(2, "0")}`;
+const periodoStr =
+  args.periodo
+  || (args.fecha && /^\d{4}-\d{2}-\d{2}$/.test(args.fecha) ? args.fecha.slice(0, 7) : "")
+  || `${ANIO}-${String(MES).padStart(2, "0")}`;
+
+if (args.persona && !/^per_/i.test(args.persona)) {
+  console.error("[backfill-fase-f] --persona debe ser per_*");
+  process.exit(1);
+}
+if (args.fecha && !/^\d{4}-\d{2}-\d{2}$/.test(args.fecha)) {
+  console.error("[backfill-fase-f] --fecha debe ser YYYY-MM-DD");
+  process.exit(1);
+}
+if ((args.persona && !args.fecha) || (!args.persona && args.fecha)) {
+  console.error("[backfill-fase-f] Usá --persona y --fecha juntos para backfill puntual.");
+  process.exit(1);
+}
 
 if (!/^gdt_/i.test(grupoId) || !/^\d{4}-\d{2}$/.test(periodoStr)) {
   console.error(
     "Uso: node scripts/backfill_fase_f_validacion.mjs [--gdt=gdt_...] [--periodo=YYYY-MM] [--solo-auditoria]",
+  );
+  console.error(
+    "     node scripts/backfill_fase_f_validacion.mjs --gdt=gdt_... --persona=per_... --fecha=YYYY-MM-DD",
   );
   console.error("  O editá GRUPO_ID / ANIO / MES al inicio del script.");
   process.exit(1);
@@ -281,7 +374,18 @@ console.log({
   grupo_id: grupoId,
   periodo: periodoStr,
   solo_auditoria: args.soloAuditoria,
+  persona: args.persona || null,
+  fecha: args.fecha || null,
 });
+
+if (args.persona && args.fecha) {
+  console.log("\n Modo celda única — validación fichada");
+  const out = await backfillValidacionUnaCelda(db, grupoId, args.persona, args.fecha);
+  console.log("\n--- Resultado celda ---");
+  console.log(JSON.stringify(out, null, 2));
+  console.log("\n[backfill-fase-f] Listo.");
+  process.exit(0);
+}
 
 if (!args.soloAuditoria) {
   const { materializarGrupoMes } = require(

@@ -24,7 +24,6 @@ import {
   claseFondoTdJefeSemaforo,
 } from "./grillaTurnosVisual.js";
 import GrillaTurnosCeldaChip from "./GrillaTurnosCeldaChip.jsx";
-import GrillaFichadaPresenciaBadge from "./GrillaFichadaPresenciaBadge.jsx";
 import { fichadasEsperadasDesdeCeldaVis } from "./grillaFichadasEsperadasDisplay.js";
 import {
   fichadaPresenciaDesdeCeldaVis,
@@ -34,9 +33,10 @@ import {
 import GrillaFichadaEstadoJefeBadge from "./GrillaFichadaEstadoJefeBadge.jsx";
 import {
   celdaEsDiaFuturoInstitucional,
-  CLASE_CELDA_FUTURO_GRIS,
+  estadoSemaforoPinturaCeldaJefe,
   semaforoFichadaDesdeCelda,
 } from "./grillaFichadaEstadoJefeDisplay.js";
+import { celdaAusenteSinMarcasPasada } from "../../../../shared/utils/grillaFichadaPresencia.js";
 import { visualCeldaOutboxPendiente } from "./grillaCeldaOutboxVisual.js";
 import { diaFueraTramoHlg } from "./grillaMesFilasUtils.js";
 import DiaGrillaCelda from "./DiaGrillaCelda.jsx";
@@ -69,6 +69,8 @@ function contenidoCeldaOperativa({
   ocultarMicroAnalitica = false,
   modoFichadaRrhh = false,
   omitirBadgeSemaforo = false,
+  soloTeoriaFuturo = false,
+  celdaFuturaSinFichada = false,
 }) {
   const alertaTitle = desalineacionTooltip || "Teoría modificada post-licencia";
   const badgeAlerta = desalineacionTeoria ? (
@@ -141,28 +143,30 @@ function contenidoCeldaOperativa({
         {badgeSoloLectura}
       </span>
     ) : null;
-  const badgeFichada = omitirBadgeSemaforo || !estadoFichadaJefe ? (
-    mostrarFichadaReal ? null : fichadaPresencia ? (
-      <GrillaFichadaPresenciaBadge presencia={fichadaPresencia} className="mt-px" compacto />
-    ) : null
-  ) : (
-    <GrillaFichadaEstadoJefeBadge
-      estado={estadoFichadaJefe.estado}
-      tooltip={estadoFichadaJefe.tooltip}
-      className="mt-px"
-      compacto
-    />
-  );
+  const badgeFichada =
+    omitirBadgeSemaforo || !estadoFichadaJefe ? null : (
+      <GrillaFichadaEstadoJefeBadge
+        estado={estadoFichadaJefe.estado}
+        tooltip={estadoFichadaJefe.tooltip}
+        className="mt-px"
+        compacto
+      />
+    );
   const badgeAnalitica = ocultarMicroAnalitica ? null : (
     <DiaGrillaCelda celdaVis={celdaVis} className="mt-px" modoRrhh={modoFichadaRrhh} />
   );
-  const filaInferiorCelda = (
-    <span className="mt-0.5 flex flex-col items-center gap-px">
-      {filaBadges}
-      {badgeFichada}
-      {badgeAnalitica}
-    </span>
-  );
+  const filaInferiorCelda =
+    celdaFuturaSinFichada
+      ? null
+      : badgeAnalitica || filaBadges || badgeFichada
+        ? (
+            <span className="mt-px flex flex-col items-center gap-px leading-none">
+              {filaBadges}
+              {badgeFichada}
+              {badgeAnalitica}
+            </span>
+          )
+        : null;
   const diffBlock = outboxVisual?.pending && (outboxVisual.diffOut || outboxVisual.diffIn) ? (
     <span className="mt-px text-[6px] leading-tight">
       {outboxVisual.diffOut ? (
@@ -197,6 +201,16 @@ function contenidoCeldaOperativa({
   const turnoMostrar = mostrarFichadaReal
     ? turnoText
     : outboxVisual?.turnoText ?? turnoText;
+  if (soloTeoriaFuturo) {
+    const etiqueta =
+      turnoMostrar ||
+      (esNoLaborable ? "NL" : esFranco ? "F" : tieneLicencia ? licenciaCod.slice(0, 4) : "");
+    return (
+      <span className="flex flex-col items-center justify-center leading-none">
+        <span className={`${clasesTextoCelda(etiqueta)} font-medium`}>{etiqueta}</span>
+      </span>
+    );
+  }
   if (tieneLicencia && (tieneTurno || esFranco || esNoLaborable)) {
     return (
       <span className="flex w-full flex-col items-center justify-center leading-none">
@@ -232,7 +246,15 @@ function contenidoCeldaOperativa({
   }
   return (
     <span className="flex flex-col items-center justify-center leading-none">
-      <span className={clasesTextoCelda(turnoMostrar)}>{turnoMostrar}</span>
+      {turnoMostrar.includes("·") ? (
+        turnoMostrar.split("·").map((tramo, i) => (
+          <span key={i} className={clasesTextoCelda(tramo.trim())}>
+            {tramo.trim()}
+          </span>
+        ))
+      ) : (
+        <span className={clasesTextoCelda(turnoMostrar)}>{turnoMostrar}</span>
+      )}
       <span className="mt-0.5 flex flex-col items-center gap-px">
         {filaInferiorCelda}
         {diffBlock}
@@ -387,6 +409,7 @@ export default function GrillaMesEquipoTabla({
                     const licenciaCod = etiquetaCelda(eventos);
                     const tieneLicencia = Boolean(licenciaCod);
                     const fechaYmd = `${anio}-${String(mes).padStart(2, "0")}-${dia}`;
+                    const esFuturoGris = celdaEsDiaFuturoInstitucional(fechaYmd);
                     const personaIdFila = String(fila.persona_id || "");
                     const outboxVisual = visualCeldaOutboxPendiente({
                       cell,
@@ -399,7 +422,7 @@ export default function GrillaMesEquipoTabla({
                     const turnoText = outboxVisual?.turnoText ?? textoHorarioTurno(cell);
                     const textoFichadaReal =
                       modoFichada === "rrhh" ? textoHorarioFichadaRealDesdeCelda(cell) : "";
-                    const mostrarFichadaReal = Boolean(textoFichadaReal);
+                    const mostrarFichadaReal = Boolean(textoFichadaReal) && !esFuturoGris;
                     const horarioCelda = mostrarFichadaReal ? textoFichadaReal : turnoText;
                     const jornadaVis = celdaTieneJornadaVis(cell);
                     const tipoDiaVis = String(cell.tipo_dia || "")
@@ -483,10 +506,8 @@ export default function GrillaMesEquipoTabla({
                     }
                     // En RRHH queremos que el semáforo (AMARILLO/ROJO) tenga prioridad sobre el chip "Fichada real".
                     const semaforoFichada = semaforoFichadaDesdeCelda(cell, { fechaYmd });
-                    const esFuturoGrisJefe =
-                      modoFichada === "jefe" && celdaEsDiaFuturoInstitucional(fechaYmd);
                     const fichadaPresencia =
-                      modoFichada === "rrhh"
+                      modoFichada === "rrhh" && !esFuturoGris
                         ? fichadaPresenciaDesdeCeldaVis(cell, { esRrhh: true })
                         : null;
                     const fichadaTitle = semaforoFichada
@@ -512,9 +533,12 @@ export default function GrillaMesEquipoTabla({
                       titleParts.push(soloLectura.tooltip);
                     }
 
-                    const estadoSemaforoCelda = semaforoFichada?.estado ? semaforoFichada.estado : null;
+                    const ausenteSinMarcasPasada = celdaAusenteSinMarcasPasada(cell, fechaYmd);
+                    const estadoSemaforoCelda = semaforoFichada?.estado
+                      ? estadoSemaforoPinturaCeldaJefe(semaforoFichada.estado, cell, fechaYmd)
+                      : null;
                     const pintarCeldaSemaforoJefe =
-                      modoFichada === "jefe" && Boolean(estadoSemaforoCelda) && !esFuturoGrisJefe;
+                      modoFichada === "jefe" && Boolean(estadoSemaforoCelda) && !esFuturoGris;
 
                     const puedeMostrarChipFichadaReal =
                       modoFichada !== "rrhh" ||
@@ -536,8 +560,10 @@ export default function GrillaMesEquipoTabla({
                             tieneTurno: tieneTurno || jornadaVis,
                             esIncompletoPlan: esIncompletoPlan && !tieneLicencia,
                             teoriaPendienteLazy: teoriaPendiente.activo,
-                            esFuturoGris: esFuturoGrisJefe,
-                            estadoSemaforoFichada: estadoSemaforoCelda,
+                            esFuturoGris,
+                            estadoSemaforoFichada: esFuturoGris
+                              ? null
+                              : estadoSemaforoPinturaCeldaJefe(semaforoFichada?.estado, cell, fechaYmd),
                           });
 
                     const claseTd =
@@ -614,7 +640,6 @@ export default function GrillaMesEquipoTabla({
                             rellenoCelda={pintarCeldaSemaforoJefe}
                             className={[
                               outboxVisual?.pending ? "ring-2 ring-amber-500 ring-offset-0" : "",
-                              esFuturoGrisJefe ? CLASE_CELDA_FUTURO_GRIS : "",
                             ]
                               .filter(Boolean)
                               .join(" ")}
@@ -645,9 +670,14 @@ export default function GrillaMesEquipoTabla({
                               soloLecturaGrilla: soloLectura.activo,
                               soloLecturaTooltip: soloLectura.tooltip,
                               celdaVis: cell,
-                              ocultarMicroAnalitica: modoFichada === "jefe",
+                              ocultarMicroAnalitica:
+                                (modoFichada === "jefe" && !ausenteSinMarcasPasada) || esFuturoGris,
                               modoFichadaRrhh: modoFichada === "rrhh",
-                              omitirBadgeSemaforo: pintarCeldaSemaforoJefe,
+                              omitirBadgeSemaforo:
+                                Boolean(semaforoFichada?.estado)
+                                && (pintarCeldaSemaforoJefe || modoFichada === "rrhh"),
+                              soloTeoriaFuturo: esFuturoGris && !tieneLicencia,
+                              celdaFuturaSinFichada: esFuturoGris,
                             })}
                           </GrillaTurnosCeldaChip>
                         </GrillaMesCeldaLicencia>

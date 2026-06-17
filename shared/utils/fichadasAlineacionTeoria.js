@@ -64,7 +64,7 @@ export function construirAnclasTeoricasCelda(celda, fechaYmd) {
   if (!celda || typeof celda !== "object" || !fechaYmd) return [];
 
   const segmentos = Array.isArray(celda.segmentos) ? celda.segmentos : [];
-  if (segmentos.length > 0 && celda.tiene_huecos === true) {
+  if (segmentos.length >= 2) {
     const anclas = [];
     for (const seg of segmentos) {
       if (!seg || typeof seg !== "object") continue;
@@ -301,6 +301,49 @@ function armarFichadasRealesDesdeRoles(asignadas, fecha_ymd, celda) {
     else if (egreso) pares.push({ ingreso: null, egreso, fecha_ymd });
   }
   return pares.filter((p) => p.ingreso || p.egreso);
+}
+
+/**
+ * Una fila de `fichadas_reales` desde par ingreso/egreso del ABM grilla.
+ *
+ * @param {string} ingresoHm
+ * @param {string} egresoHm
+ * @param {string} fecha_ymd
+ * @param {Record<string, unknown>|null|undefined} [_celda]
+ */
+export function fichadaRealFilaDesdeParAbm(ingresoHm, egresoHm, fecha_ymd, _celda) {
+  const ingreso = String(ingresoHm || "").trim();
+  const egreso = String(egresoHm || "").trim();
+  if (!ingreso || !egreso || !fecha_ymd) return null;
+  /** @type {Record<string, string>} */
+  const fila = { ingreso, egreso, fecha_ymd };
+  const ingMin = parseHmMinutos(ingreso);
+  const egrMin = parseHmMinutos(egreso);
+  if (ingMin != null && egrMin != null && egrMin <= ingMin) {
+    fila.fecha_egreso_ymd = diaSiguienteYmd(fecha_ymd);
+  }
+  return fila;
+}
+
+/**
+ * ABM «Confirmar alta»: agrega un tramo sin re-emparejar todas las marcas del día.
+ *
+ * @param {Array<Record<string, unknown>>|null|undefined} fichadas_existentes
+ * @param {Array<{ hora_hm?: string; rol?: string }>|null|undefined} marcasPayload
+ * @param {string} fecha_ymd
+ * @param {Record<string, unknown>|null|undefined} celda
+ * @returns {Array<Record<string, unknown>>|null}
+ */
+export function agregarTramoAbmAFichadasExistentes(fichadas_existentes, marcasPayload, fecha_ymd, celda) {
+  if (!Array.isArray(marcasPayload) || marcasPayload.length < 2) return null;
+  const ingM = marcasPayload.find((m) => String(m?.rol || "").trim().toLowerCase() === "ingreso");
+  const egrM = marcasPayload.find((m) => String(m?.rol || "").trim().toLowerCase() === "egreso");
+  if (!ingM?.hora_hm || !egrM?.hora_hm) return null;
+  const fila = fichadaRealFilaDesdeParAbm(String(ingM.hora_hm), String(egrM.hora_hm), fecha_ymd, celda);
+  if (!fila) return null;
+  const actuales = Array.isArray(fichadas_existentes) ? [...fichadas_existentes] : [];
+  actuales.push(fila);
+  return actuales;
 }
 
 /**

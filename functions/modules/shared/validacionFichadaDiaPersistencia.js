@@ -2,7 +2,8 @@
 
 const { calcularDeltasCumplimiento } = require("./calcularDeltasCumplimiento");
 const { resolverValidacionFichadaDia } = require("./resolverValidacionFichadaDia");
-const { FieldValue } = require("firebase-admin/firestore");
+const { obtenerYmdHoyInstitucional } = require("./fechaInstitucionalBa.js");
+const { FieldValue, FieldPath } = require("firebase-admin/firestore");
 
 /**
  * @param {string} diaKey
@@ -31,6 +32,44 @@ function buildFirestorePatchValidacionFichadaDia(diaKey, resolverResult) {
 }
 
 /**
+ * Escribe analítica + validación en vis_* (mapa `dias`), purgando claves planas legacy en la raíz.
+ *
+ * @param {import("firebase-admin/firestore").DocumentReference} visRef
+ * @param {string} diaKey
+ * @param {Record<string, unknown>|null} analitica
+ * @param {{ accion?: string, validacion_fichada_dia?: object }|null|undefined} resolverOut
+ */
+async function aplicarAnaliticaValidacionVisDia(visRef, diaKey, analitica, resolverOut) {
+  const dk = String(diaKey || "").trim();
+  if (!visRef || !dk) return;
+
+  const visPayload = { [`dias.${dk}.analitica_cumplimiento`]: analitica };
+  const valPatch = buildFirestorePatchValidacionFichadaDia(dk, resolverOut);
+  if (valPatch) Object.assign(visPayload, valPatch);
+
+  const visSnap = await visRef.get();
+  const visData = visSnap.exists ? visSnap.data() || {} : {};
+  const prefixPlano = `dias.${dk}.`;
+  /** @type {Array<unknown>} */
+  const purgaArgs = [];
+  for (const key of Object.keys(visData)) {
+    if (!key.startsWith(prefixPlano)) continue;
+    purgaArgs.push(new FieldPath(key), FieldValue.delete());
+  }
+  if (purgaArgs.length > 0) {
+    await visRef.update(...purgaArgs);
+  }
+
+  const analiticaPath = `dias.${dk}.analitica_cumplimiento`;
+  if (visSnap.exists) {
+    await visRef.update({ [analiticaPath]: FieldValue.delete() });
+    await visRef.update(visPayload);
+  } else {
+    await visRef.set(visPayload, { merge: true });
+  }
+}
+
+/**
  * @param {object} params
  * @param {Record<string, unknown>} params.celdaCtx
  * @param {Record<string, unknown>} [params.celdaRaw]
@@ -44,6 +83,13 @@ function ejecutarAnaliticaYValidacionFichadaDia(params) {
   const ahoraMs = Number.isFinite(Number(params.ahora_evaluacion_ms))
     ? Number(params.ahora_evaluacion_ms)
     : Date.now();
+  const hoy = obtenerYmdHoyInstitucional(ahoraMs);
+  if (fecha_ymd > hoy) {
+    return {
+      analitica: null,
+      resolverOut: { accion: "omit", motivo: "dia_futuro" },
+    };
+  }
   const celdaCtx = params.celdaCtx && typeof params.celdaCtx === "object" ? params.celdaCtx : {};
   const celdaRaw = params.celdaRaw && typeof params.celdaRaw === "object" ? params.celdaRaw : celdaCtx;
   const capaEnriquecida = params.capaEnriquecida && typeof params.capaEnriquecida === "object"
@@ -73,4 +119,5 @@ module.exports = {
   dotPathValidacionFichadaDia,
   buildFirestorePatchValidacionFichadaDia,
   ejecutarAnaliticaYValidacionFichadaDia,
+  aplicarAnaliticaValidacionVisDia,
 };

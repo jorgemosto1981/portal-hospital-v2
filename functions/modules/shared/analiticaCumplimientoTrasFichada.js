@@ -6,7 +6,7 @@ const { leerCeldaVisDiaFusionada } = require("./visCeldaFusionLectura");
 const { resolverCapaTeoricaGrupo } = require("./capaTeoricaPorGrupoCore");
 const { buildAsiDocumentId } = require("./mdcRdaDocumentIds");
 const {
-  buildFirestorePatchValidacionFichadaDia,
+  aplicarAnaliticaValidacionVisDia,
   ejecutarAnaliticaYValidacionFichadaDia,
 } = require("./validacionFichadaDiaPersistencia");
 
@@ -64,11 +64,7 @@ async function actualizarAnaliticaCumplimientoTrasFichada(db, params) {
     forzar_recalculo: params.forzar_recalculo === true,
   });
 
-  const visUpdate = { [`dias.${diaKey}.analitica_cumplimiento`]: analitica };
-  const valPatch = buildFirestorePatchValidacionFichadaDia(diaKey, resolverOut);
-  if (valPatch) Object.assign(visUpdate, valPatch);
-
-  await visRef.update(visUpdate);
+  await aplicarAnaliticaValidacionVisDia(visRef, diaKey, analitica, resolverOut);
 
   if (asiDocId) {
     const asiRef = db.collection(COL_ASISTENCIA).doc(asiDocId);

@@ -138,7 +138,7 @@ export default function DiaGrillaDetalleModal({
   }, [celdaVis, open, fechaYmd, personaId]);
 
   useEffect(() => {
-    if (!open || !mostrarFichada || detalleFichadaRrhh) return;
+    if (!open || !mostrarFichada) return;
     const pid = String(personaId || "").trim();
     const gdt = String(grupoTrabajoId || "").trim();
     const ymd = String(fechaYmd || "").slice(0, 10);
@@ -160,7 +160,7 @@ export default function DiaGrillaDetalleModal({
         const dias = res.data?.dias && typeof res.data.dias === "object" ? res.data.dias : {};
         const fresca = diaKey && dias[diaKey] ? dias[diaKey] : null;
         if (fresca && typeof fresca === "object") {
-          setCeldaVisDetalle((prev) => ({ ...(prev || {}), ...fresca }));
+          setCeldaVisDetalle(fresca);
         }
       } catch {
         /* listado sigue siendo fuente; modal sin alertas lazy */

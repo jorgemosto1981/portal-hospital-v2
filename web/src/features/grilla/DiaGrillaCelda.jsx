@@ -32,11 +32,11 @@ function DiaGrillaCelda({ celdaVis, className = "", modoRrhh = false }) {
   if (chipsDisciplina.length === 0 && !badges.debito && !badges.extras) return null;
 
   return (
-    <span className={`flex flex-wrap items-center justify-center gap-0.5 leading-none ${className}`.trim()}>
+    <span className={`flex flex-col items-center justify-center gap-px leading-none ${className}`.trim()}>
       {chipsDisciplina.map((chip, i) => (
         <span
           key={`${chip.label}-${i}`}
-          className="rounded border border-rose-200 bg-rose-50/90 px-0.5 text-[9px] font-bold text-rose-700"
+          className="rounded border border-rose-200/80 bg-rose-50/80 px-0.5 text-[8px] font-bold leading-tight text-rose-800"
           title={chip.title || undefined}
         >
           {chip.label}
@@ -44,7 +44,7 @@ function DiaGrillaCelda({ celdaVis, className = "", modoRrhh = false }) {
       ))}
       {badges.debito ? (
         <span
-          className="rounded border border-rose-200 bg-rose-50/90 px-0.5 text-[9px] font-bold text-rose-700"
+          className="rounded border border-rose-200/80 bg-rose-50/80 px-0.5 text-[8px] font-bold leading-tight text-rose-800"
           title={badges.titleDebito || undefined}
         >
           {badges.debito}
@@ -52,7 +52,7 @@ function DiaGrillaCelda({ celdaVis, className = "", modoRrhh = false }) {
       ) : null}
       {badges.extras ? (
         <span
-          className="rounded bg-emerald-50 px-1 text-[10px] font-bold text-emerald-700"
+          className="rounded bg-emerald-50/90 px-0.5 text-[8px] font-bold leading-tight text-emerald-800"
           title={badges.titleExtras || undefined}
         >
           {badges.extras}

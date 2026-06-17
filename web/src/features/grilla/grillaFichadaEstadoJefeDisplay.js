@@ -1,6 +1,7 @@
 /** Semáforo fichada jefe — lectura de `validacion_fichada_dia` persistida (RFC Fase F). */
 
 import { obtenerYmdHoyInstitucional } from "../../../../shared/utils/fechaInstitucionalBa.js";
+import { celdaAusenteSinMarcasPasada } from "../../../../shared/utils/grillaFichadaPresencia.js";
 
 /** @param {string|null|undefined} estado */
 export function etiquetaEstadoSemaforoFichada(estado) {
@@ -44,6 +45,21 @@ export function celdaEsDiaFuturoInstitucional(fechaYmd) {
  * @param {{ fechaYmd?: string }} [opts]
  * @returns {{ estado: string; tooltip: string }|null}
  */
+/**
+ * Color de fondo en grilla jefe: ausencia pura sin marcas → ROJO (no AMARILLO “déficit”).
+ * @param {string|null|undefined} estado
+ * @param {Record<string, unknown>|null|undefined} cell
+ * @param {string} fechaYmd
+ */
+export function estadoSemaforoPinturaCeldaJefe(estado, cell, fechaYmd) {
+  const e = String(estado || "").trim();
+  if (!e) return null;
+  if (e === "AMARILLO" && celdaAusenteSinMarcasPasada(cell, fechaYmd)) {
+    return "ROJO";
+  }
+  return e;
+}
+
 export function semaforoFichadaDesdeCelda(cell, opts = {}) {
   const fechaYmd = String(opts.fechaYmd || "").slice(0, 10);
   if (celdaEsDiaFuturoInstitucional(fechaYmd)) return null;

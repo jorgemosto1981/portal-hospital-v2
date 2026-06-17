@@ -109,6 +109,53 @@ describe("alinearMarcasConTeoriaDia — manual noche mismo día", () => {
   });
 });
 
+describe("ABM agregar tramos M y N en M+T+N continuo", () => {
+  it("conserva dos filas sin emparejar 05:59 con 05:55", () => {
+    const {
+      agregarTramoAbmAFichadasExistentes,
+    } = require(join(sharedDir, "fichadasAlineacionTeoria.js"));
+    const celda = {
+      tipo_dia: "laborable",
+      rda_ingreso: "06:00",
+      rda_egreso: "06:00",
+      rda_turno_id: "M+T+N",
+      segmentos: [
+        { segmento_id: "M", ingreso: "06:00", egreso: "14:00" },
+        { segmento_id: "T", ingreso: "14:00", egreso: "22:00" },
+        { segmento_id: "N", ingreso: "22:00", egreso: "06:00" },
+      ],
+    };
+    const trasM = agregarTramoAbmAFichadasExistentes(
+      [],
+      [
+        { hora_hm: "05:55", rol: "ingreso" },
+        { hora_hm: "14:06", rol: "egreso" },
+      ],
+      "2026-06-16",
+      celda,
+    );
+    assert.equal(trasM?.length, 1);
+    assert.equal(trasM[0].ingreso, "05:55");
+    assert.equal(trasM[0].egreso, "14:06");
+
+    const trasN = agregarTramoAbmAFichadasExistentes(
+      trasM,
+      [
+        { hora_hm: "21:55", rol: "ingreso" },
+        { hora_hm: "05:59", rol: "egreso" },
+      ],
+      "2026-06-16",
+      celda,
+    );
+    assert.equal(trasN?.length, 2);
+    assert.equal(trasN[0].ingreso, "05:55");
+    assert.equal(trasN[0].egreso, "14:06");
+    assert.equal(trasN[1].ingreso, "21:55");
+    assert.equal(trasN[1].egreso, "05:59");
+    assert.equal(trasN[1].fecha_egreso_ymd, "2026-06-17");
+  });
+});
+
 describe("construirAnclasTeoricasCelda", () => {
   it("coloca ancla de egreso nocturno en D+1", () => {
     const anclas = construirAnclasTeoricasCelda(

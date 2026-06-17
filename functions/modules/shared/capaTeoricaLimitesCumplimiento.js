@@ -78,6 +78,55 @@ function resolverTurnoRegimenParaTolerancias(regimen, turnoIdRaw) {
 }
 
 /**
+ * M+T+N continuo o M+N con huecos: ≥2 segmentos materializados → cumplimiento por tramo.
+ * @param {Record<string, unknown>|null|undefined} capa
+ */
+function capaMaterializadaConSegmentosMultiples(capa) {
+  const segmentos = Array.isArray(capa?.segmentos) ? capa.segmentos : [];
+  return segmentos.length >= 2;
+}
+
+/**
+ * Sobre teórico efectivo: prioriza segmentos materializados (override / cambio de turno).
+ * @param {Record<string, unknown>} base
+ */
+function envelopeTeoricoDesdeCapa(base) {
+  const capa = base && typeof base === "object" ? base : {};
+  const segs = Array.isArray(capa.segmentos)
+    ? capa.segmentos.filter((s) => s && s.ingreso_iso && s.egreso_iso)
+    : [];
+  if (segs.length > 0) {
+    const sorted = [...segs].sort((a, b) =>
+      String(a.ingreso_iso).localeCompare(String(b.ingreso_iso)),
+    );
+    const ingreso_teorico_final = sorted[0].ingreso_iso;
+    const egreso_teorico_final = sorted[sorted.length - 1].egreso_iso;
+    const turnoParaTolerancias =
+      segs.length === 1
+        ? (sorted[0].segmento_id || capa.turno_id || capa.turno_compuesto_id)
+        : (capa.turno_compuesto_id || capa.turno_id);
+    let horas = 0;
+    for (const s of segs) {
+      const t0 = new Date(s.ingreso_iso).getTime();
+      const t1 = new Date(s.egreso_iso).getTime();
+      if (t1 > t0) horas += (t1 - t0) / 3_600_000;
+    }
+    return {
+      ingreso_teorico_final,
+      egreso_teorico_final,
+      turnoParaTolerancias,
+      horas_desde_segmentos: horas > 0 ? horas : null,
+    };
+  }
+  return {
+    ingreso_teorico_final: capa.ingreso_teorico_final ?? null,
+    egreso_teorico_final: capa.egreso_teorico_final ?? null,
+    turnoParaTolerancias: capa.turno_id || capa.turno_compuesto_id,
+    horas_desde_segmentos: null,
+  };
+}
+
+/**
  * Enriquece slice `capa_teorica_por_grupo` con límites para calcularDeltasCumplimiento.
  *
  * @param {Record<string, unknown>} capa
@@ -85,20 +134,20 @@ function resolverTurnoRegimenParaTolerancias(regimen, turnoIdRaw) {
  */
 function enriquecerLimitesCumplimientoEnCapa(capa, regimen) {
   const base = capa && typeof capa === "object" ? { ...capa } : {};
-  const horas = Number(base.horas_teoricas_totales);
+  const env = envelopeTeoricoDesdeCapa(base);
+  const horas = Number(env.horas_desde_segmentos ?? base.horas_teoricas_totales);
   const carga_horaria_diaria_minutos = Number.isFinite(horas) && horas > 0 ? Math.round(horas * 60) : 0;
   const rawTol = Number(regimen?.tolerancia_debitohorario_minutos);
   const tolerancia_debitohorario_minutos = Number.isFinite(rawTol) && rawTol >= 0
     ? Math.trunc(rawTol)
     : DEFAULT_TOLERANCIA_DEBITOHORARIO_MIN;
 
-  const turnoId = base.turno_id || base.turno_compuesto_id;
-  const turno = resolverTurnoRegimenParaTolerancias(regimen, turnoId);
+  const turno = resolverTurnoRegimenParaTolerancias(regimen, env.turnoParaTolerancias);
   const tolIn = Number(turno?.tolerancia_ingreso_min) || 0;
   const tolOut = Number(turno?.tolerancia_egreso_min) || 0;
 
-  const ingreso_nominal_iso = base.ingreso_teorico_final ? String(base.ingreso_teorico_final) : null;
-  const egreso_nominal_iso = base.egreso_teorico_final ? String(base.egreso_teorico_final) : null;
+  const ingreso_nominal_iso = env.ingreso_teorico_final ? String(env.ingreso_teorico_final) : null;
+  const egreso_nominal_iso = env.egreso_teorico_final ? String(env.egreso_teorico_final) : null;
 
   const ventana_ausencia_automatica_min = resolverUmbralCumplimientoMaterializado(
     base,
@@ -150,4 +199,4 @@ function isoInstitucionalDesdeYmdHm(fechaYmd, hhmm) {
   return new Date(anchor + (h * 60 + mi) * 60_000).toISOString();
 }
 
-module.exports = { DEFAULT_TOLERANCIA_DEBITOHORARIO_MIN, DEFAULT_VENTANA_AUSENCIA_AUTOMATICA_MIN, DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_MIN, DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_PCT, resolverUmbralCumplimientoMaterializado, isoMasMinutos, resolverTurnoRegimenParaTolerancias, enriquecerLimitesCumplimientoEnCapa, isoInstitucionalDesdeYmdHm };
+module.exports = { DEFAULT_TOLERANCIA_DEBITOHORARIO_MIN, DEFAULT_VENTANA_AUSENCIA_AUTOMATICA_MIN, DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_MIN, DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_PCT, resolverUmbralCumplimientoMaterializado, isoMasMinutos, resolverTurnoRegimenParaTolerancias, capaMaterializadaConSegmentosMultiples, envelopeTeoricoDesdeCapa, enriquecerLimitesCumplimientoEnCapa, isoInstitucionalDesdeYmdHm };

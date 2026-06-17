@@ -56,6 +56,28 @@ describe("varianteCeldaOperativa incompleto", () => {
   });
 });
 
+describe("varianteCeldaOperativa futuro gris", () => {
+  it("día futuro sin licencia usa futuroGris", () => {
+    expect(
+      varianteCeldaOperativa({
+        esFuturoGris: true,
+        tieneLicencia: false,
+        tieneTurno: true,
+      }),
+    ).toBe("futuroGris");
+  });
+
+  it("día futuro con licencia mantiene variante licencia (estado MDC)", () => {
+    expect(
+      varianteCeldaOperativa({
+        esFuturoGris: true,
+        tieneLicencia: true,
+        tieneTurno: true,
+      }),
+    ).toBe("licencia");
+  });
+});
+
 describe("varianteCeldaOperativa semáforo jefe", () => {
   it("licencia pisa color de semáforo", () => {
     expect(

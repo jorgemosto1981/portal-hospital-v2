@@ -20,6 +20,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) | Grilla aprobada VER plan; matriz control turno |
 | [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) | **Índice corto** → [`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md) |
 | **[`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md)** | **RETOMAR QA** — escenarios teoría ↔ real (alineación, presencia, cumplimiento, visual, acciones) |
+| [`RFC_CUMPLIMIENTO_TURNO_COMPUESTO_FILAS_CELDA.md`](./RFC_CUMPLIMIENTO_TURNO_COMPUESTO_FILAS_CELDA.md) | **Aprobado** — matriz N filas por segmento; `presentacion_compuesto` materializada en `vis_*`; QA días 13–16 piloto |
 | **[`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md)** | Cierre sesión 2026-06-12 — fichadas + colisión + visual celda |
 | [`HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md`](./HANDOFF_SESION_2026-06-12_PAUSA_QA_FICHADAS_COLISION.md) | Checklist §3 QA ingreso fichadas (rama `feature/grilla-fase1-colision`) |
 | [`MODULO_FICHADAS_RELOJ_V2.md`](./MODULO_FICHADAS_RELOJ_V2.md) | Módulo fichadas A–G + §14 colisión analítica |

@@ -18,7 +18,10 @@ const {
   clearHlgVigenteCacheMutacion,
 } = require("../shared/helpers");
 const { resolverEstadoPlanMensualGrupo } = require("./planEstadoMensualGrupo");
-const { materializarTurnoTeoricoDia: materializarTurnoTeoricoDiaWorker } = require("./rdaTurnoTeoricoWorker");
+const {
+  materializarTurnoTeoricoDia: materializarTurnoTeoricoDiaWorker,
+  recalcularAnaliticaValidacionFichadaTrasTeoria,
+} = require("./rdaTurnoTeoricoWorker");
 const { assertGrillaGsoEscrituraEnFecha } = require("./grillaGsoSoloLectura");
 const { buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
 const { obtenerCapaTeoricaDia } = require("./obtenerCapaTeoricaDia");
@@ -182,10 +185,26 @@ async function materializarDiaAfectado({ override, personaId, fechaYmd, grupoId,
 
   for (const pid of personas) {
     try {
-      await materializarTurnoTeoricoDiaWorker({ personaId: pid, grupoId: gdt, fechaYmd });
-      logger.info(`materializarTurnoTeoricoDia_${logTag} OK`, {
-        personaId: pid, fecha: fechaYmd, grupoId: gdt,
+      const mat = await materializarTurnoTeoricoDiaWorker({ personaId: pid, grupoId: gdt, fechaYmd });
+      if (!mat?.ok) {
+        logger.warn(`materializarTurnoTeoricoDia_${logTag} SKIP`, {
+          personaId: pid, fecha: fechaYmd, grupoId: gdt, error: mat?.error,
+        });
+      } else {
+        logger.info(`materializarTurnoTeoricoDia_${logTag} OK`, {
+          personaId: pid, fecha: fechaYmd, grupoId: gdt, segmentos: mat.segmentos,
+        });
+      }
+      const rec = await recalcularAnaliticaValidacionFichadaTrasTeoria({
+        personaId: pid,
+        grupoId: gdt,
+        fechaYmd,
       });
+      if (!rec?.ok) {
+        logger.warn(`recalcularAnaliticaValidacionFichadaTrasTeoria_${logTag}`, {
+          personaId: pid, fecha: fechaYmd, grupoId: gdt, motivo: rec?.motivo,
+        });
+      }
     } catch (e) {
       logger.error(`materializarTurnoTeoricoDia_${logTag} ERROR`, {
         personaId: pid, fecha: fechaYmd, grupoId: gdt, error: String(e),

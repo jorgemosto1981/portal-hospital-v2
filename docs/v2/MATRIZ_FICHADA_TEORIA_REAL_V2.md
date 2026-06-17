@@ -112,6 +112,9 @@ Parámetros habituales: tolerancia débito default **30 min**; ausencia automát
 | 15 | M 06:00–14:00 | 06:00–13:01 | real 421m, déficit **59m** | ✅ recálculo script |
 | 18 | N 22:00–06:00 | 05:35–13:55 | `fichada_fuera_turno_teorico`, sin déficit 480 | ✅ recálculo script |
 | 14 | M+N | 07:00–14:00 | ▼60m (M) + ▼480m (N); modal déficit 540m | ⏳ backfill 2026-06-16 |
+| 15 | CHAPARRO `per_01KR3HD24AMJ6YX3N7B3GPAZJ4` · M+T+N 06:00–06:00 (2 fich.) | ABM **05:45–04:00** (egreso D+1) | **C4** `SALIDA_ANTICIPADA` **▼120m** (cierre teórico 06:00 vs egreso 04:00); ingreso 15m antes del nominal sin tardanza | ✅ QA manual 2026-06-17 |
+| 14 | CHAPARRO · M+T+N 06:00–06:00 | Reloj **06:35–05:40** | **C3** ingreso tardío **35m** (celda **▼35m**; egreso 05:40 → salida 20m &lt; tol. 30 → no badge salida) | ✅ QA manual 2026-06-17 |
+| 13 | CHAPARRO · M+T+N 06:00–06:00 | Reloj **06:38–05:35** | **C3** ingreso tardío **38m** → celda **▼38m** | ✅ QA manual 2026-06-17 |
 
 ---
 
@@ -184,4 +187,4 @@ npm run test --prefix web -- --run src/features/grilla/grillaAnaliticaCumplimien
 
 ---
 
-**Última actualización:** 2026-06-12 — matriz creada al cierre de sesión; columnas QA pendientes de validación navegador.
+**Última actualización:** 2026-06-17 — CHAPARRO día 15 M+T+N + ABM nocturno (C4 ▼120m).

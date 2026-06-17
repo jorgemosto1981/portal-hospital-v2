@@ -2,14 +2,119 @@
  * Presentación de `analitica_cumplimiento` (v1) en grilla — sin horas crudas en copy jefe.
  */
 
-import { disciplinaHorariaIncumplimientoDesdeAnalitica } from "../../../../shared/utils/calcularDeltasCumplimiento.js";
-import { isoToHhmmInstitucional } from "../../../../shared/utils/horarioInstitucionalDisplay.js";
+import {
+  disciplinaHorariaIncumplimientoDesdeAnalitica,
+  enriquecerIncumplimientoCeldaPorSegmento,
+} from "../../../../shared/utils/calcularDeltasCumplimiento.js";
+import {
+  celdaEsperaFichada,
+  parseFichadasRealesCelda,
+} from "../../../../shared/utils/grillaFichadaPresencia.js";
+import { isoToHhmmInstitucional, toHhmmInstitucionalDisplay } from "../../../../shared/utils/horarioInstitucionalDisplay.js";
 
 /**
  * @param {string|null|undefined} iso
  */
 function hmDesdeIsoAnalitica(iso) {
   return isoToHhmmInstitucional(iso) || "—";
+}
+
+/** @param {Record<string, unknown>|null|undefined} celdaVis */
+function celdaTieneHuecosTeoricos(celdaVis) {
+  if (!celdaVis || typeof celdaVis !== "object") return false;
+  return celdaVis.rda_tiene_huecos === true || celdaVis.tiene_huecos === true;
+}
+
+/**
+ * Segmentos teóricos en celda vis (M+N con discontinuidad).
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ * @returns {Array<Record<string, unknown>>|null}
+ */
+export function segmentosTeoricosHuecosDesdeCelda(celdaVis) {
+  if (!celdaTieneHuecosTeoricos(celdaVis)) return null;
+  const raw = celdaVis.segmentos ?? celdaVis.rda_segmentos;
+  if (Array.isArray(raw) && raw.length >= 2) {
+    return raw.filter((s) => s && typeof s === "object");
+  }
+  const display = String(celdaVis.rda_horario_display || celdaVis.horario_display || "").trim();
+  if (!display.includes("·")) return null;
+  const partes = display.split("·").map((s) => s.trim()).filter(Boolean);
+  if (partes.length < 2) return null;
+  return partes.map((horario, idx) => ({
+    segmento_id: String(idx + 1),
+    horario_display: horario,
+  }));
+}
+
+/**
+ * Ausente en cada tramo cuando la jornada tiene huecos y no hay fichadas (fallback sin analítica por segmento).
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ */
+export function listaBadgesAusentePorTramoHuecosCelda(celdaVis) {
+  if (!celdaVis || parseFichadasRealesCelda(celdaVis).length > 0) return null;
+  if (!celdaEsperaFichada(celdaVis)) return null;
+  const segs = segmentosTeoricosHuecosDesdeCelda(celdaVis);
+  if (!segs || segs.length < 2) return null;
+
+  /** @type {Array<{ label: string, title: string }>} */
+  const items = [];
+  for (const seg of segs) {
+    const id = String(seg.segmento_id || "").trim();
+    const horario =
+      String(seg.horario_display || "").trim()
+      || (() => {
+        const ing = toHhmmInstitucionalDisplay(seg.ingreso) || isoToHhmmInstitucional(seg.ingreso_iso);
+        const egr = toHhmmInstitucionalDisplay(seg.egreso) || isoToHhmmInstitucional(seg.egreso_iso);
+        return ing && egr ? `${ing}–${egr}` : "";
+      })();
+    const pref = id && !/^\d+$/.test(id) ? `Tramo ${id}` : horario ? `Tramo ${horario}` : "Tramo teórico";
+    items.push({
+      label: "AUSENTE",
+      title: horario
+        ? `${pref}: sin fichada (${horario})`
+        : `${pref}: sin fichada en jornada con huecos`,
+    });
+  }
+  return items.length >= 2 ? items : null;
+}
+
+/**
+ * Badges por tramo: analítica persistida o, si falta, teoría con huecos + ausencia total.
+ * @param {Record<string, unknown> | null | undefined} analitica
+ * @param {Record<string, unknown>|null|undefined} [celdaVis]
+ */
+export function disciplinaListaBadgesPorTramoCelda(analitica, celdaVis) {
+  const desdeAnalitica = listaBadgesIncumplimientoPorSegmentoCelda(analitica);
+  if (desdeAnalitica?.length) return desdeAnalitica;
+  return listaBadgesAusentePorTramoHuecosCelda(celdaVis);
+}
+
+/** @param {Record<string, unknown>|null|undefined} celdaVis @param {Record<string, unknown> | null | undefined} [analitica] */
+function microBadgesAusenteSinMarcas(celdaVis, analitica) {
+  if (
+    !celdaVis
+    || parseFichadasRealesCelda(celdaVis).length > 0
+    || !celdaEsperaFichada(celdaVis)
+  ) {
+    return null;
+  }
+  const porTramo = disciplinaListaBadgesPorTramoCelda(analitica, celdaVis);
+  if (porTramo?.length) {
+    return {
+      disciplina: null,
+      disciplinaLista: porTramo,
+      debito: null,
+      titleDisciplina: null,
+      titleDebito: null,
+    };
+  }
+  return {
+    disciplina: null,
+    disciplinaLista: [{ label: "AUSENTE", title: "Sin marcas en día con expectativa de fichada" }],
+    debito: null,
+    titleDisciplina: null,
+    titleDebito: null,
+  };
 }
 
 /**
@@ -78,10 +183,73 @@ export function toleranciasTextoDesdeAnalitica(analitica) {
 /**
  * @param {Record<string, unknown> | null | undefined} celdaVis
  */
+function codigosAlertasValidacionCelda(celdaVis) {
+  const raw = celdaVis?.validacion_fichada_dia;
+  const arr = Array.isArray(raw?.alertas_semanticas) ? raw.alertas_semanticas : [];
+  return arr.map((a) => String((a && typeof a === "object" ? a.codigo : a) || "").trim()).filter(Boolean);
+}
+
+/**
+ * Corrige analítica obsoleta (flag fuera de turno) cuando la validación persistida ya fue recalculada.
+ *
+ * @param {Record<string, unknown>} analitica
+ * @param {Record<string, unknown> | null | undefined} celdaVis
+ */
+export function normalizarAnaliticaCumplimientoUi(analitica, celdaVis) {
+  if (!analitica || typeof analitica !== "object") return analitica;
+  const out = { ...analitica };
+  const codigosVal = codigosAlertasValidacionCelda(celdaVis);
+  const fuera = out.fichada_fuera_turno_teorico === true;
+  if (fuera && out.calculo_por_segmentos === true) {
+    delete out.fichada_fuera_turno_teorico;
+    delete out.fichada_fuera_turno_detalle;
+    if (Array.isArray(out.alertas_activas)) {
+      out.alertas_activas = out.alertas_activas.filter(
+        (a) => String(a) !== "FICHADA_FUERA_TURNO_TEORICO",
+      );
+    }
+  }
+  const valDiceFuera = codigosVal.includes("FICHADA_FUERA_TURNO_TEORICO");
+  const debito =
+    out.debito_tiempo && typeof out.debito_tiempo === "object" ? out.debito_tiempo : {};
+  const debitoVigente =
+    debito.incumplimiento_carga_horaria === true && debito.calculo_suspendido !== true;
+
+  if (!fuera || valDiceFuera) return out;
+
+  if (debitoVigente || codigosVal.length > 0) {
+    delete out.fichada_fuera_turno_teorico;
+    delete out.fichada_fuera_turno_detalle;
+    if (Array.isArray(out.alertas_activas)) {
+      out.alertas_activas = out.alertas_activas.filter(
+        (a) => String(a) !== "FICHADA_FUERA_TURNO_TEORICO",
+      );
+    }
+    const inc = disciplinaHorariaIncumplimientoDesdeAnalitica(out);
+    if (!inc.hay_incumplimiento && debitoVigente && out.disciplina && typeof out.disciplina === "object") {
+      const nomIn = hmDesdeIsoAnalitica(out.disciplina.ingreso_nominal_iso);
+      const rdaIn = String(celdaVis?.rda_ingreso || "").trim();
+      if (rdaIn && nomIn && nomIn !== "—" && rdaIn !== nomIn) {
+        out.disciplina = {
+          ...out.disciplina,
+          ingreso_nominal_iso: null,
+          ingreso_limite_con_gracia_iso: null,
+          egreso_nominal_iso: null,
+          egreso_limite_con_gracia_iso: null,
+        };
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * @param {Record<string, unknown> | null | undefined} celdaVis
+ */
 export function analiticaCumplimientoDesdeCelda(celdaVis) {
   const raw = celdaVis?.analitica_cumplimiento;
   if (!raw || typeof raw !== "object") return null;
-  return /** @type {Record<string, unknown>} */ (raw);
+  return normalizarAnaliticaCumplimientoUi(/** @type {Record<string, unknown>} */ (raw), celdaVis);
 }
 
 /**
@@ -97,8 +265,30 @@ export function formatearMinutosJornada(minutos) {
 }
 
 /**
+ * Minutos en micro-badge de celda día (≥60 → horas y minutos).
+ *
+ * @param {number} minutos
+ * @param {{ conTriangulo?: boolean; negativo?: boolean }} [opts]
+ */
+export function formatearMinutosMicroCelda(minutos, opts = {}) {
+  const raw = Math.trunc(Number(minutos) || 0);
+  if (raw <= 0) return null;
+  const cuerpo = raw >= 60 ? formatearMinutosJornada(raw) : `${raw}m`;
+  const pref = opts.conTriangulo === false ? "" : "▼ ";
+  const sign = opts.negativo ? "-" : "";
+  return `${pref}${sign}${cuerpo}`.trim();
+}
+
+/**
+ * Badge de celda para incumplimiento horario (tardanza o salida anticipada punitiva).
+ * @param {number} minutos
+ */
+export function labelBadgeIncumplimientoDisciplina(minutos) {
+  return formatearMinutosMicroCelda(minutos, { conTriangulo: true });
+}
+
+/**
  * Minutos de horas extra ya autorizadas (pedido aprobado) persistidos en celda.
- * Hasta que el flujo de trámite escriba el campo, devuelve 0.
  *
  * @param {Record<string, unknown> | null | undefined} celdaVis
  */
@@ -113,40 +303,56 @@ export function minutosHorasExtrasAutorizadasDesdeCelda(celdaVis) {
 }
 
 /**
- * Badge de celda para incumplimiento horario (tardanza o salida anticipada punitiva).
- * @param {number} minutos
- */
-export function labelBadgeIncumplimientoDisciplina(minutos) {
-  const m = Math.trunc(Number(minutos) || 0);
-  if (m <= 0) return null;
-  return `▼ ${m}m`;
-}
-
-/**
  * Badges ▼ por tramo teórico (M+N, etc.): un resultado por segmento, sin sumar en celda.
  *
  * @param {Record<string, unknown> | null | undefined} analitica
  * @returns {Array<{ label: string, title: string }> | null}
  */
 export function listaBadgesIncumplimientoPorSegmentoCelda(analitica) {
-  if (!analitica || analitica.calculo_por_segmentos !== true) return null;
-  const segs = analitica.segmentos_cumplimiento;
-  if (!Array.isArray(segs) || segs.length < 2) return null;
+  if (!analitica) return null;
+  const segsRaw = analitica.segmentos_cumplimiento;
+  if (!Array.isArray(segsRaw) || segsRaw.length < 2) return null;
+  const modoSegmentos =
+    analitica.calculo_por_segmentos === true
+    || segsRaw.some((s) => s && (s.cubierto === false || String(s.segmento_id || "").trim()));
+  if (!modoSegmentos) return null;
+
+  const tolRaw = Number(analitica.debito_tiempo?.tolerancia_debitohorario_minutos);
+  const tolerancia = Number.isFinite(tolRaw) && tolRaw >= 0 ? Math.trunc(tolRaw) : 30;
+  const baseSegs = segsRaw.map((seg) => {
+    if (!seg || typeof seg !== "object") return seg;
+    const {
+      incumplimiento_celda_minutos: _i,
+      incumplimiento_celda_tipo: _t,
+      ...rest
+    } = /** @type {Record<string, unknown>} */ (seg);
+    return rest;
+  });
+  const segs = enriquecerIncumplimientoCeldaPorSegmento(baseSegs, tolerancia);
+
   /** @type {Array<{ label: string, title: string }>} */
   const items = [];
   for (const seg of segs) {
     if (!seg || typeof seg !== "object") continue;
     const m = Math.trunc(Number(seg.incumplimiento_celda_minutos) || 0);
     if (m <= 0) continue;
-    const label = labelBadgeIncumplimientoDisciplina(m);
-    if (!label) continue;
     const id = String(seg.segmento_id || "").trim();
     const pref = id ? `Tramo ${id}` : "Tramo teórico";
     const tipo = String(seg.incumplimiento_celda_tipo || "");
-    let title = `${pref}: incumplimiento ${m} min`;
-    if (tipo === "ausente_tramo") title = `${pref}: sin fichada (${m} min de jornada teórica)`;
-    else if (tipo === "tardanza") title = `${pref}: ingreso tardío ${m} min`;
-    else if (tipo === "salida") title = `${pref}: salida anticipada ${m} min`;
+    let label;
+    let title;
+    if (tipo === "ausente_tramo") {
+      label = "AUSENTE";
+      title = id
+        ? `${pref}: sin fichada (${formatearMinutosJornada(m)} de jornada teórica)`
+        : `Sin fichada en tramo teórico (${formatearMinutosJornada(m)})`;
+    } else {
+      label = labelBadgeIncumplimientoDisciplina(m);
+      if (!label) continue;
+      title = `${pref}: incumplimiento ${m} min`;
+      if (tipo === "tardanza") title = `${pref}: ingreso tardío ${m} min`;
+      else if (tipo === "salida") title = `${pref}: salida anticipada ${m} min`;
+    }
     items.push({ label, title });
   }
   return items.length ? items : null;
@@ -196,7 +402,11 @@ export function microBadgesAnaliticaRrhh(analitica, celdaVis) {
     titleDebito: null,
     titleExtras: null,
   };
-  if (!analitica) return vacio;
+  if (!analitica) {
+    const ausente = microBadgesAusenteSinMarcas(celdaVis, null);
+    if (ausente) return { ...vacio, ...ausente };
+    return vacio;
+  }
 
   if (analitica.fichada_fuera_turno_teorico === true) {
     return {
@@ -206,13 +416,14 @@ export function microBadgesAnaliticaRrhh(analitica, celdaVis) {
     };
   }
 
-  const porSegmento = listaBadgesIncumplimientoPorSegmentoCelda(analitica);
+  const porSegmento = disciplinaListaBadgesPorTramoCelda(analitica, celdaVis);
   if (porSegmento?.length) {
     const minExtras = minutosHorasExtrasAutorizadasDesdeCelda(celdaVis);
     let extrasLabel = null;
     let titleExtras = null;
     if (minExtras > 0) {
-      extrasLabel = `+${minExtras}m`;
+      extrasLabel =
+        minExtras >= 60 ? `+${formatearMinutosJornada(minExtras)}` : `+${minExtras}m`;
       titleExtras = `Horas extra autorizadas: ${minExtras} min`;
     }
     return {
@@ -226,6 +437,11 @@ export function microBadgesAnaliticaRrhh(analitica, celdaVis) {
     };
   }
 
+  const ausenteSinMarcas = microBadgesAusenteSinMarcas(celdaVis, analitica);
+  if (ausenteSinMarcas) {
+    return { ...vacio, ...ausenteSinMarcas };
+  }
+
   const disciplina =
     analitica.disciplina && typeof analitica.disciplina === "object" ? analitica.disciplina : {};
   const debito =
@@ -236,9 +452,16 @@ export function microBadgesAnaliticaRrhh(analitica, celdaVis) {
 
   let debitoLabel = null;
   let titleDebito = null;
-  if (debito.incumplimiento_carga_horaria === true && !incDisc.hay_incumplimiento) {
+  const suprimirDebitoAgregado =
+    Boolean(disciplinaListaBadgesPorTramoCelda(analitica, celdaVis)?.length)
+    || (Array.isArray(analitica.segmentos_cumplimiento) && analitica.segmentos_cumplimiento.length >= 2);
+  if (
+    debito.incumplimiento_carga_horaria === true
+    && !incDisc.hay_incumplimiento
+    && !suprimirDebitoAgregado
+  ) {
     const def = Number(debito.deficit_minutos) || 0;
-    debitoLabel = def > 0 ? `-${def}m` : "⏳";
+    debitoLabel = def > 0 ? formatearMinutosMicroCelda(def, { conTriangulo: false, negativo: true }) : "⏳";
     const tol = Number(debito.tolerancia_debitohorario_minutos) || 0;
     titleDebito = `Déficit de carga horaria: ${def} min (supera tolerancia de ${tol} min)`;
   }
@@ -247,15 +470,26 @@ export function microBadgesAnaliticaRrhh(analitica, celdaVis) {
   let extrasLabel = null;
   let titleExtras = null;
   if (minExtras > 0) {
-    extrasLabel = `+${minExtras}m`;
+    extrasLabel =
+      minExtras >= 60 ? `+${formatearMinutosJornada(minExtras)}` : `+${minExtras}m`;
     titleExtras = `Horas extra autorizadas: ${minExtras} min`;
   }
 
   if (analitica.ausencia_automatica === true && !inc.label && !debitoLabel) {
+    const porSeg = disciplinaListaBadgesPorTramoCelda(analitica, celdaVis);
+    if (porSeg?.length) {
+      return {
+        ...vacio,
+        disciplinaLista: porSeg,
+        extras: extrasLabel,
+        titleExtras,
+      };
+    }
     return {
       ...vacio,
-      disciplina: "A",
-      titleDisciplina: "Ausencia automática sin marcas",
+      disciplinaLista: [{ label: "AUSENTE", title: "Ausencia automática sin marcas" }],
+      extras: extrasLabel,
+      titleExtras,
     };
   }
 
@@ -280,18 +514,31 @@ export function microBadgesAnalitica(analitica, opts = {}) {
   if (opts.modoRrhh) {
     return microBadgesAnaliticaRrhh(analitica, opts.celdaVis);
   }
-  if (!analitica) {
-    return { disciplina: null, disciplinaLista: null, debito: null, titleDisciplina: null, titleDebito: null };
+  const vacio = {
+    disciplina: null,
+    disciplinaLista: null,
+    debito: null,
+    titleDisciplina: null,
+    titleDebito: null,
+  };
+  if (analitica) {
+    const porSegmento = disciplinaListaBadgesPorTramoCelda(analitica, opts.celdaVis);
+    if (porSegmento?.length) {
+      return {
+        disciplina: null,
+        disciplinaLista: porSegmento,
+        debito: null,
+        titleDisciplina: null,
+        titleDebito: null,
+      };
+    }
   }
-  const porSegmento = listaBadgesIncumplimientoPorSegmentoCelda(analitica);
-  if (porSegmento?.length) {
-    return {
-      disciplina: null,
-      disciplinaLista: porSegmento,
-      debito: null,
-      titleDisciplina: null,
-      titleDebito: null,
-    };
+  const ausenteSinMarcas = microBadgesAusenteSinMarcas(opts.celdaVis, analitica);
+  if (ausenteSinMarcas) {
+    return ausenteSinMarcas;
+  }
+  if (!analitica) {
+    return vacio;
   }
   const disciplina = analitica.disciplina && typeof analitica.disciplina === "object"
     ? analitica.disciplina
@@ -313,9 +560,16 @@ export function microBadgesAnalitica(analitica, opts = {}) {
 
   let debitoLabel = null;
   let titleDebito = null;
-  if (debito.incumplimiento_carga_horaria === true && !inc.hay_incumplimiento) {
+  const suprimirDebitoAgregado =
+    Boolean(disciplinaListaBadgesPorTramoCelda(analitica, opts.celdaVis)?.length)
+    || (Array.isArray(analitica.segmentos_cumplimiento) && analitica.segmentos_cumplimiento.length >= 2);
+  if (
+    debito.incumplimiento_carga_horaria === true
+    && !inc.hay_incumplimiento
+    && !suprimirDebitoAgregado
+  ) {
     const def = Number(debito.deficit_minutos) || 0;
-    debitoLabel = def > 0 ? `-${def}m` : "⏳";
+    debitoLabel = def > 0 ? formatearMinutosMicroCelda(def, { conTriangulo: false, negativo: true }) : "⏳";
     const tol = Number(debito.tolerancia_debitohorario_minutos) || 0;
     titleDebito = `Déficit contractual: ${def} min (supera tolerancia de cortesía de ${tol} min)`;
   }
@@ -465,7 +719,10 @@ export function lineasDisciplinaTeoriaVsRealRrhh(analitica, ctx = {}) {
     return ["Sin evaluación de cumplimiento persistida para este día."];
   }
 
-  if (analitica.fichada_fuera_turno_teorico === true) {
+  if (
+    analitica.fichada_fuera_turno_teorico === true
+    && analitica.calculo_por_segmentos !== true
+  ) {
     return [
       "Las marcas no coinciden con la ventana del turno teórico; no se comparan ingreso/egreso hasta alinear plan u override.",
     ];

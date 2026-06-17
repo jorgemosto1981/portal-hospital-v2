@@ -3,6 +3,8 @@
  * @typedef {'presente'|'ausente'} FichadaPresencia
  */
 
+import { obtenerYmdHoyInstitucional } from "./fechaInstitucionalBa.js";
+
 /** @param {unknown} raw */
 function normalizarTipoDia(raw) {
   const t = String(raw || "")
@@ -244,4 +246,18 @@ export function evaluarContradiccionFichadaTeoria(celda) {
   }
 
   return { contradictorio: false };
+}
+
+/**
+ * Día ya evaluable, con expectativa de fichada y sin marcas (ausente).
+ * @param {Record<string, unknown>|null|undefined} celda
+ * @param {string} fechaYmd
+ * @param {number} [ahoraMs]
+ */
+export function celdaAusenteSinMarcasPasada(celda, fechaYmd, ahoraMs = Date.now()) {
+  const ymd = String(fechaYmd || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return false;
+  if (ymd > obtenerYmdHoyInstitucional(ahoraMs)) return false;
+  if (parseFichadasRealesCelda(celda).length > 0) return false;
+  return celdaEsperaFichada(celda) && resolverFichadaPresencia(celda) === "ausente";
 }

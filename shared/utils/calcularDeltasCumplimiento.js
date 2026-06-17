@@ -9,12 +9,15 @@ import {
   DEFAULT_VENTANA_AUSENCIA_AUTOMATICA_MIN,
   DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_MIN,
   DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_PCT,
+  capaMaterializadaConSegmentosMultiples,
 } from "./capaTeoricaLimitesCumplimiento.js";
 
 const ANALITICA_VERSION = 1;
 
 /** Solape mínimo (min) para asignar una fichada a un tramo teórico del día. */
 const UMBRAL_EMPAREJAR_SEGMENTO_MIN = 15;
+const DURACION_TRAMO_PUNTUAL_MS = 60_000;
+const MARGEN_INGRESO_PUNTUAL_MS = 20 * 60_000;
 
 function msDesdeIso(iso) {
   const ms = new Date(String(iso || "")).getTime();
@@ -79,20 +82,30 @@ export function extraerTramosFichadaDesdeCelda(celdaVis, fechaYmd) {
     const horaHm = String(f.hora_hm || f.hora || "").trim();
     const fYmd = String(f.fecha_ymd || f.fecha || fecha).slice(0, 10) || fecha;
 
-    if (ingHm) {
-      const ms = instanteMarcaInstitucionalMs(fYmd, ingHm);
-      if (ms != null) ingresos.push(ms);
-    }
-    if (egrHm) {
-      const fEgr = String(f.fecha_egreso_ymd || fYmd).slice(0, 10);
-      const ms = instanteMarcaInstitucionalMs(fEgr, egrHm);
-      if (ms != null) egresos.push(ms);
-    }
     if (ingHm && egrHm) {
       const msIn = instanteMarcaInstitucionalMs(fYmd, ingHm);
       const msOut = instanteMarcaInstitucionalMs(String(f.fecha_egreso_ymd || fYmd).slice(0, 10), egrHm);
+      if (msIn != null) ingresos.push(msIn);
+      if (msOut != null) egresos.push(msOut);
       if (msIn != null && msOut != null && msOut > msIn) {
         tramos.push({ ingreso_ms: msIn, egreso_ms: msOut });
+      }
+      continue;
+    }
+    if (ingHm && !egrHm) {
+      const msIn = instanteMarcaInstitucionalMs(fYmd, ingHm);
+      if (msIn != null) {
+        ingresos.push(msIn);
+        tramos.push({ ingreso_ms: msIn, egreso_ms: msIn + DURACION_TRAMO_PUNTUAL_MS });
+      }
+      continue;
+    }
+    if (!ingHm && egrHm) {
+      const fEgr = String(f.fecha_egreso_ymd || fYmd).slice(0, 10);
+      const msOut = instanteMarcaInstitucionalMs(fEgr, egrHm);
+      if (msOut != null) {
+        egresos.push(msOut);
+        tramos.push({ ingreso_ms: msOut - DURACION_TRAMO_PUNTUAL_MS, egreso_ms: msOut });
       }
       continue;
     }
@@ -126,7 +139,7 @@ export function extraerTramosFichadaDesdeCelda(celdaVis, fechaYmd) {
  * @param {number} tolOut
  */
 function ventanasTeoricasPorSegmento(capa, tolIn, tolOut) {
-  if (capa.tiene_huecos !== true) return [];
+  if (!capaMaterializadaConSegmentosMultiples(capa)) return [];
   const segmentos = Array.isArray(capa.segmentos) ? capa.segmentos : [];
   if (segmentos.length < 2) return [];
 
@@ -151,32 +164,72 @@ function ventanasTeoricasPorSegmento(capa, tolIn, tolOut) {
 }
 
 /**
+ * @param {{ ingreso_ms: number, egreso_ms: number }} tramo
+ * @param {{ ingreso_nominal_ms: number, egreso_nominal_ms: number }} ventana
+ */
+function solapeTramoConVentanaParaEmparejar(tramo, ventana) {
+  const solape = minutosSolapeTramosConVentanaTeorica(
+    [tramo],
+    ventana.ingreso_nominal_ms,
+    ventana.egreso_nominal_ms,
+  );
+  if (solape >= UMBRAL_EMPAREJAR_SEGMENTO_MIN) return solape;
+  const durMs = tramo.egreso_ms - tramo.ingreso_ms;
+  if (durMs > 2 * 60_000 && solape > 0) return UMBRAL_EMPAREJAR_SEGMENTO_MIN;
+  if (durMs > 2 * 60_000) return solape;
+  const ingresoEnVentana =
+    tramo.ingreso_ms >= ventana.ingreso_nominal_ms - MARGEN_INGRESO_PUNTUAL_MS
+    && tramo.ingreso_ms <= ventana.ingreso_nominal_ms + MARGEN_INGRESO_PUNTUAL_MS;
+  if (ingresoEnVentana) return UMBRAL_EMPAREJAR_SEGMENTO_MIN;
+  return solape;
+}
+
+/**
  * @param {Array<{ ingreso_ms: number, egreso_ms: number }>} tramos
  * @param {Array<{ ingreso_nominal_ms: number, egreso_nominal_ms: number }>} ventanas
  */
 function emparejarTramosConVentanasSegmento(tramos, ventanas) {
-  const usados = new Set();
-  return ventanas.map((ventana) => {
-    let mejorIdx = -1;
-    let mejorSolape = 0;
-    for (let i = 0; i < tramos.length; i += 1) {
-      if (usados.has(i)) continue;
-      const solape = minutosSolapeTramosConVentanaTeorica(
-        [tramos[i]],
-        ventana.ingreso_nominal_ms,
-        ventana.egreso_nominal_ms,
-      );
-      if (solape > mejorSolape) {
-        mejorSolape = solape;
-        mejorIdx = i;
+  /** @type {{ vIdx: number, tIdx: number, solape: number }[]} */
+  const candidatos = [];
+  for (let vIdx = 0; vIdx < ventanas.length; vIdx += 1) {
+    for (let tIdx = 0; tIdx < tramos.length; tIdx += 1) {
+      const solape = solapeTramoConVentanaParaEmparejar(tramos[tIdx], ventanas[vIdx]);
+      if (solape >= UMBRAL_EMPAREJAR_SEGMENTO_MIN) {
+        candidatos.push({ vIdx, tIdx, solape });
       }
     }
-    if (mejorIdx >= 0 && mejorSolape >= UMBRAL_EMPAREJAR_SEGMENTO_MIN) {
-      usados.add(mejorIdx);
-      return { ventana, tramo: tramos[mejorIdx] };
-    }
+  }
+  candidatos.sort((a, b) => b.solape - a.solape);
+  const ventanaAsignada = new Map();
+  const tramoUsado = new Set();
+  for (const c of candidatos) {
+    if (ventanaAsignada.has(c.vIdx) || tramoUsado.has(c.tIdx)) continue;
+    ventanaAsignada.set(c.vIdx, c.tIdx);
+    tramoUsado.add(c.tIdx);
+  }
+  return ventanas.map((ventana, vIdx) => {
+    const tIdx = ventanaAsignada.get(vIdx);
+    if (tIdx != null) return { ventana, tramo: tramos[tIdx] };
     return { ventana, tramo: null };
   });
+}
+
+/**
+ * @param {{ ingreso_ms: number, egreso_ms: number }|null} tramo
+ * @param {{ ingreso_nominal_ms: number, egreso_nominal_ms: number, ingreso_limite_ms: number, egreso_limite_ms: number }} ventana
+ */
+function tramoCuentaComoCubiertoEnSegmento(tramo, ventana) {
+  if (!tramo) return false;
+  const solapeNominal = minutosSolapeTramosConVentanaTeorica(
+    [tramo],
+    ventana.ingreso_nominal_ms,
+    ventana.egreso_nominal_ms,
+  );
+  const ingresoEnVentana =
+    tramo.ingreso_ms >= ventana.ingreso_nominal_ms - MARGEN_INGRESO_PUNTUAL_MS
+    && tramo.ingreso_ms <= ventana.ingreso_nominal_ms + MARGEN_INGRESO_PUNTUAL_MS;
+  if (ingresoEnVentana) return true;
+  return solapeNominal >= UMBRAL_EMPAREJAR_SEGMENTO_MIN;
 }
 
 /**
@@ -212,7 +265,7 @@ function calcularDisciplinaPorSegmentos(tramos, ventanas) {
     }
     segmentos_cumplimiento.push({
       segmento_id: ventana.segmento_id,
-      cubierto: Boolean(tramo),
+      cubierto: tramoCuentaComoCubiertoEnSegmento(tramo, ventana),
       carga_teorica_minutos: ventana.carga_minutos,
       tardanza_minutos: segTard,
       salida_anticipada_minutos: segSal,
@@ -254,6 +307,13 @@ export function enriquecerIncumplimientoCeldaPorSegmento(segmentos, tolerancia_d
       incumplimiento_celda_tipo = "salida";
     } else if (punt.tardanza_punitiva_min > 0) {
       incumplimiento_celda_minutos = punt.tardanza_punitiva_min;
+      incumplimiento_celda_tipo = "tardanza";
+    } else if (cubierto && sal > 0) {
+      // Badge por tramo (M+N): mostrar desvío aunque no supere tol. global de alertas
+      incumplimiento_celda_minutos = sal;
+      incumplimiento_celda_tipo = "salida";
+    } else if (cubierto && tard > 0) {
+      incumplimiento_celda_minutos = tard;
       incumplimiento_celda_tipo = "tardanza";
     }
     return { ...seg, incumplimiento_celda_minutos, incumplimiento_celda_tipo };
@@ -428,19 +488,21 @@ export function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}
   const tolOut = Number(capa.tolerancia_egreso_dia_min) || 0;
   const ventanasSegmento = ventanasTeoricasPorSegmento(capa, tolIn, tolOut);
 
-  const fueraTurno =
-    filasCount > 0 && carga_teorica_minutos > 0
-      ? evaluarFichadaFueraTurnoTeorico(
-          tramos,
-          carga_teorica_minutos,
-          ingresoNominalMs,
-          egresoNominalMs,
-          {
-            umbral_solape_fuera_turno_min,
-            umbral_solape_fuera_turno_pct,
-          },
-        )
-      : { fuera_turno: false, solape_minutos: 0, umbral_minutos: 0 };
+  const umbralesSolape = {
+    umbral_solape_fuera_turno_min,
+    umbral_solape_fuera_turno_pct,
+  };
+
+  let fueraTurno = { fuera_turno: false, solape_minutos: 0, umbral_minutos: 0 };
+  if (filasCount > 0 && carga_teorica_minutos > 0 && ventanasSegmento.length < 2) {
+    fueraTurno = evaluarFichadaFueraTurnoTeorico(
+      tramos,
+      carga_teorica_minutos,
+      ingresoNominalMs,
+      egresoNominalMs,
+      umbralesSolape,
+    );
+  }
 
   if (fueraTurno.fuera_turno) {
     let carga_real_bruta = 0;
@@ -490,7 +552,7 @@ export function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}
   /** @type {Array<Record<string, unknown>>|undefined} */
   let segmentos_cumplimiento;
 
-  if (ventanasSegmento.length >= 2 && tramos.length > 0) {
+  if (ventanasSegmento.length >= 2) {
     const porSeg = calcularDisciplinaPorSegmentos(tramos, ventanasSegmento);
     tardanza_minutos = porSeg.tardanza_minutos;
     salida_anticipada_minutos = porSeg.salida_anticipada_minutos;

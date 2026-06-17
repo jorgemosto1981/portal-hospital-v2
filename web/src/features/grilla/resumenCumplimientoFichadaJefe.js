@@ -1,5 +1,8 @@
 import { disciplinaHorariaIncumplimientoDesdeAnalitica } from "../../../../shared/utils/calcularDeltasCumplimiento.js";
-import { toleranciasTextoDesdeAnalitica } from "./grillaAnaliticaCumplimientoUi.js";
+import {
+  toleranciasTextoDesdeAnalitica,
+  analiticaCumplimientoDesdeCelda,
+} from "./grillaAnaliticaCumplimientoUi.js";
 
 export { toleranciasTextoDesdeAnalitica };
 
@@ -10,7 +13,7 @@ export { toleranciasTextoDesdeAnalitica };
  */
 export function resultadoAnalisisFichadaJefe(celdaVis) {
   const celda = celdaVis && typeof celdaVis === "object" ? celdaVis : {};
-  const anal = celda.analitica_cumplimiento;
+  const anal = analiticaCumplimientoDesdeCelda(celda);
   const sem = celda.validacion_fichada_dia?.estado_semaforo
     ? String(celda.validacion_fichada_dia.estado_semaforo)
     : "";

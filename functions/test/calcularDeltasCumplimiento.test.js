@@ -275,4 +275,242 @@ describe("calcularDeltasCumplimiento (Fase 1 colisión)", () => {
     assert.equal(manana?.incumplimiento_celda_minutos, 60);
     assert.equal(manana?.incumplimiento_celda_tipo, "tardanza");
   });
+
+  it("M+N con huecos: sin fichadas — dos tramos AUSENTE en celda (no déficit agregado)", () => {
+    const FECHA_MN = "2026-06-08";
+    const capaMn = {
+      tipo_dia: "laborable",
+      tiene_huecos: true,
+      carga_horaria_diaria_minutos: 960,
+      tolerancia_debitohorario_minutos: 30,
+      tolerancia_ingreso_dia_min: 0,
+      tolerancia_egreso_dia_min: 0,
+      ingreso_nominal_iso: "2026-06-08T09:00:00.000Z",
+      ingreso_limite_con_gracia_iso: "2026-06-08T09:00:00.000Z",
+      egreso_nominal_iso: "2026-06-09T09:00:00.000Z",
+      egreso_limite_con_gracia_iso: "2026-06-09T09:00:00.000Z",
+      segmentos: [
+        {
+          segmento_id: "M",
+          ingreso_iso: "2026-06-08T09:00:00.000Z",
+          egreso_iso: "2026-06-08T17:00:00.000Z",
+        },
+        {
+          segmento_id: "N",
+          ingreso_iso: "2026-06-09T01:00:00.000Z",
+          egreso_iso: "2026-06-09T09:00:00.000Z",
+        },
+      ],
+    };
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([]),
+      capaMn,
+      { fecha_ymd: FECHA_MN },
+    );
+    assert.equal(r.calculo_por_segmentos, true);
+    assert.equal(r.segmentos_cumplimiento?.filter((s) => s.cubierto === false).length, 2);
+    assert.equal(
+      r.segmentos_cumplimiento?.every((s) => s.incumplimiento_celda_tipo === "ausente_tramo"),
+      true,
+    );
+  });
+
+  it("M+N con huecos: solo noche fichada — ausente M + salida N en badges de celda", () => {
+    const FECHA_N = "2026-06-15";
+    const capaMn = {
+      tipo_dia: "laborable",
+      tiene_huecos: true,
+      carga_horaria_diaria_minutos: 960,
+      horas_teoricas_totales: 16,
+      tolerancia_debitohorario_minutos: 30,
+      tolerancia_ingreso_dia_min: 15,
+      tolerancia_egreso_dia_min: 15,
+      ingreso_nominal_iso: "2026-06-15T06:00:00-03:00",
+      ingreso_limite_con_gracia_iso: "2026-06-15T06:15:00-03:00",
+      egreso_nominal_iso: "2026-06-16T06:00:00-03:00",
+      egreso_limite_con_gracia_iso: "2026-06-16T05:45:00-03:00",
+      segmentos: [
+        {
+          segmento_id: "M",
+          ingreso_iso: "2026-06-15T06:00:00-03:00",
+          egreso_iso: "2026-06-15T14:00:00-03:00",
+        },
+        {
+          segmento_id: "N",
+          ingreso_iso: "2026-06-15T22:00:00-03:00",
+          egreso_iso: "2026-06-16T06:00:00-03:00",
+        },
+      ],
+    };
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([
+        {
+          ingreso: "21:45",
+          egreso: "05:35",
+          fecha_ymd: FECHA_N,
+          fecha_egreso_ymd: "2026-06-16",
+        },
+      ]),
+      capaMn,
+      { fecha_ymd: FECHA_N },
+    );
+    assert.equal(r.calculo_por_segmentos, true);
+    assert.equal(r.debito_tiempo.deficit_minutos, 490);
+    const manana = r.segmentos_cumplimiento?.find((s) => s.segmento_id === "M");
+    assert.equal(manana?.incumplimiento_celda_minutos, 480);
+    assert.equal(manana?.incumplimiento_celda_tipo, "ausente_tramo");
+    const noche = r.segmentos_cumplimiento?.find((s) => s.segmento_id === "N");
+    assert.equal(noche?.incumplimiento_celda_minutos, 25);
+    assert.equal(noche?.incumplimiento_celda_tipo, "salida");
+  });
+
+  it("turno T en segmento: ignora sobre nocturno obsoleto y no marca fuera de turno", () => {
+    const FECHA_T = "2026-06-14";
+    const regimen = {
+      tolerancia_debitohorario_minutos: 30,
+      turnos_disponibles: [
+        { turno_id: "N", tolerancia_ingreso_min: 15, tolerancia_egreso_min: 15 },
+        { turno_id: "T", tolerancia_ingreso_min: 15, tolerancia_egreso_min: 15 },
+      ],
+    };
+    const capaBase = {
+      tipo_dia: "laborable",
+      tiene_huecos: false,
+      horas_teoricas_totales: 8,
+      turno_compuesto_id: "T",
+      ingreso_teorico_final: "2026-06-13T22:00:00-03:00",
+      egreso_teorico_final: "2026-06-14T06:00:00-03:00",
+      segmentos: [
+        {
+          segmento_id: "T",
+          ingreso_iso: "2026-06-14T14:00:00-03:00",
+          egreso_iso: "2026-06-14T22:00:00-03:00",
+        },
+      ],
+    };
+    const capa = enriquecerLimitesCumplimientoEnCapa(capaBase, regimen);
+    assert.equal(capa.ingreso_nominal_iso, "2026-06-14T14:00:00-03:00");
+    assert.equal(capa.egreso_nominal_iso, "2026-06-14T22:00:00-03:00");
+
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([{ ingreso: "14:15", egreso: "21:35", fecha_ymd: FECHA_T }]),
+      capa,
+      { fecha_ymd: FECHA_T },
+    );
+    assert.notEqual(r.fichada_fuera_turno_teorico, true);
+    assert.equal(r.alertas_activas?.includes("FICHADA_FUERA_TURNO_TEORICO"), false);
+  });
+
+  it("M+T+N continuo: M fichada, T ausente, N con ingreso — por segmento sin fuera de turno", () => {
+    const FECHA_MTN = "2026-06-16";
+    const capaMtn = enriquecerLimitesCumplimientoEnCapa(
+      {
+        tipo_dia: "laborable",
+        tiene_huecos: false,
+        turno_compuesto_id: "M+T+N",
+        horas_teoricas_totales: 24,
+        segmentos: [
+          {
+            segmento_id: "M",
+            ingreso_iso: "2026-06-16T09:00:00.000Z",
+            egreso_iso: "2026-06-16T17:00:00.000Z",
+          },
+          {
+            segmento_id: "T",
+            ingreso_iso: "2026-06-16T17:00:00.000Z",
+            egreso_iso: "2026-06-17T01:00:00.000Z",
+          },
+          {
+            segmento_id: "N",
+            ingreso_iso: "2026-06-17T01:00:00.000Z",
+            egreso_iso: "2026-06-17T09:00:00.000Z",
+          },
+        ],
+        ingreso_teorico_final: "2026-06-16T09:00:00.000Z",
+        egreso_teorico_final: "2026-06-17T09:00:00.000Z",
+      },
+      {
+        tolerancia_debitohorario_minutos: 30,
+        turnos_disponibles: [
+          { turno_id: "M", tolerancia_ingreso_min: 15, tolerancia_egreso_min: 15 },
+        ],
+      },
+    );
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([
+        { ingreso: "05:55", egreso: "06:05", fecha_ymd: FECHA_MTN },
+        { ingreso: "21:55", fecha_ymd: FECHA_MTN },
+      ]),
+      capaMtn,
+      { fecha_ymd: FECHA_MTN },
+    );
+    assert.notEqual(r.fichada_fuera_turno_teorico, true);
+    assert.equal(r.calculo_por_segmentos, true);
+    const m = r.segmentos_cumplimiento?.find((s) => s.segmento_id === "M");
+    const t = r.segmentos_cumplimiento?.find((s) => s.segmento_id === "T");
+    const n = r.segmentos_cumplimiento?.find((s) => s.segmento_id === "N");
+    assert.equal(m?.cubierto, true);
+    assert.equal(t?.cubierto, false);
+    assert.equal(t?.incumplimiento_celda_tipo, "ausente_tramo");
+    assert.equal(n?.cubierto, true);
+  });
+
+  it("ABM M+N en M+T+N: tramo M largo y N no roba T ni marca tardanza 470", () => {
+    const FECHA_MTN = "2026-06-16";
+    const capaMtn = enriquecerLimitesCumplimientoEnCapa(
+      {
+        tipo_dia: "laborable",
+        tiene_huecos: false,
+        turno_compuesto_id: "M+T+N",
+        horas_teoricas_totales: 24,
+        segmentos: [
+          {
+            segmento_id: "M",
+            ingreso_iso: "2026-06-16T09:00:00.000Z",
+            egreso_iso: "2026-06-16T17:00:00.000Z",
+          },
+          {
+            segmento_id: "T",
+            ingreso_iso: "2026-06-16T17:00:00.000Z",
+            egreso_iso: "2026-06-17T01:00:00.000Z",
+          },
+          {
+            segmento_id: "N",
+            ingreso_iso: "2026-06-17T01:00:00.000Z",
+            egreso_iso: "2026-06-17T09:00:00.000Z",
+          },
+        ],
+        ingreso_teorico_final: "2026-06-16T09:00:00.000Z",
+        egreso_teorico_final: "2026-06-17T09:00:00.000Z",
+      },
+      {
+        tolerancia_debitohorario_minutos: 30,
+        turnos_disponibles: [
+          { turno_id: "M", tolerancia_ingreso_min: 15, tolerancia_egreso_min: 15 },
+        ],
+      },
+    );
+    const r = calcularDeltasCumplimiento(
+      celdaConFichadas([
+        { ingreso: "05:54", egreso: "14:10", fecha_ymd: FECHA_MTN },
+        {
+          ingreso: "21:50",
+          egreso: "05:55",
+          fecha_ymd: FECHA_MTN,
+          fecha_egreso_ymd: "2026-06-17",
+        },
+      ]),
+      capaMtn,
+      { fecha_ymd: FECHA_MTN },
+    );
+    const m = r.segmentos_cumplimiento?.find((s) => s.segmento_id === "M");
+    const t = r.segmentos_cumplimiento?.find((s) => s.segmento_id === "T");
+    const n = r.segmentos_cumplimiento?.find((s) => s.segmento_id === "N");
+    assert.equal(m?.cubierto, true);
+    assert.equal(t?.cubierto, false);
+    assert.equal(t?.incumplimiento_celda_tipo, "ausente_tramo");
+    assert.equal(n?.cubierto, true);
+    assert.equal(r.disciplina?.tardanza_minutos, 0);
+    assert.equal(r.alertas_activas?.includes("TARDANZA_PUNITIVA"), false);
+  });
 });

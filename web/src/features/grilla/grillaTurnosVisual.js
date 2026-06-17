@@ -38,7 +38,7 @@ const VARIANTES_CHIP = {
     bg: "bg-rose-100 hover:bg-rose-200 bg-[repeating-linear-gradient(-45deg,transparent,transparent_3px,rgba(244,63,94,0.15)_3px,rgba(244,63,94,0.15)_6px)]",
     text: "text-rose-950",
   },
-  futuroGris: { bg: "bg-slate-100 hover:bg-slate-200", text: "text-slate-500" },
+  futuroGris: { bg: "bg-slate-100 hover:bg-slate-200", text: "text-slate-700" },
   teoriaPendiente: { bg: "bg-slate-200 hover:bg-slate-300", text: "text-slate-800" },
   semaforoVerde: { bg: "bg-emerald-300", text: "text-emerald-950", hover: "hover:bg-emerald-400" },
   semaforoAmarillo: { bg: "bg-amber-300", text: "text-amber-950", hover: "hover:bg-amber-400" },
@@ -252,9 +252,9 @@ export function varianteCeldaOperativa({
   esFuturoGris,
   estadoSemaforoFichada,
 }) {
-  if (esFuturoGris) return "futuroGris";
   if (teoriaPendienteLazy && tieneLicencia) return "teoriaPendiente";
   if (tieneLicencia) return "licencia";
+  if (esFuturoGris) return "futuroGris";
   if (esIncompletoPlan) return "incompletoPlan";
   const vSem = varianteChipDesdeSemaforoFichada(estadoSemaforoFichada);
   if (vSem) return vSem;

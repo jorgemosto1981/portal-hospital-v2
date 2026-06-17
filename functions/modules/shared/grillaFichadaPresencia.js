@@ -2,11 +2,13 @@
 // AUTO-GENERADO por scripts/sync-shared-to-functions.mjs
 // NO EDITAR MANUALMENTE — editar shared/utils/ y correr el script.
 
+const { obtenerYmdHoyInstitucional } = require("./fechaInstitucionalBa");
 
 /**
  * US-15 / Q9-3: presencia agregada y contradicción fichada ↔ teoría (sin I/O).
  * @typedef {'presente'|'ausente'} FichadaPresencia
  */
+
 
 /** @param {unknown} raw */
 function normalizarTipoDia(raw) {
@@ -251,4 +253,18 @@ function evaluarContradiccionFichadaTeoria(celda) {
   return { contradictorio: false };
 }
 
-module.exports = { parseFichadasRealesCelda, celdaTieneRegistroFichada, contarMarcasFichadaReal, celdaTieneFichadaImpar, celdaTieneCapaFichadaCargada, celdaEsperaFichada, resolverFichadaPresencia, lineasHorarioFichadaReal, textoHorarioFichadaReal, textoHorarioFichadaRealDesdeCelda, evaluarContradiccionFichadaTeoria };
+/**
+ * Día ya evaluable, con expectativa de fichada y sin marcas (ausente).
+ * @param {Record<string, unknown>|null|undefined} celda
+ * @param {string} fechaYmd
+ * @param {number} [ahoraMs]
+ */
+function celdaAusenteSinMarcasPasada(celda, fechaYmd, ahoraMs = Date.now()) {
+  const ymd = String(fechaYmd || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return false;
+  if (ymd > obtenerYmdHoyInstitucional(ahoraMs)) return false;
+  if (parseFichadasRealesCelda(celda).length > 0) return false;
+  return celdaEsperaFichada(celda) && resolverFichadaPresencia(celda) === "ausente";
+}
+
+module.exports = { parseFichadasRealesCelda, celdaTieneRegistroFichada, contarMarcasFichadaReal, celdaTieneFichadaImpar, celdaTieneCapaFichadaCargada, celdaEsperaFichada, resolverFichadaPresencia, lineasHorarioFichadaReal, textoHorarioFichadaReal, textoHorarioFichadaRealDesdeCelda, evaluarContradiccionFichadaTeoria, celdaAusenteSinMarcasPasada };

@@ -230,6 +230,9 @@ function resolverValidacionFichadaDia(params) {
   }
 
   if (celdaSinExpectativaFichada(celda)) {
+    if (params.forzar_recalculo === true) {
+      return { accion: "delete", motivo: "sin_expectativa_fichada" };
+    }
     return { accion: "omit", motivo: "sin_expectativa_fichada" };
   }
 

@@ -1030,8 +1030,11 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                 </>
               )}
             </div>
-            <div className="mt-2 border-t border-slate-200 pt-2 text-xs text-slate-700">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <details className="mt-2 border-t border-slate-200 pt-2 text-xs text-slate-700">
+              <summary className="cursor-pointer select-none font-medium text-slate-600 hover:text-slate-900">
+                Leyenda de celdas e iconos
+              </summary>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
                 <span>
                   <span className="mr-1 inline-block h-3 w-5 rounded border border-blue-900/25 bg-[#3B82F6] align-middle" />
                   Consolidado / aprobado
@@ -1108,7 +1111,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                 </span>
                 <span>Clic = detalles</span>
               </div>
-            </div>
+            </details>
           </div>
         </div>
       ) : null}

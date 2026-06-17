@@ -5,6 +5,8 @@ import {
   analiticaTieneContenidoVisible,
   badgeIncumplimientoHorarioRrhh,
   listaBadgesIncumplimientoPorSegmentoCelda,
+  disciplinaListaBadgesPorTramoCelda,
+  listaBadgesAusentePorTramoHuecosCelda,
   lineasDisciplinaTeoriaVsRealRrhh,
   lineasMargenToleranciaRegimenDesdeAnalitica,
   microBadgesAnalitica,
@@ -88,7 +90,7 @@ describe("grillaAnaliticaCumplimientoUi", () => {
       },
       debito_tiempo: { incumplimiento_carga_horaria: false, tolerancia_debitohorario_minutos: 30 },
     });
-    expect(b.disciplina).toBe("▼ 60m");
+    expect(b.disciplina).toBe("▼ 1h");
     expect(
       badgeIncumplimientoHorarioRrhh(
         { salida_anticipada_minutos: 45 },
@@ -115,14 +117,16 @@ describe("grillaAnaliticaCumplimientoUi", () => {
         {
           segmento_id: "M",
           cubierto: true,
-          incumplimiento_celda_minutos: 60,
-          incumplimiento_celda_tipo: "tardanza",
+          carga_teorica_minutos: 480,
+          tardanza_minutos: 60,
+          salida_anticipada_minutos: 0,
         },
         {
           segmento_id: "N",
           cubierto: false,
-          incumplimiento_celda_minutos: 480,
-          incumplimiento_celda_tipo: "ausente_tramo",
+          carga_teorica_minutos: 480,
+          tardanza_minutos: 0,
+          salida_anticipada_minutos: 0,
         },
       ],
       disciplina: { tardanza_minutos: 60, fuera_de_margen: true },
@@ -133,10 +137,126 @@ describe("grillaAnaliticaCumplimientoUi", () => {
       },
     };
     const lista = listaBadgesIncumplimientoPorSegmentoCelda(analitica);
-    expect(lista?.map((x) => x.label)).toEqual(["▼ 60m", "▼ 480m"]);
+    expect(lista?.map((x) => x.label)).toEqual(["▼ 1h", "AUSENTE"]);
     const b = microBadgesAnaliticaRrhh(analitica, null);
     expect(b.debito).toBeNull();
-    expect(b.disciplinaLista?.map((x) => x.label)).toEqual(["▼ 60m", "▼ 480m"]);
+    expect(b.disciplinaLista?.map((x) => x.label)).toEqual(["▼ 1h", "AUSENTE"]);
+  });
+
+  it("M+N solo noche: dos ▼ (ausente M + salida N) sin chip -490m aunque falte flag calculo_por_segmentos", () => {
+    const analitica = {
+      segmentos_cumplimiento: [
+        {
+          segmento_id: "M",
+          cubierto: false,
+          carga_teorica_minutos: 480,
+          tardanza_minutos: 0,
+          salida_anticipada_minutos: 0,
+        },
+        {
+          segmento_id: "N",
+          cubierto: true,
+          carga_teorica_minutos: 480,
+          tardanza_minutos: 0,
+          salida_anticipada_minutos: 25,
+          ingreso_anticipado_minutos: 15,
+        },
+      ],
+      disciplina: { fuera_de_margen: false },
+      debito_tiempo: {
+        incumplimiento_carga_horaria: true,
+        deficit_minutos: 490,
+        tolerancia_debitohorario_minutos: 30,
+      },
+    };
+    expect(listaBadgesIncumplimientoPorSegmentoCelda(analitica)?.map((x) => x.label)).toEqual([
+      "AUSENTE",
+      "▼ 25m",
+    ]);
+    const b = microBadgesAnaliticaRrhh(analitica, null);
+    expect(b.debito).toBeNull();
+    expect(b.disciplinaLista?.map((x) => x.label)).toEqual(["AUSENTE", "▼ 25m"]);
+  });
+
+  it("sin marcas en celda laborable: chip AUSENTE sin déficit agregado", () => {
+    const analitica = {
+      disciplina: { fuera_de_margen: false },
+      debito_tiempo: {
+        incumplimiento_carga_horaria: true,
+        deficit_minutos: 960,
+        tolerancia_debitohorario_minutos: 30,
+      },
+    };
+    const celda = { tipo_dia: "laborable", fichadas_esperadas: 2, fichadas_reales: [] };
+    const b = microBadgesAnaliticaRrhh(analitica, celda);
+    expect(b.debito).toBeNull();
+    expect(b.disciplinaLista?.map((x) => x.label)).toEqual(["AUSENTE"]);
+  });
+
+  it("sin marcas (modo jefe): chip AUSENTE sin -480m", () => {
+    const analitica = {
+      debito_tiempo: {
+        incumplimiento_carga_horaria: true,
+        deficit_minutos: 480,
+        tolerancia_debitohorario_minutos: 30,
+      },
+    };
+    const celda = { tipo_dia: "laborable", fichadas_esperadas: 2, fichadas_reales: [] };
+    const b = microBadgesAnalitica(analitica, { celdaVis: celda });
+    expect(b.debito).toBeNull();
+    expect(b.disciplinaLista?.map((x) => x.label)).toEqual(["AUSENTE"]);
+  });
+
+  it("M+N ausente en ambos tramos (analítica): dos AUSENTE", () => {
+    const analitica = {
+      calculo_por_segmentos: true,
+      segmentos_cumplimiento: [
+        {
+          segmento_id: "M",
+          cubierto: false,
+          carga_teorica_minutos: 480,
+          tardanza_minutos: 0,
+          salida_anticipada_minutos: 0,
+        },
+        {
+          segmento_id: "N",
+          cubierto: false,
+          carga_teorica_minutos: 480,
+          tardanza_minutos: 0,
+          salida_anticipada_minutos: 0,
+        },
+      ],
+      debito_tiempo: {
+        incumplimiento_carga_horaria: true,
+        deficit_minutos: 960,
+        tolerancia_debitohorario_minutos: 30,
+      },
+    };
+    const celda = { tipo_dia: "laborable", fichadas_esperadas: 4, fichadas_reales: [] };
+    expect(disciplinaListaBadgesPorTramoCelda(analitica, celda)?.map((x) => x.label)).toEqual([
+      "AUSENTE",
+      "AUSENTE",
+    ]);
+    const b = microBadgesAnaliticaRrhh(analitica, celda);
+    expect(b.disciplinaLista?.map((x) => x.label)).toEqual(["AUSENTE", "AUSENTE"]);
+    expect(b.debito).toBeNull();
+  });
+
+  it("M+N sin analítica por tramo: dos AUSENTE desde rda_horario_display", () => {
+    const celda = {
+      tipo_dia: "laborable",
+      fichadas_esperadas: 4,
+      fichadas_reales: [],
+      rda_tiene_huecos: true,
+      rda_horario_display: "06:00–14:00 · 22:00–06:00",
+      rda_turno_id: "M+N",
+    };
+    expect(listaBadgesAusentePorTramoHuecosCelda(celda)?.map((x) => x.label)).toEqual([
+      "AUSENTE",
+      "AUSENTE",
+    ]);
+    const b = microBadgesAnalitica(null, { celdaVis: celda });
+    expect(b.disciplinaLista?.map((x) => x.label)).toEqual(["AUSENTE", "AUSENTE"]);
   });
 
   it("disciplina RRHH: desvíos dentro de tolerancia de débito no son incumplimiento", () => {
@@ -200,5 +320,28 @@ describe("grillaAnaliticaCumplimientoUi", () => {
   it("disciplina RRHH: ausente sin analítica", () => {
     const lineas = lineasDisciplinaTeoriaVsRealRrhh(null, { presencia: "ausente" });
     expect(lineas[0]).toMatch(/Ausente/);
+  });
+
+  it("ignora flag fuera de turno obsoleto si validación ya es déficit", () => {
+    const celda = {
+      rda_ingreso: "14:00",
+      rda_egreso: "22:00",
+      validacion_fichada_dia: {
+        alertas_semanticas: [{ codigo: "DEFICIT_HORARIO_GRAVE" }],
+      },
+      analitica_cumplimiento: {
+        fichada_fuera_turno_teorico: true,
+        debito_tiempo: { incumplimiento_carga_horaria: true, deficit_minutos: 40 },
+        disciplina: {
+          ingreso_nominal_iso: "2026-06-13T22:00:00-03:00",
+          ingreso_limite_con_gracia_iso: "2026-06-13T22:15:00-03:00",
+        },
+      },
+    };
+    const anal = analiticaCumplimientoDesdeCelda(celda);
+    expect(anal?.fichada_fuera_turno_teorico).toBeUndefined();
+    const lineas = lineasDisciplinaTeoriaVsRealRrhh(anal, { presencia: "presente", celdaVis: celda });
+    expect(lineas.some((l) => l.includes("ventana del turno teórico"))).toBe(false);
+    expect(lineasMargenToleranciaRegimenDesdeAnalitica(anal).length).toBe(0);
   });
 });

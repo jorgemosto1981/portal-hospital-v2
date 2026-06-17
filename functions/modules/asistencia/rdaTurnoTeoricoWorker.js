@@ -33,6 +33,7 @@ const { planHabilitadoDesdeQuerySnapshot } = require("./planGrupoAgentesNuevos")
 const { enriquecerLimitesCumplimientoEnCapa } = require("../shared/capaTeoricaLimitesCumplimiento");
 const { leerCeldaVisDiaFusionada } = require("../shared/visCeldaFusionLectura");
 const {
+  aplicarAnaliticaValidacionVisDia,
   buildFirestorePatchValidacionFichadaDia,
   ejecutarAnaliticaYValidacionFichadaDia,
 } = require("../shared/validacionFichadaDiaPersistencia");
@@ -241,7 +242,7 @@ async function persistirAnaliticaCumplimientoDia({
   regimenDoc,
 }) {
   if (!asiRef || !visRef || !/^gdt_/i.test(String(gdt || ""))) return null;
-  const visSnap = await visRef.get();
+  const [visSnap, asiSnap] = await Promise.all([visRef.get(), asiRef.get()]);
   const celdaRaw = leerCeldaVisDiaFusionada(visSnap.exists ? visSnap.data() || {} : {}, diaKey);
   const capaEnriquecida = enriquecerLimitesCumplimientoEnCapa(capaEscrita, regimenDoc);
   const celdaCtx = {
@@ -260,12 +261,26 @@ async function persistirAnaliticaCumplimientoDia({
     fecha_ymd: fechaYmd,
     forzar_recalculo: true,
   });
-  const visPayload = { [`dias.${diaKey}.analitica_cumplimiento`]: analitica };
-  const valPatch = buildFirestorePatchValidacionFichadaDia(diaKey, resolverOut);
-  if (valPatch) Object.assign(visPayload, valPatch);
-
-  await asiRef.set({ [`analitica_cumplimiento_por_grupo.${gdt}`]: analitica }, { merge: true });
-  await visRef.set(visPayload, { merge: true });
+  if (String(resolverOut?.motivo || "") === "dia_futuro") {
+    const visPayload = {
+      [`dias.${diaKey}.analitica_cumplimiento`]: FieldValue.delete(),
+    };
+    const valPatch = buildFirestorePatchValidacionFichadaDia(diaKey, resolverOut);
+    if (valPatch) Object.assign(visPayload, valPatch);
+    await visRef.set(visPayload, { merge: true });
+    await asiRef.set(
+      { [`analitica_cumplimiento_por_grupo.${gdt}`]: FieldValue.delete() },
+      { merge: true },
+    );
+    return null;
+  }
+  const asiAnaliticaPath = `analitica_cumplimiento_por_grupo.${gdt}`;
+  if (asiSnap?.exists) {
+    await asiRef.update({ [asiAnaliticaPath]: analitica });
+  } else {
+    await asiRef.set({ [asiAnaliticaPath]: analitica }, { merge: true });
+  }
+  await aplicarAnaliticaValidacionVisDia(visRef, diaKey, analitica, resolverOut);
   return analitica;
 }
 
@@ -1569,10 +1584,86 @@ async function materializarTurnoTeoricoDia({ personaId, grupoId, fechaYmd }) {
   };
 }
 
+async function resolverRegimenDocPersonaGrupo(personaId, gdt) {
+  const hlgSnap = await db
+    .collection(COL_HLG)
+    .where("persona_id", "==", personaId)
+    .where("grupo_de_trabajo_id", "==", gdt)
+    .where("activo", "==", true)
+    .limit(1)
+    .get();
+  const rid = hlgSnap.docs[0]?.data()?.regimen_horario_id;
+  if (!rid) return null;
+  const regSnap = await db.collection(COL_REGIMEN).doc(rid).get();
+  return regSnap.exists ? regSnap.data() : null;
+}
+
+/**
+ * Recalcula analítica + validación fichada tras cambio de teoría (override / intercambio).
+ * Idempotente con persistirAnaliticaCumplimientoDia al final de materializarTurnoTeoricoDia.
+ */
+async function recalcularAnaliticaValidacionFichadaTrasTeoria({
+  personaId,
+  grupoId,
+  fechaYmd,
+  regimenDoc = null,
+}) {
+  const gdt = String(grupoId || "").trim();
+  if (!/^gdt_/i.test(gdt)) return { ok: false, motivo: "grupo_invalido" };
+
+  const asiDocId = buildAsiDocumentId(personaId, fechaYmd);
+  if (!asiDocId) return { ok: false, motivo: "asi_doc_invalido" };
+  const asiRef = db.collection(COL_ASISTENCIA).doc(asiDocId);
+  const asiSnap = await asiRef.get();
+  const capaRaw = asiSnap.exists ? resolverCapaTeoricaGrupo(asiSnap.data(), gdt) : null;
+  if (!capaRaw || typeof capaRaw !== "object") {
+    return { ok: false, motivo: "sin_capa_teorica" };
+  }
+
+  const [anio, mes] = fechaYmd.split("-").map(Number);
+  const periodoId = `${anio}-${String(mes).padStart(2, "0")}`;
+  const visDocId = buildVisDocumentId(personaId, `${periodoId}-01`, gdt);
+  if (!visDocId) return { ok: false, motivo: "vis_doc_invalido" };
+
+  const visRef = db.collection(COL_VIS).doc(visDocId);
+  const diaKey = diaMesKeyDesdeYmd(fechaYmd);
+  const capaEscrita = resolverCapaTeoricaGrupo(
+    { capa_teorica_por_grupo: { [gdt]: capaRaw } },
+    gdt,
+  ) || capaRaw;
+
+  let regimenEfectivo = regimenDoc;
+  if (!regimenEfectivo) {
+    regimenEfectivo = await resolverRegimenDocPersonaGrupo(personaId, gdt);
+  }
+
+  try {
+    await persistirAnaliticaCumplimientoDia({
+      asiRef,
+      visRef,
+      gdt,
+      diaKey,
+      fechaYmd,
+      capaEscrita,
+      regimenDoc: regimenEfectivo,
+    });
+    return { ok: true };
+  } catch (e) {
+    logger.error("recalcularAnaliticaValidacionFichadaTrasTeoria ERROR", {
+      personaId,
+      fechaYmd,
+      grupoId: gdt,
+      error: String(e),
+    });
+    return { ok: false, motivo: "persistencia_error" };
+  }
+}
+
 module.exports = {
   materializarTurnoMesBatch,
   materializarGrupoMes,
   materializarTurnoTeoricoDia,
+  recalcularAnaliticaValidacionFichadaTrasTeoria,
   diasDelMes,
   resolverDiaConPreCarga,
   normalizarTipoDiaMaterializacion,

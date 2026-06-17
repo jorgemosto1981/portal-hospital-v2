@@ -15,10 +15,17 @@ function fusionarDiasDesdeClavesPlanas(data) {
     const dk = m[1];
     const field = m[2];
     if (!dias[dk] || typeof dias[dk] !== "object") dias[dk] = {};
-    const actual = dias[dk][field];
-    if (actual === undefined || actual === null) {
-      dias[dk][field] = value;
+    const nestedCelda = data.dias?.[dk];
+    if (
+      nestedCelda
+      && typeof nestedCelda === "object"
+      && Object.prototype.hasOwnProperty.call(nestedCelda, field)
+      && (field === "analitica_cumplimiento" || field === "validacion_fichada_dia")
+    ) {
+      continue;
     }
+    // Las actualizaciones por dot-path (`dias.14.campo` en la raíz del doc) son la fuente vigente.
+    dias[dk][field] = value;
   }
   return dias;
 }
