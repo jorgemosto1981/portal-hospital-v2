@@ -3,7 +3,7 @@
 > **RETOMAR AQUÍ (prioridad inmediata — próxima sesión):**  
 > **`DESAPARECEN FICHADAS REALES DE LA VISUAL DE GRILLA OPERATIVA, VER EXTENSION DE ARCHIVOS DE FUNCIONES DE GRILLA OPERATIVA, REVISAR PLAN Y CARGA INSTANTANEA DE CELDAS SIN SALIR DE GRILLA`**  
 > Handoff: [`HANDOFF_SESION_2026-06-18_PAUSA_BATCH_SANACION_NODOS.md`](./HANDOFF_SESION_2026-06-18_PAUSA_BATCH_SANACION_NODOS.md) · Plan: [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md)  
-> **PAUSA 2026-06-18:** batch inmediato (sin outbox UI) · motor unificado · sanación por firma · nodos grilla (Fase A3). Redeploy **functions** pendiente (último intento interrumpido).  
+> **CIERRE SESIÓN 2026-06-18:** batch inmediato · motor unificado · sanación · nodos (Fase A3) · **`master` `a2acaa7`** push ✅ · redeploy **functions** pendiente al retomar.  
 > **Épica doc paralela (cuando piloto verde):** [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md)  
 > **Cierre piloto grilla fichadas jun-2026 (sesión anterior):** [`HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md`](./HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md)  
 > **QA fichadas teoría vs real (piloto Sala):** matriz [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) — **cerrado operativamente** (medianoche CHAPARRO/LOKITO, CAMPOS/MOSTO, UI agnóstica IDs). Backfill ronda 2 `badges[]` = **opcional** (`npm run db:backfill-fase-f-validacion`).  

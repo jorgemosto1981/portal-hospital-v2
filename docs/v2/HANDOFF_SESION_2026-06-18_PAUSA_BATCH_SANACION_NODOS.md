@@ -1,10 +1,10 @@
-# Handoff — Pausa 2026-06-18 (batch inmediato · motor unificado · sanación · nodos grilla)
+# Handoff — Cierre sesión 2026-06-18 (batch inmediato · motor unificado · sanación · nodos grilla)
 
 > **Fecha:** 2026-06-18  
-> **Rama:** `master` (cambios locales pendientes de push al cierre de esta sesión)  
+> **Rama:** `master` @ **`a2acaa7`** (push remoto ✅)  
 > **Piloto:** Sala Internación 1 `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · jun-2026  
 > **Agente QA traslado:** CAMPOS JAQUELINA `per_01KR3GZX9TB33NHTE2QD5ZP13V` · DNI 35100564  
-> **Estado:** **PAUSA** — código listo en repo; **último deploy functions interrumpido** (hosting sí desplegado en sesión previa del hilo).
+> **Estado:** **SESIÓN CERRADA** — repo sincronizado; **redeploy functions** pendiente en próxima sesión (último intento interrumpido).
 
 ---
 

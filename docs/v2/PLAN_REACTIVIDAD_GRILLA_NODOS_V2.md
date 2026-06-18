@@ -1,6 +1,6 @@
 # Plan — Reactividad por nodo (grilla operativa GSO)
 
-> **Estado:** EN CURSO (pausa 2026-06-18)  
+> **Estado:** EN CURSO — sesión cerrada 2026-06-18 (`master` `a2acaa7`); retomar por handoff 2026-06-18  
 > **Prioridad UX:** impacto visible **sin salir del modal de mes** · reemplaza el modelo anterior de **outbox local** (cola + “aplicar después”).  
 > **Piloto:** Sala Internación 1 `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · jun-2026 · Jaqueline `per_01KR3GZX9TB33NHTE2QD5ZP13V`.
 
