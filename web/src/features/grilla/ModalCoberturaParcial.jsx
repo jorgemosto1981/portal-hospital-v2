@@ -28,6 +28,8 @@ import GrillaMotivoNovedadSection from "./GrillaMotivoNovedadSection.jsx";
 import { componerMotivoNovedadGso } from "./grillaMotivosNovedadCatalogo.js";
 import { buildGuardrailNovedadContext } from "./grillaGuardrailsTeoriaUi.js";
 
+const SIN_OPS_PENDIENTES = /** @type {Array<Record<string, unknown>>} */ ([]);
+
 /**
  * Flujo A — intercambio de guardia bilateral (RFC §3.1).
  * @param {{
@@ -36,11 +38,11 @@ import { buildGuardrailNovedadContext } from "./grillaGuardrailsTeoriaUi.js";
  *   fechaDestinoYmd: string;
  *   grupoId: string;
  *   periodo: string;
- *   opsPendientes?: Array<Record<string, unknown>>;
+ *   onAplicarCambio: (op: Record<string, unknown>) => void | Promise<void>;
+ *   aplicandoCambio?: boolean;
  *   onCerrar: () => void;
  *   onRegistrado?: () => void;
  *   onDesactualizado?: () => void;
- *   onAgregarOutbox: (op: Record<string, unknown>) => void;
  *   requiereUrgenciaG1?: boolean;
  *   guardrailNovedadContext?: import("./grillaGuardrailsTeoriaUi.js").GuardrailNovedadContext;
  * }} props
@@ -53,11 +55,11 @@ export default function ModalCoberturaParcial({
   guardrailNovedadContext = buildGuardrailNovedadContext({ puedeModificarTeoria: true }),
   grupoId,
   periodo,
-  opsPendientes = [],
   onCerrar,
   onRegistrado,
   onDesactualizado,
-  onAgregarOutbox,
+  onAplicarCambio,
+  aplicandoCambio = false,
 }) {
   const [cargandoOrigen, setCargandoOrigen] = useState(true);
   const [operando, setOperando] = useState(false);
@@ -88,19 +90,19 @@ export default function ModalCoberturaParcial({
     grupoId,
     periodo,
     regimenHorarioIdOrigen: regimenHorarioOrigenId,
-    opsPendientes,
+    opsPendientes: SIN_OPS_PENDIENTES,
     enabled: Boolean(personaDestinoId && fechaDestinoYmd && grupoId && regimenHorarioOrigenId),
   });
 
   const previewOrigen = useMemo(
     () => proyectarDiaConOpsPendientes(
       capaOrigen,
-      opsPendientes,
+      SIN_OPS_PENDIENTES,
       personaOrigenId,
       fechaYmd,
       turnosRegimenOrigen,
     ),
-    [capaOrigen, opsPendientes, personaOrigenId, fechaYmd, turnosRegimenOrigen],
+    [capaOrigen, personaOrigenId, fechaYmd, turnosRegimenOrigen],
   );
 
   useEffect(() => {
@@ -145,7 +147,7 @@ export default function ModalCoberturaParcial({
       }
       const turnosMap = turnosDisponiblesDesdeRegimen(regimenes, regimenOrigen);
       setTurnosRegimenOrigen(turnosMap);
-      const preview = proyectarDiaConOpsPendientes(capa, opsPendientes, personaOrigenId, fechaYmd, turnosMap);
+      const preview = proyectarDiaConOpsPendientes(capa, SIN_OPS_PENDIENTES, personaOrigenId, fechaYmd, turnosMap);
       const eleg = capaElegibleIntercambioGuardia(capa, preview);
       if (!eleg.ok) {
         setErrorOrigen(eleg.error || "El día origen no es elegible para intercambio.");
@@ -157,7 +159,7 @@ export default function ModalCoberturaParcial({
     } finally {
       setCargandoOrigen(false);
     }
-  }, [personaOrigenId, fechaYmd, grupoId, periodo, opsPendientes]);
+  }, [personaOrigenId, fechaYmd, grupoId, periodo]);
 
   useEffect(() => {
     void cargarOrigen();
@@ -234,7 +236,7 @@ export default function ModalCoberturaParcial({
       regimenHorarioIdOrigen: regimenHorarioOrigenId,
       regimenHorarioIdDestino: destino.regimenHorarioDestinoId,
       regimenesIdx,
-      opsPendientes,
+      SIN_OPS_PENDIENTES,
     });
   }, [
     personaDestinoId,
@@ -245,7 +247,6 @@ export default function ModalCoberturaParcial({
     destino.turnosRegimenDestino,
     destino.regimenHorarioDestinoId,
     regimenesIdx,
-    opsPendientes,
     segmentosCedidosOrigen,
     segmentosCedidosDestino,
     personaOrigenId,
@@ -315,8 +316,7 @@ export default function ModalCoberturaParcial({
         periodo,
         esUrgenciaOperativa: requiereUrgenciaG1,
       });
-      onAgregarOutbox(op);
-      toast.success("Intercambio agregado a cambios pendientes.");
+      await onAplicarCambio(op);
       if (onRegistrado) onRegistrado();
       onCerrar();
     } catch (e) {
@@ -589,6 +589,7 @@ export default function ModalCoberturaParcial({
             type="button"
             disabled={
               operando
+              || aplicandoCambio
               || cargandoOrigen
               || soloLecturaInfo.activo
               || !guardrailNovedadContext.puedeModificarTeoria
@@ -603,7 +604,7 @@ export default function ModalCoberturaParcial({
             onClick={() => void handleSubmit()}
             className="min-h-11 rounded-xl bg-violet-700 px-5 text-base font-semibold text-white active:bg-violet-800 disabled:opacity-50"
           >
-            {operando ? "Agregando…" : "Agregar a cambios"}
+            {operando || aplicandoCambio ? "Aplicando…" : "Aplicar cambio"}
           </button>
           ) : null}
         </div>

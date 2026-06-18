@@ -1,321 +1,30 @@
 import { useMemo } from "react";
-import { diasEnMes, etiquetaCelda, celdaTieneDesalineacionTeoria } from "./grillaMesCellUtils.js";
+import { buildCellKey } from "../../../../shared/utils/grillaMesNodos/index.js";
+import { diasEnMes } from "./grillaMesCellUtils.js";
 import {
-  evaluarImputacionExternaCelda,
-  evaluarLicenciaEnFrancoCelda,
-  evaluarPostPurgeHlgCelda,
-  evaluarTeoriaPendienteLazyCelda,
-} from "./grillaMesGsoHints.js";
-import { evaluarSoloLecturaCeldaGso } from "./grillaGsoSoloLectura.js";
-import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
+  claseCeldaAgenteSticky,
+  claseHeaderGrillaStickyTop,
+  claseHeaderGrillaStickyEsquina,
+  claseFondoCeldaCalendarioTitular,
+} from "./grillaTurnosVisual.js";
 import {
   columnasCalendario,
   institucionalPorDiaEnFilas,
-  textoHorarioTurno,
-  celdaTieneJornadaVis,
-  celdaEsIncompletoPlanVis,
   claseFondoColumna,
-  varianteCeldaOperativa,
 } from "./grillaMesEquipoDisplay.js";
 import {
-  claseCeldaAgenteSticky,
-  clasesTextoCelda,
-  clasesTextoCeldaOutboxPendiente,
-  claseHeaderGrillaStickyTop,
-  claseHeaderGrillaStickyEsquina,
-  CLASE_MARCO_CELDA_OUTBOX_PENDIENTE,
-  claseFondoCeldaCalendarioTitular,
-  claseFondoTdJefeSemaforo,
-} from "./grillaTurnosVisual.js";
-import GrillaTurnosCeldaChip from "./GrillaTurnosCeldaChip.jsx";
-import { fichadasEsperadasDesdeCeldaVis } from "./grillaFichadasEsperadasDisplay.js";
-import {
-  fichadaPresenciaDesdeCeldaVis,
-  titleFichadaPresencia,
-  textoHorarioFichadaRealDesdeCelda,
-} from "./grillaFichadaPresenciaDisplay.js";
-import {
-  esMatrizPresentacionCompuesta,
-  esPresentacionPorPisos,
   filaGrillaTieneTurnoCompuesto,
-  filasPresentacionOperativaDesdeCelda,
-  lineasDesdePresentacionCompuesto,
   tablaNecesitaColumnasFichadaAnchas,
   ALTURA_CHIP_GRILLA_COMPUESTO,
   ALTURA_CHIP_GRILLA_SIMPLE,
   ALTURA_FILA_GRILLA_COMPUESTO,
   ALTURA_FILA_GRILLA_SIMPLE,
-  CLASE_CHIP_IMPORTANTE_COMPUESTO,
   ANCHO_MIN_COL_DIA_FICHADA,
-  CLASE_CHIP_ANCHO_FICHADA,
-  CLASE_CHIP_ANCHO_CELDA_DIA,
-  CLASE_CHIP_MARCO_CELDA_DIA,
   CLASE_TD_DIA_FICHADA,
 } from "./grillaPresentacionCompuestoUi.js";
-import GrillaPresentacionCompuestoFilas from "./GrillaPresentacionCompuestoFilas.jsx";
-import GrillaFichadaEstadoJefeBadge from "./GrillaFichadaEstadoJefeBadge.jsx";
-import {
-  celdaEsDiaFuturoInstitucional,
-  estadoSemaforoPinturaCeldaJefe,
-  semaforoFichadaDesdeCelda,
-} from "./grillaFichadaEstadoJefeDisplay.js";
-import { celdaAusenteSinMarcasPasada } from "../../../../shared/utils/grillaFichadaPresencia.js";
-import { visualCeldaOutboxPendiente } from "./grillaCeldaOutboxVisual.js";
 import { diaFueraTramoHlg } from "./grillaMesFilasUtils.js";
 import { parsePersonaLabelGrilla } from "./grillaPersonaLabelDisplay.js";
-import DiaGrillaCelda from "./DiaGrillaCelda.jsx";
-
-function contenidoCeldaOperativa({
-  tieneLicencia,
-  licenciaCod,
-  tieneTurno,
-  esFranco,
-  esNoLaborable,
-  turnoText,
-  mostrarFichadaReal = false,
-  fichadaPresencia,
-  estadoFichadaJefe,
-  outboxVisual,
-  esIncompletoPlan,
-  desalineacionTeoria,
-  desalineacionTooltip,
-  imputacionExterna,
-  imputacionTooltip,
-  postPurgeHlg,
-  postPurgeTooltip,
-  teoriaPendienteLazy,
-  teoriaPendienteTooltip,
-  licenciaEnFranco,
-  licenciaEnFrancoTooltip,
-  soloLecturaGrilla,
-  soloLecturaTooltip,
-  celdaVis,
-  filasPresentacionCompuesto = null,
-  matrizPresentacionCompuesta = false,
-  usaPresentacionPisos = false,
-  pisoCompuestoGrande = false,
-  ocultarMicroAnalitica = false,
-  modoFichadaRrhh = false,
-  omitirBadgeSemaforo = false,
-  soloTeoriaFuturo = false,
-  celdaFuturaSinFichada = false,
-}) {
-  const claseTextoPrincipal = outboxVisual?.pending ? clasesTextoCeldaOutboxPendiente : clasesTextoCelda;
-  const alertaTitle = desalineacionTooltip || "Teoría modificada post-licencia";
-  const badgeAlerta = desalineacionTeoria ? (
-    <span
-      className="text-[8px] font-bold leading-none text-amber-700"
-      title={alertaTitle}
-      aria-label={alertaTitle}
-    >
-      ⚠
-    </span>
-  ) : null;
-  const badgeFanOut = imputacionExterna ? (
-    <span
-      className="text-[8px] font-bold leading-none text-sky-800"
-      title={imputacionTooltip || "Licencia gestionada en otro sector"}
-      aria-label={imputacionTooltip || "Licencia gestionada en otro sector"}
-    >
-      🔗
-    </span>
-  ) : null;
-  const badgePostPurge = postPurgeHlg ? (
-    <span
-      className="text-[8px] font-bold leading-none text-amber-900"
-      title={postPurgeTooltip || "HLg inactiva — historial de licencia preservado"}
-      aria-label={postPurgeTooltip || "HLg inactiva — historial de licencia preservado"}
-    >
-      📅
-    </span>
-  ) : null;
-  const badgeTeoriaPendiente = teoriaPendienteLazy ? (
-    <span
-      className="text-[8px] font-bold leading-none text-slate-700"
-      title={teoriaPendienteTooltip || "Teoría pendiente de cálculo"}
-      aria-label={teoriaPendienteTooltip || "Teoría pendiente de cálculo"}
-    >
-      ⏳
-    </span>
-  ) : null;
-  const badgeLicenciaFranco = licenciaEnFranco ? (
-    <span
-      className="text-[8px] font-bold leading-none text-slate-600"
-      title={licenciaEnFrancoTooltip || "Licencia solapada en franco"}
-      aria-label={licenciaEnFrancoTooltip || "Licencia solapada en franco"}
-    >
-      ℹ️
-    </span>
-  ) : null;
-  const badgeSoloLectura = soloLecturaGrilla ? (
-    <span
-      className="text-[8px] font-bold leading-none text-slate-700"
-      title={soloLecturaTooltip || "Mes cerrado / solo lectura"}
-      aria-label={soloLecturaTooltip || "Mes cerrado / solo lectura"}
-    >
-      🔒
-    </span>
-  ) : null;
-  const filaBadges =
-    badgeAlerta ||
-    badgeFanOut ||
-    badgePostPurge ||
-    badgeTeoriaPendiente ||
-    badgeLicenciaFranco ||
-    badgeSoloLectura ? (
-      <span className="flex items-center justify-center gap-px leading-none">
-        {badgeAlerta}
-        {badgeFanOut}
-        {badgePostPurge}
-        {badgeTeoriaPendiente}
-        {badgeLicenciaFranco}
-        {badgeSoloLectura}
-      </span>
-    ) : null;
-  const badgeFichada =
-    omitirBadgeSemaforo || !estadoFichadaJefe ? null : (
-      <GrillaFichadaEstadoJefeBadge
-        estado={estadoFichadaJefe.estado}
-        tooltip={estadoFichadaJefe.tooltip}
-        className="mt-px"
-        compacto
-      />
-    );
-  const badgeAnalitica =
-    usaPresentacionPisos || ocultarMicroAnalitica ? null : (
-      <DiaGrillaCelda celdaVis={celdaVis} className="mt-px" modoRrhh={modoFichadaRrhh} />
-    );
-  const filaInferiorCelda =
-    celdaFuturaSinFichada
-      ? null
-      : badgeAnalitica || filaBadges || badgeFichada
-        ? (
-            <span className="mt-px flex flex-col items-center gap-px leading-none">
-              {filaBadges}
-              {badgeFichada}
-              {badgeAnalitica}
-            </span>
-          )
-        : null;
-  const diffBlock = outboxVisual?.pending && (outboxVisual.diffOut || outboxVisual.diffIn) ? (
-    <span className="mt-px flex flex-col items-center gap-px text-[10px] font-semibold leading-tight">
-      {outboxVisual.diffOut ? (
-        <span className="text-rose-700">− {outboxVisual.diffOut}</span>
-      ) : null}
-      {outboxVisual.diffOut && outboxVisual.diffIn ? (
-        <span className="text-slate-400"> · </span>
-      ) : null}
-      {outboxVisual.diffIn ? (
-        <span className="text-emerald-800">+ {outboxVisual.diffIn}</span>
-      ) : null}
-    </span>
-  ) : null;
-
-  if (outboxVisual?.lineaExtra) {
-    return (
-      <span className="flex w-full flex-col items-center justify-center leading-none">
-        {outboxVisual.lineaBaseMuted ? (
-          <span className={`${clasesTextoCelda(outboxVisual.lineaBaseMuted)} opacity-70`}>
-            {outboxVisual.lineaBaseMuted}
-          </span>
-        ) : null}
-        <span className={clasesTextoCelda(outboxVisual.lineaExtra)}>{outboxVisual.lineaExtra}</span>
-        <span className="mt-0.5 flex flex-col items-center gap-px">
-          {filaInferiorCelda}
-          {diffBlock}
-        </span>
-      </span>
-    );
-  }
-
-  if (
-    usaPresentacionPisos &&
-    Array.isArray(filasPresentacionCompuesto) &&
-    filasPresentacionCompuesto.length > 0 &&
-    !soloTeoriaFuturo
-  ) {
-    return (
-      <span className="flex h-full w-full flex-col leading-none">
-        <GrillaPresentacionCompuestoFilas
-          filas={filasPresentacionCompuesto}
-          mostrarBadges
-          pisoGrande={pisoCompuestoGrande}
-          className="flex-1"
-        />
-        {filaInferiorCelda || diffBlock ? (
-          <span className="mt-px flex flex-col items-center gap-px">
-            {filaInferiorCelda}
-            {diffBlock}
-          </span>
-        ) : null}
-      </span>
-    );
-  }
-
-  const turnoMostrar = mostrarFichadaReal
-    ? turnoText
-    : outboxVisual?.turnoText ?? turnoText;
-  if (soloTeoriaFuturo) {
-    const etiqueta =
-      turnoMostrar ||
-      (esNoLaborable ? "NL" : esFranco ? "F" : tieneLicencia ? licenciaCod.slice(0, 4) : "");
-    return (
-      <span className="flex flex-col items-center justify-center leading-none">
-        <span className={`${claseTextoPrincipal(etiqueta)} font-medium`}>{etiqueta}</span>
-      </span>
-    );
-  }
-  if (tieneLicencia && (tieneTurno || esFranco || esNoLaborable)) {
-    return (
-      <span className="flex w-full flex-col items-center justify-center leading-none">
-        <span className={claseTextoPrincipal(turnoMostrar || (esNoLaborable ? "NL" : "F"))}>
-          {turnoMostrar || (esNoLaborable ? "NL" : "F")}
-        </span>
-        <span className="mt-0.5 flex flex-col items-center gap-px">
-          {filaInferiorCelda}
-          {diffBlock}
-          <span className="text-[7px] font-bold text-fuchsia-950">{licenciaCod.slice(0, 4)}</span>
-        </span>
-      </span>
-    );
-  }
-  if (tieneLicencia) {
-    return (
-      <span className="flex flex-col items-center">
-        {filaInferiorCelda}
-        <span className={claseTextoPrincipal(licenciaCod)}>{licenciaCod.slice(0, 4)}</span>
-        {esIncompletoPlan ? (
-          <span className="text-[6px] font-semibold text-rose-800">Plan incompleto</span>
-        ) : null}
-      </span>
-    );
-  }
-  if (esIncompletoPlan) {
-    return (
-      <span className="flex flex-col items-center justify-center leading-none">
-        <span className="text-[7px] font-bold leading-tight text-rose-950">Sin turno</span>
-        {filaInferiorCelda}
-      </span>
-    );
-  }
-  return (
-    <span className="flex flex-col items-center justify-center leading-none">
-      {turnoMostrar.includes("·") ? (
-        turnoMostrar.split("·").map((tramo, i) => (
-          <span key={i} className={claseTextoPrincipal(tramo.trim())}>
-            {tramo.trim()}
-          </span>
-        ))
-      ) : (
-        <span className={claseTextoPrincipal(turnoMostrar)}>{turnoMostrar}</span>
-      )}
-      <span className="mt-0.5 flex flex-col items-center gap-px">
-        {filaInferiorCelda}
-        {diffBlock}
-      </span>
-    </span>
-  );
-}
+import GrillaDiaCelda from "./GrillaDiaCelda.jsx";
 
 /**
  * @param {{
@@ -352,8 +61,8 @@ export default function GrillaMesEquipoTabla({
   etiquetasGrupo = {},
   gsoPermiteEscritura = true,
   gsoSoloLecturaMotivo = null,
-  opsOutboxGrupo = [],
-  periodoOutbox = "",
+  opsOutboxGrupo: _opsOutboxGrupo = [],
+  periodoOutbox: _periodoOutbox = "",
   modoFichada = null,
   materializacionGrupoReciente = false,
   onCeldaClick,
@@ -482,333 +191,44 @@ export default function GrillaMesEquipoTabla({
                       );
                     }
 
-                    const eventos = cell.eventos;
-                    const licenciaCod = etiquetaCelda(eventos);
-                    const tieneLicencia = Boolean(licenciaCod);
                     const fechaYmd = `${anio}-${String(mes).padStart(2, "0")}-${dia}`;
-                    const esFuturoGris = celdaEsDiaFuturoInstitucional(fechaYmd);
                     const personaIdFila = String(fila.persona_id || "");
-                    const outboxVisual = visualCeldaOutboxPendiente({
-                      cell,
-                      ops: opsOutboxGrupo,
-                      personaId: personaIdFila,
-                      fechaYmd,
-                      grupoId: grupoSeleccionado || cellGdt || "",
-                      personaLabels: { [personaIdFila]: personaLabel },
-                    });
-                    const filasPresentacion = filasPresentacionOperativaDesdeCelda(cell);
-                    const matrizPresentacionCompuesta = esMatrizPresentacionCompuesta(filasPresentacion);
-                    const usaPresentacionPisos = esPresentacionPorPisos(filasPresentacion);
-                    const turnoText = outboxVisual?.turnoText ?? textoHorarioTurno(cell);
-                    const textoFichadaReal =
-                      !usaPresentacionPisos ? textoHorarioFichadaRealDesdeCelda(cell) : "";
-                    const mostrarFichadaReal =
-                      !esFuturoGris &&
-                      (usaPresentacionPisos
-                        ? filasPresentacion.some(
-                            (f) =>
-                              String(f.fichada_label || "").trim() ||
-                              String(f.badge_label || "").trim(),
-                          )
-                        : Boolean(textoFichadaReal));
-                    const horarioCelda = mostrarFichadaReal ? textoFichadaReal : turnoText;
-                    const jornadaVis = celdaTieneJornadaVis(cell);
-                    const tipoDiaVis = String(cell.tipo_dia || "")
-                      .trim()
-                      .toLowerCase()
-                      .replace(/\s+/g, "_");
-                    const esNoLaborable =
-                      !jornadaVis &&
-                      (tipoDiaVis === "no_laborable" ||
-                        tipoDiaVis === "no-laborable" ||
-                        turnoText === "NL");
-                    const tieneTurno = Boolean(turnoText && turnoText !== "F" && turnoText !== "NL");
-                    const esFranco = (cell.es_franco === true || turnoText === "F") && !esNoLaborable;
-                    const tipoInstCel = cell.tipo_evento_institucional || tipoInstCol;
-                    const esInstitucional = Boolean(
-                      tipoInstCol || cell.es_feriado === true || tipoInstCel === "feriado" || tipoInstCel === "asueto",
-                    );
-
-                    const esIncompletoPlan = celdaEsIncompletoPlanVis(cell);
-                    const desalineacion = celdaTieneDesalineacionTeoria(eventos, cell);
-                    const desalineacionTeoria = desalineacion.desalineado;
-                    const desalineacionTooltip = desalineacion.tooltip;
-                    const imputacion = evaluarImputacionExternaCelda(
-                      eventos,
-                      grupoSeleccionado,
-                      etiquetasGrupo,
-                    );
-                    const postPurge = evaluarPostPurgeHlgCelda(cell, eventos, {
-                      fechaYmd,
-                      vigenteHasta: fila.vigente_hasta,
-                    });
                     const filaMaterializoLazy =
                       fila.materializado_lazy === true || materializacionGrupoReciente === true;
-                    const teoriaPendiente = evaluarTeoriaPendienteLazyCelda(cell, eventos, {
-                      fechaYmd,
-                      vigenteHasta: fila.vigente_hasta,
-                      materializadoLazy: filaMaterializoLazy,
-                      postPurgeActivo: postPurge.activo,
+                    const gdtCelda = grupoSeleccionado || cellGdt || "";
+                    const cellKey = buildCellKey({
+                      gdt: gdtCelda,
+                      persona_id: personaIdFila,
+                      fecha_ymd: fechaYmd,
                     });
-                    const licenciaFranco = evaluarLicenciaEnFrancoCelda(cell, eventos);
-                    const soloLectura = evaluarSoloLecturaCeldaGso({
-                      gsoPermiteEscritura,
-                      motivo: gsoSoloLecturaMotivo,
-                      tieneDatos:
-                        tieneLicencia ||
-                        tieneTurno ||
-                        esFranco ||
-                        esNoLaborable ||
-                        esInstitucional ||
-                        esIncompletoPlan,
-                    });
-                    const tieneDatos =
-                      tieneLicencia ||
-                      tieneTurno ||
-                      esFranco ||
-                      esNoLaborable ||
-                      esInstitucional ||
-                      esIncompletoPlan;
-                    const puedeOperarTurno = tieneDatos && !esIncompletoPlan;
-                    const ingreso = cell.rda_ingreso || null;
-                    const egreso = cell.rda_egreso || null;
-                    const turnoId = cell.rda_turno_id || null;
-                    const grupoLabel = cell.etiqueta_grupo_corta || null;
-
-                    const titleParts = [];
-                    if (esInstitucional && tipoInstCel) {
-                      titleParts.push(
-                        tipoInstCel === "feriado" ? "Feriado" : tipoInstCel === "asueto" ? "Asueto" : "Día institucional",
-                      );
-                    }
-                    if (mostrarFichadaReal) {
-                      if (usaPresentacionPisos) {
-                        titleParts.push(
-                          lineasDesdePresentacionCompuesto(filasPresentacion).join(" | "),
-                        );
-                      } else {
-                        titleParts.push(textoFichadaReal);
-                      }
-                    } else if (turnoText) {
-                      titleParts.push(turnoText);
-                    }
-                    if (licenciaCod) titleParts.push(`Licencia: ${licenciaCod}`);
-                    const fichadasN = fichadasEsperadasDesdeCeldaVis(cell);
-                    if (outboxVisual?.tooltip) titleParts.unshift(outboxVisual.tooltip);
-                    if (esIncompletoPlan) {
-                      titleParts.push("Laborable sin turno (corregir plan del mes)");
-                    }
-                    // En RRHH queremos que el semáforo (AMARILLO/ROJO) tenga prioridad sobre el chip "Fichada real".
-                    const semaforoFichada = semaforoFichadaDesdeCelda(cell, { fechaYmd });
-                    const fichadaPresencia =
-                      modoFichada === "rrhh" && !esFuturoGris
-                        ? fichadaPresenciaDesdeCeldaVis(cell, { esRrhh: true })
-                        : null;
-                    const fichadaTitle = semaforoFichada
-                      ? semaforoFichada.tooltip
-                      : titleFichadaPresencia(fichadaPresencia);
-                    if (fichadaTitle) titleParts.push(fichadaTitle);
-                    if (desalineacionTeoria && desalineacionTooltip) {
-                      titleParts.push(desalineacionTooltip);
-                    }
-                    if (imputacion.activo && imputacion.tooltip) {
-                      titleParts.push(imputacion.tooltip);
-                    }
-                    if (postPurge.activo && postPurge.tooltip) {
-                      titleParts.push(postPurge.tooltip);
-                    }
-                    if (teoriaPendiente.activo && teoriaPendiente.tooltip) {
-                      titleParts.push(teoriaPendiente.tooltip);
-                    }
-                    if (licenciaFranco.activo && licenciaFranco.tooltip) {
-                      titleParts.push(licenciaFranco.tooltip);
-                    }
-                    if (soloLectura.activo && soloLectura.tooltip) {
-                      titleParts.push(soloLectura.tooltip);
-                    }
-
-                    const ausenteSinMarcasPasada = celdaAusenteSinMarcasPasada(cell, fechaYmd);
-                    const estadoSemaforoCelda = semaforoFichada?.estado
-                      ? estadoSemaforoPinturaCeldaJefe(semaforoFichada.estado, cell, fechaYmd)
-                      : null;
-                    const pintarCeldaSemaforoJefe =
-                      modoFichada === "jefe" &&
-                      Boolean(estadoSemaforoCelda) &&
-                      !esFuturoGris &&
-                      !usaPresentacionPisos;
-
-                    const puedeMostrarChipFichadaReal =
-                      usaPresentacionPisos ||
-                      modoFichada === "rrhh" ||
-                      !estadoSemaforoCelda ||
-                      estadoSemaforoCelda === "VERDE";
-
-                    // Si el semáforo del jefe aplica a la celda, priorizamos su color incluso si hay "licencia".
-                    // Así evitamos que el chip/licencia fucsia oculte el fondo VERDE/AMARILLO/ROJO.
-                    const tieneLicenciaParaVariant =
-                      modoFichada === "jefe" && pintarCeldaSemaforoJefe ? false : tieneLicencia;
-
-                    const variant =
-                      usaPresentacionPisos
-                        ? "vacio"
-                        : (mostrarFichadaReal && puedeMostrarChipFichadaReal && !tieneLicenciaParaVariant)
-                          ? "fichadaReal"
-                          : varianteCeldaOperativa({
-                              tieneLicencia: tieneLicenciaParaVariant,
-                              esNoLaborable,
-                              esFranco,
-                              tieneTurno: tieneTurno || jornadaVis,
-                              esIncompletoPlan: esIncompletoPlan && !tieneLicencia,
-                              teoriaPendienteLazy: teoriaPendiente.activo,
-                              esFuturoGris,
-                              estadoSemaforoFichada: esFuturoGris
-                                ? null
-                                : estadoSemaforoPinturaCeldaJefe(semaforoFichada?.estado, cell, fechaYmd),
-                            });
-
-                    const claseTdBase =
-                      pintarCeldaSemaforoJefe && estadoSemaforoCelda
-                        ? claseFondoTdJefeSemaforo(estadoSemaforoCelda)
-                        : claseFondoCeldaCalendarioTitular({
-                            esFinde: col.esFinde,
-                            esFeriado: Boolean(tipoInstCol),
-                            esNoLaborable,
-                            esFranco,
-                            esLaborable: jornadaVis || tieneTurno,
-                          });
-                    const claseTdPadding =
-                      columnasFichadaAnchas && !pintarCeldaSemaforoJefe
-                        ? CLASE_TD_DIA_FICHADA
-                        : pintarCeldaSemaforoJefe && estadoSemaforoCelda
-                          ? "p-0 align-middle"
-                          : "px-0.5 py-0.5 align-middle";
-                    const claseTd = [claseTdBase, claseTdPadding].filter(Boolean).join(" ");
 
                     return (
-                      <td key={dia} className={claseTd}>
-                        <GrillaMesCeldaLicencia
-                          eventos={Array.isArray(eventos) ? eventos : []}
-                          celdaVis={cell}
-                          personaLabel={personaLabel}
-                          dia={dia}
-                          grupoVistaId={grupoSeleccionado || undefined}
-                          etiquetasGrupo={etiquetasGrupo}
-                          disabled={!tieneDatos}
-                          celdaRellena={pintarCeldaSemaforoJefe}
-                          onClick={() =>
-                            tieneDatos &&
-                            onCeldaClick({
-                              incompletoPlan: esIncompletoPlan,
-                              desalineacionTeoria,
-                              desalineacionTooltip,
-                              celdaVis: cell,
-                              puedeOperarTurno,
-                              dia,
-                              fechaYmd,
-                              personaId: String(fila.persona_id || ""),
-                              hlgId: hlgIdFila,
-                              filaId,
-                              eventos: Array.isArray(eventos) ? eventos : [],
-                              personaLabel,
-                              grupoLabel,
-                              grupoTrabajoId: grupoSeleccionado || cellGdt || undefined,
-                              vigenteHasta: fila.vigente_hasta,
-                              turnoTeorico: {
-                                rda_turno_id: turnoId || undefined,
-                                es_franco: esFranco,
-                                capa_teorica: {
-                                  tipo_dia: jornadaVis
-                                    ? "laborable"
-                                    : esNoLaborable
-                                      ? "no_laborable"
-                                      : esFranco
-                                        ? "franco"
-                                        : cell.tipo_dia || "laborable",
-                                  ingreso,
-                                  egreso,
-                                  horario_display: cell.rda_horario_display,
-                                  tiene_huecos: cell.rda_tiene_huecos,
-                                  fichadas_esperadas: fichadasN ?? undefined,
-                                  es_feriado: esInstitucional,
-                                  tipo_evento_institucional: tipoInstCel || undefined,
-                                },
-                              },
-                            })
-                          }
-                          className={
-                            pintarCeldaSemaforoJefe
-                              ? "block w-full p-0"
-                              : usaPresentacionPisos
-                                ? "block w-full p-0"
-                                : "flex w-full items-center justify-center py-0.5"
-                          }
-                          title={titleParts.join(" · ") || undefined}
-                        >
-                          <GrillaTurnosCeldaChip
-                            variant={variant}
-                            rellenoCelda={pintarCeldaSemaforoJefe}
-                            className={[
-                              outboxVisual?.pending ? CLASE_MARCO_CELDA_OUTBOX_PENDIENTE : "",
-                              columnasFichadaAnchas && !pintarCeldaSemaforoJefe
-                                ? CLASE_CHIP_MARCO_CELDA_DIA
-                                : "",
-                              columnasFichadaAnchas ? "!text-[9px]" : "",
-                              columnasFichadaAnchas && !usaPresentacionPisos
-                                ? CLASE_CHIP_ANCHO_CELDA_DIA
-                                : "",
-                              filaCompuesta ? CLASE_CHIP_IMPORTANTE_COMPUESTO : "",
-                              usaPresentacionPisos ? `${CLASE_CHIP_ANCHO_FICHADA} !p-0` : "",
-                              usaPresentacionPisos && !matrizPresentacionCompuesta
-                                ? CLASE_CHIP_IMPORTANTE_COMPUESTO
-                                : "",
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
-                          >
-                            {contenidoCeldaOperativa({
-                              tieneLicencia,
-                              licenciaCod,
-                              tieneTurno,
-                              esFranco,
-                              esNoLaborable,
-                              turnoText: horarioCelda,
-                              mostrarFichadaReal,
-                              fichadaPresencia,
-                              estadoFichadaJefe:
-                                modoFichada === "jefe" && pintarCeldaSemaforoJefe ? semaforoFichada : tieneLicencia ? null : semaforoFichada,
-                              esIncompletoPlan,
-                              outboxVisual,
-                              desalineacionTeoria,
-                              desalineacionTooltip,
-                              imputacionExterna: imputacion.activo,
-                              imputacionTooltip: imputacion.tooltip,
-                              postPurgeHlg: postPurge.activo,
-                              postPurgeTooltip: postPurge.tooltip,
-                              teoriaPendienteLazy: teoriaPendiente.activo,
-                              teoriaPendienteTooltip: teoriaPendiente.tooltip,
-                              licenciaEnFranco: licenciaFranco.activo,
-                              licenciaEnFrancoTooltip: licenciaFranco.tooltip,
-                              soloLecturaGrilla: soloLectura.activo,
-                              soloLecturaTooltip: soloLectura.tooltip,
-                              celdaVis: cell,
-                              filasPresentacionCompuesto: usaPresentacionPisos
-                                ? filasPresentacion
-                                : null,
-                              matrizPresentacionCompuesta,
-                              usaPresentacionPisos,
-                              pisoCompuestoGrande: filaCompuesta || usaPresentacionPisos,
-                              ocultarMicroAnalitica:
-                                (modoFichada === "jefe" && !ausenteSinMarcasPasada) || esFuturoGris,
-                              modoFichadaRrhh: modoFichada === "rrhh",
-                              omitirBadgeSemaforo:
-                                Boolean(semaforoFichada?.estado)
-                                && (pintarCeldaSemaforoJefe || modoFichada === "rrhh"),
-                              soloTeoriaFuturo: esFuturoGris && !tieneLicencia,
-                              celdaFuturaSinFichada: esFuturoGris,
-                            })}
-                          </GrillaTurnosCeldaChip>
-                        </GrillaMesCeldaLicencia>
-                      </td>
+                      <GrillaDiaCelda
+                        key={dia}
+                        cellKey={cellKey}
+                        grupoTrabajoId={gdtCelda}
+                        personaId={personaIdFila}
+                        fechaYmd={fechaYmd}
+                        cellFallback={cell}
+                        dia={dia}
+                        filaId={filaId}
+                        personaLabel={personaLabel}
+                        hlgId={hlgIdFila}
+                        vigenteHasta={fila.vigente_hasta}
+                        filaCompuesta={filaCompuesta}
+                        filaMaterializoLazy={filaMaterializoLazy}
+                        colEsFinde={col.esFinde}
+                        tipoInstCol={tipoInstCol}
+                        grupoSeleccionado={grupoSeleccionado}
+                        etiquetasGrupo={etiquetasGrupo}
+                        gsoPermiteEscritura={gsoPermiteEscritura}
+                        gsoSoloLecturaMotivo={gsoSoloLecturaMotivo}
+                        modoFichada={modoFichada}
+                        materializacionGrupoReciente={materializacionGrupoReciente}
+                        columnasFichadaAnchas={columnasFichadaAnchas}
+                        alturaChip={alturaChip}
+                        onCeldaClick={onCeldaClick}
+                      />
                     );
                   })}
                 </tr>

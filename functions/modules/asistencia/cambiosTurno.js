@@ -21,9 +21,11 @@ const { resolverEstadoPlanMensualGrupo } = require("./planEstadoMensualGrupo");
 const {
   materializarTurnoTeoricoDia: materializarTurnoTeoricoDiaWorker,
   recalcularAnaliticaValidacionFichadaTrasTeoria,
+  evaluarCoherenciaMaterializacionDia,
 } = require("./rdaTurnoTeoricoWorker");
 const { assertGrillaGsoEscrituraEnFecha } = require("./grillaGsoSoloLectura");
 const { buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
+const { leerVistaGrillaMesAgente } = require("../shared/grillaMesAgenteCore");
 const { obtenerCapaTeoricaDia } = require("./obtenerCapaTeoricaDia");
 const {
   CFG_TOV_COBERTURA_PARCIAL,
@@ -732,28 +734,86 @@ function visClosedByData(data) {
   return estado === CFG_EPL_LIQUIDADO_CERRADO;
 }
 
+function paresRematerializacionBatchItem(it) {
+  if (esBatchItemCoberturaV2(it)) {
+    return [
+      { personaId: it.persona_origen_id, fechaYmd: it.fecha, grupoId: it.grupo_trabajo_id },
+      { personaId: it.persona_cobertura_id, fechaYmd: it.fecha_destino, grupoId: it.grupo_trabajo_id },
+    ];
+  }
+  const pid = personaIdDocAsi(it);
+  const gdt = it.grupo_trabajo_id;
+  const ov = it.override && typeof it.override === "object" ? it.override : {};
+  const fo = String(ov.fecha_origen || "").trim();
+  const fd = String(ov.fecha_destino || it.fecha || "").trim();
+  const leg = String(ov.reemplazo_traslado_v2 || "").trim();
+  if (it.tipo === "reemplazo" && leg === "origen" && YMD.test(fo)) {
+    return [{ personaId: pid, fechaYmd: fo, grupoId: gdt }];
+  }
+  if (it.tipo === "reemplazo" && leg === "destino" && YMD.test(fd)) {
+    return [{ personaId: pid, fechaYmd: fd, grupoId: gdt }];
+  }
+  if (it.tipo === "reemplazo" && YMD.test(fo) && YMD.test(fd) && fo !== fd) {
+    return [
+      { personaId: pid, fechaYmd: fo, grupoId: gdt },
+      { personaId: pid, fechaYmd: fd, grupoId: gdt },
+    ];
+  }
+  return [{ personaId: pid, fechaYmd: it.fecha, grupoId: gdt }];
+}
+
+/**
+ * Lee celdas vis_* materializadas tras batch (parches mínimos para cliente / Fase C).
+ * @param {Array<{ personaId: string, fechaYmd: string, grupoId: string }>} pares
+ */
+async function diasActualizadosDesdeParesRematerializacion(pares) {
+  /** @type {Array<{ persona_id: string, fecha_ymd: string, grupo_trabajo_id: string, celda: Record<string, unknown> }>} */
+  const out = [];
+  for (const par of pares || []) {
+    const personaId = String(par.personaId || "").trim();
+    const fechaYmd = String(par.fechaYmd || "").trim();
+    const grupoId = String(par.grupoId || "").trim();
+    if (!PER_ID.test(personaId) || !YMD.test(fechaYmd) || !GDT_ID.test(grupoId)) continue;
+    const [y, m] = fechaYmd.split("-").map(Number);
+    const vista = await leerVistaGrillaMesAgente(db, {
+      personaId,
+      grupoTrabajoId: grupoId,
+      anio: y,
+      mes: m,
+    });
+    const dk = fechaYmd.slice(8, 10);
+    const celda = vista?.dias && typeof vista.dias === "object" ? vista.dias[dk] : null;
+    if (!celda || typeof celda !== "object") continue;
+    out.push({
+      persona_id: personaId,
+      fecha_ymd: fechaYmd,
+      grupo_trabajo_id: grupoId,
+      celda,
+    });
+  }
+  return out;
+}
+
 async function rematerializarBatchOps(items) {
   const visto = new Set();
+  /** @type {Array<{ personaId: string, fechaYmd: string, grupoId: string }>} */
+  const paresMaterializados = [];
   for (const it of items) {
-    const pares = esBatchItemCoberturaV2(it)
-      ? [
-        { personaId: it.persona_origen_id, fechaYmd: it.fecha },
-        { personaId: it.persona_cobertura_id, fechaYmd: it.fecha_destino },
-      ]
-      : [{ personaId: personaIdDocAsi(it), fechaYmd: it.fecha }];
-    for (const { personaId, fechaYmd } of pares) {
-      const k = `${personaId}|${fechaYmd}|${it.grupo_trabajo_id}`;
+    for (const { personaId, fechaYmd, grupoId } of paresRematerializacionBatchItem(it)) {
+      const k = `${personaId}|${fechaYmd}|${grupoId}`;
       if (visto.has(k)) continue;
       visto.add(k);
       await materializarDiaAfectado({
         override: it.override,
         personaId,
         fechaYmd,
-        grupoId: it.grupo_trabajo_id,
+        grupoId,
         logTag: "post_batch",
       });
+      paresMaterializados.push({ personaId, fechaYmd, grupoId });
     }
   }
+  return paresMaterializados;
 }
 
 /**
@@ -1184,11 +1244,13 @@ const aplicarBatchAsistencia = onCall({
     return { aplicadas: items.length };
   });
 
-  await rematerializarBatchOps(items);
+  const paresRemat = await rematerializarBatchOps(items);
+  const dias_actualizados = await diasActualizadosDesdeParesRematerializacion(paresRemat);
   return {
     ok: true,
     aplicadas: txResult.aplicadas,
     periodo: [...uniquePeriodo][0],
+    dias_actualizados,
   };
 });
 
@@ -1306,6 +1368,133 @@ const materializarTurnoTeoricoDia = onCall({
   };
 });
 
+function teoriaRefsLicenciaDesdePayload(data) {
+  if (Array.isArray(data.teoria_refs_licencia)) {
+    return data.teoria_refs_licencia.filter((r) => r && typeof r === "object");
+  }
+  if (Array.isArray(data.eventos_licencia)) {
+    const out = [];
+    for (const ev of data.eventos_licencia) {
+      const ref = ev && typeof ev === "object" ? ev.teoria_ref : null;
+      if (ref && typeof ref === "object") out.push(ref);
+    }
+    return out;
+  }
+  return [];
+}
+
+/**
+ * Auto-sanación: compara firma persistida vs motor unificado; rematerializa si hace falta.
+ */
+const sanearMaterializacionDiaSiNecesario = onCall({
+  invoker: "public",
+  memory: "512MiB",
+  timeoutSeconds: 120,
+}, async (request) => {
+  const data = request.data || {};
+  const { personaId, fecha } = validarInput(data);
+  const grupoTrabajoId = requireGrupoTrabajoId(
+    resolveGrupoTrabajoId(data, data.context),
+    "[SAN-001] grupo_trabajo_id (gdt_*) requerido.",
+  );
+  const aplicar = data.aplicar_si_desalineado !== false;
+
+  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
+    clearHlgVigenteCacheMutacion();
+    const planEstado = await resolverEstadoPlanMensualGrupo(db, grupoTrabajoId, fecha.slice(0, 7));
+    await assertOverrideAuth(request, personaId, {
+      mutacionTeoria: aplicar,
+      grupoTrabajoId,
+      planEstado,
+      esUrgenciaOperativa: data.es_urgencia_operativa === true,
+    });
+  }
+  const token = (request.auth && request.auth.token) || {};
+  if (aplicar) {
+    await assertPeriodoEditable(personaId, fecha, grupoTrabajoId, token);
+  }
+
+  const evalRes = await evaluarCoherenciaMaterializacionDia({
+    personaId,
+    grupoId: grupoTrabajoId,
+    fechaYmd: fecha,
+  });
+  if (!evalRes?.ok) {
+    err(
+      "failed-precondition",
+      evalRes?.motivo || "[SAN-002] No se pudo evaluar la coherencia del día.",
+    );
+  }
+
+  let sanado = false;
+  if (evalRes.desalineado === true && aplicar) {
+    const mat = await materializarTurnoTeoricoDiaWorker({
+      personaId,
+      grupoId: grupoTrabajoId,
+      fechaYmd: fecha,
+    });
+    if (!mat?.ok || (mat.diasProcesados || 0) < 1) {
+      err(
+        "failed-precondition",
+        mat?.error || "[SAN-003] No se pudo sincronizar la estructura de turno del día.",
+      );
+    }
+    sanado = true;
+  }
+
+  const [y, m] = fecha.split("-").map(Number);
+  const visDocId = buildVisDocumentId(personaId, `${y}-${String(m).padStart(2, "0")}-01`, grupoTrabajoId);
+  const diaKey = fecha.slice(8, 10);
+  let vis_dia = null;
+  if (visDocId) {
+    const visSnap = await db.collection("vistas_grilla_mes_agente").doc(visDocId).get();
+    if (visSnap.exists && visSnap.data()?.dias?.[diaKey]) {
+      vis_dia = visSnap.data().dias[diaKey];
+    }
+  }
+
+  const { evaluarCoherenciaTeoriaVisDia } = require("../shared/grillaTeoriaDesalineacion");
+  const teoriaRefs = teoriaRefsLicenciaDesdePayload(data);
+  const licEval = evaluarCoherenciaTeoriaVisDia({
+    teoria_refs_licencia: teoriaRefs,
+    celdaVis: vis_dia,
+  });
+  const desalineadoMaterializacion = evalRes.desalineado === true && !sanado;
+  const teoriaObsoletaLicencia = licEval.desalineado === true;
+  const coherencia = {
+    teoria_obsoleta: desalineadoMaterializacion || teoriaObsoletaLicencia,
+    desalineado_materializacion: desalineadoMaterializacion,
+    teoria_obsoleta_licencia: teoriaObsoletaLicencia,
+    motivo_licencia: licEval.motivo || null,
+    tooltip_licencia: licEval.tooltip || null,
+    firma_persistida: evalRes.firma_persistida,
+    firma_esperada: evalRes.firma_esperada,
+  };
+  if (vis_dia && typeof vis_dia === "object") {
+    vis_dia = {
+      ...vis_dia,
+      coherencia_teoria: {
+        teoria_obsoleta: coherencia.teoria_obsoleta,
+        desalineado_materializacion: coherencia.desalineado_materializacion,
+        teoria_obsoleta_licencia: coherencia.teoria_obsoleta_licencia,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    persona_id: personaId,
+    fecha,
+    grupo_trabajo_id: grupoTrabajoId,
+    desalineado: coherencia.teoria_obsoleta,
+    coherencia,
+    sanado,
+    firma_persistida: evalRes.firma_persistida,
+    firma_esperada: evalRes.firma_esperada,
+    vis_dia,
+  };
+});
+
 module.exports = {
   registrarCambioTurno,
   eliminarCambioTurno,
@@ -1314,6 +1503,7 @@ module.exports = {
   aplicarBatchAsistencia,
   obtenerCapaTeoricaDia,
   materializarTurnoTeoricoDia,
+  sanearMaterializacionDiaSiNecesario,
   normalizeBatchOp,
   esPayloadAdicionalV2,
   esPayloadReemplazoV2,

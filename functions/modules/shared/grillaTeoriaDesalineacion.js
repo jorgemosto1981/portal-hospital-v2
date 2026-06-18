@@ -115,4 +115,27 @@ function celdaTieneDesalineacionTeoria(eventos, celdaVigente) {
   return { desalineado: false };
 }
 
-module.exports = { extraerTeoriaRefDesdeCeldaVis, evaluarDesalineacionTeoriaLicencia, celdaTieneDesalineacionTeoria };
+/**
+ * Evalúa obsolescencia de teoría vs vis (licencias + contradicción fichada). Sin I/O.
+ * @param {{ teoria_refs_licencia?: Array<Record<string, unknown>>; celdaVis?: Record<string, unknown>|null }} params
+ */
+function evaluarCoherenciaTeoriaVisDia({ teoria_refs_licencia, celdaVis }) {
+  const refs = Array.isArray(teoria_refs_licencia) ? teoria_refs_licencia : [];
+  const pseudoEventos = refs
+    .filter((r) => r && typeof r === "object")
+    .map((teoria_ref) => ({ teoria_ref }));
+  if (pseudoEventos.length > 0) {
+    return celdaTieneDesalineacionTeoria(pseudoEventos, celdaVis);
+  }
+  const fichada = evaluarContradiccionFichadaTeoria(celdaVis);
+  if (fichada.contradictorio) {
+    return {
+      desalineado: true,
+      motivo: fichada.motivo,
+      tooltip: fichada.tooltip,
+    };
+  }
+  return { desalineado: false };
+}
+
+module.exports = { extraerTeoriaRefDesdeCeldaVis, evaluarDesalineacionTeoriaLicencia, celdaTieneDesalineacionTeoria, evaluarCoherenciaTeoriaVisDia };

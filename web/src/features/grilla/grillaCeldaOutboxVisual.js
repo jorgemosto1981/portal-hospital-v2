@@ -48,6 +48,21 @@ export function capaBaseDesdeCeldaGrilla(cell) {
   };
   if (tid.includes("+")) capa.turno_compuesto_id = tid;
   else if (tid) capa.turno_id = tid;
+  if (!segmentoIdsDesdeCapa(capa).length) {
+    const pres = cell.presentacion_compuesto;
+    const filas = pres?.filas;
+    if (Array.isArray(filas) && filas.length) {
+      const ids = [
+        ...new Set(
+          filas
+            .map((f) => String(f?.segmento_id || "").trim())
+            .filter(Boolean),
+        ),
+      ];
+      if (ids.length === 1) capa.turno_id = ids[0];
+      else if (ids.length > 1) capa.turno_compuesto_id = ids.join("+");
+    }
+  }
   return capa;
 }
 
@@ -64,6 +79,115 @@ function diffSegmentoLabels(baseIds, projIds, turnosPorId = {}) {
   return {
     out: out.length ? etiquetaSegmentosCompuesto(out, turnosPorId) : "",
     inn: inn.length ? etiquetaSegmentosCompuesto(inn, turnosPorId) : "",
+  };
+}
+
+const ORDEN_TRAMO_PISO = { M: 0, T: 1, N: 2 };
+
+/** @param {Record<string, unknown>} base */
+function metadatosVisualesCeldaPreservados(base) {
+  return {
+    eventos: base.eventos,
+    grupo_de_trabajo_id: base.grupo_de_trabajo_id,
+    etiqueta_grupo_corta: base.etiqueta_grupo_corta,
+    es_feriado: base.es_feriado,
+    tipo_evento_institucional: base.tipo_evento_institucional,
+    vis_id: base.vis_id,
+    existe: base.existe,
+  };
+}
+
+/**
+ * Presentación por pisos solo teoría (post-proceso outbox, sin AUSENTE materializado).
+ * @param {string[]} segmentoIds
+ */
+export function filasPresentacionTeoriaProyectadaDesdeSegmentos(segmentoIds) {
+  const ids = [...new Set((segmentoIds || []).map((x) => String(x || "").trim()).filter(Boolean))];
+  if (!ids.length) return [];
+  const sorted = [...ids].sort(
+    (a, b) => (ORDEN_TRAMO_PISO[a] ?? 9) - (ORDEN_TRAMO_PISO[b] ?? 9),
+  );
+  return sorted.map((segmento_id, orden) => ({
+    segmento_id,
+    orden,
+    teoria_label: segmento_id,
+    fichada_label: null,
+    estado_tramo: "presente",
+    badge_label: null,
+    badge_tipo: null,
+    badges: [],
+  }));
+}
+
+/**
+ * Celda vis como quedaría tras aplicar todas las ops outbox que afectan el día (vista final en cola).
+ * @param {object} params
+ */
+export function celdaVisProyectadaOutboxPendiente({
+  cell,
+  ops,
+  personaId,
+  fechaYmd,
+  turnosPorId = {},
+}) {
+  const base = cell && typeof cell === "object" ? cell : {};
+  const opsDia = (ops || []).filter((op) => opAfectaDia(op, personaId, fechaYmd));
+  if (!opsDia.length) return { ...base };
+
+  const capaBase = capaBaseDesdeCeldaGrilla(base);
+  const proj = proyectarDiaConOpsPendientes(
+    capaBase,
+    ops,
+    personaId,
+    fechaYmd,
+    turnosPorId,
+  );
+  const projIds = proj.segmentoIds || [];
+  const meta = metadatosVisualesCeldaPreservados(base);
+
+  if (!projIds.length) {
+    return {
+      ...meta,
+      es_franco: true,
+      tipo_dia: "franco",
+      rda_turno_id: "",
+      rda_ingreso: null,
+      rda_egreso: null,
+      rda_horario_display: null,
+      capa_teorica: {
+        tipo_dia: "franco",
+        es_franco: true,
+        segmentos: [],
+      },
+      presentacion_compuesto: { filas: [] },
+      fichadas_esperadas: 0,
+    };
+  }
+
+  const rdaTurno = projIds.length === 1 ? projIds[0] : projIds.join("+");
+  const fichadasEsperadas = Math.max(2, projIds.length * 2);
+
+  return {
+    ...meta,
+    es_franco: false,
+    tipo_dia: "laborable",
+    rda_turno_id: rdaTurno,
+    rda_ingreso: null,
+    rda_egreso: null,
+    rda_horario_display: proj.etiqueta || rdaTurno,
+    capa_teorica: {
+      tipo_dia: "laborable",
+      es_franco: false,
+      segmentos: projIds.map((segmento_id) => ({ segmento_id })),
+      ...(projIds.length > 1
+        ? { turno_compuesto_id: projIds.join("+") }
+        : { turno_id: projIds[0] }),
+      horas_teoricas_totales: proj.horas,
+    },
+    presentacion_compuesto: {
+      filas: filasPresentacionTeoriaProyectadaDesdeSegmentos(projIds),
+    },
+    fichadas_esperadas: fichadasEsperadas,
   };
 }
 
@@ -124,20 +248,23 @@ export function visualCeldaOutboxPendiente({
   const tooltip = [
     `${titulos.join(" / ")} (pendiente de aplicar)`,
     resumenOps,
-    "Fichadas esperadas (vista previa — aplicar cambios)",
+    esAdicional ? "Fichadas esperadas (vista previa — aplicar cambios)" : "Vista final en cola — aplicar cambios para persistir",
   ]
     .filter(Boolean)
     .join(" · ");
 
+  const mostrarResultadoFinal = !esAdicional;
+
   return {
     pending: true,
+    mostrarResultadoFinal,
     turnoText: esAdicional && lineaExtra ? lineaBase || turnoText : turnoText,
     lineaBaseMuted: esAdicional ? lineaBase : "",
     lineaExtra,
-    diffOut: esAdicional ? "" : diffOut,
-    diffIn: esAdicional ? "" : diffIn,
+    diffOut: mostrarResultadoFinal || esAdicional ? "" : diffOut,
+    diffIn: mostrarResultadoFinal || esAdicional ? "" : diffIn,
     fichadasPreview,
-    fichadasEsPreview: true,
+    fichadasEsPreview: !mostrarResultadoFinal,
     tooltip,
   };
 }

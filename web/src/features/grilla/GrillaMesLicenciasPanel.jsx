@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import toast from "react-hot-toast";
 
 import { useAuthClaims } from "../auth/useAuthClaims.js";
@@ -9,29 +10,26 @@ import GestionTurnoDiaShell from "./GestionTurnoDiaShell.jsx";
 import ModalCoberturaParcial from "./ModalCoberturaParcial.jsx";
 import ModalCambioTurnoPropio from "./ModalCambioTurnoPropio.jsx";
 import ModalTurnoAdicional from "./ModalTurnoAdicional.jsx";
-import GrillaOutboxPendientesBanner from "./GrillaOutboxPendientesBanner.jsx";
 import {
   periodoGsoDesdeVista,
   resolverNivelJerarquicoEnFilas,
 } from "./grillaGestionTurnoCapabilities.js";
 import {
   buildGuardrailNovedadContext,
-  evaluarGuardrailsAplicarOutbox,
   evaluarGuardrailsModificacionTeoria,
 } from "./grillaGuardrailsTeoriaUi.js";
+import {
+  aplicarCambioGrillaInmediato,
+  toastErrorAplicarCambioGrilla,
+} from "./grillaAplicarCambioInmediato.js";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
 import { GRILLA_MES_MODO } from "./GrillaMesSelector.jsx";
 import GrillaMesSinDotacionAviso from "./GrillaMesSinDotacionAviso.jsx";
-import { useAsistenciaOutbox } from "./useAsistenciaOutbox.js";
+import { GrillaMesNodosProvider, useGrillaMesNodos } from "./useGrillaMesNodos.js";
 import { useGrillaMesVista } from "./useGrillaMesVista.js";
-import { aplicarBatchAsistencia } from "../../services/coberturaParcialService.js";
-import { laboralCallableErrorMessage } from "../../pages/datos-laborales/callableErrorMessage.js";
 import { callObtenerVistaGrillaMesAgente } from "../../services/callables.js";
 import { diaMesKeyDesdeFechaYmd } from "../fichadas/cargaManual/fichadasCargaManualUtils.js";
-import { opsOutboxParaGrupo } from "./grillaCeldaOutboxVisual.js";
-import { useGuardrailOutboxAlCambiarFoco } from "../planes/useGuardrailOutboxAlCambiarFoco.js";
-import { mergePersonaLabelsDesdeOps } from "./grillaOutboxLabels.js";
 import { RX_GDT } from "./grillaGrupoUtils.js";
 import { formatearRangoTramoMes, diaFueraVigenciaTramo } from "./grillaMesFilasUtils.js";
 import { periodosVentanaJefe } from "../jefe/periodoJefe.js";
@@ -239,27 +237,18 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
     setVistaModal(null);
   }, [usaFocoEnUrl, focoUrl.tieneFocoValido, grillaTitularAbierta]);
 
-  const outbox = useAsistenciaOutbox({ editorPersonaId: personaId, periodo: vista.periodo });
-  const { intentarNavegacionFoco: intentarNavegacionFocoOutbox } = useGuardrailOutboxAlCambiarFoco({
-    ops: outbox.ops,
-    clearOutbox: outbox.clear,
-    focoOrigenExplicito: {
-      grupoId: focoUrl.grupoIdUrl || vista.grupoTrabajoId || "",
-      periodo: focoUrl.periodoUrl || vista.periodo || "",
-    },
-  });
-  const labelGrupoParaOutbox = (grupoId) => {
+  const labelGrupoParaOp = (grupoId) => {
     const gid = String(grupoId || "").trim();
     if (!gid) return "Titular (mi caso)";
     return etiquetasGrupo[gid] || gid;
   };
-  const enrichOutboxOp = (op, grupoId) => {
+  const enrichOpGrilla = (op, grupoId) => {
     const gid = String(grupoId || op.grupoId || "").trim();
     return {
       ...op,
       grupoId: gid,
       periodo: String(op.periodo || vista.periodo || "").trim(),
-      grupoLabel: String(op.grupoLabel || labelGrupoParaOutbox(gid)).trim(),
+      grupoLabel: String(op.grupoLabel || labelGrupoParaOp(gid)).trim(),
     };
   };
   const periodoGso = useMemo(
@@ -387,10 +376,6 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
 
   const gdtGrillaModal =
     grupoLiquidacionId || vista.grupoActivoId || vista.grupoId || "";
-  const opsOutboxGrillaModal = useMemo(
-    () => opsOutboxParaGrupo(outbox.ops, gdtGrillaModal, periodoGrillaModal),
-    [outbox.ops, gdtGrillaModal, periodoGrillaModal],
-  );
   const personaLabelsGrilla = useMemo(() => {
     /** @type {Record<string, string>} */
     const base = {};
@@ -399,8 +384,26 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
       const lbl = String(f.persona_label || "").trim();
       if (id && lbl) base[id] = lbl;
     }
-    return mergePersonaLabelsDesdeOps(outbox.ops, base);
-  }, [vista.filas, outbox.ops]);
+    return base;
+  }, [vista.filas]);
+
+  const vistaListadoNodos = useMemo(() => {
+    const p = parsePeriodo(periodoGrillaModal);
+    if (!p || !gdtGrillaModal) return null;
+    return {
+      grupo_trabajo_id: gdtGrillaModal,
+      anio: p.anio,
+      mes: p.mes,
+      filas: vista.filas,
+    };
+  }, [periodoGrillaModal, gdtGrillaModal, vista.filas]);
+
+  const grillaMesNodos = useGrillaMesNodos({
+    grupoTrabajoId: gdtGrillaModal,
+    periodoYm: periodoGrillaModal,
+    vistaListado: vistaListadoNodos,
+    enabled: Boolean(vistaModal && gdtGrillaModal && periodoGrillaModal),
+  });
 
   const onFichadaGuardadaEnModal = useCallback(async () => {
     const snap = diaModal;
@@ -424,6 +427,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
     if (!/^gdt_/i.test(gdt)) return;
     try {
       const [y, m] = snap.fechaYmd.split("-").map(Number);
+      const dk = diaMesKeyDesdeFechaYmd(snap.fechaYmd);
       const res = await callObtenerVistaGrillaMesAgente({
         persona_id: snap.personaId,
         grupo_trabajo_id: gdt,
@@ -432,7 +436,6 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         dia_key: dk,
       });
       const dias = res.data?.dias && typeof res.data.dias === "object" ? res.data.dias : {};
-      const dk = diaMesKeyDesdeFechaYmd(snap.fechaYmd);
       const celdaVis = (dk && dias[dk]) || snap.celdaVis;
       setDiaModal((prev) => {
         if (!prev || prev.personaId !== snap.personaId || prev.fechaYmd !== snap.fechaYmd) return prev;
@@ -442,6 +445,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
       /* la grilla ya se recargó; el modal conserva el snapshot anterior */
     }
   }, [diaModal, vista, gdtGrillaModal, vistaModal, periodoGrillaModal]);
+
+  const onMaterializacionSanadaEnModal = onFichadaGuardadaEnModal;
 
   useEffect(() => {
     if (!capabilities.puedeAccionesPeriodoLiquidacion || !RX_GDT.test(String(vista.grupoId || ""))) {
@@ -459,80 +464,62 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
     vista.grupoActivoLabel,
   ]);
 
-  const guardrailsOutbox = useMemo(() => {
-    const loteCap = evaluarGuardrailsModificacionTeoria({
-      usuarioActual: {
-        ...actorTeoriaSesion,
-        nivelJerarquico: nivelJerarquicoActor,
-      },
-      agenteTarget: { id: "__outbox_lote__", nivelJerarquico: 1 },
-      estadoPlan: vista.planMensualEstado || "BORRADOR",
-      periodoGso,
-    });
-    return evaluarGuardrailsAplicarOutbox({
-      ops: outbox.ops,
-      esAuditoriaCentral: shellRrhh,
-      periodoRestringido: periodoGso.cerrado === true || periodoGso.ventanaM1 === true,
-      puedeModificarTeoriaLote: loteCap.puedeModificarTeoria,
-    });
-  }, [
-    outbox.ops,
-    actorTeoriaSesion,
-    shellRrhh,
-    nivelJerarquicoActor,
-    vista.planMensualEstado,
-    periodoGso,
-  ]);
-
-  const handleAplicarCambios = async () => {
-    if (!outbox.hasPending || aplicandoBatch) return;
-    if (!guardrailsOutbox.puedeAplicarBatch) {
-      toast.error(guardrailsOutbox.mensajeBloqueo || "No se pueden aplicar los cambios.");
-      return;
-    }
-    setAplicandoBatch(true);
-    try {
-      const result = await aplicarBatchAsistencia(outbox.ops, {
-        editorPersonaId: personaId,
-        periodo: vista.periodo,
-      });
-      toast.success(`Cambios aplicados: ${result?.aplicadas ?? outbox.count}.`);
-      invalidarCacheGrillaTrasMutacion({
-        ops: outbox.ops,
-        periodo: vista.periodo,
-        gdtActivo: gdtGrillaModal,
-        grupoIdVista: vista.grupoId,
-      });
-      outbox.clear();
-      await vista.cargar({ bypassCache: true });
-    } catch (e) {
-      const msg = laboralCallableErrorMessage(e, "No se pudo aplicar el batch.");
-      if (msg.includes("ASI-CONC")) {
-        toast.error("La grilla cambió. Se conservaron tus pendientes para reintentar.");
+  const aplicarCambioInmediato = useCallback(
+    async (op, grupoIdOverride) => {
+      if (aplicandoBatch) return;
+      const enriched = enrichOpGrilla(op, grupoIdOverride);
+      setAplicandoBatch(true);
+      try {
+        const result = await aplicarCambioGrillaInmediato(enriched, {
+          editorPersonaId: personaId,
+          periodo: vista.periodo,
+        });
+        const parches = await grillaMesNodos.confirmarBatchTrasExito([enriched], result);
+        flushSync(() => {
+          vista.patchFilasDesdeParchesVis(parches);
+        });
+        toast.success("Cambio aplicado.");
         invalidarCacheGrillaTrasMutacion({
-          ops: outbox.ops,
+          ops: [enriched],
           periodo: vista.periodo,
           gdtActivo: gdtGrillaModal,
           grupoIdVista: vista.grupoId,
         });
-        await vista.cargar({ bypassCache: true });
-      } else if (msg.includes("ASI-GSO")) {
-        toast.error("Mes anterior en solo lectura. No se pueden aplicar cambios.");
-      } else if (msg.includes("ASI-PER")) {
-        toast.error("Período cerrado. Revisá los cambios pendientes.");
-      } else if (msg.includes("BATCH-A005")) {
-        toast.error("Falta la versión del día destino del intercambio. Abrí de nuevo el modal y reintentá.");
-      } else if (msg.includes("BATCH-020") || msg.includes("unimplemented")) {
-        toast.error("Ese tipo de cambio aún no está en el servidor. Actualizá functions o quitá la operación de la cola.");
-      } else if (/\[BATCH-/i.test(msg)) {
-        toast.error(msg.replace(/^\[[^\]]+\]\s*/i, ""));
-      } else {
-        toast.error(msg);
+        await vista.cargar({
+          bypassCache: true,
+          background: true,
+          periodo: vistaModal?.periodo ?? vista.periodo,
+          modo: vistaModal?.modo ?? vista.modo,
+          grupoId: vistaModal?.grupoId ?? gdtGrillaModal,
+        });
+      } catch (e) {
+        toastErrorAplicarCambioGrilla(e, {
+          onConcurrencia: async () => {
+            invalidarCacheGrillaTrasMutacion({
+              ops: [],
+              periodo: vista.periodo,
+              gdtActivo: gdtGrillaModal,
+              grupoIdVista: vista.grupoId,
+            });
+            await vista.cargar({ bypassCache: true });
+          },
+        });
+        throw e;
+      } finally {
+        setAplicandoBatch(false);
       }
-    } finally {
-      setAplicandoBatch(false);
-    }
-  };
+    },
+    [
+      aplicandoBatch,
+      personaId,
+      vista,
+      grillaMesNodos,
+      gdtGrillaModal,
+      vistaModal?.periodo,
+      vistaModal?.modo,
+      vistaModal?.grupoId,
+    ],
+  );
 
   function seleccionarTarjeta({ periodo, modo, grupoId = "", titulo }) {
     const modoEfectivo =
@@ -612,9 +599,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                 muestraAtajoTitular={capabilities.muestraTarjetaTitular}
                 disabled={vista.loading}
                 onConfirmarCarga={({ grupoId, periodo }) => {
-                  intentarNavegacionFocoOutbox({ grupoId, periodo }, () => {
-                    focoUrl.pushFocoToUrl({ grupoId, periodo });
-                  });
+                  focoUrl.pushFocoToUrl({ grupoId, periodo });
                 }}
                 onVerTitular={({ periodo }) => {
                   abrirGrillaTitularDesdeFocoUrl({ periodo });
@@ -626,10 +611,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                 <button
                   type="button"
                   onClick={() => {
-                    intentarNavegacionFocoOutbox({ grupoId: "", periodo: "" }, () => {
-                      focoUrl.clearFocoEnUrl();
-                      setVistaModal(null);
-                    });
+                    focoUrl.clearFocoEnUrl();
+                    setVistaModal(null);
                   }}
                   className="h-11 shrink-0 rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
                 >
@@ -736,9 +719,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                         disabled={cargandoTarjeta}
                         onClick={() => {
                           if (mostrarPanoramaJefe) {
-                            intentarNavegacionFocoOutbox({ grupoId: g.id, periodo }, () => {
-                              focoUrl.pushFocoToUrl({ grupoId: g.id, periodo });
-                            });
+                            focoUrl.pushFocoToUrl({ grupoId: g.id, periodo });
                             return;
                           }
                           if (capabilities.puedeAccionesPeriodoLiquidacion) {
@@ -770,51 +751,6 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         <p className="mt-2 text-sm text-amber-700">{vista.resolverError}</p>
       ) : null}
       {vista.error ? <p className="mt-2 text-sm text-rose-700">{vista.error}</p> : null}
-
-      {outbox.pendingRecovery ? (
-        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
-          <p className="font-medium">Tenés cambios pendientes de una sesión anterior ({outbox.pendingRecovery.count}).</p>
-          <p className="mt-1 text-xs text-amber-800">Período {vista.periodo}. ¿Querés recuperarlos o descartarlos?</p>
-          <div className="mt-2 flex gap-2">
-            <button
-              type="button"
-              onClick={outbox.recoverPending}
-              className="min-h-11 rounded-lg bg-amber-700 px-3 text-sm font-semibold text-white active:bg-amber-800"
-            >
-              Recuperar
-            </button>
-            <button
-              type="button"
-              onClick={outbox.discardPending}
-              className="min-h-11 rounded-lg border border-amber-300 bg-white px-3 text-sm font-semibold text-amber-800 active:bg-amber-100"
-            >
-              Descartar
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {outbox.hasPending ? (
-        <GrillaOutboxPendientesBanner
-          ops={outbox.ops}
-          aplicandoBatch={aplicandoBatch}
-          personaLabels={etiquetasPersona}
-          grupoLabels={etiquetasGrupo}
-          puedeAplicarBatch={guardrailsOutbox.puedeAplicarBatch}
-          mensajeBloqueoBatch={guardrailsOutbox.mensajeBloqueo}
-          muestraBadgeBypassRrhh={guardrailsOutbox.muestraBadgeBypassRrhh}
-          onAplicar={() => void handleAplicarCambios()}
-          onLimpiar={() => {
-            outbox.clear();
-            toast.success("Cola de cambios vaciada.");
-          }}
-          onQuitarOp={(opId) => {
-            outbox.removeOp(opId);
-            toast.success("Cambio quitado de la cola.");
-          }}
-          onAbrirAyuda={() => abrirAyuda("Cambios Pendientes (Borrador)")}
-        />
-      ) : null}
 
       {vistaModal ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 p-2 sm:p-4" role="dialog" aria-modal="true" aria-label="Grilla mensual">
@@ -961,21 +897,21 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                   periodoLabel={labelPeriodo(vistaModal.periodo)}
                 />
               ) : (
-                <GrillaMesEquipoTabla
-                  anio={parsePeriodo(vistaModal.periodo)?.anio ?? vista.anio}
-                  mes={parsePeriodo(vistaModal.periodo)?.mes ?? vista.mes}
-                  filas={vista.filas}
-                  grupoSeleccionado={grupoLiquidacionId || vista.grupoId}
-                  etiquetasGrupo={etiquetasGrupo}
-                  gsoPermiteEscritura={vista.gsoPermiteEscritura}
-                  gsoSoloLecturaMotivo={vista.gsoSoloLecturaMotivo}
-                  opsOutboxGrupo={opsOutboxGrillaModal}
-                  periodoOutbox={periodoGrillaModal}
-                  modoFichada={modoFichadaCelda}
-                  materializacionGrupoReciente={
-                    (vista.data?.materializacion_grupo?.procesados ?? 0) > 0
-                  }
-                  onCeldaClick={({
+                <GrillaMesNodosProvider value={grillaMesNodos}>
+                  <GrillaMesEquipoTabla
+                    key={`grilla-mes-${grillaMesNodos.bumpEpoch}-${vista.filasRevision}`}
+                    anio={parsePeriodo(vistaModal.periodo)?.anio ?? vista.anio}
+                    mes={parsePeriodo(vistaModal.periodo)?.mes ?? vista.mes}
+                    filas={vista.filas}
+                    grupoSeleccionado={grupoLiquidacionId || vista.grupoId}
+                    etiquetasGrupo={etiquetasGrupo}
+                    gsoPermiteEscritura={vista.gsoPermiteEscritura}
+                    gsoSoloLecturaMotivo={vista.gsoSoloLecturaMotivo}
+                    modoFichada={modoFichadaCelda}
+                    materializacionGrupoReciente={
+                      (vista.data?.materializacion_grupo?.procesados ?? 0) > 0
+                    }
+                    onCeldaClick={({
                     dia,
                     fechaYmd,
                     personaId: pid,
@@ -1013,6 +949,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                     })
                   }
                 />
+                </GrillaMesNodosProvider>
               )}
             </div>
             <details className="mt-2 border-t border-slate-200 pt-2 text-xs text-slate-700">
@@ -1049,10 +986,6 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                     ×
                   </span>
                   Sin asignación al grupo en esa fecha
-                </span>
-                <span>
-                  <span className="mr-1 inline-block h-3 w-5 rounded ring-[3px] ring-amber-600 ring-offset-1 align-middle shadow-sm" />
-                  Turno con cambio pendiente (cola)
                 </span>
                 <span>
                   <span className="mr-1 inline-block h-3 w-5 rounded border border-rose-700 bg-rose-100 align-middle" />
@@ -1113,7 +1046,6 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         personaId={diaModal?.personaId}
         fechaYmd={diaModal?.fechaYmd}
         grupoTrabajoId={diaModal?.grupoTrabajoId || gdtGrillaModal}
-        opsOutboxPendientes={opsOutboxGrillaModal}
         personaLabels={personaLabelsGrilla}
         soloLectura={!vista.gsoPermiteEscritura}
         soloLecturaMensaje={vista.gsoSoloLecturaMensaje}
@@ -1127,6 +1059,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         puedeVerTramosCrudosFichadas={capabilities.puedeVerTramosCrudosFichadas}
         puedeEditarFichadasReales={capabilities.puedeEditarFichadasReales}
         onFichadaGuardada={onFichadaGuardadaEnModal}
+        onMaterializacionSanada={onMaterializacionSanadaEnModal}
         onAbrirAyuda={abrirAyuda}
         mostrarFichada={capabilities.puedeVerFichadasReales || esJefe}
         puedeCorregirPlan={esJefe || capabilities.puedeAccionesPeriodoLiquidacion}
@@ -1233,15 +1166,13 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
           guardrailNovedadContext={coberturaModal.guardrailNovedadContext}
           grupoId={diaModal?.grupoTrabajoId || vista.grupoActivoId}
           periodo={vista.periodo}
-          opsPendientes={outbox.ops}
           onCerrar={() => setCoberturaModal(null)}
           onRegistrado={() => {}}
           onDesactualizado={() => void vista.cargar()}
-          onAgregarOutbox={(op) =>
-            outbox.addOp(
-              enrichOutboxOp(op, diaModal?.grupoTrabajoId || vista.grupoActivoId),
-            )
-          }
+          onAplicarCambio={async (op) => {
+            await aplicarCambioInmediato(op, diaModal?.grupoTrabajoId || vista.grupoActivoId);
+          }}
+          aplicandoCambio={aplicandoBatch}
         />
       ) : null}
 
@@ -1254,16 +1185,14 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
           guardrailNovedadContext={cambioTurnoPropioModal.guardrailNovedadContext}
           grupoId={cambioTurnoPropioModal.grupoId}
           periodo={vista.periodo}
-          opsPendientes={outbox.ops}
           onCerrar={() => setCambioTurnoPropioModal(null)}
-          onAgregarOutbox={(op) =>
-            outbox.addOp(
-              enrichOutboxOp(
-                op,
-                cambioTurnoPropioModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId,
-              ),
-            )
-          }
+          onAplicarCambio={async (op) => {
+            await aplicarCambioInmediato(
+              op,
+              cambioTurnoPropioModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId,
+            );
+          }}
+          aplicandoCambio={aplicandoBatch}
         />
       ) : null}
 
@@ -1276,18 +1205,16 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
           guardrailNovedadContext={turnoAdicionalModal.guardrailNovedadContext}
           grupoId={turnoAdicionalModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId || ""}
           periodo={vista.periodo}
-          opsPendientes={outbox.ops}
           turnoVisInicial={turnoAdicionalModal.turnoVisInicial ?? null}
           onCerrar={() => setTurnoAdicionalModal(null)}
           onRegistrado={() => {}}
-          onAgregarOutbox={(op) =>
-            outbox.addOp(
-              enrichOutboxOp(
-                op,
-                turnoAdicionalModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId,
-              ),
-            )
-          }
+          onAplicarCambio={async (op) => {
+            await aplicarCambioInmediato(
+              op,
+              turnoAdicionalModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId,
+            );
+          }}
+          aplicandoCambio={aplicandoBatch}
         />
       ) : null}
 

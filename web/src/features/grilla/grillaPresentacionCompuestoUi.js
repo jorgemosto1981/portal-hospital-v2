@@ -431,6 +431,19 @@ export function reconciliarFilasPresentacionDesdeAnalitica(celda, filas) {
 }
 
 /**
+ * Filas para UI por pisos sin reconciliar analítica en cliente (RFC F §7).
+ * Usar en hot path de grilla; tests/diagnóstico siguen con `filasPresentacionOperativaDesdeCelda`.
+ * @param {Record<string, unknown>|null|undefined} celda
+ */
+export function filasPresentacionMaterializadaDesdeCelda(celda) {
+  const comp = filasPresentacionCompuestoDesdeCelda(celda);
+  if (esMatrizPresentacionCompuesta(comp)) return comp;
+  if (esPresentacionPorPisos(comp)) return comp;
+  const simple = filaPresentacionSimpleDesdeCelda(celda);
+  return simple ? [simple] : [];
+}
+
+/**
  * Filas para UI por pisos: compuesto materializado o turno simple M/T/N.
  * @param {Record<string, unknown>|null|undefined} celda
  */

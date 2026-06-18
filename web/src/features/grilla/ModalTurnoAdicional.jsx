@@ -25,6 +25,8 @@ import GrillaMotivoNovedadSection from "./GrillaMotivoNovedadSection.jsx";
 import { componerMotivoNovedadGso } from "./grillaMotivosNovedadCatalogo.js";
 import { buildGuardrailNovedadContext } from "./grillaGuardrailsTeoriaUi.js";
 
+const SIN_OPS_PENDIENTES = /** @type {Array<Record<string, unknown>>} */ ([]);
+
 /**
  * Flujo C — horas adicionales (RFC §3.3). Solo turno régimen + motivo.
  * @param {{
@@ -33,11 +35,11 @@ import { buildGuardrailNovedadContext } from "./grillaGuardrailsTeoriaUi.js";
  *   fechaYmd: string;
  *   grupoId: string;
  *   periodo: string;
- *   opsPendientes?: Array<Record<string, unknown>>;
  *   turnoVisInicial?: Record<string, unknown> | null;
  *   onCerrar: () => void;
  *   onRegistrado?: () => void;
- *   onAgregarOutbox: (op: Record<string, unknown>) => void;
+ *   onAplicarCambio: (op: Record<string, unknown>) => void | Promise<void>;
+ *   aplicandoCambio?: boolean;
  *   requiereUrgenciaG1?: boolean;
  *   guardrailNovedadContext?: import("./grillaGuardrailsTeoriaUi.js").GuardrailNovedadContext;
  * }} props
@@ -50,11 +52,11 @@ export default function ModalTurnoAdicional({
   guardrailNovedadContext = buildGuardrailNovedadContext({ puedeModificarTeoria: true }),
   grupoId,
   periodo,
-  opsPendientes = [],
   turnoVisInicial = null,
   onCerrar,
   onRegistrado,
-  onAgregarOutbox,
+  onAplicarCambio,
+  aplicandoCambio = false,
 }) {
   const [cargando, setCargando] = useState(true);
   const [operando, setOperando] = useState(false);
@@ -128,12 +130,12 @@ export default function ModalTurnoAdicional({
   const { opciones, preview } = useMemo(
     () => turnosAdicionablesEnDia({
       capa: capaEfectiva,
-      opsPendientes,
+      opsPendientes: SIN_OPS_PENDIENTES,
       personaId,
       fechaYmd,
       turnosPorId: turnosRegimen,
     }),
-    [capaEfectiva, opsPendientes, personaId, fechaYmd, turnosRegimen],
+    [capaEfectiva, personaId, fechaYmd, turnosRegimen],
   );
 
   useEffect(() => {
@@ -170,7 +172,7 @@ export default function ModalTurnoAdicional({
       fechaYmd,
       periodo,
       turnosPorId: turnosRegimen,
-      opsPendientes,
+      opsPendientes: SIN_OPS_PENDIENTES,
       motivo: motivoCompuestoPreview,
     });
   }, [
@@ -181,7 +183,6 @@ export default function ModalTurnoAdicional({
     fechaYmd,
     periodo,
     turnosRegimen,
-    opsPendientes,
     motivoCompuestoPreview,
   ]);
 
@@ -224,8 +225,7 @@ export default function ModalTurnoAdicional({
         estadoPrevio: val.estadoPrevio,
         esUrgenciaOperativa: requiereUrgenciaG1,
       });
-      onAgregarOutbox(op);
-      toast.success("Turno adicional agregado a cambios pendientes.");
+      await onAplicarCambio(op);
       if (onRegistrado) onRegistrado();
       onCerrar();
     } catch (e) {
@@ -381,6 +381,7 @@ export default function ModalTurnoAdicional({
             type="button"
             disabled={
               operando
+              || aplicandoCambio
               || cargando
               || soloLecturaInfo.activo
               || !guardrailNovedadContext.puedeModificarTeoria
@@ -391,7 +392,7 @@ export default function ModalTurnoAdicional({
             onClick={() => void handleSubmit()}
             className="min-h-11 rounded-xl bg-blue-700 px-5 text-base font-semibold text-white active:bg-blue-800 disabled:opacity-50"
           >
-            {operando ? "Agregando…" : "Agregar a cambios"}
+            {operando || aplicandoCambio ? "Aplicando…" : "Aplicar cambio"}
           </button>
         </div>
       </div>

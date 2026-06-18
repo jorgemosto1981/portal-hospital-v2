@@ -11,6 +11,21 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function ensureOutboxOpId(op, index = 0) {
+  const existing = String(op?.id || "").trim();
+  if (existing) return existing;
+  return globalThis.crypto?.randomUUID?.() || `op_${Date.now()}_${index}`;
+}
+
+function normalizeOutboxOp(op, index = 0) {
+  const base = op && typeof op === "object" ? op : {};
+  return {
+    ...base,
+    id: ensureOutboxOpId(base, index),
+    creado_en: base.creado_en || nowIso(),
+  };
+}
+
 function parseEnvelope(raw) {
   try {
     const parsed = JSON.parse(String(raw || ""));
@@ -82,15 +97,15 @@ export function useAsistenciaOutbox({ editorPersonaId, periodo, ttlMs = DEFAULT_
     window.localStorage.setItem(storageKey, JSON.stringify(envelope));
   }, [ops, storageKey, editorPersonaId, periodo]);
 
+  useEffect(() => {
+    setOps((prev) => {
+      if (!prev.some((o) => !String(o?.id || "").trim())) return prev;
+      return prev.map((op, i) => normalizeOutboxOp(op, i));
+    });
+  }, [ops]);
+
   const addOp = useCallback((op) => {
-    setOps((prev) => [
-      ...prev,
-      {
-        id: globalThis.crypto?.randomUUID?.() || `op_${Date.now()}_${prev.length + 1}`,
-        creado_en: nowIso(),
-        ...op,
-      },
-    ]);
+    setOps((prev) => [...prev, normalizeOutboxOp(op, prev.length + 1)]);
   }, []);
 
   const removeOp = useCallback((opId) => {
@@ -105,7 +120,8 @@ export function useAsistenciaOutbox({ editorPersonaId, periodo, ttlMs = DEFAULT_
 
   const recoverPending = useCallback(() => {
     if (!pendingRecovery) return;
-    setOps(Array.isArray(pendingRecovery.ops) ? pendingRecovery.ops : []);
+    const raw = Array.isArray(pendingRecovery.ops) ? pendingRecovery.ops : [];
+    setOps(raw.map((op, i) => normalizeOutboxOp(op, i)));
     setPendingRecovery(null);
   }, [pendingRecovery]);
 

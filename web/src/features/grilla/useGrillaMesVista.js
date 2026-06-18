@@ -29,6 +29,7 @@ import {
   mensajeToastMaterializacionLazy,
 } from "./grillaMaterializacionToast.js";
 import { normalizarFilasGrillaEquipo } from "./grillaMesFilasUtils.js";
+import { patchFilasGrillaDesdeParchesVis } from "./grillaMesNodosBatchParches.js";
 import { hlgSegmentosTitularMes } from "./grillaTitularTramosMes.js";
 import {
   buildGrillaVistaCacheKey,
@@ -109,6 +110,7 @@ export function useGrillaMesVista({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
+  const [filasRevision, setFilasRevision] = useState(0);
   const [titularCalendarios, setTitularCalendarios] = useState([]);
   /** HLg del titular (solo lectura UI: cruz en días fuera del grupo en cada calendario). */
   const [titularHlgRows, setTitularHlgRows] = useState([]);
@@ -246,7 +248,7 @@ export function useGrillaMesVista({
   }, [modo, gruposEquipo, gruposSector, grupoId]);
 
   /**
-   * @param {{ periodo?: string; modo?: string; grupoId?: string; bypassCache?: boolean } | void} override
+   * @param {{ periodo?: string; modo?: string; grupoId?: string; bypassCache?: boolean; background?: boolean } | void} override
    */
   const cargar = useCallback(async (override) => {
     const periodoEff = override?.periodo ?? periodo;
@@ -272,6 +274,7 @@ export function useGrillaMesVista({
       personaId,
     });
     const bypassCache = override?.bypassCache === true;
+    const background = override?.background === true;
     if (!bypassCache && grillaVistaCacheStore.has(cacheKey)) {
       const cached = grillaVistaCacheStore.get(cacheKey);
       if (cached && typeof cached === "object" && "kind" in cached) {
@@ -302,11 +305,15 @@ export function useGrillaMesVista({
       }
     }
 
-    setLoading(true);
-    setError("");
-    setData(null);
-    setTitularCalendarios([]);
-    setTitularHlgListo(false);
+    if (!background) {
+      setLoading(true);
+      setError("");
+      setData(null);
+      setTitularCalendarios([]);
+      setTitularHlgListo(false);
+    } else {
+      setError("");
+    }
     try {
       if (modoEff === GRILLA_MES_MODO.TITULAR) {
         if (!/^per_/i.test(personaId)) {
@@ -440,6 +447,7 @@ export function useGrillaMesVista({
           })),
         };
         setData(titularData);
+        setFilasRevision((n) => n + 1);
         grillaVistaCacheStore.set(cacheKey, {
           kind: "titular",
           data: titularData,
@@ -500,16 +508,17 @@ export function useGrillaMesVista({
         : null;
       setData(vistaData);
       if (vistaData) {
+        setFilasRevision((n) => n + 1);
         grillaVistaCacheStore.set(cacheKey, {
           kind: "grupo",
           data: vistaData,
         });
       }
     } catch (e) {
-      setData(null);
+      if (!background) setData(null);
       setError(e?.message || "No se pudo cargar la grilla.");
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   }, [
     modo,
@@ -552,6 +561,18 @@ export function useGrillaMesVista({
       ? titularCalendarios[0].dias
       : null;
 
+  const patchFilasDesdeParchesVis = useCallback((parches) => {
+    if (!Array.isArray(parches) || !parches.length) return;
+    setData((prev) => {
+      if (!prev?.filas) return prev;
+      const filas = normalizarFilasGrillaEquipo(
+        patchFilasGrillaDesdeParchesVis(prev.filas, parches),
+      );
+      return { ...prev, filas };
+    });
+    setFilasRevision((n) => n + 1);
+  }, []);
+
   return {
     periodo,
     setPeriodo,
@@ -570,6 +591,8 @@ export function useGrillaMesVista({
     error,
     data,
     cargar,
+    patchFilasDesdeParchesVis,
+    filasRevision,
     hintModo,
     anio,
     mes,

@@ -1,10 +1,14 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (prioridad inmediata — próxima sesión):** **Auditar cambio de día (medianoche T+N / M+T+N)** · verificar plan sesión 2026-06-17 completado · handoff [`HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md`](./HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md) · RFC carga [`RFC_ANALISIS_CARGA_HORARIA_TOTAL_REGIMEN_V2.md`](./RFC_ANALISIS_CARGA_HORARIA_TOTAL_REGIMEN_V2.md) · RFC filas [`RFC_CUMPLIMIENTO_TURNO_COMPUESTO_FILAS_CELDA.md`](./RFC_CUMPLIMIENTO_TURNO_COMPUESTO_FILAS_CELDA.md).  
-> **Rama:** `feature/grilla-fase1-colision` · F1–F4 análisis carga + dual badges + split marcas ✅ · Backfill piloto ronda 1 ✅ · pendiente: QA medianoche + backfill ronda 2 (`badges[]`).  
-> **QA fichadas teoría vs real (paralelo):** [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) · [`HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md`](./HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md).  
-> **Épica en pausa (tras gate):** **Lineamientos Decreto 1919/89 + motor solicitudes / grilla** — [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md) · [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md).  
-> **Paralelo / backlog GSO:** refinamiento UX bandeja aprobación 3 meses (P2) · [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) · handoff Camino B: [`HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md`](./HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md) · GDT: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
+> **RETOMAR AQUÍ (prioridad inmediata — próxima sesión):**  
+> **`DESAPARECEN FICHADAS REALES DE LA VISUAL DE GRILLA OPERATIVA, VER EXTENSION DE ARCHIVOS DE FUNCIONES DE GRILLA OPERATIVA, REVISAR PLAN Y CARGA INSTANTANEA DE CELDAS SIN SALIR DE GRILLA`**  
+> Handoff: [`HANDOFF_SESION_2026-06-18_PAUSA_BATCH_SANACION_NODOS.md`](./HANDOFF_SESION_2026-06-18_PAUSA_BATCH_SANACION_NODOS.md) · Plan: [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md)  
+> **PAUSA 2026-06-18:** batch inmediato (sin outbox UI) · motor unificado · sanación por firma · nodos grilla (Fase A3). Redeploy **functions** pendiente (último intento interrumpido).  
+> **Épica doc paralela (cuando piloto verde):** [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md)  
+> **Cierre piloto grilla fichadas jun-2026 (sesión anterior):** [`HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md`](./HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md)  
+> **QA fichadas teoría vs real (piloto Sala):** matriz [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) — **cerrado operativamente** (medianoche CHAPARRO/LOKITO, CAMPOS/MOSTO, UI agnóstica IDs). Backfill ronda 2 `badges[]` = **opcional** (`npm run db:backfill-fase-f-validacion`).  
+> **Épica en pausa (tras gate):** **Lineamientos Decreto 1919/89 + motor solicitudes / grilla** — [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md).  
+> **Paralelo / backlog GSO:** refinamiento UX bandeja aprobación 3 meses (P2) · handoff Camino B: [`HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md`](./HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md) · GDT: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
 > **T-05 épica foco + paleta:** ✅ **(A)** grilla + planes URL · ✅ **(B)** paleta compuesta por régimen · ✅ **consola triple horizonte jefe** (`c27e6d7` en **`master`**) · UX pincel contextual + **Plan del foco** (sin grilla 3×mes)  
 > **Sesión 2026-06-11:** merge FF `feat/gso-us6-teoria-pendiente` → `master` · hosting prod **`c27e6d7`**  
 > **US-13:** ✅ **cerrado ops** 2026-06-08 · acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)  
@@ -15,25 +19,56 @@
 > **T-07b caché catálogo laboral:** ✅ **`master`** `9a5875b` · `catalogoLaboralCacheStore` + `listarGruposTrabajoCatalogo` (coalescing · peek 0 ms · claves `l400`/`l800`) · grilla/planes/explorador · smoke DevTools 2026-06-11  
 > **Camino A planes (refinamiento consola jefe):** ✅ **`master`** `b557d12` · `planRefinamientoConsolaUtils` · acordeón móvil · guardrail outbox grilla/planes · Vitest 16/16 · smoke hosting 2026-06-11  
 > **Camino B capabilities (saneamiento periférico `esRrhh`):** ✅ **`master`** `f1d7add` (squash) · `portalPerifericoCapabilities` · menú por `pathname` · redirect `last_visited_gso_shell` · `permiteExportarMatrizMacro` · Vitest 16/16 · `claimsIncludeRrhh` solo en `portalRole.js`  
-> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-11** (`master` @ **`e442ca5`** · bundle **`index-CCAzVApV.js`**)  
+> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-18** (`master` @ **`f43f7e1`** · build Vite post-presentación compuesto agnóstica)  
 > **Bloque macro (permisos + perf):** T-06 ✅ · Camino A ✅ · T-07/T-07b ✅ · Camino A planes ✅ · **Camino B ✅** — ver handoff 2026-06-11  
 > **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
 > **US-17:** ✅ código + remediación ops · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)
 
 ---
 
-## PAUSA — QA fichadas teoría vs real (2026-06-16)
+## PAUSA — Batch inmediato · sanación · nodos (2026-06-18)
 
 | Bloque | Estado | Referencia |
 |--------|--------|------------|
-| Fase F semáforo + validación persistida | ✅ en rama | [`RFC_FASE_F_VALIDACION_FICHADA_GRILLA_V2.md`](./RFC_FASE_F_VALIDACION_FICHADA_GRILLA_V2.md) |
-| M+N incumplimiento por tramo (celda ▼×2) | ✅ código + tests | handoff 2026-06-16 |
-| Backfill piloto `2026-06` Sala | ✅ ejecutado | `npm run db:backfill-fase-f-validacion` |
-| **QA día a día teoría ↔ real** | ⏳ **SIGUIENTE SESIÓN** | [`HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md`](./HANDOFF_SESION_2026-06-16_PAUSA_QA_FICHADAS_TEORIA_REAL.md) |
-| Deploy hosting (badges por segmento) | ⏳ revalidar en prod | Tras `git pull` en otra PC |
-| Merge a `master` | ⛔ bloqueado | Hasta matriz crítica en verde |
+| Outbox UI → `aplicarBatchAsistencia` inmediato | ✅ | `grillaAplicarCambioInmediato.js`, modales A/B/C |
+| Motor único `materializarTurnoTeoricoDia` | ✅ | `rdaTurnoTeoricoWorker.js` |
+| Callable `sanearMaterializacionDiaSiNecesario` | ✅ código | `cambiosTurno.js` |
+| Store nodos + parches batch | ✅ A0–A3 | `PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md` |
+| Jaqueline d11 franco / d12 T+N (script admin) | ✅ motor local | `scripts/verificar-jaqueline-dias-11-12-jun26.mjs` |
+| Deploy functions fixes Jaqueline | ⚠️ pendiente | redeploy interrumpido |
+| **Fichadas reales en grilla tras mutación** | ❌ siguiente | ver texto RETOMAR arriba |
 
-**Hosting prod:** https://portal-hospital-v2.web.app — confirmar bundle con `disciplinaLista` / dos ▼ en LOKITO día 14.
+---
+
+## CIERRE SESIÓN — Presentación compuesto + piloto fichadas jun-2026 (2026-06-18)
+
+| Bloque | Estado | Notas |
+|--------|--------|-------|
+| Plan handoff 2026-06-17 (§2 RFC F1–F4, dual badges, split marcas) | ✅ | Tests Vitest + functions |
+| Medianoche / M+T+N / M+N (CHAPARRO, LOKITO, CAMPOS, MOSTO) | ✅ | Fixes UI + QA operativo |
+| UI agnóstica IDs (`orden`, `segmentoTurnoSimple` MA/TN, slate fallback) | ✅ | `grillaPresentacionCompuestoUi` |
+| Historial gestión turno + `persona_id` overrides batch | ✅ | Web + `cambiosTurno.js` |
+| UX grilla piloto (sticky, outbox, persona 2 líneas) | ✅ | `GrillaMesEquipoTabla` |
+| Merge → **`master`** | ✅ | FF `feature/grilla-fase1-colision` → `f43f7e1` |
+| Deploy **functions** + **hosting** | ✅ | 2026-06-18 |
+| Backfill Fase F ronda 2 (`badges[]` en Firestore) | ⏸ opcional | UI reconcilia desde analítica sin backfill |
+
+**Referencia:** [`HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md`](./HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md) §9.
+
+---
+
+## PAUSA — QA fichadas teoría vs real (2026-06-16) — **cerrado con piloto jun-2026 (2026-06-18)**
+
+| Bloque | Estado | Referencia |
+|--------|--------|------------|
+| Fase F semáforo + validación persistida | ✅ en **`master`** | [`RFC_FASE_F_VALIDACION_FICHADA_GRILLA_V2.md`](./RFC_FASE_F_VALIDACION_FICHADA_GRILLA_V2.md) |
+| M+N incumplimiento por tramo (celda ▼×2) | ✅ código + tests + prod | handoff 2026-06-16 / cierre 2026-06-18 |
+| Backfill piloto `2026-06` Sala | ✅ ronda 1 | `npm run db:backfill-fase-f-validacion` |
+| **QA día a día teoría ↔ real (piloto)** | ✅ **cerrado ops** | [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) · cierre § arriba |
+| Deploy hosting + functions | ✅ | 2026-06-18 · `f43f7e1` |
+| Merge a `master` | ✅ | FF `feature/grilla-fase1-colision` |
+
+**Hosting prod:** https://portal-hospital-v2.web.app — presentación compuesto + fichadas piloto jun-2026 Sala.
 
 ---
 

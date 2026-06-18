@@ -128,15 +128,24 @@ Cobertura relevante: `M+T un tramo: persiste tardanza y salida…`, `T+N un tram
 
 ---
 
-## 8. Pendiente próxima sesión
+## 8. Pendiente próxima sesión — **supersedido por cierre 2026-06-18**
 
-- [ ] **Cambio de día / medianoche:** auditar grilla + motor (T+N, M+T+N, `fecha_egreso_ymd`).
-- [ ] **Auditar piloto** jun-2026 tras dual badges (visual + modal).
-- [ ] **Confirmar plan del día completado** (tabla §2).
+- [x] **Cambio de día / medianoche:** fixes + QA operativo piloto.
+- [x] **Auditar piloto** jun-2026 tras dual badges.
+- [x] **Plan del día completado** (tabla §2).
 - [ ] Backfill ronda 2 (opcional, persistir `badges[]`).
-- [ ] Deploy functions + hosting si otra PC no tiene bundle actualizado.
-- [ ] Merge a `master` cuando matriz QA crítica en verde.
+- [x] Deploy functions + hosting.
+- [x] Merge a `master` (`f43f7e1`).
 
 ---
 
-*Fin handoff — pausa 2026-06-17. Push remoto en rama `feature/grilla-fase1-colision`.*
+## 9. Cierre operativo 2026-06-18
+
+| Ítem | Valor |
+|------|--------|
+| **Git** | `master` @ `f43f7e1` · rama `feature/grilla-fase1-colision` alineada |
+| **Prod** | Functions + hosting desplegados · https://portal-hospital-v2.web.app |
+| **Extra sesión 18/06** | UI IDs opacos (`orden`, MA/TN simple), slate fallback, `persona_id` overrides, UX sticky/outbox/persona |
+| **SSoT continuación** | [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) — RETOMAR backlog / épica 1919 |
+
+*Fin handoff — épica piloto presentación compuesto jun-2026 **cerrada**. Origen pausa 2026-06-17.*

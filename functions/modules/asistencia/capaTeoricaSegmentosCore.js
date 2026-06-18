@@ -294,6 +294,7 @@ function buildCapaTeoricaSegmentada({
 module.exports = {
   ymdHoraToIso,
   parseTurnoCompuestoIds,
+  canonicalizarTokenTurno,
   buildSegmentosDesdeTurnoCompuesto,
   computeResumenDesdeSegmentos,
   resolveClasificacionDiaCalendario,

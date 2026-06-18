@@ -137,8 +137,12 @@ export function proyectarDiaConOpsPendientes(capa, ops, personaId, fechaYmd, tur
     if (tipo === "reemplazo") {
       const per = String(op.personaId || op.persona_id || "").trim();
       if (per !== pid) continue;
-      const fOrig = String(op.fechaOrigenYmd || op.fecha_origen || "").trim();
-      const fDest = String(op.fechaDestinoYmd || op.fecha_destino || op.fechaYmd || "").trim();
+      const fOrig = String(
+        op.fechaOrigenYmd || op.fecha_origen_ymd || op.fecha_origen || "",
+      ).trim();
+      const fDest = String(
+        op.fechaDestinoYmd || op.fecha_destino_ymd || op.fecha_destino || op.fechaYmd || "",
+      ).trim();
       if (f === fOrig) {
         quitar(op.segmentosTrasladar || op.segmentos_a_trasladar);
       }
@@ -189,10 +193,14 @@ export function opAfectaDia(op, personaId, fechaYmd) {
     return (pid === perO && f === fO) || (pid === perD && f === fD);
   }
   if (tipo === "reemplazo") {
-    const per = String(op.personaId || "").trim();
+    const per = String(op.personaId || op.persona_id || "").trim();
     if (per !== pid) return false;
-    const fOrig = String(op.fechaOrigenYmd || "").trim();
-    const fDest = String(op.fechaDestinoYmd || op.fechaYmd || "").trim();
+    const fOrig = String(
+      op.fechaOrigenYmd || op.fecha_origen_ymd || op.fecha_origen || "",
+    ).trim();
+    const fDest = String(
+      op.fechaDestinoYmd || op.fecha_destino_ymd || op.fecha_destino || op.fechaYmd || "",
+    ).trim();
     return f === fOrig || f === fDest;
   }
   if (tipo === "adicional") {

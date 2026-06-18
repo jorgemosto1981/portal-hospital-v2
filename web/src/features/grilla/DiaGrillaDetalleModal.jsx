@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -9,12 +9,10 @@ import {
   callObtenerVistaGrillaMesAgente,
 } from "../../services/callables.js";
 import {
-  lineasPendienteEnCola,
   overrideActivoEnGrupo,
   overrideAfectaCelda,
   tarjetaResumenOverride,
 } from "./grillaGestionTurnoHistorial.js";
-import { mergePersonaLabelsDesdeOps } from "./grillaOutboxLabels.js";
 import { horarioOperativoDesdeCeldaVis } from "./grillaHorarioInstitucional.js";
 import { resumenFichadaModal, titleFichadaPresencia } from "./grillaFichadaPresenciaDisplay.js";
 import GrillaFichadaEstadoJefeBadge from "./GrillaFichadaEstadoJefeBadge.jsx";
@@ -33,6 +31,7 @@ import DiaGrillaValidacionFichadaAlertas from "./DiaGrillaValidacionFichadaAlert
 import DiaGrillaResultadoCumplimientoJefe from "./DiaGrillaResultadoCumplimientoJefe.jsx";
 import GrillaPresentacionCompuestoFilas from "./GrillaPresentacionCompuestoFilas.jsx";
 import { diaMesKeyDesdeFechaYmd } from "../fichadas/cargaManual/fichadasCargaManualUtils.js";
+import { useAutoSanacionDiaGrillaModal } from "./useAutoSanacionDiaGrillaModal.js";
 
 function labelEstado(id) {
   const e = String(id || "");
@@ -76,7 +75,6 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd, rutaBase = "/portal/jef
  *   soloLectura?: boolean;
  *   soloLecturaMensaje?: string | null;
  *   grupoTrabajoId?: string;
- *   opsOutboxPendientes?: Array<Record<string, unknown>>;
  *   personaLabels?: Record<string, string>;
  *   incompletoPlan?: boolean;
  *   desalineacionTeoria?: boolean;
@@ -92,6 +90,7 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd, rutaBase = "/portal/jef
  *   etiquetasGrupo?: Record<string, string>;
  *   vigenteHasta?: string | null;
  *   materializadoLazy?: boolean;
+ *   onMaterializacionSanada?: () => void | Promise<void>;
  * }} props
  */
 export default function DiaGrillaDetalleModal({
@@ -115,7 +114,6 @@ export default function DiaGrillaDetalleModal({
   soloLectura = false,
   soloLecturaMensaje = null,
   grupoTrabajoId = "",
-  opsOutboxPendientes = [],
   personaLabels = {},
   incompletoPlan = false,
   desalineacionTeoria = false,
@@ -131,6 +129,7 @@ export default function DiaGrillaDetalleModal({
   etiquetasGrupo = {},
   vigenteHasta = null,
   materializadoLazy = false,
+  onMaterializacionSanada,
 }) {
   const detalleFichadaRrhh = puedeVerTramosCrudosFichadas;
   const [celdaVisDetalle, setCeldaVisDetalle] = useState(celdaVis);
@@ -212,7 +211,7 @@ export default function DiaGrillaDetalleModal({
   const [resumen, setResumen] = useState(null);
   const [loading, setLoading] = useState(false);
   const [tarjetasGestion, setTarjetasGestion] = useState(/** @type {Array<ReturnType<typeof tarjetaResumenOverride>>} */ ([]));
-  const [pendientesCola, setPendientesCola] = useState(/** @type {string[]} */ ([]));
+  const [tieneOverridesGestion, setTieneOverridesGestion] = useState(false);
   const [loadingGestion, setLoadingGestion] = useState(false);
   const [fichadaAbmVista, setFichadaAbmVista] = useState(/** @type {null | 'menu' | 'agregar' | 'borrar' | 'modificar'} */ (null));
   const fichadaAbmActivo = fichadaAbmVista != null;
@@ -260,11 +259,10 @@ export default function DiaGrillaDetalleModal({
   useEffect(() => {
     if (!open || !personaId || !fechaYmd) {
       setTarjetasGestion([]);
-      setPendientesCola([]);
+      setTieneOverridesGestion(false);
       return;
     }
-    const labels = mergePersonaLabelsDesdeOps(opsOutboxPendientes, personaLabels);
-    setPendientesCola(lineasPendienteEnCola(opsOutboxPendientes, personaId, fechaYmd, { personaLabels: labels }));
+    const labels = personaLabels;
     let cancelled = false;
     setLoadingGestion(true);
     void (async () => {
@@ -281,6 +279,7 @@ export default function DiaGrillaDetalleModal({
         if (cancelled) return;
         const cards = afectan.map((o) => tarjetaResumenOverride(o, personaId, fechaYmd, { personaLabels: labels }));
         setTarjetasGestion(cards);
+        setTieneOverridesGestion(afectan.length > 0);
         if (afectan.length > 0) {
           const override_refs = afectan.map((o, i) => String(o.op_batch_id || o.creado_en || i));
           const op_batch_ids = [
@@ -295,7 +294,10 @@ export default function DiaGrillaDetalleModal({
           });
         }
       } catch {
-        if (!cancelled) setTarjetasGestion([]);
+        if (!cancelled) {
+          setTarjetasGestion([]);
+          setTieneOverridesGestion(false);
+        }
       } finally {
         if (!cancelled) setLoadingGestion(false);
       }
@@ -303,11 +305,38 @@ export default function DiaGrillaDetalleModal({
     return () => {
       cancelled = true;
     };
-  }, [open, personaId, fechaYmd, grupoTrabajoId, opsOutboxPendientes, personaLabels]);
+  }, [open, personaId, fechaYmd, grupoTrabajoId, personaLabels]);
+
+  const onSanacionMaterializacion = useCallback(
+    async ({ vis_dia: visDia }) => {
+      if (visDia && typeof visDia === "object") {
+        setCeldaVisDetalle(visDia);
+      }
+      await onMaterializacionSanada?.();
+    },
+    [onMaterializacionSanada],
+  );
+
+  const listaEventos = Array.isArray(eventos) ? eventos : [];
+
+  const {
+    sincronizando: sincronizandoTeoria,
+    requiereActualizacionManual,
+    actualizarTeoriaAhora,
+  } = useAutoSanacionDiaGrillaModal({
+    open,
+    personaId,
+    fechaYmd,
+    grupoTrabajoId,
+    eventos: listaEventos,
+    habilitar: (tieneOverridesGestion || desalineacionTeoria) && !incompletoPlan,
+    aplicarSiDesalineado: puedeModificarTeoria && !soloLectura,
+    onSanado: onSanacionMaterializacion,
+  });
 
   if (!open) return null;
 
-  const lista = Array.isArray(eventos) ? eventos : [];
+  const lista = listaEventos;
   const horarioTeorico = turnoTeorico?.capa_teorica
     ? horarioOperativoDesdeCeldaVis({
         rda_ingreso: turnoTeorico.capa_teorica.ingreso,
@@ -371,6 +400,28 @@ export default function DiaGrillaDetalleModal({
           >
             Corregir plan
           </Link>
+        ) : null}
+
+        {requiereActualizacionManual ? (
+          <div className="mt-3 rounded-lg border border-sky-300 bg-sky-50 p-3">
+            <p className="text-sm text-sky-950">
+              La estructura del turno cambió desde la última sincronización.
+            </p>
+            {accionTeoriaHabilitada ? (
+              <button
+                type="button"
+                disabled={sincronizandoTeoria}
+                onClick={() => void actualizarTeoriaAhora()}
+                className="mt-2 flex min-h-10 w-full touch-manipulation items-center justify-center rounded-lg bg-sky-700 text-sm font-semibold text-white hover:bg-sky-800 disabled:opacity-60"
+              >
+                {sincronizandoTeoria ? "Actualizando…" : "Actualizar ahora"}
+              </button>
+            ) : (
+              <p className="mt-2 text-xs text-sky-900">
+                Período o rol en solo lectura: no se puede rematerializar desde aquí.
+              </p>
+            )}
+          </div>
         ) : null}
 
         {desalineacionTeoria && !incompletoPlan ? (
@@ -599,16 +650,8 @@ export default function DiaGrillaDetalleModal({
         {loadingGestion ? (
           <p className="mt-3 text-xs text-slate-500">Cargando cambios de turno…</p>
         ) : null}
-
-        {pendientesCola.length > 0 ? (
-          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-900">Pendiente en cola</h4>
-            <ul className="mt-1.5 space-y-1 text-xs text-amber-950">
-              {pendientesCola.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          </div>
+        {sincronizandoTeoria ? (
+          <p className="mt-3 text-xs text-slate-500">Sincronizando estructura de turno…</p>
         ) : null}
 
         {tarjetasGestion.length > 0 ? (

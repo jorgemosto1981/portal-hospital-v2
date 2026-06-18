@@ -28,6 +28,8 @@ import GrillaMotivoNovedadSection from "./GrillaMotivoNovedadSection.jsx";
 import { componerMotivoNovedadGso } from "./grillaMotivosNovedadCatalogo.js";
 import { buildGuardrailNovedadContext } from "./grillaGuardrailsTeoriaUi.js";
 
+const SIN_OPS_PENDIENTES = /** @type {Array<Record<string, unknown>>} */ ([]);
+
 /**
  * Flujo B — cambio de turno propio (origen → destino, aditivo, franco en origen).
  * @param {{
@@ -36,9 +38,9 @@ import { buildGuardrailNovedadContext } from "./grillaGuardrailsTeoriaUi.js";
  *   personaNombre?: string;
  *   grupoId: string;
  *   periodo: string;
- *   opsPendientes: Array<Record<string, unknown>>;
  *   onCerrar: () => void;
- *   onAgregarOutbox: (op: Record<string, unknown>) => void;
+ *   onAplicarCambio: (op: Record<string, unknown>) => void | Promise<void>;
+ *   aplicandoCambio?: boolean;
  *   requiereUrgenciaG1?: boolean;
  *   guardrailNovedadContext?: import("./grillaGuardrailsTeoriaUi.js").GuardrailNovedadContext;
  * }} props
@@ -51,9 +53,9 @@ export default function ModalCambioTurnoPropio({
   guardrailNovedadContext = buildGuardrailNovedadContext({ puedeModificarTeoria: true }),
   grupoId,
   periodo,
-  opsPendientes,
   onCerrar,
-  onAgregarOutbox,
+  onAplicarCambio,
+  aplicandoCambio = false,
 }) {
   const [fechaDestinoYmd, setFechaDestinoYmd] = useState(fechaOrigenYmd);
   const [capaOrigen, setCapaOrigen] = useState(null);
@@ -98,7 +100,7 @@ export default function ModalCambioTurnoPropio({
     fechaDestinoYmd,
     capaOrigen,
     grupoId,
-    opsPendientes,
+    opsPendientes: SIN_OPS_PENDIENTES,
     segmentosTrasladar,
     turnosIdDestino,
     turnosRegimenPorId,
@@ -108,12 +110,12 @@ export default function ModalCambioTurnoPropio({
   const previewOrigen = useMemo(
     () => proyectarDiaConOpsPendientes(
       capaOrigen,
-      opsPendientes,
+      SIN_OPS_PENDIENTES,
       personaId,
       fechaOrigenYmd,
       turnosRegimenPorId,
     ),
-    [capaOrigen, opsPendientes, personaId, fechaOrigenYmd, turnosRegimenPorId],
+    [capaOrigen, personaId, fechaOrigenYmd, turnosRegimenPorId],
   );
 
   useEffect(() => {
@@ -325,8 +327,7 @@ export default function ModalCambioTurnoPropio({
         periodo,
         esUrgenciaOperativa: requiereUrgenciaG1,
       });
-      onAgregarOutbox(op);
-      toast.success("Traslado agregado a cambios pendientes.");
+      await onAplicarCambio(op);
       onCerrar();
     } catch (e) {
       setErrorSubmit(e?.message || "No se pudo agregar el cambio.");
@@ -575,6 +576,7 @@ export default function ModalCambioTurnoPropio({
             type="button"
             disabled={
               operando
+              || aplicandoCambio
               || cargandoOrigen
               || soloLecturaInfo.activo
               || !guardrailNovedadContext.puedeModificarTeoria
@@ -589,7 +591,7 @@ export default function ModalCambioTurnoPropio({
             onClick={() => void handleSubmit()}
             className="min-h-11 rounded-xl bg-violet-700 px-5 text-base font-semibold text-white active:bg-violet-800 disabled:opacity-50"
           >
-            {operando ? "Agregando…" : "Agregar a cambios"}
+            {operando || aplicandoCambio ? "Aplicando…" : "Aplicar cambio"}
           </button>
         </div>
       </div>
