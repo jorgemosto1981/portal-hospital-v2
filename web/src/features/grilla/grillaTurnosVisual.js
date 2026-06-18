@@ -114,11 +114,26 @@ export function claseFondoCeldaCalendarioTitular({
 }
 
 export function claseHeaderAgenteSticky() {
-  return "sticky left-0 z-20 min-w-[132px] border-b border-r border-slate-400 bg-slate-200 px-2 py-1 text-left text-xs font-semibold text-slate-800 md:min-w-[210px]";
+  return "sticky left-0 z-20 min-w-[5.5rem] border-b border-r border-slate-400 bg-slate-200 px-1.5 py-0.5 text-left text-[10px] font-semibold text-slate-800 md:min-w-[9.25rem]";
 }
 
+/** Encabezado de grilla operativa: fija fila al hacer scroll vertical (contenedor con overflow-auto). */
+export function claseHeaderGrillaStickyTop(fila = 0) {
+  const top = fila === 0 ? "top-0" : "top-9";
+  return `sticky ${top} z-50 shadow-[0_1px_0_rgba(15,23,42,0.12)]`;
+}
+
+export function claseHeaderGrillaStickyEsquina(fila = 0) {
+  const top = fila === 0 ? "top-0" : "top-9";
+  return `sticky left-0 ${top} z-[60] min-w-[5.5rem] border-b border-r border-slate-400 bg-slate-200 shadow-[0_1px_0_rgba(15,23,42,0.12)] md:min-w-[9.25rem]`;
+}
+
+/** Marco celda con gestión de turno pendiente en outbox (RFC F4 amendment). */
+export const CLASE_MARCO_CELDA_OUTBOX_PENDIENTE =
+  "ring-[3px] ring-amber-600 ring-offset-1 shadow-md outline outline-1 outline-amber-500/60";
+
 export function claseCeldaAgenteSticky() {
-  return "sticky left-0 z-10 border-b border-r border-slate-400 bg-white px-2 py-1 align-middle";
+  return "sticky left-0 z-10 min-w-[5.5rem] border-b border-r border-slate-400 bg-white px-1.5 py-0.5 align-middle md:min-w-[9.25rem]";
 }
 
 export function claseBordeTablaResumen() {
@@ -131,6 +146,15 @@ export function clasesTextoCelda(valor) {
   if (len <= 9) return "text-[9px]";
   if (len <= 13) return "text-[8px]";
   return "text-[7px]";
+}
+
+/** Texto principal en celda con preview outbox (más legible que teórico denso). */
+export function clasesTextoCeldaOutboxPendiente(valor) {
+  const len = String(valor || "").trim().length;
+  if (len <= 5) return "text-xs font-semibold";
+  if (len <= 9) return "text-[11px] font-semibold";
+  if (len <= 13) return "text-[10px] font-semibold";
+  return "text-[9px] font-semibold";
 }
 
 /** @param {object|null|undefined} celda */

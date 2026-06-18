@@ -1051,7 +1051,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                   Sin asignación al grupo en esa fecha
                 </span>
                 <span>
-                  <span className="mr-1 inline-block h-3 w-5 rounded ring-2 ring-amber-500 align-middle" />
+                  <span className="mr-1 inline-block h-3 w-5 rounded ring-[3px] ring-amber-600 ring-offset-1 align-middle shadow-sm" />
                   Turno con cambio pendiente (cola)
                 </span>
                 <span>

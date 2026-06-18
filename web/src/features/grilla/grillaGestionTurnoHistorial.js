@@ -40,7 +40,8 @@ export function overrideAfectaCelda(o, personaId, fechaYmd) {
   }
   if (tipo === "reemplazo" || tipo === "adicional") {
     const per = String(o.persona_id || "").trim();
-    if (per !== pid) return false;
+    // Batch v2 persiste sin persona_id en el ítem; el listado ya viene del doc asi_* de esa persona.
+    if (per && pid && per !== pid) return false;
     const fo = String(o.fecha_origen || "").trim();
     const fd = String(o.fecha_destino || o.fecha || "").trim();
     if (tipo === "reemplazo") return f === fo || f === fd;

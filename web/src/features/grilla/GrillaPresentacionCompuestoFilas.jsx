@@ -174,6 +174,7 @@ function GrillaPresentacionCompuestoFilas({
         const vis = claseVisualPisoCompuesto(fila);
         const title = titlePisoCompuestoCelda(fila, filas.length);
         const esAusente = esPisoPresentacionAusente(fila);
+        const marcas = marcasCompactasDesdeFila(fila);
         const textoMarcas = textoMarcasPisoCelda(fila);
 
         return (
@@ -194,10 +195,20 @@ function GrillaPresentacionCompuestoFilas({
             ) : (
               <>
                 <span className={`min-w-0 flex-1 text-center tabular-nums leading-tight ${vis.dato}`}>
-                  {textoMarcas}
+                  {marcas.length >= 2 ? (
+                    <span className="flex flex-col items-center gap-px">
+                      {marcas.map((m) => (
+                        <span key={m} className="leading-none">
+                          {m}
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    textoMarcas
+                  )}
                 </span>
                 {mostrarBadges && badges.length > 0 ? (
-                  <span className={`flex max-w-[48%] shrink-0 flex-col items-end gap-px text-right ${vis.badge}`}>
+                  <span className={`flex max-w-[52%] shrink-0 flex-col items-end gap-px text-right text-[9px] font-semibold ${vis.badge}`}>
                     {badges.map((b) => (
                       <span key={`${b.tipo}-${b.label}`} className="truncate leading-tight">
                         {b.label}

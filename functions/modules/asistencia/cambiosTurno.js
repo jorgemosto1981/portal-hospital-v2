@@ -808,6 +808,7 @@ const registrarCambioTurno = onCall({
 
   const entry = {
     ...override,
+    persona_id: personaId,
     grupo_de_trabajo_id: grupoTrabajoId,
     es_override_manual: true,
     creado_por_uid: uid,
@@ -1113,8 +1114,31 @@ const aplicarBatchAsistencia = onCall({
       appendMap.set(asiKey, list);
     };
     for (const it of items) {
+      if (esBatchItemCoberturaV2(it)) {
+        const base = {
+          ...it.override,
+          grupo_de_trabajo_id: it.grupo_trabajo_id,
+          es_override_manual: true,
+          creado_por_uid: uid,
+          creado_por_persona_id: token.persona_id || null,
+          creado_en: nowIso,
+          invalidado_por_replanificacion: false,
+          op_batch_id: it.op_id,
+        };
+        pushEntry(`${it.persona_origen_id}|${it.fecha}`, {
+          ...base,
+          persona_id: it.persona_origen_id,
+        });
+        pushEntry(`${it.persona_cobertura_id}|${it.fecha_destino}`, {
+          ...base,
+          persona_id: it.persona_cobertura_id,
+        });
+        continue;
+      }
+      const pidAsi = personaIdDocAsi(it);
       const entry = {
         ...it.override,
+        persona_id: pidAsi,
         grupo_de_trabajo_id: it.grupo_trabajo_id,
         es_override_manual: true,
         creado_por_uid: uid,
@@ -1123,12 +1147,7 @@ const aplicarBatchAsistencia = onCall({
         invalidado_por_replanificacion: false,
         op_batch_id: it.op_id,
       };
-      if (esBatchItemCoberturaV2(it)) {
-        pushEntry(`${it.persona_origen_id}|${it.fecha}`, entry);
-        pushEntry(`${it.persona_cobertura_id}|${it.fecha_destino}`, entry);
-      } else {
-        pushEntry(`${personaIdDocAsi(it)}|${it.fecha}`, entry);
-      }
+      pushEntry(`${pidAsi}|${it.fecha}`, entry);
     }
 
     for (const [key, extra] of appendMap.entries()) {

@@ -18,9 +18,12 @@ import {
   varianteCeldaOperativa,
 } from "./grillaMesEquipoDisplay.js";
 import {
-  claseHeaderAgenteSticky,
   claseCeldaAgenteSticky,
   clasesTextoCelda,
+  clasesTextoCeldaOutboxPendiente,
+  claseHeaderGrillaStickyTop,
+  claseHeaderGrillaStickyEsquina,
+  CLASE_MARCO_CELDA_OUTBOX_PENDIENTE,
   claseFondoCeldaCalendarioTitular,
   claseFondoTdJefeSemaforo,
 } from "./grillaTurnosVisual.js";
@@ -59,6 +62,7 @@ import {
 import { celdaAusenteSinMarcasPasada } from "../../../../shared/utils/grillaFichadaPresencia.js";
 import { visualCeldaOutboxPendiente } from "./grillaCeldaOutboxVisual.js";
 import { diaFueraTramoHlg } from "./grillaMesFilasUtils.js";
+import { parsePersonaLabelGrilla } from "./grillaPersonaLabelDisplay.js";
 import DiaGrillaCelda from "./DiaGrillaCelda.jsx";
 
 function contenidoCeldaOperativa({
@@ -96,6 +100,7 @@ function contenidoCeldaOperativa({
   soloTeoriaFuturo = false,
   celdaFuturaSinFichada = false,
 }) {
+  const claseTextoPrincipal = outboxVisual?.pending ? clasesTextoCeldaOutboxPendiente : clasesTextoCelda;
   const alertaTitle = desalineacionTooltip || "Teoría modificada post-licencia";
   const badgeAlerta = desalineacionTeoria ? (
     <span
@@ -193,7 +198,7 @@ function contenidoCeldaOperativa({
           )
         : null;
   const diffBlock = outboxVisual?.pending && (outboxVisual.diffOut || outboxVisual.diffIn) ? (
-    <span className="mt-px text-[6px] leading-tight">
+    <span className="mt-px flex flex-col items-center gap-px text-[10px] font-semibold leading-tight">
       {outboxVisual.diffOut ? (
         <span className="text-rose-700">− {outboxVisual.diffOut}</span>
       ) : null}
@@ -256,14 +261,14 @@ function contenidoCeldaOperativa({
       (esNoLaborable ? "NL" : esFranco ? "F" : tieneLicencia ? licenciaCod.slice(0, 4) : "");
     return (
       <span className="flex flex-col items-center justify-center leading-none">
-        <span className={`${clasesTextoCelda(etiqueta)} font-medium`}>{etiqueta}</span>
+        <span className={`${claseTextoPrincipal(etiqueta)} font-medium`}>{etiqueta}</span>
       </span>
     );
   }
   if (tieneLicencia && (tieneTurno || esFranco || esNoLaborable)) {
     return (
       <span className="flex w-full flex-col items-center justify-center leading-none">
-        <span className={clasesTextoCelda(turnoMostrar || (esNoLaborable ? "NL" : "F"))}>
+        <span className={claseTextoPrincipal(turnoMostrar || (esNoLaborable ? "NL" : "F"))}>
           {turnoMostrar || (esNoLaborable ? "NL" : "F")}
         </span>
         <span className="mt-0.5 flex flex-col items-center gap-px">
@@ -278,7 +283,7 @@ function contenidoCeldaOperativa({
     return (
       <span className="flex flex-col items-center">
         {filaInferiorCelda}
-        <span className={clasesTextoCelda(licenciaCod)}>{licenciaCod.slice(0, 4)}</span>
+        <span className={claseTextoPrincipal(licenciaCod)}>{licenciaCod.slice(0, 4)}</span>
         {esIncompletoPlan ? (
           <span className="text-[6px] font-semibold text-rose-800">Plan incompleto</span>
         ) : null}
@@ -297,12 +302,12 @@ function contenidoCeldaOperativa({
     <span className="flex flex-col items-center justify-center leading-none">
       {turnoMostrar.includes("·") ? (
         turnoMostrar.split("·").map((tramo, i) => (
-          <span key={i} className={clasesTextoCelda(tramo.trim())}>
+          <span key={i} className={claseTextoPrincipal(tramo.trim())}>
             {tramo.trim()}
           </span>
         ))
       ) : (
-        <span className={clasesTextoCelda(turnoMostrar)}>{turnoMostrar}</span>
+        <span className={claseTextoPrincipal(turnoMostrar)}>{turnoMostrar}</span>
       )}
       <span className="mt-0.5 flex flex-col items-center gap-px">
         {filaInferiorCelda}
@@ -363,15 +368,15 @@ export default function GrillaMesEquipoTabla({
   const claseAnchoColDia = columnasFichadaAnchas ? ANCHO_MIN_COL_DIA_FICHADA : "min-w-[2.5rem]";
 
   return (
-    <div className="mt-4 overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm">
-      <table className="min-w-max border-separate border-spacing-0 text-[10px]">
+    <div className="mt-4 rounded-xl border border-slate-300 bg-white shadow-sm">
+      <table className="min-w-max border-separate border-spacing-0 text-[10px] [&_thead_th]:bg-clip-padding">
         <thead>
           <tr>
-            <th className={`${claseHeaderAgenteSticky()} h-9 border-b`} />
+            <th className={`${claseHeaderGrillaStickyEsquina(0)} h-9 border-b`} />
             {columnas.map((c) => (
               <th
                 key={`ds-${c.dia}`}
-                className={`${claseAnchoColDia} h-9 ${claseFondoColumna({
+                className={`${claseAnchoColDia} h-9 ${claseHeaderGrillaStickyTop(0)} ${claseFondoColumna({
                   esFinde: c.esFinde,
                   esFeriado: Boolean(institucionalPorDia[c.dia]),
                 })}`}
@@ -381,18 +386,18 @@ export default function GrillaMesEquipoTabla({
             ))}
           </tr>
           <tr>
-            <th className={`${claseHeaderAgenteSticky()} h-9 border-b`}>
+            <th className={`${claseHeaderGrillaStickyEsquina(1)} h-9 border-b px-2 py-1 text-left text-xs font-semibold text-slate-800`}>
               Persona
             </th>
             {columnas.map((c) => (
               <th
                 key={c.dia}
-                className={`${claseAnchoColDia} h-9 ${claseFondoColumna({
+                className={`${claseAnchoColDia} h-9 ${claseHeaderGrillaStickyTop(1)} ${claseFondoColumna({
                   esFinde: c.esFinde,
                   esFeriado: Boolean(institucionalPorDia[c.dia]),
                 })}`}
               >
-                <span className="text-[10px] font-bold">{c.num}</span>
+                <span className="text-[11px] font-bold">{c.num}</span>
               </th>
             ))}
           </tr>
@@ -411,6 +416,7 @@ export default function GrillaMesEquipoTabla({
             filas.map((fila) => {
               const filaId = String(fila.fila_id || fila.persona_id || "");
               const personaLabel = String(fila.persona_label || fila.persona_id || "");
+              const personaLineas = parsePersonaLabelGrilla(personaLabel);
               const hlgIdFila = String(fila.hlg_id || "").trim() || undefined;
               const filaCompuesta = filaGrillaTieneTurnoCompuesto(fila);
               const alturaFila = filaCompuesta ? ALTURA_FILA_GRILLA_COMPUESTO : ALTURA_FILA_GRILLA_SIMPLE;
@@ -418,8 +424,15 @@ export default function GrillaMesEquipoTabla({
               return (
                 <tr key={filaId} className={`${alturaFila} align-middle`}>
                   <td className={claseCeldaAgenteSticky()}>
-                    <span className="block truncate text-[11px] font-semibold leading-snug text-slate-800">
-                      {personaLabel}
+                    <span className="block leading-tight text-slate-800">
+                      <span className="block truncate text-[10px] font-semibold md:text-[11px]">
+                        {personaLineas.linea1 || personaLabel}
+                      </span>
+                      {personaLineas.linea2 ? (
+                        <span className="mt-0.5 block truncate text-[9px] font-medium text-slate-600 tabular-nums">
+                          {personaLineas.linea2}
+                        </span>
+                      ) : null}
                     </span>
                   </td>
                   {columnas.map((col) => {
@@ -735,7 +748,7 @@ export default function GrillaMesEquipoTabla({
                             variant={variant}
                             rellenoCelda={pintarCeldaSemaforoJefe}
                             className={[
-                              outboxVisual?.pending ? "ring-2 ring-amber-500 ring-offset-0" : "",
+                              outboxVisual?.pending ? CLASE_MARCO_CELDA_OUTBOX_PENDIENTE : "",
                               columnasFichadaAnchas && !pintarCeldaSemaforoJefe
                                 ? CLASE_CHIP_MARCO_CELDA_DIA
                                 : "",

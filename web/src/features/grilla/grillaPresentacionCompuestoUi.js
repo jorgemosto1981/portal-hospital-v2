@@ -5,12 +5,22 @@ import {
 import {
   badgesDisciplinaDesdeSegmentoAnalitica,
   disciplinaHorariaIncumplimientoDesdeAnalitica,
+  labelBadgeDisciplinaMinutosCelda,
 } from "../../../../shared/utils/calcularDeltasCumplimiento.js";
 import { parseFichadasRealesCelda, marcasHhmmDesdeItemFichada } from "../../../../shared/utils/grillaFichadaPresencia.js";
 import {
   analiticaCumplimientoDesdeCelda,
   badgeIncumplimientoHorarioRrhh,
 } from "./grillaAnaliticaCumplimientoUi.js";
+
+/**
+ * UI para presentación de turnos compuestos (pisos M/T/N materializados).
+ *
+ * Filosofía de empareje: el worker materializa `presentacion_compuesto.filas`.
+ * La UI confía en esa estructura, estados y orden. Repartir marcas crudas es fallback;
+ * preferir datos ya procesados en backend. Si hay que repartir manualmente, usar
+ * propiedades estructurales (`orden`, `length`) en lugar de IDs literales de segmento.
+ */
 
 export { filasPresentacionCompuestoDesdeCelda, leerPresentacionCompuestoDesdeCelda };
 
@@ -42,8 +52,20 @@ function filaTramoActivo(fila) {
   return !filaTramoAusente(fila);
 }
 
+/** @param {Record<string, unknown>} item @param {string[]} marcas */
+function fichadaItemCruzaMedianoche(item, marcas) {
+  const fy = String(item.fecha_ymd || item.fecha || "").trim();
+  const fe = String(item.fecha_egreso_ymd || "").trim();
+  if (fe && fy && fe > fy) return true;
+  if (marcas.length >= 2) {
+    const ingR = minutosDesdeHhmmInstitucional(marcas[0]);
+    const egrR = minutosDesdeHhmmInstitucional(marcas[marcas.length - 1]);
+    if (Number.isFinite(ingR) && Number.isFinite(egrR) && egrR < ingR) return true;
+  }
+  return false;
+}
+
 /**
- * Marca(s) reales por tramo — lectura de `fichadas_reales` (sin recalcular cumplimiento).
  * @param {Record<string, unknown>|null|undefined} celda
  * @param {Record<string, unknown>} fila
  * @param {Array<Record<string, unknown>>} todasFilas
@@ -64,12 +86,17 @@ export function marcasHhmmPorTramoDesdeCelda(celda, fila, todasFilas) {
   const ultimo = orden >= total - 1;
 
   if (total === 1) {
+    if (fichadas.length >= 2) {
+      const flat = [];
+      for (const item of fichadas) flat.push(...marcasHhmmDesdeItemFichada(item));
+      return [...new Set(flat.filter(Boolean))];
+    }
     return marcasHhmmDesdeItemFichada(fichadas[0]);
   }
 
   if (fichadas.length === 2 && total === 3) {
-    if (seg === "M") return marcasHhmmDesdeItemFichada(fichadas[0]);
-    if (seg === "N") return marcasHhmmDesdeItemFichada(fichadas[1]);
+    if (primero) return marcasHhmmDesdeItemFichada(fichadas[0]);
+    if (ultimo) return marcasHhmmDesdeItemFichada(fichadas[1]);
     return [];
   }
 
@@ -80,14 +107,64 @@ export function marcasHhmmPorTramoDesdeCelda(celda, fila, todasFilas) {
   }
 
   if (fichadas.length === 1 && total >= 2) {
-    const marcas = marcasHhmmDesdeItemFichada(fichadas[0]);
+    const f0 = fichadas[0];
+    const marcas = marcasHhmmDesdeItemFichada(f0);
     if (!marcas.length) return [];
+    const cruzaNoche = fichadaItemCruzaMedianoche(f0, marcas);
+    const { ingreso: ingTeo, egreso: egrTeo } = parseRangoHhmmLabel(fila.fichada_label);
+    if (
+      !cruzaNoche
+      && !filaTramoAusente(fila)
+      && ingTeo
+      && egrTeo
+      && marcas.length >= 2
+    ) {
+      const ingReal = marcas[0];
+      const egrReal = marcas[marcas.length - 1];
+      const ingR = minutosDesdeHhmmInstitucional(ingReal);
+      const egrR = minutosDesdeHhmmInstitucional(egrReal);
+      const ingT = minutosDesdeHhmmInstitucional(ingTeo);
+      const egrT = minutosDesdeHhmmInstitucional(egrTeo);
+      if (
+        Number.isFinite(ingR)
+        && Number.isFinite(egrR)
+        && Number.isFinite(ingT)
+        && Number.isFinite(egrT)
+        && ingR >= ingT
+        && egrR <= egrT
+      ) {
+        return marcas
+          .map((m) => horaCompactaDisplay(m) || m)
+          .filter(Boolean);
+      }
+    }
+    if (cruzaNoche) {
+      if (filaTramoAusente(fila)) return [];
+      if (total >= 3) {
+        const ing = marcas[0];
+        const egr = marcas[marcas.length - 1];
+        if (primero && ing) return [horaCompactaDisplay(ing) || ing];
+        if (ultimo && egr) return [horaCompactaDisplay(egr) || egr];
+        return [];
+      }
+      if (total === 2 && (seg === "N" || ultimo)) {
+        return marcas.map((m) => horaCompactaDisplay(m) || m).filter(Boolean);
+      }
+      if (primero) {
+        const ing = marcas[0];
+        const ingR = minutosDesdeHhmmInstitucional(ing);
+        if (ing && Number.isFinite(ingR) && ingR < 15 * 60) {
+          return [horaCompactaDisplay(ing) || ing];
+        }
+      }
+      return [];
+    }
     const ing = marcas[0];
     const egr = marcas.length > 1 ? marcas[marcas.length - 1] : "";
     const out = [];
-    if (primero && ing) out.push(ing);
-    if (ultimo && egr) out.push(egr);
-    return [...new Set(out)];
+    if (primero && ing) out.push(horaCompactaDisplay(ing) || ing);
+    if (ultimo && egr) out.push(horaCompactaDisplay(egr) || egr);
+    return [...new Set(out.filter(Boolean))];
   }
 
   const activos = todasFilas.filter(filaTramoActivo);
@@ -116,10 +193,32 @@ export function enriquecerFilasPresentacionMarcas(celda, filas) {
   }));
 }
 
-/** M/T/N de turno simple (no compuesto). */
+/** `segmento_id` de turno simple (no compuesto); IDs opacos (MA, TN, cfg_reg_turno_*). */
 export function segmentoTurnoSimpleDesdeCelda(celda) {
   const tid = String(celda?.rda_turno_id || "").trim();
+  if (tid.includes("+")) return "";
+
+  const anal = analiticaCumplimientoDesdeCelda(celda);
+  const sc = anal?.segmentos_cumplimiento;
+  if (Array.isArray(sc) && sc.length === 1) {
+    const sid = String(sc[0]?.segmento_id || "").trim();
+    if (sid) return sid.toUpperCase();
+  }
+
+  const capa = celda?.capa_teorica;
+  if (capa && typeof capa === "object") {
+    const segs = Array.isArray(capa.segmentos) ? capa.segmentos : [];
+    if (segs.length === 1) {
+      const sid = String(segs[0]?.segmento_id || segs[0]?.codigo_interno || segs[0]?.codigo || "").trim();
+      if (sid) return sid.toUpperCase();
+    }
+  }
+
   if (/^[MTN]$/i.test(tid)) return tid.toUpperCase();
+  const fromCfg = tid.match(/_turno_([mtn])$/i) || tid.match(/_([mtn])$/i);
+  if (fromCfg) return fromCfg[1].toUpperCase();
+
+  if (tid) return tid.toUpperCase();
   return "";
 }
 
@@ -165,7 +264,31 @@ export function filaPresentacionSimpleDesdeCelda(celda) {
 
   let badge_label = incBadge?.label || null;
   let badge_tipo = null;
-  if (badge_label) {
+  /** @type {Array<{ label: string; tipo: string }>} */
+  let badges = [];
+  const segsAnal = analitica?.segmentos_cumplimiento;
+  if (Array.isArray(segsAnal) && segsAnal.length) {
+    const hit =
+      segsAnal.find((s) => String(s?.segmento_id || "").trim() === segmento_id) || segsAnal[0];
+    if (hit) {
+      badges = badgesDisciplinaDesdeSegmentoAnalitica(hit, {
+        tolerancia_ingreso_min: Number(analitica?.disciplina_horaria?.tolerancia_ingreso_dia_min) || 0,
+        tolerancia_egreso_min: Number(analitica?.disciplina_horaria?.tolerancia_egreso_dia_min) || 0,
+      });
+      if (badges.length) {
+        badge_label = badges[0].label;
+        badge_tipo = badges[0].tipo;
+      }
+    }
+  }
+  if (!badges.length && analitica) {
+    badges = badgesDisciplinaDesdeAnaliticaDia(analitica);
+    if (badges.length) {
+      badge_label = badges[0].label;
+      badge_tipo = badges[0].tipo;
+    }
+  }
+  if (!badges.length && badge_label) {
     badge_tipo =
       inc && inc.salida_anticipada_punitiva_min > 0
         ? "salida"
@@ -176,7 +299,7 @@ export function filaPresentacionSimpleDesdeCelda(celda) {
 
   let estado_tramo = "presente";
   if (badge_label === "AUSENTE") estado_tramo = "ausente";
-  else if (badge_label || semaforo === "AMARILLO" || semaforo === "ROJO") estado_tramo = "parcial";
+  else if (badges.length || badge_label || semaforo === "AMARILLO" || semaforo === "ROJO") estado_tramo = "parcial";
 
   return {
     segmento_id,
@@ -186,6 +309,7 @@ export function filaPresentacionSimpleDesdeCelda(celda) {
     estado_tramo,
     badge_label,
     badge_tipo,
+    ...(badges.length ? { badges } : {}),
   };
 }
 
@@ -216,6 +340,49 @@ export function badgesDisciplinaDesdeFilaPresentacion(fila) {
   return [{ label: badge, tipo: String(fila.badge_tipo || "").trim() || "salida" }];
 }
 
+/** Minutos desde medianoche para comparar HH:mm / H:mm. */
+function minutosDesdeHhmmInstitucional(hhmm) {
+  const s = String(hhmm || "").trim();
+  const m = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (m) return Number(m[1]) * 60 + Number(m[2]);
+  const m2 = s.match(/^(\d{1,2})$/);
+  if (m2) return Number(m2[1]) * 60;
+  return Number.NaN;
+}
+
+/** Badges ▼ desde incumplimiento horario del día (turno simple sin dual en segmento). */
+function badgesDisciplinaDesdeAnaliticaDia(anal) {
+  if (!anal || typeof anal !== "object") return [];
+  const inc = disciplinaHorariaIncumplimientoDesdeAnalitica(anal);
+  /** @type {Array<{ label: string; tipo: string }>} */
+  const badges = [];
+  if (inc.tardanza_punitiva_min > 0) {
+    const label = labelBadgeDisciplinaMinutosCelda(inc.tardanza_punitiva_min);
+    if (label) badges.push({ label, tipo: "tardanza" });
+  }
+  if (inc.salida_anticipada_punitiva_min > 0) {
+    const label = labelBadgeDisciplinaMinutosCelda(inc.salida_anticipada_punitiva_min);
+    if (label) badges.push({ label, tipo: "salida" });
+  }
+  return badges;
+}
+
+function aplicarBadgesYEstadoTramo(fila, badges) {
+  const estado =
+    badges.some((b) => b.tipo === "ausente_tramo")
+      ? "ausente"
+      : badges.some((b) => b.tipo === "tardanza" || b.tipo === "salida")
+        ? "parcial"
+        : fila.estado_tramo || "presente";
+  return {
+    ...fila,
+    estado_tramo: estado,
+    badges,
+    badge_label: badges[0]?.label ?? fila.badge_label ?? null,
+    badge_tipo: badges[0]?.tipo ?? fila.badge_tipo ?? null,
+  };
+}
+
 /**
  * Sincroniza badges/estado desde analítica materializada (sin recalcular motor).
  * @param {Record<string, unknown>|null|undefined} celda
@@ -234,24 +401,32 @@ export function reconciliarFilasPresentacionDesdeAnalitica(celda, filas) {
   const tolOpts = { tolerancia_ingreso_min: tolIn, tolerancia_egreso_min: tolOut };
   return filas.map((fila) => {
     const segId = String(fila.segmento_id || "").trim();
-    const hit = segs.find((s) => String(s?.segmento_id || "").trim() === segId);
+    let hit = segs.find((s) => String(s?.segmento_id || "").trim() === segId);
+    if (!hit && filas.length === 1) {
+      const fallbackId = segId || segmentoTurnoSimpleDesdeCelda(celda);
+      if (fallbackId) {
+        hit = segs.find((s) => String(s?.segmento_id || "").trim() === fallbackId);
+      }
+      if (!hit) hit = segs[0];
+    }
     if (!hit) return fila;
-    const badges = badgesDisciplinaDesdeSegmentoAnalitica(hit, tolOpts);
-    const estado =
-      hit.cubierto !== true
-        ? "ausente"
-        : badges.some((b) => b.tipo === "tardanza" || b.tipo === "salida")
-          ? "parcial"
-          : "presente";
-    const badge_label = badges[0]?.label ?? fila.badge_label ?? null;
-    const badge_tipo = badges[0]?.tipo ?? fila.badge_tipo ?? null;
-    return {
-      ...fila,
-      ...(estado ? { estado_tramo: estado } : {}),
-      badges,
-      badge_label,
-      badge_tipo,
-    };
+    let badges = badgesDisciplinaDesdeSegmentoAnalitica(hit, tolOpts);
+    if (!badges.length && filas.length === 1) {
+      badges = badgesDisciplinaDesdeAnaliticaDia(anal);
+    }
+    if (!badges.length && hit.cubierto !== true) {
+      return aplicarBadgesYEstadoTramo(fila, [{ label: "AUSENTE", tipo: "ausente_tramo" }]);
+    }
+    if (!badges.length) {
+      return {
+        ...fila,
+        estado_tramo: hit.cubierto === true ? "presente" : "ausente",
+        badges: [],
+        badge_label: null,
+        badge_tipo: null,
+      };
+    }
+    return aplicarBadgesYEstadoTramo(fila, badges);
   });
 }
 
@@ -518,8 +693,11 @@ export function claseVisualPisoCompuesto(fila) {
 
   const esAusente =
     estado === "ausente" || badges.some((b) => b.tipo === "ausente_tramo" || b.label === "AUSENTE");
+  const esParcial = estado === "parcial";
   const esAlerta =
-    !esAusente && badges.some((b) => b.tipo === "tardanza" || b.tipo === "salida" || Boolean(b.label));
+    !esAusente &&
+    (esParcial ||
+      badges.some((b) => b.tipo === "tardanza" || b.tipo === "salida" || Boolean(b.label)));
 
   if (esAusente) {
     return {
@@ -537,8 +715,16 @@ export function claseVisualPisoCompuesto(fila) {
       badge: "font-bold",
     };
   }
+  if (estado === "presente") {
+    return {
+      piso: "bg-emerald-200 text-emerald-950",
+      seg: "font-bold",
+      dato: "font-mono font-semibold",
+      badge: "font-bold",
+    };
+  }
   return {
-    piso: "bg-emerald-200 text-emerald-950",
+    piso: "bg-slate-100 text-slate-600",
     seg: "font-bold",
     dato: "font-mono font-semibold",
     badge: "font-bold",
