@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   agruparFetchVistaDesdeOps,
+  agruparFetchVistaDesdeReferencias,
   parchesVisDesdeRespuestaBatch,
   patchFilasGrillaDesdeParchesVis,
 } from "./grillaMesNodosBatchParches.js";
@@ -52,6 +53,18 @@ describe("agruparFetchVistaDesdeOps", () => {
   });
 });
 
+describe("agruparFetchVistaDesdeReferencias", () => {
+  it("agrupa refs explícitas por persona-mes", () => {
+    const grupos = agruparFetchVistaDesdeReferencias([
+      { gdt: GDT, persona_id: P1, fecha_ymd: "2026-06-10" },
+      { gdt: GDT, persona_id: P1, fecha_ymd: "2026-06-11" },
+    ]);
+    expect(grupos).toHaveLength(1);
+    expect(grupos[0].fechas.has("2026-06-10")).toBe(true);
+    expect(grupos[0].fechas.has("2026-06-11")).toBe(true);
+  });
+});
+
 describe("patchFilasGrillaDesdeParchesVis", () => {
   it("actualiza dias de la persona afectada", () => {
     const filas = [
@@ -68,8 +81,54 @@ describe("patchFilasGrillaDesdeParchesVis", () => {
         celda: { turno: "N" },
       },
     ]);
-    expect(next[0].dias["11"]).toEqual({ turno: "N" });
+    expect(next[0].dias["11"]).toEqual({ b: 2, turno: "N" });
     expect(next[0].dias["10"]).toEqual({ a: 1 });
+  });
+
+  it("conserva fichadas_reales si el parche no trae el campo", () => {
+    const filas = [
+      {
+        persona_id: P1,
+        dias: {
+          "17": {
+            rda_turno_id: "M+N",
+            fichadas_reales: [{ ingreso: "06:05", egreso: "14:02" }],
+          },
+        },
+      },
+    ];
+    const next = patchFilasGrillaDesdeParchesVis(filas, [
+      {
+        persona_id: P1,
+        fecha_ymd: "2026-06-17",
+        gdt: GDT,
+        celda: { rda_turno_id: "M", fichadas_esperadas: 2 },
+      },
+    ]);
+    expect(next[0].dias["17"].rda_turno_id).toBe("M");
+    expect(next[0].dias["17"].fichadas_reales).toEqual([{ ingreso: "06:05", egreso: "14:02" }]);
+  });
+
+  it("respeta fichadas_reales vacías explícitas en el parche", () => {
+    const filas = [
+      {
+        persona_id: P1,
+        dias: {
+          "17": {
+            fichadas_reales: [{ ingreso: "06:05", egreso: "14:02" }],
+          },
+        },
+      },
+    ];
+    const next = patchFilasGrillaDesdeParchesVis(filas, [
+      {
+        persona_id: P1,
+        fecha_ymd: "2026-06-17",
+        gdt: GDT,
+        celda: { fichadas_reales: [] },
+      },
+    ]);
+    expect(next[0].dias["17"].fichadas_reales).toEqual([]);
   });
 });
 

@@ -1,6 +1,6 @@
 # Plan — Reactividad por nodo (grilla operativa GSO)
 
-> **Estado:** EN CURSO — sesión cerrada 2026-06-18 (`master` `a2acaa7`); retomar por handoff 2026-06-18  
+> **Estado:** EN CURSO — pausa 2026-06-18 noche · **intercambio guardia roto en QA** → [`HANDOFF_SESION_2026-06-18_PAUSA_INTERCAMBIO_GUARDIA.md`](./HANDOFF_SESION_2026-06-18_PAUSA_INTERCAMBIO_GUARDIA.md)  
 > **Prioridad UX:** impacto visible **sin salir del modal de mes** · reemplaza el modelo anterior de **outbox local** (cola + “aplicar después”).  
 > **Piloto:** Sala Internación 1 `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · jun-2026 · Jaqueline `per_01KR3GZX9TB33NHTE2QD5ZP13V`.
 
@@ -21,7 +21,7 @@ Cada celda/fila de la grilla es un **nodo** con snapshot de servidor + parches l
 | **A2** | `GrillaDiaCelda` memo + `useGrillaMesNodos` | ✅ parcial |
 | **A3** | Batch inmediato: `aplicarCambioInmediato` → `aplicarBatchAsistencia` + `grillaMesNodosBatchParches` | ✅ |
 | **B** | Render anclado a `presentacion_compuesto` materializado; estado incompleto explícito | ⏳ |
-| **C** | Patch cache/store post-batch y post-fichada; reducir `invalidateGrillaGrupoPeriodo` / `vista.cargar` | ⏳ |
+| **C** | Patch cache/store post-batch y post-fichada; reducir `invalidateGrillaGrupoPeriodo` / `vista.cargar` | ✅ parcial 2026-06-18 |
 | **D** | Virtualización filas + RFC rendimiento | ⏳ |
 
 ---

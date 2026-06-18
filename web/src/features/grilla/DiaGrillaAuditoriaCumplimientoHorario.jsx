@@ -30,7 +30,11 @@ import {
 
 import { titleFichadaPresencia } from "./grillaFichadaPresenciaDisplay.js";
 
-import { textoHorarioFichadaRealDesdeCelda } from "../../../../shared/utils/grillaFichadaPresencia.js";
+import {
+  celdaEsperaFichada,
+  parseFichadasRealesCelda,
+  textoHorarioFichadaRealDesdeCelda,
+} from "../../../../shared/utils/grillaFichadaPresencia.js";
 import {
   esPresentacionPorPisos,
   filasPresentacionOperativaDesdeCelda,
@@ -176,11 +180,14 @@ export default function DiaGrillaAuditoriaCumplimientoHorario({
 
 
 
-    const tituloPresencia =
-
-      titleFichadaPresencia(presencia) ||
-
-      (horarioReal ? "Presente (fichada)" : "Sin fichada registrada");
+    const tituloPresencia = (() => {
+      if (titleFichadaPresencia(presencia)) return titleFichadaPresencia(presencia);
+      if (parseFichadasRealesCelda(celdaVis).length > 0) return "Presente (fichada)";
+      if (presencia === "ausente" || celdaEsperaFichada(celdaVis)) {
+        return "Ausente (sin fichada)";
+      }
+      return "Sin fichada registrada";
+    })();
 
 
 

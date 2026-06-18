@@ -12,11 +12,11 @@ import {
   buildIntercambioGuardiaOutboxOp,
   capaElegibleIntercambioGuardia,
   horasTotalesSegmentos,
+  previewIntercambioGuardia,
   regimenPermiteIntercambioGuardia,
   rangoFechasMes,
   validarIntercambioGuardia,
 } from "./grillaCoberturaParcialPreview.js";
-import { proyectarDiaConOpsPendientes } from "./grillaCambioTurnoPropioPreview.js";
 import { useIntercambioGuardiaDestino } from "./useIntercambioGuardiaDestino.js";
 import {
   COPY_BADGE_SOLO_LECTURA_GSO,
@@ -95,7 +95,7 @@ export default function ModalCoberturaParcial({
   });
 
   const previewOrigen = useMemo(
-    () => proyectarDiaConOpsPendientes(
+    () => previewIntercambioGuardia(
       capaOrigen,
       SIN_OPS_PENDIENTES,
       personaOrigenId,
@@ -147,8 +147,14 @@ export default function ModalCoberturaParcial({
       }
       const turnosMap = turnosDisponiblesDesdeRegimen(regimenes, regimenOrigen);
       setTurnosRegimenOrigen(turnosMap);
-      const preview = proyectarDiaConOpsPendientes(capa, SIN_OPS_PENDIENTES, personaOrigenId, fechaYmd, turnosMap);
-      const eleg = capaElegibleIntercambioGuardia(capa, preview);
+      const preview = previewIntercambioGuardia(
+        capa,
+        SIN_OPS_PENDIENTES,
+        personaOrigenId,
+        fechaYmd,
+        turnosMap,
+      );
+      const eleg = capaElegibleIntercambioGuardia(capa, preview, personaOrigenId);
       if (!eleg.ok) {
         setErrorOrigen(eleg.error || "El día origen no es elegible para intercambio.");
       }
@@ -236,7 +242,7 @@ export default function ModalCoberturaParcial({
       regimenHorarioIdOrigen: regimenHorarioOrigenId,
       regimenHorarioIdDestino: destino.regimenHorarioDestinoId,
       regimenesIdx,
-      SIN_OPS_PENDIENTES,
+      opsPendientes: SIN_OPS_PENDIENTES,
     });
   }, [
     personaDestinoId,
@@ -457,7 +463,11 @@ export default function ModalCoberturaParcial({
               <div className="mt-2 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 p-2">
                   <p className="text-xs font-semibold text-slate-700">Agente 1 cede</p>
-                  {segmentosOrigen.length === 0 ? (
+                  {previewOrigen.sinTramosPropios ? (
+                    <p className="mt-2 text-xs text-amber-800">
+                      No tenés tramos propios este día; los tramos figuran cedidos a otro agente.
+                    </p>
+                  ) : segmentosOrigen.length === 0 ? (
                     <p className="mt-2 text-xs text-amber-800">Sin tramos materializados.</p>
                   ) : (
                     <ul className="mt-2 space-y-1">

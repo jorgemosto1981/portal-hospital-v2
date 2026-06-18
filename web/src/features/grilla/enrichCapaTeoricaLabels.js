@@ -54,9 +54,12 @@ export function enrichCapaTeoricaLabels(segmentos, turnosPorId = {}) {
  */
 export function filtrarSegmentosActivosTitular(segmentos, personaTitularId) {
   const pid = String(personaTitularId || "").trim();
-  return (segmentos || []).filter(
-    (s) => s.persona_titular_id === pid && s.persona_ejecutante_id === pid,
-  );
+  if (!pid) return segmentos || [];
+  return (segmentos || []).filter((s) => {
+    const tit = String(s.persona_titular_id || pid).trim();
+    const ej = String(s.persona_ejecutante_id || pid).trim();
+    return tit === pid && ej === pid;
+  });
 }
 
 export function turnosDisponiblesDesdeRegimen(regimenesIdx, regimenId) {

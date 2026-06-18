@@ -7,8 +7,7 @@ import {
   turnosDisponiblesDesdeRegimen,
 } from "./enrichCapaTeoricaLabels.js";
 import { mensajeErrorCapaTeorico, resumenTeoricoCorta } from "./grillaCeldaTeorico.js";
-import { capaElegibleIntercambioGuardia, validarMismoRegimenHorario } from "./grillaCoberturaParcialPreview.js";
-import { proyectarDiaConOpsPendientes } from "./grillaCambioTurnoPropioPreview.js";
+import { capaElegibleIntercambioGuardia, previewIntercambioGuardia, validarMismoRegimenHorario } from "./grillaCoberturaParcialPreview.js";
 
 /**
  * Capa teórica agente 2 + régimen + gate A1/A1b on-demand.
@@ -82,7 +81,7 @@ export function useIntercambioGuardiaDestino({
       setExpectedVersionToken(
         capaRes?.concurrencia?.expected_version_token || capaRes?.concurrencia?.vis_ultima_sync || "",
       );
-      const preview = proyectarDiaConOpsPendientes(
+      const preview = previewIntercambioGuardia(
         capa,
         opsPendientes,
         personaDestinoId,
@@ -93,7 +92,7 @@ export function useIntercambioGuardiaDestino({
         preview.segmentoIds.includes(String(s.segmento_id || "")),
       );
       setSegmentosDestino(enrichCapaTeoricaLabels(activos, turnosMap));
-      const eleg = capaElegibleIntercambioGuardia(capa, preview);
+      const eleg = capaElegibleIntercambioGuardia(capa, preview, personaDestinoId);
       if (!eleg.ok) {
         setError(eleg.error || "El día destino no es elegible para intercambio.");
       }
@@ -112,7 +111,7 @@ export function useIntercambioGuardiaDestino({
   }, [recargar]);
 
   const previewDestino = useMemo(
-    () => proyectarDiaConOpsPendientes(
+    () => previewIntercambioGuardia(
       capaDestino,
       opsPendientes,
       personaDestinoId,
@@ -123,7 +122,7 @@ export function useIntercambioGuardiaDestino({
   );
 
   const elegibilidad = useMemo(
-    () => capaElegibleIntercambioGuardia(capaDestino, previewDestino),
+    () => capaElegibleIntercambioGuardia(capaDestino, previewDestino, personaDestinoId),
     [capaDestino, previewDestino],
   );
 

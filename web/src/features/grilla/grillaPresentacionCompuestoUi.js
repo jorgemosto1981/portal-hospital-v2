@@ -444,6 +444,16 @@ export function filasPresentacionMaterializadaDesdeCelda(celda) {
 }
 
 /**
+ * Hot path grilla: materializado + reparto de marcas desde `fichadas_reales`.
+ * Sin reconciliar `estado_tramo` desde analítica (RFC F §7).
+ * @param {Record<string, unknown>|null|undefined} celda
+ */
+export function filasPresentacionGrillaDesdeCelda(celda) {
+  const filas = filasPresentacionMaterializadaDesdeCelda(celda);
+  return enriquecerFilasPresentacionMarcas(celda, filas);
+}
+
+/**
  * Filas para UI por pisos: compuesto materializado o turno simple M/T/N.
  * @param {Record<string, unknown>|null|undefined} celda
  */

@@ -16,7 +16,12 @@ import {
   normalizeGdtId,
   parseCellKey,
 } from "../../../../shared/utils/grillaMesNodos/index.js";
-import { fetchParchesVisDesdeOpsOutbox, mergeParchesVisLista, parchesVisDesdeRespuestaBatch } from "./grillaMesNodosBatchParches.js";
+import {
+  fetchParchesVisDesdeOpsOutbox,
+  fetchParchesVisDesdeReferencias,
+  mergeParchesVisLista,
+  parchesVisDesdeRespuestaBatch,
+} from "./grillaMesNodosBatchParches.js";
 import { callObtenerVistaGrillaMesAgente } from "../../services/callables.js";
 
 /** @typedef {ReturnType<typeof createGrillaMesNodoStore>} GrillaMesNodoStore */
@@ -41,6 +46,16 @@ const GrillaMesNodosContext = createContext(null);
  *   confirmarBatchTrasExito: (
  *     opsAplicadas: Array<Record<string, unknown>>,
  *     batchResult?: Record<string, unknown> | null,
+ *   ) => Promise<
+ *     Array<{
+ *       persona_id: string;
+ *       fecha_ymd: string;
+ *       gdt: string;
+ *       celda: Record<string, unknown>;
+ *     }>
+ *   >;
+ *   aplicarParchesVisEnGrilla: (
+ *     refs: Array<{ gdt?: string; grupo_trabajo_id?: string; persona_id?: string; fecha_ymd?: string; fecha?: string }>,
  *   ) => Promise<
  *     Array<{
  *       persona_id: string;
@@ -164,6 +179,34 @@ export function useGrillaMesNodos({
     [store],
   );
 
+  const aplicarParchesVisEnGrilla = useCallback(
+    async (refs) => {
+      const list = Array.isArray(refs) ? refs : [];
+      if (!list.length) return [];
+      let parches = [];
+      try {
+        parches = await fetchParchesVisDesdeReferencias(list, callObtenerVistaGrillaMesAgente);
+      } catch {
+        parches = [];
+      }
+      if (parches.length) {
+        store.confirmarBatch(
+          [],
+          parches.map((p) => ({
+            persona_id: p.persona_id,
+            fecha_ymd: p.fecha_ymd,
+            gdt: p.gdt,
+            celda: p.celda,
+          })),
+        );
+        snapshotCacheRef.current.clear();
+        setBumpEpoch((n) => n + 1);
+      }
+      return parches;
+    },
+    [store],
+  );
+
   const confirmarBatchTrasExito = useCallback(
     async (opsAplicadas, batchResult) => {
       const list = Array.isArray(opsAplicadas) ? opsAplicadas : [];
@@ -211,9 +254,18 @@ export function useGrillaMesNodos({
         subscribeCell,
         confirmarBatch,
         confirmarBatchTrasExito,
+        aplicarParchesVisEnGrilla,
         bumpEpoch,
       }),
-    [store, getCellRenderSnapshot, subscribeCell, confirmarBatch, confirmarBatchTrasExito, bumpEpoch],
+    [
+      store,
+      getCellRenderSnapshot,
+      subscribeCell,
+      confirmarBatch,
+      confirmarBatchTrasExito,
+      aplicarParchesVisEnGrilla,
+      bumpEpoch,
+    ],
   );
 
   return api;

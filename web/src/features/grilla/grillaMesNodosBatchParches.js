@@ -1,40 +1,58 @@
 import { paresCeldaDesdeOp } from "../../../../shared/utils/grillaMesNodos/index.js";
+import { mergeCeldaVisParche } from "../../../../shared/utils/grillaMesNodos/mergeCeldaVisParche.js";
 
 /**
  * Agrupa pares celda para mínimas llamadas `obtenerVistaGrillaMesAgente` (una por persona × mes × gdt).
  * @param {Array<Record<string, unknown>>} ops
  */
 export function agruparFetchVistaDesdeOps(ops) {
-  /** @type {Map<string, { gdt: string; persona_id: string; anio: number; mes: number; fechas: Set<string> }>} */
-  const map = new Map();
+  /** @type {Array<{ gdt?: string; persona_id?: string; fecha_ymd?: string; fecha?: string }>} */
+  const refs = [];
   for (const op of ops || []) {
     for (const par of paresCeldaDesdeOp(op)) {
-      const [yyyy, mm] = String(par.fecha_ymd || "").split("-");
-      const anio = Number(yyyy);
-      const mes = Number(mm);
-      if (!par.gdt || !par.persona_id || !Number.isFinite(anio) || !Number.isFinite(mes)) continue;
-      const key = `${par.gdt}|${par.persona_id}|${anio}|${mes}`;
-      let row = map.get(key);
-      if (!row) {
-        row = { gdt: par.gdt, persona_id: par.persona_id, anio, mes, fechas: new Set() };
-        map.set(key, row);
-      }
-      row.fechas.add(par.fecha_ymd);
+      refs.push({
+        gdt: par.gdt,
+        persona_id: par.persona_id,
+        fecha_ymd: par.fecha_ymd,
+      });
     }
+  }
+  return agruparFetchVistaDesdeReferencias(refs);
+}
+
+/**
+ * Agrupa referencias explícitas persona × fecha × gdt para fetch mínimo de vis.
+ * @param {Array<{ gdt?: string; grupo_trabajo_id?: string; persona_id?: string; fecha_ymd?: string; fecha?: string }>} refs
+ */
+export function agruparFetchVistaDesdeReferencias(refs) {
+  /** @type {Map<string, { gdt: string; persona_id: string; anio: number; mes: number; fechas: Set<string> }>} */
+  const map = new Map();
+  for (const ref of refs || []) {
+    const persona_id = String(ref.persona_id || "").trim();
+    const gdt = String(ref.gdt || ref.grupo_trabajo_id || "").trim();
+    const fechaYmd = String(ref.fecha_ymd || ref.fecha || "").trim().slice(0, 10);
+    const [yyyy, mm] = fechaYmd.split("-");
+    const anio = Number(yyyy);
+    const mes = Number(mm);
+    if (!gdt || !persona_id || !Number.isFinite(anio) || !Number.isFinite(mes)) continue;
+    const key = `${gdt}|${persona_id}|${anio}|${mes}`;
+    let row = map.get(key);
+    if (!row) {
+      row = { gdt, persona_id, anio, mes, fechas: new Set() };
+      map.set(key, row);
+    }
+    row.fechas.add(fechaYmd);
   }
   return [...map.values()];
 }
 
 /**
+ * @param {Array<{ gdt: string; persona_id: string; anio: number; mes: number; fechas: Set<string> }>} grupos
  * @param {import("../../services/callables.js").callObtenerVistaGrillaMesAgente} fetchVista
- * @param {Array<Record<string, unknown>>} ops — outbox aplicado
- * @returns {Promise<Array<{ persona_id: string; fecha_ymd: string; gdt: string; celda: Record<string, unknown> }>>}
  */
-export async function fetchParchesVisDesdeOpsOutbox(ops, fetchVista) {
-  const grupos = agruparFetchVistaDesdeOps(ops);
+async function fetchParchesVisDesdeGrupos(grupos, fetchVista) {
   /** @type {Array<{ persona_id: string; fecha_ymd: string; gdt: string; celda: Record<string, unknown> }>} */
   const parches = [];
-
   for (const g of grupos) {
     const res = await fetchVista({
       persona_id: g.persona_id,
@@ -56,8 +74,25 @@ export async function fetchParchesVisDesdeOpsOutbox(ops, fetchVista) {
       });
     }
   }
-
   return parches;
+}
+
+/**
+ * @param {import("../../services/callables.js").callObtenerVistaGrillaMesAgente} fetchVista
+ * @param {Array<Record<string, unknown>>} ops — outbox aplicado
+ * @returns {Promise<Array<{ persona_id: string; fecha_ymd: string; gdt: string; celda: Record<string, unknown> }>>}
+ */
+export async function fetchParchesVisDesdeOpsOutbox(ops, fetchVista) {
+  return fetchParchesVisDesdeGrupos(agruparFetchVistaDesdeOps(ops), fetchVista);
+}
+
+/**
+ * Fetch puntual de celdas vis tras fichada / capa teoría (Fase C — sin reload del mes).
+ * @param {Array<{ gdt?: string; grupo_trabajo_id?: string; persona_id?: string; fecha_ymd?: string; fecha?: string }>} refs
+ * @param {import("../../services/callables.js").callObtenerVistaGrillaMesAgente} fetchVista
+ */
+export async function fetchParchesVisDesdeReferencias(refs, fetchVista) {
+  return fetchParchesVisDesdeGrupos(agruparFetchVistaDesdeReferencias(refs), fetchVista);
 }
 
 /**
@@ -102,7 +137,9 @@ export function patchFilasGrillaDesdeParchesVis(filas, parches) {
     if (!diasPatch?.size) return fila;
     const dias = fila?.dias && typeof fila.dias === "object" ? { ...fila.dias } : {};
     for (const [dk, celda] of diasPatch) {
-      if (celda && typeof celda === "object") dias[dk] = { ...celda };
+      if (celda && typeof celda === "object") {
+        dias[dk] = mergeCeldaVisParche(dias[dk], celda);
+      }
     }
     return { ...fila, dias };
   });

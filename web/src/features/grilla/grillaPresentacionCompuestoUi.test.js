@@ -6,6 +6,7 @@ import {
   copyFichadaOperativaPiso,
   esMatrizPresentacionCompuesta,
   filasPresentacionOperativaDesdeCelda,
+  filasPresentacionGrillaDesdeCelda,
   marcasHhmmPorTramoDesdeCelda,
   etiquetaFichadaPisoCelda,
   filaGrillaTieneTurnoCompuesto,
@@ -344,6 +345,33 @@ describe("grillaPresentacionCompuestoUi", () => {
     expect(n?.marcas_hm).toEqual(["5:35"]);
     expect(textoMarcasPisoCelda(m)).toBe("6:38");
     expect(textoMarcasPisoCelda(n)).toBe("5:35");
+  });
+
+  it("filasPresentacionGrillaDesdeCelda enriquece marcas sin reconciliar analítica (CHAPARRO d13)", () => {
+    const celda = {
+      fichadas_reales: [
+        {
+          ingreso: "06:38",
+          egreso: "05:35",
+          fecha_ymd: "2026-06-13",
+          fecha_egreso_ymd: "2026-06-14",
+        },
+      ],
+      presentacion_compuesto: {
+        filas: [
+          { segmento_id: "M", orden: 0, estado_tramo: "parcial", fichada_label: "06:38-05:35", badge_label: "▼ 38m" },
+          { segmento_id: "T", orden: 1, estado_tramo: "presente", fichada_label: null },
+          { segmento_id: "N", orden: 2, estado_tramo: "presente", fichada_label: "22:00-05:35" },
+        ],
+      },
+    };
+    const filas = filasPresentacionGrillaDesdeCelda(celda);
+    const m = filas.find((f) => f.segmento_id === "M");
+    const n = filas.find((f) => f.segmento_id === "N");
+    expect(m?.marcas_hm).toEqual(["6:38"]);
+    expect(n?.marcas_hm).toEqual(["5:35"]);
+    expect(textoMarcasPisoCelda(n)).toBe("5:35");
+    expect(n?.estado_tramo).toBe("presente");
   });
 
   it("M+T CAMPOS d8: tardanza y salida en M, T ausente", () => {

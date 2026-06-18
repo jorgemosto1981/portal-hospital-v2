@@ -32,7 +32,7 @@ import {
 import {
   esMatrizPresentacionCompuesta,
   esPresentacionPorPisos,
-  filasPresentacionMaterializadaDesdeCelda,
+  filasPresentacionGrillaDesdeCelda,
   lineasDesdePresentacionCompuesto,
   CLASE_CHIP_IMPORTANTE_COMPUESTO,
   CLASE_CHIP_ANCHO_FICHADA,
@@ -50,11 +50,8 @@ import {
   useGrillaMesCeldaSnapshot,
   useGrillaMesNodosContext,
 } from "./useGrillaMesNodos.js";
+import { mergeCeldaNodoConFallback } from "./grillaDiaCeldaMerge.js";
 
-/**
- * @param {import("./GrillaDiaCelda.jsx").GrillaDiaCeldaViewProps} prev
- * @param {import("./GrillaDiaCelda.jsx").GrillaDiaCeldaViewProps} next
- */
 export function grillaDiaCeldaPropsAreEqual(prev, next) {
   if (prev.cellKey !== next.cellKey) return false;
   if (prev.revision !== next.revision) return false;
@@ -138,7 +135,7 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
   const tieneLicencia = Boolean(licenciaCod);
   const esFuturoGris = celdaEsDiaFuturoInstitucional(fechaYmd);
 
-  const filasPresentacion = filasPresentacionMaterializadaDesdeCelda(cell);
+  const filasPresentacion = filasPresentacionGrillaDesdeCelda(cell);
   const matrizPresentacionCompuesta = esMatrizPresentacionCompuesta(filasPresentacion);
   const previewOutboxPendiente =
     Boolean(outboxVisual?.pending) && !outboxVisual?.mostrarResultadoFinal;
@@ -150,15 +147,15 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
     !usaPresentacionPisos && !previewOutboxPendiente
       ? textoHorarioFichadaRealDesdeCelda(cell)
       : "";
+  const filaTieneDatoFichada = (f) =>
+    (Array.isArray(f.marcas_hm) && f.marcas_hm.length > 0) ||
+    String(f.fichada_label || "").trim() ||
+    String(f.badge_label || "").trim();
   const mostrarFichadaReal =
     !previewOutboxPendiente &&
     !esFuturoGris &&
     (usaPresentacionPisos
-      ? filasPresentacion.some(
-          (f) =>
-            String(f.fichada_label || "").trim() ||
-            String(f.badge_label || "").trim(),
-        )
+      ? filasPresentacion.some(filaTieneDatoFichada)
       : Boolean(textoFichadaReal));
   const horarioCelda = mostrarFichadaReal ? textoFichadaReal : turnoText;
   const jornadaVis = celdaTieneJornadaVis(cell);
@@ -485,20 +482,12 @@ export default function GrillaDiaCelda({
   const fallback =
     cellFallback && typeof cellFallback === "object" ? cellFallback : {};
   const cell = nodosCtx
-    ? snap.outboxVisual?.mostrarResultadoFinal
-      ? fromStore && typeof fromStore === "object" && Object.keys(fromStore).length > 0
-        ? fromStore
-        : fallback
-      : snap.pending
-        ? { ...fallback, ...(fromStore && typeof fromStore === "object" ? fromStore : {}) }
-        : Object.keys(fallback).length > 0
-          ? {
-              ...(fromStore && typeof fromStore === "object" ? fromStore : {}),
-              ...fallback,
-            }
-          : fromStore && typeof fromStore === "object"
-            ? fromStore
-            : {}
+    ? mergeCeldaNodoConFallback({
+        fromStore,
+        fallback,
+        pending: snap.pending,
+        mostrarResultadoFinal: Boolean(snap.outboxVisual?.mostrarResultadoFinal),
+      })
     : fallback;
   const revision = nodosCtx ? snap.revision : 0;
   const outboxVisual = nodosCtx ? snap.outboxVisual : null;

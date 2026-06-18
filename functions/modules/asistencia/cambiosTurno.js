@@ -796,22 +796,39 @@ async function diasActualizadosDesdeParesRematerializacion(pares) {
 
 async function rematerializarBatchOps(items) {
   const visto = new Set();
-  /** @type {Array<{ personaId: string, fechaYmd: string, grupoId: string }>} */
-  const paresMaterializados = [];
+  /** @type {Array<{ personaId: string, fechaYmd: string, grupoId: string, item: object }>} */
+  const pares = [];
   for (const it of items) {
     for (const { personaId, fechaYmd, grupoId } of paresRematerializacionBatchItem(it)) {
       const k = `${personaId}|${fechaYmd}|${grupoId}`;
       if (visto.has(k)) continue;
       visto.add(k);
-      await materializarDiaAfectado({
-        override: it.override,
-        personaId,
-        fechaYmd,
-        grupoId,
-        logTag: "post_batch",
-      });
-      paresMaterializados.push({ personaId, fechaYmd, grupoId });
+      pares.push({ personaId, fechaYmd, grupoId, item: it });
     }
+  }
+  pares.sort((a, b) => {
+    for (const it of items) {
+      if (!esBatchItemCoberturaV2(it)) continue;
+      const kOrig = `${it.persona_origen_id}|${it.fecha}|${it.grupo_trabajo_id}`;
+      const kDest = `${it.persona_cobertura_id}|${it.fecha_destino}|${it.grupo_trabajo_id}`;
+      const ka = `${a.personaId}|${a.fechaYmd}|${a.grupoId}`;
+      const kb = `${b.personaId}|${b.fechaYmd}|${b.grupoId}`;
+      if (ka === kOrig && kb === kDest) return -1;
+      if (ka === kDest && kb === kOrig) return 1;
+    }
+    return 0;
+  });
+  /** @type {Array<{ personaId: string, fechaYmd: string, grupoId: string }>} */
+  const paresMaterializados = [];
+  for (const { personaId, fechaYmd, grupoId, item } of pares) {
+    await materializarDiaAfectado({
+      override: item.override,
+      personaId,
+      fechaYmd,
+      grupoId,
+      logTag: "post_batch",
+    });
+    paresMaterializados.push({ personaId, fechaYmd, grupoId });
   }
   return paresMaterializados;
 }

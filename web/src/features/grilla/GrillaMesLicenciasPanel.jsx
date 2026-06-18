@@ -22,14 +22,13 @@ import {
   aplicarCambioGrillaInmediato,
   toastErrorAplicarCambioGrilla,
 } from "./grillaAplicarCambioInmediato.js";
+import { esIntercambioGuardiaV2 } from "./grillaCoberturaParcialPreview.js";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
 import GrillaMesTitularCalendario from "./GrillaMesTitularCalendario.jsx";
 import { GRILLA_MES_MODO } from "./GrillaMesSelector.jsx";
 import GrillaMesSinDotacionAviso from "./GrillaMesSinDotacionAviso.jsx";
 import { GrillaMesNodosProvider, useGrillaMesNodos } from "./useGrillaMesNodos.js";
 import { useGrillaMesVista } from "./useGrillaMesVista.js";
-import { callObtenerVistaGrillaMesAgente } from "../../services/callables.js";
-import { diaMesKeyDesdeFechaYmd } from "../fichadas/cargaManual/fichadasCargaManualUtils.js";
 import { RX_GDT } from "./grillaGrupoUtils.js";
 import { formatearRangoTramoMes, diaFueraVigenciaTramo } from "./grillaMesFilasUtils.js";
 import { periodosVentanaJefe } from "../jefe/periodoJefe.js";
@@ -244,12 +243,24 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
   };
   const enrichOpGrilla = (op, grupoId) => {
     const gid = String(grupoId || op.grupoId || "").trim();
-    return {
+    const base = {
       ...op,
       grupoId: gid,
+      grupo_trabajo_id: gid,
       periodo: String(op.periodo || vista.periodo || "").trim(),
       grupoLabel: String(op.grupoLabel || labelGrupoParaOp(gid)).trim(),
     };
+    if (esIntercambioGuardiaV2(op)) {
+      return {
+        ...base,
+        schema_version: 2,
+        persona_origen_id: op.personaOrigenId,
+        persona_cobertura_id: op.personaDestinoId || op.personaCoberturaId,
+        fecha: op.fechaOrigenYmd,
+        fecha_destino: op.fechaDestinoYmd,
+      };
+    }
+    return base;
   };
   const periodoGso = useMemo(
     () => periodoGsoDesdeVista({
@@ -405,46 +416,53 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
     enabled: Boolean(vistaModal && gdtGrillaModal && periodoGrillaModal),
   });
 
-  const onFichadaGuardadaEnModal = useCallback(async () => {
-    const snap = diaModal;
-    const gdt = String(snap?.grupoTrabajoId || gdtGrillaModal || "").trim();
-    const periodoInv = vistaModal?.periodo || periodoGrillaModal;
-    if (/^gdt_/i.test(gdt) && periodoInv) {
+  const syncDiaModalDesdeParches = useCallback((parches) => {
+    if (!Array.isArray(parches) || !parches.length) return;
+    setDiaModal((prev) => {
+      if (!prev?.personaId || !prev?.fechaYmd) return prev;
+      const hit = parches.find(
+        (p) => p.persona_id === prev.personaId && p.fecha_ymd === prev.fechaYmd,
+      );
+      if (!hit?.celda) return prev;
+      return { ...prev, celdaVis: hit.celda };
+    });
+  }, []);
+
+  /** Fase C: parche puntual en store + filas, sin `vista.cargar` del mes completo. */
+  const parchearCeldasTrasMutacion = useCallback(
+    async (refs, opts = {}) => {
+      const list = (Array.isArray(refs) ? refs : []).filter(
+        (r) => r?.persona_id && r?.fecha_ymd && (r?.gdt || r?.grupo_trabajo_id),
+      );
+      if (!list.length) return [];
+      const periodoInv = opts.periodo || vistaModal?.periodo || periodoGrillaModal;
+      const gdtInv = String(list[0]?.gdt || list[0]?.grupo_trabajo_id || gdtGrillaModal || "").trim();
       invalidarCacheGrillaTrasMutacion({
         ops: [],
         periodo: periodoInv,
-        gdtActivo: gdt,
+        gdtActivo: gdtInv,
         grupoIdVista: vistaModal?.grupoId || vista.grupoId,
       });
-    }
-    await vista.cargar({
-      bypassCache: true,
-      periodo: vistaModal?.periodo,
-      modo: vistaModal?.modo,
-      grupoId: vistaModal?.grupoId ?? gdt,
-    });
-    if (!snap?.personaId || !snap?.fechaYmd) return;
-    if (!/^gdt_/i.test(gdt)) return;
-    try {
-      const [y, m] = snap.fechaYmd.split("-").map(Number);
-      const dk = diaMesKeyDesdeFechaYmd(snap.fechaYmd);
-      const res = await callObtenerVistaGrillaMesAgente({
-        persona_id: snap.personaId,
-        grupo_trabajo_id: gdt,
-        anio: y,
-        mes: m,
-        dia_key: dk,
-      });
-      const dias = res.data?.dias && typeof res.data.dias === "object" ? res.data.dias : {};
-      const celdaVis = (dk && dias[dk]) || snap.celdaVis;
-      setDiaModal((prev) => {
-        if (!prev || prev.personaId !== snap.personaId || prev.fechaYmd !== snap.fechaYmd) return prev;
-        return { ...prev, celdaVis };
-      });
-    } catch {
-      /* la grilla ya se recargó; el modal conserva el snapshot anterior */
-    }
-  }, [diaModal, vista, gdtGrillaModal, vistaModal, periodoGrillaModal]);
+      const parches = await grillaMesNodos.aplicarParchesVisEnGrilla(list);
+      if (parches.length) {
+        flushSync(() => {
+          vista.patchFilasDesdeParchesVis(parches);
+        });
+      }
+      return parches;
+    },
+    [grillaMesNodos, vista, gdtGrillaModal, vistaModal, periodoGrillaModal],
+  );
+
+  const onFichadaGuardadaEnModal = useCallback(async () => {
+    const snap = diaModal;
+    const gdt = String(snap?.grupoTrabajoId || gdtGrillaModal || "").trim();
+    if (!snap?.personaId || !snap?.fechaYmd || !/^gdt_/i.test(gdt)) return;
+    const parches = await parchearCeldasTrasMutacion([
+      { persona_id: snap.personaId, fecha_ymd: snap.fechaYmd, gdt },
+    ]);
+    syncDiaModalDesdeParches(parches);
+  }, [diaModal, parchearCeldasTrasMutacion, gdtGrillaModal, syncDiaModalDesdeParches]);
 
   const onMaterializacionSanadaEnModal = onFichadaGuardadaEnModal;
 
@@ -478,19 +496,13 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         flushSync(() => {
           vista.patchFilasDesdeParchesVis(parches);
         });
+        syncDiaModalDesdeParches(parches);
         toast.success("Cambio aplicado.");
         invalidarCacheGrillaTrasMutacion({
           ops: [enriched],
           periodo: vista.periodo,
           gdtActivo: gdtGrillaModal,
           grupoIdVista: vista.grupoId,
-        });
-        await vista.cargar({
-          bypassCache: true,
-          background: true,
-          periodo: vistaModal?.periodo ?? vista.periodo,
-          modo: vistaModal?.modo ?? vista.modo,
-          grupoId: vistaModal?.grupoId ?? gdtGrillaModal,
         });
       } catch (e) {
         toastErrorAplicarCambioGrilla(e, {
@@ -518,6 +530,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
       vistaModal?.periodo,
       vistaModal?.modo,
       vistaModal?.grupoId,
+      syncDiaModalDesdeParches,
     ],
   );
 
@@ -1111,7 +1124,16 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
           requiereUrgenciaG1={gestionTurnoShell.requiereUrgenciaG1 === true}
           soloLectura={!vista.gsoPermiteEscritura}
           soloLecturaMensaje={vista.gsoSoloLecturaMensaje}
-          onCapaActualizada={() => void vista.cargar()}
+          onCapaActualizada={async () => {
+            const ctx = gestionTurnoShell;
+            if (!ctx?.personaId || !ctx?.fechaYmd) return;
+            const gdt = String(ctx.grupoTrabajoId || gdtGrillaModal || "").trim();
+            if (!/^gdt_/i.test(gdt)) return;
+            const parches = await parchearCeldasTrasMutacion([
+              { persona_id: ctx.personaId, fecha_ymd: ctx.fechaYmd, gdt },
+            ]);
+            syncDiaModalDesdeParches(parches);
+          }}
           onAbrirAyuda={() => {
             window.dispatchEvent(new CustomEvent("portal-help-open", {
               detail: { termino: "Gestionar turno del día (A/B/C)" },

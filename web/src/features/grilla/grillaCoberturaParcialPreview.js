@@ -1,4 +1,7 @@
-import { parseFichadasEsperadasCelda } from "./grillaFichadasEsperadasDisplay.js";
+import {
+  fichadasEsperadasDesdeCapaTeorica,
+} from "./grillaFichadasEsperadasDisplay.js";
+import { filtrarSegmentosActivosTitular } from "./enrichCapaTeoricaLabels.js";
 import {
   etiquetaSegmentosCompuesto,
   horasDeSegmento,
@@ -25,11 +28,41 @@ export function horasTotalesSegmentos(ids, turnosPorId = {}, segmentosCapa = [])
 }
 
 /**
+ * Preview día para intercambio: solo tramos que el titular aún ejecuta (excluye cedidos).
+ * @param {unknown} capa
+ * @param {Array<Record<string, unknown>>} ops
+ * @param {string} personaId
+ * @param {string} fechaYmd
+ * @param {Record<string, object>} [turnosPorId]
+ */
+export function previewIntercambioGuardia(capa, ops, personaId, fechaYmd, turnosPorId = {}) {
+  const base = proyectarDiaConOpsPendientes(capa, ops, personaId, fechaYmd, turnosPorId);
+  const segsCapa = Array.isArray(capa?.segmentos) ? capa.segmentos : base.segmentosCapa;
+  const ejecutables = filtrarSegmentosActivosTitular(segsCapa, personaId);
+  const idsEj = new Set(ejecutables.map((s) => String(s.segmento_id || "")));
+  const ids = base.segmentoIds.filter((id) => idsEj.has(String(id)));
+  const segmentosCapa = ejecutables.filter((s) => ids.includes(String(s.segmento_id || "")));
+  const horas = ids.reduce(
+    (sum, id) => sum + horasDeSegmento(id, turnosPorId, segmentosCapa),
+    0,
+  );
+  return {
+    ...base,
+    segmentoIds: ids,
+    segmentosCapa,
+    horas,
+    etiqueta: etiquetaSegmentosCompuesto(ids, turnosPorId),
+    sinTramosPropios: segsCapa.length > 0 && ejecutables.length === 0,
+  };
+}
+
+/**
  * A1 / A1b — día laborable materializado con fichada esperada (capa API).
  * @param {unknown} capa
- * @param {{ segmentoIds?: string[] }} [preview]
+ * @param {{ segmentoIds?: string[]; segmentosCapa?: Array<Record<string, unknown>> }|null} [preview]
+ * @param {string} [personaId]
  */
-export function capaElegibleIntercambioGuardia(capa, preview = null) {
+export function capaElegibleIntercambioGuardia(capa, preview = null, personaId = "") {
   if (!capa || typeof capa !== "object") {
     return { ok: false, error: "Sin turno materializado en este día." };
   }
@@ -38,16 +71,24 @@ export function capaElegibleIntercambioGuardia(capa, preview = null) {
     return { ok: false, error: "Franco o no laborable: no aplica intercambio de guardia." };
   }
   const idsPreview = preview?.segmentoIds;
-  const ids = Array.isArray(idsPreview) && idsPreview.length
+  const ids = Array.isArray(idsPreview)
     ? idsPreview
     : segmentoIdsDesdeCapa(capa);
+  const segsCapa = Array.isArray(capa?.segmentos) ? capa.segmentos : [];
   if (!ids.length) {
+    if (preview?.sinTramosPropios || (personaId && segsCapa.length > 0
+      && filtrarSegmentosActivosTitular(segsCapa, personaId).length === 0)) {
+      return {
+        ok: false,
+        error: "No tenés tramos propios este día; los tramos figuran cedidos a otro agente.",
+      };
+    }
     const msg = preview?.tienePreviewPendiente
       ? "Sin tramos disponibles tras borradores pendientes en este día."
       : "Sin segmentos materializados. Calculá el día antes de intercambiar.";
     return { ok: false, error: msg };
   }
-  const fichadas = parseFichadasEsperadasCelda(capa.fichadas_esperadas);
+  const fichadas = fichadasEsperadasDesdeCapaTeorica(capa, { preview, personaId });
   if (fichadas == null || fichadas < 1) {
     return {
       ok: false,
@@ -301,14 +342,14 @@ export function validarIntercambioGuardia(params) {
   const reg = validarMismoRegimenHorario(regimenHorarioIdOrigen, regimenHorarioIdDestino, regimenesIdx);
   if (!reg.ok) return reg;
 
-  const previewA = proyectarDiaConOpsPendientes(
+  const previewA = previewIntercambioGuardia(
     capaOrigen,
     ops,
     perA,
     fA,
     turnosPorIdOrigen,
   );
-  const previewB = proyectarDiaConOpsPendientes(
+  const previewB = previewIntercambioGuardia(
     capaDestino,
     ops,
     perB,
@@ -316,9 +357,9 @@ export function validarIntercambioGuardia(params) {
     turnosPorIdDestino,
   );
 
-  const elegA = capaElegibleIntercambioGuardia(capaOrigen, previewA);
+  const elegA = capaElegibleIntercambioGuardia(capaOrigen, previewA, perA);
   if (!elegA.ok) return elegA;
-  const elegB = capaElegibleIntercambioGuardia(capaDestino, previewB);
+  const elegB = capaElegibleIntercambioGuardia(capaDestino, previewB, perB);
   if (!elegB.ok) return { ...elegB, error: `Agente 2: ${elegB.error}` };
 
   const noop = validarAntiNoopIntercambio(

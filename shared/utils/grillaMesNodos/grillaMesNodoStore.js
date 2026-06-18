@@ -6,6 +6,7 @@ import {
   parseCellKey,
 } from "./grillaMesNodoKeys.js";
 import { nodosAfectadosPorOp, nodosAfectadosPorOps, paresCeldaDesdeOp } from "./grillaMesNodoImpacto.js";
+import { mergeCeldaVisParche } from "./mergeCeldaVisParche.js";
 
 /**
  * @typedef {Record<string, unknown>} CeldaVisSnapshot
@@ -253,7 +254,8 @@ export function createGrillaMesNodoStore(options = {}) {
       const g = normalizeGdtId(patch.gdt || patch.grupo_trabajo_id || gdt);
       if (!pid || !fy || !g || !patch.celda) continue;
       const key = buildCellKey({ gdt: g, persona_id: pid, fecha_ymd: fy });
-      base.set(key, { ...patch.celda });
+      const prev = base.get(key);
+      base.set(key, mergeCeldaVisParche(prev, patch.celda));
       if (!revision.has(key)) revision.set(key, 0);
       bumpRevision(key, delta);
     }

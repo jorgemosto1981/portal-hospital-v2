@@ -22,3 +22,5 @@ export {
   createGrillaMesNodoStore,
   iterCeldasDesdeVistaListado,
 } from "./grillaMesNodoStore.js";
+
+export { mergeCeldaVisParche } from "./mergeCeldaVisParche.js";

@@ -675,6 +675,153 @@ async function segmentosTeoricosBaseEnFecha({
   return segmentos;
 }
 
+/**
+ * Segmentos del día tras plan + reemplazos/traslados/adicionales, sin coberturas parciales.
+ * Usado en intercambio v2 para tomar tramos del par (p. ej. M por traslado d16→d17).
+ * @param {{ personaId: string, fechaYmd: string, grupoId: string, indiceCalendario?: object, base?: object, activos?: object[] }} params
+ */
+async function buildSegmentosPreCoberturaEnDia({
+  personaId,
+  fechaYmd,
+  grupoId,
+  indiceCalendario: indiceArg,
+  base: baseArg,
+  activos: activosArg,
+}) {
+  const gdt = String(grupoId || "").trim();
+  const indiceCalendario = indiceArg || await getIndiceCalendario();
+  const base = baseArg || await resolverBaseDiaPersona({
+    personaId,
+    fechaYmd,
+    indiceCalendario,
+    grupoId: gdt,
+  });
+  if (!base) return [];
+
+  let activos = activosArg;
+  if (!activos) {
+    const asiDocId = buildAsiDocumentId(personaId, fechaYmd);
+    const asiSnap = asiDocId ? await db.collection(COL_ASISTENCIA).doc(asiDocId).get() : null;
+    const allOverrides = asiSnap?.exists && Array.isArray(asiSnap.data().overrides_turno)
+      ? asiSnap.data().overrides_turno
+      : [];
+    activos = filtrarOverridesActivosPorGrupo(allOverrides, gdt);
+  }
+
+  const reemplazos = activos.filter((o) => o.tipo === "reemplazo");
+  const { trasladoOrigenV2, trasladoDestinoV2, reemplazosClassic } = clasificarReemplazosParaMaterializacion(
+    reemplazos,
+    fechaYmd,
+  );
+  const adicionales = activos.filter((o) => o.tipo === "adicional");
+
+  let turnoCompuestoId = base.mejorResolucion.turno_teorico?.turno_id || base.capaBase.turno_compuesto_id || null;
+  let tipoDiaFinal = base.capaBase.tipo_dia || base.mejorResolucion.tipo_dia;
+  if (reemplazosClassic.length > 0) {
+    const ultimo = reemplazosClassic[reemplazosClassic.length - 1];
+    turnoCompuestoId = ultimo.turno_id || turnoCompuestoId;
+    tipoDiaFinal = ultimo.tipo_dia || "laborable";
+  }
+  const francoTrasladoOrigen = trasladoOrigenV2.some((o) => origenTrasladoDejaFrancoEnEsteDia(o, fechaYmd));
+  if (francoTrasladoOrigen) {
+    turnoCompuestoId = null;
+    tipoDiaFinal = "franco";
+  }
+
+  let segmentos = [];
+  const segmentosBasePlan = Array.isArray(base.capaBase?.segmentos) ? base.capaBase.segmentos : [];
+  const puedeCopiarSegmentosPlan = segmentosBasePlan.length > 0
+    && !esDiaSinTurnoLaboral(tipoDiaFinal)
+    && !francoTrasladoOrigen;
+
+  if (puedeCopiarSegmentosPlan) {
+    segmentos = segmentosBasePlan.map((s) => ({ ...s }));
+  } else if (!esDiaSinTurnoLaboral(tipoDiaFinal)) {
+    if (turnoCompuestoId) {
+      const capaPre = buildCapaTeoricaSegmentada({
+        fechaYmd,
+        personaId,
+        regimen: base.regimenDoc,
+        tipo_dia: tipoDiaFinal,
+        turnoCompuestoId,
+        origen_segmento: reemplazos.length > 0 ? "override_cobertura" : "plan_base",
+        indiceCalendario,
+      });
+      segmentos = capaPre.segmentos || [];
+      if (!segmentos.length) {
+        const turnoFallback = reemplazos.length > 0
+          ? buildTurnoResponse(reemplazos[reemplazos.length - 1].turno || reemplazos[reemplazos.length - 1])
+          : base.mejorResolucion.turno_teorico;
+        segmentos = buildSegmentosHorarioFallback({
+          fechaYmd,
+          personaId,
+          turno: turnoFallback,
+          origenSegmento: reemplazos.length > 0 ? "override_cobertura" : "plan_base",
+        });
+      }
+    } else {
+      const turnoFallback = reemplazos.length > 0
+        ? buildTurnoResponse(reemplazos[reemplazos.length - 1].turno || reemplazos[reemplazos.length - 1])
+        : base.mejorResolucion.turno_teorico;
+      segmentos = buildSegmentosHorarioFallback({
+        fechaYmd,
+        personaId,
+        turno: turnoFallback,
+        origenSegmento: reemplazos.length > 0 ? "override_cobertura" : "plan_base",
+      });
+    }
+  }
+
+  if (trasladoOrigenV2.length > 0 && !francoTrasladoOrigen && segmentos.length > 0) {
+    segmentos = aplicarQuitaSegmentosTrasladoOrigen(segmentos, trasladoOrigenV2, base.regimenDoc);
+  }
+  if (francoTrasladoOrigen) {
+    segmentos = [];
+  }
+
+  for (const adicional of adicionales) {
+    if (!adicional.turno_id) continue;
+    const capaAdd = buildCapaTeoricaSegmentada({
+      fechaYmd,
+      personaId,
+      regimen: base.regimenDoc,
+      tipo_dia: "laborable",
+      turnoCompuestoId: adicional.turno_id,
+      origen_segmento: "override_cobertura",
+      indiceCalendario,
+    });
+    for (const seg of capaAdd.segmentos || []) {
+      upsertSegmento(segmentos, seg);
+    }
+  }
+
+  if (!francoTrasladoOrigen) {
+    for (const td of trasladoDestinoV2) {
+      const ids = Array.isArray(td.segmentos_incorporados_destino)
+        ? td.segmentos_incorporados_destino
+        : (td.turno_id ? [td.turno_id] : []);
+      for (const tid of ids) {
+        const turnoId = String(tid || "").trim();
+        if (!turnoId) continue;
+        const capaAdd = buildCapaTeoricaSegmentada({
+          fechaYmd,
+          personaId,
+          regimen: base.regimenDoc,
+          tipo_dia: "laborable",
+          turnoCompuestoId: turnoId,
+          origen_segmento: "override_cobertura",
+          indiceCalendario,
+        });
+        for (const seg of capaAdd.segmentos || []) {
+          upsertSegmento(segmentos, seg);
+        }
+      }
+    }
+  }
+
+  return segmentos.map((s) => ({ ...s }));
+}
+
 async function aplicarCoberturaParcialV2EnDia({
   personaId,
   fechaYmd,
@@ -698,11 +845,11 @@ async function aplicarCoberturaParcialV2EnDia({
       seg.origen_segmento = "override_cobertura";
       seg.tipo_compensacion_id = tcc;
     }
-    const peerSegs = await segmentosTeoricosBaseEnFecha({
+    const peerSegs = await buildSegmentosPreCoberturaEnDia({
       personaId: ov.persona_cobertura_id,
       fechaYmd: fd,
-      indiceCalendario,
       grupoId,
+      indiceCalendario,
     });
     for (const seg of peerSegs) {
       if (!segsDest.includes(seg.segmento_id)) continue;
@@ -724,11 +871,11 @@ async function aplicarCoberturaParcialV2EnDia({
       seg.origen_segmento = "override_cobertura";
       seg.tipo_compensacion_id = tcc;
     }
-    const peerSegs = await segmentosTeoricosBaseEnFecha({
+    const peerSegs = await buildSegmentosPreCoberturaEnDia({
       personaId: ov.persona_origen_id,
       fechaYmd: fo,
-      indiceCalendario,
       grupoId,
+      indiceCalendario,
     });
     for (const seg of peerSegs) {
       if (!segsOrig.includes(seg.segmento_id)) continue;

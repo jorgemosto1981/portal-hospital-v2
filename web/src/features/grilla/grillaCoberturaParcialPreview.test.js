@@ -9,6 +9,7 @@ import {
   validarSubsetSegmentosCedidos,
   buildIntercambioGuardiaOutboxOp,
   esIntercambioGuardiaV2,
+  previewIntercambioGuardia,
   regimenPermiteIntercambioGuardia,
   DEFAULT_TCC_CAMBIO_INTERNO,
 } from "./grillaCoberturaParcialPreview.js";
@@ -48,6 +49,41 @@ describe("grillaCoberturaParcialPreview", () => {
   it("rechaza capa franco para intercambio", () => {
     const r = capaElegibleIntercambioGuardia({ tipo_dia: "franco", segmentos: [] });
     assert.equal(r.ok, false);
+  });
+
+  it("infiere fichadas desde segmentos si falta fichadas_esperadas en capa", () => {
+    const r = capaElegibleIntercambioGuardia(
+      {
+        tipo_dia: "laborable",
+        segmentos: [{
+          segmento_id: "cfg_reg_turno_n",
+          ingreso_iso: "2026-06-17T22:00:00-03:00",
+          egreso_iso: "2026-06-18T06:00:00-03:00",
+        }],
+      },
+      { segmentoIds: ["cfg_reg_turno_n"] },
+      PER_A,
+    );
+    assert.equal(r.ok, true);
+    assert.equal(r.fichadas, 2);
+  });
+
+  it("rechaza día con tramos cedidos a otro agente", () => {
+    const capa = {
+      tipo_dia: "laborable",
+      fichadas_esperadas: 0,
+      segmentos: [{
+        segmento_id: "N",
+        persona_titular_id: PER_A,
+        persona_ejecutante_id: PER_B,
+        ingreso_iso: "2026-06-18T01:00:00.000Z",
+        egreso_iso: "2026-06-18T09:00:00.000Z",
+      }],
+    };
+    const preview = previewIntercambioGuardia(capa, [], PER_A, "2026-06-17", TURNOS);
+    const r = capaElegibleIntercambioGuardia(capa, preview, PER_A);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /cedidos a otro agente/);
   });
 
   it("empareja M de XX con T de YY (8 h)", () => {
