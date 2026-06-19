@@ -89,6 +89,19 @@ describe("horarioInstitucionalDisplay", () => {
     );
   });
 
+  it("M+T+N con rda_tiene_huecos obsoleto (M+N) usa sobre 06:00–06:00", () => {
+    assert.equal(
+      horarioOperativoDesdeCeldaVis({
+        rda_turno_id: "M+T+N",
+        rda_ingreso: "06:00",
+        rda_egreso: "06:00",
+        rda_horario_display: "06:00–14:00 · 22:00–06:00",
+        rda_tiene_huecos: true,
+      }),
+      "06:00–06:00",
+    );
+  });
+
   it("M+N discontinuo (tiene_huecos) muestra tramos", () => {
     assert.equal(
       horarioDisplayDesdeSegmentos({

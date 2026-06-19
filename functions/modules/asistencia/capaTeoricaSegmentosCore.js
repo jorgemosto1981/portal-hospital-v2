@@ -141,12 +141,20 @@ function buildSegmentosDesdeTurnoCompuesto({
   return segmentos;
 }
 
+/** @param {object[]} segmentos */
+function ordenarSegmentosPorIngreso(segmentos) {
+  return [...(segmentos || [])].sort((a, b) =>
+    String(a?.ingreso_iso || "").localeCompare(String(b?.ingreso_iso || "")),
+  );
+}
+
 /**
  * @param {object[]} segmentos
  * @returns {{ ingreso_teorico_final: string|null, egreso_teorico_final: string|null, horas_teoricas_totales: number, tiene_huecos: boolean, turno_compuesto_id: string|null }}
  */
 function computeResumenDesdeSegmentos(segmentos) {
-  if (!segmentos?.length) {
+  const ordered = ordenarSegmentosPorIngreso(segmentos);
+  if (!ordered.length) {
     return {
       ingreso_teorico_final: null,
       egreso_teorico_final: null,
@@ -155,24 +163,24 @@ function computeResumenDesdeSegmentos(segmentos) {
       turno_compuesto_id: null,
     };
   }
-  const ingresos = segmentos.map((s) => s.ingreso_iso).filter(Boolean);
-  const egresos = segmentos.map((s) => s.egreso_iso).filter(Boolean);
+  const ingresos = ordered.map((s) => s.ingreso_iso).filter(Boolean);
+  const egresos = ordered.map((s) => s.egreso_iso).filter(Boolean);
   let horas = 0;
-  for (const s of segmentos) {
+  for (const s of ordered) {
     const t0 = new Date(s.ingreso_iso).getTime();
     const t1 = new Date(s.egreso_iso).getTime();
     if (t1 > t0) horas += (t1 - t0) / 3600000;
   }
   let tieneHuecos = false;
-  for (let i = 1; i < segmentos.length; i++) {
-    const prevEnd = new Date(segmentos[i - 1].egreso_iso).getTime();
-    const curStart = new Date(segmentos[i].ingreso_iso).getTime();
+  for (let i = 1; i < ordered.length; i++) {
+    const prevEnd = new Date(ordered[i - 1].egreso_iso).getTime();
+    const curStart = new Date(ordered[i].ingreso_iso).getTime();
     if (curStart > prevEnd + 60000) {
       tieneHuecos = true;
       break;
     }
   }
-  const turno_compuesto_id = segmentos.map((s) => s.segmento_id).join("+");
+  const turno_compuesto_id = ordered.map((s) => s.segmento_id).join("+");
   return {
     ingreso_teorico_final: ingresos.length ? ingresos.sort()[0] : null,
     egreso_teorico_final: egresos.length ? egresos.sort().pop() : null,
@@ -210,6 +218,22 @@ function resolveClasificacionDiaCalendario(fechaYmd, indiceCalendario) {
     multiplicador_institucional: null,
     es_feriado: false,
   };
+}
+
+/**
+ * Tramos que el titular ejecuta en el día materializado (excluye cedidos a otro agente).
+ * Alineado con `filtrarSegmentosActivosTitular` en la grilla web.
+ * @param {object[]} segmentos
+ * @param {string} personaId
+ */
+function filtrarSegmentosMaterializadosOperativos(segmentos, personaId) {
+  const pid = String(personaId || "").trim();
+  if (!pid) return Array.isArray(segmentos) ? segmentos : [];
+  return (Array.isArray(segmentos) ? segmentos : []).filter((s) => {
+    const tit = String(s?.persona_titular_id || pid).trim();
+    const ej = String(s?.persona_ejecutante_id || pid).trim();
+    return tit === pid && ej === pid;
+  });
 }
 
 function contarBloquesContinuos({ segmentos, personaId }) {
@@ -268,8 +292,12 @@ function buildCapaTeoricaSegmentada({
       origen_segmento,
     });
   }
-  const resumen = computeResumenDesdeSegmentos(segmentos || []);
-  const primerSeg = segmentos?.[0];
+  if (segmentosOverride?.length) {
+    segmentos = filtrarSegmentosMaterializadosOperativos(segmentos, personaId);
+  }
+  segmentos = ordenarSegmentosPorIngreso(segmentos || []);
+  const resumen = computeResumenDesdeSegmentos(segmentos);
+  const primerSeg = segmentos[0];
   const expectativas = Array.isArray(expectativasFichadaExtra) ? expectativasFichadaExtra : [];
   const fichadasEsperadas = calcularFichadasEsperadas({
     segmentos: segmentos || [],
@@ -300,4 +328,5 @@ module.exports = {
   resolveClasificacionDiaCalendario,
   buildCapaTeoricaSegmentada,
   calcularFichadasEsperadas,
+  filtrarSegmentosMaterializadosOperativos,
 };

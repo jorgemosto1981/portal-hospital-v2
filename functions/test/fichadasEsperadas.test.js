@@ -59,6 +59,7 @@ describe("calcularFichadasEsperadas (T-08)", () => {
     });
     assert.equal(calcularFichadasEsperadas({ segmentos: capaB.segmentos, personaId: pid }), 4);
     assert.equal(capaB.fichadas_esperadas, 4);
+    assert.equal(capaB.turno_compuesto_id, "cfg_reg_turno_01_manana+cfg_reg_turno_03_noche");
   });
 
   it("suma expectativas salida momentánea sobre bloque partido", () => {

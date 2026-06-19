@@ -244,10 +244,12 @@ export function createGrillaMesNodoStore(options = {}) {
   /**
    * @param {string[]} opIds
    * @param {Array<{ persona_id?: string; fecha_ymd?: string; celda?: CeldaVisSnapshot; gdt?: string }>} [parchesVis]
+   * @param {{ reemplazoTeoriaCompleto?: boolean }} [opts]
    */
-  function confirmarBatch(opIds, parchesVis) {
+  function confirmarBatch(opIds, parchesVis, opts = {}) {
     const delta = new Set();
     const gdt = contexto?.gdt || "";
+    const reemplazoTeoriaCompleto = opts.reemplazoTeoriaCompleto === true;
     for (const patch of parchesVis || []) {
       const pid = normalizePersonaId(patch.persona_id);
       const fy = normalizeFechaYmd(patch.fecha_ymd);
@@ -255,7 +257,10 @@ export function createGrillaMesNodoStore(options = {}) {
       if (!pid || !fy || !g || !patch.celda) continue;
       const key = buildCellKey({ gdt: g, persona_id: pid, fecha_ymd: fy });
       const prev = base.get(key);
-      base.set(key, mergeCeldaVisParche(prev, patch.celda));
+      const nextCelda = reemplazoTeoriaCompleto
+        ? mergeCeldaVisParche(null, patch.celda)
+        : mergeCeldaVisParche(prev, patch.celda);
+      base.set(key, nextCelda);
       if (!revision.has(key)) revision.set(key, 0);
       bumpRevision(key, delta);
     }

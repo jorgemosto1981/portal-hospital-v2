@@ -120,12 +120,64 @@ export function horarioDisplayDesdeCapaTeorica(capa, ingresoEnvelope, egresoEnve
 }
 
 /**
+ * Compuestos sin discontinuidad en régimen internación (M→T→N encadenados).
+ * @param {string} turnoId
+ */
+function esCompuestoContinuoEstandar(turnoId) {
+  const t = String(turnoId || "").trim();
+  if (!t.includes("+")) return false;
+  if (t === "M+T" || t === "M+T+N" || t === "T+N") return true;
+  const parts = t.split("+").map((x) => x.trim()).filter(Boolean);
+  const cadena = ["M", "T", "N"];
+  let last = -1;
+  for (const p of parts) {
+    const idx = cadena.indexOf(p);
+    if (idx < 0) return false;
+    if (idx < last) return false;
+    last = idx;
+  }
+  return parts.length >= 2 && parts.includes("T");
+}
+
+/**
+ * @param {object[]} segmentos
+ */
+function segmentosTeoricosContinuos(segmentos) {
+  const seg = Array.isArray(segmentos) ? segmentos : [];
+  if (seg.length <= 1) return true;
+  const ordered = [...seg].sort((a, b) => {
+    const ai = String(a?.ingreso_iso || a?.ingreso || "");
+    const bi = String(b?.ingreso_iso || b?.ingreso || "");
+    return ai.localeCompare(bi);
+  });
+  for (let i = 1; i < ordered.length; i++) {
+    const prevEnd = new Date(ordered[i - 1].egreso_iso || ordered[i - 1].egreso).getTime();
+    const curStart = new Date(ordered[i].ingreso_iso || ordered[i].ingreso).getTime();
+    if (!Number.isFinite(prevEnd) || !Number.isFinite(curStart)) continue;
+    if (curStart > prevEnd + 60000) return false;
+  }
+  return true;
+}
+
+/**
  * @param {object|null|undefined} cell — celda vis_* o capa mínima para UI
  * @param {boolean} [compact]
  * @returns {string}
  */
 export function horarioOperativoDesdeCeldaVis(cell, compact = false) {
   if (!cell || typeof cell !== "object") return "";
+  const ingEnv = String(cell.rda_ingreso || cell.ingreso || "").trim();
+  const egrEnv = String(cell.rda_egreso || cell.egreso || "").trim();
+  const turnoId = String(cell.rda_turno_id || cell.turno_compuesto_id || "").trim();
+  const segs = cell.segmentos || cell.rda_segmentos;
+  const continuoPorSegs = Array.isArray(segs) && segs.length > 1
+    ? segmentosTeoricosContinuos(segs)
+    : null;
+  const continuoPorTurno = esCompuestoContinuoEstandar(turnoId);
+  if (ingEnv && egrEnv && (continuoPorSegs === true || (continuoPorSegs === null && continuoPorTurno))) {
+    return compact ? rangoHhmmLabel(ingEnv, egrEnv) : `${ingEnv}–${egrEnv}`;
+  }
+
   const tieneHuecos = cell.rda_tiene_huecos === true || cell.tiene_huecos === true;
 
   if (tieneHuecos) {

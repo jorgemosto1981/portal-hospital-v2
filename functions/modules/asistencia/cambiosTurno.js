@@ -26,6 +26,11 @@ const {
 const { assertGrillaGsoEscrituraEnFecha } = require("./grillaGsoSoloLectura");
 const { buildVisDocumentId } = require("../shared/mdcRdaDocumentIds");
 const { leerVistaGrillaMesAgente } = require("../shared/grillaMesAgenteCore");
+const { resolverCapaTeoricaGrupo } = require("../shared/capaTeoricaPorGrupoCore");
+const {
+  segmentoIdsEjecutablesTitular,
+  validarExclusividadTramosIntercambio,
+} = require("../shared/intercambioGuardiaExclusividad");
 const { obtenerCapaTeoricaDia } = require("./obtenerCapaTeoricaDia");
 const {
   CFG_TOV_COBERTURA_PARCIAL,
@@ -33,6 +38,12 @@ const {
   seedIds,
 } = require("../shared/cfgAsistenciaTurnosIds");
 const { logger } = require("firebase-functions/v2");
+const {
+  aplicarOverridesConSupersession,
+  paresMaterializacionDesdeOverrideRegistro,
+  esOverrideActivo,
+} = require("../shared/overridesTurnoSupersession");
+const { ejecutarCicloMicroEnPares } = require("../shared/cicloMicroCeldaAsistencia");
 
 const COL_ASISTENCIA = "asistencia_diaria";
 const COL_VIS = "vistas_grilla_mes_agente";
@@ -180,39 +191,13 @@ async function assertPeriodoEditable(personaId, fecha, grupoId, token) {
  */
 async function materializarDiaAfectado({ override, personaId, fechaYmd, grupoId, logTag = "post_override" }) {
   const gdt = requireGrupoTrabajoId(grupoId, "[OVR-031] grupo_trabajo_id (gdt_*) requerido para rematerializar.");
-  const personas = new Set([personaId]);
-  const ov = override && typeof override === "object" ? override : {};
-  if (ov.persona_origen_id) personas.add(String(ov.persona_origen_id));
-  if (ov.persona_cobertura_id) personas.add(String(ov.persona_cobertura_id));
-
-  for (const pid of personas) {
-    try {
-      const mat = await materializarTurnoTeoricoDiaWorker({ personaId: pid, grupoId: gdt, fechaYmd });
-      if (!mat?.ok) {
-        logger.warn(`materializarTurnoTeoricoDia_${logTag} SKIP`, {
-          personaId: pid, fecha: fechaYmd, grupoId: gdt, error: mat?.error,
-        });
-      } else {
-        logger.info(`materializarTurnoTeoricoDia_${logTag} OK`, {
-          personaId: pid, fecha: fechaYmd, grupoId: gdt, segmentos: mat.segmentos,
-        });
-      }
-      const rec = await recalcularAnaliticaValidacionFichadaTrasTeoria({
-        personaId: pid,
-        grupoId: gdt,
-        fechaYmd,
-      });
-      if (!rec?.ok) {
-        logger.warn(`recalcularAnaliticaValidacionFichadaTrasTeoria_${logTag}`, {
-          personaId: pid, fecha: fechaYmd, grupoId: gdt, motivo: rec?.motivo,
-        });
-      }
-    } catch (e) {
-      logger.error(`materializarTurnoTeoricoDia_${logTag} ERROR`, {
-        personaId: pid, fecha: fechaYmd, grupoId: gdt, error: String(e),
-      });
-    }
-  }
+  const pares = paresMaterializacionDesdeOverrideRegistro({
+    personaId,
+    fechaYmd,
+    grupoId: gdt,
+    override,
+  });
+  return ejecutarCicloMicroEnPares(pares, { logTag });
 }
 
 function payloadCoberturaDesdeOp(op) {
@@ -734,6 +719,104 @@ function visClosedByData(data) {
   return estado === CFG_EPL_LIQUIDADO_CERRADO;
 }
 
+function listarDiasYmdPeriodo(periodo) {
+  const p = String(periodo || "").trim();
+  const [y, m] = p.split("-").map(Number);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return [];
+  const mm = String(m).padStart(2, "0");
+  const last = new Date(y, m, 0).getDate();
+  /** @type {string[]} */
+  const out = [];
+  for (let d = 1; d <= last; d++) {
+    out.push(`${y}-${mm}-${String(d).padStart(2, "0")}`);
+  }
+  return out;
+}
+
+/**
+ * Días del mes con cobertura activa que involucran a agentes del nuevo intercambio (revocar huérfanos).
+ * Lectura por doc id (asi_per_YYYYMMDD) — sin índice compuesto en Firestore.
+ * @param {Array<Record<string, unknown>>} items
+ * @param {string} periodo YYYY-MM
+ * @returns {Promise<Set<string>>} claves `persona_id|fecha`
+ */
+async function expandAsiKeysCoberturasPreviasMes(items, periodo) {
+  const keys = new Set();
+  const pids = new Set();
+  let gdtFilter = "";
+  for (const it of items) {
+    if (!esBatchItemCoberturaV2(it)) continue;
+    pids.add(it.persona_origen_id);
+    pids.add(it.persona_cobertura_id);
+    gdtFilter = it.grupo_trabajo_id;
+  }
+  if (!pids.size || !periodo || !gdtFilter) return keys;
+  const dias = listarDiasYmdPeriodo(periodo);
+  for (const pid of pids) {
+    for (const fecha of dias) {
+      const snap = await db.collection(COL_ASISTENCIA).doc(docIdAsistencia(pid, fecha)).get();
+      if (!snap.exists) continue;
+      const overrides = Array.isArray(snap.get("overrides_turno")) ? snap.get("overrides_turno") : [];
+      const tiene = overrides.some((ov) => {
+        if (!esOverrideActivo(ov)) return false;
+        if (String(ov.grupo_de_trabajo_id || "").trim() !== gdtFilter) return false;
+        if (ov.tipo !== "cobertura_parcial") return false;
+        const po = String(ov.persona_origen_id || "").trim();
+        const pc = String(ov.persona_cobertura_id || "").trim();
+        return pids.has(po) || pids.has(pc);
+      });
+      if (tiene) keys.add(`${pid}|${fecha}`);
+    }
+  }
+  return keys;
+}
+
+function segmentosCapaDesdeAsiSnap(snap, gdt) {
+  if (!snap?.exists) return [];
+  const capa = resolverCapaTeoricaGrupo(snap.data(), gdt);
+  return Array.isArray(capa?.segmentos) ? capa.segmentos : [];
+}
+
+/**
+ * A-BATCH v2: rechaza swap si el receptor ya conserva el tramo que recibiría.
+ * @param {object} it
+ * @param {Map<string, import("firebase-admin/firestore").DocumentSnapshot>} asiMap
+ */
+function assertExclusividadIntercambioV2EnBatch(it, asiMap) {
+  const gdt = it.grupo_trabajo_id;
+  const ov = it.override && typeof it.override === "object" ? it.override : {};
+  const segsOrig = Array.isArray(ov.segmentos_cedidos_origen) ? ov.segmentos_cedidos_origen : [];
+  const segsDest = Array.isArray(ov.segmentos_cedidos_destino) ? ov.segmentos_cedidos_destino : [];
+  const capaSegsOrig = segmentosCapaDesdeAsiSnap(
+    asiMap.get(`${it.persona_origen_id}|${it.fecha}`),
+    gdt,
+  );
+  const capaSegsDest = segmentosCapaDesdeAsiSnap(
+    asiMap.get(`${it.persona_cobertura_id}|${it.fecha_destino}`),
+    gdt,
+  );
+  const idsA = segmentoIdsEjecutablesTitular(capaSegsOrig, it.persona_origen_id);
+  const idsB = segmentoIdsEjecutablesTitular(capaSegsDest, it.persona_cobertura_id);
+  const exclA = validarExclusividadTramosIntercambio({
+    idsEjecutables: idsA,
+    segmentosCedidos: segsOrig,
+    segmentosRecibidos: segsDest,
+    segmentosCapa: capaSegsOrig,
+    segmentosCapaPeer: capaSegsDest,
+    ladoLabel: "Agente 1",
+  });
+  if (!exclA.ok) err("invalid-argument", `[BATCH-A007] ${exclA.error}`);
+  const exclB = validarExclusividadTramosIntercambio({
+    idsEjecutables: idsB,
+    segmentosCedidos: segsDest,
+    segmentosRecibidos: segsOrig,
+    segmentosCapa: capaSegsDest,
+    segmentosCapaPeer: capaSegsOrig,
+    ladoLabel: "Agente 2",
+  });
+  if (!exclB.ok) err("invalid-argument", `[BATCH-A007] ${exclB.error}`);
+}
+
 function paresRematerializacionBatchItem(it) {
   if (esBatchItemCoberturaV2(it)) {
     return [
@@ -744,20 +827,17 @@ function paresRematerializacionBatchItem(it) {
   const pid = personaIdDocAsi(it);
   const gdt = it.grupo_trabajo_id;
   const ov = it.override && typeof it.override === "object" ? it.override : {};
-  const fo = String(ov.fecha_origen || "").trim();
-  const fd = String(ov.fecha_destino || it.fecha || "").trim();
-  const leg = String(ov.reemplazo_traslado_v2 || "").trim();
-  if (it.tipo === "reemplazo" && leg === "origen" && YMD.test(fo)) {
-    return [{ personaId: pid, fechaYmd: fo, grupoId: gdt }];
-  }
-  if (it.tipo === "reemplazo" && leg === "destino" && YMD.test(fd)) {
-    return [{ personaId: pid, fechaYmd: fd, grupoId: gdt }];
-  }
-  if (it.tipo === "reemplazo" && YMD.test(fo) && YMD.test(fd) && fo !== fd) {
-    return [
-      { personaId: pid, fechaYmd: fo, grupoId: gdt },
-      { personaId: pid, fechaYmd: fd, grupoId: gdt },
-    ];
+  const fo = String(ov.fecha_origen || ov.fecha_origen_ymd || "").trim().slice(0, 10);
+  const fd = String(ov.fecha_destino || it.fecha || "").trim().slice(0, 10);
+  if (it.tipo === "reemplazo") {
+    /** @type {Set<string>} */
+    const fechas = new Set();
+    if (YMD.test(fo)) fechas.add(fo);
+    if (YMD.test(fd)) fechas.add(fd);
+    if (!fechas.size && YMD.test(String(it.fecha || "").trim().slice(0, 10))) {
+      fechas.add(String(it.fecha).trim().slice(0, 10));
+    }
+    return [...fechas].map((fechaYmd) => ({ personaId: pid, fechaYmd, grupoId: gdt }));
   }
   return [{ personaId: pid, fechaYmd: it.fecha, grupoId: gdt }];
 }
@@ -794,7 +874,7 @@ async function diasActualizadosDesdeParesRematerializacion(pares) {
   return out;
 }
 
-async function rematerializarBatchOps(items) {
+async function rematerializarBatchOps(items, extraAsiKeys = []) {
   const visto = new Set();
   /** @type {Array<{ personaId: string, fechaYmd: string, grupoId: string, item: object }>} */
   const pares = [];
@@ -805,6 +885,16 @@ async function rematerializarBatchOps(items) {
       visto.add(k);
       pares.push({ personaId, fechaYmd, grupoId, item: it });
     }
+  }
+  const gdtFallback = String(items[0]?.grupo_trabajo_id || "").trim();
+  for (const asiKey of extraAsiKeys || []) {
+    const [personaId, fechaYmd] = String(asiKey || "").split("|");
+    const grupoId = gdtFallback;
+    if (!PER_ID.test(personaId) || !YMD.test(fechaYmd) || !GDT_ID.test(grupoId)) continue;
+    const k = `${personaId}|${fechaYmd}|${grupoId}`;
+    if (visto.has(k)) continue;
+    visto.add(k);
+    pares.push({ personaId, fechaYmd, grupoId, item: {} });
   }
   pares.sort((a, b) => {
     for (const it of items) {
@@ -818,18 +908,12 @@ async function rematerializarBatchOps(items) {
     }
     return 0;
   });
-  /** @type {Array<{ personaId: string, fechaYmd: string, grupoId: string }>} */
-  const paresMaterializados = [];
-  for (const { personaId, fechaYmd, grupoId, item } of pares) {
-    await materializarDiaAfectado({
-      override: item.override,
-      personaId,
-      fechaYmd,
-      grupoId,
-      logTag: "post_batch",
-    });
-    paresMaterializados.push({ personaId, fechaYmd, grupoId });
-  }
+  const paresMaterializados = pares.map(({ personaId, fechaYmd, grupoId }) => ({
+    personaId,
+    fechaYmd,
+    grupoId,
+  }));
+  await ejecutarCicloMicroEnPares(paresMaterializados, { logTag: "post_batch" });
   return paresMaterializados;
 }
 
@@ -896,22 +980,33 @@ const registrarCambioTurno = onCall({
 
   const docId = docIdAsistencia(personaId, fecha);
   const ref = db.collection(COL_ASISTENCIA).doc(docId);
-  const snap = await ref.get();
+  const metaRevoc = {
+    uid,
+    personaId: token.persona_id || null,
+    nowIso: new Date().toISOString(),
+  };
 
-  if (snap.exists) {
-    await ref.update({
-      overrides_turno: FieldValue.arrayUnion(entry),
-      actualizado_en: FieldValue.serverTimestamp(),
-    });
-  } else {
-    await ref.set({
-      persona_id: personaId,
-      fecha: fecha,
-      overrides_turno: [entry],
-      creado_en: FieldValue.serverTimestamp(),
-      actualizado_en: FieldValue.serverTimestamp(),
-    });
-  }
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const current = snap.exists && Array.isArray(snap.data()?.overrides_turno)
+      ? snap.data().overrides_turno
+      : [];
+    const next = aplicarOverridesConSupersession(current, [entry], grupoTrabajoId, metaRevoc);
+    if (snap.exists) {
+      tx.update(ref, {
+        overrides_turno: next,
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+    } else {
+      tx.set(ref, {
+        persona_id: personaId,
+        fecha,
+        overrides_turno: next,
+        creado_en: FieldValue.serverTimestamp(),
+        actualizado_en: FieldValue.serverTimestamp(),
+      });
+    }
+  });
 
   const updated = await ref.get();
   const overrides = updated.exists && Array.isArray(updated.data().overrides_turno)
@@ -1107,6 +1202,21 @@ const aplicarBatchAsistencia = onCall({
   const uid = (request.auth && request.auth.uid) || "system";
   const nowIso = new Date().toISOString();
 
+  const asiKeySet = new Set();
+  for (const it of items) {
+    for (const key of clavesAsiBatchItem(it)) asiKeySet.add(key);
+  }
+  let extraPeerAsiKeys = new Set();
+  try {
+    extraPeerAsiKeys = await expandAsiKeysCoberturasPreviasMes(items, periodoNorm);
+  } catch (e) {
+    logger.error("expandAsiKeysCoberturasPreviasMes", {
+      error: String(e),
+      periodo: periodoNorm,
+    });
+  }
+  for (const k of extraPeerAsiKeys) asiKeySet.add(k);
+
   const txResult = await db.runTransaction(async (tx) => {
     const visMap = new Map();
     const visRefMap = new Map();
@@ -1125,10 +1235,6 @@ const aplicarBatchAsistencia = onCall({
 
     const asiMap = new Map();
     const asiRefMap = new Map();
-    const asiKeySet = new Set();
-    for (const it of items) {
-      for (const key of clavesAsiBatchItem(it)) asiKeySet.add(key);
-    }
     for (const key of asiKeySet) {
       const [pid, fecha] = key.split("|");
       const docId = docIdAsistencia(pid, fecha);
@@ -1183,12 +1289,23 @@ const aplicarBatchAsistencia = onCall({
       }
     }
 
-    // Escrituras asistencia_diaria
+    for (const it of items) {
+      if (esBatchItemCoberturaV2(it)) {
+        assertExclusividadIntercambioV2EnBatch(it, asiMap);
+      }
+    }
+
+    // Escrituras asistencia_diaria (supersession: revocar manuales activos del gdt antes de append)
+    /** @type {Map<string, { gdt: string, entries: object[] }>} */
     const appendMap = new Map();
-    const pushEntry = (asiKey, entry) => {
-      const list = appendMap.get(asiKey) || [];
-      list.push(entry);
-      appendMap.set(asiKey, list);
+    const pushEntry = (asiKey, gdt, entry) => {
+      const g = String(gdt || "").trim();
+      let bucket = appendMap.get(asiKey);
+      if (!bucket) {
+        bucket = { gdt: g, entries: [] };
+        appendMap.set(asiKey, bucket);
+      }
+      bucket.entries.push(entry);
     };
     for (const it of items) {
       if (esBatchItemCoberturaV2(it)) {
@@ -1202,11 +1319,11 @@ const aplicarBatchAsistencia = onCall({
           invalidado_por_replanificacion: false,
           op_batch_id: it.op_id,
         };
-        pushEntry(`${it.persona_origen_id}|${it.fecha}`, {
+        pushEntry(`${it.persona_origen_id}|${it.fecha}`, it.grupo_trabajo_id, {
           ...base,
           persona_id: it.persona_origen_id,
         });
-        pushEntry(`${it.persona_cobertura_id}|${it.fecha_destino}`, {
+        pushEntry(`${it.persona_cobertura_id}|${it.fecha_destino}`, it.grupo_trabajo_id, {
           ...base,
           persona_id: it.persona_cobertura_id,
         });
@@ -1224,24 +1341,42 @@ const aplicarBatchAsistencia = onCall({
         invalidado_por_replanificacion: false,
         op_batch_id: it.op_id,
       };
-      pushEntry(`${pidAsi}|${it.fecha}`, entry);
+      pushEntry(`${pidAsi}|${it.fecha}`, it.grupo_trabajo_id, entry);
     }
 
-    for (const [key, extra] of appendMap.entries()) {
+    for (const k of extraPeerAsiKeys) {
+      if (!appendMap.has(k)) {
+        const gdtPeer = items.find((x) => esBatchItemCoberturaV2(x))?.grupo_trabajo_id || "";
+        if (GDT_ID.test(String(gdtPeer))) {
+          appendMap.set(k, { gdt: String(gdtPeer), entries: [] });
+        }
+      }
+    }
+
+    const metaRevoc = {
+      uid,
+      personaId: token.persona_id || null,
+      nowIso,
+    };
+
+    for (const [key, bucket] of appendMap.entries()) {
       const snap = asiMap.get(key);
       const ref = asiRefMap.get(key);
       const [pid, fecha] = key.split("|");
+      const current = snap?.exists && Array.isArray(snap.data()?.overrides_turno)
+        ? snap.data().overrides_turno
+        : [];
+      const next = aplicarOverridesConSupersession(current, bucket.entries, bucket.gdt, metaRevoc);
       if (snap?.exists) {
-        const current = Array.isArray(snap.data()?.overrides_turno) ? snap.data().overrides_turno : [];
         tx.update(ref, {
-          overrides_turno: [...current, ...extra],
+          overrides_turno: next,
           actualizado_en: FieldValue.serverTimestamp(),
         });
-      } else {
+      } else if (bucket.entries.length) {
         tx.set(ref, {
           persona_id: pid,
           fecha,
-          overrides_turno: extra,
+          overrides_turno: next,
           creado_en: FieldValue.serverTimestamp(),
           actualizado_en: FieldValue.serverTimestamp(),
         }, { merge: true });
@@ -1261,8 +1396,13 @@ const aplicarBatchAsistencia = onCall({
     return { aplicadas: items.length };
   });
 
-  const paresRemat = await rematerializarBatchOps(items);
-  const dias_actualizados = await diasActualizadosDesdeParesRematerializacion(paresRemat);
+  let dias_actualizados = [];
+  try {
+    const paresRemat = await rematerializarBatchOps(items, extraPeerAsiKeys);
+    dias_actualizados = await diasActualizadosDesdeParesRematerializacion(paresRemat);
+  } catch (e) {
+    logger.error("aplicarBatchAsistencia_post_remat", { error: String(e) });
+  }
   return {
     ok: true,
     aplicadas: txResult.aplicadas,
@@ -1457,6 +1597,27 @@ const sanearMaterializacionDiaSiNecesario = onCall({
       );
     }
     sanado = true;
+  }
+
+  if (data.forzar_recalculo_fichada === true) {
+    if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
+      await assertPeriodoEditable(personaId, fecha, grupoTrabajoId, token);
+    }
+    const rec = await recalcularAnaliticaValidacionFichadaTrasTeoria({
+      personaId,
+      grupoId: grupoTrabajoId,
+      fechaYmd: fecha,
+    });
+    if (!rec?.ok) {
+      logger.warn("sanear_forzar_recalculo_fichada", {
+        personaId,
+        fecha,
+        grupoId: grupoTrabajoId,
+        motivo: rec?.motivo,
+      });
+    } else {
+      sanado = true;
+    }
   }
 
   const [y, m] = fecha.split("-").map(Number);

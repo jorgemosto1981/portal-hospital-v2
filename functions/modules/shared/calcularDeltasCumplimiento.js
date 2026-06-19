@@ -10,11 +10,18 @@ const {
   DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_MIN,
   DEFAULT_UMBRAL_SOLAPE_FUERA_TURNO_PCT,
   capaMaterializadaConSegmentosMultiples,
+  envelopeTeoricoDesdeCapa,
+  isoMasMinutos,
 } = require("./capaTeoricaLimitesCumplimiento");
+const {
+  alinearCapaSegmentosAlTeoricoVis,
+  filtrarSegmentosCumplimientoAlTeoricoVis,
+} = require("./visCeldaFusionLectura");
 
 /**
  * Motor puro: disciplina horaria + débito de tiempo (teoría ↔ fichadas_reales en celda vis_*).
  */
+
 
 
 
@@ -667,12 +674,37 @@ function derivarAlertas(disciplina, debito, ausencia_automatica, fichadaFueraTur
 }
 
 /**
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ * @param {Record<string, unknown>} capaTeoricaGrupo
+ */
+function capaAlineadaParaCumplimiento(celdaVis, capaTeoricaGrupo) {
+  const base = capaTeoricaGrupo && typeof capaTeoricaGrupo === "object" ? capaTeoricaGrupo : {};
+  const aligned = alinearCapaSegmentosAlTeoricoVis(celdaVis, base);
+  if (aligned === base) return base;
+  const tolIn = Number(base.tolerancia_ingreso_dia_min) || 0;
+  const tolOut = Number(base.tolerancia_egreso_dia_min) || 0;
+  const env = envelopeTeoricoDesdeCapa(aligned);
+  const ingreso_nominal_iso = env.ingreso_teorico_final ? String(env.ingreso_teorico_final) : null;
+  const egreso_nominal_iso = env.egreso_teorico_final ? String(env.egreso_teorico_final) : null;
+  const horas = env.horas_desde_segmentos;
+  return {
+    ...aligned,
+    ingreso_nominal_iso,
+    egreso_nominal_iso,
+    ingreso_limite_con_gracia_iso: ingreso_nominal_iso ? isoMasMinutos(ingreso_nominal_iso, tolIn) : null,
+    egreso_limite_con_gracia_iso: egreso_nominal_iso ? isoMasMinutos(egreso_nominal_iso, -tolOut) : null,
+    carga_horaria_diaria_minutos:
+      horas != null && horas > 0 ? Math.round(horas * 60) : base.carga_horaria_diaria_minutos,
+  };
+}
+
+/**
  * @param {Record<string, unknown>|null|undefined} celdaVis — celda `vis_*.dias.DD` (+ tipo_dia / fichadas_esperadas)
  * @param {Record<string, unknown>} capaTeoricaGrupo — slice enriquecido (limites + tipo_dia)
  * @param {{ ahora_evaluacion_ms?: number, fecha_ymd?: string }} [opts]
  */
 function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
-  const capa = capaTeoricaGrupo && typeof capaTeoricaGrupo === "object" ? capaTeoricaGrupo : {};
+  const capa = capaAlineadaParaCumplimiento(celdaVis, capaTeoricaGrupo);
   const fechaYmd = String(opts.fecha_ymd || capa.fecha_base || "").slice(0, 10);
   const ahoraMs = Number.isFinite(Number(opts.ahora_evaluacion_ms))
     ? Number(opts.ahora_evaluacion_ms)
@@ -883,9 +915,16 @@ function calcularDeltasCumplimiento(celdaVis, capaTeoricaGrupo, opts = {}) {
     tolOut,
   );
 
+  let segCumplimientoOut = segmentos_cumplimiento;
+  let porSegmentosOut = calculo_por_segmentos;
+  if (porSegmentosOut && segCumplimientoOut) {
+    segCumplimientoOut = filtrarSegmentosCumplimientoAlTeoricoVis(celdaVis, segCumplimientoOut);
+    if (!segCumplimientoOut?.length) porSegmentosOut = false;
+  }
+
   return {
     version: ANALITICA_VERSION,
-    ...(calculo_por_segmentos ? { calculo_por_segmentos: true, segmentos_cumplimiento } : {}),
+    ...(porSegmentosOut ? { calculo_por_segmentos: true, segmentos_cumplimiento: segCumplimientoOut } : {}),
     disciplina,
     debito_tiempo,
     ausencia_automatica,

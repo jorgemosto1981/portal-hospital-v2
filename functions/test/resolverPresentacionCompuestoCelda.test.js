@@ -202,3 +202,43 @@ describe("resolverPresentacionCompuestoCelda", () => {
     assert.ok(pres.filas.find((f) => f.segmento_id === "N")?.fichada_label);
   });
 });
+
+describe("traslado origen v2 — capa con T obsoleto", () => {
+  it("solo evalúa M cuando rda_turno_id es M (día 7 LOKITO)", () => {
+    const FECHA = "2026-06-07";
+    const capa = enriquecerLimitesCumplimientoEnCapa(
+      {
+        tipo_dia: "laborable",
+        tiene_huecos: false,
+        turno_compuesto_id: "M+T",
+        horas_teoricas_totales: 16,
+        segmentos: [
+          {
+            segmento_id: "M",
+            ingreso_iso: "2026-06-07T09:00:00.000Z",
+            egreso_iso: "2026-06-07T17:00:00.000Z",
+          },
+          {
+            segmento_id: "T",
+            ingreso_iso: "2026-06-07T17:00:00.000Z",
+            egreso_iso: "2026-06-08T01:00:00.000Z",
+          },
+        ],
+        ingreso_teorico_final: "2026-06-07T09:00:00.000Z",
+        egreso_teorico_final: "2026-06-08T01:00:00.000Z",
+      },
+      TOL_REGIMEN,
+    );
+    const celda = {
+      rda_turno_id: "M",
+      rda_ingreso: "06:00",
+      rda_egreso: "14:00",
+      ...celdaConFichadas([]),
+    };
+    const analitica = calcularDeltasCumplimiento(celda, capa, { fecha_ymd: FECHA });
+    assert.equal(analitica.ausencia_automatica, true);
+    assert.equal(analitica.debito_tiempo?.carga_teorica_minutos, 480);
+    const pres = resolverPresentacionCompuestoCelda(celda, capa, analitica, { fecha_ymd: FECHA });
+    assert.equal(pres, null);
+  });
+});

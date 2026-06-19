@@ -250,7 +250,7 @@ async function persistirAnaliticaCumplimientoDia({
     tipo_dia: celdaRaw.tipo_dia ?? capaEnriquecida.tipo_dia,
     fichadas_esperadas: celdaRaw.fichadas_esperadas ?? capaEnriquecida.fichadas_esperadas,
     fichadas_reales: celdaRaw.fichadas_reales,
-    rda_turno_id: celdaRaw.rda_turno_id,
+    rda_turno_id: celdaRaw.rda_turno_id ?? pickRdaTurnoId(capaEscrita, esDiaSinTurnoLaboral(capaEscrita.tipo_dia)),
     rda_ingreso: celdaRaw.rda_ingreso,
     rda_egreso: celdaRaw.rda_egreso,
   };
@@ -509,9 +509,17 @@ async function resolverBaseDiaPersona({ personaId, fechaYmd, indiceCalendario, g
 }
 
 function upsertSegmento(segmentos, segmentoNuevo) {
-  const idx = segmentos.findIndex((s) => s.segmento_id === segmentoNuevo.segmento_id
+  const segId = String(segmentoNuevo.segmento_id || "").trim();
+  const tit = String(segmentoNuevo.persona_titular_id || "").trim();
+  let idx = segmentos.findIndex((s) => s.segmento_id === segmentoNuevo.segmento_id
     && s.persona_titular_id === segmentoNuevo.persona_titular_id
     && s.persona_ejecutante_id === segmentoNuevo.persona_ejecutante_id);
+  if (idx < 0 && segId && tit) {
+    idx = segmentos.findIndex(
+      (s) => String(s.segmento_id || "").trim() === segId
+        && String(s.persona_titular_id || "").trim() === tit,
+    );
+  }
   if (idx >= 0) segmentos[idx] = segmentoNuevo;
   else segmentos.push(segmentoNuevo);
 }
@@ -543,14 +551,16 @@ function esTrasladoOrigenV2(o) {
 
 function esTrasladoDestinoV2(o, fechaYmd) {
   if (!o || typeof o !== "object") return false;
-  if (String(o.reemplazo_traslado_v2 || "") === "destino") return true;
-  if (String(o.reemplazo_traslado_v2 || "") === "origen") return false;
-  if (Array.isArray(o.segmentos_incorporados_destino) && o.segmentos_incorporados_destino.length > 0) {
-    return true;
-  }
   const fo = String(o.fecha_origen || "").trim();
   const fd = String(o.fecha_destino || o.fecha || "").trim();
   const f = String(fechaYmd || "").trim();
+  if (String(o.reemplazo_traslado_v2 || "") === "destino") {
+    return YMD_RE.test(fd) && fd === f;
+  }
+  if (String(o.reemplazo_traslado_v2 || "") === "origen") return false;
+  if (Array.isArray(o.segmentos_incorporados_destino) && o.segmentos_incorporados_destino.length > 0) {
+    return YMD_RE.test(fd) && fd === f;
+  }
   return YMD_RE.test(fo) && YMD_RE.test(fd) && fo !== fd && fd === f && Boolean(String(o.turno_id || "").trim());
 }
 
@@ -617,6 +627,45 @@ function clasificarReemplazosParaMaterializacion(reemplazos, fechaYmd) {
     trasladoDestinoV2: list.filter((o) => esTrasladoDestinoV2(o, fechaYmd)),
     reemplazosClassic: list.filter((o) => !esLegTrasladoReemplazoV2(o)),
   };
+}
+
+/** Tramos incorporados en destino (v2): propios del agente; se aplican tras coberturas para no quedar cedidos. */
+function incorporarTrasladoDestinoV2EnSegmentos({
+  segmentos,
+  trasladoDestinoV2,
+  francoTrasladoOrigen,
+  fechaYmd,
+  personaId,
+  regimen,
+  indiceCalendario,
+}) {
+  if (francoTrasladoOrigen || !trasladoDestinoV2.length) return;
+  for (const td of trasladoDestinoV2) {
+    const ids = Array.isArray(td.segmentos_incorporados_destino)
+      ? td.segmentos_incorporados_destino
+      : (td.turno_id ? [td.turno_id] : []);
+    for (const tid of ids) {
+      const turnoId = String(tid || "").trim();
+      if (!turnoId) continue;
+      const capaAdd = buildCapaTeoricaSegmentada({
+        fechaYmd,
+        personaId,
+        regimen,
+        tipo_dia: "laborable",
+        turnoCompuestoId: turnoId,
+        origen_segmento: "override_cobertura",
+        indiceCalendario,
+      });
+      for (const seg of capaAdd.segmentos || []) {
+        upsertSegmento(segmentos, {
+          ...seg,
+          persona_titular_id: personaId,
+          persona_ejecutante_id: personaId,
+          origen_segmento: "override_cobertura",
+        });
+      }
+    }
+  }
 }
 
 async function listarCoberturasDia(fechaYmd, personaId, grupoId) {
@@ -796,27 +845,15 @@ async function buildSegmentosPreCoberturaEnDia({
   }
 
   if (!francoTrasladoOrigen) {
-    for (const td of trasladoDestinoV2) {
-      const ids = Array.isArray(td.segmentos_incorporados_destino)
-        ? td.segmentos_incorporados_destino
-        : (td.turno_id ? [td.turno_id] : []);
-      for (const tid of ids) {
-        const turnoId = String(tid || "").trim();
-        if (!turnoId) continue;
-        const capaAdd = buildCapaTeoricaSegmentada({
-          fechaYmd,
-          personaId,
-          regimen: base.regimenDoc,
-          tipo_dia: "laborable",
-          turnoCompuestoId: turnoId,
-          origen_segmento: "override_cobertura",
-          indiceCalendario,
-        });
-        for (const seg of capaAdd.segmentos || []) {
-          upsertSegmento(segmentos, seg);
-        }
-      }
-    }
+    incorporarTrasladoDestinoV2EnSegmentos({
+      segmentos,
+      trasladoDestinoV2,
+      francoTrasladoOrigen,
+      fechaYmd,
+      personaId,
+      regimen: base.regimenDoc,
+      indiceCalendario,
+    });
   }
 
   return segmentos.map((s) => ({ ...s }));
@@ -1350,30 +1387,6 @@ async function computarCapaTeoricaSliceDia({ personaId, grupoId, fechaYmd }) {
     }
   }
 
-  if (!francoTrasladoOrigen) {
-    for (const td of trasladoDestinoV2) {
-      const ids = Array.isArray(td.segmentos_incorporados_destino)
-        ? td.segmentos_incorporados_destino
-        : (td.turno_id ? [td.turno_id] : []);
-      for (const tid of ids) {
-        const turnoId = String(tid || "").trim();
-        if (!turnoId) continue;
-        const capaAdd = buildCapaTeoricaSegmentada({
-          fechaYmd,
-          personaId,
-          regimen: base.regimenDoc,
-          tipo_dia: "laborable",
-          turnoCompuestoId: turnoId,
-          origen_segmento: "override_cobertura",
-          indiceCalendario,
-        });
-        for (const seg of capaAdd.segmentos || []) {
-          upsertSegmento(segmentos, seg);
-        }
-      }
-    }
-  }
-
   segmentos = await aplicarCoberturasParciales({
     personaId,
     fechaYmd,
@@ -1381,6 +1394,16 @@ async function computarCapaTeoricaSliceDia({ personaId, grupoId, fechaYmd }) {
     coberturas,
     indiceCalendario,
     grupoId: gdt,
+  });
+
+  incorporarTrasladoDestinoV2EnSegmentos({
+    segmentos,
+    trasladoDestinoV2,
+    francoTrasladoOrigen,
+    fechaYmd,
+    personaId,
+    regimen: base.regimenDoc,
+    indiceCalendario,
   });
 
   const tipoDiaDerivado = segmentos.length > 0

@@ -5,6 +5,7 @@ const { FieldValue, Timestamp } = require("firebase-admin/firestore");
 const { buildVisDocumentId, diaMesKeyDesdeYmd } = require("../shared/mdcRdaDocumentIds");
 const { assertPeriodoNoCerrado } = require("../asistencia/asistenciaPeriodoLiquidacion");
 const { encolarRematerializacionAsistenciaLote } = require("../asistencia/colaRematerializacionAsistenciaCore");
+const { materializarTurnoTeoricoDia } = require("../asistencia/rdaTurnoTeoricoWorker");
 const { actualizarAnaliticaCumplimientoTrasFichada } = require("../shared/analiticaCumplimientoTrasFichada");
 const { leerCeldaVisDiaFusionada } = require("../shared/visCeldaFusionLectura");
 const { alinearMarcasConTeoriaDia, alinearMarcasConTeoriaEnCalendario, agregarTramoAbmAFichadasExistentes } = require("../shared/fichadasAlineacionTeoria");
@@ -73,6 +74,39 @@ function anioMesDesdeYmd(fechaYmd) {
   const ymd = String(fechaYmd || "").slice(0, 10);
   const [y, m] = ymd.split("-").map(Number);
   return { anio: y, mes: m };
+}
+
+/**
+ * Ciclo micro celda tras ABM fichada: teoría+licencias en vis, luego analítica/presentación.
+ * @param {import("firebase-admin/firestore").Firestore} db
+ */
+async function ejecutarCicloMicroCeldaTrasFichada(db, {
+  persona_id,
+  grupo_trabajo_id,
+  fecha_ymd,
+  visId,
+  diaKey,
+}) {
+  const mat = await materializarTurnoTeoricoDia({
+    personaId: persona_id,
+    grupoId: grupo_trabajo_id,
+    fechaYmd: fecha_ymd,
+  });
+  const materializo = (mat?.diasProcesados || 0) >= 1;
+  try {
+    await actualizarAnaliticaCumplimientoTrasFichada(db, {
+      persona_id,
+      grupo_trabajo_id,
+      fecha_ymd,
+      vis_id: visId,
+      dia_key: diaKey,
+      forzar_recalculo: true,
+    });
+    return { ok: true, via: materializo ? "materializar_dia+analitica" : "analitica_fichada" };
+  } catch (err) {
+    console.error("ejecutarCicloMicroCeldaTrasFichada", err);
+    return { ok: false, via: "fallo" };
+  }
 }
 
 function origenPermiteResueltoRrhh(origen) {
@@ -250,7 +284,6 @@ async function guardarCapaFichadaDia(db, params, actor) {
   const evtId = `evt_${ulid()}`;
   let writeSkipped = false;
   let versionNueva = null;
-  let celdaParaAnalitica = null;
 
   await db.runTransaction(async (tx) => {
     const ref = db.collection(COL_VIS).doc(visId);
@@ -337,13 +370,6 @@ async function guardarCapaFichadaDia(db, params, actor) {
     escribirPatchVisDia(tx, ref, snap.exists, updatePayload);
     const { leerVersionCeldaFichada } = require("./fichadasMarcasUtils");
     versionNueva = leerVersionCeldaFichada(celdaAntes) + 1;
-    celdaParaAnalitica = {
-      ...celdaAntes,
-      fichadas_reales: patch.celdaNueva.fichadas_reales,
-      advertencias_fichada_abiertas: patch.celdaNueva.advertencias_fichada_abiertas,
-      fichadas_borradas: patch.celdaNueva.fichadas_borradas,
-      resuelto_rrhh: patch.celdaNueva.resuelto_rrhh,
-    };
   });
 
   if (writeSkipped) {
@@ -362,26 +388,22 @@ async function guardarCapaFichadaDia(db, params, actor) {
     origen,
   });
 
-  await encolarRematerializacionAsistenciaLote(db, [
-    {
-      persona_id,
-      gdt_id: grupo_trabajo_id,
-      fecha_ymd,
-      origen: "guardar_capa_fichada_dia",
-    },
-  ]);
-
-  try {
-    await actualizarAnaliticaCumplimientoTrasFichada(db, {
-      persona_id,
-      grupo_trabajo_id,
-      fecha_ymd,
-      vis_id: visId,
-      dia_key: diaKey,
-      celda_override: celdaParaAnalitica,
-    });
-  } catch (err) {
-    console.error("actualizarAnaliticaCumplimientoTrasFichada", err);
+  const micro = await ejecutarCicloMicroCeldaTrasFichada(db, {
+    persona_id,
+    grupo_trabajo_id,
+    fecha_ymd,
+    visId,
+    diaKey,
+  });
+  if (!micro.ok) {
+    await encolarRematerializacionAsistenciaLote(db, [
+      {
+        persona_id,
+        gdt_id: grupo_trabajo_id,
+        fecha_ymd,
+        origen: "guardar_capa_fichada_dia",
+      },
+    ]);
   }
 
   return {

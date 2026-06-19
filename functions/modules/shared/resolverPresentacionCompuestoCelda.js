@@ -10,10 +10,15 @@ const {
   segmentoTieneIncumplimientoDisciplina,
 } = require("./calcularDeltasCumplimiento");
 const { isoToHhmmInstitucional, rangoHhmmLabel } = require("./horarioInstitucionalDisplay");
+const {
+  alinearCapaSegmentosAlTeoricoVis,
+  filtrarFilasPresentacionAlTeoricoOperativo,
+} = require("./visCeldaFusionLectura");
 
 /**
  * Presentación apilada por segmento (RFC filas celda) — derivada de analítica + fichadas.
  */
+
 
 
 
@@ -89,7 +94,10 @@ function badgesDesdeSegmentoAnalitica(seg) {
  * @returns {Record<string, unknown>|null}
  */
 function resolverPresentacionCompuestoCelda(celdaVis, capaTeorica, analitica, opts = {}) {
-  const capa = capaTeorica && typeof capaTeorica === "object" ? capaTeorica : {};
+  const capa = alinearCapaSegmentosAlTeoricoVis(
+    celdaVis,
+    capaTeorica && typeof capaTeorica === "object" ? capaTeorica : {},
+  );
   if (!capaMaterializadaConSegmentosMultiples(capa)) return null;
 
   const anal = analitica && typeof analitica === "object" ? analitica : {};
@@ -155,7 +163,7 @@ function resolverPresentacionCompuestoCelda(celdaVis, capaTeorica, analitica, op
   const out = {
     version: PRESENTACION_VERSION,
     turno_compuesto_id: String(capa.turno_compuesto_id || capa.turno_id || "").trim() || null,
-    filas,
+    filas: filtrarFilasPresentacionAlTeoricoOperativo(celdaVis, filas),
   };
   if (opts.eval_fingerprint) {
     out.eval_fingerprint = String(opts.eval_fingerprint);

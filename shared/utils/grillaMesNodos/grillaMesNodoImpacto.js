@@ -77,6 +77,11 @@ export function paresCeldaDesdeOp(op) {
     return out;
   }
 
+  if (tipo === "micro_celda") {
+    push(op.personaId || op.persona_id, op.fecha_ymd || op.fechaYmd || op.fecha);
+    return out;
+  }
+
   return out;
 }
 

@@ -1,3 +1,5 @@
+import { envelopeTeoricoDesdeCapa } from "./capaTeoricaLimitesCumplimiento.js";
+
 /**
  * Lectura de celdas vis_* fusionando claves planas legacy `dias.18.campo`.
  * @param {Record<string, unknown>} data
@@ -64,4 +66,86 @@ export function leerPresentacionCompuestoDesdeCelda(celdaVis) {
  */
 export function filasPresentacionCompuestoDesdeCelda(celdaVis) {
   return leerPresentacionCompuestoDesdeCelda(celdaVis)?.filas ?? [];
+}
+
+/**
+ * Tramos que el teórico de la celda exige hoy (`rda_turno_id` / presentación).
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ * @returns {Set<string>|null}
+ */
+export function idsSegmentoTeoricoOperativoDesdeCeldaVis(celdaVis) {
+  if (!celdaVis || typeof celdaVis !== "object") return null;
+  const pres = leerPresentacionCompuestoDesdeCelda(celdaVis);
+  const tid = String(celdaVis.rda_turno_id || pres?.turno_compuesto_id || "").trim();
+  if (!tid) return null;
+  if (!tid.includes("+")) {
+    const one = /^[MTN]$/i.test(tid) ? tid.toUpperCase() : tid;
+    return new Set([one]);
+  }
+  return new Set(tid.split("+").map((s) => s.trim()).filter(Boolean));
+}
+
+/**
+ * Quita filas de tramos ya no teóricos (p. ej. T tras traslado origen 06→05).
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ * @param {Array<Record<string, unknown>>} filas
+ */
+export function filtrarFilasPresentacionAlTeoricoOperativo(celdaVis, filas) {
+  if (!Array.isArray(filas) || !filas.length) return filas;
+  const ids = idsSegmentoTeoricoOperativoDesdeCeldaVis(celdaVis);
+  if (!ids?.size) return filas;
+  const filtered = filas.filter((f) => ids.has(String(f?.segmento_id || "").trim()));
+  return filtered.length ? filtered : filas;
+}
+
+/**
+ * Alinea `capa.segmentos` al turno operativo de la celda (`rda_turno_id` / presentación).
+ * Evita analítica y presentación con tramos obsoletos tras traslado origen (p. ej. T en día solo-M).
+ *
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ * @param {Record<string, unknown>|null|undefined} capa
+ */
+export function alinearCapaSegmentosAlTeoricoVis(celdaVis, capa) {
+  if (!capa || typeof capa !== "object") return capa;
+  const segmentos = Array.isArray(capa.segmentos) ? capa.segmentos : [];
+  if (segmentos.length < 2) return capa;
+  const ids = idsSegmentoTeoricoOperativoDesdeCeldaVis(celdaVis);
+  if (!ids?.size) return capa;
+  const filtered = segmentos.filter((s) => ids.has(String(s?.segmento_id || "").trim()));
+  if (!filtered.length || filtered.length === segmentos.length) return capa;
+
+  const rda = String(celdaVis?.rda_turno_id || "").trim();
+  const turno_compuesto_id = rda
+    || (filtered.length > 1
+      ? filtered.map((s) => String(s?.segmento_id || "").trim()).filter(Boolean).join("+")
+      : String(filtered[0]?.segmento_id || "").trim())
+    || capa.turno_compuesto_id;
+
+  const next = {
+    ...capa,
+    segmentos: filtered,
+    turno_compuesto_id,
+    ...(filtered.length === 1 ? { turno_id: filtered[0].segmento_id } : {}),
+  };
+  const env = envelopeTeoricoDesdeCapa(next);
+  if (env.ingreso_teorico_final) {
+    next.ingreso_teorico_final = env.ingreso_teorico_final;
+    next.egreso_teorico_final = env.egreso_teorico_final;
+  }
+  if (env.horas_desde_segmentos != null) {
+    next.horas_teoricas_totales = env.horas_desde_segmentos;
+  }
+  return next;
+}
+
+/**
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ * @param {Array<Record<string, unknown>>|undefined} segmentos
+ */
+export function filtrarSegmentosCumplimientoAlTeoricoVis(celdaVis, segmentos) {
+  if (!Array.isArray(segmentos) || !segmentos.length) return segmentos;
+  const ids = idsSegmentoTeoricoOperativoDesdeCeldaVis(celdaVis);
+  if (!ids?.size) return segmentos;
+  const filtered = segmentos.filter((s) => ids.has(String(s?.segmento_id || "").trim()));
+  return filtered.length ? filtered : segmentos;
 }

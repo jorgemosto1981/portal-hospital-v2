@@ -47,6 +47,7 @@ const FILES_TO_SYNC = [
   "resolverValidacionFichadaDia.js",
   "resolverPresentacionCompuestoCelda.js",
   "visCeldaFusionLectura.js",
+  "intercambioGuardiaExclusividad.js",
 ];
 
 function esmToCjs(source, filename) {

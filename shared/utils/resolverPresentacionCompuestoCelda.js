@@ -10,6 +10,10 @@ import {
   segmentoTieneIncumplimientoDisciplina,
 } from "./calcularDeltasCumplimiento.js";
 import { isoToHhmmInstitucional, rangoHhmmLabel } from "./horarioInstitucionalDisplay.js";
+import {
+  alinearCapaSegmentosAlTeoricoVis,
+  filtrarFilasPresentacionAlTeoricoOperativo,
+} from "./visCeldaFusionLectura.js";
 
 const PRESENTACION_VERSION = 1;
 
@@ -82,7 +86,10 @@ function badgesDesdeSegmentoAnalitica(seg) {
  * @returns {Record<string, unknown>|null}
  */
 export function resolverPresentacionCompuestoCelda(celdaVis, capaTeorica, analitica, opts = {}) {
-  const capa = capaTeorica && typeof capaTeorica === "object" ? capaTeorica : {};
+  const capa = alinearCapaSegmentosAlTeoricoVis(
+    celdaVis,
+    capaTeorica && typeof capaTeorica === "object" ? capaTeorica : {},
+  );
   if (!capaMaterializadaConSegmentosMultiples(capa)) return null;
 
   const anal = analitica && typeof analitica === "object" ? analitica : {};
@@ -148,7 +155,7 @@ export function resolverPresentacionCompuestoCelda(celdaVis, capaTeorica, analit
   const out = {
     version: PRESENTACION_VERSION,
     turno_compuesto_id: String(capa.turno_compuesto_id || capa.turno_id || "").trim() || null,
-    filas,
+    filas: filtrarFilasPresentacionAlTeoricoOperativo(celdaVis, filas),
   };
   if (opts.eval_fingerprint) {
     out.eval_fingerprint = String(opts.eval_fingerprint);
