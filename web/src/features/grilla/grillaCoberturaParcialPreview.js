@@ -11,6 +11,9 @@ import {
   TOPE_HORAS_DIA,
 } from "./grillaCambioTurnoPropioPreview.js";
 import seedIds from "../../../../scripts/seed-v2/seed-ids-asistencia-turnos.v2.json" with { type: "json" };
+import {
+  validarExclusividadTramosIntercambio,
+} from "../../../../shared/utils/intercambioGuardiaExclusividad.js";
 
 export const DEFAULT_TCC_CAMBIO_INTERNO =
   seedIds.cfg_tipo_compensacion_cobertura?.CAMBIO_INTERNO || "";
@@ -402,8 +405,29 @@ export function validarIntercambioGuardia(params) {
   const par = validarEmparejamientoHoras(horasA, horasB);
   if (!par.ok) return par;
 
-  const idsPostA = segmentoIdsPostSwap(previewA.segmentoIds, subA.segmentos, subB.segmentos);
-  const idsPostB = segmentoIdsPostSwap(previewB.segmentoIds, subB.segmentos, subA.segmentos);
+  const idsEjecutablesA = previewA.segmentoIds;
+  const idsEjecutablesB = previewB.segmentoIds;
+  const exclA = validarExclusividadTramosIntercambio({
+    idsEjecutables: idsEjecutablesA,
+    segmentosCedidos: subA.segmentos,
+    segmentosRecibidos: subB.segmentos,
+    segmentosCapa: segsA,
+    segmentosCapaPeer: segsB,
+    ladoLabel: "Agente 1",
+  });
+  if (!exclA.ok) return exclA;
+  const exclB = validarExclusividadTramosIntercambio({
+    idsEjecutables: idsEjecutablesB,
+    segmentosCedidos: subB.segmentos,
+    segmentosRecibidos: subA.segmentos,
+    segmentosCapa: segsB,
+    segmentosCapaPeer: segsA,
+    ladoLabel: "Agente 2",
+  });
+  if (!exclB.ok) return exclB;
+
+  const idsPostA = exclA.idsPost ?? segmentoIdsPostSwap(previewA.segmentoIds, subA.segmentos, subB.segmentos);
+  const idsPostB = exclB.idsPost ?? segmentoIdsPostSwap(previewB.segmentoIds, subB.segmentos, subA.segmentos);
   const topeA = validarTopeHorasPostSwap(idsPostA, turnosPorIdOrigen, segsA, "Agente 1");
   if (!topeA.ok) return topeA;
   const topeB = validarTopeHorasPostSwap(idsPostB, turnosPorIdDestino, segsB, "Agente 2");

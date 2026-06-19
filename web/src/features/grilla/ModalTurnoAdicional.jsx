@@ -61,6 +61,11 @@ export default function ModalTurnoAdicional({
   const [cargando, setCargando] = useState(true);
   const [operando, setOperando] = useState(false);
   const [errorCarga, setErrorCarga] = useState("");
+
+  useEffect(() => {
+    if (!aplicandoCambio) setOperando(false);
+  }, [aplicandoCambio]);
+
   const [errorSubmit, setErrorSubmit] = useState("");
   const [capa, setCapa] = useState(null);
   const [visDia, setVisDia] = useState(null);

@@ -1,10 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   agruparFetchVistaDesdeOps,
   agruparFetchVistaDesdeReferencias,
+  mergeParchesVisLista,
   parchesVisDesdeRespuestaBatch,
   patchFilasGrillaDesdeParchesVis,
+  resolverParchesVisTrasBatchExito,
 } from "./grillaMesNodosBatchParches.js";
 
 const GDT = "gdt_01";
@@ -152,5 +154,70 @@ describe("parchesVisDesdeRespuestaBatch", () => {
       gdt: GDT,
       celda: { turno: "M" },
     });
+  });
+});
+
+describe("mergeParchesVisLista (confirmarBatchTrasExito)", () => {
+  it("la última lista gana: dias_actualizados del batch pisa fetch viejo", () => {
+    const fetchStale = [
+      {
+        persona_id: P1,
+        fecha_ymd: "2026-06-20",
+        gdt: GDT,
+        celda: { segmentos_teoricos: ["T", "N"] },
+      },
+    ];
+    const batch = parchesVisDesdeRespuestaBatch({
+      dias_actualizados: [
+        {
+          persona_id: P1,
+          fecha_ymd: "2026-06-20",
+          grupo_trabajo_id: GDT,
+          celda: { segmentos_teoricos: ["N"] },
+        },
+      ],
+    });
+    const merged = mergeParchesVisLista(fetchStale, batch);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].celda).toEqual({ segmentos_teoricos: ["N"] });
+  });
+});
+
+describe("resolverParchesVisTrasBatchExito", () => {
+  it("no llama fetch si dias_actualizados cubre origen y destino del intercambio", async () => {
+    const fetchVista = vi.fn();
+    const ops = [
+      {
+        tipo: "cobertura_parcial",
+        schema_version: 2,
+        grupo_trabajo_id: GDT,
+        persona_origen_id: P1,
+        persona_cobertura_id: P2,
+        fecha: "2026-06-20",
+        fecha_destino: "2026-06-20",
+      },
+    ];
+    const parches = await resolverParchesVisTrasBatchExito(
+      ops,
+      {
+        dias_actualizados: [
+          {
+            persona_id: P1,
+            fecha_ymd: "2026-06-20",
+            grupo_trabajo_id: GDT,
+            celda: { segmentos_teoricos: ["N"] },
+          },
+          {
+            persona_id: P2,
+            fecha_ymd: "2026-06-20",
+            grupo_trabajo_id: GDT,
+            celda: { segmentos_teoricos: ["T", "N"] },
+          },
+        ],
+      },
+      fetchVista,
+    );
+    expect(fetchVista).not.toHaveBeenCalled();
+    expect(parches).toHaveLength(2);
   });
 });

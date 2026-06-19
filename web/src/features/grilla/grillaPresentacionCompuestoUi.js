@@ -1,5 +1,6 @@
 import {
   filasPresentacionCompuestoDesdeCelda,
+  filtrarFilasPresentacionAlTeoricoOperativo,
   leerPresentacionCompuestoDesdeCelda,
 } from "../../../../shared/utils/visCeldaFusionLectura.js";
 import {
@@ -161,6 +162,22 @@ export function marcasHhmmPorTramoDesdeCelda(celda, fila, todasFilas) {
     }
     const ing = marcas[0];
     const egr = marcas.length > 1 ? marcas[marcas.length - 1] : "";
+    const ultimaFila = todasFilas[total - 1];
+    const primeraFila = todasFilas[0];
+    if (
+      primero
+      && ing
+      && egr
+      && !cruzaNoche
+      && filaTramoAusente(ultimaFila)
+      && !filaTramoAusente(primeraFila)
+      && seg === String(primeraFila.segmento_id || "").trim()
+    ) {
+      return [
+        horaCompactaDisplay(ing) || ing,
+        horaCompactaDisplay(egr) || egr,
+      ];
+    }
     const out = [];
     if (primero && ing) out.push(horaCompactaDisplay(ing) || ing);
     if (ultimo && egr) out.push(horaCompactaDisplay(egr) || egr);
@@ -465,6 +482,7 @@ export function filasPresentacionOperativaDesdeCelda(celda) {
     const simple = filaPresentacionSimpleDesdeCelda(celda);
     if (simple) filas = [simple];
   }
+  filas = filtrarFilasPresentacionAlTeoricoOperativo(celda, filas);
   filas = reconciliarFilasPresentacionDesdeAnalitica(celda, filas);
   return enriquecerFilasPresentacionMarcas(celda, filas);
 }

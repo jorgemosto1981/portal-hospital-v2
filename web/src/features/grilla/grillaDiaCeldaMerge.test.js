@@ -12,13 +12,13 @@ describe("mergeCeldaNodoConFallback", () => {
     expect(merged).toEqual({ turno: "N", revision_vis: 5 });
   });
 
-  it("pending mezcla fallback base con overlay del store", () => {
+  it("pending ignora store y muestra solo fallback (velo procesando)", () => {
     const merged = mergeCeldaNodoConFallback({
-      fromStore: { preview: true },
+      fromStore: { preview: true, rda_turno_id: "M+T" },
       fallback: { turno: "M" },
       pending: true,
     });
-    expect(merged).toEqual({ turno: "M", preview: true });
+    expect(merged).toEqual({ turno: "M" });
   });
 
   it("mostrarResultadoFinal prioriza store si existe", () => {

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { ensureOutboxOpId } from "./grillaOutboxLabels.js";
+
 const OUTBOX_PREFIX = "outbox_ops";
 const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -9,12 +11,6 @@ function buildStorageKey(editorPersonaId, periodo) {
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function ensureOutboxOpId(op, index = 0) {
-  const existing = String(op?.id || "").trim();
-  if (existing) return existing;
-  return globalThis.crypto?.randomUUID?.() || `op_${Date.now()}_${index}`;
 }
 
 function normalizeOutboxOp(op, index = 0) {

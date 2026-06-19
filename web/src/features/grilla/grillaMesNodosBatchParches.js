@@ -1,6 +1,37 @@
 import { paresCeldaDesdeOp } from "../../../../shared/utils/grillaMesNodos/index.js";
 import { mergeCeldaVisParche } from "../../../../shared/utils/grillaMesNodos/mergeCeldaVisParche.js";
 
+/** Tiempo máximo para fetch de vis en el tramo crítico (no debe colgar el overlay). */
+export const FETCH_PATCHES_VIS_TIMEOUT_MS = 12_000;
+
+/**
+ * @param {{ persona_id?: string; fecha_ymd?: string; gdt?: string }} p
+ */
+export function parcheCeldaKey(p) {
+  return `${String(p.persona_id || "").trim()}|${String(p.fecha_ymd || "").trim().slice(0, 10)}|${String(p.gdt || "").trim()}`;
+}
+
+/**
+ * @template T
+ * @param {Promise<T>} promise
+ * @param {number} ms
+ */
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error("fetch-parches-timeout")), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
+
 /**
  * Agrupa pares celda para mínimas llamadas `obtenerVistaGrillaMesAgente` (una por persona × mes × gdt).
  * @param {Array<Record<string, unknown>>} ops
@@ -84,6 +115,48 @@ async function fetchParchesVisDesdeGrupos(grupos, fetchVista) {
  */
 export async function fetchParchesVisDesdeOpsOutbox(ops, fetchVista) {
   return fetchParchesVisDesdeGrupos(agruparFetchVistaDesdeOps(ops), fetchVista);
+}
+
+/**
+ * Parches vis para confirmar batch: prioriza `dias_actualizados` del servidor;
+ * fetch solo si faltan celdas y con timeout (tramo crítico del ciclo de aplicación).
+ *
+ * @param {Array<Record<string, unknown>>} ops
+ * @param {Record<string, unknown> | null | undefined} batchResult
+ * @param {import("../../services/callables.js").callObtenerVistaGrillaMesAgente} fetchVista
+ * @param {{ timeoutMs?: number }} [opts]
+ */
+export async function resolverParchesVisTrasBatchExito(ops, batchResult, fetchVista, opts = {}) {
+  const list = Array.isArray(ops) ? ops : [];
+  const fromBatch = parchesVisDesdeRespuestaBatch(batchResult);
+  const keysBatch = new Set(fromBatch.map((p) => parcheCeldaKey(p)));
+
+  const visto = new Set();
+  /** @type {Array<{ persona_id: string; fecha_ymd: string; gdt: string }>} */
+  const paresNecesarios = [];
+  for (const op of list) {
+    for (const par of paresCeldaDesdeOp(op)) {
+      const k = parcheCeldaKey(par);
+      if (visto.has(k)) continue;
+      visto.add(k);
+      paresNecesarios.push(par);
+    }
+  }
+
+  const faltanEnBatch = paresNecesarios.some((p) => !keysBatch.has(parcheCeldaKey(p)));
+  let fromFetch = [];
+  if (faltanEnBatch && typeof fetchVista === "function") {
+    const timeoutMs = opts.timeoutMs ?? FETCH_PATCHES_VIS_TIMEOUT_MS;
+    try {
+      fromFetch = await withTimeout(
+        fetchParchesVisDesdeOpsOutbox(list, fetchVista),
+        timeoutMs,
+      );
+    } catch {
+      fromFetch = [];
+    }
+  }
+  return mergeParchesVisLista(fromFetch, fromBatch);
 }
 
 /**

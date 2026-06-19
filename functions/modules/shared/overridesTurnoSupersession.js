@@ -66,6 +66,28 @@ function trasladoV2ComparteSegmento(a, b) {
 }
 
 /**
+ * Mismo día calendario del doc asi_*: pierna destino nueva vs origen que dejó franco (u origen franco vs destino previo).
+ * @param {Record<string, unknown>} existing
+ * @param {Record<string, unknown>} neu
+ */
+function piernasOpuestasTrasladoMismoDia(existing, neu) {
+  const legE = String(existing.reemplazo_traslado_v2 || "").trim();
+  const legN = String(neu.reemplazo_traslado_v2 || "").trim();
+  if (legE === legN) return false;
+  const foE = String(existing.fecha_origen || "").trim().slice(0, 10);
+  const fdE = String(existing.fecha_destino || "").trim().slice(0, 10);
+  const foN = String(neu.fecha_origen || "").trim().slice(0, 10);
+  const fdN = String(neu.fecha_destino || "").trim().slice(0, 10);
+  if (legN === "destino" && legE === "origen" && YMD.test(fdN) && fdN === foE) {
+    if (existing.franco_en_origen === true || existing.tipo_dia === "franco") return true;
+  }
+  if (legN === "origen" && legE === "destino" && YMD.test(foN) && foN === fdE) {
+    if (neu.franco_en_origen === true || neu.tipo_dia === "franco") return true;
+  }
+  return false;
+}
+
+/**
  * @param {Record<string, unknown>} existing
  * @param {Array<Record<string, unknown>>} nuevos
  */
@@ -84,7 +106,12 @@ function debeRevocarOverridePorNuevasEntradas(existing, nuevos) {
     const exTras = esTrasladoReemplazoV2(existing);
 
     if (neuTras && exTras) {
-      if (String(neu.reemplazo_traslado_v2 || "") !== String(existing.reemplazo_traslado_v2 || "")) {
+      const legN = String(neu.reemplazo_traslado_v2 || "").trim();
+      const legE = String(existing.reemplazo_traslado_v2 || "").trim();
+      if (legN !== legE) {
+        if (piernasOpuestasTrasladoMismoDia(existing, neu)) return true;
+        // Ida y vuelta: pierna origen en asi del día que antes era destino (y viceversa).
+        if (trasladoV2ComparteSegmento(existing, neu)) return true;
         continue;
       }
       if (trasladoV2ComparteSegmento(existing, neu)) return true;

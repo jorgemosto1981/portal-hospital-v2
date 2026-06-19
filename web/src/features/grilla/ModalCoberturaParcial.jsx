@@ -27,6 +27,10 @@ import UrgenciaG1AvisoModal from "./UrgenciaG1AvisoModal.jsx";
 import GrillaMotivoNovedadSection from "./GrillaMotivoNovedadSection.jsx";
 import { componerMotivoNovedadGso } from "./grillaMotivosNovedadCatalogo.js";
 import { buildGuardrailNovedadContext } from "./grillaGuardrailsTeoriaUi.js";
+import {
+  personasConRegimenEnFecha,
+  regimenHorarioIdParaFecha,
+} from "./grillaRegimenHorarioPorFecha.js";
 
 const SIN_OPS_PENDIENTES = /** @type {Array<Record<string, unknown>>} */ ([]);
 
@@ -79,6 +83,10 @@ export default function ModalCoberturaParcial({
   const [fechaDestinoYmd, setFechaDestinoYmd] = useState(fechaYmd);
   const [codigoNovedadId, setCodigoNovedadId] = useState("");
   const [motivoDetalle, setMotivoDetalle] = useState("");
+
+  useEffect(() => {
+    if (!aplicandoCambio) setOperando(false);
+  }, [aplicandoCambio]);
 
   const rangoMes = useMemo(() => rangoFechasMes(periodo), [periodo]);
   const segmentosCedidosOrigen = useMemo(() => [...selOrigen], [selOrigen]);
@@ -139,8 +147,9 @@ export default function ModalCoberturaParcial({
       setCapaOrigen(capa);
       const regimenes = ctx?.data?.regimenes || {};
       setRegimenesIdx(regimenes);
-      const hlg = (ctx?.data?.personas_grupo || []).find((p) => p.persona_id === personaOrigenId);
-      const regimenOrigen = String(hlg?.regimen_horario_id || "").trim();
+      const personas = ctx?.data?.personas_grupo || [];
+      setPersonasGrupo(personas);
+      const regimenOrigen = regimenHorarioIdParaFecha(personas, personaOrigenId, fechaYmd);
       setRegimenHorarioOrigenId(regimenOrigen);
       if (!regimenOrigen) {
         setErrorOrigen("El agente 1 no tiene régimen horario en este cargo y período.");
@@ -159,7 +168,6 @@ export default function ModalCoberturaParcial({
         setErrorOrigen(eleg.error || "El día origen no es elegible para intercambio.");
       }
       setSelOrigen(new Set());
-      setPersonasGrupo(ctx?.data?.personas_grupo || []);
     } catch (e) {
       setErrorOrigen(mensajeErrorCapaTeorico(e));
     } finally {
@@ -172,11 +180,11 @@ export default function ModalCoberturaParcial({
   }, [cargarOrigen]);
 
   const personasMismoRegimen = useMemo(
-    () => personasGrupo.filter(
-      (p) => p.persona_id !== personaOrigenId
-        && String(p.regimen_horario_id || "").trim() === regimenHorarioOrigenId,
-    ),
-    [personasGrupo, personaOrigenId, regimenHorarioOrigenId],
+    () =>
+      personasConRegimenEnFecha(personasGrupo, fechaDestinoYmd, personaOrigenId).filter(
+        (p) => String(p.regimen_horario_id || "").trim() === regimenHorarioOrigenId,
+      ),
+    [personasGrupo, personaOrigenId, regimenHorarioOrigenId, fechaDestinoYmd],
   );
 
   const hayParejaRegimen = personasMismoRegimen.length > 0;
@@ -324,7 +332,6 @@ export default function ModalCoberturaParcial({
       });
       await onAplicarCambio(op);
       if (onRegistrado) onRegistrado();
-      onCerrar();
     } catch (e) {
       const msg = e?.message || "Error al registrar intercambio.";
       if (msg.includes("ASI-CONC")) {

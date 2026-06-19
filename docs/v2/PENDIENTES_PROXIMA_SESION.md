@@ -1,9 +1,27 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (prioridad inmediata — próxima sesión):**  
-> **`DESAPARECEN FICHADAS REALES DE LA VISUAL DE GRILLA OPERATIVA, VER EXTENSION DE ARCHIVOS DE FUNCIONES DE GRILLA OPERATIVA, REVISAR PLAN Y CARGA INSTANTANEA DE CELDAS SIN SALIR DE GRILLA`**  
-> Handoff: [`HANDOFF_SESION_2026-06-18_PAUSA_BATCH_SANACION_NODOS.md`](./HANDOFF_SESION_2026-06-18_PAUSA_BATCH_SANACION_NODOS.md) · Plan: [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md)  
-> **CIERRE SESIÓN 2026-06-18:** batch inmediato · motor unificado · sanación · nodos (Fase A3) · **`master` `a2acaa7`** push ✅ · redeploy **functions** pendiente al retomar.  
+> **RETOMAR AQUÍ (2026-06-19 — pausa):**  
+> Piloto **Sala Internación 1 · jun-2026** con overrides **reseteados** (plan/HLG). QA grilla reactiva: batch inmediato, intercambio, traslados.  
+> Handoff: [`HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md`](./HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md) · Plan: [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md)  
+> **Análisis (sin código):** tope 2 movimientos/tramo/día → [`RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md`](./RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md)  
+> **Hosting prod:** https://portal-hospital-v2.web.app · deploy functions + hosting **2026-06-19**
+
+---
+
+## PAUSA — Grilla reactiva + supersession (2026-06-19)
+
+| Bloque | Estado |
+|--------|--------|
+| Ciclo aplicar cambio (overlay / POST) | ✅ web |
+| Supersession ida/vuelta + N→franco→M | ✅ functions |
+| Reset overrides jun-2026 Sala | ✅ ops (`sanear-invalidar-overrides-grilla-gdt-mes.mjs`) |
+| Tope movimientos | 📋 RFC borrador |
+| QA piloto post-reset | ⏳ siguiente sesión |
+
+---
+
+> **Histórico — prioridad 2026-06-18:**  
+> **`DESAPARECEN FICHADAS REALES...`** — ver [`HANDOFF_SESION_2026-06-18_PAUSA_BATCH_SANACION_NODOS.md`](./HANDOFF_SESION_2026-06-18_PAUSA_BATCH_SANACION_NODOS.md)  
 > **Épica doc paralela (cuando piloto verde):** [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md)  
 > **Cierre piloto grilla fichadas jun-2026 (sesión anterior):** [`HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md`](./HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md)  
 > **QA fichadas teoría vs real (piloto Sala):** matriz [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) — **cerrado operativamente** (medianoche CHAPARRO/LOKITO, CAMPOS/MOSTO, UI agnóstica IDs). Backfill ronda 2 `badges[]` = **opcional** (`npm run db:backfill-fase-f-validacion`).  

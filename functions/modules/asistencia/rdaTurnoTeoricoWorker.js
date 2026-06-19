@@ -771,7 +771,8 @@ async function buildSegmentosPreCoberturaEnDia({
     turnoCompuestoId = ultimo.turno_id || turnoCompuestoId;
     tipoDiaFinal = ultimo.tipo_dia || "laborable";
   }
-  const francoTrasladoOrigen = trasladoOrigenV2.some((o) => origenTrasladoDejaFrancoEnEsteDia(o, fechaYmd));
+  const francoTrasladoOrigen = trasladoDestinoV2.length === 0
+    && trasladoOrigenV2.some((o) => origenTrasladoDejaFrancoEnEsteDia(o, fechaYmd));
   if (francoTrasladoOrigen) {
     turnoCompuestoId = null;
     tipoDiaFinal = "franco";
@@ -1314,7 +1315,8 @@ async function computarCapaTeoricaSliceDia({ personaId, grupoId, fechaYmd }) {
     turnoCompuestoId = ultimo.turno_id || turnoCompuestoId;
     tipoDiaFinal = ultimo.tipo_dia || "laborable";
   }
-  const francoTrasladoOrigen = trasladoOrigenV2.some((o) => origenTrasladoDejaFrancoEnEsteDia(o, fechaYmd));
+  const francoTrasladoOrigen = trasladoDestinoV2.length === 0
+    && trasladoOrigenV2.some((o) => origenTrasladoDejaFrancoEnEsteDia(o, fechaYmd));
   if (francoTrasladoOrigen) {
     turnoCompuestoId = null;
     tipoDiaFinal = "franco";

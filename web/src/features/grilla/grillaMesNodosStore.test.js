@@ -91,6 +91,22 @@ describe("createGrillaMesNodoStore", () => {
     expect(store.getCelda(kNeutral).pending).toBe(false);
   });
 
+  it("micro_celda marca una sola celda en tránsito", () => {
+    const store = createGrillaMesNodoStore();
+    store.hidratarDesdeListadoVista(vistaMinima());
+    const key = buildCellKey({ gdt: GDT, persona_id: P1, fecha_ymd: "2026-06-05" });
+    store.aplicarOpLocal({
+      id: "micro_1",
+      tipo: "micro_celda",
+      grupo_trabajo_id: GDT,
+      persona_id: P1,
+      fecha_ymd: "2026-06-05",
+    });
+    expect(store.getCelda(key).pending).toBe(true);
+    store.revocarOpLocal("micro_1");
+    expect(store.getCelda(key).pending).toBe(false);
+  });
+
   it("confirmarBatch parchea base y quita overlay de ops", () => {
     const store = createGrillaMesNodoStore();
     store.hidratarDesdeListadoVista(vistaMinima());

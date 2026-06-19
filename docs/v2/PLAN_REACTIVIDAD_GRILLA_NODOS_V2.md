@@ -1,7 +1,7 @@
 # Plan — Reactividad por nodo (grilla operativa GSO)
 
-> **Estado:** EN CURSO — materialización intercambio (defensiva) 2026-06-19 · validación exclusividad tramos (UI+batch) · **Fase B** presentación compuesto  
-> **QA intercambio legal:** LOKITO `M+T` cede `M` ↔ par con **solo `N`** ese día (no `M+N`); caso d8 LOKITO↔CHAPARRO `M↔N` era **ilegal** (CHAPARRO ya tenía `M`).  
+> **Estado:** EN CURSO — supersession + ciclo UI 2026-06-19 · reset piloto jun-2026 · **tope movimientos** en RFC borrador  
+> Handoff sesión: [`HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md`](./HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md)  
 > Handoff intercambio: [`HANDOFF_SESION_2026-06-18_PAUSA_INTERCAMBIO_GUARDIA.md`](./HANDOFF_SESION_2026-06-18_PAUSA_INTERCAMBIO_GUARDIA.md)  
 > **Prioridad UX:** impacto visible **sin salir del modal de mes** · reemplaza el modelo anterior de **outbox local** (cola + “aplicar después”).  
 > **Piloto:** Sala Internación 1 `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · jun-2026 · Jaqueline `per_01KR3GZX9TB33NHTE2QD5ZP13V`.
@@ -59,14 +59,18 @@ Cada celda/fila de la grilla es un **nodo** con snapshot de servidor + parches l
 
 ---
 
-## Scripts QA (dev)
+## Scripts QA / ops (dev)
 
 ```bash
+# Reset overrides gestión turno del mes (Sala jun-2026)
+node scripts/sanear-invalidar-overrides-grilla-gdt-mes.mjs --gdt=gdt_01KQA6QCA8TDQK9YBTHKYA4R2V --periodo=2026-06
+ALLOW_FIRESTORE_SEED_V2=true node scripts/sanear-invalidar-overrides-grilla-gdt-mes.mjs --gdt=gdt_01KQA6QCA8TDQK9YBTHKYA4R2V --periodo=2026-06 --apply
+
 node scripts/verificar-jaqueline-dias-11-12-jun26.mjs
 node scripts/debug-jaqueline-overrides-jun26.mjs
 ```
 
-Esperado tras motor actual: **día 11 franco**, **día 12 `T+N`**.
+Esperado tras motor actual (Jaqueline): **día 11 franco**, **día 12 `T+N`**.
 
 ## Backlog intercambio guardia
 
@@ -75,3 +79,6 @@ Esperado tras motor actual: **día 11 franco**, **día 12 `T+N`**.
 | Materialización: excluir tramos cedidos de `turno_compuesto_id` / `segmentos[]` persistidos | ✅ 2026-06-19 (`filtrarSegmentosMaterializadosOperativos`) |
 | Validación exclusividad: no recibir tramo que ya conservás + sin solape horario post-swap | ✅ 2026-06-19 (`intercambioGuardiaExclusividad` UI + `[BATCH-A007]`) |
 | `upsertSegmento` por `segmento_id`+titular | Solo defensivo (no sustituye validación) |
+| Supersession piernas opuestas + cadena N/M | ✅ 2026-06-19 (`overridesTurnoSupersession.js`, `rdaTurnoTeoricoWorker.js`) |
+| Ciclo UI FIN_BLOQUEO vs POST sanación | ✅ 2026-06-19 (`grillaCicloAplicarCambioInmediato.js`) |
+| Tope 2 movimientos / tramo / día | 📋 [`RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md`](./RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md) |

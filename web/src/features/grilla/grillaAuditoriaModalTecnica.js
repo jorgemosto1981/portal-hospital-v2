@@ -5,6 +5,7 @@ import {
   parseFichadasRealesCelda,
 } from "../../../../shared/utils/grillaFichadaPresencia.js";
 import { horarioOperativoDesdeCeldaVis } from "./grillaHorarioInstitucional.js";
+import { leerPresentacionCompuestoDesdeCelda } from "../../../../shared/utils/visCeldaFusionLectura.js";
 
 /**
  * @param {Record<string, unknown>|null|undefined} celda
@@ -70,6 +71,27 @@ export function lineasAlertaAuditoriaModal(celda, ctx = {}) {
  * @param {{ rda_turno_id?: string; capa_teorica?: Record<string, unknown> } | null} [turnoTeorico]
  */
 export function resumenTeoricoParaAuditoria(celda, turnoTeorico) {
+  const celdaOk = celda && typeof celda === "object";
+  const pres = celdaOk ? leerPresentacionCompuestoDesdeCelda(celda) : null;
+  const turnoIdCelda = String(
+    celda?.rda_turno_id || pres?.turno_compuesto_id || "",
+  ).trim();
+  const horarioCelda = celdaOk ? horarioOperativoDesdeCeldaVis(celda) : "";
+
+  if (turnoIdCelda || horarioCelda) {
+    return {
+      turnoId: turnoIdCelda || "—",
+      tipoDia: String(celda?.tipo_dia || turnoTeorico?.capa_teorica?.tipo_dia || "—"),
+      horario: horarioCelda || "—",
+      fichadasEsperadas:
+        celda?.fichadas_esperadas != null
+          ? String(celda.fichadas_esperadas)
+          : turnoTeorico?.capa_teorica?.fichadas_esperadas != null
+            ? String(turnoTeorico.capa_teorica.fichadas_esperadas)
+            : "—",
+    };
+  }
+
   const capa = turnoTeorico?.capa_teorica;
   const horario =
     capa && typeof capa === "object"
@@ -81,20 +103,16 @@ export function resumenTeoricoParaAuditoria(celda, turnoTeorico) {
           segmentos: capa.segmentos,
           tiene_huecos: capa.tiene_huecos,
         })
-      : celda && typeof celda === "object"
-        ? horarioOperativoDesdeCeldaVis(celda)
-        : "";
+      : "";
 
   return {
-    turnoId: String(turnoTeorico?.rda_turno_id || celda?.rda_turno_id || "—").trim() || "—",
-    tipoDia: String(capa?.tipo_dia || celda?.tipo_dia || "—"),
+    turnoId: String(turnoTeorico?.rda_turno_id || "—").trim() || "—",
+    tipoDia: String(capa?.tipo_dia || "—"),
     horario: horario || "—",
     fichadasEsperadas:
       capa?.fichadas_esperadas != null
         ? String(capa.fichadas_esperadas)
-        : celda?.fichadas_esperadas != null
-          ? String(celda.fichadas_esperadas)
-          : "—",
+        : "—",
   };
 }
 

@@ -213,12 +213,23 @@ export function agruparOpsOutboxPorTitulo(ops) {
 }
 
 /**
+ * Id cliente para overlay outbox / velo de tránsito (antes del batch).
+ * @param {Record<string, unknown>} op
+ * @param {number} index
+ */
+export function ensureOutboxOpId(op, index = 0) {
+  const existing = String(op?.id || op?.op_id || "").trim();
+  if (existing) return existing;
+  return globalThis.crypto?.randomUUID?.() || `op_${Date.now()}_${index}`;
+}
+
+/**
  * Id estable de una op en outbox (siempre preferir op.id).
  * @param {Record<string, unknown>} op
  * @param {number} idx
  */
 export function outboxOpId(op, idx = 0) {
-  return String(op?.id || `idx_${idx}`);
+  return ensureOutboxOpId(op, idx);
 }
 
 /**

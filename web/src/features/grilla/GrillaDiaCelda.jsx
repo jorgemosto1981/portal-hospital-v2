@@ -51,6 +51,7 @@ import {
   useGrillaMesNodosContext,
 } from "./useGrillaMesNodos.js";
 import { mergeCeldaNodoConFallback } from "./grillaDiaCeldaMerge.js";
+import { turnoTeoricoDesdeCeldaVis } from "./grillaTurnoTeoricoDesdeVis.js";
 
 export function grillaDiaCeldaPropsAreEqual(prev, next) {
   if (prev.cellKey !== next.cellKey) return false;
@@ -77,6 +78,7 @@ export function grillaDiaCeldaPropsAreEqual(prev, next) {
  * @property {string} cellKey
  * @property {number} revision
  * @property {Record<string, unknown>} cell
+ * @property {boolean} nodosPendiente
  * @property {ReturnType<import("./grillaCeldaOutboxVisual.js").visualCeldaOutboxPendiente>} outboxVisual
  * @property {string} dia
  * @property {string} fechaYmd
@@ -104,6 +106,7 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
   cellKey,
   revision,
   cell,
+  nodosPendiente = false,
   outboxVisual,
   dia,
   fechaYmd,
@@ -139,12 +142,16 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
   const matrizPresentacionCompuesta = esMatrizPresentacionCompuesta(filasPresentacion);
   const previewOutboxPendiente =
     Boolean(outboxVisual?.pending) && !outboxVisual?.mostrarResultadoFinal;
+  const celdaProcesandoBatch = Boolean(nodosPendiente);
+  const celdaEnTransito = celdaProcesandoBatch || previewOutboxPendiente;
   const resultadoFinalOutbox = Boolean(outboxVisual?.mostrarResultadoFinal);
   const usaPresentacionPisos =
-    !previewOutboxPendiente && esPresentacionPorPisos(filasPresentacion);
-  const turnoText = outboxVisual?.turnoText ?? textoHorarioTurno(cell);
+    !celdaEnTransito && esPresentacionPorPisos(filasPresentacion);
+  const turnoText = celdaEnTransito
+    ? "···"
+    : (outboxVisual?.turnoText ?? textoHorarioTurno(cell));
   const textoFichadaReal =
-    !usaPresentacionPisos && !previewOutboxPendiente
+    !usaPresentacionPisos && !celdaEnTransito
       ? textoHorarioFichadaRealDesdeCelda(cell)
       : "";
   const filaTieneDatoFichada = (f) =>
@@ -152,7 +159,7 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
     String(f.fichada_label || "").trim() ||
     String(f.badge_label || "").trim();
   const mostrarFichadaReal =
-    !previewOutboxPendiente &&
+    !celdaEnTransito &&
     !esFuturoGris &&
     (usaPresentacionPisos
       ? filasPresentacion.some(filaTieneDatoFichada)
@@ -273,7 +280,7 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
     Boolean(estadoSemaforoCelda) &&
     !esFuturoGris &&
     !usaPresentacionPisos &&
-    !previewOutboxPendiente;
+    !celdaEnTransito;
 
   const puedeMostrarChipFichadaReal =
     usaPresentacionPisos ||
@@ -293,12 +300,12 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
             tieneLicencia: tieneLicenciaParaVariant,
             esNoLaborable,
             esFranco,
-            tieneTurno: previewOutboxPendiente ? tieneTurno : tieneTurno || jornadaVis,
+            tieneTurno: celdaEnTransito ? true : tieneTurno || jornadaVis,
             esIncompletoPlan: esIncompletoPlan && !tieneLicencia,
-            teoriaPendienteLazy: previewOutboxPendiente ? false : teoriaPendiente.activo,
+            teoriaPendienteLazy: celdaEnTransito ? false : teoriaPendiente.activo,
             esFuturoGris,
             estadoSemaforoFichada:
-              previewOutboxPendiente || esFuturoGris
+              celdaEnTransito || esFuturoGris
                 ? null
                 : estadoSemaforoPinturaCeldaJefe(semaforoFichada?.estado, cell, fechaYmd),
           });
@@ -311,7 +318,7 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
           esFeriado: Boolean(tipoInstCol),
           esNoLaborable,
           esFranco,
-          esLaborable: previewOutboxPendiente ? tieneTurno : jornadaVis || tieneTurno,
+          esLaborable: celdaEnTransito ? true : jornadaVis || tieneTurno,
         });
   const claseTdPadding =
     columnasFichadaAnchas && !pintarCeldaSemaforoJefe
@@ -350,7 +357,8 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
             grupoLabel,
             grupoTrabajoId: grupoSeleccionado || cellGdt || undefined,
             vigenteHasta,
-            turnoTeorico: {
+            turnoTeorico:
+              turnoTeoricoDesdeCeldaVis(cell) ?? {
               rda_turno_id: turnoId || undefined,
               es_franco: esFranco,
               capa_teorica: {
@@ -385,9 +393,11 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
           variant={variant}
           rellenoCelda={pintarCeldaSemaforoJefe}
           className={[
-            outboxVisual?.pending && !outboxVisual?.mostrarResultadoFinal
+            celdaEnTransito
               ? CLASE_MARCO_CELDA_OUTBOX_PENDIENTE
-              : "",
+              : outboxVisual?.pending && !outboxVisual?.mostrarResultadoFinal
+                ? CLASE_MARCO_CELDA_OUTBOX_PENDIENTE
+                : "",
             columnasFichadaAnchas && !pintarCeldaSemaforoJefe ? CLASE_CHIP_MARCO_CELDA_DIA : "",
             columnasFichadaAnchas ? "!text-[9px]" : "",
             columnasFichadaAnchas && !usaPresentacionPisos ? CLASE_CHIP_ANCHO_CELDA_DIA : "",
@@ -408,7 +418,7 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
             mostrarFichadaReal,
             fichadaPresencia,
             estadoFichadaJefe:
-              previewOutboxPendiente
+              celdaEnTransito
                 ? null
                 : modoFichada === "jefe" && pintarCeldaSemaforoJefe
                   ? semaforoFichada
@@ -435,12 +445,12 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
             usaPresentacionPisos,
             pisoCompuestoGrande: filaCompuesta || usaPresentacionPisos,
             ocultarMicroAnalitica:
-              previewOutboxPendiente ||
+              celdaEnTransito ||
               (modoFichada === "jefe" && !ausenteSinMarcasPasada) ||
               esFuturoGris,
             modoFichadaRrhh: modoFichada === "rrhh",
             omitirBadgeSemaforo:
-              previewOutboxPendiente ||
+              celdaEnTransito ||
               (Boolean(semaforoFichada?.estado)
                 && (pintarCeldaSemaforoJefe || modoFichada === "rrhh")),
             soloTeoriaFuturo: esFuturoGris && !tieneLicencia,
@@ -498,6 +508,7 @@ export default function GrillaDiaCelda({
       cellKey={cellKey}
       revision={revision}
       cell={cell}
+      nodosPendiente={nodosCtx ? snap.pending : false}
       outboxVisual={outboxVisual}
       personaId={personaId}
       fechaYmd={fechaYmd}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -14,6 +14,7 @@ import {
   tarjetaResumenOverride,
 } from "./grillaGestionTurnoHistorial.js";
 import { horarioOperativoDesdeCeldaVis } from "./grillaHorarioInstitucional.js";
+import { turnoTeoricoDesdeCeldaVis } from "./grillaTurnoTeoricoDesdeVis.js";
 import { resumenFichadaModal, titleFichadaPresencia } from "./grillaFichadaPresenciaDisplay.js";
 import GrillaFichadaEstadoJefeBadge from "./GrillaFichadaEstadoJefeBadge.jsx";
 import {
@@ -85,12 +86,15 @@ function planTurnoCorregirPath(grupoTrabajoId, fechaYmd, rutaBase = "/portal/jef
  *   puedeVerTramosCrudosFichadas?: boolean;
  *   puedeEditarFichadasReales?: boolean;
  *   onFichadaGuardada?: () => void | Promise<void>;
+ *   onInicioGuardadoFichada?: () => void;
+ *   onFinalizadoGuardadoFichada?: (result: { ok: boolean }) => void | Promise<void>;
  *   onAbrirAyuda?: (termino: string) => void;
  *   mostrarFichada?: boolean;
  *   etiquetasGrupo?: Record<string, string>;
  *   vigenteHasta?: string | null;
  *   materializadoLazy?: boolean;
  *   onMaterializacionSanada?: () => void | Promise<void>;
+ *   omitirSanacionAutoHasta?: number;
  * }} props
  */
 export default function DiaGrillaDetalleModal({
@@ -124,17 +128,24 @@ export default function DiaGrillaDetalleModal({
   puedeVerTramosCrudosFichadas = false,
   puedeEditarFichadasReales = false,
   onFichadaGuardada,
+  onInicioGuardadoFichada,
+  onFinalizadoGuardadoFichada,
   onAbrirAyuda,
   mostrarFichada = false,
   etiquetasGrupo = {},
   vigenteHasta = null,
   materializadoLazy = false,
   onMaterializacionSanada,
+  omitirSanacionAutoHasta = 0,
 }) {
   const detalleFichadaRrhh = puedeVerTramosCrudosFichadas;
   const [celdaVisDetalle, setCeldaVisDetalle] = useState(celdaVis);
+  /** Evita que un fetch lento de vis al abrir pise un parche reciente (p. ej. traslado T). */
+  const celdaVisParcheGen = useRef(0);
+
   useEffect(() => {
     setCeldaVisDetalle(celdaVis);
+    celdaVisParcheGen.current += 1;
   }, [celdaVis, open, fechaYmd, personaId]);
 
   useEffect(() => {
@@ -144,6 +155,7 @@ export default function DiaGrillaDetalleModal({
     const ymd = String(fechaYmd || "").slice(0, 10);
     if (!/^per_/i.test(pid) || !/^gdt_/i.test(gdt) || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return;
 
+    const genAlIniciar = celdaVisParcheGen.current;
     let cancelled = false;
     (async () => {
       try {
@@ -156,7 +168,7 @@ export default function DiaGrillaDetalleModal({
           mes: m,
           dia_key: diaKey,
         });
-        if (cancelled) return;
+        if (cancelled || genAlIniciar !== celdaVisParcheGen.current) return;
         const dias = res.data?.dias && typeof res.data.dias === "object" ? res.data.dias : {};
         const fresca = diaKey && dias[diaKey] ? dias[diaKey] : null;
         if (fresca && typeof fresca === "object") {
@@ -331,22 +343,31 @@ export default function DiaGrillaDetalleModal({
     eventos: listaEventos,
     habilitar: (tieneOverridesGestion || desalineacionTeoria) && !incompletoPlan,
     aplicarSiDesalineado: puedeModificarTeoria && !soloLectura,
+    omitirHasta: omitirSanacionAutoHasta,
     onSanado: onSanacionMaterializacion,
   });
+
+  const turnoTeoricoEfectivo = useMemo(() => {
+    const c = celdaVisDetalle ?? celdaVis;
+    return turnoTeoricoDesdeCeldaVis(c) ?? turnoTeorico;
+  }, [celdaVisDetalle, celdaVis, turnoTeorico]);
 
   if (!open) return null;
 
   const lista = listaEventos;
-  const horarioTeorico = turnoTeorico?.capa_teorica
-    ? horarioOperativoDesdeCeldaVis({
-        rda_ingreso: turnoTeorico.capa_teorica.ingreso,
-        rda_egreso: turnoTeorico.capa_teorica.egreso,
-        rda_horario_display: turnoTeorico.capa_teorica.horario_display,
-        rda_tiene_huecos: turnoTeorico.capa_teorica.tiene_huecos,
-        segmentos: turnoTeorico.capa_teorica.segmentos,
-        tiene_huecos: turnoTeorico.capa_teorica.tiene_huecos,
-      })
-    : "";
+  const celdaVisOperativa = celdaVisDetalle ?? celdaVis;
+  const horarioTeorico =
+    (celdaVisOperativa && horarioOperativoDesdeCeldaVis(celdaVisOperativa))
+    || (turnoTeoricoEfectivo?.capa_teorica
+      ? horarioOperativoDesdeCeldaVis({
+          rda_ingreso: turnoTeoricoEfectivo.capa_teorica.ingreso,
+          rda_egreso: turnoTeoricoEfectivo.capa_teorica.egreso,
+          rda_horario_display: turnoTeoricoEfectivo.capa_teorica.horario_display,
+          rda_tiene_huecos: turnoTeoricoEfectivo.capa_teorica.tiene_huecos,
+          segmentos: turnoTeoricoEfectivo.capa_teorica.segmentos,
+          tiene_huecos: turnoTeoricoEfectivo.capa_teorica.tiene_huecos,
+        })
+      : "");
 
   return (
     <div
@@ -574,7 +595,7 @@ export default function DiaGrillaDetalleModal({
           celdaVis={celdaVisEfectiva}
           esRrhhLabor={detalleFichadaRrhh}
           mostrarFichada={mostrarFichada}
-          turnoTeorico={turnoTeorico}
+          turnoTeorico={turnoTeoricoEfectivo}
           resumenFichada={resumenFichada}
           desalineacionTeoria={desalineacionTeoria}
           desalineacionTooltip={desalineacionTooltip}
@@ -584,37 +605,37 @@ export default function DiaGrillaDetalleModal({
         {!fichadaAbmActivo && puedeVerTramosCrudosFichadas && !mostrarFichada ? (
           <DiaGrillaAuditoriaTecnicaRrhh
             celdaVis={celdaVisEfectiva}
-            turnoTeorico={turnoTeorico}
+            turnoTeorico={turnoTeoricoEfectivo}
             desalineacionTeoria={desalineacionTeoria}
             desalineacionTooltip={desalineacionTooltip}
             onAbrirAyuda={onAbrirAyuda}
           />
         ) : null}
 
-        {turnoTeorico &&
+        {turnoTeoricoEfectivo &&
         !(detalleFichadaRrhh && mostrarFichada) &&
-        (turnoTeorico.rda_turno_id || turnoTeorico.es_franco || turnoTeorico.capa_teorica) ? (
+        (turnoTeoricoEfectivo.rda_turno_id || turnoTeoricoEfectivo.es_franco || turnoTeoricoEfectivo.capa_teorica) ? (
           <div className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 p-3">
             <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600">Turno teorico</h4>
             <dl className="space-y-1 text-xs">
-              {turnoTeorico.rda_turno_id ? (
+              {turnoTeoricoEfectivo.rda_turno_id ? (
                 <div className="flex gap-2">
                   <dt className="font-medium text-slate-500">Turno:</dt>
-                  <dd className="font-bold text-indigo-700">{turnoTeorico.rda_turno_id}</dd>
+                  <dd className="font-bold text-indigo-700">{turnoTeoricoEfectivo.rda_turno_id}</dd>
                 </div>
               ) : null}
-              {turnoTeorico.es_franco ? (
+              {turnoTeoricoEfectivo.es_franco ? (
                 <div className="flex gap-2">
                   <dt className="font-medium text-slate-500">Tipo:</dt>
                   <dd className="text-slate-600">Franco / No laborable</dd>
                 </div>
               ) : null}
-              {turnoTeorico.capa_teorica ? (
+              {turnoTeoricoEfectivo.capa_teorica ? (
                 <>
-                  {turnoTeorico.capa_teorica.tipo_dia ? (
+                  {turnoTeoricoEfectivo.capa_teorica.tipo_dia ? (
                     <div className="flex gap-2">
                       <dt className="font-medium text-slate-500">Tipo dia:</dt>
-                      <dd className="capitalize text-slate-700">{turnoTeorico.capa_teorica.tipo_dia}</dd>
+                      <dd className="capitalize text-slate-700">{turnoTeoricoEfectivo.capa_teorica.tipo_dia}</dd>
                     </div>
                   ) : null}
                   {horarioTeorico ? (
@@ -623,22 +644,22 @@ export default function DiaGrillaDetalleModal({
                       <dd className="text-slate-700">{horarioTeorico}</dd>
                     </div>
                   ) : null}
-                  {turnoTeorico.capa_teorica.horas_efectivas != null ? (
+                  {turnoTeoricoEfectivo.capa_teorica.horas_efectivas != null ? (
                     <div className="flex gap-2">
                       <dt className="font-medium text-slate-500">Horas efectivas:</dt>
-                      <dd className="text-slate-700">{turnoTeorico.capa_teorica.horas_efectivas}hs</dd>
+                      <dd className="text-slate-700">{turnoTeoricoEfectivo.capa_teorica.horas_efectivas}hs</dd>
                     </div>
                   ) : null}
-                  {turnoTeorico.capa_teorica.fichadas_esperadas != null ? (
+                  {turnoTeoricoEfectivo.capa_teorica.fichadas_esperadas != null ? (
                     <div className="flex gap-2">
                       <dt className="font-medium text-slate-500">Fichadas esperadas:</dt>
-                      <dd className="font-bold text-indigo-800">{turnoTeorico.capa_teorica.fichadas_esperadas}</dd>
+                      <dd className="font-bold text-indigo-800">{turnoTeoricoEfectivo.capa_teorica.fichadas_esperadas}</dd>
                     </div>
                   ) : null}
-                  {turnoTeorico.capa_teorica.origen ? (
+                  {turnoTeoricoEfectivo.capa_teorica.origen ? (
                     <div className="flex gap-2">
                       <dt className="font-medium text-slate-500">Origen:</dt>
-                      <dd className="text-slate-600">{turnoTeorico.capa_teorica.origen}</dd>
+                      <dd className="text-slate-600">{turnoTeoricoEfectivo.capa_teorica.origen}</dd>
                     </div>
                   ) : null}
                 </>
@@ -842,6 +863,8 @@ export default function DiaGrillaDetalleModal({
             vista={fichadaAbmVista}
             onVistaChange={setFichadaAbmVista}
             onCerrar={() => setFichadaAbmVista(null)}
+            onInicioGuardadoFichada={onInicioGuardadoFichada}
+            onFinalizadoGuardadoFichada={onFinalizadoGuardadoFichada}
             onGuardado={onFichadaGuardada}
           />
         ) : null}

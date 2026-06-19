@@ -8,6 +8,7 @@ import {
 } from "./enrichCapaTeoricaLabels.js";
 import { mensajeErrorCapaTeorico, resumenTeoricoCorta } from "./grillaCeldaTeorico.js";
 import { capaElegibleIntercambioGuardia, previewIntercambioGuardia, validarMismoRegimenHorario } from "./grillaCoberturaParcialPreview.js";
+import { regimenHorarioIdParaFecha } from "./grillaRegimenHorarioPorFecha.js";
 
 /**
  * Capa teórica agente 2 + régimen + gate A1/A1b on-demand.
@@ -62,9 +63,10 @@ export function useIntercambioGuardiaDestino({
       const capa = capaRes?.capa_teorica ?? capaRes?.capa_teorica_grupo ?? null;
       const regimenes = ctx?.data?.regimenes || {};
       setRegimenesIdx(regimenes);
-      const hlg = (ctx?.data?.personas_grupo || []).find((p) => p.persona_id === personaDestinoId);
+      const personas = ctx?.data?.personas_grupo || [];
+      const hlg = personas.find((p) => p.persona_id === personaDestinoId);
       setPersonaLabel(hlg?.persona_label || personaDestinoId);
-      const regimenDest = String(hlg?.regimen_horario_id || "").trim();
+      const regimenDest = regimenHorarioIdParaFecha(personas, personaDestinoId, fechaDestinoYmd);
       setRegimenHorarioDestinoId(regimenDest);
       const regCheck = validarMismoRegimenHorario(regimenHorarioIdOrigen, regimenDest, regimenes);
       if (!regCheck.ok) {

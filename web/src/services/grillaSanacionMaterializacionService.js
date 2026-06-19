@@ -21,6 +21,7 @@ export async function sanearMaterializacionDiaSiNecesario(data) {
     fecha: String(data.fecha || "").trim(),
     grupo_trabajo_id: gdt,
     aplicar_si_desalineado: data.aplicar_si_desalineado !== false,
+    forzar_recalculo_fichada: data.forzar_recalculo_fichada === true,
     teoria_refs_licencia: refs,
   });
   return res?.data ?? res;

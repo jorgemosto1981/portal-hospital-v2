@@ -93,4 +93,33 @@ describe("clasificarReemplazosParaMaterializacion", () => {
     const out = aplicarQuitaSegmentosTrasladoOrigen(segmentos, [origenOv], regimen);
     assert.equal(out.length, 0);
   });
+
+  it("destino v2 en el día anula franco forzado por origen franco aún listado", () => {
+    const origenFranco = {
+      tipo: "reemplazo",
+      reemplazo_traslado_v2: "origen",
+      fecha_origen: "2026-06-10",
+      fecha_destino: "2026-06-09",
+      segmentos_a_trasladar: ["N"],
+      franco_en_origen: true,
+    };
+    const destinoM = {
+      tipo: "reemplazo",
+      reemplazo_traslado_v2: "destino",
+      fecha_origen: "2026-06-09",
+      fecha_destino: "2026-06-10",
+      segmentos_incorporados_destino: ["M"],
+      turno_id: "M",
+    };
+    const { trasladoOrigenV2, trasladoDestinoV2 } = clasificarReemplazosParaMaterializacion(
+      [origenFranco, destinoM],
+      "2026-06-10",
+    );
+    const francoTrasladoOrigen = trasladoDestinoV2.length === 0
+      && trasladoOrigenV2.some((o) => esTrasladoOrigenAplicableEnDia(o, "2026-06-10")
+        && (o.franco_en_origen === true || o.tipo_dia === "franco")
+        && String(o.fecha_origen || "").trim().slice(0, 10) === "2026-06-10");
+    assert.equal(trasladoDestinoV2.length, 1);
+    assert.equal(francoTrasladoOrigen, false);
+  });
 });

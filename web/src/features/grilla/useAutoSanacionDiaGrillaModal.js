@@ -26,6 +26,7 @@ const YMD = /^\d{4}-\d{2}-\d{2}$/;
  *   eventos?: Array<Record<string, unknown>>;
  *   habilitar?: boolean;
  *   aplicarSiDesalineado?: boolean;
+ *   omitirHasta?: number;
  *   onSanado?: (payload: { vis_dia?: Record<string, unknown> | null }) => void | Promise<void>;
  * }} opts
  */
@@ -37,6 +38,7 @@ export function useAutoSanacionDiaGrillaModal({
   eventos = [],
   habilitar = false,
   aplicarSiDesalineado = true,
+  omitirHasta = 0,
   onSanado,
 }) {
   const [sincronizando, setSincronizando] = useState(false);
@@ -49,6 +51,9 @@ export function useAutoSanacionDiaGrillaModal({
       const gdt = String(grupoTrabajoId || "").trim();
       const ymd = String(fechaYmd || "").slice(0, 10);
       if (!/^per_/i.test(pid) || !/^gdt_/i.test(gdt) || !YMD.test(ymd)) {
+        return null;
+      }
+      if (omitirHasta > 0 && Date.now() < omitirHasta) {
         return null;
       }
       const teoria_refs_licencia = teoriaRefsLicenciaDesdeEventos(eventos);
@@ -74,7 +79,9 @@ export function useAutoSanacionDiaGrillaModal({
           });
         }
         if (res?.sanado === true) {
-          if (toastId) toast.success("Turno del día actualizado.", { id: toastId });
+          if (toastId) {
+            toast.success("Turno del día actualizado.", { id: toastId });
+          }
           await onSanado?.({ vis_dia: res.vis_dia ?? null });
         } else if (toastId) {
           toast.dismiss(toastId);
@@ -87,7 +94,7 @@ export function useAutoSanacionDiaGrillaModal({
         throw e;
       }
     },
-    [personaId, fechaYmd, grupoTrabajoId, eventos, onSanado],
+    [personaId, fechaYmd, grupoTrabajoId, eventos, onSanado, omitirHasta],
   );
 
   const actualizarTeoriaAhora = useCallback(async () => {
@@ -114,7 +121,7 @@ export function useAutoSanacionDiaGrillaModal({
     if (!/^per_/i.test(pid) || !/^gdt_/i.test(gdt) || !YMD.test(ymd)) return;
 
     const refsKey = teoriaRefsLicenciaDesdeEventos(eventos).length;
-    const clave = `${pid}|${gdt}|${ymd}|${refsKey}|${aplicarSiDesalineado ? "a" : "e"}`;
+    const clave = `${pid}|${gdt}|${ymd}|${refsKey}|${aplicarSiDesalineado ? "a" : "e"}|${omitirHasta}`;
     if (ultimaClave.current === clave) return;
     ultimaClave.current = clave;
 
@@ -123,7 +130,10 @@ export function useAutoSanacionDiaGrillaModal({
 
     void (async () => {
       try {
-        await ejecutarSanacion(aplicarSiDesalineado, { silencioso: !aplicarSiDesalineado });
+        if (omitirHasta > 0 && Date.now() < omitirHasta) {
+          return;
+        }
+        await ejecutarSanacion(aplicarSiDesalineado, { silencioso: true });
       } catch {
         /* toast en ejecutarSanacion */
       } finally {
@@ -134,7 +144,7 @@ export function useAutoSanacionDiaGrillaModal({
     return () => {
       cancelled = true;
     };
-  }, [open, habilitar, personaId, fechaYmd, grupoTrabajoId, eventos, aplicarSiDesalineado, ejecutarSanacion]);
+  }, [open, habilitar, personaId, fechaYmd, grupoTrabajoId, eventos, aplicarSiDesalineado, omitirHasta, ejecutarSanacion]);
 
   const teoriaObsoleta = coherencia?.teoria_obsoleta === true;
   const requiereActualizacionManual = teoriaObsoleta

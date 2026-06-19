@@ -12,6 +12,7 @@ import {
   parseFichadasRealesCelda,
 } from "../../../../shared/utils/grillaFichadaPresencia.js";
 import { isoToHhmmInstitucional, toHhmmInstitucionalDisplay } from "../../../../shared/utils/horarioInstitucionalDisplay.js";
+import { idsSegmentoTeoricoOperativoDesdeCeldaVis } from "../../../../shared/utils/visCeldaFusionLectura.js";
 
 /** Tolerancia de débito materializada en analítica (sin fallback en UI). */
 function toleranciaDebitohorarioDesdeAnalitica(analitica) {
@@ -133,7 +134,7 @@ export function listaBadgesAusentePorTramoHuecosCelda(celdaVis) {
  * @param {Record<string, unknown>|null|undefined} [celdaVis]
  */
 export function disciplinaListaBadgesPorTramoCelda(analitica, celdaVis) {
-  const desdeAnalitica = listaBadgesIncumplimientoPorSegmentoCelda(analitica);
+  const desdeAnalitica = listaBadgesIncumplimientoPorSegmentoCelda(analitica, celdaVis);
   if (desdeAnalitica?.length) return desdeAnalitica;
   return listaBadgesAusentePorTramoHuecosCelda(celdaVis);
 }
@@ -363,7 +364,7 @@ export function minutosHorasExtrasAutorizadasDesdeCelda(celdaVis) {
  * @param {Record<string, unknown> | null | undefined} analitica
  * @returns {Array<{ label: string, title: string }> | null}
  */
-export function listaBadgesIncumplimientoPorSegmentoCelda(analitica) {
+export function listaBadgesIncumplimientoPorSegmentoCelda(analitica, celdaVis = null) {
   if (!analitica) return null;
   const segsRaw = analitica.segmentos_cumplimiento;
   if (!Array.isArray(segsRaw) || segsRaw.length < 2) return null;
@@ -372,7 +373,12 @@ export function listaBadgesIncumplimientoPorSegmentoCelda(analitica) {
     || segsRaw.some((s) => s && (s.cubierto === false || String(s.segmento_id || "").trim()));
   if (!modoSegmentos) return null;
 
-  const segs = segmentosParaBadgesIncumplimientoCelda(analitica);
+  let segs = segmentosParaBadgesIncumplimientoCelda(analitica);
+  const idsTeoria = idsSegmentoTeoricoOperativoDesdeCeldaVis(celdaVis);
+  if (idsTeoria?.size && segs.length) {
+    segs = segs.filter((s) => idsTeoria.has(String(s?.segmento_id || "").trim()));
+  }
+  if (segs.length < 2) return null;
 
   /** @type {Array<{ label: string, title: string }>} */
   const items = [];

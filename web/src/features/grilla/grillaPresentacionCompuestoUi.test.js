@@ -374,6 +374,24 @@ describe("grillaPresentacionCompuestoUi", () => {
     expect(n?.estado_tramo).toBe("presente");
   });
 
+  it("M+N un tramo diurno: ingreso y egreso en M si N está ausente (grilla hot path)", () => {
+    const celda = {
+      fichadas_reales: [{ ingreso: "05:45", egreso: "13:55", fecha_ymd: "2026-06-16" }],
+      presentacion_compuesto: {
+        filas: [
+          { segmento_id: "M", orden: 0, estado_tramo: "presente", fichada_label: null },
+          { segmento_id: "N", orden: 1, estado_tramo: "ausente", badge_label: "AUSENTE", badge_tipo: "ausente_tramo" },
+        ],
+      },
+    };
+    const filas = filasPresentacionGrillaDesdeCelda(celda);
+    const m = filas.find((f) => f.segmento_id === "M");
+    const n = filas.find((f) => f.segmento_id === "N");
+    expect(m?.marcas_hm).toEqual(["5:45", "13:55"]);
+    expect(textoMarcasPisoCelda(m)).toBe("5:45 · 13:55");
+    expect(n?.marcas_hm).toEqual([]);
+  });
+
   it("M+T CAMPOS d8: tardanza y salida en M, T ausente", () => {
     const celda = {
       fichadas_reales: [{ ingreso: "08:15", egreso: "12:30", fecha_ymd: "2026-06-08" }],
@@ -510,6 +528,24 @@ describe("grillaPresentacionCompuestoUi", () => {
     expect(textoMarcasPisoCelda(fila)).toBe("AUSENTE");
     expect(copyFichadaOperativaPiso(fila, 3)).toBe("T · AUSENTE");
     expect(lineasDesdePresentacionCompuesto([fila])).toEqual(["T · AUSENTE"]);
+  });
+
+  it("tras traslado origen (solo M teórico) oculta fila T obsoleta en presentación", () => {
+    const celda = {
+      rda_turno_id: "M",
+      rda_ingreso: "06:00",
+      rda_egreso: "14:00",
+      validacion_fichada_dia: { estado_semaforo: "ROJO" },
+      presentacion_compuesto: {
+        turno_compuesto_id: "M+T",
+        filas: [
+          { segmento_id: "M", orden: 0, estado_tramo: "ausente", badge_label: "AUSENTE" },
+          { segmento_id: "T", orden: 1, estado_tramo: "ausente", badge_label: "AUSENTE" },
+        ],
+      },
+    };
+    const filas = filasPresentacionOperativaDesdeCelda(celda);
+    expect(filas.map((f) => f.segmento_id)).toEqual(["M"]);
   });
 
   it("etiquetaFichadaPisoCelda fallback sin marcas_hm", () => {

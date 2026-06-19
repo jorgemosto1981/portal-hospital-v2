@@ -45,6 +45,8 @@ function marcasPayloadDesdeFilas(filas) {
  *   onVistaChange: (v: VistaFichadaAbm) => void;
  *   onCerrar: () => void;
  *   onGuardado?: () => void | Promise<void>;
+ *   onInicioGuardadoFichada?: () => void;
+ *   onFinalizadoGuardadoFichada?: (result: { ok: boolean }) => void | Promise<void>;
  * }} props
  */
 export default function DiaGrillaFichadaAbmPanel({
@@ -57,6 +59,8 @@ export default function DiaGrillaFichadaAbmPanel({
   onVistaChange,
   onCerrar,
   onGuardado,
+  onInicioGuardadoFichada,
+  onFinalizadoGuardadoFichada,
 }) {
   const [motivoModal, setMotivoModal] = useState(null);
   const [ingresoAlta, setIngresoAlta] = useState("");
@@ -73,6 +77,8 @@ export default function DiaGrillaFichadaAbmPanel({
   const ejecutar = useCallback(
     async (payload) => {
       setGuardando(true);
+      onInicioGuardadoFichada?.();
+      let guardadoOk = false;
       try {
         const res = await callGuardarCapaFichadaDia({
           persona_id: personaId,
@@ -92,6 +98,7 @@ export default function DiaGrillaFichadaAbmPanel({
         } else {
           toast.success("Fichada actualizada.");
         }
+        guardadoOk = true;
         setMotivoModal(null);
         setIngresoAlta("");
         setEgresoAlta("");
@@ -101,9 +108,19 @@ export default function DiaGrillaFichadaAbmPanel({
         toast.error(laboralCallableErrorMessage(e, "Error al guardar fichada."));
       } finally {
         setGuardando(false);
+        await onFinalizadoGuardadoFichada?.({ ok: guardadoOk });
       }
     },
-    [personaId, grupoTrabajoId, fechaYmd, version, onGuardado, onVistaChange],
+    [
+      personaId,
+      grupoTrabajoId,
+      fechaYmd,
+      version,
+      onGuardado,
+      onVistaChange,
+      onInicioGuardadoFichada,
+      onFinalizadoGuardadoFichada,
+    ],
   );
 
   const pedirMotivoYEjecutar = (accion, extra = {}) => {

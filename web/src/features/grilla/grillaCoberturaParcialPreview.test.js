@@ -86,7 +86,7 @@ describe("grillaCoberturaParcialPreview", () => {
     assert.match(r.error, /cedidos a otro agente/);
   });
 
-  it("empareja M de XX con T de YY (8 h)", () => {
+  it("empareja M de XX con T de YY (8 h) en fechas distintas", () => {
     const val = validarIntercambioGuardia({
       personaOrigenId: PER_A,
       personaDestinoId: PER_B,
@@ -95,7 +95,7 @@ describe("grillaCoberturaParcialPreview", () => {
       periodo: PERIODO,
       segmentosCedidosOrigen: ["cfg_reg_turno_m"],
       segmentosCedidosDestino: ["cfg_reg_turno_t"],
-      capaOrigen: capaLaborable(["cfg_reg_turno_m", "cfg_reg_turno_t"]),
+      capaOrigen: capaLaborable(["cfg_reg_turno_m"]),
       capaDestino: capaLaborable(["cfg_reg_turno_t"]),
       turnosPorIdOrigen: TURNOS,
       turnosPorIdDestino: TURNOS,
@@ -291,8 +291,7 @@ describe("grillaCoberturaParcialPreview", () => {
     assert.match(val.error || "", /Agente 1/i);
   });
 
-  it("A-N1 permite swap N↔M con preview acumulado (LOKITO/MOSTO)", () => {
-    const capaMtn = capaLaborable(["cfg_reg_turno_m", "cfg_reg_turno_t", "cfg_reg_turno_n"]);
+  it("permite swap N↔M cuando el receptor no conserva el tramo recibido", () => {
     const val = validarIntercambioGuardia({
       personaOrigenId: PER_A,
       personaDestinoId: PER_B,
@@ -301,7 +300,7 @@ describe("grillaCoberturaParcialPreview", () => {
       periodo: PERIODO,
       segmentosCedidosOrigen: ["cfg_reg_turno_n"],
       segmentosCedidosDestino: ["cfg_reg_turno_m"],
-      capaOrigen: capaMtn,
+      capaOrigen: capaLaborable(["cfg_reg_turno_t", "cfg_reg_turno_n"]),
       capaDestino: capaLaborable(["cfg_reg_turno_m"]),
       turnosPorIdOrigen: TURNOS,
       turnosPorIdDestino: TURNOS,
@@ -333,6 +332,76 @@ describe("grillaCoberturaParcialPreview", () => {
     });
     assert.equal(val.ok, false);
     assert.match(val.error || "", /sin efecto/i);
+  });
+
+  it("rechaza swap M↔N cuando agente 2 ya tiene M (caso ilegal d8 LOKITO/CHAPARRO)", () => {
+    const val = validarIntercambioGuardia({
+      personaOrigenId: PER_A,
+      personaDestinoId: PER_B,
+      fechaOrigenYmd: FECHA1,
+      fechaDestinoYmd: FECHA1,
+      periodo: PERIODO,
+      segmentosCedidosOrigen: ["cfg_reg_turno_m"],
+      segmentosCedidosDestino: ["cfg_reg_turno_n"],
+      capaOrigen: capaLaborable(["cfg_reg_turno_m", "cfg_reg_turno_t"]),
+      capaDestino: capaLaborable(["cfg_reg_turno_m", "cfg_reg_turno_n"]),
+      turnosPorIdOrigen: TURNOS,
+      turnosPorIdDestino: TURNOS,
+      regimenHorarioIdOrigen: REGIMEN_MTN,
+      regimenHorarioIdDestino: REGIMEN_MTN,
+      regimenesIdx: REGIMENES_PLANIFICADO,
+    });
+    assert.equal(val.ok, false);
+    assert.match(val.error || "", /Agente 2/i);
+    assert.match(val.error || "", /cfg_reg_turno_m|M/i);
+  });
+
+  it("permite swap legal M↔N (LOKITO M+T ↔ agente solo N)", () => {
+    const val = validarIntercambioGuardia({
+      personaOrigenId: PER_A,
+      personaDestinoId: PER_B,
+      fechaOrigenYmd: FECHA1,
+      fechaDestinoYmd: FECHA1,
+      periodo: PERIODO,
+      segmentosCedidosOrigen: ["cfg_reg_turno_m"],
+      segmentosCedidosDestino: ["cfg_reg_turno_n"],
+      capaOrigen: capaLaborable(["cfg_reg_turno_m", "cfg_reg_turno_t"]),
+      capaDestino: capaLaborable(["cfg_reg_turno_n"]),
+      turnosPorIdOrigen: TURNOS,
+      turnosPorIdDestino: TURNOS,
+      regimenHorarioIdOrigen: REGIMEN_MTN,
+      regimenHorarioIdDestino: REGIMEN_MTN,
+      regimenesIdx: REGIMENES_PLANIFICADO,
+    });
+    assert.equal(val.ok, true);
+    assert.equal(val.preview?.origen?.despues, "T+N");
+    assert.equal(val.preview?.destino?.despues, "M");
+  });
+
+  it("permite swap T↔N mismo día 08/06 (LOKITO M+T ↔ CHAPARRO M+N)", () => {
+    const val = validarIntercambioGuardia({
+      personaOrigenId: PER_A,
+      personaDestinoId: PER_B,
+      fechaOrigenYmd: "2026-06-08",
+      fechaDestinoYmd: "2026-06-08",
+      periodo: PERIODO,
+      segmentosCedidosOrigen: ["cfg_reg_turno_t"],
+      segmentosCedidosDestino: ["cfg_reg_turno_n"],
+      capaOrigen: capaLaborable(["cfg_reg_turno_m", "cfg_reg_turno_t"]),
+      capaDestino: capaLaborable(["cfg_reg_turno_m", "cfg_reg_turno_n"]),
+      turnosPorIdOrigen: TURNOS,
+      turnosPorIdDestino: TURNOS,
+      regimenHorarioIdOrigen: REGIMEN_MTN,
+      regimenHorarioIdDestino: REGIMEN_MTN,
+      regimenesIdx: REGIMENES_PLANIFICADO,
+    });
+    assert.equal(val.ok, true);
+    assert.equal(val.preview?.origen?.cede, "T");
+    assert.equal(val.preview?.origen?.recibe, "N");
+    assert.equal(val.preview?.origen?.despues, "M+N");
+    assert.equal(val.preview?.destino?.cede, "N");
+    assert.equal(val.preview?.destino?.recibe, "T");
+    assert.equal(val.preview?.destino?.despues, "M+T");
   });
 
   it("buildIntercambioGuardiaOutboxOp arma payload v2 bilateral", () => {

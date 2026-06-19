@@ -69,6 +69,11 @@ export default function ModalCambioTurnoPropio({
   const [turnosRegimenPorId, setTurnosRegimenPorId] = useState(/** @type {Record<string, object>} */ ({}));
   const [operando, setOperando] = useState(false);
   const [errorSubmit, setErrorSubmit] = useState("");
+
+  useEffect(() => {
+    if (!aplicandoCambio) setOperando(false);
+  }, [aplicandoCambio]);
+
   const [expectedVersionTokenOrigen, setExpectedVersionTokenOrigen] = useState("");
   const [turnosDestinoSel, setTurnosDestinoSel] = useState(() => new Set());
   const [avisoPreseleccion, setAvisoPreseleccion] = useState("");

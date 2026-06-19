@@ -23,7 +23,7 @@ export function mergeCeldaNodoConFallback({
     return tieneStore ? st : fb;
   }
   if (pending) {
-    return { ...fb, ...st };
+    return { ...fb };
   }
   if (tieneStore) {
     return { ...fb, ...st };

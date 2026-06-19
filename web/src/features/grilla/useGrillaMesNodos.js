@@ -17,10 +17,8 @@ import {
   parseCellKey,
 } from "../../../../shared/utils/grillaMesNodos/index.js";
 import {
-  fetchParchesVisDesdeOpsOutbox,
   fetchParchesVisDesdeReferencias,
-  mergeParchesVisLista,
-  parchesVisDesdeRespuestaBatch,
+  resolverParchesVisTrasBatchExito,
 } from "./grillaMesNodosBatchParches.js";
 import { callObtenerVistaGrillaMesAgente } from "../../services/callables.js";
 
@@ -180,7 +178,7 @@ export function useGrillaMesNodos({
   );
 
   const aplicarParchesVisEnGrilla = useCallback(
-    async (refs) => {
+    async (refs, opts = {}) => {
       const list = Array.isArray(refs) ? refs : [];
       if (!list.length) return [];
       let parches = [];
@@ -198,6 +196,7 @@ export function useGrillaMesNodos({
             gdt: p.gdt,
             celda: p.celda,
           })),
+          { reemplazoTeoriaCompleto: opts.reemplazoTeoriaCompleto === true },
         );
         snapshotCacheRef.current.clear();
         setBumpEpoch((n) => n + 1);
@@ -211,25 +210,11 @@ export function useGrillaMesNodos({
     async (opsAplicadas, batchResult) => {
       const list = Array.isArray(opsAplicadas) ? opsAplicadas : [];
       const opIds = list.map((o) => String(o?.id || "").trim()).filter(Boolean);
-      let parches = parchesVisDesdeRespuestaBatch(batchResult);
-      try {
-        const desdeAgente = await fetchParchesVisDesdeOpsOutbox(
-          list,
-          callObtenerVistaGrillaMesAgente,
-        );
-        parches = mergeParchesVisLista(parches, desdeAgente);
-      } catch {
-        if (!parches.length) {
-          try {
-            parches = await fetchParchesVisDesdeOpsOutbox(
-              list,
-              callObtenerVistaGrillaMesAgente,
-            );
-          } catch {
-            parches = [];
-          }
-        }
-      }
+      const parches = await resolverParchesVisTrasBatchExito(
+        list,
+        batchResult,
+        callObtenerVistaGrillaMesAgente,
+      );
       store.confirmarBatch(
         opIds,
         parches.map((p) => ({
@@ -238,10 +223,35 @@ export function useGrillaMesNodos({
           gdt: p.gdt,
           celda: p.celda,
         })),
+        { reemplazoTeoriaCompleto: true },
       );
       snapshotCacheRef.current.clear();
       setBumpEpoch((n) => n + 1);
       return parches;
+    },
+    [store],
+  );
+
+  const marcarOpsPendientes = useCallback(
+    (ops) => {
+      for (const op of ops || []) {
+        if (!op || typeof op !== "object") continue;
+        store.aplicarOpLocal(op);
+      }
+      snapshotCacheRef.current.clear();
+      setBumpEpoch((n) => n + 1);
+    },
+    [store],
+  );
+
+  const revocarOpsPendientes = useCallback(
+    (ops) => {
+      for (const op of ops || []) {
+        const id = String(op?.id || op?.op_id || "").trim();
+        if (id) store.revocarOpLocal(id);
+      }
+      snapshotCacheRef.current.clear();
+      setBumpEpoch((n) => n + 1);
     },
     [store],
   );
@@ -255,6 +265,8 @@ export function useGrillaMesNodos({
         confirmarBatch,
         confirmarBatchTrasExito,
         aplicarParchesVisEnGrilla,
+        marcarOpsPendientes,
+        revocarOpsPendientes,
         bumpEpoch,
       }),
     [
@@ -264,6 +276,8 @@ export function useGrillaMesNodos({
       confirmarBatch,
       confirmarBatchTrasExito,
       aplicarParchesVisEnGrilla,
+      marcarOpsPendientes,
+      revocarOpsPendientes,
       bumpEpoch,
     ],
   );
