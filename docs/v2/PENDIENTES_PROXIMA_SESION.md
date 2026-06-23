@@ -4,7 +4,7 @@
 > **Deploy functions + hosting** · **commit** cuando corresponda. Opcional: **CHAPARRO d19** (Q2.4 histórico).  
 > Handoff: [`HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md`](./HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md) · CVC: [`RFC_CICLO_VIS_CELDA_GRILLA_V2.md`](./RFC_CICLO_VIS_CELDA_GRILLA_V2.md) · Plan: [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md)  
 > Handoff anterior: [`HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md`](./HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md)  
-> **Hosting prod:** https://portal-hospital-v2.web.app · deploy documentado **2026-06-19** · cambios 23-jun en **master local sin commit** · QA tarde en **localhost**
+> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-23** (`b594cda`) · `master` **1 commit** ahead of origin (push pendiente si se desea)
 
 ---
 
@@ -21,7 +21,7 @@
 | CHAPARRO d19 (Q2.4 inicio sesión) | ❌ histórico · ⏳ re-QA opcional post-CVC |
 | Q3 cadena N/M CAMPOS | ✅ **2026-06-23** (protocolo + d12; fix flags franco) |
 | Q4 intercambio d8 (LOKITO↔CHAPARRO T↔N) | ✅ **2026-06-23** |
-| Commit + deploy hosting/functions | ⏳ **siguiente** |
+| Commit + deploy hosting/functions | ✅ **2026-06-23** (`b594cda`) · ver nota functions parcial abajo |
 | Tope movimientos | 📋 RFC borrador |
 
 ---

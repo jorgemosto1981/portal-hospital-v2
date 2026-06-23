@@ -5,7 +5,7 @@
 
 **Piloto:** Sala Internación 1 `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · **2026-06**  
 **Rama:** `master` (cambios **sin commit** — ver `git status`)  
-**Prod:** https://portal-hospital-v2.web.app (deploy documentado **2026-06-19**; QA de esta sesión en **localhost** `npm run dev:web`)
+**Prod:** https://portal-hospital-v2.web.app · **deploy hosting + functions grilla** **2026-06-23** (`b594cda`) · QA piloto en prod tras deploy
 
 ---
 
@@ -145,3 +145,4 @@ npm run dev:web
 | 2026-06-23 | **Q4 OK** — intercambio LOKITO↔CHAPARRO d8 (T↔N, 08/06) |
 | 2026-06-23 | Fix franco obsoleto en parche; CAMPOS **d12** incorporar N → **OK** |
 | 2026-06-23 | **Q3 OK** — cadena N/M CAMPOS (protocolo + d12) |
+| 2026-06-23 | **Deploy** hosting OK · functions grilla OK (`aplicarBatchAsistencia`, `materializarTurnoTeoricoDia`, `obtenerVistaGrillaMesAgente`, `listarVistaGrillaMesPorGrupo`) · 14 functions periféricas fallaron por cuota 429 (reintentar si hace falta) |
