@@ -38,6 +38,7 @@ export function mensajeToastMaterializacionLazy(vista) {
  * @param {{ ok?: boolean; procesados?: number } | null | undefined} matGrupo
  */
 export function mensajeToastMaterializacionGrupo(matGrupo) {
+  if (matGrupo?.omitida === true) return null;
   if (matGrupo?.ok !== true) return null;
   const n = Number(matGrupo.procesados);
   if (!Number.isFinite(n) || n <= 0) return null;

@@ -292,6 +292,13 @@ export function callListarVistaGrillaMesPorGrupo(data) {
   return httpsCallable(getFunctionsV2(), "listarVistaGrillaMesPorGrupo")(data);
 }
 
+/** Encola reconciliación async vía `grilla_sync_grupo_mes` (RRHH: `forzar_sincrono`). */
+export function callSolicitarReconciliacionGrillaGrupoMes(data) {
+  return httpsCallable(getFunctionsV2(), "solicitarReconciliacionGrillaGrupoMes", { timeout: 300000 })(
+    data,
+  );
+}
+
 /** RRHH: cierra liquidación del mes en todas las vis_* del grupo (freeze). */
 export function callCerrarPeriodoLiquidacion(data) {
   return httpsCallable(getFunctionsV2(), "cerrarPeriodoLiquidacion")(data);

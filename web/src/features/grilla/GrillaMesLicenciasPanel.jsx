@@ -61,6 +61,10 @@ import SelectorFocoGdt from "./SelectorFocoGdt.jsx";
 import { useGrillaMesFocoUrl } from "./useGrillaMesFocoUrl.js";
 import { resolvePlanesTurnoCapabilities } from "../planes/planesTurnoCapabilities.js";
 import { grillaVistaCacheStore, invalidarCacheGrillaTrasMutacion } from "./grillaCacheMemoryStore.js";
+import {
+  GrillaSyncSectorControls,
+  useGrillaSyncSectorBar,
+} from "./GrillaSyncSectorBar.jsx";
 
 function parsePeriodo(periodo) {
   const [yyyy, mm] = String(periodo || "").split("-");
@@ -405,6 +409,54 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
 
   const gdtGrillaModal =
     grupoLiquidacionId || vista.grupoActivoId || vista.grupoId || "";
+
+  const focoSectorActivo =
+    usaFocoEnUrl && focoUrl.tieneFocoValido && !grillaTitularAbierta;
+  const gdtSyncSector = focoSectorActivo
+    ? String(focoUrl.grupoIdUrl || "").trim()
+    : String(gdtGrillaModal || "").trim();
+  const periodoSyncSector = focoSectorActivo
+    ? focoUrl.periodoUrl
+    : periodoGrillaModal;
+
+  const syncSectorHabilitado =
+    !modalMuestraTitular
+    && !grillaTitularAbierta
+    && RX_GDT.test(gdtSyncSector)
+    && Boolean(periodoSyncSector)
+    && (Boolean(vistaModal) || focoSectorActivo);
+
+  const syncEstadoListado = vista.data?.sync_estado;
+
+  const recargarVistaTrasSync = useCallback(
+    (opts) => {
+      if (focoSectorActivo && !vistaModal) {
+        return vista.cargar({
+          periodo: focoUrl.periodoUrl,
+          modo: GRILLA_MES_MODO.SECTOR,
+          grupoId: focoUrl.grupoIdUrl,
+          ...opts,
+        });
+      }
+      return vista.cargar(opts);
+    },
+    [focoSectorActivo, vistaModal, vista.cargar, focoUrl.periodoUrl, focoUrl.grupoIdUrl],
+  );
+
+  const grillaSyncSector = useGrillaSyncSectorBar({
+    grupoTrabajoId: gdtSyncSector,
+    periodoYm: periodoSyncSector,
+    enabled: syncSectorHabilitado,
+    syncEstadoListado,
+    onCargarVista: recargarVistaTrasSync,
+  });
+
+  const puedeSolicitarSyncSector =
+    capabilities.puedeAccionesPeriodoLiquidacion
+    || (esJefe && vista.gsoPermiteEscritura && RX_GDT.test(gdtSyncSector));
+
+  const mostrarSyncEnModal = Boolean(vistaModal) && syncSectorHabilitado;
+  const mostrarSyncEnFoco = focoSectorActivo && syncSectorHabilitado && !vistaModal;
   const personaLabelsGrilla = useMemo(() => {
     /** @type {Record<string, string>} */
     const base = {};
@@ -785,11 +837,24 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                 {labelPeriodo(vistaModal?.periodo || focoUrl.periodoUrl)}
               </p>
             ) : focoUrl.tieneFocoValido ? (
-              <p className="mt-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-950">
-                Trabajando en:{" "}
-                {focoUrl.grupoLabelUrl || vista.grupoActivoLabel || focoUrl.grupoIdUrl} ·{" "}
-                {labelPeriodo(focoUrl.periodoUrl)}
-              </p>
+              <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2">
+                <p className="text-sm font-medium text-violet-950">
+                  Trabajando en:{" "}
+                  {focoUrl.grupoLabelUrl || vista.grupoActivoLabel || focoUrl.grupoIdUrl} ·{" "}
+                  {labelPeriodo(focoUrl.periodoUrl)}
+                </p>
+                <GrillaSyncSectorControls
+                  visible={mostrarSyncEnFoco}
+                  className="mt-2"
+                  grillaSync={grillaSyncSector.grillaSync}
+                  syncEstadoListado={syncEstadoListado}
+                  listadoReconciliacionPendiente={grillaSyncSector.listadoReconciliacionPendiente}
+                  puedeSolicitarSync={puedeSolicitarSyncSector}
+                  procesandoGrilla={procesandoGrilla}
+                  solicitando={grillaSyncSector.solicitando}
+                  sincronizarSector={grillaSyncSector.sincronizarSector}
+                />
+              </div>
             ) : mostrarPanoramaJefe ? null : (
               <p className="mt-3 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-4 text-sm text-slate-600">
                 {esVistaRrhh
@@ -923,10 +988,21 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
             aria-label="Cerrar modal"
           />
           <div className="relative z-10 flex h-[96vh] w-[98vw] flex-col rounded-2xl border border-slate-300 bg-white p-3 shadow-2xl sm:p-4">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2">
-              <div>
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-2">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs uppercase tracking-wide text-slate-500">Calendario licencias</p>
                 <h3 className="text-base font-semibold text-slate-900">{vistaModal.titulo}</h3>
+                <GrillaSyncSectorControls
+                  visible={mostrarSyncEnModal}
+                  className="mt-1"
+                  grillaSync={grillaSyncSector.grillaSync}
+                  syncEstadoListado={syncEstadoListado}
+                  listadoReconciliacionPendiente={grillaSyncSector.listadoReconciliacionPendiente}
+                  puedeSolicitarSync={puedeSolicitarSyncSector}
+                  procesandoGrilla={procesandoGrilla}
+                  solicitando={grillaSyncSector.solicitando}
+                  sincronizarSector={grillaSyncSector.sincronizarSector}
+                />
               </div>
               <button
                 type="button"
@@ -1084,7 +1160,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                     gsoSoloLecturaMotivo={vista.gsoSoloLecturaMotivo}
                     modoFichada={modoFichadaCelda}
                     materializacionGrupoReciente={
-                      (vista.data?.materializacion_grupo?.procesados ?? 0) > 0
+                      vista.data?.materializacion_grupo?.omitida !== true
+                      && (vista.data?.materializacion_grupo?.procesados ?? 0) > 0
                     }
                     onCeldaClick={({
                     dia,
@@ -1120,7 +1197,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
                       celdaVis: celdaVis || undefined,
                       vigenteHasta: vigenteHasta || undefined,
                       materializadoLazy:
-                        (vista.data?.materializacion_grupo?.procesados ?? 0) > 0,
+                        (vista.data?.materializacion_grupo?.procesados ?? 0) > 0
+                        && vista.data?.materializacion_grupo?.omitida !== true,
                       grupoTrabajoId: grupoTrabajoId || grupoLiquidacionId || vista.grupoActivoId || "",
                     });
                   }}
@@ -1220,6 +1298,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         </div>
       ) : null}
 
+      <GrillaMesNodosProvider value={grillaMesNodos}>
       <DiaGrillaDetalleModal
         open={diaModal != null}
         onClose={() => {
@@ -1288,6 +1367,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
             : undefined
         }
       />
+      </GrillaMesNodosProvider>
 
       {gestionTurnoShell ? (
         <GestionTurnoDiaShell

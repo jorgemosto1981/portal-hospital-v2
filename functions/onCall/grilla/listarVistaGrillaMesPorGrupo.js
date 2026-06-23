@@ -43,6 +43,7 @@ const listarVistaGrillaMesPorGrupoCallable = onCall(async (request) => {
       grupoTrabajoId,
       anio,
       mes,
+      forzarMaterializacionGrupo: d.forzar_materializacion_grupo === true,
     });
 
     if (!result.ok) {

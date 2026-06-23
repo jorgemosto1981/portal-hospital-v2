@@ -78,6 +78,121 @@ function visRequiereMaterializacion(vista) {
 }
 
 /**
+ * @param {unknown} ts — Firestore Timestamp o similar
+ * @returns {string | null} ISO 8601
+ */
+function firestoreTimestampToIso(ts) {
+  if (!ts) return null;
+  if (typeof ts.toDate === "function") {
+    const d = ts.toDate();
+    return d instanceof Date && !Number.isNaN(d.getTime()) ? d.toISOString() : null;
+  }
+  if (typeof ts === "object" && ts !== null && typeof ts._seconds === "number") {
+    return new Date(ts._seconds * 1000).toISOString();
+  }
+  return null;
+}
+
+/**
+ * @param {Array<{ vista?: { existe?: boolean; metadata?: { ultima_sync_teorica?: unknown } | null } }>} filasMeta
+ */
+function construirSyncEstadoDesdeFilas(filasMeta) {
+  let ultimaSyncMax = null;
+  let filasSinVis = 0;
+  let filasDegeneradas = 0;
+  for (const row of filasMeta || []) {
+    const vista = row.vista;
+    if (!vista || vista.existe !== true) {
+      filasSinVis += 1;
+      continue;
+    }
+    if (visRequiereMaterializacion(vista)) {
+      filasDegeneradas += 1;
+    }
+    const iso = firestoreTimestampToIso(vista.metadata?.ultima_sync_teorica);
+    if (iso && (!ultimaSyncMax || iso > ultimaSyncMax)) {
+      ultimaSyncMax = iso;
+    }
+  }
+  const pendiente = filasSinVis + filasDegeneradas > 0;
+  return {
+    ultima_sync_max: ultimaSyncMax,
+    filas_sin_vis: filasSinVis,
+    filas_degeneradas: filasDegeneradas,
+    reconciliacion: pendiente ? "pendiente" : "idle",
+  };
+}
+
+/**
+ * Lectura batch de vis_* por persona (sin materializar).
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {{ personaIds: string[]; grupoTrabajoId: string; anio: number; mes: number }} opts
+ * @returns {Promise<Map<string, Awaited<ReturnType<typeof leerVistaGrillaMesAgente>>>>}
+ */
+async function leerVistasGrillaMesAgentePorPersonas(db, { personaIds, grupoTrabajoId, anio, mes }) {
+  const gdt = String(grupoTrabajoId || "").trim();
+  const y = Number(anio);
+  const m = Number(mes);
+  const mm = String(m).padStart(2, "0");
+  const fechaRef = `${y}-${mm}-01`;
+  const unicos = [...new Set((personaIds || []).map((p) => String(p || "").trim()).filter((p) => /^per_/i.test(p)))];
+  const byPid = new Map();
+
+  const entries = [];
+  for (const pid of unicos) {
+    try {
+      const visId = buildVisDocumentId(pid, fechaRef, gdt);
+      entries.push({ pid, visId });
+    } catch {
+      byPid.set(pid, {
+        ok: false,
+        codigo: "PARAMS_INVALIDOS",
+        mensaje: "No se pudo resolver id de vista.",
+      });
+    }
+  }
+
+  const GET_ALL_CHUNK = 10;
+  for (let i = 0; i < entries.length; i += GET_ALL_CHUNK) {
+    const chunk = entries.slice(i, i + GET_ALL_CHUNK);
+    const refs = chunk.map(({ visId }) => db.collection(COL_VISTAS_GRILLA_MES).doc(visId));
+    const snaps = await db.getAll(...refs);
+    snaps.forEach((snap, idx) => {
+      const { pid, visId } = chunk[idx];
+      if (!snap.exists) {
+        byPid.set(pid, {
+          ok: true,
+          existe: false,
+          vis_id: visId,
+          persona_id: pid,
+          grupo_trabajo_id: gdt,
+          anio: y,
+          mes: m,
+          dias: {},
+          metadata: null,
+        });
+        return;
+      }
+      const data = snap.data() || {};
+      byPid.set(pid, {
+        ok: true,
+        existe: true,
+        vis_id: visId,
+        persona_id: String(data.persona_id || pid),
+        grupo_trabajo_id: String(data.grupo_de_trabajo_id || gdt),
+        anio: data.anio ?? y,
+        mes: data.mes ?? m,
+        dias: fusionarDiasDesdeClavesPlanas(data),
+        metadata: data.metadata || null,
+        estado_periodo_liquidacion_id: data.estado_periodo_liquidacion_id || null,
+      });
+    });
+  }
+
+  return byPid;
+}
+
+/**
  * Carga HLg del grupo con fechas resueltas desde HLD cuando aplica.
  * @param {import("firebase-admin/firestore").Firestore} db
  * @param {string} grupoTrabajoId
@@ -339,9 +454,14 @@ async function contarPersonasVigentesGrupoMes(db, opts) {
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
- * @param {{ grupoTrabajoId: string, anio: number, mes: number }} opts
+ * @param {{ grupoTrabajoId: string, anio: number, mes: number, forzarMaterializacionGrupo?: boolean }} opts
  */
-async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
+async function listarVistaGrillaMesPorGrupo(db, {
+  grupoTrabajoId,
+  anio,
+  mes,
+  forzarMaterializacionGrupo = false,
+}) {
   const gdt = String(grupoTrabajoId || "").trim();
   const y = Number(anio);
   const m = Number(mes);
@@ -369,29 +489,45 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
 
   const mm = String(m).padStart(2, "0");
   const periodoId = `${y}-${mm}`;
-  const planCache = await obtenerPlanHabilitadoCache(db, gdt, periodoId);
-  const { materializarGrupoMes } = require("../asistencia/rdaTurnoTeoricoWorker");
-  const matGrupo = await materializarGrupoMes({
-    grupoId: gdt,
+  const forzar = forzarMaterializacionGrupo === true;
+
+  let matGrupo = { ok: true, procesados: 0, fallos: [] };
+  if (forzar) {
+    const planCache = await obtenerPlanHabilitadoCache(db, gdt, periodoId);
+    const { materializarGrupoMes } = require("../asistencia/rdaTurnoTeoricoWorker");
+    matGrupo = await materializarGrupoMes({
+      grupoId: gdt,
+      anio: y,
+      mes: m,
+      planCache,
+    });
+  }
+
+  const personaIdsTramos = tramosLimitados.map((t) => t.persona_id);
+  const vistasPorPersona = await leerVistasGrillaMesAgentePorPersonas(db, {
+    personaIds: personaIdsTramos,
+    grupoTrabajoId: gdt,
     anio: y,
     mes: m,
-    planCache,
   });
 
   const filas = [];
   for (const tramo of tramosLimitados) {
     const pid = tramo.persona_id;
-    const vista = await leerVistaGrillaMesAgente(db, {
-      personaId: pid,
-      grupoTrabajoId: gdt,
-      anio: y,
-      mes: m,
-    });
+    const vista =
+      vistasPorPersona.get(pid)
+      || (await leerVistaGrillaMesAgente(db, {
+        personaId: pid,
+        grupoTrabajoId: gdt,
+        anio: y,
+        mes: m,
+      }));
     const baseLabel = await resolvePersonaLabel(db, pid, personaCache);
     const regimenDoc = tramo.regimen_horario_id ? regimenCache.get(tramo.regimen_horario_id) : null;
     const cargaHoras = derivarCargaSemanalDesdeRegimen(regimenDoc);
     const persona_label = buildPersonaLabelConCarga(baseLabel, cargaHoras);
     const diasCompletos = vista.ok !== false && vista.dias ? vista.dias : {};
+    const requiereMat = !forzar && visRequiereMaterializacion(vista);
     filas.push({
       fila_id: tramo.fila_id,
       persona_id: pid,
@@ -405,11 +541,63 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
       vis_id: vista.vis_id || null,
       existe: vista.existe === true,
       dias: filtrarDiasPorTramo(diasCompletos, tramo.vigente_desde, tramo.vigente_hasta),
-      materializado_lazy: false,
+      materializado_lazy: requiereMat,
     });
   }
 
   filas.sort((a, b) => String(a.persona_label || "").localeCompare(String(b.persona_label || ""), "es"));
+
+  const sync_estado = construirSyncEstadoDesdeFilas(
+    [...vistasPorPersona.values()].map((vista) => ({ vista })),
+  );
+
+  if (!forzar && sync_estado.reconciliacion === "pendiente") {
+    const { alinearGrillaSyncTrasListar } = require("./grillaSyncGrupoMesCore");
+    void alinearGrillaSyncTrasListar(db, {
+      grupoTrabajoId: gdt,
+      anio: y,
+      mes: m,
+      sync_estado,
+    }).catch(() => {});
+  }
+
+  if (forzar) {
+    const { buildGrillaSyncGrupoMesDocId, ESTADO_IDLE } = require("./grillaSyncGrupoMesCore");
+    const { FieldValue } = require("firebase-admin/firestore");
+    const { COL_GRILLA_SYNC_GRUPO_MES } = require("./grillaSyncGrupoMesCore");
+    try {
+      const docId = buildGrillaSyncGrupoMesDocId(gdt, y, m);
+      await db.collection(COL_GRILLA_SYNC_GRUPO_MES).doc(docId).set(
+        {
+          gdt,
+          periodo: `${y}-${mm}`,
+          anio: y,
+          mes: m,
+          estado: ESTADO_IDLE,
+          ultimo_ok_at: FieldValue.serverTimestamp(),
+          metadata: {
+            materializacion_grupo: {
+              ok: matGrupo.ok === true,
+              procesados: matGrupo.procesados ?? 0,
+              fallos: Array.isArray(matGrupo.fallos) ? matGrupo.fallos.length : 0,
+            },
+          },
+          error: null,
+        },
+        { merge: true },
+      );
+    } catch {
+      /* sync doc opcional */
+    }
+  }
+
+  let grilla_sync = null;
+  try {
+    const { leerGrillaSyncGrupoMes } = require("./grillaSyncGrupoMesCore");
+    grilla_sync = await leerGrillaSyncGrupoMes(db, { grupoTrabajoId: gdt, anio: y, mes: m });
+  } catch {
+    grilla_sync = null;
+  }
 
   return {
     ok: true,
@@ -420,11 +608,21 @@ async function listarVistaGrillaMesPorGrupo(db, { grupoTrabajoId, anio, mes }) {
     total_personas: total_personas_unicas,
     total_filas: filas.length,
     truncado,
-    materializacion_grupo: {
-      ok: matGrupo.ok === true,
-      procesados: matGrupo.procesados ?? 0,
-      fallos: Array.isArray(matGrupo.fallos) ? matGrupo.fallos.length : 0,
-    },
+    sync_estado,
+    grilla_sync,
+    materializacion_grupo: forzar
+      ? {
+          ok: matGrupo.ok === true,
+          procesados: matGrupo.procesados ?? 0,
+          fallos: Array.isArray(matGrupo.fallos) ? matGrupo.fallos.length : 0,
+        }
+      : {
+          omitida: true,
+          motivo: "lectura_snapshot",
+          ok: true,
+          procesados: 0,
+          fallos: 0,
+        },
     filas,
   };
 }
@@ -439,4 +637,5 @@ module.exports = {
   ensureMaterializacionVisMes,
   visRequiereMaterializacion,
   visSnapshotDegenerado,
+  construirSyncEstadoDesdeFilas,
 };

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -6,7 +6,6 @@ import {
   callListarOverridesTurno,
   callObtenerResumenSolicitudArticuloGrilla,
   callRegistrarConsultaGestionTurnoGrilla,
-  callObtenerVistaGrillaMesAgente,
 } from "../../services/callables.js";
 import {
   overrideActivoEnGrupo,
@@ -31,9 +30,10 @@ import DiaGrillaAuditoriaCumplimientoHorario from "./DiaGrillaAuditoriaCumplimie
 import DiaGrillaValidacionFichadaAlertas from "./DiaGrillaValidacionFichadaAlertas.jsx";
 import DiaGrillaResultadoCumplimientoJefe from "./DiaGrillaResultadoCumplimientoJefe.jsx";
 import GrillaPresentacionCompuestoFilas from "./GrillaPresentacionCompuestoFilas.jsx";
-import { diaMesKeyDesdeFechaYmd } from "../fichadas/cargaManual/fichadasCargaManualUtils.js";
 import { useAutoSanacionDiaGrillaModal } from "./useAutoSanacionDiaGrillaModal.js";
 import { sufijoTituloDiaGrillaDetalleModal } from "./diaGrillaDetalleModalTitulo.js";
+import { buildCellKey, useGrillaMesCeldaSnapshot } from "./useGrillaMesNodos.js";
+import { celdaTieneJornadaVis } from "./grillaMesEquipoDisplay.js";
 
 function labelEstado(id) {
   const e = String(id || "");
@@ -141,50 +141,47 @@ export default function DiaGrillaDetalleModal({
 }) {
   const detalleFichadaRrhh = puedeVerTramosCrudosFichadas;
   const [celdaVisDetalle, setCeldaVisDetalle] = useState(celdaVis);
-  /** Evita que un fetch lento de vis al abrir pise un parche reciente (p. ej. traslado T). */
-  const celdaVisParcheGen = useRef(0);
 
   useEffect(() => {
     setCeldaVisDetalle(celdaVis);
-    celdaVisParcheGen.current += 1;
   }, [celdaVis, open, fechaYmd, personaId]);
 
-  useEffect(() => {
-    if (!open || !mostrarFichada) return;
+  const cellKeyModal = useMemo(() => {
     const pid = String(personaId || "").trim();
     const gdt = String(grupoTrabajoId || "").trim();
     const ymd = String(fechaYmd || "").slice(0, 10);
-    if (!/^per_/i.test(pid) || !/^gdt_/i.test(gdt) || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return;
+    if (!open || !/^per_/i.test(pid) || !/^gdt_/i.test(gdt) || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+      return "";
+    }
+    try {
+      return buildCellKey({ gdt, persona_id: pid, fecha_ymd: ymd });
+    } catch {
+      return "";
+    }
+  }, [open, personaId, grupoTrabajoId, fechaYmd]);
 
-    const genAlIniciar = celdaVisParcheGen.current;
-    let cancelled = false;
-    (async () => {
-      try {
-        const [y, m] = ymd.split("-").map(Number);
-        const diaKey = diaMesKeyDesdeFechaYmd(ymd);
-        const res = await callObtenerVistaGrillaMesAgente({
-          persona_id: pid,
-          grupo_trabajo_id: gdt,
-          anio: y,
-          mes: m,
-          dia_key: diaKey,
-        });
-        if (cancelled || genAlIniciar !== celdaVisParcheGen.current) return;
-        const dias = res.data?.dias && typeof res.data.dias === "object" ? res.data.dias : {};
-        const fresca = diaKey && dias[diaKey] ? dias[diaKey] : null;
-        if (fresca && typeof fresca === "object") {
-          setCeldaVisDetalle(fresca);
-        }
-      } catch {
-        /* listado sigue siendo fuente; modal sin alertas lazy */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, mostrarFichada, detalleFichadaRrhh, personaId, grupoTrabajoId, fechaYmd]);
+  const celdaStoreSnapshot = useGrillaMesCeldaSnapshot(cellKeyModal);
+  const celdaDesdeStore =
+    celdaStoreSnapshot?.cell && typeof celdaStoreSnapshot.cell === "object"
+      && Object.keys(celdaStoreSnapshot.cell).length > 0
+      ? celdaStoreSnapshot.cell
+      : null;
 
-  const celdaVisEfectiva = celdaVisDetalle || celdaVis;
+  const celdaVisProp = celdaVisDetalle || celdaVis;
+  const celdaVisEfectiva = useMemo(() => {
+    if (celdaDesdeStore && celdaVisProp && typeof celdaVisProp === "object") {
+      return { ...celdaVisProp, ...celdaDesdeStore };
+    }
+    return celdaDesdeStore || celdaVisProp;
+  }, [celdaDesdeStore, celdaVisProp]);
+
+  const celdaVisPendienteSync =
+    celdaStoreSnapshot?.pending === true
+    || (
+      !incompletoPlan
+      && !celdaTieneJornadaVis(celdaVisEfectiva)
+      && (materializadoLazy || desalineacionTeoria)
+    );
   const resumenFichada = useMemo(
     () => (mostrarFichada && celdaVisEfectiva ? resumenFichadaModal(celdaVisEfectiva, { esRrhh: detalleFichadaRrhh }) : null),
     [mostrarFichada, celdaVisEfectiva, detalleFichadaRrhh],
@@ -195,22 +192,22 @@ export default function DiaGrillaDetalleModal({
     [eventos, grupoTrabajoId, etiquetasGrupo],
   );
   const postPurgeHlg = useMemo(
-    () => evaluarPostPurgeHlgCelda(celdaVis, eventos, { fechaYmd, vigenteHasta }),
-    [celdaVis, eventos, fechaYmd, vigenteHasta],
+    () => evaluarPostPurgeHlgCelda(celdaVisEfectiva, eventos, { fechaYmd, vigenteHasta }),
+    [celdaVisEfectiva, eventos, fechaYmd, vigenteHasta],
   );
   const teoriaPendiente = useMemo(
     () =>
-      evaluarTeoriaPendienteLazyCelda(celdaVis, eventos, {
+      evaluarTeoriaPendienteLazyCelda(celdaVisEfectiva, eventos, {
         fechaYmd,
         vigenteHasta,
         materializadoLazy,
         postPurgeActivo: postPurgeHlg.activo,
       }),
-    [celdaVis, eventos, fechaYmd, vigenteHasta, materializadoLazy, postPurgeHlg.activo],
+    [celdaVisEfectiva, eventos, fechaYmd, vigenteHasta, materializadoLazy, postPurgeHlg.activo],
   );
   const licenciaEnFranco = useMemo(
-    () => evaluarLicenciaEnFrancoCelda(celdaVis, eventos),
-    [celdaVis, eventos],
+    () => evaluarLicenciaEnFrancoCelda(celdaVisEfectiva, eventos),
+    [celdaVisEfectiva, eventos],
   );
   const corregirPlanTo = useMemo(
     () => planTurnoCorregirPath(grupoTrabajoId, fechaYmd, rutaPlanTurnoBase),
@@ -342,30 +339,29 @@ export default function DiaGrillaDetalleModal({
     fechaYmd,
     grupoTrabajoId,
     eventos: listaEventos,
-    habilitar: (tieneOverridesGestion || desalineacionTeoria) && !incompletoPlan,
+    habilitar: false,
     aplicarSiDesalineado: puedeModificarTeoria && !soloLectura,
     omitirHasta: omitirSanacionAutoHasta,
     onSanado: onSanacionMaterializacion,
   });
 
   const turnoTeoricoEfectivo = useMemo(() => {
-    const c = celdaVisDetalle ?? celdaVis;
+    const c = celdaVisEfectiva;
     return turnoTeoricoDesdeCeldaVis(c) ?? turnoTeorico;
-  }, [celdaVisDetalle, celdaVis, turnoTeorico]);
+  }, [celdaVisEfectiva, turnoTeorico]);
 
   const tituloSufijo = useMemo(
     () => sufijoTituloDiaGrillaDetalleModal({
       incompletoPlan,
       cantidadEventosLicencia: listaEventos.length,
-      celdaVis: celdaVisDetalle ?? celdaVis,
+      celdaVis: celdaVisEfectiva,
       turnoTeoricoEfectivo,
       tieneHistorialGestionTurno: tieneOverridesGestion || tarjetasGestion.length > 0,
     }),
     [
       incompletoPlan,
       listaEventos.length,
-      celdaVisDetalle,
-      celdaVis,
+      celdaVisEfectiva,
       turnoTeoricoEfectivo,
       tieneOverridesGestion,
       tarjetasGestion.length,
@@ -375,7 +371,7 @@ export default function DiaGrillaDetalleModal({
   if (!open) return null;
 
   const lista = listaEventos;
-  const celdaVisOperativa = celdaVisDetalle ?? celdaVis;
+  const celdaVisOperativa = celdaVisEfectiva;
   const horarioTeorico =
     (celdaVisOperativa && horarioOperativoDesdeCeldaVis(celdaVisOperativa))
     || (turnoTeoricoEfectivo?.capa_teorica
@@ -417,6 +413,12 @@ export default function DiaGrillaDetalleModal({
             Cerrar
           </button>
         </div>
+
+        {celdaVisPendienteSync && !incompletoPlan ? (
+          <p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            Sincronizando turno del día… Los datos de la grilla se actualizarán en breve.
+          </p>
+        ) : null}
 
         {incompletoPlan ? (
           <div className="mt-3 rounded-lg border border-rose-300 bg-rose-50 p-3">

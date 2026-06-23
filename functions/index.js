@@ -64,6 +64,8 @@ const guardarCfgRelojBiometrico = require("./onCall/fichadas/guardarCfgRelojBiom
 const listarCfgRelojBiometrico = require("./onCall/fichadas/listarCfgRelojBiometrico");
 const listarRosterParaFichadas = require("./onCall/fichadas/listarRosterParaFichadas");
 const colaRematerializacionTriggers = require("./triggers/onColaRematerializacionAsistencia");
+const grillaSyncGrupoMesTriggers = require("./triggers/onGrillaSyncGrupoMes");
+const solicitarReconciliacionGrillaGrupoMes = require("./onCall/grilla/solicitarReconciliacionGrillaGrupoMes");
 
 module.exports = {
   ...login,
@@ -99,6 +101,7 @@ module.exports = {
   ...obtenerVistaGrillaMesAgente,
   ...obtenerResumenSolicitudArticuloGrilla,
   ...listarVistaGrillaMesPorGrupo,
+  ...solicitarReconciliacionGrillaGrupoMes,
   ...cerrarPeriodoLiquidacion,
   ...reabrirPeriodoLiquidacion,
   ...consultarEstadosPeriodoLiquidacionGrupo,
@@ -119,4 +122,5 @@ module.exports = {
   ...listarCfgRelojBiometrico,
   ...listarRosterParaFichadas,
   ...colaRematerializacionTriggers,
+  ...grillaSyncGrupoMesTriggers,
 };

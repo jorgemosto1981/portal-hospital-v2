@@ -8,6 +8,7 @@ const assert = require("node:assert/strict");
 const {
   visRequiereMaterializacion,
   visSnapshotDegenerado,
+  construirSyncEstadoDesdeFilas,
 } = require("../modules/shared/grillaMesAgenteCore");
 
 function celdaNl() {
@@ -77,5 +78,31 @@ describe("visRequiereMaterializacion", () => {
       return celdaFranco();
     });
     assert.equal(visRequiereMaterializacion({ existe: true, dias }), false);
+  });
+});
+
+describe("construirSyncEstadoDesdeFilas", () => {
+  it("agrega filas sin vis y reconciliacion pendiente", () => {
+    const sync = construirSyncEstadoDesdeFilas([
+      { vista: { existe: false } },
+      { vista: { existe: true, dias: mesCon(() => celdaLaborable()) } },
+    ]);
+    assert.equal(sync.filas_sin_vis, 1);
+    assert.equal(sync.filas_degeneradas, 0);
+    assert.equal(sync.reconciliacion, "pendiente");
+  });
+
+  it("idle cuando todas las vis tienen turno", () => {
+    const sync = construirSyncEstadoDesdeFilas([
+      {
+        vista: {
+          existe: true,
+          dias: mesCon(() => celdaLaborable()),
+          metadata: { ultima_sync_teorica: { toDate: () => new Date("2026-06-01T12:00:00Z") } },
+        },
+      },
+    ]);
+    assert.equal(sync.reconciliacion, "idle");
+    assert.equal(sync.ultima_sync_max, "2026-06-01T12:00:00.000Z");
   });
 });

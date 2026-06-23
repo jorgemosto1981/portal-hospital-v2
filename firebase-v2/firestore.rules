@@ -390,6 +390,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    /** Estado de reconciliación grilla sector×mes — lectura autenticada; escritura solo Functions. */
+    match /grilla_sync_grupo_mes/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
