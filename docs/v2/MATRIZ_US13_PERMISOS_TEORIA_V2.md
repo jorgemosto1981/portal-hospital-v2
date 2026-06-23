@@ -61,7 +61,7 @@ Identificadores internos para capacitación, tests y módulo compartido futuro.
 | **C5** | Override puntual | `registrarCambioTurno`, `eliminarOverrideTurno` | Sí (día) |
 | **C6** | Batch F-UX (cobertura / reemplazo / adicional) | `aplicarBatchAsistencia` | Sí |
 | **C7** | HLg / régimen / calendario / purge | `catalogosLaborales`, jobs purge | Sí (forward) |
-| **C8** | Listar grilla equipo (efecto observador) | `listarVistaGrillaMesPorGrupo` → `materializarGrupoMes` | **Sí** (si worker corre) |
+| **C8** | Listar grilla equipo | `listarVistaGrillaMesPorGrupo` → lectura snapshot `vis_*`; reconciliación vía `grilla_sync_grupo_mes` | **Sí** (worker async; no remat en listar default) |
 | **C8t** | Vista titular lazy | `obtenerVistaGrillaMesAgente` | **Sí** (lazy) |
 | **C9** | Rematerialización admin / día 5 | `ejecutarMaterializacionVentanaDia5`, scripts remat | **Sí** |
 | **C10** | Cerrar período liquidación | `cerrarPeriodoLiquidacion` | Bloquea escritura jefe (no borra teoría) |
@@ -112,7 +112,7 @@ Columnas **Gate UI** y **Callable** describen el estado **jun 2026** en `master`
 | **C5** | `DiaGrillaDetalleModal` → `GestionTurnoDiaShell` | ⚠ | ✅‡ | ✅ | ✅ | `registrarCambioTurno` — `assertOverrideAuth` + `assertPeriodoEditable` | `puedeGestionarTurnoEnGrilla` | **⚠ Q9-1:** UI no distingue «táctico» vs «oficial» en mes HABILITADO |
 | **C6** | Modales A/B/C + outbox panel | ⛔ | ✅‡ | ✅ | ✅ | `aplicarBatchAsistencia` — `assertOverrideAuth` por persona | `tieneCapabilityGestionTurno` | Mismos gates que C5 |
 | **C7** | Datos laborales (fuera GSO) | ⛔ | ⛔ | ⛔ | ✅ | `catalogosLaborales` — `assertEscrituraLaboral` / `assertRrhh` | N/A GSO | Mensaje 📅 US-5 post-purge |
-| **C8** | `GrillaMesEquipoTabla` / `GrillaMesLicenciasPanel` | 👁 | 👁 | 👁 | 👁 | `listarVistaGrillaMesPorGrupo` — `assertAgenteConPersonaId` + rol portal | Sin gate «remat» | **Q9-5:** efecto colateral; US-11 toast |
+| **C8** | `GrillaMesEquipoTabla` / `GrillaMesLicenciasPanel` | 👁 | 👁 | 👁 | 👁 | `listarVistaGrillaMesPorGrupo` — `assertAgenteConPersonaId` + rol portal | Badge sync (`useGrillaSyncState`); jefe/RRHH «Sincronizar sector» | ✅ **Piloto cerrado** 2026-06-23 — lectura optimista; [`GRILLA_SYNC_GRUPO_MES_V2.md`](./GRILLA_SYNC_GRUPO_MES_V2.md) |
 | **C8t** | `GrillaMesTitularCalendario` | 👁 | — | 👁 | 👁 | `obtenerVistaGrillaMesAgente` | Titular propio | Lazy materialización |
 | **C9** | Admin / jobs | ⛔ | ⛔ | ⚠ | ✅ | Varios — `assertRrhh` | — | Definir lista cerrada en implementación |
 | **C10** | `GrillaPeriodoLiquidacionAccionesRrhh` | ⛔ | ⛔ | ⛔ | ✅ | `cerrarPeriodoLiquidacion` — `assertRrhh` | Acciones RRHH en grilla | Tras C10, jefe ⛔ en C5/C6 vía `assertPeriodoEditable` |
@@ -162,7 +162,7 @@ Columnas **Gate UI** y **Callable** describen el estado **jun 2026** en `master`
 | **G2** | Jefe UI vs jerarquía | Superior del agente | UI: `esJefe` por claim; backend: niveles HLG | Unificar en util compartido `puedeActoTeoria(...)` |
 | **G3** | Dos RRHH | **Cerrado:** un rol RRHH (Opción B) | Labor vs Access en código | Fase A: `esRrhhOperativo`; revisar callables |
 | **G4** | Titular override | **Cerrado:** no (Opción A) | `assertOverrideAuth` permite self hoy | Fase C: rechazar actor === titular salvo RRHH |
-| **G5** | C8 sin permiso remat | **Cerrado:** Q9-5 (A) | Listar = remat + US-11 | Sin modal confirmación; matiz idempotente v2 |
+| **G5** | C8 sin permiso remat | **Cerrado:** Q9-5 (A) + piloto sync 2026-06-23 | Listar = snapshot; remat async/sync manual | Sin modal confirmación; toast grupo omitido si `materializacion_grupo.omitida` |
 | **G6** | `guardar`/`enviar` plan | **Cerrado:** solo superior del `gdt` (A) | Cualquier HLG del grupo | Endurecer `assertPlanAuth` + UI plan |
 | **G7** | Go-live | **Cerrado:** reglas estrictas día 1 | Sin usuarios en prod aún | Fase A–C sin modo permisivo; onboarding con copy G1 |
 

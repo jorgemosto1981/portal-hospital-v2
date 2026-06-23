@@ -837,7 +837,7 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 |----|--------|--------|--------|
 | **O-P0-4** | Fuga post-HLg | ✅ Prod + UX | Purge validado; modal HLg paso 2 (confirmar + confirmar_purge) |
 | **O-P0-1** | Gate LAO | ✅ Código | Anclas desde/hasta |
-| **O-P0-7** | Listado sector | ✅ Código | `materializarGrupoMes` previo |
+| **O-P0-7** | Listado sector | ✅ **Piloto cerrado** 2026-06-23 | Lectura snapshot `vis_*` + `grilla_sync_grupo_mes` (sin remat en listar default). [`GRILLA_SYNC_GRUPO_MES_V2.md`](./GRILLA_SYNC_GRUPO_MES_V2.md) |
 | **O-P0-5** | UI ciega | ✅ Código | Toasts en `useGrillaMesVista` |
 | O-P0-2 | Cierre período | ✅ Prod | Callable + 3 vis actualizadas en smoke |
 | O-P0-3 | MDC en trámite vs M-1 cerrado | ✅ Código | `assertNuevaSolicitudNoEnPeriodoCerrado` en validar entorno + MDC; excepción trámite/consolidar |

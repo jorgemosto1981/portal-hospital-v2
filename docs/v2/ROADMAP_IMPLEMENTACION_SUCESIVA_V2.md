@@ -144,18 +144,18 @@ Backend functions + frontend GSO; **no** incluye job día 5 ni `materializarRang
 | **O-P0-4** | P0-A Fuga datos | Helper `purgeCapaTeoricaGdtRango({ personaId, gdt, desdeYmd, hastaYmd, motivo })`; integrar en `rrhhDeshabilitarHlg` y eliminar HLg; **no** tocar `eventos[]`/overrides | Nuevo módulo + `catalogosLaborales.js` | Piloto: cerrar HLg mid-mes → sin `rda_*` en días posteriores en ese `gdt` |
 | | | UX: modal doble confirmación con `purge_desde`, alcance, §19.6 plan si aplica | Web RRHH HLg | RRHH confirma dos veces |
 | **O-P0-1** | P0-B Gate | `evaluarGrillaTurnoEntorno`: si `depende_rda`, validar solo `fecha_desde` y `fecha_hasta` (capa teórica ancla); no bucle 365 días | `grillaTurnoEntornoGate.js` | Test: LAO 1 año ≤2 reads asi (mock) |
-| **O-P0-7** | P0-B Listado | Refactor `listarVistaGrillaMesPorGrupo`: 1× `materializarGrupoMes` (o prechequeo batch) + N× `leerVista` sin lazy por fila | `grillaMesAgenteCore.js` | Sector 60 personas < timeout 60s; métrica reads ↓ |
+| **O-P0-7** | P0-B Listado | ✅ Piloto 2026-06-23: lectura snapshot batch + reconciliación async `grilla_sync_grupo_mes` (remat solo `forzar_materializacion_grupo` / worker) | `grillaMesAgenteCore.js`, `grillaSyncGrupoMesCore.js` | Listar ~2,4s smoke; sin 60× remat síncrono en path default — [`GRILLA_SYNC_GRUPO_MES_V2.md`](./GRILLA_SYNC_GRUPO_MES_V2.md) |
 | **O-P0-5** | P0-C UI | Propagar `materializado_lazy`, `materializacion_error?`, `truncado`; toasts en `useGrillaMesVista` / fila sector | `GrillaMesLicenciasPanel.jsx` | Usuario ve “falló materialización” vs “sin turno” |
 
 ### Checklist cierre F0
 
 - [ ] Purge probado en staging con HLg real.
 - [ ] Gate anclas en tests (`validarEntornoOperativo.test.js` ampliado).
-- [ ] Listado sector sin 60× `materializarTurnoMesBatch` secuencial.
-- [ ] Toast/badge en al menos un flujo de error lazy.
-- [ ] Deploy functions + hosting documentado.
+- [x] Listado sector sin remat síncrono en lectura default (O-P0-7 piloto 2026-06-23).
+- [x] Badge sync + listener Firestore en GSO (`GrillaSyncSectorBar`).
+- [x] Deploy functions + hosting documentado (grilla sync — `GRILLA_SYNC_GRUPO_MES_V2.md`).
 
-**Avance esperado:** 0% → **100%**.
+**Avance esperado:** O-P0-7 piloto **cerrado**; ítems purge/gate según filas abiertas arriba.
 
 **Paralelo permitido:** F-UX.1, review PR Multi-HLG (sin mezclar features en mismo deploy si evitable).
 
