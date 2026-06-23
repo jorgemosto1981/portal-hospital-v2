@@ -72,12 +72,6 @@ function filasPresentacionCompuestoDesdeCelda(celdaVis) {
   return leerPresentacionCompuestoDesdeCelda(celdaVis)?.filas ?? [];
 }
 
-function leerTurnoCompuestoIdPresentacionRaw(celdaVis) {
-  const raw = celdaVis?.presentacion_compuesto;
-  if (!raw || typeof raw !== "object") return "";
-  return String(raw.turno_compuesto_id || "").trim();
-}
-
 function celdaVisSinHorarioOperativo(celdaVis) {
   const ing = String(celdaVis?.rda_ingreso || "").trim();
   const egr = String(celdaVis?.rda_egreso || "").trim();
@@ -100,29 +94,14 @@ function celdaVisSinSegmentosNiFilasOperativas(celdaVis) {
 }
 
 /**
- * Tras traslados sucesivos: `rda_turno_id` o `turno_compuesto_id` sin filas ni horario (saldo cero).
- * @param {Record<string, unknown>|null|undefined} celdaVis
- */
-function celdaVisTokenTeoricoSinSaldoOperativo(celdaVis) {
-  if (!celdaVisSinHorarioOperativo(celdaVis)) return false;
-  if (!celdaVisSinSegmentosNiFilasOperativas(celdaVis)) return false;
-  const rda = String(celdaVis.rda_turno_id || "").trim();
-  const comp = leerTurnoCompuestoIdPresentacionRaw(celdaVis);
-  const token = rda || comp;
-  if (!token || token === "F" || token === "NL") return false;
-  return true;
-}
-
-/**
  * Día sin turno teórico operativo (franco explícito).
- * Si hay `rda_turno_id`, segmentos en capa o filas de presentación, no es franco
+ * Épica B4: confía en flags y `rda_*` materializados por el motor (sin inferir por token fantasma).
+ * Si hay `rda_turno_id` operativo, segmentos en capa o filas de presentación, no es franco
  * aunque queden flags `es_franco` / `tipo_dia: franco` obsoletos (p. ej. incorporar N en día plan franco).
  * @param {Record<string, unknown>|null|undefined} celdaVis
  */
 function celdaVisIndicaFrancoOperativo(celdaVis) {
   if (!celdaVis || typeof celdaVis !== "object") return false;
-
-  if (celdaVisTokenTeoricoSinSaldoOperativo(celdaVis)) return true;
 
   const rda = String(celdaVis.rda_turno_id || "").trim();
   if (rda && rda !== "F") return false;
@@ -172,9 +151,9 @@ function coherirCeldaVisTeoriaFranco(celdaVis) {
     rda_egreso: null,
     rda_horario_display: null,
     capa_teorica: capa,
-    presentacion_compuesto: { filas: [] },
     fichadas_esperadas: 0,
   };
+  delete next.presentacion_compuesto;
   delete next.analitica_cumplimiento;
   delete next.validacion_fichada_dia;
   return next;
@@ -284,7 +263,7 @@ function alinearFlagsTipoDiaAlTeoricoOperativo(celdaVis) {
 
 /**
  * Recorta `presentacion_compuesto` y `capa_teorica.segmentos` al teórico operativo (`rda_turno_id`).
- * Tras traslados sucesivos el worker a veces deja filas M/T obsoletas con `rda` ya reducido (p. ej. solo N).
+ * Tras traslados parciales el cliente recorta filas obsoletas hasta que CVC trae `vis` fresco.
  *
  * @param {Record<string, unknown>|null|undefined} celdaVis
  */

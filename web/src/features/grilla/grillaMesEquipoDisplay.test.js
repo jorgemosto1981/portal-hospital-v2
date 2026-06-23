@@ -32,12 +32,12 @@ describe("celdaEsIncompletoPlanVis (US-1)", () => {
     ).toBe(false);
   });
 
-  it("tras traslados sucesivos: token T sin filas ni horario no es incompleto plan", () => {
+  it("franco materializado (motor) no es incompleto plan", () => {
     expect(
       celdaEsIncompletoPlanVis({
-        tipo_dia: "laborable",
-        es_franco: false,
-        presentacion_compuesto: { turno_compuesto_id: "T", filas: [] },
+        tipo_dia: "franco",
+        es_franco: true,
+        rda_turno_id: null,
       }),
     ).toBe(false);
   });

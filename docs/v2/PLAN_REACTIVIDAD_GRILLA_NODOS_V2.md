@@ -24,7 +24,7 @@ Cada celda/fila de la grilla es un **nodo** con snapshot de servidor + parches l
 | **A1** | `grillaMesNodoStore` (base + overlay + índice ops) | ✅ |
 | **A2** | `GrillaDiaCelda` memo + `useGrillaMesNodos` | ✅ parcial |
 | **A3** | Batch inmediato: `aplicarCambioInmediato` → `aplicarBatchAsistencia` + `grillaMesNodosBatchParches` | ✅ |
-| **B** | Render anclado a `presentacion_compuesto` materializado; estado incompleto explícito | ⏳ **épica B** — [`EPICA_B_PRESENTACION_MOTOR_V2.md`](./EPICA_B_PRESENTACION_MOTOR_V2.md) B1–B2 ✅ |
+| **B** | Render anclado a `presentacion_compuesto` materializado; estado incompleto explícito | ✅ **épica B** B1–B4 · [`EPICA_B_PRESENTACION_MOTOR_V2.md`](./EPICA_B_PRESENTACION_MOTOR_V2.md) |
 | **C** | Patch cache/store post-batch y post-fichada; **CVC** `sincronizarCeldasVisGrilla` | ✅ **2026-06-23** prod |
 | **D** | Virtualización filas + RFC rendimiento | ⏳ |
 

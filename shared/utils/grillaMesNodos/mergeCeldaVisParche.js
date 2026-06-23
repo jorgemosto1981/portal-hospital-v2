@@ -1,5 +1,4 @@
 import {
-  coherirCeldaVisTeoriaFranco,
   coherirPresentacionCompuestoAlTeoricoVis,
   alinearFlagsTipoDiaAlTeoricoOperativo,
 } from "../visCeldaFusionLectura.js";
@@ -35,7 +34,5 @@ export function mergeCeldaVisParche(prev, patch) {
     }
   }
 
-  return coherirCeldaVisTeoriaFranco(
-    alinearFlagsTipoDiaAlTeoricoOperativo(coherirPresentacionCompuestoAlTeoricoVis(merged)),
-  );
+  return alinearFlagsTipoDiaAlTeoricoOperativo(coherirPresentacionCompuestoAlTeoricoVis(merged));
 }

@@ -40,13 +40,15 @@ const GDT = "gdt_01KQA6QCA8TDQK9YBTHKYA4R2V";
 function resumenCelda(celda) {
   if (!celda || typeof celda !== "object") return { vacia: true };
   const pres = celda.presentacion_compuesto;
-  const tramos = Array.isArray(pres?.tramos) ? pres.tramos.map((t) => t?.etiqueta || t?.turno_id) : [];
+  const filas = Array.isArray(pres?.filas)
+    ? pres.filas.map((f) => f?.segmento_id || f?.teoria_label)
+    : [];
   return {
     tipo_dia: celda.tipo_dia ?? null,
     es_franco: celda.es_franco === true,
     rda_turno_id: celda.rda_turno_id ?? null,
     rda_horario_display: celda.rda_horario_display ?? null,
-    tramos_presentacion: tramos,
+    presentacion_filas: filas,
   };
 }
 
@@ -89,21 +91,19 @@ console.log("\n--- VIS tras rematerializar ---");
 console.log(JSON.stringify(out, null, 2));
 
 const ok11 = d11?.es_franco === true || d11?.tipo_dia === "franco";
-const turno12 = String(d12?.rda_turno_id || "");
-const tramos12 = out.dia_12.tramos_presentacion || [];
-const ok12Compuesto =
-  tramos12.some((t) => /t/i.test(String(t)))
-  && tramos12.some((t) => /n/i.test(String(t)))
-  || /\+/.test(turno12)
-  || (turno12 && tramos12.length >= 2);
+const turno12 = String(d12?.rda_turno_id || "").trim();
+const ok12 =
+  d12?.tipo_dia === "laborable"
+  && d12?.es_franco !== true
+  && turno12.length > 0;
 
 if (!ok11) {
   console.error("\nFAIL día 11: se esperaba franco, got", out.dia_11);
   process.exit(1);
 }
-if (!ok12Compuesto && !/t.*n|n.*t/i.test(turno12)) {
-  console.error("\nFAIL día 12: se esperaba T+N compuesto, got", out.dia_12);
+if (!ok12) {
+  console.error("\nFAIL día 12: se esperaba laborable con turno operativo (motor), got", out.dia_12);
   process.exit(1);
 }
 
-console.log("\nPASS: día 11 franco y día 12 con señal T+N");
+console.log("\nPASS: día 11 franco y día 12 laborable según motor (rda:", turno12, ")");

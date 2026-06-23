@@ -33,8 +33,9 @@ export function turnoTeoricoDesdeCeldaVis(celda) {
 
   const rdaTurnoId = String(celda.rda_turno_id || "").trim();
   const presentacion = leerPresentacionCompuestoDesdeCelda(celda);
-  const turnoCompuesto =
-    String(presentacion?.turno_compuesto_id || rdaTurnoId || "").trim() || undefined;
+  const turnoCompuesto = String(
+    presentacion?.turno_compuesto_id || rdaTurnoId || "",
+  ).trim() || undefined;
   const esFranco = celda.es_franco === true || rdaTurnoId === "F";
   const tipoDiaRaw = String(celda.tipo_dia || "").trim().toLowerCase();
 
@@ -64,6 +65,7 @@ export function turnoTeoricoDesdeCeldaVis(celda) {
     Boolean(rdaTurnoId)
     || Boolean(presentacion?.filas?.length)
     || esFranco
+    || tipo_dia === "franco"
     || tipo_dia === "no_laborable";
 
   if (!tieneSenal) return null;

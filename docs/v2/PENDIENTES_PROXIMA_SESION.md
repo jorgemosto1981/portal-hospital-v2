@@ -21,7 +21,7 @@
 | QA ciclo base Q1.x / Q2.1–2.3 | ✅ |
 | Flujo C UI + motor preasignado | ✅ código local · ⏳ deploy |
 | CHAPARRO d21 — 3 traslados → franco origen | ✅ QA prod **2026-06-23** (fix saldo cero / token fantasma) |
-| CHAPARRO d19 (**Q2.4** smoke cierre épica) | ✅ **2026-06-23** prod — 3 traslados → **F** |
+| CHAPARRO d19 (**Q2.4** histórico) | ✅ pre-CVC · revalidado patrón **d25→26** post-épica B **2026-06-23** |
 | Q3 cadena N/M CAMPOS | ✅ **2026-06-23** (protocolo + d12; fix flags franco) |
 | Q4 intercambio d8 (LOKITO↔CHAPARRO T↔N) | ✅ **2026-06-23** |
 | Commit + deploy hosting/functions | ✅ **2026-06-23** (`b594cda`) · ver nota functions parcial abajo |
