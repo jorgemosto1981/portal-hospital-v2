@@ -115,3 +115,4 @@ Mantenido en cliente (traslados **parciales** / cache CVC): `coherirPresentacion
 | 2026-06-23 | Deploy prod `8edddac` · guía ops · script Jaqueline alineado a motor |
 | 2026-06-23 | Smoke CHAPARRO d25→26 post-B · cierre formal B1–B2 |
 | 2026-06-23 | **B4** — limpieza heurísticas web (motor SSoT franco) |
+| 2026-06-23 | UX modal título (`2f90ceb`) — QA prod CHAPARRO **d25** «— franco» ✅ |
