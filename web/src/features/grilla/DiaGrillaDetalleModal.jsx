@@ -33,6 +33,7 @@ import DiaGrillaResultadoCumplimientoJefe from "./DiaGrillaResultadoCumplimiento
 import GrillaPresentacionCompuestoFilas from "./GrillaPresentacionCompuestoFilas.jsx";
 import { diaMesKeyDesdeFechaYmd } from "../fichadas/cargaManual/fichadasCargaManualUtils.js";
 import { useAutoSanacionDiaGrillaModal } from "./useAutoSanacionDiaGrillaModal.js";
+import { sufijoTituloDiaGrillaDetalleModal } from "./diaGrillaDetalleModalTitulo.js";
 
 function labelEstado(id) {
   const e = String(id || "");
@@ -352,6 +353,25 @@ export default function DiaGrillaDetalleModal({
     return turnoTeoricoDesdeCeldaVis(c) ?? turnoTeorico;
   }, [celdaVisDetalle, celdaVis, turnoTeorico]);
 
+  const tituloSufijo = useMemo(
+    () => sufijoTituloDiaGrillaDetalleModal({
+      incompletoPlan,
+      cantidadEventosLicencia: listaEventos.length,
+      celdaVis: celdaVisDetalle ?? celdaVis,
+      turnoTeoricoEfectivo,
+      tieneHistorialGestionTurno: tieneOverridesGestion || tarjetasGestion.length > 0,
+    }),
+    [
+      incompletoPlan,
+      listaEventos.length,
+      celdaVisDetalle,
+      celdaVis,
+      turnoTeoricoEfectivo,
+      tieneOverridesGestion,
+      tarjetasGestion.length,
+    ],
+  );
+
   if (!open) return null;
 
   const lista = listaEventos;
@@ -381,7 +401,7 @@ export default function DiaGrillaDetalleModal({
         <div className="flex items-start justify-between gap-2">
           <h3 id="dia-grilla-titulo" className="text-lg font-semibold text-slate-900">
             Día {Number(dia)}
-            {incompletoPlan && lista.length === 0 ? " — sin turno en plan" : " — licencias"}
+            {tituloSufijo}
             {subtitulo ? (
               <span className="mt-0.5 block text-sm font-normal text-slate-600">{subtitulo}</span>
             ) : null}

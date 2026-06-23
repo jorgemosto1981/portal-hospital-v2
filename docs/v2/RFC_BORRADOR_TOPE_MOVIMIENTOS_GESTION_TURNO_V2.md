@@ -1,6 +1,8 @@
 # RFC (borrador) — Tope de movimientos (límite blando) · gestión de turno
 
-> **Estado:** ANÁLISIS — sin implementación. **Gate:** cerrar **fase B** (`presentacion_compuesto` en motor) + smoke **Q2.4** antes de codificar `[BATCH-LIM-001]`.  
+> **Estado:** LISTO PARA WORKSHOP — sin implementación en código.  
+> **Gate técnico:** ✅ Épica B (B1–B4) + smoke d25→26 · ver [`EPICA_B_PRESENTACION_MOTOR_V2.md`](./EPICA_B_PRESENTACION_MOTOR_V2.md)  
+> **Workshop:** [`RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md`](./RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md)  
 > **Relación:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) · [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md) · handoff [`HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md`](./HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md)
 
 ---
@@ -69,7 +71,34 @@ Sin tope, la cadena de traslados e intercambios en el mismo mes (ida/vuelta, N l
 
 ---
 
-## 6. Criterios de aceptación (cuando se implemente)
+## 6. Decisiones de producto (workshop)
+
+Completar en [`RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md`](./RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md). Hasta entonces **no** mergear `[BATCH-LIM-001]`.
+
+| ID | Tema | Estado |
+|----|------|--------|
+| D1 | Número de tope (propuesta: 2) | ⏳ |
+| D2 | Bloqueo duro vs advertencia | ⏳ |
+| D3 | Perfil bypass (RRHH / jefe) | ⏳ |
+| D4 | Conteo intercambio bilateral | ⏳ |
+| D5 | Alcance adicional/reemplazo clásico | ⏳ |
+| D6 | Fecha corte contador | ⏳ |
+
+### 6.1 Riesgos sin workshop
+
+- Falso positivo: rechazar cadena legítima si el contador no alinea supersession/historial con la UI.
+- Falso negativo: no deduplicar piernas del mismo `op_batch_id`.
+
+### 6.2 Orden de implementación (post-decisión)
+
+1. `contarMovimientosTramoDia` + `functions/test/topeMovimientosGestionTurno.test.js`.
+2. Validación pre-transacción en `cambiosTurno.js`.
+3. Toast web `[BATCH-LIM-001]`.
+4. (Opcional) Callable preview para modales.
+
+---
+
+## 7. Criterios de aceptación (cuando se implemente)
 
 1. Tercer movimiento del mismo tramo/día/persona/gdt → batch rechazado con `[BATCH-LIM-001]`.
 2. RRHH con bypass aplica cuarto movimiento y queda auditado.
@@ -78,8 +107,9 @@ Sin tope, la cadena de traslados e intercambios en el mismo mes (ida/vuelta, N l
 
 ---
 
-## 7. Changelog
+## 8. Changelog
 
 | Fecha | Nota |
 |-------|------|
 | 2026-06-19 | Borrador incorporado desde propuesta piloto (sin código). |
+| 2026-06-23 | Gate B4 cumplido; §8 workshop; enlace agenda RRHH. |
