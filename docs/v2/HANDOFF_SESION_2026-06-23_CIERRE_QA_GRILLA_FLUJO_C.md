@@ -1,6 +1,7 @@
 # Handoff — Sesión 2026-06-23 (CVC · QA grilla reactiva · Flujo C)
 
-> **RETOMAR AQUÍ:** **deploy functions + hosting** · **commit** a pedido · opcional re-QA **CHAPARRO d19** (Q2.4 histórico).  
+> **RETOMAR AQUÍ:** Smoke **Q2.4** CHAPARRO **d19** (cierre épica) → **Épica B** presentación en motor → tope movimientos **post-B**.  
+> CHAPARRO **d21** (3 traslados → franco): ✅ QA prod tras fix saldo cero / presentación fantasma.  
 > **Índice:** [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · Plan: [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md) · **CVC:** [`RFC_CICLO_VIS_CELDA_GRILLA_V2.md`](./RFC_CICLO_VIS_CELDA_GRILLA_V2.md)
 
 **Piloto:** Sala Internación 1 `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · **2026-06**  
@@ -20,8 +21,8 @@
 | Q1.4 | Coherencia modal ↔ celda | ✅ |
 | Q1.5 | Revertir piloto | ⏭ No (datos de prueba) |
 | Q2.1 / Q2.2 / Q2.3 | Traslado B | ✅ |
-| **Q2.4** | **CHAPARRO d19** — 3× traslado (inicio sesión) | ❌ **histórico** | Origen no en **F** tras 2.º movimiento; no re-ejecutado tras fixes CVC |
-| Q4 | Intercambio LOKITO ↔ CHAPARRO **d8** (T ↔ N, 08/06) | ✅ OK | Teoría post-swap M+N / M+T; grilla sin F5 |
+| **Q2.4** | **CHAPARRO d19** — 3× traslado | ✅ **2026-06-23** prod |
+| Q4 | Intercambio LOKITO ↔ CHAPARRO **d8** (T ↔ N, 08/06) | ✅ OK |
 | Q3 | Cadena N/M CAMPOS (protocolo 3 pasos + d12 regresión) | ✅ **OK** 2026-06-23 |
 
 ---

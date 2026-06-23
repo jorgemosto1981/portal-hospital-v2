@@ -1,6 +1,6 @@
 # RFC (borrador) — Tope de movimientos (límite blando) · gestión de turno
 
-> **Estado:** ANÁLISIS — sin implementación en código (piloto grilla jun-2026).  
+> **Estado:** ANÁLISIS — sin implementación. **Gate:** cerrar **fase B** (`presentacion_compuesto` en motor) + smoke **Q2.4** antes de codificar `[BATCH-LIM-001]`.  
 > **Relación:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) · [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md) · handoff [`HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md`](./HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md)
 
 ---

@@ -1,7 +1,10 @@
 "use strict";
 
 const { calcularDeltasCumplimiento } = require("./calcularDeltasCumplimiento");
-const { resolverPresentacionCompuestoCelda } = require("./resolverPresentacionCompuestoCelda");
+const {
+  construirCeldaCtxTrasCapaMaterializada,
+  resolverPresentacionVisMaterializada,
+} = require("./materializarPresentacionVisCelda");
 const { resolverValidacionFichadaDia } = require("./resolverValidacionFichadaDia");
 const { obtenerYmdHoyInstitucional } = require("./fechaInstitucionalBa.js");
 const { FieldValue, FieldPath } = require("firebase-admin/firestore");
@@ -119,7 +122,7 @@ function ejecutarAnaliticaYValidacionFichadaDia(params) {
     forzar_recalculo: params.forzar_recalculo === true,
   });
 
-  const presentacion_compuesto = resolverPresentacionCompuestoCelda(
+  const presentacion_compuesto = resolverPresentacionVisMaterializada(
     celdaCtx,
     capaEnriquecida,
     analitica,

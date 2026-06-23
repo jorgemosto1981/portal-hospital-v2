@@ -680,6 +680,15 @@ describe("franco operativo vs flags obsoletos (incorporar N en día plan franco)
     expect(celdaVisIndicaFrancoOperativo(celda)).toBe(false);
   });
 
+  it("celdaVisIndicaFrancoOperativo: M+T+N vaciado por traslados (token T sin filas)", () => {
+    const celda = {
+      tipo_dia: "laborable",
+      rda_turno_id: "T",
+      presentacion_compuesto: { turno_compuesto_id: "M+T+N", filas: [] },
+    };
+    expect(celdaVisIndicaFrancoOperativo(celda)).toBe(true);
+  });
+
   it("mergeCeldaVisParche no borra N si es_franco obsoleto en parche", () => {
     const parche = {
       es_franco: true,

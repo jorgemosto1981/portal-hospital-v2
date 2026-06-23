@@ -3,6 +3,7 @@
  */
 
 import { horarioOperativoDesdeCeldaVis } from "../../../../shared/utils/horarioInstitucionalDisplay.js";
+import { celdaVisIndicaFrancoOperativo } from "../../../../shared/utils/visCeldaFusionLectura.js";
 import {
   claseHeaderColumna,
   claseTdColumna,
@@ -69,6 +70,7 @@ function normalizarTipoDiaVis(raw) {
  */
 export function celdaEsIncompletoPlanVis(cell) {
   if (!cell || typeof cell !== "object") return false;
+  if (celdaVisIndicaFrancoOperativo(cell)) return false;
   const tipo = normalizarTipoDiaVis(cell.tipo_dia);
   if (tipo !== "laborable" && tipo !== "guardia") return false;
   if (cell.es_franco === true || tipo === "franco" || tipo === "no_laborable") return false;

@@ -19,4 +19,15 @@ describe("turnoTeoricoDesdeCeldaVis", () => {
     expect(tt?.capa_teorica?.segmentos).toHaveLength(1);
     expect(tt?.presentacion_compuesto?.filas).toHaveLength(1);
   });
+
+  it("saldo cero tras traslados: presentación fantasma T → franco en modal", () => {
+    const tt = turnoTeoricoDesdeCeldaVis({
+      tipo_dia: "laborable",
+      es_franco: false,
+      presentacion_compuesto: { turno_compuesto_id: "T", filas: [] },
+    });
+    expect(tt?.es_franco).toBe(true);
+    expect(tt?.capa_teorica?.tipo_dia).toBe("franco");
+    expect(tt?.capa_teorica?.turno_compuesto_id).toBeNull();
+  });
 });

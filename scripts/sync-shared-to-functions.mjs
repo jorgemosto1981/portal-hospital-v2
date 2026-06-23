@@ -46,6 +46,7 @@ const FILES_TO_SYNC = [
   "validacionFichadaDiaFingerprint.js",
   "resolverValidacionFichadaDia.js",
   "resolverPresentacionCompuestoCelda.js",
+  "materializarPresentacionVisCelda.js",
   "visCeldaFusionLectura.js",
   "intercambioGuardiaExclusividad.js",
 ];

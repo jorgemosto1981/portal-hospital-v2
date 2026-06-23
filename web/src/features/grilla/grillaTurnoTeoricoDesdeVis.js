@@ -1,4 +1,8 @@
-import { leerPresentacionCompuestoDesdeCelda } from "../../../../shared/utils/visCeldaFusionLectura.js";
+import {
+  celdaVisIndicaFrancoOperativo,
+  coherirCeldaVisTeoriaFranco,
+  leerPresentacionCompuestoDesdeCelda,
+} from "../../../../shared/utils/visCeldaFusionLectura.js";
 
 /**
  * Turno teórico operativo derivado solo de `vis` (misma verdad que la celda de grilla).
@@ -7,6 +11,25 @@ import { leerPresentacionCompuestoDesdeCelda } from "../../../../shared/utils/vi
  */
 export function turnoTeoricoDesdeCeldaVis(celda) {
   if (!celda || typeof celda !== "object") return null;
+
+  if (celdaVisIndicaFrancoOperativo(celda)) {
+    const f = coherirCeldaVisTeoriaFranco(celda);
+    return {
+      rda_turno_id: "F",
+      es_franco: true,
+      capa_teorica: {
+        tipo_dia: "franco",
+        ingreso: null,
+        egreso: null,
+        horario_display: null,
+        tiene_huecos: false,
+        fichadas_esperadas: 0,
+        turno_compuesto_id: null,
+        segmentos: [],
+      },
+      presentacion_compuesto: f.presentacion_compuesto,
+    };
+  }
 
   const rdaTurnoId = String(celda.rda_turno_id || "").trim();
   const presentacion = leerPresentacionCompuestoDesdeCelda(celda);

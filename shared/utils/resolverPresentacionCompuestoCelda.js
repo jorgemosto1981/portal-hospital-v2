@@ -152,10 +152,13 @@ export function resolverPresentacionCompuestoCelda(celdaVis, capaTeorica, analit
     };
   });
 
+  const filasOperativas = filtrarFilasPresentacionAlTeoricoOperativo(celdaVis, filas);
+  if (!filasOperativas.length) return null;
+
   const out = {
     version: PRESENTACION_VERSION,
     turno_compuesto_id: String(capa.turno_compuesto_id || capa.turno_id || "").trim() || null,
-    filas: filtrarFilasPresentacionAlTeoricoOperativo(celdaVis, filas),
+    filas: filasOperativas,
   };
   if (opts.eval_fingerprint) {
     out.eval_fingerprint = String(opts.eval_fingerprint);

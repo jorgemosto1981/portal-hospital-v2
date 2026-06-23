@@ -72,6 +72,47 @@ function filasPresentacionCompuestoDesdeCelda(celdaVis) {
   return leerPresentacionCompuestoDesdeCelda(celdaVis)?.filas ?? [];
 }
 
+function leerTurnoCompuestoIdPresentacionRaw(celdaVis) {
+  const raw = celdaVis?.presentacion_compuesto;
+  if (!raw || typeof raw !== "object") return "";
+  return String(raw.turno_compuesto_id || "").trim();
+}
+
+function celdaVisSinHorarioOperativo(celdaVis) {
+  const ing = String(celdaVis?.rda_ingreso || "").trim();
+  const egr = String(celdaVis?.rda_egreso || "").trim();
+  return !ing && !egr;
+}
+
+function celdaVisSinSegmentosNiFilasOperativas(celdaVis) {
+  const pres = leerPresentacionCompuestoDesdeCelda(celdaVis);
+  if (pres?.filas?.length) return false;
+  const rawPres = celdaVis?.presentacion_compuesto;
+  if (rawPres && typeof rawPres === "object" && Array.isArray(rawPres.filas) && rawPres.filas.length > 0) {
+    return false;
+  }
+  const capa = celdaVis?.capa_teorica;
+  if (capa && typeof capa === "object") {
+    const segs = Array.isArray(capa.segmentos) ? capa.segmentos : [];
+    if (segs.length > 0) return false;
+  }
+  return true;
+}
+
+/**
+ * Tras traslados sucesivos: `rda_turno_id` o `turno_compuesto_id` sin filas ni horario (saldo cero).
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ */
+function celdaVisTokenTeoricoSinSaldoOperativo(celdaVis) {
+  if (!celdaVisSinHorarioOperativo(celdaVis)) return false;
+  if (!celdaVisSinSegmentosNiFilasOperativas(celdaVis)) return false;
+  const rda = String(celdaVis.rda_turno_id || "").trim();
+  const comp = leerTurnoCompuestoIdPresentacionRaw(celdaVis);
+  const token = rda || comp;
+  if (!token || token === "F" || token === "NL") return false;
+  return true;
+}
+
 /**
  * Día sin turno teórico operativo (franco explícito).
  * Si hay `rda_turno_id`, segmentos en capa o filas de presentación, no es franco
@@ -80,6 +121,8 @@ function filasPresentacionCompuestoDesdeCelda(celdaVis) {
  */
 function celdaVisIndicaFrancoOperativo(celdaVis) {
   if (!celdaVis || typeof celdaVis !== "object") return false;
+
+  if (celdaVisTokenTeoricoSinSaldoOperativo(celdaVis)) return true;
 
   const rda = String(celdaVis.rda_turno_id || "").trim();
   if (rda && rda !== "F") return false;
@@ -93,6 +136,13 @@ function celdaVisIndicaFrancoOperativo(celdaVis) {
     if (segs.length > 0) return false;
   }
 
+  if (
+    celdaVisSinHorarioOperativo(celdaVis)
+    && celdaVisSinSegmentosNiFilasOperativas(celdaVis)
+    && (celdaVis.es_franco === true || String(celdaVis.tipo_dia || "").trim().toLowerCase() === "franco")
+  ) {
+    return true;
+  }
   if (celdaVis.es_franco === true) return true;
   const tipo = String(celdaVis.tipo_dia || "").trim().toLowerCase();
   if (tipo === "franco") return true;

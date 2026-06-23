@@ -31,6 +31,16 @@ describe("celdaEsIncompletoPlanVis (US-1)", () => {
       }),
     ).toBe(false);
   });
+
+  it("tras traslados sucesivos: token T sin filas ni horario no es incompleto plan", () => {
+    expect(
+      celdaEsIncompletoPlanVis({
+        tipo_dia: "laborable",
+        es_franco: false,
+        presentacion_compuesto: { turno_compuesto_id: "T", filas: [] },
+      }),
+    ).toBe(false);
+  });
 });
 
 describe("varianteCeldaOperativa US-6", () => {

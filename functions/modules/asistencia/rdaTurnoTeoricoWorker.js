@@ -32,6 +32,7 @@ const { hlgVigenteOperativaEnGrilla } = require("../shared/solicitudHlgVigencia"
 const { planHabilitadoDesdeQuerySnapshot } = require("./planGrupoAgentesNuevos");
 const { enriquecerLimitesCumplimientoEnCapa } = require("../shared/capaTeoricaLimitesCumplimiento");
 const { leerCeldaVisDiaFusionada } = require("../shared/visCeldaFusionLectura");
+const { construirCeldaCtxTrasCapaMaterializada } = require("../shared/materializarPresentacionVisCelda");
 const {
   aplicarAnaliticaValidacionVisDia,
   buildFirestorePatchValidacionFichadaDia,
@@ -245,15 +246,7 @@ async function persistirAnaliticaCumplimientoDia({
   const [visSnap, asiSnap] = await Promise.all([visRef.get(), asiRef.get()]);
   const celdaRaw = leerCeldaVisDiaFusionada(visSnap.exists ? visSnap.data() || {} : {}, diaKey);
   const capaEnriquecida = enriquecerLimitesCumplimientoEnCapa(capaEscrita, regimenDoc);
-  const celdaCtx = {
-    ...celdaRaw,
-    tipo_dia: celdaRaw.tipo_dia ?? capaEnriquecida.tipo_dia,
-    fichadas_esperadas: celdaRaw.fichadas_esperadas ?? capaEnriquecida.fichadas_esperadas,
-    fichadas_reales: celdaRaw.fichadas_reales,
-    rda_turno_id: celdaRaw.rda_turno_id ?? pickRdaTurnoId(capaEscrita, esDiaSinTurnoLaboral(capaEscrita.tipo_dia)),
-    rda_ingreso: celdaRaw.rda_ingreso,
-    rda_egreso: celdaRaw.rda_egreso,
-  };
+  const celdaCtx = construirCeldaCtxTrasCapaMaterializada(celdaRaw, capaEnriquecida);
   const { analitica, resolverOut, presentacion_compuesto } = ejecutarAnaliticaYValidacionFichadaDia({
     celdaCtx,
     celdaRaw,

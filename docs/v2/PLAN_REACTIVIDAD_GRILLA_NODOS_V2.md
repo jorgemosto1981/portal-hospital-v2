@@ -1,6 +1,6 @@
 # Plan — Reactividad por nodo (grilla operativa GSO)
 
-> **Estado:** EN CURSO — CVC + QA piloto **2026-06-23** (traslados encadenados y 3×3 fichadas OK en local)  
+> **Estado:** CIERRE ÉPICA PILOTO — gate **Q2.4 d19** prod · siguiente foco **fase B** (presentación en motor)  
 > Handoff sesión: [`HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md`](./HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md)  
 > **CVC:** [`RFC_CICLO_VIS_CELDA_GRILLA_V2.md`](./RFC_CICLO_VIS_CELDA_GRILLA_V2.md)  
 > Handoff anterior: [`HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md`](./HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md)  
@@ -24,8 +24,8 @@ Cada celda/fila de la grilla es un **nodo** con snapshot de servidor + parches l
 | **A1** | `grillaMesNodoStore` (base + overlay + índice ops) | ✅ |
 | **A2** | `GrillaDiaCelda` memo + `useGrillaMesNodos` | ✅ parcial |
 | **A3** | Batch inmediato: `aplicarCambioInmediato` → `aplicarBatchAsistencia` + `grillaMesNodosBatchParches` | ✅ |
-| **B** | Render anclado a `presentacion_compuesto` materializado; estado incompleto explícito | ⏳ en curso |
-| **C** | Patch cache/store post-batch y post-fichada; **CVC** `sincronizarCeldasVisGrilla` | ✅ local **2026-06-23** · deploy pendiente |
+| **B** | Render anclado a `presentacion_compuesto` materializado; estado incompleto explícito | ⏳ **épica B** — [`EPICA_B_PRESENTACION_MOTOR_V2.md`](./EPICA_B_PRESENTACION_MOTOR_V2.md) B1–B2 ✅ |
+| **C** | Patch cache/store post-batch y post-fichada; **CVC** `sincronizarCeldasVisGrilla` | ✅ **2026-06-23** prod |
 | **D** | Virtualización filas + RFC rendimiento | ⏳ |
 
 ---
@@ -84,7 +84,7 @@ Esperado tras motor actual (Jaqueline): **día 11 franco**, **día 12 `T+N`**.
 | `upsertSegmento` por `segmento_id`+titular | Solo defensivo (no sustituye validación) |
 | Supersession piernas opuestas + cadena N/M | ✅ 2026-06-19 (`overridesTurnoSupersession.js`, `rdaTurnoTeoricoWorker.js`) |
 | Ciclo UI FIN_BLOQUEO vs POST sanación | ✅ 2026-06-19 (`grillaCicloAplicarCambioInmediato.js`) |
-| Tope 2 movimientos / tramo / día | 📋 [`RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md`](./RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md) |
+| Tope 2 movimientos / tramo / día | 📋 [`RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md`](./RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md) · **post-épica B** |
 | Flujo C — declaración tramo preasignado (sin duplicar teoría) | ✅ web + functions **2026-06-23** · deploy pendiente |
 | Coherencia celda franco + presentación tras traslados sucesivos | ✅ CVC + `coherirPresentacionCompuestoAlTeoricoVis` **2026-06-23** · QA LOKITO d19 |
 | M+T+N — 3 fichadas, orden reloj ≠ M/T/N | ✅ UI `mapSegmentoMtnAIndiceFichada` **2026-06-23** · QA d16 LOKITO/CHAPARRO |
