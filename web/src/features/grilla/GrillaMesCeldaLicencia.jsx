@@ -49,7 +49,7 @@ export default function GrillaMesCeldaLicencia({
         disabled={disabled}
         onClick={onClick}
         className={[
-          celdaRellena ? "min-h-12 w-full rounded-none p-0" : "h-full w-full",
+          celdaRellena ? "min-h-[5.5rem] w-full rounded-none p-0" : "h-full w-full",
           visualClass,
           tiene ? "cursor-pointer hover:ring-2 hover:ring-violet-400 hover:ring-offset-1" : "",
           className,

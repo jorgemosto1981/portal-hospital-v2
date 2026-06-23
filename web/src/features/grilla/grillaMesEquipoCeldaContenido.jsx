@@ -2,6 +2,7 @@ import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 import {
   clasesTextoCelda,
   clasesTextoCeldaAlineadoPlanificado,
+  clasesTextoCeldaLicenciaGrilla,
   clasesTextoCeldaOutboxPendiente,
 } from "./grillaTurnosVisual.js";
 import GrillaPresentacionCompuestoFilas from "./GrillaPresentacionCompuestoFilas.jsx";
@@ -43,11 +44,18 @@ export function contenidoCeldaOperativa({
   soloTeoriaFuturo = false,
   celdaFuturaSinFichada = false,
   alinearTipografiaPlanificada = false,
+  licenciaCeldaGrande = false,
 }) {
   const claseTextoPrincipal = (valor) => {
     if (outboxVisual?.pending) return clasesTextoCeldaOutboxPendiente(valor);
     if (alinearTipografiaPlanificada) return clasesTextoCeldaAlineadoPlanificado(valor);
     return clasesTextoCelda(valor);
+  };
+  const claseTextoLicencia = (codigo, { secundaria = false } = {}) => {
+    if (licenciaCeldaGrande || alinearTipografiaPlanificada || secundaria) {
+      return clasesTextoCeldaLicenciaGrilla(codigo, { secundaria });
+    }
+    return claseTextoPrincipal(codigo);
   };
   const alertaTitle = desalineacionTooltip || "Teoría modificada post-licencia";
   const badgeAlerta = desalineacionTeoria ? (
@@ -218,25 +226,27 @@ export function contenidoCeldaOperativa({
   }
   if (tieneLicencia && (tieneTurno || esFranco || esNoLaborable)) {
     return (
-      <span className="flex w-full flex-col items-center justify-center leading-none">
+      <span className="flex h-full w-full min-h-[5.5rem] flex-col items-center justify-center gap-1 leading-none py-1">
         <span className={claseTextoPrincipal(turnoMostrar || (esNoLaborable ? "NL" : "F"))}>
           {turnoMostrar || (esNoLaborable ? "NL" : "F")}
         </span>
-        <span className="mt-0.5 flex flex-col items-center gap-px">
+        <span className="flex flex-col items-center gap-px">
           {filaInferiorCelda}
           {diffBlock}
-          <span className="text-[7px] font-bold text-fuchsia-950">{licenciaCod.slice(0, 4)}</span>
+          <span className={`${claseTextoLicencia(licenciaCod, { secundaria: true })} text-fuchsia-950`}>
+            {licenciaCod.slice(0, 4)}
+          </span>
         </span>
       </span>
     );
   }
   if (tieneLicencia) {
     return (
-      <span className="flex flex-col items-center">
+      <span className="flex h-full min-h-[5.5rem] w-full flex-col items-center justify-center leading-none">
         {filaInferiorCelda}
-        <span className={claseTextoPrincipal(licenciaCod)}>{licenciaCod.slice(0, 4)}</span>
+        <span className={`${claseTextoLicencia(licenciaCod)} text-slate-900`}>{licenciaCod.slice(0, 4)}</span>
         {esIncompletoPlan ? (
-          <span className="text-[6px] font-semibold text-rose-800">Plan incompleto</span>
+          <span className="mt-1 text-[9px] font-semibold text-rose-800">Plan incompleto</span>
         ) : null}
       </span>
     );

@@ -158,6 +158,22 @@ export function clasesTextoCeldaAlineadoPlanificado(valor) {
 /** Tipografía chip grilla equipo cuando la fila se uniforma con planificado. */
 export const CLASE_CHIP_TIPOGRAFIA_PLANIFICADA_GRILLA = "!text-[10px] !font-semibold !leading-tight";
 
+/** Código de licencia en celda día (grilla equipo, altura estándar). */
+export const CLASE_TEXTO_LICENCIA_GRILLA_CELDA = "text-[12px] font-bold leading-tight tracking-tight";
+export const CLASE_TEXTO_LICENCIA_GRILLA_SECUNDARIA = "text-[11px] font-bold leading-tight";
+
+export function clasesTextoCeldaLicenciaGrilla(codigo, { secundaria = false } = {}) {
+  const base = secundaria ? CLASE_TEXTO_LICENCIA_GRILLA_SECUNDARIA : CLASE_TEXTO_LICENCIA_GRILLA_CELDA;
+  const len = String(codigo || "").trim().length;
+  if (len > 8) return `${base} !text-[10px]`;
+  if (len > 5) return `${base} !text-[11px]`;
+  return base;
+}
+
+/** Chip interior transparente: el color MDC va en el botón padre (`GrillaMesCeldaLicencia`). */
+export const CLASE_CHIP_LICENCIA_TRANSPARENTE_GRILLA =
+  "!mx-0 !h-full !w-full !max-w-none !min-w-0 !rounded-none !border-0 !bg-transparent !shadow-none";
+
 /** Texto principal en celda con preview outbox (más legible que teórico denso). */
 export function clasesTextoCeldaOutboxPendiente(valor) {
   const len = String(valor || "").trim().length;

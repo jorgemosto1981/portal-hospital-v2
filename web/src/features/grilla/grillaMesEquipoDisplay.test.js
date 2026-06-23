@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { celdaEsIncompletoPlanVis, celdaTieneJornadaVis, textoHorarioTurno } from "./grillaMesEquipoDisplay.js";
 import { celdaTieneDesalineacionTeoria } from "./grillaMesCellUtils.js";
-import { varianteCeldaOperativa } from "./grillaTurnosVisual.js";
+import { varianteCeldaOperativa, clasesTextoCeldaLicenciaGrilla } from "./grillaTurnosVisual.js";
 
 describe("celdaEsIncompletoPlanVis (US-1)", () => {
   it("laborable sin rda_* es incompleto", () => {
@@ -85,6 +85,13 @@ describe("varianteCeldaOperativa futuro gris", () => {
         tieneTurno: true,
       }),
     ).toBe("licencia");
+  });
+});
+
+describe("clasesTextoCeldaLicenciaGrilla", () => {
+  it("usa tipografía grande para códigos cortos", () => {
+    expect(clasesTextoCeldaLicenciaGrilla("LAO-")).toContain("text-[12px]");
+    expect(clasesTextoCeldaLicenciaGrilla("64-B", { secundaria: true })).toContain("text-[11px]");
   });
 });
 

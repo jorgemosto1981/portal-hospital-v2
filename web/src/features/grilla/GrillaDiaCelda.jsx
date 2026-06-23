@@ -20,6 +20,7 @@ import {
 import {
   CLASE_MARCO_CELDA_OUTBOX_PENDIENTE,
   CLASE_CHIP_TIPOGRAFIA_PLANIFICADA_GRILLA,
+  CLASE_CHIP_LICENCIA_TRANSPARENTE_GRILLA,
   claseFondoCeldaCalendarioTitular,
   claseFondoTdJefeSemaforo,
 } from "./grillaTurnosVisual.js";
@@ -295,7 +296,14 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
   const tieneLicenciaParaVariant =
     modoFichada === "jefe" && pintarCeldaSemaforoJefe ? false : tieneLicencia;
 
-  const variant =
+  const celdaLicenciaOperativa =
+    tieneLicenciaParaVariant && !usaPresentacionPisos && !pintarCeldaSemaforoJefe;
+  const licenciaSoloCelda =
+    celdaLicenciaOperativa &&
+    !celdaEnTransito &&
+    !(tieneTurno || esFranco || esNoLaborable || jornadaVis);
+
+  const variantBase =
     usaPresentacionPisos
       ? "vacio"
       : (mostrarFichadaReal && puedeMostrarChipFichadaReal && !tieneLicenciaParaVariant)
@@ -313,6 +321,9 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
                 ? null
                 : estadoSemaforoPinturaCeldaJefe(semaforoFichada?.estado, cell, fechaYmd),
           });
+
+  const variant = licenciaSoloCelda ? "vacio" : variantBase;
+  const chipRellenaCelda = pintarCeldaSemaforoJefe || celdaLicenciaOperativa;
 
   const claseTdBase =
     pintarCeldaSemaforoJefe && estadoSemaforoCelda
@@ -342,7 +353,7 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
         grupoVistaId={grupoSeleccionado || undefined}
         etiquetasGrupo={etiquetasGrupo}
         disabled={!tieneDatos}
-        celdaRellena={pintarCeldaSemaforoJefe}
+        celdaRellena={chipRellenaCelda}
         onClick={() =>
           tieneDatos &&
           onCeldaClick({
@@ -385,7 +396,7 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
           })
         }
         className={
-          pintarCeldaSemaforoJefe
+          pintarCeldaSemaforoJefe || celdaLicenciaOperativa
             ? "block w-full p-0"
             : usaPresentacionPisos
               ? "block w-full p-0"
@@ -395,8 +406,11 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
       >
         <GrillaTurnosCeldaChip
           variant={variant}
-          rellenoCelda={pintarCeldaSemaforoJefe}
+          rellenoCelda={chipRellenaCelda}
           className={[
+            licenciaSoloCelda ? CLASE_CHIP_LICENCIA_TRANSPARENTE_GRILLA : "",
+            celdaLicenciaOperativa && !licenciaSoloCelda ? CLASE_CHIP_ANCHO_CELDA_DIA : "",
+            celdaLicenciaOperativa && !licenciaSoloCelda ? CLASE_CHIP_IMPORTANTE_COMPUESTO : "",
             celdaEnTransito
               ? CLASE_MARCO_CELDA_OUTBOX_PENDIENTE
               : outboxVisual?.pending && !outboxVisual?.mostrarResultadoFinal
@@ -460,6 +474,7 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
             usaPresentacionPisos,
             pisoCompuestoGrande: filaCompuesta || usaPresentacionPisos,
             alinearTipografiaPlanificada: uniformarChipPlanificado && !usaPresentacionPisos,
+            licenciaCeldaGrande: celdaLicenciaOperativa,
             ocultarMicroAnalitica:
               celdaEnTransito ||
               (modoFichada === "jefe" && !ausenteSinMarcasPasada) ||
