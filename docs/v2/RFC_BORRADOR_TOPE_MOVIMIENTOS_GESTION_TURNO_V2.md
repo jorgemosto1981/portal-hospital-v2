@@ -1,115 +1,135 @@
-# RFC (borrador) — Tope de movimientos (límite blando) · gestión de turno
+# RFC — Tope de movimientos (límite blando) · gestión de turno
 
-> **Estado:** LISTO PARA WORKSHOP — sin implementación en código.  
-> **Gate técnico:** ✅ Épica B (B1–B4) + smoke d25→26 · ver [`EPICA_B_PRESENTACION_MOTOR_V2.md`](./EPICA_B_PRESENTACION_MOTOR_V2.md)  
+> **Estado:** **DECISIONES CERRADAS** (simulacro piloto 2026-06-23) — **implementación `[BATCH-LIM-001]` pendiente**  
+> **Gate técnico:** ✅ Épica B (B1–B4) · [`EPICA_B_PRESENTACION_MOTOR_V2.md`](./EPICA_B_PRESENTACION_MOTOR_V2.md)  
 > **Workshop:** [`RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md`](./RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md)  
-> **Relación:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) · [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md) · handoff [`HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md`](./HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md)
+> **Relación:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) · [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md)
 
 ---
 
 ## 1. Problema
 
-Sin tope, la cadena de traslados e intercambios en el mismo mes (ida/vuelta, N luego M, etc.) genera **caos operativo** y bugs de supersession difíciles de auditar. Un límite blando fuerza intervención humana (RRHH) cuando la gestión del día/tramo deja de ser estable.
+Sin tope, la cadena de traslados e intercambios en el mismo mes genera **caos operativo** y bugs de supersession difíciles de auditar. Un límite **duro** con bypass auditado fuerza intervención humana cuando un tramo/día supera la norma operativa.
 
 ---
 
-## 2. Propuesta piloto (límite blando)
+## 2. Propuesta piloto (acordada D0–D7)
 
 | Concepto | Definición |
 |----------|------------|
-| **Unidad** | **Tramo** ejecutable (`segmento_id` / token de turno simple: M, T, N, …) — unidad mínima de negocio en turno compuesto M+T+N. |
-| **Ámbito** | `persona_id` × `fecha_ymd` × `segmento_id` × `grupo_trabajo_id` (gdt). |
-| **Tope** | **Máximo 2 movimientos** por tramo en ese ámbito (mes GSO abierto). |
-| **Movimiento** | Un `aplicarBatchAsistencia` que **impacte** ese tramo en ese día (origen o destino). |
+| **Unidad (D0)** | **Tramo** × `persona_id` × `fecha_ymd` × `grupo_trabajo_id` — no tope agregado por día. |
+| **Tope (D1)** | **Máximo 2 movimientos** por unidad en el mes GSO abierto. |
+| **Movimiento** | Un `aplicarBatchAsistencia` que impacte ese tramo en ese día (origen o destino). |
+| **Alcance v1 (D5)** | Solo **traslado propio v2** e **intercambio guardia v2**. |
 
-### 2.1 Cómo cuenta cada tipo de op
+### 2.1 Conteo por tipo de op
 
-| Tipo batch | Conteo sugerido |
-|------------|-----------------|
-| **Traslado propio v2** | **+1** en cada día/tramo afectado: origen (segmento cedido) y destino (segmento incorporado). |
-| **Intercambio guardia v2** | **+1** por agente y tramo involucrado en el intercambio (cada pierna del par bilateral). |
-| **Reemplazo clásico / adicional** | Definir en implementación (¿1 por celda/día o por `turno_id`?). Piloto: priorizar traslado + intercambio. |
+| Tipo batch | Conteo |
+|------------|--------|
+| **Traslado propio v2** | **+1** por cada par `(persona, fecha, segmento_canon, gdt)` en origen (cedido) y en destino (incorporado). |
+| **Intercambio guardia v2 (D4)** | **+1** por agente y tramo involucrado en ese día (**2** en un swap bilateral típico). |
+| **Adicional / reemplazo clásico** | **No cuenta** en v1. |
 
-**Ida y vuelta** del mismo tramo en el mismo día puede consumir 2 movimientos; el **tercero** debe bloquearse.
-
----
-
-## 3. Comportamiento en error
-
-- **Código:** `[BATCH-LIM-001]` desde `cambiosTurno.js` **antes** de la transacción Firestore.
-- **HTTP / callable:** `failed-precondition` (o `invalid-argument` alineado al resto BATCH-*).
-- **Web:** toast: *«Superaste el límite de cambios operativos para este tramo. Solicitá una excepción a RRHH.»*
+**Ida y vuelta** del mismo tramo en el mismo día consume 2; el **3.º** → rechazo (D2).
 
 ---
 
-## 4. Arquitectura de implementación (futura)
+## 3. Comportamiento en error (D2, D7)
 
-### 4.1 Backend (autoridad)
-
-1. Tras normalizar la op a ítems batch, derivar pares `(persona_id, fecha_ymd, segmento_id, gdt)`.
-2. Para cada par, contar en `asistencia_diaria.overrides_turno` del mes:
-   - entradas **activas** y **históricas no invalidadas** (`eliminado` / `supersedido` / `invalidado_por_replanificacion`) que hayan movido ese tramo;
-   - criterio exacto a fijar en implementación (incl. `op_batch_id` para no duplicar piernas del mismo batch).
-3. Si `conteo + delta_op > 2` → `err(..., '[BATCH-LIM-001] ...')`.
-
-### 4.2 Excepción RRHH
-
-- Flag en perfil/claims (ej. `puede_bypass_tope_movimientos_gestion_turno`) **solo RRHH**.
-- Batch acepta header/context `bypass_tope_movimientos: true` si el token lo autoriza (auditoría obligatoria en override).
-
-### 4.3 Frontend (preview)
-
-- Misma función de conteo (callable ligero o duplicar lógica en preview) en modales A/B/C **antes** de enviar batch — evita frustración y round-trip.
+- **Código:** `[BATCH-LIM-001]` en `cambiosTurno.js` **antes** de la transacción Firestore.
+- **Callable:** `failed-precondition` (alineado a BATCH-*).
+- **Web (toast):** *«Límite de movimientos excedido para este tramo (máx. 2 por día). Contacte a RRHH o Jefe de Sala para una excepción.»*
 
 ---
 
-## 5. Fuera de alcance (borrador)
+## 4. Bypass (D3)
 
-- Límite por mes completo agregado (solo por día/tramo en piloto).
-- Bloqueo duro sin vía RRHH.
-- Migración de datos históricos (conteo solo hacia adelante o desde fecha corte).
-
----
-
-## 6. Decisiones de producto (workshop)
-
-Completar en [`RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md`](./RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md). Hasta entonces **no** mergear `[BATCH-LIM-001]`.
-
-| ID | Tema | Estado |
-|----|------|--------|
-| D1 | Número de tope (propuesta: 2) | ⏳ |
-| D2 | Bloqueo duro vs advertencia | ⏳ |
-| D3 | Perfil bypass (RRHH / jefe) | ⏳ |
-| D4 | Conteo intercambio bilateral | ⏳ |
-| D5 | Alcance adicional/reemplazo clásico | ⏳ |
-| D6 | Fecha corte contador | ⏳ |
-
-### 6.1 Riesgos sin workshop
-
-- Falso positivo: rechazar cadena legítima si el contador no alinea supersession/historial con la UI.
-- Falso negativo: no deduplicar piernas del mismo `op_batch_id`.
-
-### 6.2 Orden de implementación (post-decisión)
-
-1. `contarMovimientosTramoDia` + `functions/test/topeMovimientosGestionTurno.test.js`.
-2. Validación pre-transacción en `cambiosTurno.js`.
-3. Toast web `[BATCH-LIM-001]`.
-4. (Opcional) Callable preview para modales.
+- Perfiles: **RRHH** y **jefe de sala** (capability/claim a definir, ej. `puede_bypass_tope_movimientos_gestion_turno`).
+- Batch: `bypass_tope_movimientos: true` + **motivo obligatorio** en contexto; persistir en override / `registrarConsultaGestionTurnoGrilla`.
+- Sin bypass válido → D2 duro.
 
 ---
 
-## 7. Criterios de aceptación (cuando se implemente)
+## 5. Historial (D6)
 
-1. Tercer movimiento del mismo tramo/día/persona/gdt → batch rechazado con `[BATCH-LIM-001]`.
-2. RRHH con bypass aplica cuarto movimiento y queda auditado.
-3. Tests unitarios en `functions/test` con cadena N→franco→M y intercambio bilateral.
-4. Documentación de conteo alineada a este RFC.
+- Contar solo overrides con `registrado_en` (o equivalente) **≥ `tope_movimientos_vigente_desde`** (fecha/hora del deploy que activa el tope).
+- No aplicar retroactivamente movimientos de QA previos (ej. CHAPARRO d25) al contador.
 
 ---
 
-## 8. Changelog
+## 6. Decisiones de producto — cerradas
+
+| ID | Decisión |
+|----|----------|
+| D0 | Por **tramo** × día × persona × gdt |
+| D1 | **2** movimientos |
+| D2 | **Bloqueo duro** |
+| D3 | Bypass **RRHH + jefe sala** (auditado) |
+| D4 | Intercambio: **+1 por agente/tramo** |
+| D5 | v1: **traslado v2 + intercambio** solamente |
+| D6 | Conteo **post-deploy** |
+| D7 | Mensaje §3 |
+
+Ratificación formal RRHH: pendiente opcional; implementación puede seguir este perfil piloto.
+
+---
+
+## 7. Criterios de aceptación
+
+1. 3.er movimiento del mismo tramo/día/persona/gdt (sin bypass) → `[BATCH-LIM-001]`.
+2. CHAPARRO d25→26 (M, T, N distintos) **no** bloquea al 3.er batch si cada tramo lleva ≤2 movimientos.
+3. Bypass RRHH/jefe permite 3.er+ con auditoría.
+4. Tests: ida/vuelta mismo tramo; intercambio +2; cadena N→franco→M (conteo por movimiento).
+5. Adicional/reemplazo **no** incrementa contador en v1.
+
+---
+
+## 8. Fuera de alcance v1
+
+- Tope agregado por día (D0-B).
+- Advertencia blanda sin rechazo (D2 blando).
+- Conteo retroactivo mes completo (D6 alternativa).
+- Límite por mes acumulado.
+
+---
+
+## 9. Implementación `[BATCH-LIM-001]` (esqueleto)
+
+### 9.1 Módulo puro (testeable)
+
+- **Archivo:** `shared/utils/topeMovimientosGestionTurno.js` → sync functions.
+- **`derivarIncrementosTopeDesdeBatchOp(op, gdt)`** → lista `{ persona_id, fecha_ymd, segmento_id_canon, delta }`.
+- **`contarMovimientosTramoDia({ overridesMes, persona_id, fecha_ymd, segmento_id, gdt, vigenteDesde })`** → número.
+- **`evaluarTopeMovimientosBatch({ ops, overridesMes, gdt, vigenteDesde, tope = 2, bypass })`** → `{ ok, violaciones[] }`.
+
+Reglas: canonicalizar segmento como en `rdaTurnoTeoricoWorker`; **no duplicar** piernas del mismo `op_batch_id` al contar un batch ya persistido.
+
+### 9.2 Integración backend
+
+- **Hook:** en `cambiosTurno.js`, tras normalizar batch, **antes** de transacción:
+  - si `bypass_tope_movimientos` y claim válido → skip con log auditoría;
+  - si no → `evaluarTopeMovimientosBatch`; si falla → `err('failed-precondition', '[BATCH-LIM-001] ...')`.
+- **Fuente datos:** `overrides_turno` del mes en `asistencia_diaria` (Firestore, no SQL); filtrar activos + histórico válido según supersession.
+
+### 9.3 Config
+
+- `tope_movimientos_vigente_desde` — ISO timestamp fijado en deploy (o `cfg_*` si se prefiere ops).
+
+### 9.4 Web (v1.0 mínimo)
+
+- Toast mapeado a `[BATCH-LIM-001]`.
+- v1.1: preview en modales gestión turno (callable o lógica compartida).
+
+### 9.5 Tests
+
+- `functions/test/topeMovimientosGestionTurno.test.js` — casos D4, ida/vuelta, d25 patrón 3 tramos, bypass mock.
+
+---
+
+## 10. Changelog
 
 | Fecha | Nota |
 |-------|------|
-| 2026-06-19 | Borrador incorporado desde propuesta piloto (sin código). |
-| 2026-06-23 | Gate B4 cumplido; §8 workshop; enlace agenda RRHH. |
+| 2026-06-19 | Borrador inicial. |
+| 2026-06-23 | Gate B4; workshop agenda. |
+| 2026-06-23 | **D0–D7 cerradas** (simulacro piloto); §9 esqueleto BATCH-LIM-001. |

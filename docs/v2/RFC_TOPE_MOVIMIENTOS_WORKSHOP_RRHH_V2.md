@@ -2,75 +2,64 @@
 
 > **Propósito:** cerrar decisiones de producto antes de implementar `[BATCH-LIM-001]`.  
 > **RFC técnico:** [`RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md`](./RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md)  
-> **Gate técnico cumplido:** Épica B (B1–B4) + smoke CHAPARRO d25→26 **2026-06-23**
+> **Gate técnico:** ✅ Épica B (B1–B4) + smoke CHAPARRO d25→26 **2026-06-23**  
+> **Estado decisiones:** ✅ **Cerradas (simulacro piloto técnico 2026-06-23)** — ratificar con RRHH formal si aplica.
 
 ---
 
-## Agenda sugerida (30–45 min)
+## Decisiones registradas
 
-1. **Problema** — cadenas largas de traslados en el mismo mes (ida/vuelta, auditoría difícil).
-2. **Propuesta piloto** — máx. **2 movimientos** por tramo × persona × día × gdt.
-3. **Qué cuenta como movimiento** — traslado propio (origen + destino), intercambio (cada pierna).
-4. **Excepciones** — ¿solo RRHH con bypass auditado? ¿jefe de sala en urgencia?
-5. **Mensaje al usuario** — toast + derivación a RRHH.
-6. **Fecha de corte** — conteo solo desde deploy del tope vs mes completo jun-2026.
+| # | Pregunta | Decisión | Notas |
+|---|----------|----------|--------|
+| **D0** | Unidad de conteo | **A — por tramo × día × persona × gdt** | M+T+N = tres cupos independientes (hasta 2 movimientos por M, por T, por N). |
+| **D1** | Número máximo | **2** | Piloto Sala; 1 corrección + 1 cambio justificado; 3.º bloqueado. |
+| **D2** | Superar tope | **Duro** — batch rechazado, sin advertencia blanda | `[BATCH-LIM-001]` pre-transacción. |
+| **D3** | Bypass | **RRHH + jefe de sala** (motivo auditado, `op_batch_id`) | Claim/capability + flag en contexto batch. |
+| **D4** | Intercambio guardia | **+1 por agente y tramo** en el batch (= **2** incrementos en un swap bilateral típico) | No colapsar a +1 global. |
+| **D5** | Alcance v1 | **Solo traslado propio v2 + intercambio guardia v2** | Fuera: adicional, reemplazo clásico. |
+| **D6** | Historial contador | **Desde fecha deploy del tope** | No retroactivo sobre QA jun-2026 previo. |
+| **D7** | Mensaje usuario | Ver RFC §3 | Menciona RRHH y jefe de sala. |
 
----
-
-## Decisiones a registrar (completar en reunión)
-
-| # | Pregunta | Decisión | Fecha | Responsable |
-|---|----------|----------|-------|-------------|
-| D1 | ¿Tope = **2** movimientos por tramo/día/gdt? | ☐ Sí ☐ No → valor: ___ | | |
-| D2 | ¿Bloqueo **duro** (batch rechazado) o advertencia con confirmación? | ☐ Duro ☐ Blando | | |
-| D3 | ¿Bypass solo **RRHH** o también rol jefe piloto? | | | |
-| D4 | ¿Intercambio cuenta **2** (uno por agente/tramo) o **1** por par? | | | |
-| D5 | ¿Adicional / reemplazo clásico entra en el tope en v1? | ☐ No ☐ Sí | | |
-| D6 | Conteo desde **fecha deploy** o **inicio mes GSO** abierto | | | |
+**Responsable simulacro:** decisor técnico piloto · **Fecha:** 2026-06-23.
 
 ---
 
-## Preguntas resolutivas (llevar a la reunión)
+## Mensaje usuario (D7)
 
-Objetivo: salir con **D1–D6 completas** en ≤45 min. No abrir debate de implementación en la sala.
-
-1. **D2 primero (bloqueo vs alerta):** ¿El tercer movimiento del **mismo tramo en el mismo día** debe **imposibilitar** guardar el batch, o solo mostrar advertencia y permitir confirmar con motivo?
-2. **D1 (número):** ¿Confirmamos **2** como tope? ¿Aplica igual a **M**, **T** y **N** por separado en un día M+T+N?
-3. **D4 (intercambio):** Swap LOKITO↔CHAPARRO un tramo: ¿son **2** movimientos (uno por agente en ese tramo) o **1** operación compartida?
-4. **D3 (bypass):** ¿Quién puede autorizar un 3.er/4.º movimiento: solo RRHH, o jefe de sala con registro auditado?
-5. **D6 (corte):** ¿Contamos solo batches **desde el deploy del tope**, o todo jun-2026 ya ejecutado entra al historial del contador?
-6. **D5 (alcance v1):** ¿Excluimos **adicional** y **reemplazo clásico** del tope en la primera versión? (recomendación técnica: **sí**, solo traslado v2 + intercambio).
+*«Límite de movimientos excedido para este tramo (máx. 2 por día). Contacte a RRHH o Jefe de Sala para una excepción.»*
 
 ---
 
-## Anexo técnico — casuísticas que el motor ya maneja (pre-workshop)
+## Agenda (referencia reunión RRHH)
 
-Usar para validar que **D1–D6** no generen falsos positivos con el comportamiento real post–Épica B.
-
-| Caso | Comportamiento motor / piloto | Implicación para el tope |
-|------|------------------------------|---------------------------|
-| **Traslados encadenados mismo origen** (CHAPARRO d25→26: M, T, N en 3 batches) | Cada batch mueve **un tramo**; origen queda franco al vaciar el día | ¿**+1 por tramo** en origen (M, T, N) = 3 contadores distintos, o un solo “día origen”? RFC propone **por tramo** en ese día. |
-| **Traslado parcial** (solo M a otro día; quedan T+N) | Origen sigue laborable; destino aditivo | **+1** en M origen y **+1** en M destino; T/N no cuentan hasta moverse. |
-| **Cadena N→franco→M mismo día** (CAMPOS d10/d12) | Supersession revoca franco al incorporar M | Tope debe contar **movimientos**, no “estado final”; ¿el 3.er batch del **mismo tramo N** en el mismo día debe bloquear? |
-| **Intercambio bilateral** (swap T↔N d8) | Cada agente cede y recibe un tramo | Alinear **D4**: típicamente **+1** por agente × tramo cedido/recibido en ese día. |
-| **Ida y vuelta mismo tramo mismo día** | 2 batches consumen cupo del tramo | Con tope 2, el **3.er** debe disparar **D2** (bloqueo o alerta). |
-| **Bypass RRHH** | No existe aún | **D3:** sin bypass, operación queda bloqueada; con bypass, `op_batch_id` + flag auditado. |
-
-**Hueco a cerrar con RRHH:** si el tope es por **tramo×día**, un día M+T+N permite hasta **6** movimientos de traslado (2×M + 2×T + 2×N) antes de bloquear cualquiera — ¿es la intención operativa, o buscan tope **por día** agregado (más restrictivo, fuera del borrador actual)?
+1. Problema — cadenas largas de traslados en el mes.
+2. Validar tabla D0–D7 (especialmente D0 tramo vs día y D6 no retroactivo).
+3. Bypass y auditoría (D3).
+4. Fecha de activación en prod (D6 → constante `tope_movimientos_vigente_desde`).
 
 ---
 
-## Tras el workshop
+## Anexo técnico — casuísticas (validadas con D0-A)
 
-1. Volcar decisiones en §8 del RFC borrador.
-2. Implementar backend `cambiosTurno.js` + tests (cadena N→franco→M, intercambio).
-3. Preview en modales gestión turno (opcional v1.1).
-4. Piloto Sala jun-2026 — observar rechazos `[BATCH-LIM-001]` una semana antes de generalizar.
+| Caso | Con D0-A + D1=2 |
+|------|------------------|
+| CHAPARRO d25→26 (M, T, N en 3 batches) | Tres tramos → cada uno +1 en origen; **no** bloquea al 3.er batch si son tramos distintos. |
+| Ida y vuelta **mismo tramo** mismo día | 3.er movimiento de **ese** tramo → **D2 duro**. |
+| Intercambio bilateral | **D4:** +1 contador por persona/tramo afectado en ese día. |
+| Cadena N→franco→M mismo día | Cuenta **movimientos** en historial overrides, no estado final franco. |
+
+---
+
+## Tras ratificación RRHH
+
+1. Volcar en §6 del RFC borrador (hecho en repo).
+2. Implementar `BATCH-LIM-001` — ver RFC §9.
+3. Piloto: observar rechazos una semana antes de ampliar ámbito.
 
 ---
 
 ## Criterios de éxito piloto
 
-- Ningún rechazo en movimientos **claramente legítimos** (falso positivo).
-- Tercer movimiento abusivo en el mismo tramo/día **bloqueado** con mensaje claro.
-- Bypass RRHH deja rastro en override / consulta gestión turno.
+- Sin falsos positivos en traslados legítimos (parcial, d25→26).
+- 3.er movimiento del **mismo tramo/día** bloqueado con mensaje D7.
+- Bypass jefe/RRHH auditado en override o consulta gestión turno.
