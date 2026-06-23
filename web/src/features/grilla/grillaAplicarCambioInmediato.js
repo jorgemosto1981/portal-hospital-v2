@@ -46,6 +46,12 @@ export function toastErrorAplicarCambioGrilla(e, opts = {}) {
     toast.error("Ese tipo de cambio aún no está en el servidor.");
     return true;
   }
+  if (msg.includes("BATCH-LIM-001")) {
+    toast.error(
+      "Límite de movimientos excedido para este tramo (máx. 2 por día). Contacte a RRHH o Jefe de Sala para una excepción.",
+    );
+    return true;
+  }
   if (/\[BATCH-/i.test(msg)) {
     toast.error(msg.replace(/^\[[^\]]+\]\s*/i, ""));
     return true;

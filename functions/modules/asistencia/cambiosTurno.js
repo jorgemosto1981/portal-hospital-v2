@@ -44,6 +44,21 @@ const {
   esOverrideActivo,
 } = require("../shared/overridesTurnoSupersession");
 const { ejecutarCicloMicroEnPares } = require("../shared/cicloMicroCeldaAsistencia");
+const {
+  evaluarTopeMovimientosBatch,
+  topeMovimientosActivo,
+} = require("../shared/topeMovimientosGestionTurno");
+const {
+  TOPE_MOVIMIENTOS_VIGENTE_DESDE,
+  TOPE_MOVIMIENTOS_MAX,
+  MENSAJE_BATCH_LIM_001,
+} = require("../shared/topeMovimientosConfig");
+const { tokenHasRrhhLaborAccess } = require("../shared/laborProfile");
+const {
+  loadHlgRowsPorPersona,
+  filterHlgVigentesEnFecha,
+  nivelTitularEnGrupo,
+} = require("../shared/solicitudHlgVigencia");
 
 const COL_ASISTENCIA = "asistencia_diaria";
 const COL_VIS = "vistas_grilla_mes_agente";
@@ -54,6 +69,9 @@ const GDT_ID = /^gdt_[A-Z0-9]+$/i;
 const TIPOS_OVERRIDE = new Set(["reemplazo", "adicional", "cobertura_parcial"]);
 
 const TCC_IDS = new Set(Object.values(seedIds.cfg_tipo_compensacion_cobertura || {}));
+
+/** Nivel jerárquico ≤ este umbral = jefe de sala (bypass D3). */
+const JEFE_NIVEL_MAX_BYPASS_TOPE = 2;
 
 function err(code, msg) {
   throw new HttpsError(code, msg);
@@ -1127,6 +1145,41 @@ const listarOverridesTurno = onCall({
   };
 });
 
+async function actorPuedeBypassTopeMovimientos(request, gdt) {
+  const token = (request.auth && request.auth.token) || {};
+  if (tokenHasRrhhLaborAccess(token)) return true;
+  const actorPid = typeof token.persona_id === "string" ? token.persona_id.trim() : "";
+  if (!PER_ID.test(actorPid)) return false;
+  const hoy = new Date().toISOString().slice(0, 10);
+  const rows = filterHlgVigentesEnFecha(await loadHlgRowsPorPersona(actorPid), hoy);
+  const nivel = nivelTitularEnGrupo(rows, gdt);
+  return nivel !== null && nivel <= JEFE_NIVEL_MAX_BYPASS_TOPE;
+}
+
+async function cargarOverridesEnriquecidosParaClaves(asiKeys) {
+  const enriched = [];
+  for (const key of asiKeys) {
+    const [pid, fecha] = key.split("|");
+    const snap = await db.collection(COL_ASISTENCIA).doc(docIdAsistencia(pid, fecha)).get();
+    const list = snap?.exists && Array.isArray(snap.data()?.overrides_turno)
+      ? snap.data().overrides_turno
+      : [];
+    for (const ov of list) {
+      enriched.push({
+        ...ov,
+        persona_id_doc: pid,
+        fecha_ymd: fecha,
+      });
+    }
+  }
+  return enriched;
+}
+
+function leerBypassTopeDesdeBatch(data, opsRaw) {
+  if (data && data.bypass_tope_movimientos === true) return true;
+  return opsRaw.some((o) => o?.context?.bypass_tope_movimientos === true);
+}
+
 /**
  * Aplica un lote de cambios de asistencia en forma atómica.
  * Tipos: cobertura_parcial, reemplazo, adicional.
@@ -1218,6 +1271,41 @@ const aplicarBatchAsistencia = onCall({
     });
   }
   for (const k of extraPeerAsiKeys) asiKeySet.add(k);
+
+  const vigenteDesde = process.env.TOPE_MOVIMIENTOS_VIGENTE_DESDE || TOPE_MOVIMIENTOS_VIGENTE_DESDE;
+  /** @type {{ motivo: string } | null} */
+  let bypassTopeMeta = null;
+  if (topeMovimientosActivo(vigenteDesde, nowIso)) {
+    const gdtBatch = String(items[0]?.grupo_trabajo_id || "").trim();
+    const bypassFlag = leerBypassTopeDesdeBatch(data, opsRaw);
+    if (bypassFlag) {
+      const motivo = String(data.motivo_bypass_tope || "").trim();
+      if (motivo.length < 3) {
+        err("invalid-argument", "[BATCH-LIM-002] motivo_bypass_tope requerido (mín. 3 caracteres).");
+      }
+      if (!await actorPuedeBypassTopeMovimientos(request, gdtBatch)) {
+        err("permission-denied", "[BATCH-LIM-003] Sin permiso para bypass de tope de movimientos.");
+      }
+      bypassTopeMeta = { motivo };
+      logger.info("bypass_tope_movimientos", { gdt: gdtBatch, uid, motivo });
+    } else {
+      const overridesEnriquecidos = await cargarOverridesEnriquecidosParaClaves(asiKeySet);
+      const evalRes = evaluarTopeMovimientosBatch({
+        overridesEnriquecidos,
+        batchItems: items,
+        vigenteDesde,
+        tope: TOPE_MOVIMIENTOS_MAX,
+      });
+      if (!evalRes.ok) {
+        const v0 = evalRes.violaciones[0] || {};
+        logger.warn("batch_lim_001", { violaciones: evalRes.violaciones });
+        err(
+          "failed-precondition",
+          `[BATCH-LIM-001] ${MENSAJE_BATCH_LIM_001} (${v0.segmento_id_canon || "?"} ${v0.fecha_ymd || ""})`,
+        );
+      }
+    }
+  }
 
   const txResult = await db.runTransaction(async (tx) => {
     const visMap = new Map();
@@ -1320,6 +1408,12 @@ const aplicarBatchAsistencia = onCall({
           creado_en: nowIso,
           invalidado_por_replanificacion: false,
           op_batch_id: it.op_id,
+          ...(bypassTopeMeta
+            ? {
+              bypass_tope_movimientos: true,
+              motivo_bypass_tope: bypassTopeMeta.motivo,
+            }
+            : {}),
         };
         pushEntry(`${it.persona_origen_id}|${it.fecha}`, it.grupo_trabajo_id, {
           ...base,
@@ -1342,6 +1436,12 @@ const aplicarBatchAsistencia = onCall({
         creado_en: nowIso,
         invalidado_por_replanificacion: false,
         op_batch_id: it.op_id,
+        ...(bypassTopeMeta
+          ? {
+            bypass_tope_movimientos: true,
+            motivo_bypass_tope: bypassTopeMeta.motivo,
+          }
+          : {}),
       };
       pushEntry(`${pidAsi}|${it.fecha}`, it.grupo_trabajo_id, entry);
     }

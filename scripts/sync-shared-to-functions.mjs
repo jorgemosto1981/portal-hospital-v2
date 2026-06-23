@@ -49,6 +49,8 @@ const FILES_TO_SYNC = [
   "materializarPresentacionVisCelda.js",
   "visCeldaFusionLectura.js",
   "intercambioGuardiaExclusividad.js",
+  "topeMovimientosConfig.js",
+  "topeMovimientosGestionTurno.js",
 ];
 
 function esmToCjs(source, filename) {
