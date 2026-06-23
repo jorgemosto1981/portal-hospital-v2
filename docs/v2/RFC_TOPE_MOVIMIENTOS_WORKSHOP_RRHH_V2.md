@@ -60,8 +60,8 @@
 |------|--------|
 | Código `[BATCH-LIM-001]` | ✅ `2525ae5` |
 | Config `TOPE_MOVIMIENTOS_VIGENTE_DESDE` | ✅ `2026-07-01T03:00:00.000Z` en repo |
-| Deploy functions (re-sync config) | Pendiente si se cambia solo config |
-| Deploy hosting (toast D7) | Pendiente |
+| Deploy functions (re-sync config) | ✅ 2026-06-23 (functions + hosting) |
+| Deploy hosting (toast D7) | ✅ `index-BSFCEpNO.js` |
 | Observación piloto 1 semana | Tras 01/07 |
 
 ---
