@@ -1,6 +1,6 @@
 # RFC — Tope de movimientos (límite blando) · gestión de turno
 
-> **Estado:** **DECISIONES CERRADAS** (simulacro piloto 2026-06-23) — **implementación `[BATCH-LIM-001]` pendiente**  
+> **Estado:** **RATIFICADO RRHH** (2026-06-23) · `[BATCH-LIM-001]` en prod — vigencia **2026-07-01 00:00 ART**  
 > **Gate técnico:** ✅ Épica B (B1–B4) · [`EPICA_B_PRESENTACION_MOTOR_V2.md`](./EPICA_B_PRESENTACION_MOTOR_V2.md)  
 > **Workshop:** [`RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md`](./RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md)  
 > **Relación:** [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) · [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md)
@@ -38,13 +38,13 @@ Sin tope, la cadena de traslados e intercambios en el mismo mes genera **caos op
 
 - **Código:** `[BATCH-LIM-001]` en `cambiosTurno.js` **antes** de la transacción Firestore.
 - **Callable:** `failed-precondition` (alineado a BATCH-*).
-- **Web (toast):** *«Límite de movimientos excedido para este tramo (máx. 2 por día). Contacte a RRHH o Jefe de Sala para una excepción.»*
+- **Web (toast):** *«Límite de movimientos excedido para este tramo (máx. 2 por día). Contacte a RRHH para solicitar una excepción.»*
 
 ---
 
 ## 4. Bypass (D3)
 
-- Perfiles: **RRHH** y **jefe de sala** (capability/claim a definir, ej. `puede_bypass_tope_movimientos_gestion_turno`).
+- Perfiles: **solo RRHH** (`tokenHasRrhhLaborAccess`).
 - Batch: `bypass_tope_movimientos: true` + **motivo obligatorio** en contexto; persistir en override / `registrarConsultaGestionTurnoGrilla`.
 - Sin bypass válido → D2 duro.
 
@@ -52,8 +52,8 @@ Sin tope, la cadena de traslados e intercambios en el mismo mes genera **caos op
 
 ## 5. Historial (D6)
 
-- Contar solo overrides con `registrado_en` (o equivalente) **≥ `tope_movimientos_vigente_desde`** (fecha/hora del deploy que activa el tope).
-- No aplicar retroactivamente movimientos de QA previos (ej. CHAPARRO d25) al contador.
+- Contar solo overrides con `creado_en` **≥ `tope_movimientos_vigente_desde`**.
+- **Ratificado:** `2026-07-01T03:00:00.000Z` (1 jul 2026 00:00 ART). Sin retroactivo jun-2026 QA.
 
 ---
 
@@ -64,13 +64,13 @@ Sin tope, la cadena de traslados e intercambios en el mismo mes genera **caos op
 | D0 | Por **tramo** × día × persona × gdt |
 | D1 | **2** movimientos |
 | D2 | **Bloqueo duro** |
-| D3 | Bypass **RRHH + jefe sala** (auditado) |
+| D3 | Bypass **solo RRHH** (auditado) |
 | D4 | Intercambio: **+1 por agente/tramo** |
 | D5 | v1: **traslado v2 + intercambio** solamente |
-| D6 | Conteo **post-deploy** |
+| D6 | Conteo desde **2026-07-01 00:00 ART** |
 | D7 | Mensaje §3 |
 
-Ratificación formal RRHH: pendiente opcional; implementación puede seguir este perfil piloto.
+Ratificación formal RRHH: **2026-06-23** (ver workshop).
 
 ---
 
@@ -78,7 +78,7 @@ Ratificación formal RRHH: pendiente opcional; implementación puede seguir este
 
 1. 3.er movimiento del mismo tramo/día/persona/gdt (sin bypass) → `[BATCH-LIM-001]`.
 2. CHAPARRO d25→26 (M, T, N distintos) **no** bloquea al 3.er batch si cada tramo lleva ≤2 movimientos.
-3. Bypass RRHH/jefe permite 3.er+ con auditoría.
+3. Bypass **solo RRHH** permite 3.er+ con auditoría.
 4. Tests: ida/vuelta mismo tramo; intercambio +2; cadena N→franco→M (conteo por movimiento).
 5. Adicional/reemplazo **no** incrementa contador en v1.
 
@@ -132,4 +132,4 @@ Reglas: canonicalizar segmento como en `rdaTurnoTeoricoWorker`; **no duplicar** 
 |-------|------|
 | 2026-06-19 | Borrador inicial. |
 | 2026-06-23 | Gate B4; workshop agenda. |
-| 2026-06-23 | **D0–D7 cerradas** (simulacro piloto); §9 esqueleto BATCH-LIM-001. |
+| 2026-06-23 | **Ratificación RRHH**; D3 solo RRHH; D6 = 2026-07-01 ART. |

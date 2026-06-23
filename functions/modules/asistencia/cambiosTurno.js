@@ -54,11 +54,6 @@ const {
   MENSAJE_BATCH_LIM_001,
 } = require("../shared/topeMovimientosConfig");
 const { tokenHasRrhhLaborAccess } = require("../shared/laborProfile");
-const {
-  loadHlgRowsPorPersona,
-  filterHlgVigentesEnFecha,
-  nivelTitularEnGrupo,
-} = require("../shared/solicitudHlgVigencia");
 
 const COL_ASISTENCIA = "asistencia_diaria";
 const COL_VIS = "vistas_grilla_mes_agente";
@@ -69,9 +64,6 @@ const GDT_ID = /^gdt_[A-Z0-9]+$/i;
 const TIPOS_OVERRIDE = new Set(["reemplazo", "adicional", "cobertura_parcial"]);
 
 const TCC_IDS = new Set(Object.values(seedIds.cfg_tipo_compensacion_cobertura || {}));
-
-/** Nivel jerárquico ≤ este umbral = jefe de sala (bypass D3). */
-const JEFE_NIVEL_MAX_BYPASS_TOPE = 2;
 
 function err(code, msg) {
   throw new HttpsError(code, msg);
@@ -1145,15 +1137,9 @@ const listarOverridesTurno = onCall({
   };
 });
 
-async function actorPuedeBypassTopeMovimientos(request, gdt) {
+async function actorPuedeBypassTopeMovimientos(request, _gdt) {
   const token = (request.auth && request.auth.token) || {};
-  if (tokenHasRrhhLaborAccess(token)) return true;
-  const actorPid = typeof token.persona_id === "string" ? token.persona_id.trim() : "";
-  if (!PER_ID.test(actorPid)) return false;
-  const hoy = new Date().toISOString().slice(0, 10);
-  const rows = filterHlgVigentesEnFecha(await loadHlgRowsPorPersona(actorPid), hoy);
-  const nivel = nivelTitularEnGrupo(rows, gdt);
-  return nivel !== null && nivel <= JEFE_NIVEL_MAX_BYPASS_TOPE;
+  return tokenHasRrhhLaborAccess(token);
 }
 
 async function cargarOverridesEnriquecidosParaClaves(asiKeys) {

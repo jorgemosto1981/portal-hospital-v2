@@ -48,7 +48,7 @@ export function toastErrorAplicarCambioGrilla(e, opts = {}) {
   }
   if (msg.includes("BATCH-LIM-001")) {
     toast.error(
-      "Límite de movimientos excedido para este tramo (máx. 2 por día). Contacte a RRHH o Jefe de Sala para una excepción.",
+      "Límite de movimientos excedido para este tramo (máx. 2 por día). Contacte a RRHH para solicitar una excepción.",
     );
     return true;
   }
