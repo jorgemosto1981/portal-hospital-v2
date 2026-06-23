@@ -14,11 +14,8 @@ import {
 } from "./grillaMesEquipoDisplay.js";
 import {
   filaGrillaTieneTurnoCompuesto,
+  ALTURAS_FILA_GRILLA_EQUIPO_ESTANDAR,
   tablaNecesitaColumnasFichadaAnchas,
-  ALTURA_CHIP_GRILLA_COMPUESTO,
-  ALTURA_CHIP_GRILLA_SIMPLE,
-  ALTURA_FILA_GRILLA_COMPUESTO,
-  ALTURA_FILA_GRILLA_SIMPLE,
   ANCHO_MIN_COL_DIA_FICHADA,
   CLASE_TD_DIA_FICHADA,
 } from "./grillaPresentacionCompuestoUi.js";
@@ -74,6 +71,7 @@ export default function GrillaMesEquipoTabla({
     () => tablaNecesitaColumnasFichadaAnchas(filas, modoFichada),
     [filas, modoFichada],
   );
+  const { alturaFila, alturaChip, uniformarChipPlanificado } = ALTURAS_FILA_GRILLA_EQUIPO_ESTANDAR;
   const claseAnchoColDia = columnasFichadaAnchas ? ANCHO_MIN_COL_DIA_FICHADA : "min-w-[2.5rem]";
 
   return (
@@ -128,8 +126,6 @@ export default function GrillaMesEquipoTabla({
               const personaLineas = parsePersonaLabelGrilla(personaLabel);
               const hlgIdFila = String(fila.hlg_id || "").trim() || undefined;
               const filaCompuesta = filaGrillaTieneTurnoCompuesto(fila);
-              const alturaFila = filaCompuesta ? ALTURA_FILA_GRILLA_COMPUESTO : ALTURA_FILA_GRILLA_SIMPLE;
-              const alturaChip = filaCompuesta ? ALTURA_CHIP_GRILLA_COMPUESTO : ALTURA_CHIP_GRILLA_SIMPLE;
               return (
                 <tr key={filaId} className={`${alturaFila} align-middle`}>
                   <td className={claseCeldaAgenteSticky()}>
@@ -227,6 +223,7 @@ export default function GrillaMesEquipoTabla({
                         materializacionGrupoReciente={materializacionGrupoReciente}
                         columnasFichadaAnchas={columnasFichadaAnchas}
                         alturaChip={alturaChip}
+                        uniformarChipPlanificado={uniformarChipPlanificado}
                         onCeldaClick={onCeldaClick}
                       />
                     );

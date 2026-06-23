@@ -10,6 +10,9 @@ import {
   marcasHhmmPorTramoDesdeCelda,
   etiquetaFichadaPisoCelda,
   filaGrillaTieneTurnoCompuesto,
+  alturasFilaGrillaEquipoTabla,
+  grillaEquipoTablaUsaAlturaFilaPlanificada,
+  filaGrillaTienePresentacionPorPisos,
   filaPresentacionSimpleDesdeCelda,
   lineasDesdePresentacionCompuesto,
   segmentoTurnoSimpleDesdeCelda,
@@ -222,6 +225,27 @@ describe("grillaPresentacionCompuestoUi", () => {
         dias: { "5": { rda_turno_id: "M+T+N" } },
       }),
     ).toBe(true);
+  });
+
+  it("altura fila grilla equipo: estándar fijo h-[5.75rem] en toda la tabla", () => {
+    const filaPlanificada = {
+      dias: {
+        "3": {
+          presentacion_compuesto: {
+            filas: [{ segmento_id: "M", estado_tramo: "presente", badge_label: "M" }],
+          },
+        },
+      },
+    };
+    const filaFijo = { dias: { "3": { rda_turno_id: "NL", es_franco: false } } };
+    expect(filaGrillaTienePresentacionPorPisos(filaPlanificada)).toBe(true);
+    expect(filaGrillaTienePresentacionPorPisos(filaFijo)).toBe(false);
+    expect(grillaEquipoTablaUsaAlturaFilaPlanificada([filaFijo])).toBe(true);
+    const alturas = alturasFilaGrillaEquipoTabla([filaFijo, filaPlanificada]);
+    expect(alturas.uniformarChipPlanificado).toBe(true);
+    expect(alturas.alturaFila).toBe("h-[5.75rem]");
+    expect(alturas.alturaChip).toBe("h-[5.5rem]");
+    expect(alturasFilaGrillaEquipoTabla([])).toEqual(alturas);
   });
 
   it("etiquetaFichadaPisoCelda muestra todas las marcas del tramo", () => {

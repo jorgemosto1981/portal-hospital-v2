@@ -148,6 +148,16 @@ export function clasesTextoCelda(valor) {
   return "text-[7px]";
 }
 
+/** Misma escala que `GrillaPresentacionCompuestoFilas` con `pisoGrande` (régimen planificado). */
+export function clasesTextoCeldaAlineadoPlanificado(valor) {
+  const len = String(valor || "").trim().length;
+  if (len <= 13) return "text-[10px] font-semibold leading-tight tabular-nums";
+  return "text-[9px] font-semibold leading-tight tabular-nums";
+}
+
+/** Tipografía chip grilla equipo cuando la fila se uniforma con planificado. */
+export const CLASE_CHIP_TIPOGRAFIA_PLANIFICADA_GRILLA = "!text-[10px] !font-semibold !leading-tight";
+
 /** Texto principal en celda con preview outbox (más legible que teórico denso). */
 export function clasesTextoCeldaOutboxPendiente(valor) {
   const len = String(valor || "").trim().length;

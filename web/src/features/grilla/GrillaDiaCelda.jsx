@@ -19,6 +19,7 @@ import {
 } from "./grillaMesEquipoDisplay.js";
 import {
   CLASE_MARCO_CELDA_OUTBOX_PENDIENTE,
+  CLASE_CHIP_TIPOGRAFIA_PLANIFICADA_GRILLA,
   claseFondoCeldaCalendarioTitular,
   claseFondoTdJefeSemaforo,
 } from "./grillaTurnosVisual.js";
@@ -70,6 +71,7 @@ export function grillaDiaCeldaPropsAreEqual(prev, next) {
   if (prev.vigenteHasta !== next.vigenteHasta) return false;
   if (prev.personaLabel !== next.personaLabel) return false;
   if (prev.alturaChip !== next.alturaChip) return false;
+  if (prev.uniformarChipPlanificado !== next.uniformarChipPlanificado) return false;
   return true;
 }
 
@@ -99,6 +101,7 @@ export function grillaDiaCeldaPropsAreEqual(prev, next) {
  * @property {boolean} materializacionGrupoReciente
  * @property {boolean} columnasFichadaAnchas
  * @property {string} alturaChip
+ * @property {boolean} [uniformarChipPlanificado]
  * @property {(payload: Record<string, unknown>) => void} onCeldaClick
  */
 
@@ -127,6 +130,7 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
   materializacionGrupoReciente,
   columnasFichadaAnchas,
   alturaChip,
+  uniformarChipPlanificado = false,
   onCeldaClick,
 }) {
   void cellKey;
@@ -399,9 +403,20 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
                 ? CLASE_MARCO_CELDA_OUTBOX_PENDIENTE
                 : "",
             columnasFichadaAnchas && !pintarCeldaSemaforoJefe ? CLASE_CHIP_MARCO_CELDA_DIA : "",
-            columnasFichadaAnchas ? "!text-[9px]" : "",
+            columnasFichadaAnchas && !usaPresentacionPisos && !uniformarChipPlanificado
+              ? "!text-[9px]"
+              : "",
+            columnasFichadaAnchas && !usaPresentacionPisos && uniformarChipPlanificado
+              ? CLASE_CHIP_TIPOGRAFIA_PLANIFICADA_GRILLA
+              : "",
             columnasFichadaAnchas && !usaPresentacionPisos ? CLASE_CHIP_ANCHO_CELDA_DIA : "",
             filaCompuesta ? CLASE_CHIP_IMPORTANTE_COMPUESTO : "",
+            uniformarChipPlanificado &&
+            !filaCompuesta &&
+            !usaPresentacionPisos &&
+            !matrizPresentacionCompuesta
+              ? CLASE_CHIP_IMPORTANTE_COMPUESTO
+              : "",
             usaPresentacionPisos ? `${CLASE_CHIP_ANCHO_FICHADA} !p-0` : "",
             usaPresentacionPisos && !matrizPresentacionCompuesta ? CLASE_CHIP_IMPORTANTE_COMPUESTO : "",
           ]
@@ -444,6 +459,7 @@ const GrillaDiaCeldaView = memo(function GrillaDiaCeldaView({
             matrizPresentacionCompuesta,
             usaPresentacionPisos,
             pisoCompuestoGrande: filaCompuesta || usaPresentacionPisos,
+            alinearTipografiaPlanificada: uniformarChipPlanificado && !usaPresentacionPisos,
             ocultarMicroAnalitica:
               celdaEnTransito ||
               (modoFichada === "jefe" && !ausenteSinMarcasPasada) ||

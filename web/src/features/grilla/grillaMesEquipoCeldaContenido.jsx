@@ -1,6 +1,7 @@
 import GrillaMesCeldaLicencia from "./GrillaMesCeldaLicencia.jsx";
 import {
   clasesTextoCelda,
+  clasesTextoCeldaAlineadoPlanificado,
   clasesTextoCeldaOutboxPendiente,
 } from "./grillaTurnosVisual.js";
 import GrillaPresentacionCompuestoFilas from "./GrillaPresentacionCompuestoFilas.jsx";
@@ -41,8 +42,13 @@ export function contenidoCeldaOperativa({
   omitirBadgeSemaforo = false,
   soloTeoriaFuturo = false,
   celdaFuturaSinFichada = false,
+  alinearTipografiaPlanificada = false,
 }) {
-  const claseTextoPrincipal = outboxVisual?.pending ? clasesTextoCeldaOutboxPendiente : clasesTextoCelda;
+  const claseTextoPrincipal = (valor) => {
+    if (outboxVisual?.pending) return clasesTextoCeldaOutboxPendiente(valor);
+    if (alinearTipografiaPlanificada) return clasesTextoCeldaAlineadoPlanificado(valor);
+    return clasesTextoCelda(valor);
+  };
   const alertaTitle = desalineacionTooltip || "Teoría modificada post-licencia";
   const badgeAlerta = desalineacionTeoria ? (
     <span

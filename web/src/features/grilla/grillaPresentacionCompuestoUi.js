@@ -574,11 +574,17 @@ export function filasPresentacionOperativaDesdeCelda(celda) {
   return enriquecerFilasPresentacionMarcas(celda, filas);
 }
 
-/** Alturas grilla equipo — turno simple vs compuesto (M+T+N). */
+/** Alturas grilla equipo — estándar operativa (planificado / fijo / rotativo). */
 export const ALTURA_FILA_GRILLA_SIMPLE = "h-[4.25rem]";
 export const ALTURA_FILA_GRILLA_COMPUESTO = "h-[5.75rem]";
 export const ALTURA_CHIP_GRILLA_SIMPLE = "h-[3.25rem]";
 export const ALTURA_CHIP_GRILLA_COMPUESTO = "h-[5.5rem]";
+/** Altura fija de fila y chip en `GrillaMesEquipoTabla` (todas las filas). */
+export const ALTURAS_FILA_GRILLA_EQUIPO_ESTANDAR = {
+  alturaFila: ALTURA_FILA_GRILLA_COMPUESTO,
+  alturaChip: ALTURA_CHIP_GRILLA_COMPUESTO,
+  uniformarChipPlanificado: true,
+};
 /** Para override de CHIP_BASE (h-12) en filas compuestas. */
 export const CLASE_CHIP_IMPORTANTE_COMPUESTO = "!h-[5.5rem]";
 /** Columna día con fichadas M/T/N (más ancha que w-14). */
@@ -639,6 +645,29 @@ export function filaGrillaTieneTurnoCompuesto(fila) {
     if (tid.includes("+")) return true;
   }
   return false;
+}
+
+/** ¿Algún día de la fila usa presentación por pisos (típico régimen planificado)? */
+export function filaGrillaTienePresentacionPorPisos(fila) {
+  const dias = fila?.dias && typeof fila.dias === "object" ? fila.dias : {};
+  for (const cell of Object.values(dias)) {
+    if (!cell || typeof cell !== "object") continue;
+    if (esPresentacionPorPisos(filasPresentacionGrillaDesdeCelda(cell))) return true;
+  }
+  return false;
+}
+
+/**
+ * Altura estándar de grilla equipo (siempre alta — mejor lectura en celda día).
+ * @param {Array<Record<string, unknown>>} [_filas]
+ */
+export function grillaEquipoTablaUsaAlturaFilaPlanificada(_filas) {
+  return true;
+}
+
+/** @param {Array<Record<string, unknown>>} [_filas] */
+export function alturasFilaGrillaEquipoTabla(_filas) {
+  return ALTURAS_FILA_GRILLA_EQUIPO_ESTANDAR;
 }
 
 /**
