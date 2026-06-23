@@ -831,6 +831,16 @@ async function buildSegmentosPreCoberturaEnDia({
 
   for (const adicional of adicionales) {
     if (!adicional.turno_id) continue;
+    const ep = adicional.estado_previo && typeof adicional.estado_previo === "object"
+      ? adicional.estado_previo
+      : {};
+    const tid = String(adicional.turno_id || "").trim();
+    if (
+      ep.declaracion_tramo_preasignado === true
+      && segmentos.some((s) => String(s.segmento_id || "").trim() === tid)
+    ) {
+      continue;
+    }
     const capaAdd = buildCapaTeoricaSegmentada({
       fechaYmd,
       personaId,
@@ -1375,6 +1385,16 @@ async function computarCapaTeoricaSliceDia({ personaId, grupoId, fechaYmd }) {
 
   for (const adicional of adicionales) {
     if (!adicional.turno_id) continue;
+    const ep = adicional.estado_previo && typeof adicional.estado_previo === "object"
+      ? adicional.estado_previo
+      : {};
+    const tid = String(adicional.turno_id || "").trim();
+    if (
+      ep.declaracion_tramo_preasignado === true
+      && segmentos.some((s) => String(s.segmento_id || "").trim() === tid)
+    ) {
+      continue;
+    }
     const capaAdd = buildCapaTeoricaSegmentada({
       fechaYmd,
       personaId,

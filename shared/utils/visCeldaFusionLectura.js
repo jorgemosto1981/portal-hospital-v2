@@ -69,12 +69,71 @@ export function filasPresentacionCompuestoDesdeCelda(celdaVis) {
 }
 
 /**
+ * Día sin turno teórico operativo (franco explícito).
+ * Si hay `rda_turno_id`, segmentos en capa o filas de presentación, no es franco
+ * aunque queden flags `es_franco` / `tipo_dia: franco` obsoletos (p. ej. incorporar N en día plan franco).
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ */
+export function celdaVisIndicaFrancoOperativo(celdaVis) {
+  if (!celdaVis || typeof celdaVis !== "object") return false;
+
+  const rda = String(celdaVis.rda_turno_id || "").trim();
+  if (rda && rda !== "F") return false;
+
+  const pres = leerPresentacionCompuestoDesdeCelda(celdaVis);
+  if (pres?.filas?.length) return false;
+
+  const capa = celdaVis.capa_teorica;
+  if (capa && typeof capa === "object") {
+    const segs = Array.isArray(capa.segmentos) ? capa.segmentos : [];
+    if (segs.length > 0) return false;
+  }
+
+  if (celdaVis.es_franco === true) return true;
+  const tipo = String(celdaVis.tipo_dia || "").trim().toLowerCase();
+  if (tipo === "franco") return true;
+  if (capa && typeof capa === "object") {
+    if (capa.es_franco === true) return true;
+    if (String(capa.tipo_dia || "").trim().toLowerCase() === "franco") return true;
+  }
+  return rda === "F";
+}
+
+/**
+ * Limpia turno/presentación obsoletos cuando la celda ya es franco (tras traslados sucesivos).
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ */
+export function coherirCeldaVisTeoriaFranco(celdaVis) {
+  if (!celdaVisIndicaFrancoOperativo(celdaVis)) return celdaVis;
+  const capaRaw = celdaVis.capa_teorica;
+  const capa = capaRaw && typeof capaRaw === "object"
+    ? { ...capaRaw, tipo_dia: "franco", es_franco: true, segmentos: [] }
+    : { tipo_dia: "franco", es_franco: true, segmentos: [] };
+  const next = {
+    ...celdaVis,
+    es_franco: true,
+    tipo_dia: "franco",
+    rda_turno_id: "",
+    rda_ingreso: null,
+    rda_egreso: null,
+    rda_horario_display: null,
+    capa_teorica: capa,
+    presentacion_compuesto: { filas: [] },
+    fichadas_esperadas: 0,
+  };
+  delete next.analitica_cumplimiento;
+  delete next.validacion_fichada_dia;
+  return next;
+}
+
+/**
  * Tramos que el teórico de la celda exige hoy (`rda_turno_id` / presentación).
  * @param {Record<string, unknown>|null|undefined} celdaVis
  * @returns {Set<string>|null}
  */
 export function idsSegmentoTeoricoOperativoDesdeCeldaVis(celdaVis) {
   if (!celdaVis || typeof celdaVis !== "object") return null;
+  if (celdaVisIndicaFrancoOperativo(celdaVis)) return new Set();
   const pres = leerPresentacionCompuestoDesdeCelda(celdaVis);
   const tid = String(celdaVis.rda_turno_id || pres?.turno_compuesto_id || "").trim();
   if (!tid) return null;
@@ -134,6 +193,71 @@ export function alinearCapaSegmentosAlTeoricoVis(celdaVis, capa) {
   }
   if (env.horas_desde_segmentos != null) {
     next.horas_teoricas_totales = env.horas_desde_segmentos;
+  }
+  return next;
+}
+
+/**
+ * Quita `es_franco` / `tipo_dia: franco` en raíz o capa si el teórico operativo ya tiene turno.
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ */
+export function alinearFlagsTipoDiaAlTeoricoOperativo(celdaVis) {
+  if (!celdaVis || typeof celdaVis !== "object") return celdaVis;
+  if (celdaVisIndicaFrancoOperativo(celdaVis)) return celdaVis;
+  let next = celdaVis;
+  const touchRoot = celdaVis.es_franco === true
+    || String(celdaVis.tipo_dia || "").trim().toLowerCase() === "franco";
+  const capa = celdaVis.capa_teorica;
+  const touchCapa = capa && typeof capa === "object"
+    && (capa.es_franco === true || String(capa.tipo_dia || "").trim().toLowerCase() === "franco");
+  if (!touchRoot && !touchCapa) return celdaVis;
+  next = { ...celdaVis };
+  if (touchRoot) {
+    next.es_franco = false;
+    if (String(next.tipo_dia || "").trim().toLowerCase() === "franco") {
+      next.tipo_dia = "laborable";
+    }
+  }
+  if (touchCapa && capa && typeof capa === "object") {
+    const c = { ...capa, es_franco: false };
+    if (String(c.tipo_dia || "").trim().toLowerCase() === "franco") {
+      c.tipo_dia = "laborable";
+    }
+    next.capa_teorica = c;
+  }
+  return next;
+}
+
+/**
+ * Recorta `presentacion_compuesto` y `capa_teorica.segmentos` al teórico operativo (`rda_turno_id`).
+ * Tras traslados sucesivos el worker a veces deja filas M/T obsoletas con `rda` ya reducido (p. ej. solo N).
+ *
+ * @param {Record<string, unknown>|null|undefined} celdaVis
+ */
+export function coherirPresentacionCompuestoAlTeoricoVis(celdaVis) {
+  if (!celdaVis || typeof celdaVis !== "object") return celdaVis;
+  if (celdaVisIndicaFrancoOperativo(celdaVis)) return coherirCeldaVisTeoriaFranco(celdaVis);
+
+  let next = celdaVis;
+  const pres = leerPresentacionCompuestoDesdeCelda(next);
+  if (pres?.filas?.length) {
+    const filtered = filtrarFilasPresentacionAlTeoricoOperativo(next, pres.filas);
+    if (filtered.length && filtered.length < pres.filas.length) {
+      const rda = String(next.rda_turno_id || "").trim();
+      next = {
+        ...next,
+        presentacion_compuesto: {
+          ...pres,
+          turno_compuesto_id: rda || pres.turno_compuesto_id,
+          filas: filtered,
+        },
+      };
+    }
+  }
+  const capa = next.capa_teorica;
+  if (capa && typeof capa === "object") {
+    const aligned = alinearCapaSegmentosAlTeoricoVis(next, capa);
+    if (aligned !== capa) next = { ...next, capa_teorica: aligned };
   }
   return next;
 }

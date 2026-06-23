@@ -1,3 +1,9 @@
+import {
+  coherirCeldaVisTeoriaFranco,
+  coherirPresentacionCompuestoAlTeoricoVis,
+  alinearFlagsTipoDiaAlTeoricoOperativo,
+} from "../visCeldaFusionLectura.js";
+
 /**
  * Fusiona parche vis post-batch/teoría sin perder capa fichada si el servidor
  * no reenvió esos campos (materialización solo teoría/analítica).
@@ -29,5 +35,7 @@ export function mergeCeldaVisParche(prev, patch) {
     }
   }
 
-  return merged;
+  return coherirCeldaVisTeoriaFranco(
+    alinearFlagsTipoDiaAlTeoricoOperativo(coherirPresentacionCompuestoAlTeoricoVis(merged)),
+  );
 }

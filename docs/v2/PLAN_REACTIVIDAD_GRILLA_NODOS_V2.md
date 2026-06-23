@@ -1,7 +1,9 @@
 # Plan — Reactividad por nodo (grilla operativa GSO)
 
-> **Estado:** EN CURSO — supersession + ciclo UI 2026-06-19 · reset piloto jun-2026 · **tope movimientos** en RFC borrador  
-> Handoff sesión: [`HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md`](./HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md)  
+> **Estado:** EN CURSO — CVC + QA piloto **2026-06-23** (traslados encadenados y 3×3 fichadas OK en local)  
+> Handoff sesión: [`HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md`](./HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md)  
+> **CVC:** [`RFC_CICLO_VIS_CELDA_GRILLA_V2.md`](./RFC_CICLO_VIS_CELDA_GRILLA_V2.md)  
+> Handoff anterior: [`HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md`](./HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md)  
 > Handoff intercambio: [`HANDOFF_SESION_2026-06-18_PAUSA_INTERCAMBIO_GUARDIA.md`](./HANDOFF_SESION_2026-06-18_PAUSA_INTERCAMBIO_GUARDIA.md)  
 > **Prioridad UX:** impacto visible **sin salir del modal de mes** · reemplaza el modelo anterior de **outbox local** (cola + “aplicar después”).  
 > **Piloto:** Sala Internación 1 `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · jun-2026 · Jaqueline `per_01KR3GZX9TB33NHTE2QD5ZP13V`.
@@ -23,7 +25,7 @@ Cada celda/fila de la grilla es un **nodo** con snapshot de servidor + parches l
 | **A2** | `GrillaDiaCelda` memo + `useGrillaMesNodos` | ✅ parcial |
 | **A3** | Batch inmediato: `aplicarCambioInmediato` → `aplicarBatchAsistencia` + `grillaMesNodosBatchParches` | ✅ |
 | **B** | Render anclado a `presentacion_compuesto` materializado; estado incompleto explícito | ⏳ en curso |
-| **C** | Patch cache/store post-batch y post-fichada; reducir `invalidateGrillaGrupoPeriodo` / `vista.cargar` | ✅ parcial 2026-06-18 |
+| **C** | Patch cache/store post-batch y post-fichada; **CVC** `sincronizarCeldasVisGrilla` | ✅ local **2026-06-23** · deploy pendiente |
 | **D** | Virtualización filas + RFC rendimiento | ⏳ |
 
 ---
@@ -50,6 +52,7 @@ Cada celda/fila de la grilla es un **nodo** con snapshot de servidor + parches l
 - `web/src/features/grilla/GrillaDiaCelda.jsx` · `grillaMesEquipoCeldaContenido.jsx`
 - `web/src/features/grilla/useAutoSanacionDiaGrillaModal.js`
 - `web/src/features/grilla/GrillaMesLicenciasPanel.jsx`
+- `web/src/features/grilla/cicloVisCeldaGrilla.js` — API CVC-4
 
 ## Archivos núcleo (functions)
 
@@ -82,3 +85,7 @@ Esperado tras motor actual (Jaqueline): **día 11 franco**, **día 12 `T+N`**.
 | Supersession piernas opuestas + cadena N/M | ✅ 2026-06-19 (`overridesTurnoSupersession.js`, `rdaTurnoTeoricoWorker.js`) |
 | Ciclo UI FIN_BLOQUEO vs POST sanación | ✅ 2026-06-19 (`grillaCicloAplicarCambioInmediato.js`) |
 | Tope 2 movimientos / tramo / día | 📋 [`RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md`](./RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md) |
+| Flujo C — declaración tramo preasignado (sin duplicar teoría) | ✅ web + functions **2026-06-23** · deploy pendiente |
+| Coherencia celda franco + presentación tras traslados sucesivos | ✅ CVC + `coherirPresentacionCompuestoAlTeoricoVis` **2026-06-23** · QA LOKITO d19 |
+| M+T+N — 3 fichadas, orden reloj ≠ M/T/N | ✅ UI `mapSegmentoMtnAIndiceFichada` **2026-06-23** · QA d16 LOKITO/CHAPARRO |
+| Analítica M+T+N — cobertura parcial tramo T vs marcas tarde | ⏳ motor (incumplimiento puede diferir de marcas en piso) |

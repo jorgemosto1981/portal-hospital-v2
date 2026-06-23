@@ -66,23 +66,106 @@ function fichadaItemCruzaMedianoche(item, marcas) {
   return false;
 }
 
+/** @param {Array<Record<string, unknown>>} filas */
+function esMatrizMtnOrdenada(filas) {
+  if (!Array.isArray(filas) || filas.length !== 3) return false;
+  const ids = filas.map((f) => String(f.segmento_id || "").trim().toUpperCase());
+  return ids[0] === "M" && ids[1] === "T" && ids[2] === "N";
+}
+
+/**
+ * Empareja cada fichada con M, T o N por hora de ingreso (no por orden en `fichadas_reales`).
+ * @param {Array<Record<string, unknown>>} fichadas
+ * @returns {Map<string, number>}
+ */
+function mapSegmentoMtnAIndiceFichada(fichadas) {
+  /** @type {Map<string, number>} */
+  const out = new Map();
+  const used = new Set();
+
+  const items = fichadas.map((item, index) => {
+    const marcas = marcasHhmmDesdeItemFichada(item);
+    const cruza = fichadaItemCruzaMedianoche(item, marcas);
+    const ingMin = minutosDesdeHhmmInstitucional(marcas[0]);
+    let franja = "T";
+    if (cruza) franja = "N";
+    else if (Number.isFinite(ingMin)) {
+      if (ingMin < 14 * 60) franja = "M";
+      else if (ingMin < 20 * 60) franja = "T";
+      else franja = "N";
+    }
+    return { index, cruza, franja };
+  });
+
+  const take = (seg, pred) => {
+    if (out.has(seg)) return;
+    const hit = items.find((x) => !used.has(x.index) && pred(x));
+    if (!hit) return;
+    out.set(seg, hit.index);
+    used.add(hit.index);
+  };
+
+  take("N", (x) => x.cruza);
+  take("M", (x) => x.franja === "M");
+  take("T", (x) => x.franja === "T");
+  take("N", (x) => x.franja === "N");
+  for (const x of items) {
+    if (used.has(x.index)) continue;
+    if (!out.has("T")) {
+      out.set("T", x.index);
+      used.add(x.index);
+    } else if (!out.has("N")) {
+      out.set("N", x.index);
+      used.add(x.index);
+    } else if (!out.has("M")) {
+      out.set("M", x.index);
+      used.add(x.index);
+    }
+  }
+  return out;
+}
+
 /**
  * @param {Record<string, unknown>|null|undefined} celda
  * @param {Record<string, unknown>} fila
  * @param {Array<Record<string, unknown>>} todasFilas
  */
 export function marcasHhmmPorTramoDesdeCelda(celda, fila, todasFilas) {
-  if (!celda || filaTramoAusente(fila)) return [];
-
   const fichadas = parseFichadasRealesCelda(celda);
+  const seg = String(fila.segmento_id || "").trim();
+  const total = todasFilas.length;
+  const orden = Number.isFinite(Number(fila.orden)) ? Number(fila.orden) : 0;
+
+  if (
+    fichadas.length === 3
+    && total === 3
+    && esMatrizMtnOrdenada(todasFilas)
+  ) {
+    const map = mapSegmentoMtnAIndiceFichada(fichadas);
+    const idx = map.get(seg.toUpperCase());
+    if (idx != null && fichadas[idx]) {
+      return marcasHhmmDesdeItemFichada(fichadas[idx]);
+    }
+    return [];
+  }
+
+  if (fichadas.length === total && total >= 2 && fichadas[orden]) {
+    return marcasHhmmDesdeItemFichada(fichadas[orden]);
+  }
+
+  if (filaTramoAusente(fila)) {
+    if (!fichadas.length) {
+      const { ingreso, egreso } = parseRangoHhmmLabel(fila.fichada_label);
+      return [ingreso, egreso].filter(Boolean);
+    }
+    return [];
+  }
+
   if (!fichadas.length) {
     const { ingreso, egreso } = parseRangoHhmmLabel(fila.fichada_label);
     return [ingreso, egreso].filter(Boolean);
   }
 
-  const seg = String(fila.segmento_id || "").trim();
-  const total = todasFilas.length;
-  const orden = Number.isFinite(Number(fila.orden)) ? Number(fila.orden) : 0;
   const primero = orden === 0;
   const ultimo = orden >= total - 1;
 
@@ -466,7 +549,11 @@ export function filasPresentacionMaterializadaDesdeCelda(celda) {
  * @param {Record<string, unknown>|null|undefined} celda
  */
 export function filasPresentacionGrillaDesdeCelda(celda) {
-  const filas = filasPresentacionMaterializadaDesdeCelda(celda);
+  let filas = filasPresentacionMaterializadaDesdeCelda(celda);
+  filas = filtrarFilasPresentacionAlTeoricoOperativo(celda, filas);
+  if (analiticaCumplimientoDesdeCelda(celda)) {
+    filas = reconciliarFilasPresentacionDesdeAnalitica(celda, filas);
+  }
   return enriquecerFilasPresentacionMarcas(celda, filas);
 }
 

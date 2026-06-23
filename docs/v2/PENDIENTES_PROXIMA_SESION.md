@@ -1,14 +1,32 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ (2026-06-19 — pausa):**  
-> Piloto **Sala Internación 1 · jun-2026** con overrides **reseteados** (plan/HLG). QA grilla reactiva: batch inmediato, intercambio, traslados.  
-> Handoff: [`HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md`](./HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md) · Plan: [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md)  
-> **Análisis (sin código):** tope 2 movimientos/tramo/día → [`RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md`](./RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md)  
-> **Hosting prod:** https://portal-hospital-v2.web.app · deploy functions + hosting **2026-06-19**
+> **RETOMAR AQUÍ (2026-06-23 — piloto QA cerrado Q1–Q4 + Q3):**  
+> **Deploy functions + hosting** · **commit** cuando corresponda. Opcional: **CHAPARRO d19** (Q2.4 histórico).  
+> Handoff: [`HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md`](./HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md) · CVC: [`RFC_CICLO_VIS_CELDA_GRILLA_V2.md`](./RFC_CICLO_VIS_CELDA_GRILLA_V2.md) · Plan: [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md)  
+> Handoff anterior: [`HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md`](./HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md)  
+> **Hosting prod:** https://portal-hospital-v2.web.app · deploy documentado **2026-06-19** · cambios 23-jun en **master local sin commit** · QA tarde en **localhost**
 
 ---
 
-## PAUSA — Grilla reactiva + supersession (2026-06-19)
+## PAUSA — QA grilla reactiva + CVC + Flujo C (2026-06-23) — **checklist piloto OK**
+
+| Bloque | Estado |
+|--------|--------|
+| **CVC** — ciclo vis celda (`sincronizarCeldasVisGrilla`, fetch pares batch) | ✅ código local · [`RFC_CICLO_VIS_CELDA_GRILLA_V2.md`](./RFC_CICLO_VIS_CELDA_GRILLA_V2.md) |
+| Traslados propios encadenados (origen sin fantasmas) | ✅ QA LOKITO d19→18, d12; coherir presentación |
+| M+T+N — 3 fichadas orden reloj | ✅ QA LOKITO d16, CHAPARRO d16 |
+| Incorporación T desde otro día + fichadas destino | ✅ QA LOKITO d6 ← 07/06 |
+| QA ciclo base Q1.x / Q2.1–2.3 | ✅ |
+| Flujo C UI + motor preasignado | ✅ código local · ⏳ deploy |
+| CHAPARRO d19 (Q2.4 inicio sesión) | ❌ histórico · ⏳ re-QA opcional post-CVC |
+| Q3 cadena N/M CAMPOS | ✅ **2026-06-23** (protocolo + d12; fix flags franco) |
+| Q4 intercambio d8 (LOKITO↔CHAPARRO T↔N) | ✅ **2026-06-23** |
+| Commit + deploy hosting/functions | ⏳ **siguiente** |
+| Tope movimientos | 📋 RFC borrador |
+
+---
+
+## PAUSA — Grilla reactiva + supersession (2026-06-19) — histórico
 
 | Bloque | Estado |
 |--------|--------|

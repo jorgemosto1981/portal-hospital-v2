@@ -143,6 +143,47 @@ export function validarAdicionalCN1(turnoId, capa, segmentoIdsProyectados = null
 }
 
 /**
+ * Tramos del teórico preasignado que el jefe puede declarar (Flujo C — cumplimiento fichada).
+ * @param {{
+ *   capa: unknown;
+ *   opsPendientes?: Array<Record<string, unknown>>;
+ *   personaId: string;
+ *   fechaYmd: string;
+ *   turnosPorId?: Record<string, object>;
+ * }} params
+ */
+export function turnosPreasignadosDeclarablesEnDia(params) {
+  const {
+    capa,
+    opsPendientes = [],
+    personaId,
+    fechaYmd,
+    turnosPorId = {},
+  } = params;
+  if (!capaTieneTeoricoLaborable(capa)) {
+    return { opciones: [], preview: null };
+  }
+  const preview = proyectarDiaConOpsPendientes(
+    capa,
+    opsPendientes,
+    personaId,
+    fechaYmd,
+    turnosPorId,
+  );
+  const estadoPrevio = capturarEstadoPrevioDia(capa, turnosPorId, preview);
+  const ids = Array.isArray(estadoPrevio.segmentos_preasignados)
+    ? estadoPrevio.segmentos_preasignados.map(String).filter(Boolean)
+    : [];
+  const opciones = ids
+    .filter((id) => turnosPorId[id])
+    .map((turno_id) => ({
+      turno_id,
+      meta: turnosPorId[turno_id] || {},
+    }));
+  return { opciones, preview, estadoPrevio };
+}
+
+/**
  * C-N2 — tope 24 h tras sumar el turno adicional sobre preview acumulado.
  */
 export function validarTopeHorasPostAdicional(horasPreview, turnoId, turnosPorId = {}, segmentosCapa = []) {
@@ -213,6 +254,7 @@ export function turnosAdicionablesEnDia(params) {
  *   turnosPorId?: Record<string, object>;
  *   opsPendientes?: Array<Record<string, unknown>>;
  *   motivo?: string;
+ *   modoDeclaracion?: "extra" | "preasignado";
  * }} params
  */
 export function validarAdicionalTurno(params) {
@@ -225,6 +267,7 @@ export function validarAdicionalTurno(params) {
     turnosPorId = {},
     opsPendientes = [],
     motivo = "",
+    modoDeclaracion = "extra",
   } = params;
 
   const tid = String(turnoId || "").trim();
@@ -253,27 +296,47 @@ export function validarAdicionalTurno(params) {
     turnosPorId,
   );
 
-  const cn1 = validarAdicionalCN1(tid, capa, preview.segmentoIds, turnosPorId);
-  if (!cn1.ok) return cn1;
+  const estadoPrevioBase = capturarEstadoPrevioDia(capa, turnosPorId, preview);
+  const esPreasignado = modoDeclaracion === "preasignado";
 
-  const tope = validarTopeHorasPostAdicional(
-    preview.horas,
-    tid,
-    turnosPorId,
-    preview.segmentosCapa,
-  );
-  if (!tope.ok) return tope;
+  if (esPreasignado) {
+    const preasignados = (estadoPrevioBase.segmentos_preasignados || []).map(String);
+    if (!preasignados.includes(tid)) {
+      const lbl = etiquetaSegmentosCompuesto([tid], turnosPorId);
+      return {
+        ok: false,
+        error: `${lbl} no figura en el turno preasignado de este día.`,
+      };
+    }
+  } else {
+    const cn1 = validarAdicionalCN1(tid, capa, preview.segmentoIds, turnosPorId);
+    if (!cn1.ok) return cn1;
+    const tope = validarTopeHorasPostAdicional(
+      preview.horas,
+      tid,
+      turnosPorId,
+      preview.segmentosCapa,
+    );
+    if (!tope.ok) return tope;
+  }
 
-  const estadoPrevio = capturarEstadoPrevioDia(capa, turnosPorId, preview);
+  const estadoPrevio = {
+    ...estadoPrevioBase,
+    declaracion_tramo_preasignado: esPreasignado,
+    tramo_declarado_id: esPreasignado ? tid : null,
+  };
 
   return {
     ok: true,
     turnoId: tid,
+    modoDeclaracion: esPreasignado ? "preasignado" : "extra",
     estadoPrevio,
     preview,
     etiquetaTeorico: estadoPrevio.etiqueta_preasignada
       || (estadoPrevio.es_franco ? "Franco" : estadoPrevio.es_no_laborable ? "No laborable" : "—"),
-    etiquetaAdicional: etiquetaSegmentosCompuesto([tid], turnosPorId),
+    etiquetaAdicional: esPreasignado
+      ? etiquetaSegmentosCompuesto([tid], turnosPorId)
+      : `+ ${etiquetaSegmentosCompuesto([tid], turnosPorId)}`,
   };
 }
 

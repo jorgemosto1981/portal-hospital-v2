@@ -340,6 +340,8 @@ function validarOverrideAdicionalV2(raw) {
     horas_preasignadas: Number.isFinite(Number(ep.horas_preasignadas))
       ? Math.max(0, Number(ep.horas_preasignadas))
       : 0,
+    declaracion_tramo_preasignado: ep.declaracion_tramo_preasignado === true,
+    tramo_declarado_id: ep.tramo_declarado_id ? String(ep.tramo_declarado_id).trim() : null,
   };
 
   return {

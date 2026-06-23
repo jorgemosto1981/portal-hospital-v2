@@ -12,6 +12,7 @@ import {
   buildAdicionalOutboxOp,
   capturarEstadoPrevioDia,
   turnosAdicionablesEnDia,
+  turnosPreasignadosDeclarablesEnDia,
   validarAdicionalTurno,
 } from "./grillaAdicionalPreview.js";
 import { etiquetaSegmentosCompuesto } from "./grillaCambioTurnoPropioPreview.js";
@@ -73,6 +74,7 @@ export default function ModalTurnoAdicional({
   const [expectedVersionToken, setExpectedVersionToken] = useState("");
   const [soloLecturaInfo, setSoloLecturaInfo] = useState({ activo: false, detalle: "" });
   const [turnoId, setTurnoId] = useState("");
+  const [modoDeclaracion, setModoDeclaracion] = useState(/** @type {"" | "extra" | "preasignado"} */ (""));
   const [codigoNovedadId, setCodigoNovedadId] = useState("");
   const [motivoDetalle, setMotivoDetalle] = useState("");
 
@@ -114,6 +116,7 @@ export default function ModalTurnoAdicional({
         setTurnosRegimen(turnosDisponiblesDesdeRegimen(ctx?.data?.regimenes || {}, regimenId));
       }
       setTurnoId("");
+      setModoDeclaracion("");
     } catch (e) {
       setErrorCarga(mensajeErrorCapaTeorico(e));
       setCapa(null);
@@ -143,10 +146,32 @@ export default function ModalTurnoAdicional({
     [capaEfectiva, personaId, fechaYmd, turnosRegimen],
   );
 
+  const { opciones: opcionesPreasignadas } = useMemo(
+    () => turnosPreasignadosDeclarablesEnDia({
+      capa: capaEfectiva,
+      opsPendientes: SIN_OPS_PENDIENTES,
+      personaId,
+      fechaYmd,
+      turnosPorId: turnosRegimen,
+    }),
+    [capaEfectiva, personaId, fechaYmd, turnosRegimen],
+  );
+
+  const elegirTurno = useCallback((id, modo) => {
+    setTurnoId(id);
+    setModoDeclaracion(modo);
+  }, []);
+
   useEffect(() => {
     if (!turnoId) return;
-    if (!opciones.some((o) => o.turno_id === turnoId)) setTurnoId("");
-  }, [opciones, turnoId]);
+    const okExtra = modoDeclaracion === "extra" && opciones.some((o) => o.turno_id === turnoId);
+    const okPre = modoDeclaracion === "preasignado"
+      && opcionesPreasignadas.some((o) => o.turno_id === turnoId);
+    if (!okExtra && !okPre) {
+      setTurnoId("");
+      setModoDeclaracion("");
+    }
+  }, [opciones, opcionesPreasignadas, turnoId, modoDeclaracion]);
 
   const estadoPrevioActual = useMemo(
     () => capturarEstadoPrevioDia(capaEfectiva, turnosRegimen, preview),
@@ -179,6 +204,7 @@ export default function ModalTurnoAdicional({
       turnosPorId: turnosRegimen,
       opsPendientes: SIN_OPS_PENDIENTES,
       motivo: motivoCompuestoPreview,
+      modoDeclaracion: modoDeclaracion === "preasignado" ? "preasignado" : "extra",
     });
   }, [
     turnoId,
@@ -189,10 +215,13 @@ export default function ModalTurnoAdicional({
     periodo,
     turnosRegimen,
     motivoCompuestoPreview,
+    modoDeclaracion,
   ]);
 
-  const etiquetaAdicional = turnoId
-    ? etiquetaSegmentosCompuesto([turnoId], turnosRegimen)
+  const etiquetaDeclarado = turnoId
+    ? (modoDeclaracion === "preasignado"
+      ? etiquetaSegmentosCompuesto([turnoId], turnosRegimen)
+      : `+ ${etiquetaSegmentosCompuesto([turnoId], turnosRegimen)}`)
     : "—";
 
   const handleSubmit = async () => {
@@ -303,45 +332,78 @@ export default function ModalTurnoAdicional({
               <p className="mt-2">
                 <span className="text-slate-500">Turno extra declarado: </span>
                 <span className="font-semibold text-blue-800">
-                  {turnoId ? `+ ${etiquetaAdicional}` : "—"}
+                  {etiquetaDeclarado}
                 </span>
               </p>
             </section>
 
             <section>
-              <h3 className="text-sm font-semibold text-slate-800">Turno adicional que realiza</h3>
-              {opciones.length === 0 ? (
+              <h3 className="text-sm font-semibold text-slate-800">Turno que realiza</h3>
+              {opciones.length === 0 && opcionesPreasignadas.length === 0 ? (
                 <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-                  No hay turnos disponibles para agregar (colisión con teórico, tope 24 h o borradores pendientes).
+                  No hay turnos disponibles para declarar (colisión con teórico, tope 24 h o borradores pendientes).
                 </p>
               ) : (
-                <fieldset className="mt-2 space-y-2">
-                  <legend className="sr-only">Elegir turno adicional que realiza</legend>
-                  {opciones.map((o) => {
-                    const lbl = etiquetaTurno(o.turno_id);
-                    const activo = turnoId === o.turno_id;
-                    return (
-                      <label
-                        key={o.turno_id}
-                        className={`flex min-h-11 touch-manipulation cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-sm active:bg-slate-50 ${
-                          activo
-                            ? "border-blue-600 bg-blue-50 ring-2 ring-blue-600/30"
-                            : "border-slate-200 bg-white"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="turno-adicional"
-                          value={o.turno_id}
-                          checked={activo}
-                          onChange={() => setTurnoId(o.turno_id)}
-                          className="h-5 w-5 shrink-0 accent-blue-700"
-                        />
-                        <span className="font-medium text-slate-900">+ {lbl}</span>
-                      </label>
-                    );
-                  })}
-                </fieldset>
+                <div className="mt-2 space-y-4">
+                  {opciones.length > 0 ? (
+                    <fieldset className="space-y-2">
+                      <legend className="text-xs font-medium text-slate-600">Turno adicional</legend>
+                      {opciones.map((o) => {
+                        const lbl = etiquetaTurno(o.turno_id);
+                        const activo = turnoId === o.turno_id && modoDeclaracion === "extra";
+                        return (
+                          <label
+                            key={`extra-${o.turno_id}`}
+                            className={`flex min-h-11 touch-manipulation cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-sm active:bg-slate-50 ${
+                              activo
+                                ? "border-blue-600 bg-blue-50 ring-2 ring-blue-600/30"
+                                : "border-slate-200 bg-white"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="turno-declaracion-c"
+                              value={`extra:${o.turno_id}`}
+                              checked={activo}
+                              onChange={() => elegirTurno(o.turno_id, "extra")}
+                              className="h-5 w-5 shrink-0 accent-blue-700"
+                            />
+                            <span className="font-medium text-slate-900">+ {lbl}</span>
+                          </label>
+                        );
+                      })}
+                    </fieldset>
+                  ) : null}
+                  {opcionesPreasignadas.length > 0 ? (
+                    <fieldset className="space-y-2">
+                      <legend className="text-xs font-medium text-slate-600">Turno preasignado</legend>
+                      {opcionesPreasignadas.map((o) => {
+                        const lbl = etiquetaTurno(o.turno_id);
+                        const activo = turnoId === o.turno_id && modoDeclaracion === "preasignado";
+                        return (
+                          <label
+                            key={`pre-${o.turno_id}`}
+                            className={`flex min-h-11 touch-manipulation cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-sm active:bg-slate-50 ${
+                              activo
+                                ? "border-blue-600 bg-blue-50 ring-2 ring-blue-600/30"
+                                : "border-slate-200 bg-white"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="turno-declaracion-c"
+                              value={`pre:${o.turno_id}`}
+                              checked={activo}
+                              onChange={() => elegirTurno(o.turno_id, "preasignado")}
+                              className="h-5 w-5 shrink-0 accent-blue-700"
+                            />
+                            <span className="font-medium text-slate-900">{lbl}</span>
+                          </label>
+                        );
+                      })}
+                    </fieldset>
+                  ) : null}
+                </div>
               )}
             </section>
 
@@ -391,7 +453,7 @@ export default function ModalTurnoAdicional({
               || soloLecturaInfo.activo
               || !guardrailNovedadContext.puedeModificarTeoria
               || Boolean(errorCarga)
-              || !opciones.length
+              || (!opciones.length && !opcionesPreasignadas.length)
               || !validacion?.ok
             }
             onClick={() => void handleSubmit()}

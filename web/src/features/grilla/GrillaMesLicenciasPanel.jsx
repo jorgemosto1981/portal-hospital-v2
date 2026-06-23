@@ -26,6 +26,7 @@ import {
   faseServidorAplicarCambio,
   iniciarFasePostCicloAplicarCambio,
 } from "./grillaCicloAplicarCambioInmediato.js";
+import { sincronizarCeldasVisGrilla } from "./cicloVisCeldaGrilla.js";
 import { esIntercambioGuardiaV2 } from "./grillaCoberturaParcialPreview.js";
 import { ensureOutboxOpId } from "./grillaOutboxLabels.js";
 import GrillaMesEquipoTabla from "./GrillaMesEquipoTabla.jsx";
@@ -487,30 +488,24 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
     gdtGrillaModal,
   ]);
 
-  /** Fase C: parche puntual en store + filas, sin `vista.cargar` del mes completo. */
+  /** Fase CVC-4: `sincronizarCeldasVisGrilla` — store + filas sin recargar el mes. */
   const parchearCeldasTrasMutacion = useCallback(
     async (refs, opts = {}) => {
-      const list = (Array.isArray(refs) ? refs : []).filter(
-        (r) => r?.persona_id && r?.fecha_ymd && (r?.gdt || r?.grupo_trabajo_id),
-      );
-      if (!list.length) return [];
-      const periodoInv = opts.periodo || vistaModal?.periodo || periodoGrillaModal;
-      const gdtInv = String(list[0]?.gdt || list[0]?.grupo_trabajo_id || gdtGrillaModal || "").trim();
-      invalidarCacheGrillaTrasMutacion({
-        ops: [],
-        periodo: periodoInv,
-        gdtActivo: gdtInv,
+      return sincronizarCeldasVisGrilla(refs, {
+        grillaMesNodos,
+        vista: {
+          patchFilasDesdeParchesVis: (parches) => {
+            flushSync(() => {
+              vista.patchFilasDesdeParchesVis(parches);
+            });
+          },
+        },
+        invalidarCacheGrillaTrasMutacion,
+        periodo: opts.periodo || vistaModal?.periodo || periodoGrillaModal,
+        gdtActivo: gdtGrillaModal,
         grupoIdVista: vistaModal?.grupoId || vista.grupoId,
-      });
-      const parches = await grillaMesNodos.aplicarParchesVisEnGrilla(list, {
         reemplazoTeoriaCompleto: opts.reemplazoTeoriaCompleto === true,
       });
-      if (parches.length) {
-        flushSync(() => {
-          vista.patchFilasDesdeParchesVis(parches);
-        });
-      }
-      return parches;
     },
     [grillaMesNodos, vista, gdtGrillaModal, vistaModal, periodoGrillaModal],
   );

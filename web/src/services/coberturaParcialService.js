@@ -280,6 +280,10 @@ function mapOutboxOpToBatchPayload(op, idx, ctx) {
             : [],
           etiqueta_preasignada: estadoPrevio.etiqueta_preasignada || null,
           horas_preasignadas: Number(estadoPrevio.horas_preasignadas) || 0,
+          declaracion_tramo_preasignado: estadoPrevio.declaracion_tramo_preasignado === true,
+          tramo_declarado_id: estadoPrevio.tramo_declarado_id
+            ? String(estadoPrevio.tramo_declarado_id).trim()
+            : null,
         },
       },
     };

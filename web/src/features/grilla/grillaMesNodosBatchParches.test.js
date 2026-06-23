@@ -184,17 +184,21 @@ describe("mergeParchesVisLista (confirmarBatchTrasExito)", () => {
 });
 
 describe("resolverParchesVisTrasBatchExito", () => {
-  it("no llama fetch si dias_actualizados cubre origen y destino del intercambio", async () => {
-    const fetchVista = vi.fn();
+  it("fetch de pares y fusiona con dias_actualizados (fetch primero, batch pisa)", async () => {
+    const fetchVista = vi.fn().mockResolvedValue({
+      data: {
+        dias: {
+          20: { rda_turno_id: "N", segmentos_teoricos: ["N"] },
+        },
+      },
+    });
     const ops = [
       {
-        tipo: "cobertura_parcial",
-        schema_version: 2,
+        tipo: "reemplazo",
         grupo_trabajo_id: GDT,
-        persona_origen_id: P1,
-        persona_cobertura_id: P2,
-        fecha: "2026-06-20",
-        fecha_destino: "2026-06-20",
+        persona_id: P1,
+        fechaOrigenYmd: "2026-06-20",
+        fechaDestinoYmd: "2026-06-11",
       },
     ];
     const parches = await resolverParchesVisTrasBatchExito(
@@ -207,17 +211,12 @@ describe("resolverParchesVisTrasBatchExito", () => {
             grupo_trabajo_id: GDT,
             celda: { segmentos_teoricos: ["N"] },
           },
-          {
-            persona_id: P2,
-            fecha_ymd: "2026-06-20",
-            grupo_trabajo_id: GDT,
-            celda: { segmentos_teoricos: ["T", "N"] },
-          },
         ],
       },
       fetchVista,
     );
-    expect(fetchVista).not.toHaveBeenCalled();
-    expect(parches).toHaveLength(2);
+    expect(fetchVista).toHaveBeenCalled();
+    expect(parches).toHaveLength(1);
+    expect(parches[0].celda).toMatchObject({ segmentos_teoricos: ["N"] });
   });
 });

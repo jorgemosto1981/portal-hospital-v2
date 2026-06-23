@@ -126,7 +126,7 @@ describe("grillaAdicionalPreview", () => {
     assert.equal(val.ok, true);
     assert.equal(val.estadoPrevio.horas_preasignadas, 8);
     assert.equal(val.estadoPrevio.es_feriado, true);
-    assert.equal(val.etiquetaAdicional, "N");
+    assert.equal(val.etiquetaAdicional, "+ N");
     assert.equal(val.horasAdicionalesSolicitadas, undefined);
   });
 
@@ -173,6 +173,23 @@ describe("grillaAdicionalPreview", () => {
     assert.equal(op.esFeriado, true);
     assert.equal(op.horas_efectivas, undefined);
     assert.equal(horasAdicionalesDelTurno("cfg_reg_turno_n", TURNOS), 8);
+  });
+
+  it("validarAdicionalTurno modo preasignado acepta tramo del teórico", () => {
+    const capa = capaLaborable(["cfg_reg_turno_m", "cfg_reg_turno_n"]);
+    const val = validarAdicionalTurno({
+      turnoId: "cfg_reg_turno_m",
+      capa,
+      personaId: PER,
+      fechaYmd: FECHA,
+      periodo: PERIODO,
+      turnosPorId: TURNOS,
+      motivo: "Cumplimiento fichada M",
+      modoDeclaracion: "preasignado",
+    });
+    assert.equal(val.ok, true);
+    assert.equal(val.estadoPrevio.declaracion_tramo_preasignado, true);
+    assert.equal(val.modoDeclaracion, "preasignado");
   });
 
   it("rechaza motivo corto", () => {

@@ -21,7 +21,9 @@ import {
 import {
   filasPresentacionCompuestoDesdeCelda,
   leerPresentacionCompuestoDesdeCelda,
+  celdaVisIndicaFrancoOperativo,
 } from "../../../../shared/utils/visCeldaFusionLectura.js";
+import { mergeCeldaVisParche } from "../../../../shared/utils/grillaMesNodos/mergeCeldaVisParche.js";
 
 const FILAS_QA_C5 = [
   {
@@ -254,6 +256,42 @@ describe("grillaPresentacionCompuestoUi", () => {
     expect(marcasHhmmPorTramoDesdeCelda(celda, filas[2], filas)).toEqual(["21:50", "05:55"]);
   });
 
+  it("M+T+N tres fichadas: una por tramo aunque T siga ausente en presentación", () => {
+    const celda = {
+      fichadas_reales: [
+        { ingreso: "05:45", egreso: "13:55", fecha_ymd: "2026-06-16" },
+        { ingreso: "15:00", egreso: "17:00", fecha_ymd: "2026-06-16" },
+        { ingreso: "21:40", egreso: "04:10", fecha_ymd: "2026-06-16", fecha_egreso_ymd: "2026-06-17" },
+      ],
+    };
+    const filas = [
+      { segmento_id: "M", orden: 0, estado_tramo: "presente" },
+      { segmento_id: "T", orden: 1, estado_tramo: "ausente", badge_label: "AUSENTE" },
+      { segmento_id: "N", orden: 2, estado_tramo: "parcial" },
+    ];
+    expect(marcasHhmmPorTramoDesdeCelda(celda, filas[0], filas)).toEqual(["05:45", "13:55"]);
+    expect(marcasHhmmPorTramoDesdeCelda(celda, filas[1], filas)).toEqual(["15:00", "17:00"]);
+    expect(marcasHhmmPorTramoDesdeCelda(celda, filas[2], filas)).toEqual(["21:40", "04:10"]);
+  });
+
+  it("M+T+N tres fichadas: orden crudo del reloj distinto a M,T,N (LOKITO d16)", () => {
+    const celda = {
+      fichadas_reales: [
+        { ingreso: "05:45", egreso: "13:55", fecha_ymd: "2026-06-16" },
+        { ingreso: "21:40", egreso: "04:10", fecha_ymd: "2026-06-16", fecha_egreso_ymd: "2026-06-17" },
+        { ingreso: "15:00", egreso: "17:00", fecha_ymd: "2026-06-16" },
+      ],
+    };
+    const filas = [
+      { segmento_id: "M", orden: 0, estado_tramo: "presente" },
+      { segmento_id: "T", orden: 1, estado_tramo: "ausente", badge_label: "AUSENTE" },
+      { segmento_id: "N", orden: 2, estado_tramo: "parcial" },
+    ];
+    expect(marcasHhmmPorTramoDesdeCelda(celda, filas[0], filas)).toEqual(["05:45", "13:55"]);
+    expect(marcasHhmmPorTramoDesdeCelda(celda, filas[1], filas)).toEqual(["15:00", "17:00"]);
+    expect(marcasHhmmPorTramoDesdeCelda(celda, filas[2], filas)).toEqual(["21:40", "04:10"]);
+  });
+
   it("M+T una fichada: ingreso en M y egreso en T (sin duplicar salida)", () => {
     const celda = {
       fichadas_reales: [{ ingreso: "06:25", egreso: "20:05", fecha_ymd: "2026-06-10" }],
@@ -345,6 +383,21 @@ describe("grillaPresentacionCompuestoUi", () => {
     expect(n?.marcas_hm).toEqual(["5:35"]);
     expect(textoMarcasPisoCelda(m)).toBe("6:38");
     expect(textoMarcasPisoCelda(n)).toBe("5:35");
+  });
+
+  it("filasPresentacionGrillaDesdeCelda oculta tramos obsoletos tras traslado (origen solo N)", () => {
+    const celda = {
+      rda_turno_id: "N",
+      presentacion_compuesto: {
+        turno_compuesto_id: "T+N",
+        filas: [
+          { segmento_id: "T", orden: 0, estado_tramo: "ausente", badge_label: "AUSENTE" },
+          { segmento_id: "N", orden: 1, estado_tramo: "ausente", badge_label: "AUSENTE" },
+        ],
+      },
+    };
+    const filas = filasPresentacionGrillaDesdeCelda(celda);
+    expect(filas.map((f) => f.segmento_id)).toEqual(["N"]);
   });
 
   it("filasPresentacionGrillaDesdeCelda enriquece marcas sin reconciliar analítica (CHAPARRO d13)", () => {
@@ -613,5 +666,31 @@ describe("grillaPresentacionCompuestoUi", () => {
         3,
       ),
     ).toBe("");
+  });
+});
+
+describe("franco operativo vs flags obsoletos (incorporar N en día plan franco)", () => {
+  it("celdaVisIndicaFrancoOperativo: N materializado no es franco", () => {
+    const celda = {
+      es_franco: true,
+      tipo_dia: "franco",
+      rda_turno_id: "N",
+      capa_teorica: { tipo_dia: "laborable", segmentos: [{ segmento_id: "N" }] },
+    };
+    expect(celdaVisIndicaFrancoOperativo(celda)).toBe(false);
+  });
+
+  it("mergeCeldaVisParche no borra N si es_franco obsoleto en parche", () => {
+    const parche = {
+      es_franco: true,
+      tipo_dia: "franco",
+      rda_turno_id: "N",
+      capa_teorica: { tipo_dia: "laborable", segmentos: [{ segmento_id: "N" }] },
+      presentacion_compuesto: { filas: [{ segmento_id: "N", orden: 0 }] },
+    };
+    const merged = mergeCeldaVisParche(null, parche);
+    expect(merged.rda_turno_id).toBe("N");
+    expect(merged.presentacion_compuesto?.filas?.length).toBe(1);
+    expect(merged.tipo_dia).not.toBe("franco");
   });
 });

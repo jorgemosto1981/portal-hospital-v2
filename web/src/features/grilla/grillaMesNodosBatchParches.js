@@ -118,8 +118,9 @@ export async function fetchParchesVisDesdeOpsOutbox(ops, fetchVista) {
 }
 
 /**
- * Parches vis para confirmar batch: prioriza `dias_actualizados` del servidor;
- * fetch solo si faltan celdas y con timeout (tramo crítico del ciclo de aplicación).
+ * Parches vis para confirmar batch: fusiona `dias_actualizados` con re-lectura
+ * de **todas** las celdas de `paresCeldaDesdeOp` (origen + destino). El batch gana
+ * por celda si existe; el fetch rellena huecos y alinea origen/destino (CVC PARCHE_CRITICO).
  *
  * @param {Array<Record<string, unknown>>} ops
  * @param {Record<string, unknown> | null | undefined} batchResult
@@ -129,7 +130,6 @@ export async function fetchParchesVisDesdeOpsOutbox(ops, fetchVista) {
 export async function resolverParchesVisTrasBatchExito(ops, batchResult, fetchVista, opts = {}) {
   const list = Array.isArray(ops) ? ops : [];
   const fromBatch = parchesVisDesdeRespuestaBatch(batchResult);
-  const keysBatch = new Set(fromBatch.map((p) => parcheCeldaKey(p)));
 
   const visto = new Set();
   /** @type {Array<{ persona_id: string; fecha_ymd: string; gdt: string }>} */
@@ -143,13 +143,12 @@ export async function resolverParchesVisTrasBatchExito(ops, batchResult, fetchVi
     }
   }
 
-  const faltanEnBatch = paresNecesarios.some((p) => !keysBatch.has(parcheCeldaKey(p)));
   let fromFetch = [];
-  if (faltanEnBatch && typeof fetchVista === "function") {
+  if (paresNecesarios.length && typeof fetchVista === "function") {
     const timeoutMs = opts.timeoutMs ?? FETCH_PATCHES_VIS_TIMEOUT_MS;
     try {
       fromFetch = await withTimeout(
-        fetchParchesVisDesdeOpsOutbox(list, fetchVista),
+        fetchParchesVisDesdeReferencias(paresNecesarios, fetchVista),
         timeoutMs,
       );
     } catch {
