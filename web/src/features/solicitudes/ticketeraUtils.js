@@ -12,6 +12,7 @@ export function etiquetaArticulo(a) {
 
 export const PATRON_SALDO_A = "A";
 export const PATRON_SALDO_B = "B";
+export const PATRON_SALDO_C = "C";
 
 /** Primer mensaje de bloqueo del motor (preview / elegibilidad). */
 export function mensajeBloqueoPreview(preview) {

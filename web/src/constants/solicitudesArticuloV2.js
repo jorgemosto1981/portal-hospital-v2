@@ -14,11 +14,9 @@ export const VERSION_64A_PILOTO_ID = "ver_01KRNKNBXNBFC9HZN7CZJGPRDH";
 export const ARTICULO_64B_ID = "art_01KRYEX0JZY4Y8J1GY3Q9F8BJQ";
 export const VERSION_64B_PILOTO_ID = "ver_01KRYEX13QN7VBPMFQFES1QHB4";
 
-/** Debe coincidir con `ARTICULO_IDS_MVP` en `functions/modules/shared/ticketeraArticulosMvp.js` */
-export const ARTICULO_IDS_PATRON_B_MVP = [ARTICULO_64A_ID, ARTICULO_64B_ID];
 
 /** Piloto ticketera Patrón C — 68-B Compensatorio */
 export const ARTICULO_68B_ID = "art_01KRYEF39ZM0KB0F0Y4GPBH38F";
 export const VERSION_68B_PILOTO_ID = "ver_01KRYEFZRQF0RKHJ5JTK6244G8";
 
-export const ARTICULO_IDS_PATRON_C_MVP = [ARTICULO_68B_ID];
+
