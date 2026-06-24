@@ -691,6 +691,35 @@ describe("grillaPresentacionCompuestoUi", () => {
       ),
     ).toBe("");
   });
+
+  it("T+N con fichada diurna fuera de tramos: piso extra violeta en grilla (CHAPARRO d23)", () => {
+    const celda = {
+      rda_turno_id: "T+N",
+      fichadas_reales: [{ ingreso: "08:00", egreso: "14:02", fecha_ymd: "2026-06-23" }],
+      presentacion_compuesto: {
+        turno_compuesto_id: "T+N",
+        filas: [
+          { segmento_id: "T", orden: 0, estado_tramo: "ausente", badge_label: "AUSENTE", badge_tipo: "ausente_tramo" },
+          { segmento_id: "N", orden: 1, estado_tramo: "ausente", badge_label: "AUSENTE", badge_tipo: "ausente_tramo" },
+        ],
+      },
+      analitica_cumplimiento: {
+        fichada_fuera_turno_teorico: true,
+        calculo_por_segmentos: true,
+        segmentos_cumplimiento: [
+          { segmento_id: "T", cubierto: false, incumplimiento_celda_tipo: "ausente_tramo" },
+          { segmento_id: "N", cubierto: false, incumplimiento_celda_tipo: "ausente_tramo" },
+        ],
+      },
+    };
+    const filas = filasPresentacionGrillaDesdeCelda(celda);
+    expect(filas.map((f) => f.segmento_id)).toEqual(["T", "N", "·"]);
+    const extra = filas[2];
+    expect(extra?.marcas_hm).toEqual(["8:00", "14:02"]);
+    expect(textoMarcasPisoCelda(extra)).toBe("8:00 · 14:02");
+    expect(claseVisualPisoCompuesto(extra).piso).toContain("violet");
+    expect(copyFichadaOperativaPiso(extra, 3)).toContain("8:00");
+  });
 });
 
 describe("franco operativo vs flags obsoletos (incorporar N en día plan franco)", () => {

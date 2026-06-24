@@ -293,6 +293,92 @@ export function enriquecerFilasPresentacionMarcas(celda, filas) {
   }));
 }
 
+/** Piso extra en grilla: fichada real sin empareje en tramo teórico (M/T/N). */
+export const SEGMENTO_PISO_FICHADA_FUERA_TRAMO = "·";
+
+/** @param {string} hhmm */
+function marcaHhmmNormalizada(hhmm) {
+  return horaCompactaDisplay(String(hhmm || "").trim()) || String(hhmm || "").trim();
+}
+
+/** @param {Record<string, unknown>} fila @param {Record<string, unknown>} item */
+function filaPresentacionConsumeFichadaItem(fila, item) {
+  const marcasItem = marcasHhmmDesdeItemFichada(item).map(marcaHhmmNormalizada).filter(Boolean);
+  if (!marcasItem.length) return false;
+
+  const marcasFila = marcasCompactasDesdeFila(fila).map(marcaHhmmNormalizada).filter(Boolean);
+  if (marcasFila.length) {
+    return marcasFila.some((m) => marcasItem.includes(m));
+  }
+
+  const { ingreso, egreso } = parseRangoHhmmLabel(fila.fichada_label);
+  const desdeLabel = [ingreso, egreso].map(marcaHhmmNormalizada).filter(Boolean);
+  if (desdeLabel.length && desdeLabel.some((m) => marcasItem.includes(m))) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Filas sintéticas al pie de la celda: marcas reales no mostradas en ningún tramo teórico.
+ * @param {Record<string, unknown>|null|undefined} celda
+ * @param {Array<Record<string, unknown>>} filasTramo
+ */
+export function filasFichadaRealFueraTramoDesdeCelda(celda, filasTramo) {
+  const fichadas = parseFichadasRealesCelda(celda);
+  if (!fichadas.length || !Array.isArray(filasTramo) || !filasTramo.length) return [];
+
+  const baseOrden = filasTramo.reduce(
+    (max, f) => Math.max(max, Number.isFinite(Number(f.orden)) ? Number(f.orden) : 0),
+    -1,
+  );
+
+  /** @type {Array<Record<string, unknown>>} */
+  const extras = [];
+  fichadas.forEach((item) => {
+    if (!item || typeof item !== "object") return;
+    const consumida = filasTramo.some((fila) => filaPresentacionConsumeFichadaItem(fila, item));
+    if (consumida) return;
+
+    const marcas_hm = marcasHhmmDesdeItemFichada(item)
+      .map((m) => horaCompactaDisplay(m) || m)
+      .filter(Boolean);
+    if (!marcas_hm.length) return;
+
+    const ing = String(item.ingreso || item.hora_ingreso || "").trim();
+    const egr = String(item.egreso || item.hora_egreso || "").trim();
+    const hora = String(item.hora || "").trim();
+    const fichada_label =
+      ing && egr ? `${ing}–${egr}` : ing && !egr ? ing : hora || ing || egr || null;
+
+    extras.push({
+      segmento_id: SEGMENTO_PISO_FICHADA_FUERA_TRAMO,
+      orden: baseOrden + 1 + extras.length,
+      fichada_fuera_tramo: true,
+      teoria_label: null,
+      fichada_label,
+      marcas_hm,
+      estado_tramo: "parcial",
+      badge_label: "FUERA",
+      badge_tipo: "fuera_tramo",
+      badges: [{ label: "FUERA", tipo: "fuera_tramo" }],
+    });
+  });
+  return extras;
+}
+
+/**
+ * @param {Record<string, unknown>|null|undefined} celda
+ * @param {Array<Record<string, unknown>>} filas
+ */
+export function anexarFilasFichadaRealFueraTramo(celda, filas) {
+  if (!Array.isArray(filas) || !filas.length) return filas;
+  const extras = filasFichadaRealFueraTramoDesdeCelda(celda, filas);
+  if (!extras.length) return filas;
+  return [...filas, ...extras];
+}
+
 /** `segmento_id` de turno simple (no compuesto); IDs opacos (MA, TN, cfg_reg_turno_*). */
 export function segmentoTurnoSimpleDesdeCelda(celda) {
   const tid = String(celda?.rda_turno_id || "").trim();
@@ -554,7 +640,8 @@ export function filasPresentacionGrillaDesdeCelda(celda) {
   if (analiticaCumplimientoDesdeCelda(celda)) {
     filas = reconciliarFilasPresentacionDesdeAnalitica(celda, filas);
   }
-  return enriquecerFilasPresentacionMarcas(celda, filas);
+  filas = enriquecerFilasPresentacionMarcas(celda, filas);
+  return anexarFilasFichadaRealFueraTramo(celda, filas);
 }
 
 /**
@@ -571,7 +658,8 @@ export function filasPresentacionOperativaDesdeCelda(celda) {
   }
   filas = filtrarFilasPresentacionAlTeoricoOperativo(celda, filas);
   filas = reconciliarFilasPresentacionDesdeAnalitica(celda, filas);
-  return enriquecerFilasPresentacionMarcas(celda, filas);
+  filas = enriquecerFilasPresentacionMarcas(celda, filas);
+  return anexarFilasFichadaRealFueraTramo(celda, filas);
 }
 
 /** Alturas grilla equipo — estándar operativa (planificado / fijo / rotativo). */
@@ -696,6 +784,11 @@ export function lineasDesdePresentacionCompuesto(filas, opts = {}) {
 /** Copy modal / tooltip: solo fichada operativa (sin teoría). */
 export function copyFichadaOperativaPiso(fila, totalFilas = 2) {
   const seg = String(fila.segmento_id || "").trim();
+  if (fila.fichada_fuera_tramo === true) {
+    const marcas = marcasCompactasDesdeFila(fila);
+    const horas = marcas.length ? marcas.join(" · ") : String(fila.fichada_label || "").trim();
+    return horas ? `Fichada ${horas}` : "Fichada fuera de turno teórico";
+  }
   if (filaTramoAusente(fila)) {
     return seg ? `${seg} · AUSENTE` : "AUSENTE";
   }
@@ -847,6 +940,15 @@ export function etiquetaFichadaPisoCelda(fila, totalFilas = 2) {
 export function claseVisualPisoCompuesto(fila) {
   const estado = String(fila.estado_tramo || "").trim();
   const badges = badgesDisciplinaDesdeFilaPresentacion(fila);
+
+  if (fila.fichada_fuera_tramo === true || badges.some((b) => b.tipo === "fuera_tramo")) {
+    return {
+      piso: "bg-violet-200 text-violet-950",
+      seg: "font-bold",
+      dato: "font-mono font-semibold",
+      badge: "font-bold uppercase tracking-tight text-[8px]",
+    };
+  }
 
   const esAusente =
     estado === "ausente" || badges.some((b) => b.tipo === "ausente_tramo" || b.label === "AUSENTE");
