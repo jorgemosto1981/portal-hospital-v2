@@ -5,146 +5,160 @@
 > **2)** ~~Épica B B1–B4~~ ✅ prod · backlog opcional **B3/B5**  
 > **3)** ~~Tope movimientos v1~~ ✅ prod (vigente **01/07/2026**) · **UI bypass RRHH** en modales traslado/intercambio ✅ código  
 > **4)** Piloto tope post-01/07 + preview contador en modales (RFC v1.1) · **B3/B5** opcional  
-> Handoff QA: [`HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md`](./HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md) · Tope: [`RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md`](./RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md)
+> Handoff QA: `[HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md](./HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md)` · Tope: `[RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md](./RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md)`
 
 ---
 
 ## PAUSA — QA grilla reactiva + CVC + Flujo C (2026-06-23) — **checklist piloto OK**
 
-| Bloque | Estado |
-|--------|--------|
-| **CVC** — ciclo vis celda (`sincronizarCeldasVisGrilla`, fetch pares batch) | ✅ código local · [`RFC_CICLO_VIS_CELDA_GRILLA_V2.md`](./RFC_CICLO_VIS_CELDA_GRILLA_V2.md) |
-| Traslados propios encadenados (origen sin fantasmas) | ✅ QA LOKITO d19→18, d12; coherir presentación |
-| M+T+N — 3 fichadas orden reloj | ✅ QA LOKITO d16, CHAPARRO d16 |
-| Incorporación T desde otro día + fichadas destino | ✅ QA LOKITO d6 ← 07/06 |
-| QA ciclo base Q1.x / Q2.1–2.3 | ✅ |
-| Flujo C UI + motor preasignado | ✅ prod **2026-06-23** (`b594cda`) |
-| Lectura snapshot O-P0-7 — RFC CVC-0 + test listar | ✅ **2026-06-24** |
-| CHAPARRO d21 — 3 traslados → franco origen | ✅ QA prod **2026-06-23** (fix saldo cero / token fantasma) |
-| CHAPARRO d19 (**Q2.4** histórico) | ✅ pre-CVC · revalidado patrón **d25→26** post-épica B **2026-06-23** |
-| Q3 cadena N/M CAMPOS | ✅ **2026-06-23** (protocolo + d12; fix flags franco) |
-| Q4 intercambio d8 (LOKITO↔CHAPARRO T↔N) | ✅ **2026-06-23** |
-| Commit + deploy hosting/functions | ✅ **2026-06-23** (`b594cda`) · ver nota functions parcial abajo |
-| Tope movimientos | 📋 RFC borrador · **post-épica B** (decisión RRHH + motor estable) |
+
+| Bloque                                                                      | Estado                                                                                    |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **CVC** — ciclo vis celda (`sincronizarCeldasVisGrilla`, fetch pares batch) | ✅ código local · `[RFC_CICLO_VIS_CELDA_GRILLA_V2.md](./RFC_CICLO_VIS_CELDA_GRILLA_V2.md)` |
+| Traslados propios encadenados (origen sin fantasmas)                        | ✅ QA LOKITO d19→18, d12; coherir presentación                                             |
+| M+T+N — 3 fichadas orden reloj                                              | ✅ QA LOKITO d16, CHAPARRO d16                                                             |
+| Incorporación T desde otro día + fichadas destino                           | ✅ QA LOKITO d6 ← 07/06                                                                    |
+| QA ciclo base Q1.x / Q2.1–2.3                                               | ✅                                                                                         |
+| Flujo C UI + motor preasignado                                              | ✅ prod **2026-06-23** (`b594cda`)                                                         |
+| Lectura snapshot O-P0-7 — RFC CVC-0 + test listar                           | ✅ **2026-06-24**                                                                          |
+| CHAPARRO d21 — 3 traslados → franco origen                                  | ✅ QA prod **2026-06-23** (fix saldo cero / token fantasma)                                |
+| CHAPARRO d19 (**Q2.4** histórico)                                           | ✅ pre-CVC · revalidado patrón **d25→26** post-épica B **2026-06-23**                      |
+| Q3 cadena N/M CAMPOS                                                        | ✅ **2026-06-23** (protocolo + d12; fix flags franco)                                      |
+| Q4 intercambio d8 (LOKITO↔CHAPARRO T↔N)                                     | ✅ **2026-06-23**                                                                          |
+| Commit + deploy hosting/functions                                           | ✅ **2026-06-23** (`b594cda`) · ver nota functions parcial abajo                           |
+| Tope movimientos                                                            | 📋 RFC borrador · **post-épica B** (decisión RRHH + motor estable)                        |
+
 
 ---
 
 ## PAUSA — Grilla reactiva + supersession (2026-06-19) — histórico
 
-| Bloque | Estado |
-|--------|--------|
-| Ciclo aplicar cambio (overlay / POST) | ✅ web |
-| Supersession ida/vuelta + N→franco→M | ✅ functions |
-| Reset overrides jun-2026 Sala | ✅ ops (`sanear-invalidar-overrides-grilla-gdt-mes.mjs`) |
-| Tope movimientos | 📋 RFC borrador · **post-épica B** (decisión RRHH + motor estable) |
-| QA piloto post-reset | ⏳ siguiente sesión |
+
+| Bloque                                | Estado                                                             |
+| ------------------------------------- | ------------------------------------------------------------------ |
+| Ciclo aplicar cambio (overlay / POST) | ✅ web                                                              |
+| Supersession ida/vuelta + N→franco→M  | ✅ functions                                                        |
+| Reset overrides jun-2026 Sala         | ✅ ops (`sanear-invalidar-overrides-grilla-gdt-mes.mjs`)            |
+| Tope movimientos                      | 📋 RFC borrador · **post-épica B** (decisión RRHH + motor estable) |
+| QA piloto post-reset                  | ⏳ siguiente sesión                                                 |
+
 
 ---
 
 > **Histórico — prioridad 2026-06-18:**  
-> **`DESAPARECEN FICHADAS REALES...`** — ver [`HANDOFF_SESION_2026-06-18_PAUSA_BATCH_SANACION_NODOS.md`](./HANDOFF_SESION_2026-06-18_PAUSA_BATCH_SANACION_NODOS.md)  
-> **Épica doc paralela (cuando piloto verde):** [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md)  
-> **Cierre piloto grilla fichadas jun-2026 (sesión anterior):** [`HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md`](./HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md)  
-> **QA fichadas teoría vs real (piloto Sala):** matriz [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) — **cerrado operativamente** (medianoche CHAPARRO/LOKITO, CAMPOS/MOSTO, UI agnóstica IDs). Backfill ronda 2 `badges[]` = **opcional** (`npm run db:backfill-fase-f-validacion`).  
-> **Épica en pausa (tras gate):** **Lineamientos Decreto 1919/89 + motor solicitudes / grilla** — [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md).  
-> **Paralelo / backlog GSO:** refinamiento UX bandeja aprobación 3 meses (P2) · handoff Camino B: [`HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md`](./HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md) · GDT: [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)  
-> **T-05 épica foco + paleta:** ✅ **(A)** grilla + planes URL · ✅ **(B)** paleta compuesta por régimen · ✅ **consola triple horizonte jefe** (`c27e6d7` en **`master`**) · UX pincel contextual + **Plan del foco** (sin grilla 3×mes)  
-> **Sesión 2026-06-11:** merge FF `feat/gso-us6-teoria-pendiente` → `master` · hosting prod **`c27e6d7`**  
-> **US-13:** ✅ **cerrado ops** 2026-06-08 · acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)  
-> **T-06 auditoría RRHH:** ✅ **épica cerrada** en **`master`** (`5c3fd86`) — bandeja · modal técnico · guardrails US-13 (modal + combo A/B/C + outbox) · smoke integral hosting  
+> `**DESAPARECEN FICHADAS REALES...`** — ver `[HANDOFF_SESION_2026-06-18_PAUSA_BATCH_SANACION_NODOS.md](./HANDOFF_SESION_2026-06-18_PAUSA_BATCH_SANACION_NODOS.md)`  
+> **Épica doc paralela (cuando piloto verde):** `[PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md)`  
+> **Cierre piloto grilla fichadas jun-2026 (sesión anterior):** `[HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md](./HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md)`  
+> **QA fichadas teoría vs real (piloto Sala):** matriz `[MATRIZ_FICHADA_TEORIA_REAL_V2.md](./MATRIZ_FICHADA_TEORIA_REAL_V2.md)` — **cerrado operativamente** (medianoche CHAPARRO/LOKITO, CAMPOS/MOSTO, UI agnóstica IDs). Backfill ronda 2 `badges[]` = **opcional** (`npm run db:backfill-fase-f-validacion`).  
+> **Épica en pausa (tras gate):** **Lineamientos Decreto 1919/89 + motor solicitudes / grilla** — `[HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md)`.  
+> **Paralelo / backlog GSO:** refinamiento UX bandeja aprobación 3 meses (P2) · handoff Camino B: `[HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md](./HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md)` · GDT: `[HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)`  
+> **T-05 épica foco + paleta:** ✅ **(A)** grilla + planes URL · ✅ **(B)** paleta compuesta por régimen · ✅ **consola triple horizonte jefe** (`c27e6d7` en `**master`**) · UX pincel contextual + **Plan del foco** (sin grilla 3×mes)  
+> **Sesión 2026-06-11:** merge FF `feat/gso-us6-teoria-pendiente` → `master` · hosting prod `**c27e6d7`**  
+> **US-13:** ✅ **cerrado ops** 2026-06-08 · acta `[CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)`  
+> **T-06 auditoría RRHH:** ✅ **épica cerrada** en `**master`** (`5c3fd86`) — bandeja · modal técnico · guardrails US-13 (modal + combo A/B/C + outbox) · smoke integral hosting  
 > **Otros:** RFC HLG ⏸ RRHH  
-> **Camino A capabilities:** ✅ grilla operativa + turnos mensuales (shells jefe/RRHH · `actorPortalTeoriaDesdeShell`) · merge FF **`master`** `b12ab13` · smoke A–C 2026-06-11  
-> **T-07 caché grilla:** ✅ **`master`** `a5ca021` · `grillaVistaCacheStore` + hit en `useGrillaMesVista` · invalidación outbox · fix race `setData`/doble `cargar` · smoke performance 2026-06-11  
-> **T-07b caché catálogo laboral:** ✅ **`master`** `9a5875b` · `catalogoLaboralCacheStore` + `listarGruposTrabajoCatalogo` (coalescing · peek 0 ms · claves `l400`/`l800`) · grilla/planes/explorador · smoke DevTools 2026-06-11  
-> **Camino A planes (refinamiento consola jefe):** ✅ **`master`** `b557d12` · `planRefinamientoConsolaUtils` · acordeón móvil · guardrail outbox grilla/planes · Vitest 16/16 · smoke hosting 2026-06-11  
-> **Camino B capabilities (saneamiento periférico `esRrhh`):** ✅ **`master`** `f1d7add` (squash) · `portalPerifericoCapabilities` · menú por `pathname` · redirect `last_visited_gso_shell` · `permiteExportarMatrizMacro` · Vitest 16/16 · `claimsIncludeRrhh` solo en `portalRole.js`  
-> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-18** (`master` @ **`f43f7e1`** · build Vite post-presentación compuesto agnóstica)  
+> **Camino A capabilities:** ✅ grilla operativa + turnos mensuales (shells jefe/RRHH · `actorPortalTeoriaDesdeShell`) · merge FF `**master`** `b12ab13` · smoke A–C 2026-06-11  
+> **T-07 caché grilla:** ✅ `**master`** `a5ca021` · `grillaVistaCacheStore` + hit en `useGrillaMesVista` · invalidación outbox · fix race `setData`/doble `cargar` · smoke performance 2026-06-11  
+> **T-07b caché catálogo laboral:** ✅ `**master`** `9a5875b` · `catalogoLaboralCacheStore` + `listarGruposTrabajoCatalogo` (coalescing · peek 0 ms · claves `l400`/`l800`) · grilla/planes/explorador · smoke DevTools 2026-06-11  
+> **Camino A planes (refinamiento consola jefe):** ✅ `**master`** `b557d12` · `planRefinamientoConsolaUtils` · acordeón móvil · guardrail outbox grilla/planes · Vitest 16/16 · smoke hosting 2026-06-11  
+> **Camino B capabilities (saneamiento periférico `esRrhh`):** ✅ `**master`** `f1d7add` (squash) · `portalPerifericoCapabilities` · menú por `pathname` · redirect `last_visited_gso_shell` · `permiteExportarMatrizMacro` · Vitest 16/16 · `claimsIncludeRrhh` solo en `portalRole.js`  
+> **Hosting prod:** [https://portal-hospital-v2.web.app](https://portal-hospital-v2.web.app) · deploy **2026-06-18** (`master` @ `**f43f7e1`** · build Vite post-presentación compuesto agnóstica)  
 > **Bloque macro (permisos + perf):** T-06 ✅ · Camino A ✅ · T-07/T-07b ✅ · Camino A planes ✅ · **Camino B ✅** — ver handoff 2026-06-11  
-> **Qué falta implementar (SSoT backlog):** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md)  
-> **US-17:** ✅ código + remediación ops · audit **0 huecos** · [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)
+> **Qué falta implementar (SSoT backlog):** `[PENDIENTES_IMPLEMENTACION_V2.md](./PENDIENTES_IMPLEMENTACION_V2.md)`  
+> **US-17:** ✅ código + remediación ops · audit **0 huecos** · `[PLAN_VUELO_US17_INVENTARIO_PLANES.md](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)`
 
 ---
 
 ## PAUSA — Batch inmediato · sanación · nodos (2026-06-18)
 
-| Bloque | Estado | Referencia |
-|--------|--------|------------|
-| Outbox UI → `aplicarBatchAsistencia` inmediato | ✅ | `grillaAplicarCambioInmediato.js`, modales A/B/C |
-| Motor único `materializarTurnoTeoricoDia` | ✅ | `rdaTurnoTeoricoWorker.js` |
-| Callable `sanearMaterializacionDiaSiNecesario` | ✅ código | `cambiosTurno.js` |
-| Store nodos + parches batch | ✅ A0–A3 | `PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md` |
-| Jaqueline d11 franco / d12 T+N (script admin) | ✅ motor local | `scripts/verificar-jaqueline-dias-11-12-jun26.mjs` |
-| Deploy functions fixes Jaqueline | ⚠️ pendiente | redeploy interrumpido |
-| **Fichadas reales en grilla tras mutación** | ❌ siguiente | ver texto RETOMAR arriba |
+
+| Bloque                                         | Estado        | Referencia                                         |
+| ---------------------------------------------- | ------------- | -------------------------------------------------- |
+| Outbox UI → `aplicarBatchAsistencia` inmediato | ✅             | `grillaAplicarCambioInmediato.js`, modales A/B/C   |
+| Motor único `materializarTurnoTeoricoDia`      | ✅             | `rdaTurnoTeoricoWorker.js`                         |
+| Callable `sanearMaterializacionDiaSiNecesario` | ✅ código      | `cambiosTurno.js`                                  |
+| Store nodos + parches batch                    | ✅ A0–A3       | `PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`              |
+| Jaqueline d11 franco / d12 T+N (script admin)  | ✅ motor local | `scripts/verificar-jaqueline-dias-11-12-jun26.mjs` |
+| Deploy functions fixes Jaqueline               | ⚠️ pendiente  | redeploy interrumpido                              |
+| **Fichadas reales en grilla tras mutación**    | ❌ siguiente   | ver texto RETOMAR arriba                           |
+
 
 ---
 
 ## CIERRE SESIÓN — Presentación compuesto + piloto fichadas jun-2026 (2026-06-18)
 
-| Bloque | Estado | Notas |
-|--------|--------|-------|
-| Plan handoff 2026-06-17 (§2 RFC F1–F4, dual badges, split marcas) | ✅ | Tests Vitest + functions |
-| Medianoche / M+T+N / M+N (CHAPARRO, LOKITO, CAMPOS, MOSTO) | ✅ | Fixes UI + QA operativo |
-| UI agnóstica IDs (`orden`, `segmentoTurnoSimple` MA/TN, slate fallback) | ✅ | `grillaPresentacionCompuestoUi` |
-| Historial gestión turno + `persona_id` overrides batch | ✅ | Web + `cambiosTurno.js` |
-| UX grilla piloto (sticky, outbox, persona 2 líneas) | ✅ | `GrillaMesEquipoTabla` |
-| Merge → **`master`** | ✅ | FF `feature/grilla-fase1-colision` → `f43f7e1` |
-| Deploy **functions** + **hosting** | ✅ | 2026-06-18 |
-| Backfill Fase F ronda 2 (`badges[]` en Firestore) | ⏸ opcional | UI reconcilia desde analítica sin backfill |
 
-**Referencia:** [`HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md`](./HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md) §9.
+| Bloque                                                                  | Estado     | Notas                                          |
+| ----------------------------------------------------------------------- | ---------- | ---------------------------------------------- |
+| Plan handoff 2026-06-17 (§2 RFC F1–F4, dual badges, split marcas)       | ✅          | Tests Vitest + functions                       |
+| Medianoche / M+T+N / M+N (CHAPARRO, LOKITO, CAMPOS, MOSTO)              | ✅          | Fixes UI + QA operativo                        |
+| UI agnóstica IDs (`orden`, `segmentoTurnoSimple` MA/TN, slate fallback) | ✅          | `grillaPresentacionCompuestoUi`                |
+| Historial gestión turno + `persona_id` overrides batch                  | ✅          | Web + `cambiosTurno.js`                        |
+| UX grilla piloto (sticky, outbox, persona 2 líneas)                     | ✅          | `GrillaMesEquipoTabla`                         |
+| Merge → `**master`**                                                    | ✅          | FF `feature/grilla-fase1-colision` → `f43f7e1` |
+| Deploy **functions** + **hosting**                                      | ✅          | 2026-06-18                                     |
+| Backfill Fase F ronda 2 (`badges[]` en Firestore)                       | ⏸ opcional | UI reconcilia desde analítica sin backfill     |
+
+
+**Referencia:** `[HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md](./HANDOFF_SESION_2026-06-17_CIERRE_ANALISIS_CARGA_GRILLA_V2.md)` §9.
 
 ---
 
 ## PAUSA — QA fichadas teoría vs real (2026-06-16) — **cerrado con piloto jun-2026 (2026-06-18)**
 
-| Bloque | Estado | Referencia |
-|--------|--------|------------|
-| Fase F semáforo + validación persistida | ✅ en **`master`** | [`RFC_FASE_F_VALIDACION_FICHADA_GRILLA_V2.md`](./RFC_FASE_F_VALIDACION_FICHADA_GRILLA_V2.md) |
-| M+N incumplimiento por tramo (celda ▼×2) | ✅ código + tests + prod | handoff 2026-06-16 / cierre 2026-06-18 |
-| Backfill piloto `2026-06` Sala | ✅ ronda 1 | `npm run db:backfill-fase-f-validacion` |
-| **QA día a día teoría ↔ real (piloto)** | ✅ **cerrado ops** | [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) · cierre § arriba |
-| Deploy hosting + functions | ✅ | 2026-06-18 · `f43f7e1` |
-| Merge a `master` | ✅ | FF `feature/grilla-fase1-colision` |
 
-**Hosting prod:** https://portal-hospital-v2.web.app — presentación compuesto + fichadas piloto jun-2026 Sala.
+| Bloque                                   | Estado                  | Referencia                                                                                   |
+| ---------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------- |
+| Fase F semáforo + validación persistida  | ✅ en `**master`**       | `[RFC_FASE_F_VALIDACION_FICHADA_GRILLA_V2.md](./RFC_FASE_F_VALIDACION_FICHADA_GRILLA_V2.md)` |
+| M+N incumplimiento por tramo (celda ▼×2) | ✅ código + tests + prod | handoff 2026-06-16 / cierre 2026-06-18                                                       |
+| Backfill piloto `2026-06` Sala           | ✅ ronda 1               | `npm run db:backfill-fase-f-validacion`                                                      |
+| **QA día a día teoría ↔ real (piloto)**  | ✅ **cerrado ops**       | `[MATRIZ_FICHADA_TEORIA_REAL_V2.md](./MATRIZ_FICHADA_TEORIA_REAL_V2.md)` · cierre § arriba   |
+| Deploy hosting + functions               | ✅                       | 2026-06-18 · `f43f7e1`                                                                       |
+| Merge a `master`                         | ✅                       | FF `feature/grilla-fase1-colision`                                                           |
+
+
+**Hosting prod:** [https://portal-hospital-v2.web.app](https://portal-hospital-v2.web.app) — presentación compuesto + fichadas piloto jun-2026 Sala.
 
 ---
 
 ## PAUSA — QA fichadas + colisión grilla (2026-06-12) — histórico
 
-| Bloque | Estado | Referencia |
-|--------|--------|------------|
-| Motor analítico + outbox + F-UX | ✅ en rama | `feature/grilla-fase1-colision` |
-| Fixes sesión 12/06 (persistencia, analítica, UI real/teórico) | ✅ | [`HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md`](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md) |
-| **Matriz escenarios teoría ↔ real** | ✅ documentada | [`MATRIZ_FICHADA_TEORIA_REAL_V2.md`](./MATRIZ_FICHADA_TEORIA_REAL_V2.md) |
+
+| Bloque                                                        | Estado        | Referencia                                                                                                     |
+| ------------------------------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------- |
+| Motor analítico + outbox + F-UX                               | ✅ en rama     | `feature/grilla-fase1-colision`                                                                                |
+| Fixes sesión 12/06 (persistencia, analítica, UI real/teórico) | ✅             | `[HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md](./HANDOFF_SESION_2026-06-12_CIERRE_PAUSA_MATRIZ_QA.md)` |
+| **Matriz escenarios teoría ↔ real**                           | ✅ documentada | `[MATRIZ_FICHADA_TEORIA_REAL_V2.md](./MATRIZ_FICHADA_TEORIA_REAL_V2.md)`                                       |
+
 
 ---
 
 ## CIERRE SESIÓN — Planificación lineamientos 1919 / motor (2026-06-11)
 
-| Bloque | Estado | Referencia |
-|--------|--------|------------|
-| **Sesión planificación** | ✅ **CERRADA** | [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md) · commit `0cfb889`+ cierre doc |
-| Plan maestro + brechas RFC + backlog RRHH | ✅ | [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md) |
-| **Épica siguiente (P0 doc)** | ✅ **G1-doc** | Oleada 63.c–k + guía + RFC + cross-links — auditoría 24-jun-2026 |
-| **Cierre formal P0** | ⏳ | Acta RRHH (si aplica) + commit/PR `feat/1919-p0-doc` + tag `1919-p0-doc-g1` — ver plan **§11.1** |
-| **Pre-P1 (seguridad)** | ⏳ | Tras G1: `master` + rama `feat/1919-p1-ticketera` desde tag; checklist §11.1.E |
-| Motor solicitudes / grilla | ⏳ | Tras Fase 0 o RFC §3 handoff |
 
-**Última actualización índice (épica 1919):** 2026-06-24 — G1-doc cerrado; §11.1 pre-implementación; arranque P1 tras tag G1.
+| Bloque                                    | Estado        | Referencia                                                                                                                                                                     |
+| ----------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Sesión planificación**                  | ✅ **CERRADA** | `[HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md)` · commit `0cfb889`+ cierre doc                      |
+| Plan maestro + brechas RFC + backlog RRHH | ✅             | `[PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md)`                                                           |
+| **Épica siguiente (Fase 0 doc)**          | ⏳             | `[PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md)` — P0 oleada 63.c–k; pendiente acta + tag `1919-p0-doc-g1` |
+| Motor solicitudes / grilla                | ⏳             | Tras Fase 0 o RFC §3 handoff                                                                                                                                                   |
+
+
+**Última actualización índice (épica 1919):** 2026-06-11 — cierre sesión planificación; RETOMAR arriba.
 
 ---
 
 ## CIERRE SESIÓN — Sprint capabilities + caché grilla (2026-06-11)
 
-| Bloque | Estado | Referencia |
-|--------|--------|------------|
-| **T-06** guardrails US-13 UI | ✅ en `master` | `5c3fd86` · smoke integral hosting |
-| **Camino A** shells / capabilities | ✅ FF `master` | `b12ab13` · `actorPortalTeoriaDesdeShell` · planes `rrhh`/`jefe` · smoke A–C |
-| **T-07** caché RAM vista grilla | ✅ FF `master` | `35dd423` store · `a5ca021` hook + outbox · race `setData`/doble `cargar` · smoke performance |
-| **T-07b** caché RAM catálogo `grupos_de_trabajo` | ✅ FF `master` | `9a5875b` · peek + coalescing · smoke DevTools sin duplicados post-primer fetch |
-| **Índice / deploy** | ✅ | código + docs T-07b · hosting `index-BgbIdH8K.js` |
+
+| Bloque                                           | Estado        | Referencia                                                                                    |
+| ------------------------------------------------ | ------------- | --------------------------------------------------------------------------------------------- |
+| **T-06** guardrails US-13 UI                     | ✅ en `master` | `5c3fd86` · smoke integral hosting                                                            |
+| **Camino A** shells / capabilities               | ✅ FF `master` | `b12ab13` · `actorPortalTeoriaDesdeShell` · planes `rrhh`/`jefe` · smoke A–C                  |
+| **T-07** caché RAM vista grilla                  | ✅ FF `master` | `35dd423` store · `a5ca021` hook + outbox · race `setData`/doble `cargar` · smoke performance |
+| **T-07b** caché RAM catálogo `grupos_de_trabajo` | ✅ FF `master` | `9a5875b` · peek + coalescing · smoke DevTools sin duplicados post-primer fetch               |
+| **Índice / deploy**                              | ✅             | código + docs T-07b · hosting `index-BgbIdH8K.js`                                             |
+
 
 **Próximo arranque (prioridad abierta):** bandeja aprobación 3 meses (P2) u ítem siguiente en backlog SSoT.
 
@@ -154,14 +168,16 @@
 
 ## CIERRE SESIÓN — Bloque macro saneamiento permisos y optimización (2026-06-11)
 
-| Hito | Estado | Nota |
-|------|--------|------|
-| **T-06** US-13 UI (modal · combo · outbox) | ✅ | `5c3fd86` |
-| **Camino A** shells GSO | ✅ | `b12ab13` |
-| **T-07 / T-07b** caché RAM | ✅ | grilla + catálogo `grupos_de_trabajo` |
-| **Camino A planes** consola jefe | ✅ | `b557d12` · Vitest 16/16 |
-| **Camino B** periferia claims / menú / redirect | ✅ | `f1d7add` · deploy `index-CCAzVApV.js` |
-| **Documental** | ✅ | [`HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md`](./HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md) |
+
+| Hito                                            | Estado | Nota                                                                                                                   |
+| ----------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------- |
+| **T-06** US-13 UI (modal · combo · outbox)      | ✅      | `5c3fd86`                                                                                                              |
+| **Camino A** shells GSO                         | ✅      | `b12ab13`                                                                                                              |
+| **T-07 / T-07b** caché RAM                      | ✅      | grilla + catálogo `grupos_de_trabajo`                                                                                  |
+| **Camino A planes** consola jefe                | ✅      | `b557d12` · Vitest 16/16                                                                                               |
+| **Camino B** periferia claims / menú / redirect | ✅      | `f1d7add` · deploy `index-CCAzVApV.js`                                                                                 |
+| **Documental**                                  | ✅      | `[HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md](./HANDOFF_SESION_2026-06-11_CIERRE_CAMINO_B_PERIFERICO.md)` |
+
 
 **Siguiente carril:** bandeja aprobación 3 meses (P2).
 
@@ -169,37 +185,43 @@
 
 ## CIERRE SESIÓN — Camino A refinamiento consola planes jefe (2026-06-11)
 
-| Bloque | Estado | Referencia |
-|--------|--------|------------|
-| **Util intenciones M−1/M/M+1** | ✅ squash `master` | `planRefinamientoConsolaUtils` · `resolverIntencionTarjetaConsola` · 16 tests Vitest |
-| **Consola fría + bandeja inbox** | ✅ | `ConsolaTripleHorizonteSeccion` · títulos `HORIZONTE_CONSOLA_TITULOS` |
-| **Guardrail outbox al cambiar foco** | ✅ | `useGuardrailOutboxAlCambiarFoco` · grilla + turnos mensuales |
-| **Deploy** | ✅ | `b557d12` · bundle `index-Beh7bFay.js` |
+
+| Bloque                               | Estado            | Referencia                                                                           |
+| ------------------------------------ | ----------------- | ------------------------------------------------------------------------------------ |
+| **Util intenciones M−1/M/M+1**       | ✅ squash `master` | `planRefinamientoConsolaUtils` · `resolverIntencionTarjetaConsola` · 16 tests Vitest |
+| **Consola fría + bandeja inbox**     | ✅                 | `ConsolaTripleHorizonteSeccion` · títulos `HORIZONTE_CONSOLA_TITULOS`                |
+| **Guardrail outbox al cambiar foco** | ✅                 | `useGuardrailOutboxAlCambiarFoco` · grilla + turnos mensuales                        |
+| **Deploy**                           | ✅                 | `b557d12` · bundle `index-Beh7bFay.js`                                               |
+
 
 ---
 
 ## CIERRE SESIÓN — Camino B saneamiento capabilities periféricas (2026-06-11)
 
-| Bloque | Estado | Referencia |
-|--------|--------|------------|
-| **Bandeja / export read-model** | ✅ squash `master` | `portalPerifericoCapabilities` · bandeja por shell GSO |
-| **Redirect grilla + persistencia shell** | ✅ | `portalGsoShellStorage` · `last_visited_gso_shell` · `GrillaPortalRedirect` |
-| **Menú lateral / bottom nav** | ✅ | `shellMenuPortalDesdePathname` · `menuGrupoAcceso` sin `claimsIncludeRrhh` |
-| **Export matriz macro** | ✅ | `permiteExportarMatrizMacro` en `grillaOperativaCapabilities` |
-| **Tests + grep vivo** | ✅ | Vitest 16/16 · `claimsIncludeRrhh` solo `portalRole.js` (+ comentarios) |
-| **Deploy** | ✅ | `f1d7add` + docs `e442ca5` · bundle **`index-CCAzVApV.js`** · `last_visited_gso_shell` en prod |
+
+| Bloque                                   | Estado            | Referencia                                                                                     |
+| ---------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------- |
+| **Bandeja / export read-model**          | ✅ squash `master` | `portalPerifericoCapabilities` · bandeja por shell GSO                                         |
+| **Redirect grilla + persistencia shell** | ✅                 | `portalGsoShellStorage` · `last_visited_gso_shell` · `GrillaPortalRedirect`                    |
+| **Menú lateral / bottom nav**            | ✅                 | `shellMenuPortalDesdePathname` · `menuGrupoAcceso` sin `claimsIncludeRrhh`                     |
+| **Export matriz macro**                  | ✅                 | `permiteExportarMatrizMacro` en `grillaOperativaCapabilities`                                  |
+| **Tests + grep vivo**                    | ✅                 | Vitest 16/16 · `claimsIncludeRrhh` solo `portalRole.js` (+ comentarios)                        |
+| **Deploy**                               | ✅                 | `f1d7add` + docs `e442ca5` · bundle `**index-CCAzVApV.js`** · `last_visited_gso_shell` en prod |
+
 
 ---
 
 ## CIERRE SESIÓN — US-6 + US-7 + US-11 (2026-06-08)
 
-| Bloque | Estado | Commits / release |
-|--------|--------|-------------------|
-| **US-6** | ✅ QA + hosting | `ccc1040` |
-| **US-7** | ✅ QA + hosting | `ccc1040` |
-| **US-11** | ✅ QA + hosting | `ccc1040` |
-| **Checkpoint pre-implementación** | Tag | `v2.6.2-pre-us6` @ `ca71f0e` |
-| **Release** | Tag | **`v2.6.3-gso-us6`** @ `ccc1040` |
+
+| Bloque                            | Estado         | Commits / release                |
+| --------------------------------- | -------------- | -------------------------------- |
+| **US-6**                          | ✅ QA + hosting | `ccc1040`                        |
+| **US-7**                          | ✅ QA + hosting | `ccc1040`                        |
+| **US-11**                         | ✅ QA + hosting | `ccc1040`                        |
+| **Checkpoint pre-implementación** | Tag            | `v2.6.2-pre-us6` @ `ca71f0e`     |
+| **Release**                       | Tag            | `**v2.6.3-gso-us6`** @ `ccc1040` |
+
 
 **Entregables sesión**
 
@@ -224,15 +246,17 @@
 
 ## CIERRE SESIÓN — T-05 foco GDT grilla operativa (2026-06-10)
 
-| Qué | Estado |
-|-----|--------|
-| **Capabilities + shells** | `grillaOperativaCapabilities.js` · RRHH catálogo · jefe HLg vigente |
-| **Selector + URL** | `SelectorFocoGdt` · `useGrillaMesFocoUrl` · carga con botón **Ver** (no auto en combo) |
-| **Jefe titular** | Botón **Ver mi grilla (titular)** · sin carga en frío · fix formato modal |
-| **Backend** | `listarVistaGrillaMesPorGrupo` + `assertPlanAuth(..., "leer")` |
-| **Liquidación RRHH** | Botón discreto · modal doble check cierre |
-| **Git** | `8285283` · tag `v2.6.3-pos-t05-grilla` |
-| **Pendiente T-05** | Paleta **F3 (B)** en editor · capabilities en modales |
+
+| Qué                       | Estado                                                                                 |
+| ------------------------- | -------------------------------------------------------------------------------------- |
+| **Capabilities + shells** | `grillaOperativaCapabilities.js` · RRHH catálogo · jefe HLg vigente                    |
+| **Selector + URL**        | `SelectorFocoGdt` · `useGrillaMesFocoUrl` · carga con botón **Ver** (no auto en combo) |
+| **Jefe titular**          | Botón **Ver mi grilla (titular)** · sin carga en frío · fix formato modal              |
+| **Backend**               | `listarVistaGrillaMesPorGrupo` + `assertPlanAuth(..., "leer")`                         |
+| **Liquidación RRHH**      | Botón discreto · modal doble check cierre                                              |
+| **Git**                   | `8285283` · tag `v2.6.3-pos-t05-grilla`                                                |
+| **Pendiente T-05**        | Paleta **F3 (B)** en editor · capabilities en modales                                  |
+
 
 **Última actualización índice:** 2026-06-10 — cierre T-05 (A) grilla operativa.
 
@@ -240,15 +264,17 @@
 
 ## CIERRE SESIÓN — T-05 (A) paridad URL Turnos mensuales (2026-06-11)
 
-| Qué | Estado |
-|-----|--------|
-| **Hook** | `usePlanTurnoFocoUrl.js` · reutiliza `buildGrillaFocoSearchParams` |
-| **UI** | `SelectorFocoGdt` + **Ver** · banner «Trabajando en…» · estado vacío sin `grupo_id` |
-| **Carga** | Sin `listarPlanes` / resumen masivo en frío; deep-link + F5 |
-| **Página** | `PlanTurnoServicioPage` (jefe + RRHH mismo shell) |
-| **Audit previo** | Working tree CRLF sin diff real · `git restore .` |
-| **QA local** | RRHH · Portería · `2026-06` |
-| **Siguiente** | ~~T-05 (B)~~ ✅ `765a31e` · UX foco único en planes (sin tarjetas M-1/M/M+1) |
+
+| Qué              | Estado                                                                              |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| **Hook**         | `usePlanTurnoFocoUrl.js` · reutiliza `buildGrillaFocoSearchParams`                  |
+| **UI**           | `SelectorFocoGdt` + **Ver** · banner «Trabajando en…» · estado vacío sin `grupo_id` |
+| **Carga**        | Sin `listarPlanes` / resumen masivo en frío; deep-link + F5                         |
+| **Página**       | `PlanTurnoServicioPage` (jefe + RRHH mismo shell)                                   |
+| **Audit previo** | Working tree CRLF sin diff real · `git restore .`                                   |
+| **QA local**     | RRHH · Portería · `2026-06`                                                         |
+| **Siguiente**    | ~~T-05 (B)~~ ✅ `765a31e` · UX foco único en planes (sin tarjetas M-1/M/M+1)         |
+
 
 **Última actualización índice:** 2026-06-11 — T-05 (A)+(B) cerrado · UX refinamiento foco/pincel.
 
@@ -256,23 +282,27 @@
 
 ## PAUSA SESIÓN — T-05 contexto GDT (2026-06-08) — histórico
 
-| Qué | Estado |
-|-----|--------|
-| **Handoff detallado** | [`HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md`](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md) |
-| **T-05 operativo grilla** | ✅ Ver § cierre 2026-06-10 arriba |
-| **T-05 épica F3 (B)** | DoR documentado · **sin código** |
+
+| Qué                       | Estado                                                                                                         |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Handoff detallado**     | `[HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md](./HANDOFF_SESION_2026-06-08_PAUSA_T05_CONTEXTO_GDT.md)` |
+| **T-05 operativo grilla** | ✅ Ver § cierre 2026-06-10 arriba                                                                               |
+| **T-05 épica F3 (B)**     | DoR documentado · **sin código**                                                                               |
+
 
 ---
 
 ## CIERRE SESIÓN — US-13 política permisos (analítica, 2026-06-08)
 
-| Qué | Dónde / estado |
-|-----|----------------|
-| **Matriz rol × acción × pantalla** | [`MATRIZ_US13_PERMISOS_TEORIA_V2.md`](./MATRIZ_US13_PERMISOS_TEORIA_V2.md) — § Política oficial G1–G7 |
-| **Checklist RRHH (cerrado)** | [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md) |
-| **Commit SSoT** | `docs(gso): oficializar politica de permisos US-13 (G1-G7)` |
-| **Código (cerrado)** | Web: `teoriaPermisosGso`, capabilities, plan G6, modales urgencia · Functions: motor, batch, `assertPlanTeoriaAuth` |
-| **Próximo (ops)** | Plan deploy/smoke (§ siguiente) · deploy · checklist RRHH en staging |
+
+| Qué                                | Dónde / estado                                                                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Matriz rol × acción × pantalla** | `[MATRIZ_US13_PERMISOS_TEORIA_V2.md](./MATRIZ_US13_PERMISOS_TEORIA_V2.md)` — § Política oficial G1–G7               |
+| **Checklist RRHH (cerrado)**       | `[CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)`          |
+| **Commit SSoT**                    | `docs(gso): oficializar politica de permisos US-13 (G1-G7)`                                                         |
+| **Código (cerrado)**               | Web: `teoriaPermisosGso`, capabilities, plan G6, modales urgencia · Functions: motor, batch, `assertPlanTeoriaAuth` |
+| **Próximo (ops)**                  | Plan deploy/smoke (§ siguiente) · deploy · checklist RRHH en staging                                                |
+
 
 ---
 
@@ -285,58 +315,66 @@
 
 **Riesgo a evitar:** backend nuevo exige `es_urgencia_operativa` (G1) antes de que el front lo envíe → jefes bloqueados sin UI de urgencia.
 
-| Paso | Acción | Comando / nota |
-|------|--------|----------------|
-| **0** | Gate | CI verde en `master` · `npm run test:us13-functions` |
-| **1** | **Hosting UI primero** | `npm run build:web` · `firebase deploy --project portal-hospital-v2 --only hosting` |
-| **2** | **Functions inmediatamente después** | `npm run firebase:deploy:functions` |
-| **3** | Smoke §2 | En **&lt;15 min** tras paso 2 · solo piloto antes de anuncio masivo |
+
+| Paso  | Acción                               | Comando / nota                                                                      |
+| ----- | ------------------------------------ | ----------------------------------------------------------------------------------- |
+| **0** | Gate                                 | CI verde en `master` · `npm run test:us13-functions`                                |
+| **1** | **Hosting UI primero**               | `npm run build:web` · `firebase deploy --project portal-hospital-v2 --only hosting` |
+| **2** | **Functions inmediatamente después** | `npm run firebase:deploy:functions`                                                 |
+| **3** | Smoke §2                             | En **<15 min** tras paso 2 · solo piloto antes de anuncio masivo                    |
+
 
 **Paso 1 — compatibilidad:** con backend **aún viejo**, el front nuevo puede enviar `es_urgencia_operativa` (campo ignorado o inofensivo); operación sigue como hoy.  
 **Paso 2 — enforcement:** al publicar functions, G1–G6 activos al instante; el front ya preparado → **zero-downtime coordinado**.
 
-Entorno Firebase: proyecto único `portal-hospital-v2` (https://portal-hospital-v2.web.app) — tratar primeras horas post-deploy como **staging operativo** con actores piloto.
+Entorno Firebase: proyecto único `portal-hospital-v2` ([https://portal-hospital-v2.web.app](https://portal-hospital-v2.web.app)) — tratar primeras horas post-deploy como **staging operativo** con actores piloto.
 
-**Flags:** `OPEN_ACCESS_TEMP` = **false** en [`functions/modules/shared/runtimeFlags.json`](../../functions/modules/shared/runtimeFlags.json) y [`shared/runtimeFlags.json`](../../shared/runtimeFlags.json).
+**Flags:** `OPEN_ACCESS_TEMP` = **false** en `[functions/modules/shared/runtimeFlags.json](../../functions/modules/shared/runtimeFlags.json)` y `[shared/runtimeFlags.json](../../shared/runtimeFlags.json)`.
 
 ### 2. Smoke tests (validación humana)
 
 **Piloto:** GDT conocido · mes con plan **HABILITADO** (G1) · jefe con `tiene_subordinados` · médico de planta sin subordinados.
 
-| Regla | Escenario | Resultado esperado |
-|-------|-----------|-------------------|
-| **G4** | Jefe intenta **self-override** (editar su propia teoría) | Bloqueo · `TITULAR_NO_PUEDE_EDITAR_PROPIA_TEORIA` (UI + 403 backend) |
-| **G2** | Jefe edita agente **fuera de jerarquía** en el GDT de la op (otro sector / igual o mayor `nivel_jerarquico` HLG vigente) | Bloqueo · `NO_ES_SUPERIOR_JERARQUICO` |
-| **G1a** | Plan **HABILITADO** · override **sin** urgencia | Bloqueo · `PLAN_HABILITADO_REQUIERE_URGENCIA` |
-| **G1b** | Mismo caso · override **con** urgencia operativa (modal + payload) | **Permitido** |
-| **G6** | Médico de planta **Guardar/Enviar** plan mensual | Bloqueo · `SOLO_JEFE_O_RRHH_PUEDE_EDITAR_PLAN` |
 
-Checklist extendido: [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md).
+| Regla   | Escenario                                                                                                                | Resultado esperado                                                   |
+| ------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| **G4**  | Jefe intenta **self-override** (editar su propia teoría)                                                                 | Bloqueo · `TITULAR_NO_PUEDE_EDITAR_PROPIA_TEORIA` (UI + 403 backend) |
+| **G2**  | Jefe edita agente **fuera de jerarquía** en el GDT de la op (otro sector / igual o mayor `nivel_jerarquico` HLG vigente) | Bloqueo · `NO_ES_SUPERIOR_JERARQUICO`                                |
+| **G1a** | Plan **HABILITADO** · override **sin** urgencia                                                                          | Bloqueo · `PLAN_HABILITADO_REQUIERE_URGENCIA`                        |
+| **G1b** | Mismo caso · override **con** urgencia operativa (modal + payload)                                                       | **Permitido**                                                        |
+| **G6**  | Médico de planta **Guardar/Enviar** plan mensual                                                                         | Bloqueo · `SOLO_JEFE_O_RRHH_PUEDE_EDITAR_PLAN`                       |
+
+
+Checklist extendido: `[CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)`.
 
 ---
 
 ## Unidad piloto — smoke US-13 post-deploy (ejecución humana)
 
-**Entorno:** https://portal-hospital-v2.web.app · deploy US-13 **2026-06-08** (hosting + functions).  
-**Estado smoke:** 🟢 **cerrado 2026-06-08** — prod piloto Sala jun-26 · G1a/G1b/G2/G4/G6 UI · G2 neg. motor · § acta [`CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md`](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md).
+**Entorno:** [https://portal-hospital-v2.web.app](https://portal-hospital-v2.web.app) · deploy US-13 **2026-06-08** (hosting + functions).  
+**Estado smoke:** 🟢 **cerrado 2026-06-08** — prod piloto Sala jun-26 · G1a/G1b/G2/G4/G6 UI · G2 neg. motor · § acta `[CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md](./CHECKLIST_VALIDACION_RRHH_US13_PERMISOS_TEORIA.md)`.
 
 ### Escenario (mapeo BD documentada)
 
-| Parámetro | Valor acordado | IDs / notas en repo |
-|-----------|----------------|---------------------|
-| **GDT** | Sala de Clínica Médica *(nombre operativo)* | En catálogo figura **Sala Internación 1** — `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · confirmar etiqueta en UI antes de empezar |
-| **Período** | **Junio 2026** (`2026-06`) | Plan vigente documentado: `plt_01KT9AZQGV0BRZVSEEMBT0141A` · agentes en plan: LOKITO `per_01KQQJA5Q1VKBTJ74RHQ0HSHSB`, MOSTO `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ` |
-| **Pre-flight G1/G6** | Plan en **HABILITADO** | Tras login jefe/RRHH: Plan turno servicio o contexto grilla → si no está HABILITADO, **no** usar este mes para G1 hasta habilitar (RRHH) o elegir mes que lo esté |
+
+| Parámetro            | Valor acordado                              | IDs / notas en repo                                                                                                                                               |
+| -------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **GDT**              | Sala de Clínica Médica *(nombre operativo)* | En catálogo figura **Sala Internación 1** — `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · confirmar etiqueta en UI antes de empezar                                          |
+| **Período**          | **Junio 2026** (`2026-06`)                  | Plan vigente documentado: `plt_01KT9AZQGV0BRZVSEEMBT0141A` · agentes en plan: LOKITO `per_01KQQJA5Q1VKBTJ74RHQ0HSHSB`, MOSTO `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ`     |
+| **Pre-flight G1/G6** | Plan en **HABILITADO**                      | Tras login jefe/RRHH: Plan turno servicio o contexto grilla → si no está HABILITADO, **no** usar este mes para G1 hasta habilitar (RRHH) o elegir mes que lo esté |
+
 
 ### Usuarios piloto (roles)
 
 Sustituir por **cuenta portal + DNI** reales al ejecutar; niveles **10 / 5** = `nivel_jerarquico` en **HLG vigente** del `gdt_01KQA6Q…`, no el rol de negocio.
 
-| Alias | Rol esperado | Uso en smoke | Expectativa motor |
-|-------|--------------|--------------|-------------------|
-| **Jefe_Sala** | Jefe · `tiene_subordinados` · nivel **>** subordinado en GDT | G1, G2 (caso feliz opcional), G1b | Override subordinado con jerarquía; en plan HABILITADO sin urgencia → bloqueo G1; con urgencia → OK |
-| **Medico_Planta** | Agente · **sin** `tiene_subordinados` · nivel bajo | G4, G6 | Bloqueos G4/G6; no usar para validar “puede todo” |
-| **Administrativo_RRHH** | Claim RRHH (`esRrhhOperativo`) | G3 *(opcional)* | Bypass **G1** y **G2** sobre **otros**; **G6** guardar/enviar plan OK · **G4 self-override sigue bloqueado** (política G4 + tests) |
+
+| Alias                   | Rol esperado                                                 | Uso en smoke                      | Expectativa motor                                                                                                                  |
+| ----------------------- | ------------------------------------------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Jefe_Sala**           | Jefe · `tiene_subordinados` · nivel **>** subordinado en GDT | G1, G2 (caso feliz opcional), G1b | Override subordinado con jerarquía; en plan HABILITADO sin urgencia → bloqueo G1; con urgencia → OK                                |
+| **Medico_Planta**       | Agente · **sin** `tiene_subordinados` · nivel bajo           | G4, G6                            | Bloqueos G4/G6; no usar para validar “puede todo”                                                                                  |
+| **Administrativo_RRHH** | Claim RRHH (`esRrhhOperativo`)                               | G3 *(opcional)*                   | Bypass **G1** y **G2** sobre **otros**; **G6** guardar/enviar plan OK · **G4 self-override sigue bloqueado** (política G4 + tests) |
+
 
 **Hallazgo vs política:** si RRHH esperaba editar **su propia** teoría, es **rechazo esperado** (`TITULAR_NO_PUEDE_EDITAR_PROPIA_TEORIA`), no bug.
 
@@ -344,36 +382,42 @@ Sustituir por **cuenta portal + DNI** reales al ejecutar; niveles **10 / 5** = `
 
 Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` · día **laborable con turno** (ej. MOSTO **13** documentado en smokes previos). Plan: **Plan turno servicio** mismo GDT/mes.
 
-| # | Test | Actor | Pasos | Pass |
-|---|------|-------|-------|------|
-| **G4** | Self-override | **Medico_Planta** | Gestión turno / override **sobre sí mismo** (`per_*` titular = target) | Mensaje/código `TITULAR_NO_PUEDE_EDITAR_PROPIA_TEORIA` · sin persistir |
-| **G2** | Jerarquía | **Jefe_Sala** | Override sobre colega **nivel ≥** en el **mismo GDT** *o* intento sobre agente cuya op no cumple superioridad (ej. par jefe/jefe si existen) | `NO_ES_SUPERIOR_JERARQUICO` |
-| **G1a** | Plan habilitado | **Jefe_Sala** | Plan **HABILITADO** · override sobre subordinado **sin** marcar urgencia | `PLAN_HABILITADO_REQUIERE_URGENCIA` |
-| **G1b** | Urgencia | **Jefe_Sala** | Mismo día/agente · marcar **urgencia operativa** + motivo (modal) | **Permitido** (UI + guardado) |
-| **G6** | Plan mensual | **Medico_Planta** | Plan jun-26 · **Guardar** / **Enviar a aprobación** | Botón deshabilitado o `SOLO_JEFE_O_RRHH_PUEDE_EDITAR_PLAN` |
+
+| #       | Test            | Actor             | Pasos                                                                                                                                        | Pass                                                                   |
+| ------- | --------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| **G4**  | Self-override   | **Medico_Planta** | Gestión turno / override **sobre sí mismo** (`per_*` titular = target)                                                                       | Mensaje/código `TITULAR_NO_PUEDE_EDITAR_PROPIA_TEORIA` · sin persistir |
+| **G2**  | Jerarquía       | **Jefe_Sala**     | Override sobre colega **nivel ≥** en el **mismo GDT** *o* intento sobre agente cuya op no cumple superioridad (ej. par jefe/jefe si existen) | `NO_ES_SUPERIOR_JERARQUICO`                                            |
+| **G1a** | Plan habilitado | **Jefe_Sala**     | Plan **HABILITADO** · override sobre subordinado **sin** marcar urgencia                                                                     | `PLAN_HABILITADO_REQUIERE_URGENCIA`                                    |
+| **G1b** | Urgencia        | **Jefe_Sala**     | Mismo día/agente · marcar **urgencia operativa** + motivo (modal)                                                                            | **Permitido** (UI + guardado)                                          |
+| **G6**  | Plan mensual    | **Medico_Planta** | Plan jun-26 · **Guardar** / **Enviar a aprobación**                                                                                          | Botón deshabilitado o `SOLO_JEFE_O_RRHH_PUEDE_EDITAR_PLAN`             |
+
 
 **Opcional G3:** **Administrativo_RRHH** · plan HABILITADO · override sobre LOKITO **sin** urgencia → **debe permitir** (contrasta con G1a).
 
 ### Registro de resultados (completar operador)
 
-| Test | Fecha | Cuenta (alias) | `per_*` / uid | Resultado | Evidencia / notas |
-|------|-------|----------------|---------------|-----------|-------------------|
-| G4 | 2026-06-08 | MOSTO + CHAPARRO | self en grilla | ☑ OK ☐ Falla | MOSTO día 13 · CHAPARRO día 1 jefe sin gestionar |
-| G2 | 2026-06-08 | Jefe_Sala | MOSTO día 9 + motor | ☑ OK ☐ Falla | UI feliz · negativo vía `test:us13-functions` |
-| G1a | 2026-06-08 | Jefe_Sala (CHAPARRO) | LOKITO · día 10 | ☑ OK ☐ Falla | Prod · aviso plan habilitado · sin guardado sin urgencia |
-| G1b | 2026-06-08 | Jefe_Sala (CHAPARRO) | LOKITO · 2026-06-02 · flujo C | ☑ OK ☐ Falla | Urgencia + motivo · «Agregar a cambios» OK · sin guardar |
-| G6 | | | | ☐ OK ☐ Falla | |
-| G3 opt. | | | | ☐ OK ☐ Falla | |
+
+| Test    | Fecha      | Cuenta (alias)       | `per_*` / uid                 | Resultado    | Evidencia / notas                                        |
+| ------- | ---------- | -------------------- | ----------------------------- | ------------ | -------------------------------------------------------- |
+| G4      | 2026-06-08 | MOSTO + CHAPARRO     | self en grilla                | ☑ OK ☐ Falla | MOSTO día 13 · CHAPARRO día 1 jefe sin gestionar         |
+| G2      | 2026-06-08 | Jefe_Sala            | MOSTO día 9 + motor           | ☑ OK ☐ Falla | UI feliz · negativo vía `test:us13-functions`            |
+| G1a     | 2026-06-08 | Jefe_Sala (CHAPARRO) | LOKITO · día 10               | ☑ OK ☐ Falla | Prod · aviso plan habilitado · sin guardado sin urgencia |
+| G1b     | 2026-06-08 | Jefe_Sala (CHAPARRO) | LOKITO · 2026-06-02 · flujo C | ☑ OK ☐ Falla | Urgencia + motivo · «Agregar a cambios» OK · sin guardar |
+| G6      |            |                      |                               | ☐ OK ☐ Falla |                                                          |
+| G3 opt. |            |                      |                               | ☐ OK ☐ Falla |                                                          |
+
 
 **Si falla:** no cambiar código aún · clasificar **dato HLG** (Nivel 1) vs **lógica** (Nivel 2 rollback) · anotar en tabla.
 
 ### 3. Contingencia (rollback)
 
-| Nivel | Cuándo | Acción |
-|-------|--------|--------|
-| **1 — Datos (recomendado)** | Falso positivo G2 (jefe legítimo bloqueado) | Ajustar `nivel_jerarquico` en **HLG vigente** para el **GDT de la operación** (sin redeploy) |
-| **2 — Rollback** | Regresión de código / muchos falsos positivos | Firebase Console → **Functions**: revisión anterior · **Hosting**: release anterior |
-| **3 — Emergencia** | Guardia / operación crítica inminente | `OPEN_ACCESS_TEMP=true` en **ambas** copias de `runtimeFlags` + redeploy functions (**última ratio**; bypassa overrides y planes) |
+
+| Nivel                       | Cuándo                                        | Acción                                                                                                                            |
+| --------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **1 — Datos (recomendado)** | Falso positivo G2 (jefe legítimo bloqueado)   | Ajustar `nivel_jerarquico` en **HLG vigente** para el **GDT de la operación** (sin redeploy)                                      |
+| **2 — Rollback**            | Regresión de código / muchos falsos positivos | Firebase Console → **Functions**: revisión anterior · **Hosting**: release anterior                                               |
+| **3 — Emergencia**          | Guardia / operación crítica inminente         | `OPEN_ACCESS_TEMP=true` en **ambas** copias de `runtimeFlags` + redeploy functions (**última ratio**; bypassa overrides y planes) |
+
 
 **Fase A — criterios de arranque (TDD)** — histórico, código ✅
 
@@ -385,51 +429,59 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 ## CIERRE US-6 — teoría pendiente lazy (escenario G) (2026-06-08)
 
-| Qué | Dónde / evidencia |
-|-----|-------------------|
-| **Escenario G** | Licencia visible + fondo neutro/gris + **⏳** tooltip *«Teoría pendiente de cálculo»* |
-| **Util** | `grillaMesGsoHints.js` — `evaluarTeoriaPendienteLazyCelda`, `COPY_TEORIA_PENDIENTE` |
-| **Chip** | `grillaTurnosVisual.js` — variante `teoriaPendiente`; `varianteCeldaOperativa` prioriza sobre `licencia` |
-| **UI grilla** | `GrillaMesEquipoTabla.jsx`, `GrillaMesTitularCalendario.jsx`, leyenda `GrillaMesLicenciasPanel.jsx` |
-| **Modal** | `DiaGrillaDetalleModal.jsx` — bloque gris ⏳ |
-| **Tests** | `grillaMesGsoHints.test.js` (US-6) — vitest ✅ |
-| **Commit** | `ccc1040` — `feat(gso): US-6 US-7 US-11 teoria pendiente lazy hints y toasts sector` |
-| **Tag / deploy** | `v2.6.3-gso-us6` · https://portal-hospital-v2.web.app — 2026-06-08 |
+
+| Qué              | Dónde / evidencia                                                                                        |
+| ---------------- | -------------------------------------------------------------------------------------------------------- |
+| **Escenario G**  | Licencia visible + fondo neutro/gris + **⏳** tooltip *«Teoría pendiente de cálculo»*                     |
+| **Util**         | `grillaMesGsoHints.js` — `evaluarTeoriaPendienteLazyCelda`, `COPY_TEORIA_PENDIENTE`                      |
+| **Chip**         | `grillaTurnosVisual.js` — variante `teoriaPendiente`; `varianteCeldaOperativa` prioriza sobre `licencia` |
+| **UI grilla**    | `GrillaMesEquipoTabla.jsx`, `GrillaMesTitularCalendario.jsx`, leyenda `GrillaMesLicenciasPanel.jsx`      |
+| **Modal**        | `DiaGrillaDetalleModal.jsx` — bloque gris ⏳                                                              |
+| **Tests**        | `grillaMesGsoHints.test.js` (US-6) — vitest ✅                                                            |
+| **Commit**       | `ccc1040` — `feat(gso): US-6 US-7 US-11 teoria pendiente lazy hints y toasts sector`                     |
+| **Tag / deploy** | `v2.6.3-gso-us6` · [https://portal-hospital-v2.web.app](https://portal-hospital-v2.web.app) — 2026-06-08 |
+
 
 ---
 
 ## CIERRE US-7 — licencia en franco (escenario D) (2026-06-08)
 
-| Qué | Dónde / evidencia |
-|-----|-------------------|
-| **Hint ℹ️** | *«Licencia solapada en franco»* con F + código licencia |
-| **Util** | `evaluarLicenciaEnFrancoCelda` en `grillaMesGsoHints.js` |
-| **UI** | Badges celda equipo/titular + bloque modal |
-| **QA manual** | ✅ Día 5 jun-26 MOSTO — LAO sobre franco |
-| **Commit / tag** | `ccc1040` · `v2.6.3-gso-us6` |
+
+| Qué              | Dónde / evidencia                                        |
+| ---------------- | -------------------------------------------------------- |
+| **Hint ℹ️**      | *«Licencia solapada en franco»* con F + código licencia  |
+| **Util**         | `evaluarLicenciaEnFrancoCelda` en `grillaMesGsoHints.js` |
+| **UI**           | Badges celda equipo/titular + bloque modal               |
+| **QA manual**    | ✅ Día 5 jun-26 MOSTO — LAO sobre franco                  |
+| **Commit / tag** | `ccc1040` · `v2.6.3-gso-us6`                             |
+
 
 ---
 
 ## CIERRE US-11 — toasts materialización sector (2026-06-08)
 
-| Qué | Dónde / evidencia |
-|-----|-------------------|
-| **Antes** | *«Sector sincronizado (N agente-mes).»* |
-| **Ahora** | *«Turno teórico recalculado al vuelo (N agente-mes en el sector).»* — alineado a copy titular lazy |
-| **Util** | `grillaMaterializacionToast.js` — `mensajeToastMaterializacionGrupo` |
-| **Hook** | `useGrillaMesVista.js` — listado equipo/sector |
-| **QA manual** | ✅ Toast tras materializar grupo jun-26 Sala |
-| **Commit / tag** | `ccc1040` · `v2.6.3-gso-us6` |
+
+| Qué              | Dónde / evidencia                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------------- |
+| **Antes**        | *«Sector sincronizado (N agente-mes).»*                                                            |
+| **Ahora**        | *«Turno teórico recalculado al vuelo (N agente-mes en el sector).»* — alineado a copy titular lazy |
+| **Util**         | `grillaMaterializacionToast.js` — `mensajeToastMaterializacionGrupo`                               |
+| **Hook**         | `useGrillaMesVista.js` — listado equipo/sector                                                     |
+| **QA manual**    | ✅ Toast tras materializar grupo jun-26 Sala                                                        |
+| **Commit / tag** | `ccc1040` · `v2.6.3-gso-us6`                                                                       |
+
 
 ---
 
 ## CIERRE SESIÓN — GSO UX/copy + US-8 (2026-06-06)
 
-| Bloque | Estado | Commits / deploy |
-|--------|--------|------------------|
-| **US-4 + US-5** | ✅ QA + hosting | `dbc9fc5` · `6119285` |
-| **US-8** | ✅ QA + hosting | `4dcd9b9` · `5755b42` |
+
+| Bloque              | Estado                       | Commits / deploy      |
+| ------------------- | ---------------------------- | --------------------- |
+| **US-4 + US-5**     | ✅ QA + hosting               | `dbc9fc5` · `6119285` |
+| **US-8**            | ✅ QA + hosting               | `4dcd9b9` · `5755b42` |
 | **Smoke US-3 68-B** | ✅ (sesión previa, revertido) | `4394055` · `2669503` |
+
 
 **Entregables sesión**
 
@@ -440,7 +492,7 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 **Pausa — no iniciado en código**
 
-- **US-6:** escenario G — celda ⏳ *«Teoría pendiente de cálculo»* con licencia visible (explicado en chat; ver §escenario G en [`CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md`](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md)).
+- **US-6:** escenario G — celda ⏳ *«Teoría pendiente de cálculo»* con licencia visible (explicado en chat; ver §escenario G en `[CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md](./CRITERIOS_ACEPTACION_GSO_CONFLICTOS_CAPAS_V2.md)`).
 - **US-7, US-11:** backlog P2 sin cambios.
 
 **QA piloto validado**
@@ -454,37 +506,41 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 ## CIERRE US-8 — mes cerrado / solo lectura (2026-06-06)
 
-| Qué | Dónde / evidencia |
-|-----|-------------------|
-| **Escenario H / P8** | Licencia visible + 🔒 en acciones de edición de turno |
-| **Util** | `grillaGsoSoloLectura.js` — `evaluarSoloLecturaCeldaGso`, `COPY_BADGE_SOLO_LECTURA_GSO`, `soloLecturaDesdeGsoEscrituraApi` |
-| **Celda** | Badge 🔒 en `GrillaMesEquipoTabla` y `GrillaMesTitularCalendario` cuando `!gsoPermiteEscritura` |
-| **Modal día** | `DiaGrillaDetalleModal` — bloque 🔒 + sin botón gestionar turno |
-| **Wizard turno** | `GestionTurnoDiaShell` — gate solo lectura (sin wizard) |
-| **Flujos A/B/C** | `ModalCoberturaParcial`, `ModalCambioTurnoPropio`, `ModalTurnoAdicional` — aviso + submit deshabilitado vía `gso_escritura` API |
-| **Banner grilla** | `GrillaMesLicenciasPanel` — copy acta + leyenda 🔒 |
-| **Tests** | `grillaGsoSoloLectura.test.js` (6) — vitest ✅ |
-| **QA manual** | ✅ RRHH MOSTO — tarjeta mayo Sala *«consulta y gestión RRHH»* · jefe M-1 🔒 sin edición |
-| **Commit** | `4dcd9b9` — `feat(gso): cerrar US-8 mes cerrado badge y gates modales turno` |
-| **Deploy** | hosting https://portal-hospital-v2.web.app — 2026-06-06 |
+
+| Qué                  | Dónde / evidencia                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Escenario H / P8** | Licencia visible + 🔒 en acciones de edición de turno                                                                           |
+| **Util**             | `grillaGsoSoloLectura.js` — `evaluarSoloLecturaCeldaGso`, `COPY_BADGE_SOLO_LECTURA_GSO`, `soloLecturaDesdeGsoEscrituraApi`      |
+| **Celda**            | Badge 🔒 en `GrillaMesEquipoTabla` y `GrillaMesTitularCalendario` cuando `!gsoPermiteEscritura`                                 |
+| **Modal día**        | `DiaGrillaDetalleModal` — bloque 🔒 + sin botón gestionar turno                                                                 |
+| **Wizard turno**     | `GestionTurnoDiaShell` — gate solo lectura (sin wizard)                                                                         |
+| **Flujos A/B/C**     | `ModalCoberturaParcial`, `ModalCambioTurnoPropio`, `ModalTurnoAdicional` — aviso + submit deshabilitado vía `gso_escritura` API |
+| **Banner grilla**    | `GrillaMesLicenciasPanel` — copy acta + leyenda 🔒                                                                              |
+| **Tests**            | `grillaGsoSoloLectura.test.js` (6) — vitest ✅                                                                                   |
+| **QA manual**        | ✅ RRHH MOSTO — tarjeta mayo Sala *«consulta y gestión RRHH»* · jefe M-1 🔒 sin edición                                          |
+| **Commit**           | `4dcd9b9` — `feat(gso): cerrar US-8 mes cerrado badge y gates modales turno`                                                    |
+| **Deploy**           | hosting [https://portal-hospital-v2.web.app](https://portal-hospital-v2.web.app) — 2026-06-06                                   |
+
 
 ---
 
 ## CIERRE US-4 + US-5 — hints GSO UX/copy (2026-06-06)
 
-| Qué | Dónde / evidencia |
-|-----|-------------------|
-| **US-4 (E)** | Badge **🔗** + tooltip *«Licencia gestionada en otro sector ({nombre})»* cuando `grupo_trabajo_id_ancla` ≠ `gdt` del `vis_*` |
+
+| Qué                 | Dónde / evidencia                                                                                                                                                                            |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **US-4 (E)**        | Badge **🔗** + tooltip *«Licencia gestionada en otro sector ({nombre})»* cuando `grupo_trabajo_id_ancla` ≠ `gdt` del `vis_*`                                                                 |
 | **US-5 (F / Q3-2)** | Badge **📅** + copy *«Sin dotación en este grupo desde el {fecha}. Licencias del período anterior conservadas.»* en celdas post-purge / `no_laborable` con licencia, o día > `vigente_hasta` |
-| **Util compartido** | `grillaMesGsoHints.js` — `evaluarImputacionExternaCelda`, `evaluarPostPurgeHlgCelda`, `copyPostPurgeHlg` |
-| **UI grilla** | `GrillaMesEquipoTabla.jsx`, `GrillaMesTitularCalendario.jsx`, `grillaMesCellUtils.js` (tooltip línea) |
-| **UI avisos** | `GrillaMesSinDotacionAviso.jsx`, `GrillaTarjetaGrupoPeriodo.jsx`, `GrillaMesLicenciasPanel.jsx` (leyenda 🔗 📅) |
-| **Modal** | `DiaGrillaDetalleModal.jsx` — bloques informativos sky/ámbar US-4 y US-5 |
-| **Tests** | `grillaMesGsoHints.test.js` (5) · `grillaMesCellUtils.test.js` (4) — vitest ✅ |
-| **Limitación** | Días fuera de tramo HLg (`diaFueraTramoHlg` → celda vacía) no muestran licencias aunque existan en `vis_*` — sin cambio backend en esta iteración |
-| **QA manual** | ✅ `sol_01KT3ZG…` día 11 jun-26 — Sala 🔗 *Oficina PERSONAL* · Oficina 📅 post-purge |
-| **Commit** | `dbc9fc5` — `feat(gso): cerrar US-4 y US-5 hints fan-out y post-purge HLg` |
-| **Deploy** | hosting https://portal-hospital-v2.web.app — 2026-06-06 |
+| **Util compartido** | `grillaMesGsoHints.js` — `evaluarImputacionExternaCelda`, `evaluarPostPurgeHlgCelda`, `copyPostPurgeHlg`                                                                                     |
+| **UI grilla**       | `GrillaMesEquipoTabla.jsx`, `GrillaMesTitularCalendario.jsx`, `grillaMesCellUtils.js` (tooltip línea)                                                                                        |
+| **UI avisos**       | `GrillaMesSinDotacionAviso.jsx`, `GrillaTarjetaGrupoPeriodo.jsx`, `GrillaMesLicenciasPanel.jsx` (leyenda 🔗 📅)                                                                              |
+| **Modal**           | `DiaGrillaDetalleModal.jsx` — bloques informativos sky/ámbar US-4 y US-5                                                                                                                     |
+| **Tests**           | `grillaMesGsoHints.test.js` (5) · `grillaMesCellUtils.test.js` (4) — vitest ✅                                                                                                                |
+| **Limitación**      | Días fuera de tramo HLg (`diaFueraTramoHlg` → celda vacía) no muestran licencias aunque existan en `vis_*` — sin cambio backend en esta iteración                                            |
+| **QA manual**       | ✅ `sol_01KT3ZG…` día 11 jun-26 — Sala 🔗 *Oficina PERSONAL* · Oficina 📅 post-purge                                                                                                          |
+| **Commit**          | `dbc9fc5` — `feat(gso): cerrar US-4 y US-5 hints fan-out y post-purge HLg`                                                                                                                   |
+| **Deploy**          | hosting [https://portal-hospital-v2.web.app](https://portal-hospital-v2.web.app) — 2026-06-06                                                                                                |
+
 
 **Última actualización índice:** 2026-06-06 — US-4/US-5 cerrados (QA + deploy).
 
@@ -492,18 +548,20 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 ## CIERRE SMOKE US-3 — 68-B horas + reconciliación (2026-06-06)
 
-| Qué | Dónde / evidencia |
-|-----|-------------------|
-| **Objetivo** | Validar que US-3 es **agnóstico** a unidad horas (`cfg_uma_horas`) y a `nivel_ocupacion_dia_id` (68-B piloto = `cfg_nod_exclusivo`) |
-| **Script** | `scripts/smoke-us3-fanout-68b-dev.mjs` · `npm run smoke:us3-fanout-68b` |
-| **Piloto** | MOSTO `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ` · Sala `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · **2026-06-13** (turno M) |
-| **Paso 1** | Fan-out smoke `sol_SMOKE68B_US3_DIA13` → chip **68-B** sobre turno M · `teoria_ref` capturada en proyección |
-| **Paso 2** | Override `asi_*.overrides_turno` reemplazo **T** + `materializarTurnoTeoricoDia` (no patch directo `vis_*` — se revierte con `materializarGrupoMes` al listar grilla) |
-| **UI validada** | Celda: T + chip 68-B + **⚠️** · Modal: bloque ámbar US-3 + acciones US-14 |
-| **Fix UI** | `DiaGrillaDetalleModal.jsx` — no llama resumen si `solicitud_id` no es ULID real (evita 403 smoke) · `GrillaMesEquipoTabla.jsx` — badge ⚠️ `amber-700` · **hosting deploy 2026-06-06** |
-| **Commit** | `4394055` — `feat(gso): smoke US-3 68-B horas y fixes UI reconciliacion` |
-| **Limpieza** | `--modo=revert --apply` + `--modo=restore-turno --apply` → día 13 vuelve a **M** sin evento smoke |
-| **Lección** | Portero = gate alta (`depende_rda`) · Auditor = US-3 post-evento (`teoria_ref` vs piso vigente) |
+
+| Qué             | Dónde / evidencia                                                                                                                                                                      |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Objetivo**    | Validar que US-3 es **agnóstico** a unidad horas (`cfg_uma_horas`) y a `nivel_ocupacion_dia_id` (68-B piloto = `cfg_nod_exclusivo`)                                                    |
+| **Script**      | `scripts/smoke-us3-fanout-68b-dev.mjs` · `npm run smoke:us3-fanout-68b`                                                                                                                |
+| **Piloto**      | MOSTO `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ` · Sala `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · **2026-06-13** (turno M)                                                                              |
+| **Paso 1**      | Fan-out smoke `sol_SMOKE68B_US3_DIA13` → chip **68-B** sobre turno M · `teoria_ref` capturada en proyección                                                                            |
+| **Paso 2**      | Override `asi_*.overrides_turno` reemplazo **T** + `materializarTurnoTeoricoDia` (no patch directo `vis_*` — se revierte con `materializarGrupoMes` al listar grilla)                  |
+| **UI validada** | Celda: T + chip 68-B + **⚠️** · Modal: bloque ámbar US-3 + acciones US-14                                                                                                              |
+| **Fix UI**      | `DiaGrillaDetalleModal.jsx` — no llama resumen si `solicitud_id` no es ULID real (evita 403 smoke) · `GrillaMesEquipoTabla.jsx` — badge ⚠️ `amber-700` · **hosting deploy 2026-06-06** |
+| **Commit**      | `4394055` — `feat(gso): smoke US-3 68-B horas y fixes UI reconciliacion`                                                                                                               |
+| **Limpieza**    | `--modo=revert --apply` + `--modo=restore-turno --apply` → día 13 vuelve a **M** sin evento smoke                                                                                      |
+| **Lección**     | Portero = gate alta (`depende_rda`) · Auditor = US-3 post-evento (`teoria_ref` vs piso vigente)                                                                                        |
+
 
 **Última actualización índice:** 2026-06-06 — smoke 68-B + US-3 cerrado y revertido.
 
@@ -511,20 +569,22 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 ## CIERRE US-15 — fichada en celda por rol (2026-06-06)
 
-| Qué | Dónde / evidencia |
-|-----|-------------------|
-| **Contrato Q9-3** | RRHH: horarios en modal + badge P/A · Jefe: solo `fichada_presencia` (P/A) sin `fichadas_reales` · Titular: sin fichada |
-| **Util compartido** | `shared/utils/grillaFichadaPresencia.js` — presencia agregada + contradicción fichada ↔ teoría |
-| **Sanitize API jefe** | `grillaVisSanitizeGso.js` — quita capa 4 cruda; expone `fichada_presencia` |
-| **Q9-4 B** | `grillaTeoriaDesalineacion.js` — ⚠️ si fichada contradice teoría **con licencia en celda** |
-| **UI** | `GrillaFichadaPresenciaBadge.jsx` · `DiaGrillaDetalleModal.jsx` (bloque Fichada/Asistencia por rol) |
-| **Deploy prod** | functions + hosting · https://portal-hospital-v2.web.app — **2026-06-06** |
-| **Smoke visual prod** | Grilla igual que antes (sin capa 4 en `vis_*` → sin badges P/A; comportamiento esperado) |
-| **Guard capa 4** | Sin `fichadas_reales`/`fichadas`/`capa_realidad` en celda → no se infiere ausente (evita ruido pre-reloj) |
-| **Tests** | `grillaFichadaPresencia.test.js` · `grillaVisSanitizeGso.test.js` · `grillaTeoriaDesalineacion.test.js` |
+
+| Qué                       | Dónde / evidencia                                                                                                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Contrato Q9-3**         | RRHH: horarios en modal + badge P/A · Jefe: solo `fichada_presencia` (P/A) sin `fichadas_reales` · Titular: sin fichada                                                 |
+| **Util compartido**       | `shared/utils/grillaFichadaPresencia.js` — presencia agregada + contradicción fichada ↔ teoría                                                                          |
+| **Sanitize API jefe**     | `grillaVisSanitizeGso.js` — quita capa 4 cruda; expone `fichada_presencia`                                                                                              |
+| **Q9-4 B**                | `grillaTeoriaDesalineacion.js` — ⚠️ si fichada contradice teoría **con licencia en celda**                                                                              |
+| **UI**                    | `GrillaFichadaPresenciaBadge.jsx` · `DiaGrillaDetalleModal.jsx` (bloque Fichada/Asistencia por rol)                                                                     |
+| **Deploy prod**           | functions + hosting · [https://portal-hospital-v2.web.app](https://portal-hospital-v2.web.app) — **2026-06-06**                                                         |
+| **Smoke visual prod**     | Grilla igual que antes (sin capa 4 en `vis_*` → sin badges P/A; comportamiento esperado)                                                                                |
+| **Guard capa 4**          | Sin `fichadas_reales`/`fichadas`/`capa_realidad` en celda → no se infiere ausente (evita ruido pre-reloj)                                                               |
+| **Tests**                 | `grillaFichadaPresencia.test.js` · `grillaVisSanitizeGso.test.js` · `grillaTeoriaDesalineacion.test.js`                                                                 |
 | **Próximo paso (script)** | `npm run smoke:us15-fichada-presencia -- --dni=… --gdt=… --fecha=YYYY-MM-DD --modo=presente` (dry-run) · `--apply` para inyectar · `--modo=revert --apply` para limpiar |
-| **RFC HLG** | ⏸ [`RFC_HLG_COBERTURA_HLC_WARNING_V2.md`](./RFC_HLG_COBERTURA_HLC_WARNING_V2.md) — pendiente aprobación RRHH (`VAL-HLG-W004`) |
-| **Siguiente backlog GSO** | ~~US-4, US-5~~ ✅ · **US-8**… — ver [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) §2.2 |
+| **RFC HLG**               | ⏸ `[RFC_HLG_COBERTURA_HLC_WARNING_V2.md](./RFC_HLG_COBERTURA_HLC_WARNING_V2.md)` — pendiente aprobación RRHH (`VAL-HLG-W004`)                                           |
+| **Siguiente backlog GSO** | ~~US-4, US-5~~ ✅ · **US-8**… — ver `[PENDIENTES_IMPLEMENTACION_V2.md](./PENDIENTES_IMPLEMENTACION_V2.md)` §2.2                                                          |
+
 
 **Última actualización índice:** 2026-06-06 — cierre US-15 registrado.
 
@@ -532,16 +592,18 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 ## CIERRE US-3 A + US-14 — reconciliación teoría post-licencia (2026-06-06)
 
-| Qué | Dónde / evidencia |
-|-----|-------------------|
-| **Badge ⚠️** | `teoria_ref` en fan-out MDC + backfill en rematerialización; comparación en grilla equipo/titular |
-| **Modal US-14** | `DiaGrillaDetalleModal.jsx` — bloque ámbar + 3 acciones (bandeja, ajuste turno, derivar plan) |
-| **Util compartido** | `shared/utils/grillaTeoriaDesalineacion.js` |
-| **Deploy prod** | functions + hosting · rematerialización grupos con licencias jun/jul-26 |
-| **Smoke E2E** | Override día 27 Sala Internación (`M+T` → `T`) → ⚠️ + modal validado en UI → **revertido** |
-| **Smoke 68-B horas** | Día 13 jun-26 MOSTO — fan-out smoke + override T → ⚠️ + modal → **revertido** (sección arriba) |
-| **Tests** | `functions/test/grillaTeoriaDesalineacion.test.js` · `grillaMesEquipoDisplay.test.js` |
-| **Siguiente (sugerido)** | US-15 · RFC VAL-HLG-W004 |
+
+| Qué                      | Dónde / evidencia                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------- |
+| **Badge ⚠️**             | `teoria_ref` en fan-out MDC + backfill en rematerialización; comparación en grilla equipo/titular |
+| **Modal US-14**          | `DiaGrillaDetalleModal.jsx` — bloque ámbar + 3 acciones (bandeja, ajuste turno, derivar plan)     |
+| **Util compartido**      | `shared/utils/grillaTeoriaDesalineacion.js`                                                       |
+| **Deploy prod**          | functions + hosting · rematerialización grupos con licencias jun/jul-26                           |
+| **Smoke E2E**            | Override día 27 Sala Internación (`M+T` → `T`) → ⚠️ + modal validado en UI → **revertido**        |
+| **Smoke 68-B horas**     | Día 13 jun-26 MOSTO — fan-out smoke + override T → ⚠️ + modal → **revertido** (sección arriba)    |
+| **Tests**                | `functions/test/grillaTeoriaDesalineacion.test.js` · `grillaMesEquipoDisplay.test.js`             |
+| **Siguiente (sugerido)** | US-15 · RFC VAL-HLG-W004                                                                          |
+
 
 **Última actualización índice:** 2026-06-06 — cierre US-3/US-14 registrado.
 
@@ -549,13 +611,15 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 ## CIERRE US-17 — remediación (2026-06-06)
 
-| Qué | Dónde |
-|-----|--------|
-| **Acta cierre** | [`HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md`](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md) |
-| **Manifiesto R0–R4** | [`MANIFIESTO_REIMPACTO_INTEGRIDAD_PLAN_REGIMEN_2026.md`](./MANIFIESTO_REIMPACTO_INTEGRIDAD_PLAN_REGIMEN_2026.md) |
-| **Audit cierre** | `npm run audit:us17-planes-huecos` → 5 planes, **0 huecos** |
-| **Lista RRHH (histórico)** | [`reports/US17_LISTA_TRABAJO_RRHH_2026-06-05.md`](../reports/US17_LISTA_TRABAJO_RRHH_2026-06-05.md) |
-| **Siguiente (sugerido)** | ~~US-3 A + US-14~~ ✅ · ~~US-15~~ ✅ · smoke P/A script · RFC HLG ⏸ |
+
+| Qué                        | Dónde                                                                                                            |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Acta cierre**            | `[HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md](./HANDOFF_SESION_2026-06-06_CIERRE_US17_REMEDIACION.md)` |
+| **Manifiesto R0–R4**       | `[MANIFIESTO_REIMPACTO_INTEGRIDAD_PLAN_REGIMEN_2026.md](./MANIFIESTO_REIMPACTO_INTEGRIDAD_PLAN_REGIMEN_2026.md)` |
+| **Audit cierre**           | `npm run audit:us17-planes-huecos` → 5 planes, **0 huecos**                                                      |
+| **Lista RRHH (histórico)** | `[reports/US17_LISTA_TRABAJO_RRHH_2026-06-05.md](../reports/US17_LISTA_TRABAJO_RRHH_2026-06-05.md)`              |
+| **Siguiente (sugerido)**   | ~~US-3 A + US-14~~ ✅ · ~~US-15~~ ✅ · smoke P/A script · RFC HLG ⏸                                                |
+
 
 **Última actualización índice:** 2026-06-06 — cierre US-17 registrado (US-3/US-14 cerrados aparte arriba).
 
@@ -563,13 +627,15 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 ## Histórico — PAUSA post inventario US-17 (2026-06-05)
 
-| Qué | Dónde |
-|-----|--------|
-| **Handoff sesión** | [`HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md`](./HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md) |
-| **Inventario + severidad** | [`PLAN_VUELO_US17_INVENTARIO_PLANES.md`](./PLAN_VUELO_US17_INVENTARIO_PLANES.md) |
-| **Audit CLI** | `npm run audit:us17-planes-huecos` |
-| **master** | `352692b` (merge PR #3) |
-| **Siguiente (sugerido)** | Remediación RRHH pasivo 9/126 **o** código US-3 escenario A + US-14 |
+
+| Qué                        | Dónde                                                                                                |
+| -------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Handoff sesión**         | `[HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md](./HANDOFF_SESION_2026-06-05_PAUSA_US17_CIERRE.md)` |
+| **Inventario + severidad** | `[PLAN_VUELO_US17_INVENTARIO_PLANES.md](./PLAN_VUELO_US17_INVENTARIO_PLANES.md)`                     |
+| **Audit CLI**              | `npm run audit:us17-planes-huecos`                                                                   |
+| **master**                 | `352692b` (merge PR #3)                                                                              |
+| **Siguiente (sugerido)**   | Remediación RRHH pasivo 9/126 **o** código US-3 escenario A + US-14                                  |
+
 
 **Última actualización:** 2026-06-05 — pausa registrada (supersedida por cierre 2026-06-06).
 
@@ -577,75 +643,85 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 ## Histórico — CIERRE F-UX.3 — gestión turno A/B/C (implementación terminada)
 
-| Qué | Dónde |
-|-----|--------|
-| **Handoff completo** | [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) |
-| **Estado frontend F-UX.3** | ✅ Wizard A/B/C · modales · outbox v2 · banner por tarjeta grupo×mes · labels embebidos |
-| **Spec visual grilla (§12)** | ✅ UI `73d58cd` · consulta ligera callable desplegada |
-| **Registro documental F-UX.3** | [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) |
-| **RFC F4 (outbox + batch)** | [`RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md`](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md) · [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) |
-| **Branch trabajo** | `feat/epic-multi-hlg-fase1-execution` |
-| **Fase 6 backend batch v2** | ✅ A-BATCH + B-BATCH-1 + C-BATCH (`cambiosTurno.js` + worker v2) · deploy functions **2026-06-04** |
-| **QA batch prod** | ✅ Manual **4 aplicadas** + smokes dev |
-| **QA grilla prod** | ✅ Validado en grilla (hosting + functions 2026-06-04) |
-| **Push rama** | ✅ Sincronizar con `git pull` — ver handoff 2026-06-04 |
-| **Handoff sesión 2026-06-04** | [`HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md`](./HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md) |
 
-### Pendientes (resumen — detalle en [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md))
+| Qué                            | Dónde                                                                                                                                                             |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Handoff completo**           | `[HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md)`                                          |
+| **Estado frontend F-UX.3**     | ✅ Wizard A/B/C · modales · outbox v2 · banner por tarjeta grupo×mes · labels embebidos                                                                            |
+| **Spec visual grilla (§12)**   | ✅ UI `73d58cd` · consulta ligera callable desplegada                                                                                                              |
+| **Registro documental F-UX.3** | `[REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md)`                                                          |
+| **RFC F4 (outbox + batch)**    | `[RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md](./RFC_F4_AMPLIADO_FUX_GESTION_TURNO_V2.md)` · `[RFC_CACHE_LOCAL_ASISTENCIA_V2.md](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md)` |
+| **Branch trabajo**             | `feat/epic-multi-hlg-fase1-execution`                                                                                                                             |
+| **Fase 6 backend batch v2**    | ✅ A-BATCH + B-BATCH-1 + C-BATCH (`cambiosTurno.js` + worker v2) · deploy functions **2026-06-04**                                                                 |
+| **QA batch prod**              | ✅ Manual **4 aplicadas** + smokes dev                                                                                                                             |
+| **QA grilla prod**             | ✅ Validado en grilla (hosting + functions 2026-06-04)                                                                                                             |
+| **Push rama**                  | ✅ Sincronizar con `git pull` — ver handoff 2026-06-04                                                                                                             |
+| **Handoff sesión 2026-06-04**  | `[HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md](./HANDOFF_SESION_2026-06-04_CIERRE_FUX_BATCH_Y_DOCUMENTAL.md)`                                      |
 
-| Tipo | Ítems |
-|------|--------|
-| **Proceso** | PR → `master`, tag `v2.4.0-fux-gestion-turno`, QA formal §4.2 |
-| **Código P0** | GSO: US-9, US-1, US-16 (anti-blanco + habilitar plan) |
-| **Código P1** | GSO: US-3, US-10, US-14, US-8… · F3: T-05…T-09 |
-| **Opcional F-UX** | Horas RRHH post-C, validación A2 servidor |
 
-1. Abrir PR y merge → **`PR_EPIC_MULTI_HLG_FUX.md`** · compare: `master`…`feat/epic-multi-hlg-fase1-execution`
+### Pendientes (resumen — detalle en `[PENDIENTES_IMPLEMENTACION_V2.md](./PENDIENTES_IMPLEMENTACION_V2.md)`)
+
+
+| Tipo              | Ítems                                                         |
+| ----------------- | ------------------------------------------------------------- |
+| **Proceso**       | PR → `master`, tag `v2.4.0-fux-gestion-turno`, QA formal §4.2 |
+| **Código P0**     | GSO: US-9, US-1, US-16 (anti-blanco + habilitar plan)         |
+| **Código P1**     | GSO: US-3, US-10, US-14, US-8… · F3: T-05…T-09                |
+| **Opcional F-UX** | Horas RRHH post-C, validación A2 servidor                     |
+
+
+1. Abrir PR y merge → `**PR_EPIC_MULTI_HLG_FUX.md`** · compare: `master`…`feat/epic-multi-hlg-fase1-execution`
 2. Post-merge: tag `v2.4.0-fux-gestion-turno` (comandos en release notes F-UX)
-3. Siguiente sprint código: §2 y §8 de **`PENDIENTES_IMPLEMENTACION_V2.md`**
+3. Siguiente sprint código: §2 y §8 de `**PENDIENTES_IMPLEMENTACION_V2.md**`
 
 **Última actualización:** registro backlog implementación — 2026-06-04
 
 ---
 
 > **Sesión previa 2026-06-02** · F3 T-02/T-03/T-04/T-08 + **F-UX.2** fichadas en grilla — **validado F:2 prod**.  
-> Handoff pausa: [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) · GSO: [`HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md`](./HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md).
+> Handoff pausa: `[HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md)` · GSO: `[HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md](./HANDOFF_SESION_2026-06-01_PAUSA_GSO_CIERRE_PERIODO.md)`.
 
 ## Contexto F4 (histórico — reemplazado por bloque arriba)
 
-| Qué | Dónde |
-|-----|--------|
-| **Handoff completo (propuesta textual)** | [`HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md`](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md) |
-| **Estado** | ~~Spec producto **cerrada**~~ → **frontend F-UX.3 cerrado** 2026-06-03 |
-| **RFC F4 (outbox)** | [`RFC_CACHE_LOCAL_ASISTENCIA_V2.md`](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md) |
-| **PR merge épica** | `master` ← `feat/epic-multi-hlg-fase1-execution` · `gh auth login` pendiente |
-| **F4 backend** | ✅ batch v2 A/B/C (ver registro F-UX.3) |
-| **UI actual** | Wizard A/B/C + banner outbox v2 ✅ |
+
+| Qué                                      | Dónde                                                                                                                    |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Handoff completo (propuesta textual)** | `[HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md](./HANDOFF_SESION_2026-06-02_PAUSA_FUX_GESTION_TURNO_DIA.md)` |
+| **Estado**                               | ~~Spec producto **cerrada~~** → **frontend F-UX.3 cerrado** 2026-06-03                                                   |
+| **RFC F4 (outbox)**                      | `[RFC_CACHE_LOCAL_ASISTENCIA_V2.md](./RFC_CACHE_LOCAL_ASISTENCIA_V2.md)`                                                 |
+| **PR merge épica**                       | `master` ← `feat/epic-multi-hlg-fase1-execution` · `gh auth login` pendiente                                             |
+| **F4 backend**                           | ✅ batch v2 A/B/C (ver registro F-UX.3)                                                                                   |
+| **UI actual**                            | Wizard A/B/C + banner outbox v2 ✅                                                                                        |
+
 
 **Última actualización histórica:** F-UX gestión turno — spec cerrada §9 — 2026-06-03
 
 ## Contexto F4 (sesión previa mismo día)
 
-| Qué | Dónde |
-|-----|--------|
-| **Tag F3** | ✅ `v2.3.0-f3-turnos-compuestos` |
+
+| Qué                | Dónde                            |
+| ------------------ | -------------------------------- |
+| **Tag F3**         | ✅ `v2.3.0-f3-turnos-compuestos`  |
 | **Deploy prod F3** | ✅ Functions + hosting 2026-06-02 |
 
-| Campo | Valor |
-|-------|--------|
-| **Branch trabajo** | `feat/epic-multi-hlg-fase1-execution` (commit pausa GSO pendiente de tag) |
-| **master** | `25bc00c` — merge épica Multi-HLG + checkpoint grilla RRHH |
-| **Tag pre-ejecución** | `pre-ejecucion-v2` (docs); código funcional posterior en `942adcf` |
-| **Biblia** | [`PLAN_GRILLA_MULTI_HLG_V2.md`](./PLAN_GRILLA_MULTI_HLG_V2.md) |
-| **Handoff incidente Z** | [`HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md`](./HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md) |
-| **Producción** | https://portal-hospital-v2.web.app |
-| **Plan piloto** | `plt_01KSSPY2H5EZA925FQP4S1G2XW` · Sala `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` |
-| **Tag salvavidas** | `v2.2.0-pre-multi-hlg` |
-| **SSoT orquestación** | [`PLAN_CURSOR_ANALISIS_HLG_GRILLA.plan.md`](./PLAN_CURSOR_ANALISIS_HLG_GRILLA.plan.md) §15–22 |
-| **Manual borrador** | [`MANUAL_CAPAS_ORQUESTACION_BORRADOR.md`](./MANUAL_CAPAS_ORQUESTACION_BORRADOR.md) |
-| **Coherencia doc ↔ código** | [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](./ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md) |
-| **Roadmap sucesivo F0–F4** | [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md) |
-| **Handoff agente implementador** | [`HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md`](./HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md) |
+
+
+| Campo                            | Valor                                                                                                                    |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Branch trabajo**               | `feat/epic-multi-hlg-fase1-execution` (commit pausa GSO pendiente de tag)                                                |
+| **master**                       | `25bc00c` — merge épica Multi-HLG + checkpoint grilla RRHH                                                               |
+| **Tag pre-ejecución**            | `pre-ejecucion-v2` (docs); código funcional posterior en `942adcf`                                                       |
+| **Biblia**                       | `[PLAN_GRILLA_MULTI_HLG_V2.md](./PLAN_GRILLA_MULTI_HLG_V2.md)`                                                           |
+| **Handoff incidente Z**          | `[HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md](./HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md)` |
+| **Producción**                   | [https://portal-hospital-v2.web.app](https://portal-hospital-v2.web.app)                                                 |
+| **Plan piloto**                  | `plt_01KSSPY2H5EZA925FQP4S1G2XW` · Sala `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V`                                                 |
+| **Tag salvavidas**               | `v2.2.0-pre-multi-hlg`                                                                                                   |
+| **SSoT orquestación**            | `[PLAN_CURSOR_ANALISIS_HLG_GRILLA.plan.md](./PLAN_CURSOR_ANALISIS_HLG_GRILLA.plan.md)` §15–22                            |
+| **Manual borrador**              | `[MANUAL_CAPAS_ORQUESTACION_BORRADOR.md](./MANUAL_CAPAS_ORQUESTACION_BORRADOR.md)`                                       |
+| **Coherencia doc ↔ código**      | `[ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md](./ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md)`                       |
+| **Roadmap sucesivo F0–F4**       | `[ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md)`                                       |
+| **Handoff agente implementador** | `[HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md](./HANDOFF_AGENTE_IMPLEMENTACION_ROADMAP.md)`                                 |
+
 
 ---
 
@@ -655,17 +731,19 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 **Modelo mental:** capas 0→4 + GSO solo lectura. **Materializar** = solo capa 1, informado al usuario. **Purge** ≠ materializar.
 
-| Tema | Decisión cerrada |
-|------|------------------|
-| Ventana teórica fijo/rotativo | **Mes actual + mes siguiente**; día **5**: M+1 idempotente; días **1–4** altas HLg pueden adelantar M+1 |
-| Licencias — `fecha_desde` | Fin del **mes siguiente** (alineado a M+M+1) |
-| Licencias — `depende_rda` | Hábiles/corridos/calendario: OK. RDA: bloqueo si falta en **anclas** (`fecha_desde` / `fecha_hasta`) — **implementado** en gate (`942adcf`) |
-| LAO + cambio HLg | **Rodante:** solo capa 1; LAO intacta; reintegro con `gdt` vigente |
-| `vis` mínimo | MDC crea/merge; materialización añade `rda_*` en el **mismo** `vis_*` |
-| Cierre período | **Manual RRHH** (botón + callable) fase 1; Scheduler día 5 liquidación **diferido** |
-| Mes cerrado + licencias | **En trámite** en M-1: hasta aprobar/rechazar; **nuevas** en M-1: no |
-| HLg | Régimen en vigente **bloqueado**; cerrar (purge desde fin+1) o eliminar (desde fecha_inicio); doble OK |
-| Turnos mensuales | Usuario nuevo en plan existente → warning + plan **paralelo** solo para el/los nuevos |
+
+| Tema                          | Decisión cerrada                                                                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ventana teórica fijo/rotativo | **Mes actual + mes siguiente**; día **5**: M+1 idempotente; días **1–4** altas HLg pueden adelantar M+1                                     |
+| Licencias — `fecha_desde`     | Fin del **mes siguiente** (alineado a M+M+1)                                                                                                |
+| Licencias — `depende_rda`     | Hábiles/corridos/calendario: OK. RDA: bloqueo si falta en **anclas** (`fecha_desde` / `fecha_hasta`) — **implementado** en gate (`942adcf`) |
+| LAO + cambio HLg              | **Rodante:** solo capa 1; LAO intacta; reintegro con `gdt` vigente                                                                          |
+| `vis` mínimo                  | MDC crea/merge; materialización añade `rda_*` en el **mismo** `vis_*`                                                                       |
+| Cierre período                | **Manual RRHH** (botón + callable) fase 1; Scheduler día 5 liquidación **diferido**                                                         |
+| Mes cerrado + licencias       | **En trámite** en M-1: hasta aprobar/rechazar; **nuevas** en M-1: no                                                                        |
+| HLg                           | Régimen en vigente **bloqueado**; cerrar (purge desde fin+1) o eliminar (desde fecha_inicio); doble OK                                      |
+| Turnos mensuales              | Usuario nuevo en plan existente → warning + plan **paralelo** solo para el/los nuevos                                                       |
+
 
 **Dos procesos el día 5:** (1) materialización M+1 fijo/rotativo; (2) cierre liquidación M-1 — solo (2) diferido en auto.
 
@@ -673,46 +751,50 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 ## Checkpoint implementación (2026-06-01)
 
-| Etapa | Estado | Notas |
-|-------|--------|--------|
-| **F-UX.1** | ✅ Código | Menú RRHH, `/portal/rrhh/grilla-operativa`, selector sector |
-| **F0** (O-P0-4,1,7,5) | ✅ Código | Purge HLg, gate anclas, bulk sector, toasts |
-| **F1.1** Multi-HLG → master | ✅ Merge | `25bc00c` en `origin/master` |
-| **F1.3** cierre período | ✅ Prod | `cerrarPeriodoLiquidacion` + `reabrirPeriodoLiquidacion` |
-| **F1.4** UI cierre GSO | ✅ Prod | Tarjetas cerrado/sin dotación; modal compacto; sin selector RRHH |
-| **F1** núcleo prod | ✅ Smoke | Cierre período (3 `vis_*`) + purge HLg Sala; ver acta abajo |
-| **F1** manual QA | ✅ | A1–A5 + **B1–B5** GSO RRHH cerrados 2026-06-02 — handoff GSO |
-| **F1** deploy functions | ✅ | 2026-06-02 — `rrhhDeshabilitarHlg` + purge HLg (`resolveHastaPurgeTrasDeshabilitarHlg`) |
-| **F3 T-02** | ✅ Código | Zod + golden tests `npm run test:segmentos-contract` |
-| **F3 T-03** | ✅ Validado | Smoke seguro `smoke-materializar-turno-dia-dev.mjs` sin mutar régimen fijo |
-| **F3 T-04** | ✅ Parcial validado | `materializarDiaAfectado` en `cambiosTurno.js` + freeze `smoke-outbox-freeze-dev.mjs` (`ASI-PER-001`) |
-| **F3 T-08** | ✅ Validado | `fichadas_esperadas` bloques×2 + extras; `test:fichadas-esperadas` + `smoke:fichadas-esperadas` |
-| **F-UX.2** | ✅ Validado UI | Badge **F:2** en grilla/modal (planificado, fijo, rotativo); fix fallback horario sin `turno_id` en prod |
-| **Ticketera / HLg vigencia** | ✅ Prod | `a44b83f` — corte inclusivo (acta ticketera § abajo) |
-| **F2 O-P1-2** `materializarRango` | ✅ Código + wire HLg | `6a4db61` — alta M+M+1; deshabilitar inicio→corte |
-| **F2 2.1** metadata `vis_*` | ✅ Código + deploy parcial | `e349412` — laboral + GSO listado; ver handoff pausa |
-| **F2 O-P1-1** job día 5 | ✅ Prod | Scheduler + callable; smoke julio OK |
-| **F2 O-P1-2** feriado + toasts | ✅ Deploy | `rematerializarPostCalendario({ fecha_ymd })` + `grillaMaterializacionToast.js` |
-| **F2 O-P1-3** GSO M-1 solo lectura | ✅ Deploy | `grillaGsoSoloLectura.js` + hosting |
-| **F2 O-P1-4** plan usuario nuevo §19.6 | ✅ Deploy | banner + incorporación agentes |
-| **F2.6** resolverFijo D2 | ✅ Código | `Number(dia_semana)` + franco sin match |
-| **F2.7** rematerializar UI RRHH | ✅ Código | `RegimenesHorariosPage` + `CalendarioConfig` |
-| **Deploy producción** | ✅ Sesión 01/06 | Ver tabla deploy en [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md) |
-| **F3 T-05..T-07b** | ✅ Cerrado | T-05 consola/foco · T-06 auditoría RRHH · T-07 caché grilla · **T-07b** catálogo laboral — `master` `9a5875b` |
-| **F3 T-09** | ⏳ Pendiente | Guías + `helpContent` extendido |
-| **F3 cierre épica** | ✅ Núcleo | Piloto Sala validado · release notes · tag pendiente commit |
-| **F4 Outbox** | ✅ En rama (F-UX.3) | Ver [`REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md`](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md) · backlog: [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) |
+
+| Etapa                                  | Estado                    | Notas                                                                                                                                                                                          |
+| -------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **F-UX.1**                             | ✅ Código                  | Menú RRHH, `/portal/rrhh/grilla-operativa`, selector sector                                                                                                                                    |
+| **F0** (O-P0-4,1,7,5)                  | ✅ Código                  | Purge HLg, gate anclas, bulk sector, toasts                                                                                                                                                    |
+| **F1.1** Multi-HLG → master            | ✅ Merge                   | `25bc00c` en `origin/master`                                                                                                                                                                   |
+| **F1.3** cierre período                | ✅ Prod                    | `cerrarPeriodoLiquidacion` + `reabrirPeriodoLiquidacion`                                                                                                                                       |
+| **F1.4** UI cierre GSO                 | ✅ Prod                    | Tarjetas cerrado/sin dotación; modal compacto; sin selector RRHH                                                                                                                               |
+| **F1** núcleo prod                     | ✅ Smoke                   | Cierre período (3 `vis_*`) + purge HLg Sala; ver acta abajo                                                                                                                                    |
+| **F1** manual QA                       | ✅                         | A1–A5 + **B1–B5** GSO RRHH cerrados 2026-06-02 — handoff GSO                                                                                                                                   |
+| **F1** deploy functions                | ✅                         | 2026-06-02 — `rrhhDeshabilitarHlg` + purge HLg (`resolveHastaPurgeTrasDeshabilitarHlg`)                                                                                                        |
+| **F3 T-02**                            | ✅ Código                  | Zod + golden tests `npm run test:segmentos-contract`                                                                                                                                           |
+| **F3 T-03**                            | ✅ Validado                | Smoke seguro `smoke-materializar-turno-dia-dev.mjs` sin mutar régimen fijo                                                                                                                     |
+| **F3 T-04**                            | ✅ Parcial validado        | `materializarDiaAfectado` en `cambiosTurno.js` + freeze `smoke-outbox-freeze-dev.mjs` (`ASI-PER-001`)                                                                                          |
+| **F3 T-08**                            | ✅ Validado                | `fichadas_esperadas` bloques×2 + extras; `test:fichadas-esperadas` + `smoke:fichadas-esperadas`                                                                                                |
+| **F-UX.2**                             | ✅ Validado UI             | Badge **F:2** en grilla/modal (planificado, fijo, rotativo); fix fallback horario sin `turno_id` en prod                                                                                       |
+| **Ticketera / HLg vigencia**           | ✅ Prod                    | `a44b83f` — corte inclusivo (acta ticketera § abajo)                                                                                                                                           |
+| **F2 O-P1-2** `materializarRango`      | ✅ Código + wire HLg       | `6a4db61` — alta M+M+1; deshabilitar inicio→corte                                                                                                                                              |
+| **F2 2.1** metadata `vis_*`            | ✅ Código + deploy parcial | `e349412` — laboral + GSO listado; ver handoff pausa                                                                                                                                           |
+| **F2 O-P1-1** job día 5                | ✅ Prod                    | Scheduler + callable; smoke julio OK                                                                                                                                                           |
+| **F2 O-P1-2** feriado + toasts         | ✅ Deploy                  | `rematerializarPostCalendario({ fecha_ymd })` + `grillaMaterializacionToast.js`                                                                                                                |
+| **F2 O-P1-3** GSO M-1 solo lectura     | ✅ Deploy                  | `grillaGsoSoloLectura.js` + hosting                                                                                                                                                            |
+| **F2 O-P1-4** plan usuario nuevo §19.6 | ✅ Deploy                  | banner + incorporación agentes                                                                                                                                                                 |
+| **F2.6** resolverFijo D2               | ✅ Código                  | `Number(dia_semana)` + franco sin match                                                                                                                                                        |
+| **F2.7** rematerializar UI RRHH        | ✅ Código                  | `RegimenesHorariosPage` + `CalendarioConfig`                                                                                                                                                   |
+| **Deploy producción**                  | ✅ Sesión 01/06            | Ver tabla deploy en `[HANDOFF_SESION_2026-06-01_PAUSA_F2.md](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md)`                                                                                         |
+| **F3 T-05..T-07b**                     | ✅ Cerrado                 | T-05 consola/foco · T-06 auditoría RRHH · T-07 caché grilla · **T-07b** catálogo laboral — `master` `9a5875b`                                                                                  |
+| **F3 T-09**                            | ⏳ Pendiente               | Guías + `helpContent` extendido                                                                                                                                                                |
+| **F3 cierre épica**                    | ✅ Núcleo                  | Piloto Sala validado · release notes · tag pendiente commit                                                                                                                                    |
+| **F4 Outbox**                          | ✅ En rama (F-UX.3)        | Ver `[REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md](./REGISTRO_FASE_DOCUMENTAL_FUX_GESTION_TURNO_V3.md)` · backlog: `[PENDIENTES_IMPLEMENTACION_V2.md](./PENDIENTES_IMPLEMENTACION_V2.md)` |
+
 
 ---
 
 ## Registro sesión (2026-06-02) — pausa F3 / F-UX.2
 
-| Tema | Resultado | Nota |
-|------|-----------|------|
-| T-08 + tests/smokes | ✅ | `test:fichadas-esperadas`, `smoke:fichadas-esperadas` |
-| F-UX.2 UI + `vis_*.fichadas_esperadas` | ✅ | Deploy functions ×2 + hosting; validación **F:2** usuario |
-| Fix fijo/rotativo sin `turno_id` | ✅ | Fallback segmento horario → fichadas 2 en día laborable |
-| Handoff pausa | ✅ | `HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md` |
+
+| Tema                                   | Resultado | Nota                                                      |
+| -------------------------------------- | --------- | --------------------------------------------------------- |
+| T-08 + tests/smokes                    | ✅         | `test:fichadas-esperadas`, `smoke:fichadas-esperadas`     |
+| F-UX.2 UI + `vis_*.fichadas_esperadas` | ✅         | Deploy functions ×2 + hosting; validación **F:2** usuario |
+| Fix fijo/rotativo sin `turno_id`       | ✅         | Fallback segmento horario → fichadas 2 en día laborable   |
+| Handoff pausa                          | ✅         | `HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`      |
+
 
 **Siguiente sesión:** Tag F3 + deploy hosting/functions · PR merge épica.
 
@@ -720,13 +802,15 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 ## Registro sesión (2026-06-02) — continuación F3 piloto Sala + ids «+»
 
-| Tema | Resultado | Nota |
-|------|-----------|------|
-| Piloto compuesto régimen `1779788226715` | ✅ Validado grilla | Usuario confirma **F:2**, horarios M+T / N+M coherentes |
-| Migración ids atómicos → `+` | ✅ Prod | `migrar-regimen-planificado-compuesto-plus.mjs --apply` — 21 días plan Sala + remat 4 meses |
-| Tip UI régimen «+» | ✅ Código | `RegimenTurnoCompuestoPlusTip.jsx` — deploy hosting pendiente |
-| Release notes F3 | ✅ Doc | `RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md` |
-| UX-6 filtro API jefe | ✅ Código | `grillaVisSanitizeGso.js` — sin `fichadas_reales` en respuesta GSO |
+
+| Tema                                     | Resultado         | Nota                                                                                        |
+| ---------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------- |
+| Piloto compuesto régimen `1779788226715` | ✅ Validado grilla | Usuario confirma **F:2**, horarios M+T / N+M coherentes                                     |
+| Migración ids atómicos → `+`             | ✅ Prod            | `migrar-regimen-planificado-compuesto-plus.mjs --apply` — 21 días plan Sala + remat 4 meses |
+| Tip UI régimen «+»                       | ✅ Código          | `RegimenTurnoCompuestoPlusTip.jsx` — deploy hosting pendiente                               |
+| Release notes F3                         | ✅ Doc             | `RELEASE_NOTES_EPIC_TURNOS_COMPUESTOS_F3_V2.md`                                             |
+| UX-6 filtro API jefe                     | ✅ Código          | `grillaVisSanitizeGso.js` — sin `fichadas_reales` en respuesta GSO                          |
+
 
 **Siguiente:** tag `v2.3.0-f3-turnos-compuestos` · deploy · PR merge.
 
@@ -734,18 +818,20 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 ## Registro sesión (2026-06-02) — GSO / F1
 
-| Tema | Resultado | Nota |
-|------|-----------|------|
-| Validación HLG `activo:false` en alta/solape | ✅ Confirmado | Backend y frontend ya excluyen HLG deshabilitada en control `VAL-HLG-014`. |
-| Smoke F1 D2 Portería mayo | ✅ Ajustado | `scripts/smoke-f1-qa-4-2-prod.mjs` ahora marca `SKIP` si no hay HLG activa para el mes/grupo. |
-| Datos laborales (card HLg) | ✅ Corregido | Clasificación interna HLG por HLC: “vigente interna” = abierta/no cerrada; “histórica” = cerrada o deshabilitada. Evita mostrar HLG futura vigente dentro de históricos. |
-| QA manual A4/A5 | ✅ Cerrado | A4: coherencia por semántica (histórico vs vigente). A5: override scoped validado con mutación real + rollback. |
-| QA manual A3 | ✅ Cerrado | §4.2 #6: revertir plan Oficina jun-2026 en Explorador; Sala jun-2026 sin cambio; rehabilitar plan Oficina en Bandeja Evaluador. |
-| QA manual A1 | ✅ Cerrado | 64-A `sol_01KT3ZG4VPY2SNRWW3Z09DV73S` día 11 fan-out Oficina+Sala. LAO `sol_01KT402WR9SVN46JESKAS6KE1E` 03–09/06 ancla **Sala**, `LAO-2026` en `vis_2026_06` días 03–05 y 08–09 en ambos `gdt`. |
-| UX aclaratoria A4 | ✅ Implementado | `web/src/pages/jefe/PlanTurnoServicioPage.jsx`: aviso simple al pie de grilla histórica (“foto histórica del plan…”). |
-| Deploy | ✅ Hosting | Publicado en `https://portal-hospital-v2.web.app` para validación visual. |
-| QA B1–B5 GSO RRHH | ✅ Cerrado | UI + purge Portería MOSTO; criterio dotación = HLg activa al cierre de mes. |
-| Purge HLg Portería | ✅ Prod | `--apply` 01/06–13/06; fix purge `asi`/`vis` en código. |
+
+| Tema                                         | Resultado      | Nota                                                                                                                                                                                            |
+| -------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Validación HLG `activo:false` en alta/solape | ✅ Confirmado   | Backend y frontend ya excluyen HLG deshabilitada en control `VAL-HLG-014`.                                                                                                                      |
+| Smoke F1 D2 Portería mayo                    | ✅ Ajustado     | `scripts/smoke-f1-qa-4-2-prod.mjs` ahora marca `SKIP` si no hay HLG activa para el mes/grupo.                                                                                                   |
+| Datos laborales (card HLg)                   | ✅ Corregido    | Clasificación interna HLG por HLC: “vigente interna” = abierta/no cerrada; “histórica” = cerrada o deshabilitada. Evita mostrar HLG futura vigente dentro de históricos.                        |
+| QA manual A4/A5                              | ✅ Cerrado      | A4: coherencia por semántica (histórico vs vigente). A5: override scoped validado con mutación real + rollback.                                                                                 |
+| QA manual A3                                 | ✅ Cerrado      | §4.2 #6: revertir plan Oficina jun-2026 en Explorador; Sala jun-2026 sin cambio; rehabilitar plan Oficina en Bandeja Evaluador.                                                                 |
+| QA manual A1                                 | ✅ Cerrado      | 64-A `sol_01KT3ZG4VPY2SNRWW3Z09DV73S` día 11 fan-out Oficina+Sala. LAO `sol_01KT402WR9SVN46JESKAS6KE1E` 03–09/06 ancla **Sala**, `LAO-2026` en `vis_2026_06` días 03–05 y 08–09 en ambos `gdt`. |
+| UX aclaratoria A4                            | ✅ Implementado | `web/src/pages/jefe/PlanTurnoServicioPage.jsx`: aviso simple al pie de grilla histórica (“foto histórica del plan…”).                                                                           |
+| Deploy                                       | ✅ Hosting      | Publicado en `https://portal-hospital-v2.web.app` para validación visual.                                                                                                                       |
+| QA B1–B5 GSO RRHH                            | ✅ Cerrado      | UI + purge Portería MOSTO; criterio dotación = HLg activa al cierre de mes.                                                                                                                     |
+| Purge HLg Portería                           | ✅ Prod         | `--apply` 01/06–13/06; fix purge `asi`/`vis` en código.                                                                                                                                         |
+
 
 **Siguiente:** deploy functions (purge deshabilitar) · smokes C · **F3** o deuda E.
 
@@ -755,13 +841,15 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 **Script:** `node scripts/smoke-f1-qa-4-2-prod.mjs` · **F2:** `smoke-f2-orquestacion-prod.mjs` (3/3 OK).
 
-| Prueba | Resultado |
-|--------|-----------|
-| D2 MOSTO mayo Portería | ✅ 12 turnos (no mes todo NL) |
-| MOSTO jun Oficina (multicargo) | ✅ 13 turnos |
-| LOKITO jun/jul Oficina | ✅ 14 + 25 turnos |
-| CHAPARRO may Sala | ✅ 9 turnos |
-| CHAPARRO jun Sala | SKIP — HLg inactiva desde 01/06 (purge F0) |
+
+| Prueba                         | Resultado                                  |
+| ------------------------------ | ------------------------------------------ |
+| D2 MOSTO mayo Portería         | ✅ 12 turnos (no mes todo NL)               |
+| MOSTO jun Oficina (multicargo) | ✅ 13 turnos                                |
+| LOKITO jun/jul Oficina         | ✅ 14 + 25 turnos                           |
+| CHAPARRO may Sala              | ✅ 9 turnos                                 |
+| CHAPARRO jun Sala              | SKIP — HLg inactiva desde 01/06 (purge F0) |
+
 
 **Incidente LOKITO (plan `eliminado` + HABILITADO):** fix `planHabilitadoDesdeQuerySnapshot` deployado; jun/jul OK en UI.
 
@@ -771,14 +859,16 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 ## Acta smoke producción (2026-06-01)
 
-**Entorno:** https://portal-hospital-v2.web.app · RRHH → Grilla operativa.
+**Entorno:** [https://portal-hospital-v2.web.app](https://portal-hospital-v2.web.app) · RRHH → Grilla operativa.
 
-| Prueba | Resultado | Evidencia |
-|--------|-----------|-----------|
-| Cierre período (sector piloto Sala) | ✅ | UI: «Período cerrado (3 vista(s) actualizadas)» · `estado_periodo_liquidacion_id` cerrado en `vis_*` |
-| Deshabilitar HLg (CHAPARRO · DNI 27667499) | ✅ | Corte **01/06/2026** · `hlg_01KS50551PFWPXTCZ90KGJ07B6` · Sala `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` |
-| Purge capa teórica post-corte (Sala) | ✅ BD | Jun–jul 2026: **0** `rda_*` en burbuja Sala (`purge_ok`) |
-| Multicargo (no regresión) | ✅ BD | Oficina `gdt_01KR3H81ENQK84ZK21EQWEQQXG` · HLg `hlg_01KR3HZ1XN…` **activa** · jun 2026: 21 días con turno (esperado, otra burbuja) |
+
+| Prueba                                     | Resultado | Evidencia                                                                                                                          |
+| ------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Cierre período (sector piloto Sala)        | ✅         | UI: «Período cerrado (3 vista(s) actualizadas)» · `estado_periodo_liquidacion_id` cerrado en `vis_*`                               |
+| Deshabilitar HLg (CHAPARRO · DNI 27667499) | ✅         | Corte **01/06/2026** · `hlg_01KS50551PFWPXTCZ90KGJ07B6` · Sala `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V`                                    |
+| Purge capa teórica post-corte (Sala)       | ✅ BD      | Jun–jul 2026: **0** `rda_*` en burbuja Sala (`purge_ok`)                                                                           |
+| Multicargo (no regresión)                  | ✅ BD      | Oficina `gdt_01KR3H81ENQK84ZK21EQWEQQXG` · HLg `hlg_01KR3HZ1XN…` **activa** · jun 2026: 21 días con turno (esperado, otra burbuja) |
+
 
 **Agente piloto purge:** `per_01KR3HD24AMJ6YX3N7B3GPAZJ4` · mayo Sala: 9 días con turno antes del corte; junio Sala: 0 turnos.
 
@@ -799,13 +889,15 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 **Contexto:** deshabilitar HLg Portería para piloto **DNI 28914247** (`per_01KQN9WXFXF69Z9DCT5YNJ3TFZ`) con corte **01/06/2026**. Modal RRHH: *«inactiva y cerrada en la fecha de corte (vigencia inclusiva)»*.
 
-| Prueba | Resultado | Evidencia |
-|--------|-----------|-----------|
-| Selector grupo `fecha_desde` **01/06/2026** | ✅ | UI: Oficina PERSONAL, **Portería**, Sala Internación 1 |
-| Selector grupo `fecha_desde` **02/06/2026** | ✅ | UI: sin Portería (post-corte) |
-| Fix motor | ✅ Código | `solicitudHlgVigencia.js`: `activo:false` + `fecha_fin` → vigencia por rango inclusivo |
-| Deploy callables ticketera | ✅ Prod | 9 functions (`resolverContextoLaboralSolicitud`, validar/preview B·C, triggers, `simularLaoPreview`, `listarArticulosIngresoAgente`) |
-| Patrón C compensatorio (Art 68 Inc B) | ✅ | `sol_01KT1QEX2A6NP624ZC8TBMH24A` · 6 hs · huérfana · checks 9/9 (warning preaviso `[W] PREAVISO_FUERA_NORMA`) |
+
+| Prueba                                      | Resultado | Evidencia                                                                                                                            |
+| ------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Selector grupo `fecha_desde` **01/06/2026** | ✅         | UI: Oficina PERSONAL, **Portería**, Sala Internación 1                                                                               |
+| Selector grupo `fecha_desde` **02/06/2026** | ✅         | UI: sin Portería (post-corte)                                                                                                        |
+| Fix motor                                   | ✅ Código  | `solicitudHlgVigencia.js`: `activo:false` + `fecha_fin` → vigencia por rango inclusivo                                               |
+| Deploy callables ticketera                  | ✅ Prod    | 9 functions (`resolverContextoLaboralSolicitud`, validar/preview B·C, triggers, `simularLaoPreview`, `listarArticulosIngresoAgente`) |
+| Patrón C compensatorio (Art 68 Inc B)       | ✅         | `sol_01KT1QEX2A6NP624ZC8TBMH24A` · 6 hs · huérfana · checks 9/9 (warning preaviso `[W] PREAVISO_FUERA_NORMA`)                        |
+
 
 **BD referencia (Portería):** `hlg_01KSXC395J2ACV5W4HWW7YTCTM` · `gdt_01KQA9FVEW53JSNTPGX32NWQ5B` · `activo:false` · `fecha_fin:2026-06-01`.
 
@@ -821,47 +913,55 @@ Ruta: **Grilla mes equipo** → `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · `2026-06` ·
 
 ## Prioridad producto — Grilla operativa → menú RRHH
 
-| Paso | Qué | Estado |
-|------|-----|--------|
-| 1 | Menú RRHH + ruta grilla-operativa | ✅ |
-| 2 | Validación operativa RRHH (acta UX-4) | ✅ Smoke prod 2026-06-01 (cierre + purge); formalizar acta RRHH si hace falta |
-| 3 | Vista jefe acotada (F-UX.2) | ✅ Validación final usuario: **F:2** OK |
 
-Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md) § F-UX.
+| Paso | Qué                                   | Estado                                                                       |
+| ---- | ------------------------------------- | ---------------------------------------------------------------------------- |
+| 1    | Menú RRHH + ruta grilla-operativa     | ✅                                                                            |
+| 2    | Validación operativa RRHH (acta UX-4) | ✅ Smoke prod 2026-06-01 (cierre + purge); formalizar acta RRHH si hace falta |
+| 3    | Vista jefe acotada (F-UX.2)           | ✅ Validación final usuario: **F:2** OK                                       |
+
+
+Detalle: `[ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md](./ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md)` § F-UX.
 
 ---
 
 ## Backlog implementación — orquestación (post-repaso)
 
-### P0 — contención (ver [`ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md`](./ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md) §5)
+### P0 — contención (ver `[ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md](./ANALISIS_COHERENCIA_ORQUESTACION_VS_CODIGO.md)` §5)
 
-| ID | Riesgo | Estado | Notas |
-|----|--------|--------|--------|
-| **O-P0-4** | Fuga post-HLg | ✅ Prod + UX | Purge validado; modal HLg paso 2 (confirmar + confirmar_purge) |
-| **O-P0-1** | Gate LAO | ✅ Código | Anclas desde/hasta |
-| **O-P0-7** | Listado sector | ✅ **Piloto cerrado** 2026-06-23 | Lectura snapshot `vis_*` + `grilla_sync_grupo_mes` (sin remat en listar default). [`GRILLA_SYNC_GRUPO_MES_V2.md`](./GRILLA_SYNC_GRUPO_MES_V2.md) |
-| **O-P0-5** | UI ciega | ✅ Código | Toasts en `useGrillaMesVista` |
-| O-P0-2 | Cierre período | ✅ Prod | Callable + 3 vis actualizadas en smoke |
-| O-P0-3 | MDC en trámite vs M-1 cerrado | ✅ Código | `assertNuevaSolicitudNoEnPeriodoCerrado` en validar entorno + MDC; excepción trámite/consolidar |
-| O-P0-6 | Piloto `resolverFijo` / rematerializar UI (D2/D11) | plan § pilotos |
+
+| ID         | Riesgo                                             | Estado                          | Notas                                                                                                                                            |
+| ---------- | -------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **O-P0-4** | Fuga post-HLg                                      | ✅ Prod + UX                     | Purge validado; modal HLg paso 2 (confirmar + confirmar_purge)                                                                                   |
+| **O-P0-1** | Gate LAO                                           | ✅ Código                        | Anclas desde/hasta                                                                                                                               |
+| **O-P0-7** | Listado sector                                     | ✅ **Piloto cerrado** 2026-06-23 | Lectura snapshot `vis_*` + `grilla_sync_grupo_mes` (sin remat en listar default). `[GRILLA_SYNC_GRUPO_MES_V2.md](./GRILLA_SYNC_GRUPO_MES_V2.md)` |
+| **O-P0-5** | UI ciega                                           | ✅ Código                        | Toasts en `useGrillaMesVista`                                                                                                                    |
+| O-P0-2     | Cierre período                                     | ✅ Prod                          | Callable + 3 vis actualizadas en smoke                                                                                                           |
+| O-P0-3     | MDC en trámite vs M-1 cerrado                      | ✅ Código                        | `assertNuevaSolicitudNoEnPeriodoCerrado` en validar entorno + MDC; excepción trámite/consolidar                                                  |
+| O-P0-6     | Piloto `resolverFijo` / rematerializar UI (D2/D11) | plan § pilotos                  |                                                                                                                                                  |
+
 
 ### P1 — orquestación temporal
 
-| ID | Entrega | Notas |
-|----|---------|--------|
-| O-P1-1 | Job día 5 **materialización** M+1 (fijo/rotativo), idempotente §17.2.1 | ✅ Código — deploy `materializacionVentanaDia5Scheduled` + `ejecutarMaterializacionVentanaDia5` |
-| O-P1-2 | `materializarRango` + feriado puntual | ✅ Código + deploy — `rematerializarPostCalendario({ fecha_ymd })` vía rango; toasts F2.1 en GSO |
-| O-P1-3 | GSO: M-1 **solo lectura** usuario/jefe desde día 1 | ✅ Código + deploy — `ASI-GSO-001` + banner UI |
-| O-P1-4 | Turnos mensuales: warning + flujo plan paralelo usuario nuevo §19.6 | ✅ Código — `listarContextoPlanGrupo` + incorporación en `guardarPlan`; deploy pendiente |
+
+| ID     | Entrega                                                                | Notas                                                                                           |
+| ------ | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| O-P1-1 | Job día 5 **materialización** M+1 (fijo/rotativo), idempotente §17.2.1 | ✅ Código — deploy `materializacionVentanaDia5Scheduled` + `ejecutarMaterializacionVentanaDia5`  |
+| O-P1-2 | `materializarRango` + feriado puntual                                  | ✅ Código + deploy — `rematerializarPostCalendario({ fecha_ymd })` vía rango; toasts F2.1 en GSO |
+| O-P1-3 | GSO: M-1 **solo lectura** usuario/jefe desde día 1                     | ✅ Código + deploy — `ASI-GSO-001` + banner UI                                                   |
+| O-P1-4 | Turnos mensuales: warning + flujo plan paralelo usuario nuevo §19.6    | ✅ Código — `listarContextoPlanGrupo` + incorporación en `guardarPlan`; deploy pendiente         |
+
 
 ### P2 — diferido / excepciones
 
-| ID | Entrega | Notas |
-|----|---------|--------|
-| O-P2-1 | Auto-cierre período día 5 (Scheduler) | Tras asimilar P0-2/P0-3 |
-| O-P2-2 | Caso excepcional LAO + cola sin RDA §20.4 | Solo con precedente RRHH |
-| O-P2-3 | Acotar lazy GSO si día 5 + alta HLg cubren | `grillaMesAgenteCore.js` |
-| O-P2-4 | Manual RRHH normativo desde `MANUAL_CAPAS_*` | validación RRHH |
+
+| ID     | Entrega                                      | Notas                    |
+| ------ | -------------------------------------------- | ------------------------ |
+| O-P2-1 | Auto-cierre período día 5 (Scheduler)        | Tras asimilar P0-2/P0-3  |
+| O-P2-2 | Caso excepcional LAO + cola sin RDA §20.4    | Solo con precedente RRHH |
+| O-P2-3 | Acotar lazy GSO si día 5 + alta HLg cubren   | `grillaMesAgenteCore.js` |
+| O-P2-4 | Manual RRHH normativo desde `MANUAL_CAPAS_*` | validación RRHH          |
+
 
 ### Documentación (hecho en repaso)
 
@@ -872,17 +972,19 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 
 ## Estado al cerrar sesión 29/05
 
-| Hito | Estado |
-|------|--------|
-| Opción A scoped (`vis_*` + `capa_teorica_por_grupo`) | ✅ Código + BD |
-| Purga `vis_*` legacy | ✅ 8 docs (sesión previa) |
-| Paso 2 — Gates + overrides E2 | ✅ Deploy `fc54e8b` |
-| Paso 3 — Materialización mayo Sala | ✅ 93 agentes |
-| Paso C — Strip `capa_teorica` raíz | ✅ 244 docs → **0** legacy |
-| Documentación biblia/handoff | ✅ `c07cea3` |
-| **PR → `master`** | ✅ Merge `25bc00c` (2026-06-01) |
-| **Smoke prod F0/F1** | ✅ 2026-06-01 (acta arriba) |
-| **Paso 4 QA** | ⏳ Matriz §4.2 biblia Multi-HLG |
+
+| Hito                                                 | Estado                         |
+| ---------------------------------------------------- | ------------------------------ |
+| Opción A scoped (`vis_*` + `capa_teorica_por_grupo`) | ✅ Código + BD                  |
+| Purga `vis_*` legacy                                 | ✅ 8 docs (sesión previa)       |
+| Paso 2 — Gates + overrides E2                        | ✅ Deploy `fc54e8b`             |
+| Paso 3 — Materialización mayo Sala                   | ✅ 93 agentes                   |
+| Paso C — Strip `capa_teorica` raíz                   | ✅ 244 docs → **0** legacy      |
+| Documentación biblia/handoff                         | ✅ `c07cea3`                    |
+| **PR → `master`**                                    | ✅ Merge `25bc00c` (2026-06-01) |
+| **Smoke prod F0/F1**                                 | ✅ 2026-06-01 (acta arriba)     |
+| **Paso 4 QA**                                        | ⏳ Matriz §4.2 biblia Multi-HLG |
+
 
 ---
 
@@ -893,22 +995,26 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 1. `git pull origin feat/epic-multi-hlg-fase1-execution`
 2. Copiar `.env.v2.local` (raíz repo).
 3. `npm install`
-4. Leer [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) §7.
+4. Leer `[HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md)` §7.
 
 ### 2. F3 — cierre épica turnos compuestos
 
-| Paso | Acción |
-|------|--------|
-| Piloto | Nocturno/compuesto (M+T+N o régimen real) en un `gdt`; validar grilla mes + **F:n** |
-| T-05/06 | Editor plan / ayuda (si entra en alcance) |
-| Docs | Release notes + tag (`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`) |
+
+| Paso    | Acción                                                                              |
+| ------- | ----------------------------------------------------------------------------------- |
+| Piloto  | Nocturno/compuesto (M+T+N o régimen real) en un `gdt`; validar grilla mes + **F:n** |
+| T-05/06 | Editor plan / ayuda (si entra en alcance)                                           |
+| Docs    | Release notes + tag (`EPIC_TURNOS_COMPUESTOS_TICKETS_V2.md`)                        |
+
 
 ### 3. F-UX.2 restante + F1
 
-| Paso | Acción |
-|------|--------|
+
+| Paso | Acción                                                       |
+| ---- | ------------------------------------------------------------ |
 | UX-6 | Auditar callables listado grilla: jefe sin `fichadas_reales` |
-| F1 | Paso 4 QA formal; PR merge épica cuando aprueben |
+| F1   | Paso 4 QA formal; PR merge épica cuando aprueben             |
+
 
 **No mezclar** rama `feat/epic-turno-mensual-fase2-pr3` sin decisión explícita.
 
@@ -927,7 +1033,7 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 
 ## Pendientes priorizados
 
-> **Lista maestra actualizada:** [`PENDIENTES_IMPLEMENTACION_V2.md`](./PENDIENTES_IMPLEMENTACION_V2.md) (sustituye esta sección para planificación 2026-06-04+).
+> **Lista maestra actualizada:** `[PENDIENTES_IMPLEMENTACION_V2.md](./PENDIENTES_IMPLEMENTACION_V2.md)` (sustituye esta sección para planificación 2026-06-04+).
 
 ### Alta (próxima sesión)
 
@@ -937,50 +1043,55 @@ Detalle: [`ROADMAP_IMPLEMENTACION_SUCESIVA_V2.md`](./ROADMAP_IMPLEMENTACION_SUCE
 
 ### Media
 
-4. Materializar otros `gdt` con plan HABILITADO (fuera piloto Sala) cuando RRHH lo requiera.
-5. Actualizar scripts `audit-fase4-6`, `rematerializar-vis-turno-teorico` a `buildVisDocumentId` 3 args.
-6. Hook KI-1 `proyectarAportesNormativosVisGrupo` (épica futura).
+1. Materializar otros `gdt` con plan HABILITADO (fuera piloto Sala) cuando RRHH lo requiera.
+2. Actualizar scripts `audit-fase4-6`, `rematerializar-vis-turno-teorico` a `buildVisDocumentId` 3 args.
+3. Hook KI-1 `proyectarAportesNormativosVisGrupo` (épica futura).
 
 ### Baja
 
-7. Fichadas reales (reloj).
-8. Code splitting bundle > 500KB.
+1. Fichadas reales (reloj).
+2. Code splitting bundle > 500KB.
 
 ---
 
 ## Archivos clave
 
-| Área | Archivo |
-|------|---------|
-| Biblia | `docs/v2/PLAN_GRILLA_MULTI_HLG_V2.md` |
-| Worker | `functions/modules/asistencia/rdaTurnoTeoricoWorker.js` |
-| Materializar rango (F2) | `functions/modules/asistencia/materializarRango.js` |
-| Metadata `vis_*` materialización | `functions/modules/asistencia/visMaterializacionMetadata.js` |
-| Gate E11 | `functions/modules/ticketera/grillaTurnoEntornoGate.js` |
-| Lectura capa | `functions/modules/shared/capaTeoricaPorGrupoCore.js` |
-| Strip (ops) | `scripts/strip-capa-teorica-legacy.mjs` |
-| Materializar mes | `scripts/materializar-grupo-mes.mjs` |
-| Smoke purge HLg | `scripts/audit-purge-hlg-post-corte.mjs` |
-| Smoke fichadas / materializar día | `scripts/smoke-fichadas-esperadas-dev.mjs`, `smoke-materializar-turno-dia-dev.mjs` |
-| Smoke US-15 capa 4 (P/A) | `npm run smoke:us15-fichada-presencia -- --dni=… --gdt=… --fecha=YYYY-MM-DD --modo=presente` |
-| Smoke US-3 fan-out 68-B (horas) | `npm run smoke:us3-fanout-68b -- --dni=… --gdt=… --fecha=YYYY-MM-DD --modo=inject` · `patch-turno-t` · `revert` · `restore-turno` (+ `--apply`) |
-| Rematerializar 1 día + leer vis | `scripts/_tmp-materializar-dia-y-leer-vis.mjs` |
-| Handoff pausa F3 | `docs/v2/HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md` |
-| HLg por persona/gdt | `scripts/audit-hlg-persona-gdts.mjs` |
-| Grupos vigentes solicitud (fecha) | `scripts/audit-persona-grupos-fecha.mjs` |
-| Vigencia HLg solicitud | `functions/modules/shared/solicitudHlgVigencia.js` |
-| IAM callables nuevas | `scripts/grant-run-invoker-firebase-token.mjs` → `npm run firebase:grant-callables-invoker:firebase-login` |
+
+| Área                              | Archivo                                                                                                                                         |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Biblia                            | `docs/v2/PLAN_GRILLA_MULTI_HLG_V2.md`                                                                                                           |
+| Worker                            | `functions/modules/asistencia/rdaTurnoTeoricoWorker.js`                                                                                         |
+| Materializar rango (F2)           | `functions/modules/asistencia/materializarRango.js`                                                                                             |
+| Metadata `vis_`* materialización  | `functions/modules/asistencia/visMaterializacionMetadata.js`                                                                                    |
+| Gate E11                          | `functions/modules/ticketera/grillaTurnoEntornoGate.js`                                                                                         |
+| Lectura capa                      | `functions/modules/shared/capaTeoricaPorGrupoCore.js`                                                                                           |
+| Strip (ops)                       | `scripts/strip-capa-teorica-legacy.mjs`                                                                                                         |
+| Materializar mes                  | `scripts/materializar-grupo-mes.mjs`                                                                                                            |
+| Smoke purge HLg                   | `scripts/audit-purge-hlg-post-corte.mjs`                                                                                                        |
+| Smoke fichadas / materializar día | `scripts/smoke-fichadas-esperadas-dev.mjs`, `smoke-materializar-turno-dia-dev.mjs`                                                              |
+| Smoke US-15 capa 4 (P/A)          | `npm run smoke:us15-fichada-presencia -- --dni=… --gdt=… --fecha=YYYY-MM-DD --modo=presente`                                                    |
+| Smoke US-3 fan-out 68-B (horas)   | `npm run smoke:us3-fanout-68b -- --dni=… --gdt=… --fecha=YYYY-MM-DD --modo=inject` · `patch-turno-t` · `revert` · `restore-turno` (+ `--apply`) |
+| Rematerializar 1 día + leer vis   | `scripts/_tmp-materializar-dia-y-leer-vis.mjs`                                                                                                  |
+| Handoff pausa F3                  | `docs/v2/HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`                                                                                    |
+| HLg por persona/gdt               | `scripts/audit-hlg-persona-gdts.mjs`                                                                                                            |
+| Grupos vigentes solicitud (fecha) | `scripts/audit-persona-grupos-fecha.mjs`                                                                                                        |
+| Vigencia HLg solicitud            | `functions/modules/shared/solicitudHlgVigencia.js`                                                                                              |
+| IAM callables nuevas              | `scripts/grant-run-invoker-firebase-token.mjs` → `npm run firebase:grant-callables-invoker:firebase-login`                                      |
+
 
 ---
 
 ## Historial sesiones recientes (turnos / grilla)
 
-| Fecha | Documento |
-|-------|-----------|
-| 29/05 | [`HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md`](./HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md) — **repaso orquestación §15–22** |
-| 02/06 | [`HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md`](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md) — **pausa F3 + F-UX.2 @ validación F:2** |
-| 01/06 | [`HANDOFF_SESION_2026-06-01_PAUSA_F2.md`](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md) — **pausa F2 @ e349412** |
-| 01/06 | Smoke prod + acta ticketera (este doc) |
-| 29/05 | [`HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md`](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md) — **cierre hito** |
-| 29/05 | [`HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md`](./HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md) — incidente Z |
-| 28/05 | [`HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md`](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md) |
+
+| Fecha | Documento                                                                                                                                             |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 29/05 | `[HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md](./HANDOFF_SESION_2026-05-29_ANALISIS_ORQUESTACION.md)` — **repaso orquestación §15–22**         |
+| 02/06 | `[HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md](./HANDOFF_SESION_2026-06-02_PAUSA_F3_FUX_FICHADAS.md)` — **pausa F3 + F-UX.2 @ validación F:2** |
+| 01/06 | `[HANDOFF_SESION_2026-06-01_PAUSA_F2.md](./HANDOFF_SESION_2026-06-01_PAUSA_F2.md)` — **pausa F2 @ e349412**                                           |
+| 01/06 | Smoke prod + acta ticketera (este doc)                                                                                                                |
+| 29/05 | `[HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md](./HANDOFF_SESION_2026-05-29_CIERRE_MULTI_HLG.md)` — **cierre hito**                                  |
+| 29/05 | `[HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md](./HANDOFF_SESION_2026-05-29_MATERIALIZACION_PLAN_VS_HLG.md)` — incidente Z                |
+| 28/05 | `[HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md](./HANDOFF_SESION_2026-05-28_TURNOS_GRILLA_APROBADA.md)`                                        |
+
+

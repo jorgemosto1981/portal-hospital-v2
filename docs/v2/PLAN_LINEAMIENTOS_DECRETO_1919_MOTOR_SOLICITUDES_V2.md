@@ -170,6 +170,36 @@ Ver `[LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md](./LINEAMIENTOS_DECRETO_19
 | **S3** | Wizards B/C + ayudas cuando existan en versión                          |
 | **S4** | Bandejas sin cambio de filtros; nuevos `codigo_grilla`                  |
 
+### 9.1 S1 — Ticketera dinámica (decisión 24-jun-2026, Opción B)
+
+**Rama:** `feat/1919-p1-ticketera` · tag cierre previsto: `1919-p1-ticketera`.
+
+| Tema | Decisión |
+|------|----------|
+| Ruta alta | **Única:** `/portal/solicitudes/alta?articulo=art_*` (+ `fecha` opcional) |
+| LAO | Rutas `/portal/solicitudes/lao` y `lao-formulario` **sin cambio** |
+| Legacy | `/patron-b` y `/patron-c` → redirect a `/alta` con misma query |
+| Guard | Validación **1:1** del `articulo` en query contra catálogo del provider (no `ids.some()`) |
+| Despacho | `WIZARD_BY_PATRON[B|C]` → shells `TicketeraPatronB` / `TicketeraPatronC` (hooks existentes) |
+| Provider | `Map<articulo_id, { patron_saldo, version_id, … }>` desde `listarArticulosIngresoAgente` |
+| Menú | Quitar `articulosIngresoIds` MVP; `ticketeraSiempreVisible: true` |
+| Constantes | Eliminar `ARTICULO_IDS_PATRON_*_MVP`; conservar `ARTICULO_64A_ID` etc. solo seeds/tests |
+| Backend | Ya en modo `catalogo` (`ticketeraArticulosMvp.js` `ARTICULO_IDS_MVP = []`) |
+
+**Archivos a tocar (web):**
+
+- `web/src/features/solicitudes/ArticulosIngresoProvider.jsx` — mapa + `obtenerDatosArticuloElegible`
+- `web/src/features/solicitudes/GuardArticuloIngreso.jsx` — query + redirect hub `?error=ELEG_NO_DISPONIBLE`
+- `web/src/features/solicitudes/ticketeraRouteUtils.js` (+ test vitest intrusión URL)
+- `web/src/features/solicitudes/ticketeraWizardRegistry.js`
+- `web/src/pages/TicketeraAltaPage.jsx`
+- `web/src/features/solicitudes/RedirectTicketeraAlta.jsx`
+- `web/src/App.jsx`, `web/src/constants/modulosEstado.js`, `web/src/pages/TicketeraHub.jsx`
+- `web/src/constants/solicitudesArticuloV2.js` — quitar arrays MVP
+
+**Tests mínimos:** `ticketeraRouteUtils.test.js` — agente con solo 64-A en mapa → `art_68B` rechazado.
+
+**Estado implementación:** commit `ef4ba9c` en `feat/1919-p1-ticketera` · PR [#8](https://github.com/jorgemosto1981/portal-hospital-v2/pull/8) · tag `1919-p1-ticketera` tras merge + smoke piloto.
 
 ---
 
@@ -336,5 +366,6 @@ flowchart TD
 | 2026-06-24 | Cross-links: README, ANEXO §5, PENDIENTES, HANDOFF addendum, CHANGELOG, ACTA plantilla; corrección MODULO §6 |
 | 2026-06-24 | Auditoría consolidación ecosistema: G1-doc cerrado; §3.1 plan maestro |
 | 2026-06-24 | §11.1 pre-implementación: tags, ramas, restauración Git/Firestore, checklist P1 |
+| 2026-06-24 | §9.1 S1 Opción B: ruta `/solicitudes/alta`, guard 1:1, WIZARD_BY_PATRON |
 
 
