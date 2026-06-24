@@ -48,6 +48,7 @@ Para cada artículo en `cfg_articulos`, la especificación operativa debería po
 
 | Documento | Uso |
 |-----------|-----|
+| [`LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md`](./LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md) | Índice y fichas por artículo (Fase 0 configurador / motor) |
 | [`DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md`](./DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md) | Antigüedad, LAO, contexto ticket |
 | [`LEY_8525_1979_EGAP_SANTA_FE_V2.md`](./LEY_8525_1979_EGAP_SANTA_FE_V2.md) | Marco EGAP (referencia consulta) |
 | [`MODULO_CONFIGURACION_ARTICULOS_V2.md`](./MODULO_CONFIGURACION_ARTICULOS_V2.md) | Contrato funcional del módulo |
