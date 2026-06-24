@@ -234,7 +234,10 @@ flowchart LR
 | ------- | -------------------------------------------------- |
 | **P0**  | Fichas 63.c–k, guía, acta, tag `1919-p0-doc-g1`    |
 | **P1**  | Tag `1919-p1-ticketera`                            |
-| **P2**  | 5 `art_`* publicados, UAT MDC+GSO (mín. 2 incisos) |
+| **P2**  | 5 `art_`* publicados, UAT MDC+GSO (mín. 2 incisos) — **cerrado 24-jun-2026** |
+
+**Estado (24-jun-2026):** oleada 63 **completada** — merge `feat/1919-p2-oleada-63` + tag `1919-p2-oleada-63`.
+
 | **P3**  | Smoke check-in si limpieza BD                      |
 | **P4**  | 52, 54                                             |
 | **P5**  | UI configurador + motores leen nuevos campos       |

@@ -1,0 +1,111 @@
+{
+  "oleada": "63_p2",
+  "fecha_desde": "2026-01-01",
+  "circuito_ingreso_ids": [
+    "CFG_USUARIO",
+    "CFG_RRHH",
+    "CFG_MEDICO",
+    "CFG_VISUALIZADOR"
+  ],
+  "articulos": [
+    {
+      "inciso": "63c",
+      "codigo": "63-C",
+      "codigo_grilla": "63-C",
+      "nombre": "FUERZA MAYOR / FENOMENOS METEOROLOGICOS",
+      "inciso_normativo": "Art. 63 inc. c — Decreto 1919/89",
+      "codigo_sarh": "63C",
+      "color_ui": "#F97316",
+      "regla_computo_dias_id": "cfg_rcd_habiles_compuesto",
+      "tope_dias_por_evento": 3,
+      "cupo_dias_por_ciclo": 6,
+      "tope_frecuencia_mensual": null
+    },
+    {
+      "inciso": "63d",
+      "codigo": "63-D",
+      "codigo_grilla": "63-D",
+      "nombre": "DONACION DE SANGRE",
+      "inciso_normativo": "Art. 63 inc. d — Decreto 1919/89",
+      "codigo_sarh": "63D",
+      "color_ui": "#2563EB",
+      "regla_computo_dias_id": "cfg_rcd_habiles_compuesto",
+      "tope_dias_por_evento": 1,
+      "cupo_dias_por_ciclo": null,
+      "tope_frecuencia_mensual": null
+    },
+    {
+      "inciso": "63i",
+      "codigo": "63-I",
+      "codigo_grilla": "63-I",
+      "nombre": "DIA PREVENTIVO DE SALUD",
+      "inciso_normativo": "Art. 63 inc. i — Decreto 1919/89",
+      "codigo_sarh": "63I",
+      "color_ui": "#2563EB",
+      "regla_computo_dias_id": "cfg_rcd_habiles_compuesto",
+      "tope_dias_por_evento": 1,
+      "cupo_dias_por_ciclo": 1,
+      "tope_frecuencia_mensual": 1
+    },
+    {
+      "inciso": "63j",
+      "codigo": "63-J",
+      "codigo_grilla": "63-J",
+      "nombre": "DUELO",
+      "inciso_normativo": "Art. 63 inc. j — Decreto 1919/89",
+      "codigo_sarh": "63J",
+      "color_ui": "#2563EB",
+      "regla_computo_dias_id": "cfg_rcd_corridos",
+      "tope_dias_por_evento": 5,
+      "cupo_dias_por_ciclo": null,
+      "tope_frecuencia_mensual": null,
+      "opciones_consumo_solicitud": [
+        {
+          "id": "oc_63j_conyuge_hijos_padres",
+          "etiqueta_ui": "Cónyuge / conviviente, hijos, padres",
+          "codigo_sarh": "63J",
+          "dias_por_evento": 5,
+          "regla_computo_id": "cfg_rcd_corridos",
+          "activo": true
+        },
+        {
+          "id": "oc_63j_hermanos",
+          "etiqueta_ui": "Hermanos",
+          "codigo_sarh": "63J",
+          "dias_por_evento": 3,
+          "regla_computo_id": "cfg_rcd_corridos",
+          "activo": true
+        },
+        {
+          "id": "oc_63j_abuelos_nietos",
+          "etiqueta_ui": "Abuelos y nietos",
+          "codigo_sarh": "63J",
+          "dias_por_evento": 2,
+          "regla_computo_id": "cfg_rcd_corridos",
+          "activo": true
+        },
+        {
+          "id": "oc_63j_tios_sobrinos",
+          "etiqueta_ui": "Tíos y sobrinos (consanguíneos directos)",
+          "codigo_sarh": "63J",
+          "dias_por_evento": 1,
+          "regla_computo_id": "cfg_rcd_corridos",
+          "activo": true
+        }
+      ]
+    },
+    {
+      "inciso": "63k",
+      "codigo": "63-K",
+      "codigo_grilla": "63-K",
+      "nombre": "CONCURSOS Y OPOSICIONES",
+      "inciso_normativo": "Art. 63 inc. k — Decreto 1919/89",
+      "codigo_sarh": "63K",
+      "color_ui": "#2563EB",
+      "regla_computo_dias_id": "cfg_rcd_habiles_compuesto",
+      "tope_dias_por_evento": 4,
+      "cupo_dias_por_ciclo": 12,
+      "tope_frecuencia_mensual": null
+    }
+  ]
+}
