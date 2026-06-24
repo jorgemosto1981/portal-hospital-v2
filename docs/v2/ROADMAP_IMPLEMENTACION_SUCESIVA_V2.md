@@ -151,7 +151,7 @@ Backend functions + frontend GSO; **no** incluye job día 5 ni `materializarRang
 
 - [ ] Purge probado en staging con HLg real.
 - [ ] Gate anclas en tests (`validarEntornoOperativo.test.js` ampliado).
-- [x] Listado sector sin remat síncrono en lectura default (O-P0-7 piloto 2026-06-23).
+- [x] Listado sector sin remat síncrono en lectura default (O-P0-7 piloto 2026-06-23; test + RFC CVC-0 2026-06-24).
 - [x] Badge sync + listener Firestore en GSO (`GrillaSyncSectorBar`).
 - [x] Deploy functions + hosting documentado (grilla sync — `GRILLA_SYNC_GRUPO_MES_V2.md`).
 

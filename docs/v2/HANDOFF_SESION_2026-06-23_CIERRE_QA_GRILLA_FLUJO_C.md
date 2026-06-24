@@ -1,11 +1,11 @@
 # Handoff — Sesión 2026-06-23 (CVC · QA grilla reactiva · Flujo C)
 
-> **RETOMAR AQUÍ:** Smoke **Q2.4** CHAPARRO **d19** (cierre épica) → **Épica B** presentación en motor → tope movimientos **post-B**.  
+> **RETOMAR AQUÍ:** ~~Q2.4~~ ✅ · ~~Épica B B1–B4~~ ✅ · ~~O-P0-7 doc/test CVC-0~~ ✅ · **Siguiente:** RFC tope movimientos (implementación) · B3/B5 opcional.  
 > CHAPARRO **d21** (3 traslados → franco): ✅ QA prod tras fix saldo cero / presentación fantasma.  
 > **Índice:** [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · Plan: [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md) · **CVC:** [`RFC_CICLO_VIS_CELDA_GRILLA_V2.md`](./RFC_CICLO_VIS_CELDA_GRILLA_V2.md)
 
 **Piloto:** Sala Internación 1 `gdt_01KQA6QCA8TDQK9YBTHKYA4R2V` · **2026-06**  
-**Rama:** `master` (cambios **sin commit** — ver `git status`)  
+**Rama:** `master` — cierre doc O-P0-7 en commit dedicado post-`51720dc`  
 **Prod:** https://portal-hospital-v2.web.app · **deploy hosting + functions grilla** **2026-06-23** (`b594cda`) · QA piloto en prod tras deploy
 
 ---

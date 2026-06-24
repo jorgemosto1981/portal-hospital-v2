@@ -1,12 +1,11 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ — cierre épica piloto grilla jun-2026:**  
-> **1)** ~~Smoke Q2.4~~ ✅ · **2)** **Épica B** — [`EPICA_B_PRESENTACION_MOTOR_V2.md`](./EPICA_B_PRESENTACION_MOTOR_V2.md) (B1–B2 en código)  
-> **3)** **RFC tope movimientos** — **después de B** (no implementar mientras el motor pueda dejar tokens fantasma).  
-> Fix saldo cero d21 (presentación fantasma) — ✅ QA prod OK · commit/deploy pendiente si aún no subido.  
-> Handoff: [`HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md`](./HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md) · CVC: [`RFC_CICLO_VIS_CELDA_GRILLA_V2.md`](./RFC_CICLO_VIS_CELDA_GRILLA_V2.md) · Plan: [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md)  
-> Handoff anterior: [`HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md`](./HANDOFF_SESION_2026-06-19_PAUSA_GRILLA_REACTIVIDAD.md)  
-> **Hosting prod:** https://portal-hospital-v2.web.app · deploy **2026-06-23** (`b594cda`) · `master` **1 commit** ahead of origin (push pendiente si se desea)
+> **RETOMAR AQUÍ — producto grilla post-piloto jun-2026:**  
+> **1)** ~~Lectura snapshot / `grilla_sync` / RFC CVC-0 + test listar~~ ✅ **épica cerrada** — [`GRILLA_SYNC_GRUPO_MES_V2.md`](./GRILLA_SYNC_GRUPO_MES_V2.md)  
+> **2)** ~~Épica B B1–B4~~ ✅ prod · backlog opcional **B3/B5** — [`EPICA_B_PRESENTACION_MOTOR_V2.md`](./EPICA_B_PRESENTACION_MOTOR_V2.md)  
+> **3)** **RFC tope movimientos** — siguiente implementación (post-B; ver deploy doc `e6471f4` si aplica).  
+> Handoff QA: [`HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md`](./HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md) · CVC: [`RFC_CICLO_VIS_CELDA_GRILLA_V2.md`](./RFC_CICLO_VIS_CELDA_GRILLA_V2.md)  
+> **Hosting prod:** https://portal-hospital-v2.web.app · UX grilla `51720dc` · **push** `master` si hay commits locales sin remoto
 
 ---
 
@@ -19,7 +18,8 @@
 | M+T+N — 3 fichadas orden reloj | ✅ QA LOKITO d16, CHAPARRO d16 |
 | Incorporación T desde otro día + fichadas destino | ✅ QA LOKITO d6 ← 07/06 |
 | QA ciclo base Q1.x / Q2.1–2.3 | ✅ |
-| Flujo C UI + motor preasignado | ✅ código local · ⏳ deploy |
+| Flujo C UI + motor preasignado | ✅ prod **2026-06-23** (`b594cda`) |
+| Lectura snapshot O-P0-7 — RFC CVC-0 + test listar | ✅ **2026-06-24** |
 | CHAPARRO d21 — 3 traslados → franco origen | ✅ QA prod **2026-06-23** (fix saldo cero / token fantasma) |
 | CHAPARRO d19 (**Q2.4** histórico) | ✅ pre-CVC · revalidado patrón **d25→26** post-épica B **2026-06-23** |
 | Q3 cadena N/M CAMPOS | ✅ **2026-06-23** (protocolo + d12; fix flags franco) |

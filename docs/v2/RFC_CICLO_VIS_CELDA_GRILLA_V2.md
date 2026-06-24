@@ -41,17 +41,23 @@ Archivo clave: `grillaDiaCeldaMerge.js` — **si el store B tiene teoría vieja,
 
 ### 3.1 CVC-0 — Carga inicial del mes
 
+**Contrato de lectura (2026-06, piloto `grilla_sync_grupo_mes`):** el listado **no** ejecuta `materializarGrupoMes` en el path por defecto. Lee snapshots `vis_*` ya persistidos (batch `getAll` por persona del mes) y devuelve `sync_estado` + `grilla_sync`. La respuesta incluye `materializacion_grupo: { omitida: true, motivo: "lectura_snapshot", … }`. Filas con `vis` ausente o degenerado llevan `materializado_lazy: true`; si `sync_estado.reconciliacion === "pendiente"`, el backend encola reconciliación async (doc `grilla_sync_grupo_mes`) sin bloquear la respuesta. Remat síncrono solo con `forzar_materializacion_grupo: true` (callable `listar…` / `solicitarReconciliacionGrillaGrupoMes` con `forzar_sincrono`). Detalle operativo: [`GRILLA_SYNC_GRUPO_MES_V2.md`](./GRILLA_SYNC_GRUPO_MES_V2.md).
+
 ```text
 Usuario abre tarjeta grupo×mes
   → GrillaMesLicenciasPanel.seleccionarTarjeta
   → useGrillaMesVista.cargar()
-  → listarVistaGrillaMesPorGrupo (callable)
+  → listarVistaGrillaMesPorGrupo (callable, lectura snapshot)
   → setData(vistaData)                    [capa A]
   → useGrillaMesNodos: hidratarDesdeListadoVista(vista)  [capa B, base.clear + relleno]
   → GrillaMesEquipoTabla → GrillaDiaCelda(cellFallback=cell de A)
+  → (paralelo) useGrillaSyncState + GrillaSyncSectorBar: badge / onSnapshot grilla_sync
+  → si worker pasa en_curso → idle: vista.cargar({ bypassCache: true, background: true })
 ```
 
-**Archivos:** `useGrillaMesVista.js`, `useGrillaMesNodos.js` (effect `vistaListado`), `grillaMesNodoStore.js` (`hidratarDesdeListadoVista`).
+**Modal día (misma épica):** al abrir **no** llama `obtenerVistaGrillaMesAgente`; la celda sale del snapshot del listado (`celdaVis` / store). Placeholder «Sincronizando turno del día…» si aún no hay datos en capa A/B.
+
+**Archivos:** `useGrillaMesVista.js`, `useGrillaMesNodos.js` (effect `vistaListado`), `grillaMesNodoStore.js` (`hidratarDesdeListadoVista`), `grillaMesAgenteCore.js` (`listarVistaGrillaMesPorGrupo`), `GrillaSyncSectorBar.jsx`, `DiaGrillaDetalleModal.jsx`.
 
 ---
 
