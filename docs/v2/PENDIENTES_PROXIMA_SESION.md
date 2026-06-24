@@ -1,11 +1,11 @@
 # Punto de Continuación — Próxima Sesión
 
 > **RETOMAR AQUÍ — producto grilla post-piloto jun-2026:**  
-> **1)** ~~Lectura snapshot / `grilla_sync` / RFC CVC-0 + test listar~~ ✅ **épica cerrada** — [`GRILLA_SYNC_GRUPO_MES_V2.md`](./GRILLA_SYNC_GRUPO_MES_V2.md)  
-> **2)** ~~Épica B B1–B4~~ ✅ prod · backlog opcional **B3/B5** — [`EPICA_B_PRESENTACION_MOTOR_V2.md`](./EPICA_B_PRESENTACION_MOTOR_V2.md)  
-> **3)** **RFC tope movimientos** — siguiente implementación (post-B; ver deploy doc `e6471f4` si aplica).  
-> Handoff QA: [`HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md`](./HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md) · CVC: [`RFC_CICLO_VIS_CELDA_GRILLA_V2.md`](./RFC_CICLO_VIS_CELDA_GRILLA_V2.md)  
-> **Hosting prod:** https://portal-hospital-v2.web.app · UX grilla `51720dc` · **push** `master` si hay commits locales sin remoto
+> **1)** ~~Lectura snapshot / `grilla_sync` / RFC CVC-0 + test listar~~ ✅  
+> **2)** ~~Épica B B1–B4~~ ✅ prod · backlog opcional **B3/B5**  
+> **3)** ~~Tope movimientos v1~~ ✅ prod (vigente **01/07/2026**) · **UI bypass RRHH** en modales traslado/intercambio ✅ código  
+> **4)** Piloto tope post-01/07 + preview contador en modales (RFC v1.1) · **B3/B5** opcional  
+> Handoff QA: [`HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md`](./HANDOFF_SESION_2026-06-23_CIERRE_QA_GRILLA_FLUJO_C.md) · Tope: [`RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md`](./RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md)
 
 ---
 

@@ -115,10 +115,11 @@ Reglas: canonicalizar segmento como en `rdaTurnoTeoricoWorker`; **no duplicar** 
 
 - `tope_movimientos_vigente_desde` — ISO timestamp fijado en deploy (o `cfg_*` si se prefiere ops).
 
-### 9.4 Web (v1.0 mínimo)
+### 9.4 Web
 
-- Toast mapeado a `[BATCH-LIM-001]`.
-- v1.1: preview en modales gestión turno (callable o lógica compartida).
+- Toast mapeado a `[BATCH-LIM-001]` (`MENSAJE_BATCH_LIM_001`).
+- **v1.0 RRHH:** checkbox + motivo en `ModalCambioTurnoPropio` y `ModalCoberturaParcial` (intercambio); envía `bypass_tope_movimientos` / `motivo_bypass_tope` en `aplicarBatchAsistencia` (shell RRHH).
+- **v1.1 (pendiente):** preview en modales gestión turno (callable o lógica compartida).
 
 ### 9.5 Tests
 

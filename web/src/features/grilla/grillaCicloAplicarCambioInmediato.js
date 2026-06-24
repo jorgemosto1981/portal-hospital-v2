@@ -25,7 +25,7 @@ export const FASE_CICLO_APLICAR_CAMBIO = Object.freeze({
 /**
  * Fase SERVIDOR.
  * @param {Record<string, unknown>} enriched
- * @param {{ editorPersonaId?: string; periodo?: string }} ctx
+ * @param {{ editorPersonaId?: string; periodo?: string; bypassTopeMovimientos?: boolean; motivoBypassTope?: string }} ctx
  */
 export async function faseServidorAplicarCambio(enriched, ctx) {
   return aplicarCambioGrillaInmediato(enriched, ctx);

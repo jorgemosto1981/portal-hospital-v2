@@ -1,6 +1,6 @@
 # Handoff — Sesión 2026-06-23 (CVC · QA grilla reactiva · Flujo C)
 
-> **RETOMAR AQUÍ:** ~~Q2.4~~ ✅ · ~~Épica B B1–B4~~ ✅ · ~~O-P0-7 doc/test CVC-0~~ ✅ · **Siguiente:** RFC tope movimientos (implementación) · B3/B5 opcional.  
+> **RETOMAR AQUÍ:** ~~Q2.4~~ ✅ · ~~Épica B B1–B4~~ ✅ · ~~O-P0-7~~ ✅ · ~~Tope v1 + bypass RRHH UI~~ ✅ · **Siguiente:** piloto tope post-01/07 · preview v1.1 · B3/B5 opcional.  
 > CHAPARRO **d21** (3 traslados → franco): ✅ QA prod tras fix saldo cero / presentación fantasma.  
 > **Índice:** [`PENDIENTES_PROXIMA_SESION.md`](./PENDIENTES_PROXIMA_SESION.md) · Plan: [`PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md`](./PLAN_REACTIVIDAD_GRILLA_NODOS_V2.md) · **CVC:** [`RFC_CICLO_VIS_CELDA_GRILLA_V2.md`](./RFC_CICLO_VIS_CELDA_GRILLA_V2.md)
 

@@ -84,7 +84,7 @@ Esperado tras motor actual (Jaqueline): **día 11 franco**, **día 12 `T+N`**.
 | `upsertSegmento` por `segmento_id`+titular | Solo defensivo (no sustituye validación) |
 | Supersession piernas opuestas + cadena N/M | ✅ 2026-06-19 (`overridesTurnoSupersession.js`, `rdaTurnoTeoricoWorker.js`) |
 | Ciclo UI FIN_BLOQUEO vs POST sanación | ✅ 2026-06-19 (`grillaCicloAplicarCambioInmediato.js`) |
-| Tope 2 movimientos / tramo / día | 📋 [`RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md`](./RFC_BORRADOR_TOPE_MOVIMIENTOS_GESTION_TURNO_V2.md) · **post-épica B** |
+| Tope 2 movimientos / tramo / día | ✅ v1 prod + bypass RRHH UI (traslado/intercambio) · vigente 01/07/2026 — [`RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md`](./RFC_TOPE_MOVIMIENTOS_WORKSHOP_RRHH_V2.md) |
 | Flujo C — declaración tramo preasignado (sin duplicar teoría) | ✅ prod **2026-06-23** (`b594cda`) |
 | Coherencia celda franco + presentación tras traslados sucesivos | ✅ CVC + `coherirPresentacionCompuestoAlTeoricoVis` **2026-06-23** · QA LOKITO d19 |
 | M+T+N — 3 fichadas, orden reloj ≠ M/T/N | ✅ UI `mapSegmentoMtnAIndiceFichada` **2026-06-23** · QA d16 LOKITO/CHAPARRO |

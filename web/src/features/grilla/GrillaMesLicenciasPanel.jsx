@@ -667,7 +667,7 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
   }, [procesandoGrilla]);
 
   const aplicarCambioInmediato = useCallback(
-    async (op, grupoIdOverride) => {
+    async (op, grupoIdOverride, batchCtx = {}) => {
       if (procesandoGrilla) {
         throw new Error("Ya hay un cambio en curso. Esperá un momento.");
       }
@@ -680,6 +680,8 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
         const result = await faseServidorAplicarCambio(enriched, {
           editorPersonaId: personaId,
           periodo: vista.periodo,
+          bypassTopeMovimientos: batchCtx.bypassTopeMovimientos === true,
+          motivoBypassTope: batchCtx.motivoBypassTope,
         });
         const parches = await faseParcheCriticoTrasBatch(enriched, result, {
           invalidarCache: (p) =>
@@ -1455,14 +1457,16 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
           onCerrar={() => setCoberturaModal(null)}
           onRegistrado={() => {}}
           onDesactualizado={() => void vista.cargar()}
-          onAplicarCambio={async (op) => {
+          onAplicarCambio={async (op, batchCtx) => {
             await aplicarCambioInmediato(
               op,
               coberturaModal.grupoTrabajoId ||
                 diaModal?.grupoTrabajoId ||
                 vista.grupoActivoId,
+              batchCtx,
             );
           }}
+          puedeBypassTopeMovimientos={capabilities.puedeAccionesPeriodoLiquidacion}
           aplicandoCambio={aplicandoBatch}
         />
       ) : null}
@@ -1477,12 +1481,14 @@ export default function GrillaMesLicenciasPanel({ variant = "default", capabilit
           grupoId={cambioTurnoPropioModal.grupoId}
           periodo={vista.periodo}
           onCerrar={() => setCambioTurnoPropioModal(null)}
-          onAplicarCambio={async (op) => {
+          onAplicarCambio={async (op, batchCtx) => {
             await aplicarCambioInmediato(
               op,
               cambioTurnoPropioModal.grupoId || diaModal?.grupoTrabajoId || vista.grupoActivoId,
+              batchCtx,
             );
           }}
+          puedeBypassTopeMovimientos={capabilities.puedeAccionesPeriodoLiquidacion}
           aplicandoCambio={aplicandoBatch}
         />
       ) : null}

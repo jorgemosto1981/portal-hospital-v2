@@ -134,7 +134,12 @@ function normalizeFechaYmd(value) {
 
 /**
  * @param {Array<Record<string, unknown>>} opsOutbox
- * @param {{ editorPersonaId?: string; periodo?: string }} [ctx]
+ * @param {{
+ *   editorPersonaId?: string;
+ *   periodo?: string;
+ *   bypassTopeMovimientos?: boolean;
+ *   motivoBypassTope?: string;
+ * }} [ctx]
  */
 export async function aplicarBatchAsistencia(opsOutbox, ctx = {}) {
   const ops = (opsOutbox || []).map((op, idx) => mapOutboxOpToBatchPayload(op, idx, ctx));
@@ -144,6 +149,10 @@ export async function aplicarBatchAsistencia(opsOutbox, ctx = {}) {
     periodo: String(ctx?.periodo || "").trim() || null,
     ops,
   };
+  if (ctx?.bypassTopeMovimientos === true) {
+    payload.bypass_tope_movimientos = true;
+    payload.motivo_bypass_tope = String(ctx?.motivoBypassTope || "").trim();
+  }
   const res = await callAplicarBatchAsistencia(payload);
   return res?.data ?? res;
 }

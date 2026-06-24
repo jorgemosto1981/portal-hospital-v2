@@ -62,6 +62,7 @@
 | Config `TOPE_MOVIMIENTOS_VIGENTE_DESDE` | ✅ `2026-07-01T03:00:00.000Z` en repo |
 | Deploy functions (re-sync config) | ✅ 2026-06-23 (functions + hosting) |
 | Deploy hosting (toast D7) | ✅ `index-BSFCEpNO.js` |
+| UI bypass RRHH (modales traslado + intercambio) | ✅ web — `bypass_tope_movimientos` + `motivo_bypass_tope` en batch |
 | Observación piloto 1 semana | Tras 01/07 |
 
 ---

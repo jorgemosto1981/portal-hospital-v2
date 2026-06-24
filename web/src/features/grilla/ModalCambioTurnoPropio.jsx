@@ -25,6 +25,11 @@ import {
 import { errorMotivoTeoriaOverride } from "./teoriaPermisosGso.js";
 import UrgenciaG1AvisoModal from "./UrgenciaG1AvisoModal.jsx";
 import GrillaMotivoNovedadSection from "./GrillaMotivoNovedadSection.jsx";
+import GrillaBypassTopeMovimientosSection from "./GrillaBypassTopeMovimientosSection.jsx";
+import {
+  batchCtxDesdeBypass,
+  validarBypassTopeMovimientos,
+} from "./grillaBypassTopeMovimientos.js";
 import { componerMotivoNovedadGso } from "./grillaMotivosNovedadCatalogo.js";
 import { buildGuardrailNovedadContext } from "./grillaGuardrailsTeoriaUi.js";
 
@@ -39,9 +44,13 @@ const SIN_OPS_PENDIENTES = /** @type {Array<Record<string, unknown>>} */ ([]);
  *   grupoId: string;
  *   periodo: string;
  *   onCerrar: () => void;
- *   onAplicarCambio: (op: Record<string, unknown>) => void | Promise<void>;
+ *   onAplicarCambio: (
+ *     op: Record<string, unknown>,
+ *     batchCtx?: { bypassTopeMovimientos?: boolean; motivoBypassTope?: string },
+ *   ) => void | Promise<void>;
  *   aplicandoCambio?: boolean;
  *   requiereUrgenciaG1?: boolean;
+ *   puedeBypassTopeMovimientos?: boolean;
  *   guardrailNovedadContext?: import("./grillaGuardrailsTeoriaUi.js").GuardrailNovedadContext;
  * }} props
  */
@@ -56,6 +65,7 @@ export default function ModalCambioTurnoPropio({
   onCerrar,
   onAplicarCambio,
   aplicandoCambio = false,
+  puedeBypassTopeMovimientos = false,
 }) {
   const [fechaDestinoYmd, setFechaDestinoYmd] = useState(fechaOrigenYmd);
   const [capaOrigen, setCapaOrigen] = useState(null);
@@ -69,6 +79,8 @@ export default function ModalCambioTurnoPropio({
   const [turnosRegimenPorId, setTurnosRegimenPorId] = useState(/** @type {Record<string, object>} */ ({}));
   const [operando, setOperando] = useState(false);
   const [errorSubmit, setErrorSubmit] = useState("");
+  const [bypassTopeActivo, setBypassTopeActivo] = useState(false);
+  const [motivoBypassTope, setMotivoBypassTope] = useState("");
 
   useEffect(() => {
     if (!aplicandoCambio) setOperando(false);
@@ -312,6 +324,14 @@ export default function ModalCambioTurnoPropio({
       setErrorSubmit("No se pudo leer la versión del día destino. Recargá e intentá de nuevo.");
       return;
     }
+    const bypassVal = validarBypassTopeMovimientos({
+      activo: bypassTopeActivo,
+      motivo: motivoBypassTope,
+    });
+    if (!bypassVal.ok) {
+      setErrorSubmit(bypassVal.error || "Motivo de excepción inválido.");
+      return;
+    }
 
     setOperando(true);
     try {
@@ -332,7 +352,7 @@ export default function ModalCambioTurnoPropio({
         periodo,
         esUrgenciaOperativa: requiereUrgenciaG1,
       });
-      await onAplicarCambio(op);
+      await onAplicarCambio(op, batchCtxDesdeBypass(bypassVal));
       onCerrar();
     } catch (e) {
       setErrorSubmit(e?.message || "No se pudo agregar el cambio.");
@@ -554,6 +574,15 @@ export default function ModalCambioTurnoPropio({
               onMotivoDetalleChange={setMotivoDetalle}
               requiereUrgenciaG1={requiereUrgenciaG1}
               tituloSeccion="4. Motivo"
+            />
+
+            <GrillaBypassTopeMovimientosSection
+              className="mt-4"
+              habilitado={puedeBypassTopeMovimientos}
+              activo={bypassTopeActivo}
+              onActivoChange={setBypassTopeActivo}
+              motivo={motivoBypassTope}
+              onMotivoChange={setMotivoBypassTope}
             />
           </div>
         )}

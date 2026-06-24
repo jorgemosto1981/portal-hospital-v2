@@ -2,18 +2,26 @@ import toast from "react-hot-toast";
 
 import { laboralCallableErrorMessage } from "../../pages/datos-laborales/callableErrorMessage.js";
 import { aplicarBatchAsistencia } from "../../services/coberturaParcialService.js";
+import { MENSAJE_BATCH_LIM_001 } from "./grillaBypassTopeMovimientos.js";
 
 /**
  * Aplica una operación de gestión de turno al servidor (batch de 1 op):
  * overrides, rematerialización de días y recálculo de analítica/fichadas.
  *
  * @param {Record<string, unknown>} op — contrato outbox (reemplazo, cobertura, adicional)
- * @param {{ editorPersonaId?: string; periodo?: string }} ctx
+ * @param {{
+ *   editorPersonaId?: string;
+ *   periodo?: string;
+ *   bypassTopeMovimientos?: boolean;
+ *   motivoBypassTope?: string;
+ * }} ctx
  */
 export async function aplicarCambioGrillaInmediato(op, ctx = {}) {
   const result = await aplicarBatchAsistencia([op], {
     editorPersonaId: ctx.editorPersonaId,
     periodo: ctx.periodo,
+    bypassTopeMovimientos: ctx.bypassTopeMovimientos,
+    motivoBypassTope: ctx.motivoBypassTope,
   });
   return result;
 }
@@ -47,9 +55,15 @@ export function toastErrorAplicarCambioGrilla(e, opts = {}) {
     return true;
   }
   if (msg.includes("BATCH-LIM-001")) {
-    toast.error(
-      "Límite de movimientos excedido para este tramo (máx. 2 por día). Contacte a RRHH para solicitar una excepción.",
-    );
+    toast.error(MENSAJE_BATCH_LIM_001);
+    return true;
+  }
+  if (msg.includes("BATCH-LIM-002")) {
+    toast.error("Motivo de excepción RRHH requerido (mín. 3 caracteres).");
+    return true;
+  }
+  if (msg.includes("BATCH-LIM-003")) {
+    toast.error("Solo RRHH puede autorizar excepciones al tope de movimientos.");
     return true;
   }
   if (/\[BATCH-/i.test(msg)) {

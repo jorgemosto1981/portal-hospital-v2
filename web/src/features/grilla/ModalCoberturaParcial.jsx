@@ -25,6 +25,11 @@ import {
 import { errorMotivoTeoriaOverride } from "./teoriaPermisosGso.js";
 import UrgenciaG1AvisoModal from "./UrgenciaG1AvisoModal.jsx";
 import GrillaMotivoNovedadSection from "./GrillaMotivoNovedadSection.jsx";
+import GrillaBypassTopeMovimientosSection from "./GrillaBypassTopeMovimientosSection.jsx";
+import {
+  batchCtxDesdeBypass,
+  validarBypassTopeMovimientos,
+} from "./grillaBypassTopeMovimientos.js";
 import { componerMotivoNovedadGso } from "./grillaMotivosNovedadCatalogo.js";
 import { buildGuardrailNovedadContext } from "./grillaGuardrailsTeoriaUi.js";
 import {
@@ -42,12 +47,16 @@ const SIN_OPS_PENDIENTES = /** @type {Array<Record<string, unknown>>} */ ([]);
  *   fechaDestinoYmd: string;
  *   grupoId: string;
  *   periodo: string;
- *   onAplicarCambio: (op: Record<string, unknown>) => void | Promise<void>;
+ *   onAplicarCambio: (
+ *     op: Record<string, unknown>,
+ *     batchCtx?: { bypassTopeMovimientos?: boolean; motivoBypassTope?: string },
+ *   ) => void | Promise<void>;
  *   aplicandoCambio?: boolean;
  *   onCerrar: () => void;
  *   onRegistrado?: () => void;
  *   onDesactualizado?: () => void;
  *   requiereUrgenciaG1?: boolean;
+ *   puedeBypassTopeMovimientos?: boolean;
  *   guardrailNovedadContext?: import("./grillaGuardrailsTeoriaUi.js").GuardrailNovedadContext;
  * }} props
  */
@@ -64,6 +73,7 @@ export default function ModalCoberturaParcial({
   onDesactualizado,
   onAplicarCambio,
   aplicandoCambio = false,
+  puedeBypassTopeMovimientos = false,
 }) {
   const [cargandoOrigen, setCargandoOrigen] = useState(true);
   const [operando, setOperando] = useState(false);
@@ -83,6 +93,8 @@ export default function ModalCoberturaParcial({
   const [fechaDestinoYmd, setFechaDestinoYmd] = useState(fechaYmd);
   const [codigoNovedadId, setCodigoNovedadId] = useState("");
   const [motivoDetalle, setMotivoDetalle] = useState("");
+  const [bypassTopeActivo, setBypassTopeActivo] = useState(false);
+  const [motivoBypassTope, setMotivoBypassTope] = useState("");
 
   useEffect(() => {
     if (!aplicandoCambio) setOperando(false);
@@ -309,6 +321,14 @@ export default function ModalCoberturaParcial({
       setErrorSubmit("No se pudo leer la versión de uno de los días. Recargá e intentá de nuevo.");
       return;
     }
+    const bypassVal = validarBypassTopeMovimientos({
+      activo: bypassTopeActivo,
+      motivo: motivoBypassTope,
+    });
+    if (!bypassVal.ok) {
+      setErrorSubmit(bypassVal.error || "Motivo de excepción inválido.");
+      return;
+    }
     setOperando(true);
     try {
       const personaDestinoLabel = personasMismoRegimen.find(
@@ -330,7 +350,7 @@ export default function ModalCoberturaParcial({
         periodo,
         esUrgenciaOperativa: requiereUrgenciaG1,
       });
-      await onAplicarCambio(op);
+      await onAplicarCambio(op, batchCtxDesdeBypass(bypassVal));
       if (onRegistrado) onRegistrado();
     } catch (e) {
       const msg = e?.message || "Error al registrar intercambio.";
@@ -576,6 +596,15 @@ export default function ModalCoberturaParcial({
               onMotivoDetalleChange={setMotivoDetalle}
               requiereUrgenciaG1={requiereUrgenciaG1}
               tituloSeccion="3. Motivo"
+            />
+
+            <GrillaBypassTopeMovimientosSection
+              className="mt-4"
+              habilitado={puedeBypassTopeMovimientos}
+              activo={bypassTopeActivo}
+              onActivoChange={setBypassTopeActivo}
+              motivo={motivoBypassTope}
+              onMotivoChange={setMotivoBypassTope}
             />
             </>
             ) : null}
