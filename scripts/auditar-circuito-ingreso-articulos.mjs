@@ -11,6 +11,10 @@ import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const APPLIED_OLEADA_63_PATH = join(
+  repoRoot,
+  "docs/v2/seeds/oleada_63_p2/applied-ids.json",
+);
 
 /** Circuito operativo acordado RRHH 2026-05-18. */
 export const CIRCUITO_OPERATIVO_ESPERADO = [
@@ -39,6 +43,22 @@ const ARTICULOS = [
     },
   },
 ];
+
+function loadOleada63Articulos() {
+  if (!existsSync(APPLIED_OLEADA_63_PATH)) return [];
+  try {
+    const raw = JSON.parse(readFileSync(APPLIED_OLEADA_63_PATH, "utf8"));
+    const arts = raw?.articulos && typeof raw.articulos === "object" ? raw.articulos : {};
+    return Object.entries(arts).map(([clave, row]) => ({
+      id: String(row.artId || "").trim(),
+      label: String(row.codigo || clave).trim() || clave,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+const ARTICULOS_AUDIT = [...ARTICULOS, ...loadOleada63Articulos()].filter((a) => /^art_/i.test(a.id));
 
 function loadGacPath() {
   const envFile = join(repoRoot, ".env.v2.local");
@@ -78,7 +98,7 @@ console.log("=== Auditoría circuito_ingreso_ids ===");
 console.log("Esperado (mínimo):", CIRCUITO_OPERATIVO_ESPERADO.join(", "));
 console.log("");
 
-for (const art of ARTICULOS) {
+for (const art of ARTICULOS_AUDIT) {
   const verSnap = await db
     .collection("cfg_articulos")
     .doc(art.id)
