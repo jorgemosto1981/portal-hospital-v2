@@ -8,6 +8,7 @@
 **Handoff:** [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md)  
 **Precedencia normativa:** [`ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md`](./ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md)  
 **Schema configurador:** [`MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md`](./MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md) · ABM [`MODULO_CONFIGURACION_ARTICULOS_V2.md`](./MODULO_CONFIGURACION_ARTICULOS_V2.md)  
+**Política día vs tramo (P0):** [`GUIA_POLITICA_DIA_VS_TRAMO_JUSTIFICACIONES_V2.md`](./GUIA_POLITICA_DIA_VS_TRAMO_JUSTIFICACIONES_V2.md)  
 **Texto oficial (consulta):** [Decreto 1919/89 — Santa Fe (SIN)](https://www.santafe.gov.ar/index.php/web/content/view/full/119989/decreto-191989-regimen-de-licencias-y-franquicias-del-personal-de-la-administracion-publica-provincial)
 
 **Leyenda de estado en índice**
@@ -63,6 +64,8 @@ Cada artículo (o inciso frecuente del Art. 63) usa **la misma plantilla**. Copi
 ```
 
 **Bloques del schema (recordatorio):** ver matriz §4 de [`MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md`](./MODULO_ARTICULOS_V2_SCHEMA_PRODUCT_FIRST.md).
+
+**Fichas oleada 1 (Art. 63):** incluyen tablas **Bloques 1–7** + **bloque grilla** con ids `cfg_*` / `art_*` (valores `—` = pendiente alta RRHH en P2). **Enlace asistencia** alineado a la [guía día vs tramo](./GUIA_POLITICA_DIA_VS_TRAMO_JUSTIFICACIONES_V2.md).
 
 ---
 
@@ -182,18 +185,318 @@ Lista acordada en handoff 2026-06-11 (máx. 5 para RFC Fase 3):
 
 ## Bloque E — Justificaciones (Art. 63)
 
-**Modelo producto:** un `art_*` por **inciso de uso frecuente** (plantilla Patrón B). Tabla índice — completar incisos según práctica hospital + SARH.
+**Modelo producto:** un `art_*` por **inciso de uso frecuente** (plantilla Patrón B). Motor valida topes y unidad; **no** sugiere artículo desde grilla.
 
-| Inciso (ej.) | Tema | Parámetros típicos | Estado |
-|--------------|------|-------------------|--------|
-| **63.a** | (según texto decreto) | cupo / hábiles | ⏳ |
-| **63.d** | Donación sangre | 1 día / evento | ⏳ |
-| **63.i** | Día preventivo salud | 1 / año | ⏳ |
-| **63.j** | Duelo | 5/3/2 laborables por vínculo | ⏳ |
-| **63.k** | Concursos | 4 hábiles; máx 12/año | ⏳ |
-| **…** | Resto incisos RRHH | copiar fila | ⏳ |
+**Plantilla de alta:** misma estructura operativa que [`GUIA_ALTA_ARTICULO_68B_COMPENSATORIO_V2.md`](./GUIA_ALTA_ARTICULO_68B_COMPENSATORIO_V2.md), con Patrón **B** y unidad **días** salvo indicación.
 
-**Plantilla de alta:** misma estructura que [`GUIA_ALTA_ARTICULO_68B_COMPENSATORIO_V2.md`](./GUIA_ALTA_ARTICULO_68B_COMPENSATORIO_V2.md), con Patrón **B**.
+| Inciso | Tema | Estado ficha |
+|--------|------|--------------|
+| **63.d** | Donación de sangre | ✅ [ficha](#art-63-d--donación-de-sangre) |
+| **63.i** | Día preventivo de salud | ✅ [ficha](#art-63-i--día-preventivo-de-salud) |
+| **63.j** | Duelo | ✅ [ficha](#art-63-j--duelo) |
+| **63.k** | Concursos / oposiciones | ✅ [ficha](#art-63-k--concursos-y-oposiciones) |
+| **63.a** | Justificación inc. a (piloto normativo) | ✅ [ficha](#art-63-a--justificación-inc-a) |
+
+---
+
+### Art. 63.d — Donación de sangre
+
+| Campo | Contenido |
+|-------|-----------|
+| **Referencia** | Decreto 1919/89, Art. 63 inc. **d** |
+| **Resumen operativo** | Justificación por donación de sangre; **1 día** por evento; con goce; documentación acreditante; autorización según workflow. |
+| **¿Artículo en portal?** | Sí — Patrón B |
+| **Patrón saldo** | **B** |
+| **`art_*` piloto** | — (alta P2) |
+| **Enlace asistencia** | `cubre_inasistencia_total` (por tramo/día según solicitud); no delta parcial fragmentado |
+| **Brecha motor** | Preview B + MDC día entero; sin variante SARH en UI (C2 pendiente) |
+| **Relación SARH** | Pendiente inventario §6 anexo |
+
+**Bloque 1 — Identidad** (`bloque_identidad_naturaleza`)
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `codigo` | `63-D` |
+| `inciso_normativo` | Art. 63 inc. d — Decreto 1919/89 |
+| `nombre` | DONACION DE SANGRE (ajustar mayúsculas institucional) |
+| `es_lao_anual` | `false` |
+| `es_sin_goce` | `false` |
+| `es_licencia_medica` | `false` |
+| `requiere_dictamen` | `false` |
+| `visualizacion.codigo_grilla` | `63-D` |
+| `visualizacion.color_ui` | (paleta institucional licencia administrativa) |
+
+**Bloque 2 — Impacto** (`bloque_impacto_economico`)
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `justifica_sueldo_id` | `cfg_js_si_completo` |
+| `suma_para_sac` | `true` (validar con RRHH contable) |
+| `afecta_presentismo` | según política hospital |
+| `suma_antiguedad_lao` | `false` |
+
+**Bloque 3 — Elegibilidad** (`bloque_elegibilidad_filtros`)
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `escalafon_ids` | `[]` o `CFG_ESC_02_ADMINISTRACION` (igual criterio 64-A piloto) |
+| `agrupamiento_ids`, `vinculo_ids`, `cargo_ids`, `grupo_ids`, `persona_ids` | `[]` = todos |
+| `filtros_antiguedad` | `0` meses salvo norma |
+
+**Bloque 4 — Topes** (`bloque_topes_plazos_computo`)
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `unidad_medida_id` | `cfg_uma_dias` |
+| `regla_computo_desde_id` / `regla_computo_hasta_id` | hábiles según catálogo (alinear 64-A) |
+| `ambito_consumo_id` | `cfg_ac_anio_calendario` |
+| `reinicio_ciclo_id` | `cfg_rcc_anual` |
+| `origen_saldo_id` | `cfg_os_interno` |
+| `accion_saldo_id` | `cfg_as_resta` |
+| `cupo_dias_por_ciclo` | sin tope anual estricto en norma inc. d (validar RRHH) o alto |
+| `tope_dias_por_evento` | **1** |
+| `tope_frecuencia_mensual` | — |
+| `depende_rda` | `false` (piloto) o `true` si RRHH exige plan |
+| `nivel_ocupacion_dia_id` | `cfg_nod_exclusivo` |
+| `politica_superposicion_id` | según catálogo (incompatibilidades LAO en ficha LAO) |
+
+**Bloque 5 — Acumulación** (`bloque_acumulacion_sucesion`)
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| Caducidad / arrastre | Sin arrastre típico; evento puntual |
+
+**Bloque 6 — Workflow** (`bloque_workflow_sla_cobertura`)
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `circuito_ingreso_ids` | `CFG_USUARIO`, `CFG_RRHH`, `CFG_MEDICO`, `CFG_VISUALIZADOR` |
+| Adjuntos / plazos doc | Certificado donación — bloque 7 |
+
+**Bloque 7 — Documentación** (`bloque_documentacion_convivencia`)
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| Adjuntos obligatorios | Certificado institución donante |
+| `articulos_incompatibles_ids` | según política (LAO mismo día si exclusivo) |
+| Plazo presentación doc | según `cfg_tcp_*` |
+
+**Bloque grilla**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `codigo_grilla` | `63-D` |
+| `nivel_ocupacion_dia_id` | `cfg_nod_exclusivo` |
+| Unidad consumo | Días |
+| Fichada | Cubre **día entero** (`licenciaCubreDiaFichada`) |
+| MDC | Fan-out por cada día de solicitud aprobada |
+
+**Texto instructivo — Agente:** Solicitá el día de la donación con certificado; no reemplaza comunicación institucional si la norma lo exige.  
+**Texto instructivo — Jefe:** Verificar certificado y que el día coincide con el evento.  
+**Texto instructivo — RRHH:** Parametrización 1 día/evento; cruce excepcional día vs delta solo por acto RRHH ([guía](./GUIA_POLITICA_DIA_VS_TRAMO_JUSTIFICACIONES_V2.md) §5).
+
+---
+
+### Art. 63.i — Día preventivo de salud
+
+| Campo | Contenido |
+|-------|-----------|
+| **Referencia** | Decreto 1919/89, Art. 63 inc. **i** |
+| **Resumen operativo** | **1 día** por año calendario; examen preventivo de salud; con goce; documentación. |
+| **¿Artículo en portal?** | Sí — Patrón B |
+| **Patrón saldo** | **B** |
+| **`art_*` piloto** | — (alta P2) |
+| **Enlace asistencia** | `cubre_inasistencia_total` |
+| **Brecha motor** | Tope anual 1 — validar en preview B |
+
+**Bloque 1 — Identidad**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `codigo` | `63-I` |
+| `inciso_normativo` | Art. 63 inc. i |
+| `nombre` | DIA PREVENTIVO DE SALUD |
+| `es_lao_anual` / `es_sin_goce` / `es_licencia_medica` | `false` |
+| `visualizacion.codigo_grilla` | `63-I` |
+
+**Bloque 2 — Impacto**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `justifica_sueldo_id` | `cfg_js_si_completo` |
+
+**Bloque 3 — Elegibilidad**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| Filtros `*_ids` | Igual criterio 64-A piloto salvo decisión RRHH |
+
+**Bloque 4 — Topes**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `unidad_medida_id` | `cfg_uma_dias` |
+| `reinicio_ciclo_id` | `cfg_rcc_anual` |
+| `origen_saldo_id` | `cfg_os_interno` |
+| `cupo_dias_por_ciclo` | **1** |
+| `tope_dias_por_evento` | **1** |
+| `tope_frecuencia_mensual` | **1** (máx. un uso/mes si RRHH lo exige) |
+| `nivel_ocupacion_dia_id` | `cfg_nod_exclusivo` |
+
+**Bloques 5–7**
+
+| Bloque | Valor objetivo |
+|--------|----------------|
+| 5 | Sin arrastre |
+| 6 | Circuito estándar § [`ARTICULOS_BASICOS_OPERATIVOS_V2.md`](./ARTICULOS_BASICOS_OPERATIVOS_V2.md) |
+| 7 | Certificado examen preventivo |
+
+**Bloque grilla**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `codigo_grilla` | `63-I` |
+| Fichada | Día entero |
+| MDC | Exclusivo |
+
+**Texto instructivo — Agente:** Un día por año para examen preventivo; adjuntá certificado al solicitar.  
+**Texto instructivo — Jefe:** Controlar cupo anual y fechas.  
+**Texto instructivo — RRHH:** No acumular más de 1 día/ciclo A.
+
+---
+
+### Art. 63.j — Duelo
+
+| Campo | Contenido |
+|-------|-----------|
+| **Referencia** | Decreto 1919/89, Art. 63 inc. **j** |
+| **Resumen operativo** | Licencia por fallecimiento de familiar; días **laborables** según vínculo (tabla normativa 5 / 3 / 2); comunicación en plazo; certificado. |
+| **¿Artículo en portal?** | Sí — Patrón B (puede requerir `variantes_sarh[]` o múltiples `art_*` — RFC #1) |
+| **Patrón saldo** | **B** |
+| **`art_*` piloto** | — (alta P2) |
+| **Enlace asistencia** | `cubre_inasistencia_total` |
+| **Brecha motor** | Días por vínculo: validación manual RRHH hasta variantes en schema |
+
+**Bloque 1 — Identidad**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `codigo` | `63-J` |
+| `inciso_normativo` | Art. 63 inc. j |
+| `nombre` | DUELO |
+| `visualizacion.codigo_grilla` | `63-J` |
+
+**Bloque 4 — Topes (parametrización inicial piloto)**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `unidad_medida_id` | `cfg_uma_dias` |
+| `tope_dias_por_evento` | **5** (máximo normativo; RRHH ajusta días efectivos por vínculo al aprobar) |
+| `cupo_dias_por_ciclo` | sin tope bajo (evento por fallecimiento) |
+| `regla_computo_*` | **días laborables** |
+| `nivel_ocupacion_dia_id` | `cfg_nod_exclusivo` |
+
+**Bloque 6 — Workflow**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `circuito_ingreso_ids` | Estándar operativo |
+| Plazo comunicación | Documentar en bloque 7 (2 h primeras horas — práctica hospital) |
+
+**Bloque 7**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| Adjuntos | Certificado defunción / acta según vínculo |
+| `variantes_sarh[]` | **Pendiente C2** — tabla vínculo → días (5/3/2) |
+
+**Bloque grilla**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `codigo_grilla` | `63-J` |
+| Fichada | Día entero por cada día de la solicitud aprobada |
+| Multievento | Un evento por fallecimiento; no fragmentar en horas |
+
+**Texto instructivo — Agente:** Comunicá en las primeras horas según norma interna; indicá fechas y adjuntá certificado.  
+**Texto instructivo — Jefe:** Verificar vínculo y días laborables otorgados.  
+**Texto instructivo — RRHH:** Aplicar tabla 5/3/2; cruce excepcional solo acto RRHH.
+
+---
+
+### Art. 63.k — Concursos y oposiciones
+
+| Campo | Contenido |
+|-------|-----------|
+| **Referencia** | Decreto 1919/89, Art. 63 inc. **k** |
+| **Resumen operativo** | Hasta **4 días hábiles** por concurso/oposición; **máx. 12** por año; con goce; acreditación. |
+| **¿Artículo en portal?** | Sí — Patrón B |
+| **Patrón saldo** | **B** |
+| **`art_*` piloto** | — (alta P2) |
+| **Enlace asistencia** | `cubre_inasistencia_total` |
+| **Brecha motor** | Contador por “período de examen” — si no existe, control RRHH en aprobación |
+
+**Bloque 4 — Topes**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `unidad_medida_id` | `cfg_uma_dias` |
+| `tope_dias_por_evento` | **4** |
+| `cupo_dias_por_ciclo` | **12** |
+| `reinicio_ciclo_id` | `cfg_rcc_anual` |
+| `regla_computo_*` | hábiles |
+| `nivel_ocupacion_dia_id` | `cfg_nod_exclusivo` |
+
+**Bloques 1–3, 5–7**
+
+| Bloque | Valor objetivo |
+|--------|----------------|
+| 1 | `codigo` `63-K`, grilla `63-K` |
+| 2 | `cfg_js_si_completo` |
+| 3 | Elegibilidad estándar piloto |
+| 5 | Sin arrastre |
+| 6 | Circuito estándar |
+| 7 | Certificado / llamado concurso |
+
+**Bloque grilla**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| MDC | Hasta 4 días por solicitud; pila si otros eventos mismo día con conflicto |
+
+**Texto instructivo — Agente:** Máximo 4 días por concurso; respetá cupo anual 12.  
+**Texto instructivo — RRHH:** Verificar llamado y acumulado anual.
+
+---
+
+### Art. 63.a — Justificación inc. a
+
+| Campo | Contenido |
+|-------|-----------|
+| **Referencia** | Decreto 1919/89, Art. 63 inc. **a** |
+| **Resumen operativo** | Inciso **a** del artículo 63 — completar redacción normativa exacta con RRHH/SARH; parametrización Patrón B según texto legal definitivo. |
+| **¿Artículo en portal?** | Sí, cuando RRHH cierre texto y topes |
+| **Patrón saldo** | **B** (provisional) |
+| **`art_*` piloto** | — |
+| **Enlace asistencia** | Definir tras cierre normativo (`cubre_inasistencia_total` típico) |
+| **Brecha motor** | **Bloqueante RRHH:** inciso a sin inventario SARH en este MD |
+
+**Bloque 4 — Topes (placeholder hasta acta RRHH)**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `unidad_medida_id` | `cfg_uma_dias` (salvo norma en horas) |
+| `tope_dias_por_evento` | **—** (RRHH) |
+| `cupo_dias_por_ciclo` | **—** (RRHH) |
+| `nivel_ocupacion_dia_id` | `cfg_nod_exclusivo` |
+
+**Bloque grilla**
+
+| Campo | Valor objetivo |
+|-------|----------------|
+| `codigo_grilla` | `63-A` (no confundir con Art. **64**-A franquicia) — usar `63-INC-A` si RRHH prefiere |
+
+**Texto instructivo — RRHH:** Completar esta ficha con texto del decreto y códigos SARH antes del alta Firestore.
 
 ---
 
@@ -231,6 +534,9 @@ Borrador para checklist **ayuda-copy** (textos finales van en cada ficha).
 ## Criterios de cierre Fase 0
 
 - [ ] Ficha completa (plantilla) para **todos** los artículos con impacto en ausencias de las tablas §5–§10.
+- [x] **Oleada 1 Art. 63:** fichas d, i, j, k, a (tablas cfg) — 2026-06-24.
+- [x] [`GUIA_POLITICA_DIA_VS_TRAMO_JUSTIFICACIONES_V2.md`](./GUIA_POLITICA_DIA_VS_TRAMO_JUSTIFICACIONES_V2.md).
+- [ ] Acta RRHH oleada 63 (firma) + tag `1919-p0-doc-g1`.
 - [ ] LAO, 64, 68 alineados a [`ARTICULOS_BASICOS_OPERATIVOS_V2.md`](./ARTICULOS_BASICOS_OPERATIVOS_V2.md).
 - [ ] Brechas RFC §2 reflejadas en fichas afectadas.
 - [ ] [`MATRIZ_ESCENARIOS_ARTICULOS_V2.md`](./MATRIZ_ESCENARIOS_ARTICULOS_V2.md) enlaza este MD.
@@ -242,4 +548,5 @@ Borrador para checklist **ayuda-copy** (textos finales van en cada ficha).
 
 | Fecha | Cambio |
 |-------|--------|
+| 2026-06-24 | P0: guía día vs tramo; 5 fichas Art. 63 (a, d, i, j, k) con bloques 1–7 + grilla. |
 | 2026-06-24 | Creación del documento: índice por bloques A–F, plantilla de ficha, brechas RFC, backlog y matriz cobertura (Fase 0). |
