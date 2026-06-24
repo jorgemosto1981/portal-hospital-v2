@@ -51,6 +51,7 @@ const FILES_TO_SYNC = [
   "intercambioGuardiaExclusividad.js",
   "topeMovimientosConfig.js",
   "topeMovimientosGestionTurno.js",
+  "opcionesConsumoSolicitud.js",
 ];
 
 function esmToCjs(source, filename) {

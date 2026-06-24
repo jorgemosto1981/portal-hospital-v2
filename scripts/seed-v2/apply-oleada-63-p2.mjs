@@ -64,7 +64,7 @@ function validateBuilt(built) {
   if (!coreRes.success) {
     errors.push(...coreRes.error.issues.map((i) => `core.${i.path.join(".")}: ${i.message}`));
   }
-  const verRes = cfgArticuloVersionSchema.safeParse(built.versionForZod);
+  const verRes = cfgArticuloVersionSchema.safeParse(built.version);
   if (!verRes.success) {
     errors.push(...verRes.error.issues.map((i) => `version.${i.path.join(".")}: ${i.message}`));
   }

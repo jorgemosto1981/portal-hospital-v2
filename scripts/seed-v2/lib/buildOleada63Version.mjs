@@ -149,6 +149,7 @@ export function buildOleada63Documents(spec, ids) {
     verId,
     core,
     version,
-    versionForZod: versionBase,
+    /** @deprecated usar `version` — P5.0 valida opciones en el mismo documento */
+    versionForZod: version,
   };
 }

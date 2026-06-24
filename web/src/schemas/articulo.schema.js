@@ -305,23 +305,86 @@ export const cfgArticuloCoreSchema = z
   })
   .strict();
 
-// --- Documento de versión (§2.2 + §4 vía bloques) ---
+// --- Opciones de consumo por solicitud (RFC extensiones §2.1, embebido en versión P5) ---
 
-export const cfgArticuloVersionSchema = z
+export const opcionConsumoSolicitudRowSchema = z
   .object({
-    version_semantica: z.string().min(1),
-    estado_version_id: cfgRowIdSchema,
-    publicada_en: firestoreDateLikeSchema.nullable().optional(),
-    publicada_por_persona_id: perDocumentIdSchema.nullable().optional(),
-    bloque_identidad_naturaleza: bloqueIdentidadNaturalezaSchema,
-    bloque_impacto_economico: bloqueImpactoEconomicoSchema,
-    bloque_elegibilidad_filtros: bloqueElegibilidadFiltrosSchema,
-    bloque_topes_plazos_computo: bloqueTopesPlazosComputoSchema,
-    bloque_acumulacion_sucesion: bloqueAcumulacionSucesionSchema,
-    bloque_workflow_sla_cobertura: bloqueWorkflowSlaCoberturaSchema,
-    bloque_documentacion_convivencia: bloqueDocumentacionConvivenciaSchema,
+    id: z
+      .string()
+      .min(1)
+      .regex(/^oc_[a-z0-9_]+$/i, "id estable oc_* (ej. oc_63j_hermanos)"),
+    etiqueta_ui: z.string().min(1),
+    codigo_sarh: z.string().min(1).optional(),
+    dias_por_evento: z.number().int().min(1).max(31),
+    regla_computo_id: cfgRowIdSchema.nullable().optional(),
+    activo: z.boolean().default(true),
   })
   .strict();
+
+/**
+ * @param {import("zod").infer<typeof cfgArticuloVersionObjectSchema>} data
+ * @param {import("zod").RefinementCtx} ctx
+ */
+function refineOpcionesConsumoVersion(data, ctx) {
+  const opciones = data.opciones_consumo_solicitud;
+  if (!opciones?.length) return;
+
+  const ids = new Set();
+  let activos = 0;
+  const topeRaw = data.bloque_topes_plazos_computo?.tope_dias_por_evento;
+  const tope =
+    topeRaw != null && Number.isFinite(Number(topeRaw)) && Number(topeRaw) > 0
+      ? Math.floor(Number(topeRaw))
+      : null;
+
+  opciones.forEach((row, i) => {
+    if (ids.has(row.id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["opciones_consumo_solicitud", i, "id"],
+        message: "id duplicado en opciones_consumo_solicitud",
+      });
+    }
+    ids.add(row.id);
+    if (row.activo !== false) activos += 1;
+    if (tope != null && row.dias_por_evento > tope) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["opciones_consumo_solicitud", i, "dias_por_evento"],
+        message: `dias_por_evento no puede superar tope_dias_por_evento (${tope})`,
+      });
+    }
+  });
+
+  if (activos < 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["opciones_consumo_solicitud"],
+      message: "debe haber al menos una opción activa",
+    });
+  }
+}
+
+const cfgArticuloVersionObjectSchema = z.object({
+  version_semantica: z.string().min(1),
+  estado_version_id: cfgRowIdSchema,
+  publicada_en: firestoreDateLikeSchema.nullable().optional(),
+  publicada_por_persona_id: perDocumentIdSchema.nullable().optional(),
+  bloque_identidad_naturaleza: bloqueIdentidadNaturalezaSchema,
+  bloque_impacto_economico: bloqueImpactoEconomicoSchema,
+  bloque_elegibilidad_filtros: bloqueElegibilidadFiltrosSchema,
+  bloque_topes_plazos_computo: bloqueTopesPlazosComputoSchema,
+  bloque_acumulacion_sucesion: bloqueAcumulacionSucesionSchema,
+  bloque_workflow_sla_cobertura: bloqueWorkflowSlaCoberturaSchema,
+  bloque_documentacion_convivencia: bloqueDocumentacionConvivenciaSchema,
+  opciones_consumo_solicitud: z.array(opcionConsumoSolicitudRowSchema).optional(),
+});
+
+// --- Documento de versión (§2.2 + §4 vía bloques) ---
+
+export const cfgArticuloVersionSchema = cfgArticuloVersionObjectSchema
+  .strict()
+  .superRefine(refineOpcionesConsumoVersion);
 
 // --- Grafo cfg_articulo_relaciones (§2.3) ---
 
@@ -350,9 +413,12 @@ export const cfgArticuloCoreWithIdSchema = cfgArticuloCoreSchema.extend({
   id: artDocumentIdSchema.optional(),
 });
 
-export const cfgArticuloVersionWithIdSchema = cfgArticuloVersionSchema.extend({
-  id: verDocumentIdSchema.optional(),
-});
+export const cfgArticuloVersionWithIdSchema = cfgArticuloVersionObjectSchema
+  .extend({
+    id: verDocumentIdSchema.optional(),
+  })
+  .strict()
+  .superRefine(refineOpcionesConsumoVersion);
 
 export const cfgArticuloRelacionWithIdSchema = cfgArticuloRelacionesSchema.extend({
   id: carDocumentIdSchema.optional(),
