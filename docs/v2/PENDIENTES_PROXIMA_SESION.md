@@ -127,10 +127,12 @@
 |--------|--------|------------|
 | **Sesión planificación** | ✅ **CERRADA** | [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md) · commit `0cfb889`+ cierre doc |
 | Plan maestro + brechas RFC + backlog RRHH | ✅ | [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md) |
-| **Épica siguiente (Fase 0 doc)** | ⏳ | Redactar `LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md` |
+| **Épica siguiente (P0 doc)** | ✅ **G1-doc** | Oleada 63.c–k + guía + RFC + cross-links — auditoría 24-jun-2026 |
+| **Cierre formal P0** | ⏳ | Acta RRHH (si aplica) + commit/PR `feat/1919-p0-doc` + tag `1919-p0-doc-g1` — ver plan **§11.1** |
+| **Pre-P1 (seguridad)** | ⏳ | Tras G1: `master` + rama `feat/1919-p1-ticketera` desde tag; checklist §11.1.E |
 | Motor solicitudes / grilla | ⏳ | Tras Fase 0 o RFC §3 handoff |
 
-**Última actualización índice (épica 1919):** 2026-06-11 — cierre sesión planificación; RETOMAR arriba.
+**Última actualización índice (épica 1919):** 2026-06-24 — G1-doc cerrado; §11.1 pre-implementación; arranque P1 tras tag G1.
 
 ---
 

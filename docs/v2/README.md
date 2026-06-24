@@ -125,6 +125,13 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`DECISIONES_REVISION_PERSONALES_LABORALES_V2.md`](./DECISIONES_REVISION_PERSONALES_LABORALES_V2.md) | **Decisiones de revisión** (A–D) entre módulos personales y laborales; precedencia y criterios sin código |
 | [`MODULO_CONFIGURACION_V2.md`](./MODULO_CONFIGURACION_V2.md) | Colecciones `cfg_*`, semillas |
 | [`MODULO_CONFIGURACION_ARTICULOS_V2.md`](./MODULO_CONFIGURACION_ARTICULOS_V2.md) | **Artículos (licencias/franquicias):** contrato funcional ABM + solicitudes, norma/SARH, documentación diferida, eventos |
+| **[`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md)** | **Épica 1919:** proceso P0–P6, gates, ticketera, grilla, tags |
+| [`LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md`](./LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md) | Fichas configurador/motor/grilla por artículo |
+| [`GUIA_POLITICA_DIA_VS_TRAMO_JUSTIFICACIONES_V2.md`](./GUIA_POLITICA_DIA_VS_TRAMO_JUSTIFICACIONES_V2.md) | Política día vs tramo (asistencia ↔ licencias) |
+| [`RFC_CONFIGURADOR_ARTICULOS_1919_EXTENSIONES_P0_V2.md`](./RFC_CONFIGURADOR_ARTICULOS_1919_EXTENSIONES_P0_V2.md) | Extensiones ABM sin hardcode (duelo, vigencias) |
+| [`ANALISIS_IMPACTO_GRILLA_ARTICULOS_1919_V2.md`](./ANALISIS_IMPACTO_GRILLA_ARTICULOS_1919_V2.md) | Impacto artículos en grilla operativa |
+| [`CHANGELOG_1919.md`](./CHANGELOG_1919.md) | Tags y hitos épica 1919 |
+| [`ACTA_RRHH_EPICA_1919_BLOQUE_E_V2.md`](./ACTA_RRHH_EPICA_1919_BLOQUE_E_V2.md) | Acta oleada Art. 63.c–k |
 | [`DICCIONARIO_CFG_ARTICULOS_V2.md`](./DICCIONARIO_CFG_ARTICULOS_V2.md) | Inventario `cfg_*` y prefijos del dominio artículos (`art_`, `sol_`, `cfg_tcp_*`, `cfg_cfi_*`, `cfg_tev_art_*`, …) |
 | [`ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md`](./ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md) | Jerarquía Decreto 1919 / SARH / Ley 8525 y trazabilidad |
 | [`MATRIZ_ESCENARIOS_ARTICULOS_V2.md`](./MATRIZ_ESCENARIOS_ARTICULOS_V2.md) | Ocho escenarios operativos → parámetros y catálogos |
