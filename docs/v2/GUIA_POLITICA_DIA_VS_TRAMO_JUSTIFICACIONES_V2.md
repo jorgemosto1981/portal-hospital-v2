@@ -83,6 +83,12 @@ Cuando hay **marcas** pero la carga del tramo **no** se cumple:
 
 ---
 
+## 8. Coherencia con Bloque E (acta RRHH)
+
+Los artículos **63.c–63.k** de justificación se parametrizan **solo por día entero exclusivo** (`cfg_nod_exclusivo`). No aplican justificaciones por tramo horario en esta oleada; ver [`LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md`](./LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md) Bloque E.
+
+---
+
 ## Changelog
 
 | Fecha | Cambio |

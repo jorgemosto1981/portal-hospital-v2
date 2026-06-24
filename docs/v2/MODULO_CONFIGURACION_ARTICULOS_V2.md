@@ -22,7 +22,7 @@
 
 ## 2. Jerarquía normativa (orden de lectura)
 
-1. **Decreto 1919/89** — derechos, plazos, procedimientos, LAO, franquicias y justificaciones. Referencia documental: [`DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md`](./DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md).
+1. **Decreto 1919/89** — derechos, plazos, procedimientos, LAO, franquicias y justificaciones. Referencia documental: [`DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md`](./DECRETO_1919_89_ANTIGUEDAD_Y_LAO_V2.md). **Trazabilidad artículo a artículo (configurador + motor):** [`LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md`](./LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md) bajo [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md). **Extensiones ABM épica 1919 (sin hardcode):** [`RFC_CONFIGURADOR_ARTICULOS_1919_EXTENSIONES_P0_V2.md`](./RFC_CONFIGURADOR_ARTICULOS_1919_EXTENSIONES_P0_V2.md).
 2. **SARH** — puente operativo norma ↔ código de ausencias (quién ingresa, N.L., convención, reemplazo, afectación sueldo). Un artículo normativo puede derivar en **varias filas/códigos SARH**.
 3. **Ley 8525** — marco del personal; complemento para coherencia disciplinaria y procedimientos; no sustituye el detalle del decreto por licencia. Referencia: [`LEY_8525_1979_EGAP_SANTA_FE_V2.md`](./LEY_8525_1979_EGAP_SANTA_FE_V2.md).
 
