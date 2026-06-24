@@ -1,5 +1,3 @@
-import { ARTICULO_IDS_PATRON_B_MVP } from "./solicitudesArticuloV2.js";
-
 export const ESTADOS_MODULO = {
   ACTIVO: "activo",
   MVP: "mvp",
@@ -68,7 +66,6 @@ export const MODULOS_PORTAL = [
     estado: ESTADOS_MODULO.MVP,
     grupo: "usuario",
     /** Hub visible si hay Patrón B hoy o siempre (incluye carril LAO en pantalla). */
-    articulosIngresoIds: ARTICULO_IDS_PATRON_B_MVP,
     ticketeraSiempreVisible: true,
   },
   {

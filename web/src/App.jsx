@@ -25,12 +25,11 @@ import SolicitudLaoAlta from "./pages/SolicitudLaoAlta.jsx";
 import Solicitud64AAlta from "./pages/Solicitud64AAlta.jsx";
 import TicketeraShell from "./features/solicitudes/TicketeraShell.jsx";
 import TicketeraHub from "./pages/TicketeraHub.jsx";
-import TicketeraPatronB from "./pages/TicketeraPatronB.jsx";
-import TicketeraPatronC from "./pages/TicketeraPatronC.jsx";
 import BandejaJefeSolicitudes from "./pages/BandejaJefeSolicitudes.jsx";
 import BandejaRrhhSolicitudes from "./pages/BandejaRrhhSolicitudes.jsx";
 import GuardArticuloIngreso from "./features/solicitudes/GuardArticuloIngreso.jsx";
-import { ARTICULO_IDS_PATRON_B_MVP, ARTICULO_IDS_PATRON_C_MVP } from "./constants/solicitudesArticuloV2.js";
+import RedirectTicketeraAlta from "./features/solicitudes/RedirectTicketeraAlta.jsx";
+import TicketeraAltaPage from "./pages/TicketeraAltaPage.jsx";
 import CheckinSaldosAgente from "./pages/CheckinSaldosAgente.jsx";
 import AltaAgenteOnboardingRRHH from "./pages/AltaAgenteOnboardingRRHH.jsx";
 import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
@@ -116,21 +115,15 @@ export default function App() {
             <Route path="solicitudes" element={<TicketeraShell />}>
               <Route index element={<TicketeraHub />} />
               <Route
-                path="patron-b"
+                path="alta"
                 element={
-                  <GuardArticuloIngreso articuloIds={ARTICULO_IDS_PATRON_B_MVP}>
-                    <TicketeraPatronB />
+                  <GuardArticuloIngreso>
+                    <TicketeraAltaPage />
                   </GuardArticuloIngreso>
                 }
               />
-              <Route
-                path="patron-c"
-                element={
-                  <GuardArticuloIngreso articuloIds={ARTICULO_IDS_PATRON_C_MVP}>
-                    <TicketeraPatronC />
-                  </GuardArticuloIngreso>
-                }
-              />
+              <Route path="patron-b" element={<RedirectTicketeraAlta />} />
+              <Route path="patron-c" element={<RedirectTicketeraAlta />} />
               <Route path="lao" element={<LaoWizardTicketera />} />
               <Route path="lao-formulario" element={<SolicitudLaoAlta />} />
             </Route>

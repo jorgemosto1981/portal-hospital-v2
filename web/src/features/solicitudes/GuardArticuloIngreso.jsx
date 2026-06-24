@@ -1,26 +1,30 @@
-import { Navigate } from "react-router-dom";
+﻿import { Navigate, useSearchParams } from "react-router-dom";
 
 import { GateSpinner } from "../routing/RouteGuards.jsx";
 import { useArticulosIngresoMenu } from "./ArticulosIngresoProvider.jsx";
+import { articuloIdDesdeSearchParams } from "./ticketeraRouteUtils.js";
 
 /**
- * Bloquea rutas de alta por artículo si el agente no pasa elegibilidad (filtros + circuito) hoy.
+ * Bloquea alta si el artículo en query no está en el catálogo elegible (listarArticulosIngresoAgente).
  */
-export default function GuardArticuloIngreso({ articuloId, articuloIds, children }) {
-  const { loading, puedeSolicitarArticulo } = useArticulosIngresoMenu();
+export default function GuardArticuloIngreso({ children }) {
+  const [searchParams] = useSearchParams();
+  const { loading, obtenerDatosArticuloElegible } = useArticulosIngresoMenu();
 
-  const ids = Array.isArray(articuloIds) && articuloIds.length > 0
-    ? articuloIds
-    : articuloId
-      ? [articuloId]
-      : [];
+  const articuloId = articuloIdDesdeSearchParams(searchParams);
 
   if (loading) {
-    return <GateSpinner label="Verificando artículos disponibles…" />;
+    return <GateSpinner label="Verificando elegibilidad del artículo en catálogo…" />;
   }
-  const permitido = ids.some((id) => puedeSolicitarArticulo(id));
-  if (!permitido) {
-    return <Navigate to="/portal/home" replace />;
+
+  if (!articuloId) {
+    return <Navigate to="/portal/solicitudes" replace />;
   }
+
+  const articuloElegible = obtenerDatosArticuloElegible(articuloId);
+  if (!articuloElegible) {
+    return <Navigate to="/portal/solicitudes?error=ELEG_NO_DISPONIBLE" replace />;
+  }
+
   return children;
 }
