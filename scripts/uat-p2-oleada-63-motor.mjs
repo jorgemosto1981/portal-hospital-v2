@@ -4,6 +4,10 @@
  * Uso:
  *   node scripts/uat-p2-oleada-63-motor.mjs
  *   node scripts/uat-p2-oleada-63-motor.mjs --apply-fanout   # escribe vis_* (sol sintética UAT)
+ *
+ * IMPORTANTE: --apply-fanout crea eventos en vis_* sin solicitudes_articulo reales.
+ * La grilla mostrará códigos pero "La solicitud no existe" al abrir detalle.
+ * Limpiar con: node scripts/revert-fanout-huerfanos-vis.mjs --anio=YYYY --mes=M --apply
  */
 import "./load-env-v2.mjs";
 import { createRequire } from "node:module";

@@ -15,6 +15,12 @@ node scripts/seed-v2/apply-oleada-63-p2.mjs --apply
 node scripts/seed-v2/verify-oleada-63-listar.mjs
 ```
 
+**Limpieza fan-out UAT (eventos sin `solicitudes_articulo`):**
+
+```bash
+node scripts/revert-fanout-huerfanos-vis.mjs --anio=2026 --mes=6 --apply
+```
+
 ## Artefactos
 
 | Archivo | Rol |
