@@ -6,4 +6,6 @@
 
 **Origen:** export manual desde Firestore piloto tras publicar versiones; sin credenciales en repo.
 
-Ver [`ARTICULOS_BASICOS_OPERATIVOS_V2.md`](../ARTICULOS_BASICOS_OPERATIVOS_V2.md) para ids `art_*` / `ver_*` actuales.
+Ver `[ARTICULOS_BASICOS_OPERATIVOS_V2.md](../ARTICULOS_BASICOS_OPERATIVOS_V2.md)` para ids `art_`* / `ver_`* actuales.
+
+**Plan:** oleada 63 en P2 — `[PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md](../PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md)` §9.

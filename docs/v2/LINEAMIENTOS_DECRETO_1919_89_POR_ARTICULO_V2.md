@@ -2,7 +2,7 @@
 
 **Propósito:** fichas operativas artículo a artículo para alinear **configurador** (`cfg_articulos` + versiones en 7 bloques), **motores A/B/C**, **ticketera** y **grilla** (`vistas_grilla_mes_agente`) con el Decreto 1919/89. No reemplaza el texto legal.
 
-**Estado:** **índice y convención cerrados** · redacción de fichas **en curso** (Fase 0 doc).
+**Estado:** **G1-doc cerrado** (24-jun-2026) — oleada **63.c–k** fichada · **G1 formal:** acta RRHH firma + tag `1919-p0-doc-g1` · índice A–F activo.
 
 **Plan maestro:** [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md)  
 **Handoff:** [`HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md`](./HANDOFF_SESION_2026-06-11_PLAN_LINEAMIENTOS_1919_MOTOR.md)  
@@ -617,11 +617,11 @@ Borrador para checklist **ayuda-copy** (textos finales van en cada ficha).
 - [ ] Ficha completa (plantilla) para **todos** los artículos con impacto en ausencias de las tablas §5–§10.
 - [x] **Oleada 1 Art. 63:** fichas **c, d, i, j, k** (acta RRHH 2026-06-24).
 - [x] [`GUIA_POLITICA_DIA_VS_TRAMO_JUSTIFICACIONES_V2.md`](./GUIA_POLITICA_DIA_VS_TRAMO_JUSTIFICACIONES_V2.md).
-- [ ] Acta RRHH oleada 63 (firma) + tag `1919-p0-doc-g1`.
-- [ ] LAO, 64, 68 alineados a [`ARTICULOS_BASICOS_OPERATIVOS_V2.md`](./ARTICULOS_BASICOS_OPERATIVOS_V2.md).
-- [ ] Brechas RFC §2 reflejadas en fichas afectadas.
-- [ ] [`MATRIZ_ESCENARIOS_ARTICULOS_V2.md`](./MATRIZ_ESCENARIOS_ARTICULOS_V2.md) enlaza este MD.
-- [ ] Cross-links: [`ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md`](./ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md) §5 y [`MODULO_CONFIGURACION_ARTICULOS_V2.md`](./MODULO_CONFIGURACION_ARTICULOS_V2.md) §2.
+- [ ] Acta RRHH oleada 63 (**firma**) + tag `1919-p0-doc-g1` — único pendiente **G1 formal** (G1-doc cerrado; ver plan §3.1).
+- [x] LAO, 64, 68 referenciados en [`ARTICULOS_BASICOS_OPERATIVOS_V2.md`](./ARTICULOS_BASICOS_OPERATIVOS_V2.md) (sin refactor LAO en épica).
+- [ ] Brechas RFC §2 reflejadas en fichas afectadas (oleada 63 cubierta; resto índice).
+- [x] [`MATRIZ_ESCENARIOS_ARTICULOS_V2.md`](./MATRIZ_ESCENARIOS_ARTICULOS_V2.md) enlaza este MD.
+- [x] Cross-links: [`ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md`](./ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md) §5 y [`MODULO_CONFIGURACION_ARTICULOS_V2.md`](./MODULO_CONFIGURACION_ARTICULOS_V2.md) §5.1–5.2.
 
 ---
 
@@ -631,4 +631,5 @@ Borrador para checklist **ayuda-copy** (textos finales van en cada ficha).
 |-------|--------|
 | 2026-06-24 | Acta RRHH: oleada **63.c–k**; transversal; **63.a** fuera; RFC extensiones configurador; duelo `opciones_consumo_solicitud[]`. |
 | 2026-06-24 | P0: guía día vs tramo; fichas Art. 63 con bloques 1–7 + grilla. |
+| 2026-06-24 | Auditoría consolidación: G1-doc cerrado; criterios en plan §3.1. |
 | 2026-06-24 | Creación del documento: índice por bloques A–F, plantilla de ficha, brechas RFC, backlog y matriz cobertura (Fase 0). |

@@ -36,3 +36,5 @@
 ## Próximo paso
 
 Derillar cada escenario en **casos de prueba documentales** (entrada: datos laborales + solicitud; salida: estado, eventos y flags) al avanzar la implementación, sin ampliar este archivo hasta cerrar inventario SARH.
+
+**Fuente normativa por artículo / parámetros de versión:** [`LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md`](./LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md) · plan [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md).
