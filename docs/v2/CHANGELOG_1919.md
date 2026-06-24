@@ -15,4 +15,5 @@ Registro de **tags Git** y hitos documentales/código. Detalle operativo en `[PL
 | 2026-06-24 | (rama `feat/1919-p2-oleada-63`) | Deploy hosting alineado a `HEAD` `8033605` (post P1); seeds oleada 63 |
 | 2026-06-24 | `1919-p2-oleada-63` | Merge P2: 5 incisos Firestore (`63.c`–`63.k`), seeds/apply, UAT listado+RDA+GSO+regresión VERDE (piloto 28914247) |
 | 2026-06-24 | (rama `feat/1919-p5-config-rfc`) | **P5.0:** Zod `opciones_consumo_solicitud[]`, `shared/utils/opcionesConsumoSolicitud.js`, seeds oleada 63 validadas en dry-run |
+| 2026-06-24 | `c0075f9` (pausa sesión P5) | P5.0 en remoto; siguiente: **P5.1 motor** (`runPatronBAltaMotorV2`, fechas corridos, rules create) → P5.2 ticketera |
 | —          | `1919-pre-firestore-clean` | Antes de limpieza/reseed piloto (con export GCS) |
