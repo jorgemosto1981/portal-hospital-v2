@@ -1,0 +1,31 @@
+{
+  "oleada": "63_p2",
+  "aplicado_en": "2026-06-24T13:07:31.180Z",
+  "articulos": {
+    "63c": {
+      "artId": "art_01KVWVW9Z0PFWJJF6510BF8DW8",
+      "verId": "ver_01KVWVW9Z1A5DS7871ZS80G5D0",
+      "codigo": "63-C"
+    },
+    "63d": {
+      "artId": "art_01KVWVW9Z4KJCSVYB9W91AR4YX",
+      "verId": "ver_01KVWVW9Z4PA52K2BDZWDH3BTN",
+      "codigo": "63-D"
+    },
+    "63i": {
+      "artId": "art_01KVWVW9Z402RB71K7QC34DGJB",
+      "verId": "ver_01KVWVW9Z4R62FEZA8WD2WTFP8",
+      "codigo": "63-I"
+    },
+    "63j": {
+      "artId": "art_01KVWVW9Z50VR6T1BC6J0R3YQ8",
+      "verId": "ver_01KVWVW9Z51122AXS78E82NHFP",
+      "codigo": "63-J"
+    },
+    "63k": {
+      "artId": "art_01KVWVW9Z569849JQWY2PTK396",
+      "verId": "ver_01KVWVW9Z57HCPCHXPKNZ9T6N8",
+      "codigo": "63-K"
+    }
+  }
+}
