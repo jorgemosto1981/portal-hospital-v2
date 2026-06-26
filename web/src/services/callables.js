@@ -521,3 +521,13 @@ export function callGuardarCfgRelojBiometrico(data) {
 export function callListarCfgRelojBiometrico(data = {}) {
   return httpsCallable(getFunctionsV2(), "listarCfgRelojBiometrico")(data);
 }
+
+/** Completa aviso médico incompleto (certificado + plazo G3). */
+export function callActualizarAvisoMedicoIncompleto(data) {
+  return httpsCallable(getFunctionsV2(), "actualizarAvisoMedicoIncompleto")(data);
+}
+
+/** Aviso incompleto vigente del titular (anti-duplicado UI). */
+export function callBuscarAvisoIncompletaVigente() {
+  return httpsCallable(getFunctionsV2(), "buscarAvisoIncompletaVigente")({});
+}

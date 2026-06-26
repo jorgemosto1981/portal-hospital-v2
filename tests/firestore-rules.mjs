@@ -128,6 +128,7 @@ function medAvisoPayloadBase() {
     ingreso_medico: {
       modo: "caja_negra",
       tipo_ingreso_id: "cfg_tig_enfermedad_propia",
+      es_licencia_incompleta: false,
       adjuntos: [{ storage_path: "avisos-med/2026/cert.pdf" }],
     },
     creado_en: new Date(),
@@ -152,6 +153,43 @@ await it("SOL_MED_AVISO_V1: rechaza si titular distinto del claim", async () => 
   const bad = { ...medAvisoPayloadBase(), titular_persona_id: "per_01KQN9WXFXF69Z9DCT5YNJ3TG1" };
   await assertFails(
     pdb.doc("solicitudes_articulo/sol_01KQN9WXFXF69Z9DCT5YNJ3TS2").set(bad),
+  );
+});
+
+function medAvisoIncompletoPayload() {
+  const venc = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  return {
+    ...medAvisoPayloadBase(),
+    ingreso_medico: {
+      modo: "caja_negra",
+      tipo_ingreso_id: "cfg_tig_enfermedad_propia",
+      es_licencia_incompleta: true,
+      adjuntos: [],
+      timestamp_aviso_incompleto: "2026-06-24T12:00:00.000Z",
+    },
+    vencimiento_plazo_certificado: venc,
+  };
+}
+
+await it("SOL_MED_AVISO_V1: agente crea aviso incompleto sin adjuntos", async () => {
+  await assertSucceeds(
+    pdb.doc("solicitudes_articulo/sol_01KQN9WXFXF69Z9DCT5YNJ3TS3").set(medAvisoIncompletoPayload()),
+  );
+});
+
+await it("SOL_MED_AVISO_V1: rechaza incompleto sin vencimiento_plazo_certificado", async () => {
+  const bad = medAvisoIncompletoPayload();
+  delete bad.vencimiento_plazo_certificado;
+  await assertFails(
+    pdb.doc("solicitudes_articulo/sol_01KQN9WXFXF69Z9DCT5YNJ3TS4").set(bad),
+  );
+});
+
+await it("SOL_MED_AVISO_V1: rechaza update cliente (G1)", async () => {
+  const id = "sol_01KQN9WXFXF69Z9DCT5YNJ3TS5";
+  await assertSucceeds(pdb.doc(`solicitudes_articulo/${id}`).set(medAvisoIncompletoPayload()));
+  await assertFails(
+    pdb.doc(`solicitudes_articulo/${id}`).update({ "ingreso_medico.es_licencia_incompleta": false }),
   );
 });
 

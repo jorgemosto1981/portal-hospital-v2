@@ -66,6 +66,7 @@ const listarRosterParaFichadas = require("./onCall/fichadas/listarRosterParaFich
 const colaRematerializacionTriggers = require("./triggers/onColaRematerializacionAsistencia");
 const grillaSyncGrupoMesTriggers = require("./triggers/onGrillaSyncGrupoMes");
 const solicitarReconciliacionGrillaGrupoMes = require("./onCall/grilla/solicitarReconciliacionGrillaGrupoMes");
+const avisoMedicoCajaNegra = require("./onCall/solicitudes/actualizarAvisoMedicoIncompleto");
 
 module.exports = {
   ...login,
@@ -123,4 +124,5 @@ module.exports = {
   ...listarRosterParaFichadas,
   ...colaRematerializacionTriggers,
   ...grillaSyncGrupoMesTriggers,
+  ...avisoMedicoCajaNegra,
 };

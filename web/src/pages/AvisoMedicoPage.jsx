@@ -21,6 +21,12 @@ export default function AvisoMedicoPage() {
       setFechaInicioReposo={alta.setFechaInicioReposo}
       comentarioAgente={alta.comentarioAgente}
       setComentarioAgente={alta.setComentarioAgente}
+      esLicenciaIncompleta={alta.esLicenciaIncompleta}
+      onToggleLicenciaIncompleta={alta.onToggleLicenciaIncompleta}
+      plazoHorasCertificado={alta.plazoHorasCertificado}
+      modoCompletar={alta.modoCompletar}
+      avisoIncompletoVigente={alta.avisoIncompletoVigente}
+      buscandoAvisoPendiente={alta.buscandoAvisoPendiente}
       archivo={alta.archivo}
       onSeleccionarArchivo={alta.onSeleccionarArchivo}
       gruposVigentes={alta.gruposVigentes}

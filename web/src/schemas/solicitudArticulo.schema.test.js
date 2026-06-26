@@ -60,4 +60,37 @@ describe("solicitudArticuloCreateShapeMedAvisoSchema", () => {
     );
     expect(parseSolicitudArticuloCreateDocument(doc).schema_version).toBe("SOL_MED_AVISO_V1");
   });
+
+  it("aviso incompleto exige vencimiento_plazo_certificado en documento", () => {
+    const venc = { seconds: 1, nanoseconds: 0 };
+    const doc = buildSolicitudMedAvisoDocument(
+      {
+        personaId: "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ",
+        tipoIngresoId: TIPO_INGRESO_MEDICO_ENFERMEDAD_PROPIA,
+        grupoTrabajoIdAncla: "gdt_01KQN9WXFXF69Z9DCT5YNJ3TG0",
+        esLicenciaIncompleta: true,
+      },
+      { ...TS, vencimiento_plazo_certificado: venc, timestampAvisoIncompletoIso: "2026-06-24T12:00:00.000Z" },
+    );
+    expect(doc.ingreso_medico.es_licencia_incompleta).toBe(true);
+    expect(doc.ingreso_medico.adjuntos).toEqual([]);
+    expect(doc.vencimiento_plazo_certificado).toBe(venc);
+    expect(solicitudArticuloCreateShapeMedAvisoSchema.safeParse(doc).success).toBe(true);
+  });
+
+  it("rechaza incompleto sin vencimiento", () => {
+    const venc = { seconds: 1 };
+    const base = buildSolicitudMedAvisoDocument(
+      {
+        personaId: "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ",
+        tipoIngresoId: TIPO_INGRESO_MEDICO_ENFERMEDAD_PROPIA,
+        grupoTrabajoIdAncla: "gdt_01KQN9WXFXF69Z9DCT5YNJ3TG0",
+        esLicenciaIncompleta: true,
+      },
+      { ...TS, vencimiento_plazo_certificado: venc },
+    );
+    const { vencimiento_plazo_certificado: _v, ...sinVenc } = base;
+    const r = solicitudArticuloCreateShapeMedAvisoSchema.safeParse(sinVenc);
+    expect(r.success).toBe(false);
+  });
 });

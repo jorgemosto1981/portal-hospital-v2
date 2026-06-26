@@ -1,7 +1,6 @@
 /**
  * Contrato documento `solicitudes_articulo` — unión por `schema_version` (create cliente).
  * @see docs/v2/RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md §2.2
- * @see web/src/schemas/solicitudArticuloCreate.schema.js — Patrón B/C borrador
  */
 
 import { z } from "zod";
@@ -30,7 +29,7 @@ const cfgTigIdSchema = z.enum([
   TIPO_INGRESO_MEDICO_ATENCION_FAMILIAR,
 ]);
 
-const ingresoMedicoAdjuntoSchema = z
+export const ingresoMedicoAdjuntoSchema = z
   .object({
     storage_path: z.string().min(1).max(1024),
     content_type: z.string().max(128).optional(),
@@ -38,62 +37,132 @@ const ingresoMedicoAdjuntoSchema = z
   })
   .strict();
 
-const ingresoMedicoCajaNegraSchema = z
-  .object({
-    modo: z.literal("caja_negra"),
-    tipo_ingreso_id: cfgTigIdSchema,
+const ingresoMedicoBaseSchema = z.object({
+  modo: z.literal("caja_negra"),
+  tipo_ingreso_id: cfgTigIdSchema,
+  comentario_agente: z.string().max(2000).optional(),
+});
+
+const ingresoMedicoCompletoSchema = ingresoMedicoBaseSchema
+  .extend({
+    es_licencia_incompleta: z.literal(false),
     adjuntos: z.array(ingresoMedicoAdjuntoSchema).min(1).max(10),
-    comentario_agente: z.string().max(2000).optional(),
   })
   .strict();
+
+const ingresoMedicoIncompletoSchema = ingresoMedicoBaseSchema
+  .extend({
+    es_licencia_incompleta: z.literal(true),
+    adjuntos: z.array(ingresoMedicoAdjuntoSchema).max(10).default([]),
+    timestamp_aviso_incompleto: z.string().min(1).max(64),
+  })
+  .strict();
+
+export const ingresoMedicoCajaNegraSchema = z.discriminatedUnion("es_licencia_incompleta", [
+  ingresoMedicoCompletoSchema,
+  ingresoMedicoIncompletoSchema,
+]);
+
+const solicitudMedAvisoAltaInputBase = z.object({
+  personaId: perIdSchema,
+  tipoIngresoId: cfgTigIdSchema,
+  grupoTrabajoIdAncla: gdtIdSchema,
+  fechaInicioReposoEstimada: ymdSchema.optional(),
+  comentarioAgente: z.string().max(2000).optional(),
+  esLicenciaIncompleta: z.boolean().default(false),
+});
 
 /** Parámetros UI — aviso médico antes de clasificación auditor. */
-export const solicitudMedAvisoAltaInputSchema = z
-  .object({
-    personaId: perIdSchema,
-    tipoIngresoId: cfgTigIdSchema,
-    grupoTrabajoIdAncla: gdtIdSchema,
-    fechaInicioReposoEstimada: ymdSchema.optional(),
-    adjuntos: z.array(ingresoMedicoAdjuntoSchema).min(1).max(10),
-    comentarioAgente: z.string().max(2000).optional(),
+export const solicitudMedAvisoAltaInputSchema = solicitudMedAvisoAltaInputBase
+  .extend({
+    adjuntos: z.array(ingresoMedicoAdjuntoSchema).max(10).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    if (data.esLicenciaIncompleta) {
+      if (data.adjuntos && data.adjuntos.length > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Aviso incompleto no debe incluir adjuntos en el alta.",
+          path: ["adjuntos"],
+        });
+      }
+      return;
+    }
+    if (!data.adjuntos || data.adjuntos.length < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Adjuntá el certificado médico.",
+        path: ["adjuntos"],
+      });
+    }
+  });
 
-/**
- * Documento create aviso Caja Negra (`articulo_id` null hasta clasificación).
- * Sin `onSolicitudArticuloPatronBOnCreate` — shape distinto al borrador B/C.
- */
-export const solicitudArticuloCreateShapeMedAvisoSchema = z
-  .object({
-    schema_version: z.literal(SCHEMA_SOLICITUD_MED_AVISO),
-    articulo_id: z.null(),
-    version_id_aplicada: z.null(),
-    titular_persona_id: perIdSchema,
-    actor_alta_persona_id: perIdSchema,
-    grupo_trabajo_id_ancla: gdtIdSchema,
-    patron_saldo: z.literal(PATRON_SALDO_MEDICO_AVISO),
-    estado_solicitud_id: z.literal(ESTADO_SOLICITUD_ARTICULO_PENDIENTE_CLASIFICACION_MEDICA),
-    ingreso_medico: ingresoMedicoCajaNegraSchema,
-    fecha_inicio_reposo_estimada: ymdSchema.optional(),
-    creado_en: z.unknown(),
-    actualizado_en: z.unknown(),
-  })
-  .strict();
+const solicitudMedAvisoDocumentBase = z.object({
+  schema_version: z.literal(SCHEMA_SOLICITUD_MED_AVISO),
+  articulo_id: z.null(),
+  version_id_aplicada: z.null(),
+  titular_persona_id: perIdSchema,
+  actor_alta_persona_id: perIdSchema,
+  grupo_trabajo_id_ancla: gdtIdSchema,
+  patron_saldo: z.literal(PATRON_SALDO_MEDICO_AVISO),
+  estado_solicitud_id: z.literal(ESTADO_SOLICITUD_ARTICULO_PENDIENTE_CLASIFICACION_MEDICA),
+  ingreso_medico: ingresoMedicoCajaNegraSchema,
+  fecha_inicio_reposo_estimada: ymdSchema.optional(),
+  vencimiento_plazo_certificado: z.unknown().optional(),
+  creado_en: z.unknown(),
+  actualizado_en: z.unknown(),
+});
+
+export const solicitudArticuloCreateShapeMedAvisoSchema = solicitudMedAvisoDocumentBase
+  .strict()
+  .superRefine((doc, ctx) => {
+    const inc = doc.ingreso_medico.es_licencia_incompleta === true;
+    if (inc && doc.vencimiento_plazo_certificado == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "vencimiento_plazo_certificado obligatorio en aviso incompleto.",
+        path: ["vencimiento_plazo_certificado"],
+      });
+    }
+    if (!inc && "vencimiento_plazo_certificado" in doc && doc.vencimiento_plazo_certificado != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "vencimiento_plazo_certificado solo aplica a aviso incompleto.",
+        path: ["vencimiento_plazo_certificado"],
+      });
+    }
+  });
 
 /**
  * @param {z.infer<typeof solicitudMedAvisoAltaInputSchema>} input
- * @param {{ creado_en: unknown, actualizado_en: unknown }} timestamps
+ * @param {{
+ *   creado_en: unknown,
+ *   actualizado_en: unknown,
+ *   vencimiento_plazo_certificado?: unknown,
+ *   timestampAvisoIncompletoIso?: string,
+ * }} timestamps
  */
 export function buildSolicitudMedAvisoDocument(input, timestamps) {
   const parsed = solicitudMedAvisoAltaInputSchema.parse(input);
+  const esIncompleta = parsed.esLicenciaIncompleta === true;
+
+  /** @type {Record<string, unknown>} */
   const ingreso = {
     modo: "caja_negra",
     tipo_ingreso_id: parsed.tipoIngresoId,
-    adjuntos: parsed.adjuntos,
+    es_licencia_incompleta: esIncompleta,
+    adjuntos: esIncompleta ? [] : parsed.adjuntos || [],
   };
   if (parsed.comentarioAgente) {
     ingreso.comentario_agente = parsed.comentarioAgente;
   }
+  if (esIncompleta) {
+    ingreso.timestamp_aviso_incompleto =
+      timestamps.timestampAvisoIncompletoIso || new Date().toISOString();
+  }
+
+  /** @type {Record<string, unknown>} */
   const doc = {
     schema_version: SCHEMA_SOLICITUD_MED_AVISO,
     articulo_id: null,
@@ -110,13 +179,12 @@ export function buildSolicitudMedAvisoDocument(input, timestamps) {
   if (parsed.fechaInicioReposoEstimada) {
     doc.fecha_inicio_reposo_estimada = parsed.fechaInicioReposoEstimada;
   }
+  if (esIncompleta && timestamps.vencimiento_plazo_certificado != null) {
+    doc.vencimiento_plazo_certificado = timestamps.vencimiento_plazo_certificado;
+  }
   return solicitudArticuloCreateShapeMedAvisoSchema.parse(doc);
 }
 
-/**
- * Unión por `schema_version` (discriminador lógico).
- * Patrón B usa `.refine()` — no es `ZodObject` plano; por eso `z.union` y no `discriminatedUnion`.
- */
 export const solicitudArticuloCreateDocumentSchema = z.union([
   solicitudArticuloCreateShapePatronBSchema,
   solicitudArticuloCreateShapePatronCSchema,

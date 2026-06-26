@@ -387,13 +387,24 @@ service cloud.firestore {
         && ing.modo == 'caja_negra'
         && solicitudMedAvisoTipoIngresoValid(ing.tipo_ingreso_id)
         && ing.adjuntos is list
-        && ing.adjuntos.size() >= 1
         && ing.adjuntos.size() <= 10
         && (!('comentario_agente' in ing)
-          || (ing.comentario_agente is string && ing.comentario_agente.size() <= 2000));
+          || (ing.comentario_agente is string && ing.comentario_agente.size() <= 2000))
+        && (
+          (ing.es_licencia_incompleta == true
+            && ing.adjuntos.size() == 0
+            && ing.timestamp_aviso_incompleto is string
+            && ing.timestamp_aviso_incompleto.size() >= 1
+            && ing.timestamp_aviso_incompleto.size() <= 64)
+          || (
+            (ing.es_licencia_incompleta == false || !('es_licencia_incompleta' in ing))
+            && ing.adjuntos.size() >= 1
+          )
+        );
     }
 
     function solicitudArticuloMedAvisoFieldsValid(d) {
+      let inc = d.ingreso_medico is map && d.ingreso_medico.es_licencia_incompleta == true;
       return d.schema_version == 'SOL_MED_AVISO_V1'
         && d.articulo_id == null
         && d.version_id_aplicada == null
@@ -408,7 +419,9 @@ service cloud.firestore {
         && solicitudMedAvisoIngresoValid(d.ingreso_medico)
         && (!('fecha_inicio_reposo_estimada' in d)
           || (d.fecha_inicio_reposo_estimada is string
-            && d.fecha_inicio_reposo_estimada.matches('^\\d{4}-\\d{2}-\\d{2}$')));
+            && d.fecha_inicio_reposo_estimada.matches('^\\d{4}-\\d{2}-\\d{2}$')))
+        && (!inc || d.vencimiento_plazo_certificado is timestamp)
+        && (inc || !('vencimiento_plazo_certificado' in d));
     }
 
     function solicitudArticuloCreateShapeMedAviso() {
@@ -425,6 +438,7 @@ service cloud.firestore {
           'estado_solicitud_id',
           'ingreso_medico',
           'fecha_inicio_reposo_estimada',
+          'vencimiento_plazo_certificado',
           'creado_en',
           'actualizado_en',
         ]);

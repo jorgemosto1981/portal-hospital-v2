@@ -2,7 +2,7 @@
  * Escrituras mínimas en `solicitudes_articulo` (V2).
  * @see web/src/services/firebase.js — dbV2
  */
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, setDoc, Timestamp } from "firebase/firestore";
 import { ulid } from "ulid";
 
 import {
@@ -14,6 +14,8 @@ import {
   buildSolicitudPatronCBorradorDocument,
 } from "../schemas/solicitudArticuloCreate.schema.js";
 import { buildSolicitudMedAvisoDocument } from "../schemas/solicitudArticulo.schema.js";
+import { calcularVencimientoPlazoCertificado } from "../../../shared/utils/licenciaMedicaParametrosCore.js";
+import { leerPlazoHorasLicenciaIncompleta } from "./cfgParametrosSistemaService.js";
 import { dbV2 } from "./firebase.js";
 
 const SOL_ULID_RE = /^sol_[0-9A-HJKMNP-TV-Z]{26}$/i;
@@ -248,10 +250,19 @@ export { esperarValidacionMotorPatronB as esperarValidacionMotorPatronC };
  *   adjuntos: Array<{ storage_path: string, content_type?: string, nombre_archivo?: string }>,
  *   fechaInicioReposoEstimada?: string,
  *   comentarioAgente?: string,
+ *   esLicenciaIncompleta?: boolean,
  * }} params
  * @returns {Promise<{ solicitud_id: string, estado_solicitud_id: string }>}
  */
 export async function crearAvisoMedicoCajaNegra(params) {
+  const esIncompleta = params.esLicenciaIncompleta === true;
+  let vencimientoTs;
+  if (esIncompleta) {
+    const horas = await leerPlazoHorasLicenciaIncompleta();
+    const venc = calcularVencimientoPlazoCertificado(new Date(), horas);
+    vencimientoTs = Timestamp.fromDate(venc);
+  }
+
   const payload = buildSolicitudMedAvisoDocument(
     {
       personaId: params.personaId,
@@ -260,8 +271,14 @@ export async function crearAvisoMedicoCajaNegra(params) {
       adjuntos: params.adjuntos,
       fechaInicioReposoEstimada: params.fechaInicioReposoEstimada,
       comentarioAgente: params.comentarioAgente,
+      esLicenciaIncompleta: esIncompleta,
     },
-    { creado_en: serverTimestamp(), actualizado_en: serverTimestamp() },
+    {
+      creado_en: serverTimestamp(),
+      actualizado_en: serverTimestamp(),
+      vencimiento_plazo_certificado: vencimientoTs,
+      timestampAvisoIncompletoIso: new Date().toISOString(),
+    },
   );
 
   const solicitud_id = `sol_${ulid()}`;
