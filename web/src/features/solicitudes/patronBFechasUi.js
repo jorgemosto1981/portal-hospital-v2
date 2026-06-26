@@ -7,7 +7,9 @@ const RX_YMD = /^\d{4}-\d{2}-\d{2}$/;
  * @param {{ dias_solicitados?: number | null, requiere_opcion_consumo?: boolean } | null | undefined} articuloSel
  */
 export function articuloRequiereOpcionConsumo(articuloSel) {
-  return articuloSel?.requiere_opcion_consumo === true;
+  if (articuloSel?.requiere_opcion_consumo === true) return true;
+  const ops = articuloSel?.opciones_consumo_solicitud;
+  return Array.isArray(ops) && ops.length > 0;
 }
 
 export function articuloTieneDiasPreestablecidos(articuloSel) {

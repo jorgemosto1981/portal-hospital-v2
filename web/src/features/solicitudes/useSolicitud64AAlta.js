@@ -10,6 +10,7 @@ import {
   crearSolicitudArticuloPatronBBorrador,
   esperarValidacionMotorPatronB,
 } from "../../services/solicitudesArticuloV2Service.js";
+import { enriquecerArticuloIngresoListado } from "./enriquecerArticuloIngresoListado.js";
 import {
   articuloRequiereOpcionConsumo,
   articuloTieneDiasPreestablecidos,
@@ -174,7 +175,9 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     setMotivoVacio("");
     try {
       const res = await callListarArticulosIngresoAgente({ fecha_desde: fechaDesde });
-      const list = res?.data?.articulos || [];
+      const list = (res?.data?.articulos || [])
+        .map((row) => enriquecerArticuloIngresoListado(row))
+        .filter(Boolean);
       setArticulos(list);
       const fijado = String(articuloIdInicial || "").trim();
       const match = fijado ? list.find((x) => String(x.articulo_id || "") === fijado) : null;

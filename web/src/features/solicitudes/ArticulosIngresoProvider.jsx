@@ -1,7 +1,7 @@
 ﻿import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { callListarArticulosIngresoAgente } from "../../services/callables.js";
-import { filaArticuloIngresoDesdeCallable } from "./ticketeraRouteUtils.js";
+import { enriquecerArticuloIngresoListado } from "./enriquecerArticuloIngresoListado.js";
 import { ymdHoyBa } from "./ticketeraUtils.js";
 
 const ArticulosIngresoContext = createContext(null);
@@ -9,8 +9,8 @@ const ArticulosIngresoContext = createContext(null);
 function mapDesdeListado(list) {
   const map = new Map();
   for (const raw of list) {
-    const row = filaArticuloIngresoDesdeCallable(raw);
-    if (row) map.set(row.articulo_id, row);
+    const row = enriquecerArticuloIngresoListado(raw);
+    if (row) map.set(String(row.articulo_id || "").trim(), row);
   }
   return map;
 }
