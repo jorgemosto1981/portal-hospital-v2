@@ -10,7 +10,8 @@
       "cfg_calendario_feriados_institucional": "Diccionario §6: fecha (YYYY-MM-DD), tipo, alcance_efector_id (nullable), activo + metadatos cfg comunes donde aplique.",
       "cfg_paso_workflow_articulo": "Prefijo cfg_pwa_; puede extenderse con horas_max_resolucion, cfg_accion_vencimiento_id, etc. (MODULO_CONFIGURACION_ARTICULOS_V2 / matriz SLA).",
       "cfg_tipo_evento_filas_articulos": "Prefijo cfg_tev_art_; modulo_origen = articulos; codigo_interno según diccionario §5.",
-      "cfg_tipo_ingreso_medico": "Prefijo cfg_tig_; aviso agente Caja Negra (RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2)."
+      "cfg_tipo_ingreso_medico": "Prefijo cfg_tig_; aviso agente Caja Negra (RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2).",
+      "cfg_parametros_sistema": "Prefijo param_*; valor_numerico + unidad (horas, etc.). RFC Caja Negra §2.4 — sin hardcode en código."
     },
     "equivalencias_pendientes_rfc": [
       "cfg_unidad_plazo (PF §3.2) vs cfg_tipo_computo_plazo cfg_tcp_* (plazo documental modular) — no mezclar filas hasta RFC (diccionario §2 nota).",
@@ -304,6 +305,34 @@
       "id": "cfg_tig_atencion_familiar",
       "codigo_interno": "ATENCION_FAMILIAR",
       "titulo_ui": "Atención de familiar enfermo",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_parametros_sistema": [
+    {
+      "id": "param_lm_incompleta_plazo_horas",
+      "codigo_interno": "LM_INCOMPLETA_PLAZO_HORAS",
+      "titulo_ui": "Plazo para completar certificado (licencia incompleta)",
+      "descripcion_ui": "Horas desde el aviso incompleto hasta vencimiento_plazo_certificado. Manual operativo (valor inicial RRHH).",
+      "modulo_origen": "licencias_medicas",
+      "valor_numerico": 24,
+      "unidad": "horas",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "param_lm_incompleta_aviso_obligacion_horas",
+      "codigo_interno": "LM_INCOMPLETA_AVISO_OBLIGACION_HORAS",
+      "titulo_ui": "Plazo referencia aviso de obligación (copy UI)",
+      "descripcion_ui": "Solo textos en portal; no sustituye el plazo de certificado.",
+      "modulo_origen": "licencias_medicas",
+      "valor_numerico": 2,
+      "unidad": "horas",
       "orden": 20,
       "activo": true,
       "vigente_desde": null,

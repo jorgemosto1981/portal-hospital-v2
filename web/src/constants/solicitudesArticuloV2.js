@@ -20,6 +20,11 @@ export const SCHEMA_SOLICITUD_MED_AVISO = "SOL_MED_AVISO_V1";
 
 export const PATRON_SALDO_MEDICO_AVISO = "MEDICO_AVISO";
 
+/** @see cfg_parametros_sistema — RFC Caja Negra §2.4 */
+export const PARAM_LM_INCOMPLETA_PLAZO_HORAS = "param_lm_incompleta_plazo_horas";
+export const PARAM_LM_INCOMPLETA_AVISO_OBLIGACION_HORAS =
+  "param_lm_incompleta_aviso_obligacion_horas";
+
 /** Piloto ticketera Patrón B — @see docs/v2/ARTICULOS_BASICOS_OPERATIVOS_V2.md */
 export const ARTICULO_64A_ID = "art_01KRNK10V10CH7W5M2W6V558GS";
 export const VERSION_64A_PILOTO_ID = "ver_01KRNKNBXNBFC9HZN7CZJGPRDH";

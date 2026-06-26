@@ -467,7 +467,7 @@ Hoy: `allow create` para aviso completo; **`allow update, delete: if false`** gl
 
 | Orden | Entrega | Dependencia | Estado rama (referencia) |
 |-------|---------|-------------|---------------------------|
-| 1 | Seed estados + `cfg_tig_*` + **`cfg_parametros_sistema`** | Este RFC | **Parcial** — estados/tig OK; faltan parámetros LM |
+| 1 | Seed estados + `cfg_tig_*` + **`cfg_parametros_sistema`** | Este RFC | **Hecho** (param LM en seed; aplicar en piloto) |
 | 2 | Zod `SOL_MED_AVISO_V1` + Rules create | §8.1 | **Parcial** — solo aviso **completo** |
 | 2a | UI agente completa + Storage + `crearAvisoMedicoCajaNegra` | — | **Hecho** P4.3 |
 | 2b | Incompleta + `vencimiento_plazo_certificado` (param §2.4) + §5.6 | §0.2 | Pendiente |

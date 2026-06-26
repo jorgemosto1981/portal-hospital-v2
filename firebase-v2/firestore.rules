@@ -37,6 +37,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /cfg_parametros_sistema/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // Catálogos usados en onboarding (listarCatalogoOnboarding) — mismo criterio: solo lectura autenticada.
     match /cfg_provincia/{docId} {
       allow read: if signedIn();
