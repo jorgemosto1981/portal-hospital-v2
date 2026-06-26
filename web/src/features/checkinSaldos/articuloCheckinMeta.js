@@ -1,8 +1,11 @@
 import { CFG_EST_VER_PUBLICADA, getCorrespondenciaAnioFromVersion } from "../../../../shared/utils/laoVersionResolver.js";
+import {
+  esArticuloPatronBPorEventoSinTopeAnual,
+} from "../../../../shared/utils/opcionesConsumoSolicitud.js";
 import { callListarVersionesCfgArticulo } from "../../services/callables.js";
 import { resolvePatronSaldo } from "./resolvePatronSaldo.js";
 
-/** @type {Map<string, { patron: 'A'|'B'|'C'|null, versionId: string, cupoDiasPorCiclo: number | null, error: string | null }>} */
+/** @type {Map<string, { patron: 'A'|'B'|'C'|null, versionId: string, cupoDiasPorCiclo: number | null, validacionPorEventoSinTopeAnual: boolean, error: string | null }>} */
 const metaCache = new Map();
 
 function cacheKey(articuloId, anioA) {
@@ -15,12 +18,12 @@ export function clearArticuloCheckinMetaCache() {
 }
 
 /**
- * @returns {Promise<{ patron: 'A'|'B'|'C'|null, versionId: string, cupoDiasPorCiclo: number | null, error: string | null }>}
+ * @returns {Promise<{ patron: 'A'|'B'|'C'|null, versionId: string, cupoDiasPorCiclo: number | null, validacionPorEventoSinTopeAnual: boolean, error: string | null }>}
  */
 export async function fetchArticuloCheckinMeta(articuloId, anioA) {
   const art = String(articuloId || "").trim();
   if (!/^art_/i.test(art)) {
-    return { patron: null, versionId: "", cupoDiasPorCiclo: null, error: "Artículo inválido." };
+    return { patron: null, versionId: "", cupoDiasPorCiclo: null, validacionPorEventoSinTopeAnual: false, error: "Artículo inválido." };
   }
 
   const key = cacheKey(art, anioA);
@@ -40,6 +43,7 @@ export async function fetchArticuloCheckinMeta(articuloId, anioA) {
         patron: null,
         versionId: "",
         cupoDiasPorCiclo: null,
+        validacionPorEventoSinTopeAnual: false,
         error: "Sin versión publicada.",
       };
       metaCache.set(key, out);
@@ -62,10 +66,13 @@ export async function fetchArticuloCheckinMeta(articuloId, anioA) {
       cupoRaw != null && Number.isFinite(Number(cupoRaw)) ? Number(cupoRaw) : null;
     const verId = String(pick.versionId || "").trim();
 
+    const validacionPorEventoSinTopeAnual = esArticuloPatronBPorEventoSinTopeAnual(data);
+
     const out = {
       patron,
       versionId: verId,
       cupoDiasPorCiclo: cupo,
+      validacionPorEventoSinTopeAnual,
       error: patron ? null : "Patrón no reconocido en configurador.",
     };
     metaCache.set(key, out);
@@ -75,6 +82,7 @@ export async function fetchArticuloCheckinMeta(articuloId, anioA) {
       patron: null,
       versionId: "",
       cupoDiasPorCiclo: null,
+      validacionPorEventoSinTopeAnual: false,
       error: e?.message || "No se pudo leer versiones.",
     };
     metaCache.set(key, out);

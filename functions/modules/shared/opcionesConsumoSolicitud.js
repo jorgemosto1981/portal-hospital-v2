@@ -63,6 +63,17 @@ function versionTieneOpcionesConsumoActivas(versionData) {
 }
 
 /**
+ * Patrón B sin cupo anual: límite por evento vía opciones (63.j duelo).
+ * @param {Record<string, unknown> | null | undefined} versionData
+ */
+function esArticuloPatronBPorEventoSinTopeAnual(versionData) {
+  const topes =
+    versionData && typeof versionData === "object" ? versionData.bloque_topes_plazos_computo || {} : {};
+  if (topes.cupo_dias_por_ciclo != null) return false;
+  return versionTieneOpcionesConsumoActivas(versionData);
+}
+
+/**
  * @param {Record<string, unknown> | null | undefined} versionData
  * @param {string | null | undefined} opcionConsumoId
  * @returns {{ ok: true, opcion: OpcionConsumoSolicitudRow } | { ok: false, codigo: string }}
@@ -182,4 +193,4 @@ function resolvePatronBConsumoDesdeSolicitud(versionData, solicitud) {
   };
 }
 
-module.exports = { CODIGOS_CONSUMO, leerOpcionesConsumoDesdeVersion, filtrarOpcionesActivas, versionTieneOpcionesConsumoActivas, resolverOpcionConsumo, reglaComputoDiasIdDesdeOpcion, versionDataConOpcionAplicada, mapOpcionesParaListadoCliente, resolvePatronBConsumoDesdeSolicitud };
+module.exports = { CODIGOS_CONSUMO, leerOpcionesConsumoDesdeVersion, filtrarOpcionesActivas, versionTieneOpcionesConsumoActivas, esArticuloPatronBPorEventoSinTopeAnual, resolverOpcionConsumo, reglaComputoDiasIdDesdeOpcion, versionDataConOpcionAplicada, mapOpcionesParaListadoCliente, resolvePatronBConsumoDesdeSolicitud };

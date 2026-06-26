@@ -38,6 +38,7 @@ const { tokenHasRrhhLaborAccess } = require("./laborProfile");
 const {
   resolvePatronBConsumoDesdeSolicitud,
   CODIGOS_CONSUMO,
+  esArticuloPatronBPorEventoSinTopeAnual,
 } = require("./opcionesConsumoSolicitud");
 const {
   diasSolicitadosDesdeVersion,
@@ -253,10 +254,24 @@ function faseT(diasPedidos, cfg) {
   };
 }
 
-function faseS(db, personaId, articuloId, anioCiclo, diasPedidos) {
+function faseS(db, personaId, articuloId, anioCiclo, diasPedidos, versionData) {
   return {
     id: "S",
     async run() {
+      if (esArticuloPatronBPorEventoSinTopeAnual(versionData)) {
+        return {
+          checks: [
+            motorCheck(
+              "S",
+              "SALDO_EVENTO_SIN_CICLO",
+              "ok",
+              "Sin tope anual: saldo validado por evento y opción de consumo (Fase T).",
+            ),
+          ],
+          data: { sin_descuento_bolsa_ciclo: true },
+        };
+      }
+
       const salId = saldoAnualDocId(personaId, anioCiclo);
       if (!salId) {
         return { checks: [motorCheck("S", CODIGO_SALDO_CICLO, "bloqueante", "Saldo anual invalido.")] };
@@ -395,7 +410,7 @@ async function runPatronBAltaMotorV2(params) {
     faseW(versionEff, fechaDesde),
     faseF(db, personaId, articuloId, fechaDesde, topeMes, excludeSolId),
     faseT(diasPedidos, cfg),
-    faseS(db, personaId, articuloId, anioCiclo, diasPedidos),
+    faseS(db, personaId, articuloId, anioCiclo, diasPedidos, versionEff),
     faseG(db, personaId, fechaDesde, cfg, grupoAncla.ok ? grupoAncla.grupo_trabajo_id_ancla : null),
   ];
 
@@ -442,6 +457,7 @@ async function runPatronBAltaMotorV2(params) {
     saldo_doc_id: pipeline.ctx.saldo_doc_id || null,
     saldo_disponible: pipeline.ctx.saldo_disponible ?? null,
     saldo_restante_preview: pipeline.ctx.saldo_restante_preview ?? null,
+    sin_descuento_bolsa_ciclo: pipeline.ctx.sin_descuento_bolsa_ciclo === true,
     frecuencia_mes: pipeline.ctx.frecuencia_mes || null,
     fecha_hasta: pipeline.ctx.fechaHastaEff || fechaHastaPre || fechaDesde,
     opcion_consumo_id: consumo.opcion_consumo_id || null,
