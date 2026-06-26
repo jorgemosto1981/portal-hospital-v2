@@ -11,15 +11,35 @@ import {
 
 const TS = { creado_en: {}, actualizado_en: {} };
 
+const DECLARACION_CONTACTO = {
+  usar_datos_perfil: true,
+  telefono_celular: "1166554433",
+  domicilio_declarado: "Av. Siempre Viva 742",
+  permanece_en_domicilio: true,
+  usar_email_perfil: true,
+  email: "agente@hospital.test",
+};
+
+function inputAvisoBase(overrides = {}) {
+  return {
+    personaId: "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ",
+    tipoIngresoId: TIPO_INGRESO_MEDICO_ENFERMEDAD_PROPIA,
+    grupoTrabajoIdAncla: "gdt_01KQN9WXFXF69Z9DCT5YNJ3TG0",
+    fechaInicioReposoEstimada: "2026-06-26",
+    fechaFinReposoEstimada: "2026-06-28",
+    fechaReferenciaHoyBa: "2026-06-26",
+    declaracionContacto: DECLARACION_CONTACTO,
+    declaracionClinica: { sintomas: "Fiebre" },
+    adjuntos: [{ storage_path: "avisos-med/2026/cert.pdf" }],
+    ...overrides,
+  };
+}
+
 describe("solicitudArticuloCreateShapeMedAvisoSchema", () => {
   it("exige articulo_id y version_id_aplicada null", () => {
     const doc = buildSolicitudMedAvisoDocument(
       {
-        personaId: "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ",
-        tipoIngresoId: TIPO_INGRESO_MEDICO_ENFERMEDAD_PROPIA,
-        grupoTrabajoIdAncla: "gdt_01KQN9WXFXF69Z9DCT5YNJ3TG0",
-        fechaInicioReposoEstimada: "2026-06-10",
-        adjuntos: [{ storage_path: "avisos-med/2026/cert.pdf" }],
+        ...inputAvisoBase(),
         comentarioAgente: "Certificado adjunto",
       },
       TS,
@@ -32,15 +52,7 @@ describe("solicitudArticuloCreateShapeMedAvisoSchema", () => {
   });
 
   it("rechaza articulo_id art_* en aviso", () => {
-    const base = buildSolicitudMedAvisoDocument(
-      {
-        personaId: "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ",
-        tipoIngresoId: TIPO_INGRESO_MEDICO_ENFERMEDAD_PROPIA,
-        grupoTrabajoIdAncla: "gdt_01KQN9WXFXF69Z9DCT5YNJ3TG0",
-        adjuntos: [{ storage_path: "x" }],
-      },
-      TS,
-    );
+    const base = buildSolicitudMedAvisoDocument(inputAvisoBase({ adjuntos: [{ storage_path: "x" }] }), TS);
     const r = solicitudArticuloCreateShapeMedAvisoSchema.safeParse({
       ...base,
       articulo_id: "art_01KRNK10V10CH7W5M2W6V558GS",
@@ -50,12 +62,7 @@ describe("solicitudArticuloCreateShapeMedAvisoSchema", () => {
 
   it("entra en union de create por schema_version", () => {
     const doc = buildSolicitudMedAvisoDocument(
-      {
-        personaId: "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ",
-        tipoIngresoId: TIPO_INGRESO_MEDICO_ENFERMEDAD_PROPIA,
-        grupoTrabajoIdAncla: "gdt_01KQN9WXFXF69Z9DCT5YNJ3TG0",
-        adjuntos: [{ storage_path: "avisos-med/a.pdf" }],
-      },
+      inputAvisoBase({ adjuntos: [{ storage_path: "avisos-med/a.pdf" }] }),
       TS,
     );
     expect(parseSolicitudArticuloCreateDocument(doc).schema_version).toBe("SOL_MED_AVISO_V1");
@@ -64,12 +71,7 @@ describe("solicitudArticuloCreateShapeMedAvisoSchema", () => {
   it("aviso incompleto exige vencimiento_plazo_certificado en documento", () => {
     const venc = { seconds: 1, nanoseconds: 0 };
     const doc = buildSolicitudMedAvisoDocument(
-      {
-        personaId: "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ",
-        tipoIngresoId: TIPO_INGRESO_MEDICO_ENFERMEDAD_PROPIA,
-        grupoTrabajoIdAncla: "gdt_01KQN9WXFXF69Z9DCT5YNJ3TG0",
-        esLicenciaIncompleta: true,
-      },
+      inputAvisoBase({ esLicenciaIncompleta: true, adjuntos: undefined }),
       { ...TS, vencimiento_plazo_certificado: venc, timestampAvisoIncompletoIso: "2026-06-24T12:00:00.000Z" },
     );
     expect(doc.ingreso_medico.es_licencia_incompleta).toBe(true);
@@ -81,16 +83,23 @@ describe("solicitudArticuloCreateShapeMedAvisoSchema", () => {
   it("rechaza incompleto sin vencimiento", () => {
     const venc = { seconds: 1 };
     const base = buildSolicitudMedAvisoDocument(
-      {
-        personaId: "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ",
-        tipoIngresoId: TIPO_INGRESO_MEDICO_ENFERMEDAD_PROPIA,
-        grupoTrabajoIdAncla: "gdt_01KQN9WXFXF69Z9DCT5YNJ3TG0",
-        esLicenciaIncompleta: true,
-      },
+      inputAvisoBase({ esLicenciaIncompleta: true, adjuntos: undefined }),
       { ...TS, vencimiento_plazo_certificado: venc },
     );
     const { vencimiento_plazo_certificado: _v, ...sinVenc } = base;
     const r = solicitudArticuloCreateShapeMedAvisoSchema.safeParse(sinVenc);
     expect(r.success).toBe(false);
+  });
+
+  it("rechaza fecha de reposo retroactiva", () => {
+    expect(() =>
+      buildSolicitudMedAvisoDocument(
+        inputAvisoBase({
+          fechaInicioReposoEstimada: "2026-06-20",
+          fechaReferenciaHoyBa: "2026-06-26",
+        }),
+        TS,
+      ),
+    ).toThrow();
   });
 });

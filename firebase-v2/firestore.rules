@@ -382,14 +382,59 @@ service cloud.firestore {
         && id in ['cfg_tig_enfermedad_propia', 'cfg_tig_atencion_familiar'];
     }
 
+    function solicitudMedAvisoDeclaracionContactoValid(c) {
+      return c is map
+        && c.usar_datos_perfil is bool
+        && c.telefono_celular is string
+        && c.telefono_celular.size() >= 6
+        && c.telefono_celular.size() <= 32
+        && c.domicilio_declarado is string
+        && c.domicilio_declarado.size() >= 3
+        && c.domicilio_declarado.size() <= 512
+        && c.permanece_en_domicilio is bool
+        && c.usar_email_perfil is bool
+        && c.email is string
+        && c.email.size() >= 5
+        && c.email.size() <= 256
+        && (!('telefono_fijo' in c)
+          || (c.telefono_fijo is string && c.telefono_fijo.size() <= 32));
+    }
+
+    function solicitudMedAvisoFamiliarAtendidoValid(f) {
+      return f is map
+        && f.declaracion_grupo_familiar_id is string
+        && f.declaracion_grupo_familiar_id.matches('^gf_[0-9A-HJKMNP-TV-Z]{26}$')
+        && f.familiar_id is string
+        && f.familiar_id.size() >= 1
+        && f.familiar_id.size() <= 64
+        && f.nombre is string
+        && f.nombre.size() >= 1
+        && f.nombre.size() <= 120
+        && f.apellido is string
+        && f.apellido.size() >= 1
+        && f.apellido.size() <= 120
+        && f.dni is string
+        && f.dni.size() >= 6
+        && f.dni.size() <= 16;
+    }
+
     function solicitudMedAvisoIngresoValid(ing) {
       return ing is map
         && ing.modo == 'caja_negra'
         && solicitudMedAvisoTipoIngresoValid(ing.tipo_ingreso_id)
+        && solicitudMedAvisoDeclaracionContactoValid(ing.declaracion_contacto)
         && ing.adjuntos is list
         && ing.adjuntos.size() <= 10
         && (!('comentario_agente' in ing)
           || (ing.comentario_agente is string && ing.comentario_agente.size() <= 2000))
+        && (
+          ing.tipo_ingreso_id != 'cfg_tig_atencion_familiar'
+          || solicitudMedAvisoFamiliarAtendidoValid(ing.familiar_atendido)
+        )
+        && (
+          ing.tipo_ingreso_id != 'cfg_tig_enfermedad_propia'
+          || !('familiar_atendido' in ing)
+        )
         && (
           (ing.es_licencia_incompleta == true
             && ing.adjuntos.size() == 0
@@ -420,6 +465,9 @@ service cloud.firestore {
         && (!('fecha_inicio_reposo_estimada' in d)
           || (d.fecha_inicio_reposo_estimada is string
             && d.fecha_inicio_reposo_estimada.matches('^\\d{4}-\\d{2}-\\d{2}$')))
+        && (!('fecha_fin_reposo_estimada' in d)
+          || (d.fecha_fin_reposo_estimada is string
+            && d.fecha_fin_reposo_estimada.matches('^\\d{4}-\\d{2}-\\d{2}$')))
         && (!inc || d.vencimiento_plazo_certificado is timestamp)
         && (inc || !('vencimiento_plazo_certificado' in d));
     }
@@ -438,6 +486,7 @@ service cloud.firestore {
           'estado_solicitud_id',
           'ingreso_medico',
           'fecha_inicio_reposo_estimada',
+          'fecha_fin_reposo_estimada',
           'vencimiento_plazo_certificado',
           'creado_en',
           'actualizado_en',

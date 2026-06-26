@@ -1,7 +1,7 @@
 # Plan P4 — Licencias médicas (Arts. 11, 14 y workflow Art. 15)
 
 **Épica:** Decreto 1919 / Bloque B — licencias médicas  
-**Estado:** **Planificación** — **pausa código** tras P4.3 (aviso **completo** as-built); **addendum Licencia Incompleta** documentado en RFC Caja Negra §0.2 — **no tocar** `schema.js` / servicio hasta cerrar UAT documental con RRHH. Motor S_MED al **`APROBADA`**.  
+**Estado:** **Pausa código** — 24-jun-2026 tras P4.3b (modal completar incompleta + exclusividad); ver [`HANDOFF_SESION_2026-06-24_P4_AVISO_MEDICO_PAUSA.md`](./HANDOFF_SESION_2026-06-24_P4_AVISO_MEDICO_PAUSA.md). Último deploy piloto incompleta: `d669b32`. Motor S_MED al **`APROBADA`**.  
 **Rama prevista:** `feat/1919-p4-licencias-medicas`  
 **Tag de cierre previsto:** `1919-p4-licencias-medicas`
 

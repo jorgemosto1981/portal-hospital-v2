@@ -37,10 +37,45 @@ export const ingresoMedicoAdjuntoSchema = z
   })
   .strict();
 
+export const declaracionContactoAvisoSchema = z
+  .object({
+    usar_datos_perfil: z.boolean(),
+    telefono_celular: z.string().min(6).max(32),
+    telefono_fijo: z.string().max(32).optional(),
+    domicilio_declarado: z.string().min(3).max(512),
+    permanece_en_domicilio: z.boolean(),
+    usar_email_perfil: z.boolean(),
+    email: z.string().email().max(256),
+  })
+  .strict();
+
+export const declaracionClinicaAvisoSchema = z
+  .object({
+    sintomas: z.string().max(2000).optional(),
+    enfermedad: z.string().max(500).optional(),
+    codigo_cie: z.string().max(16).optional(),
+    detalle: z.string().max(2000).optional(),
+  })
+  .strict();
+
+export const familiarAtendidoAvisoSchema = z
+  .object({
+    declaracion_grupo_familiar_id: z.string().regex(/^gf_[0-9A-HJKMNP-TV-Z]{26}$/i),
+    familiar_id: z.string().min(1).max(64),
+    nombre: z.string().min(1).max(120),
+    apellido: z.string().min(1).max(120),
+    dni: z.string().min(6).max(16),
+    parentesco_id: z.string().max(64).optional(),
+  })
+  .strict();
+
 const ingresoMedicoBaseSchema = z.object({
   modo: z.literal("caja_negra"),
   tipo_ingreso_id: cfgTigIdSchema,
   comentario_agente: z.string().max(2000).optional(),
+  declaracion_contacto: declaracionContactoAvisoSchema,
+  declaracion_clinica: declaracionClinicaAvisoSchema.optional(),
+  familiar_atendido: familiarAtendidoAvisoSchema.optional(),
 });
 
 const ingresoMedicoCompletoSchema = ingresoMedicoBaseSchema
@@ -67,9 +102,14 @@ const solicitudMedAvisoAltaInputBase = z.object({
   personaId: perIdSchema,
   tipoIngresoId: cfgTigIdSchema,
   grupoTrabajoIdAncla: gdtIdSchema,
-  fechaInicioReposoEstimada: ymdSchema.optional(),
+  fechaInicioReposoEstimada: ymdSchema,
+  fechaFinReposoEstimada: ymdSchema.optional(),
+  fechaReferenciaHoyBa: ymdSchema,
   comentarioAgente: z.string().max(2000).optional(),
   esLicenciaIncompleta: z.boolean().default(false),
+  declaracionContacto: declaracionContactoAvisoSchema,
+  declaracionClinica: declaracionClinicaAvisoSchema.optional(),
+  familiarAtendido: familiarAtendidoAvisoSchema.optional(),
 });
 
 /** Parámetros UI — aviso médico antes de clasificación auditor. */
@@ -79,6 +119,36 @@ export const solicitudMedAvisoAltaInputSchema = solicitudMedAvisoAltaInputBase
   })
   .strict()
   .superRefine((data, ctx) => {
+    if (data.fechaInicioReposoEstimada < data.fechaReferenciaHoyBa) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "La fecha de inicio del reposo no puede ser anterior a hoy.",
+        path: ["fechaInicioReposoEstimada"],
+      });
+    }
+    const fin = data.fechaFinReposoEstimada || data.fechaInicioReposoEstimada;
+    if (fin && fin < data.fechaInicioReposoEstimada) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "La fecha de fin no puede ser anterior al inicio del reposo.",
+        path: ["fechaFinReposoEstimada"],
+      });
+    }
+    if (data.tipoIngresoId === TIPO_INGRESO_MEDICO_ATENCION_FAMILIAR) {
+      if (!data.familiarAtendido) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Seleccioná el familiar que vas a atender.",
+          path: ["familiarAtendido"],
+        });
+      }
+    } else if (data.familiarAtendido) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Solo el aviso por familiar enfermo incluye familiar_atendido.",
+        path: ["familiarAtendido"],
+      });
+    }
     if (data.esLicenciaIncompleta) {
       if (data.adjuntos && data.adjuntos.length > 0) {
         ctx.addIssue({
@@ -88,6 +158,25 @@ export const solicitudMedAvisoAltaInputSchema = solicitudMedAvisoAltaInputBase
         });
       }
       return;
+    }
+    if (!data.fechaFinReposoEstimada) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Indicá la fecha estimada de fin del reposo.",
+        path: ["fechaFinReposoEstimada"],
+      });
+    }
+    const clin = data.declaracionClinica || {};
+    const tieneManifestacion =
+      Boolean(String(clin.sintomas || "").trim()) ||
+      Boolean(String(clin.enfermedad || "").trim()) ||
+      Boolean(String(clin.codigo_cie || "").trim());
+    if (!tieneManifestacion) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Indicá síntomas, enfermedad o código CIE.",
+        path: ["declaracionClinica"],
+      });
     }
     if (!data.adjuntos || data.adjuntos.length < 1) {
       ctx.addIssue({
@@ -109,6 +198,7 @@ const solicitudMedAvisoDocumentBase = z.object({
   estado_solicitud_id: z.literal(ESTADO_SOLICITUD_ARTICULO_PENDIENTE_CLASIFICACION_MEDICA),
   ingreso_medico: ingresoMedicoCajaNegraSchema,
   fecha_inicio_reposo_estimada: ymdSchema.optional(),
+  fecha_fin_reposo_estimada: ymdSchema.optional(),
   vencimiento_plazo_certificado: z.unknown().optional(),
   creado_en: z.unknown(),
   actualizado_en: z.unknown(),
@@ -153,7 +243,14 @@ export function buildSolicitudMedAvisoDocument(input, timestamps) {
     tipo_ingreso_id: parsed.tipoIngresoId,
     es_licencia_incompleta: esIncompleta,
     adjuntos: esIncompleta ? [] : parsed.adjuntos || [],
+    declaracion_contacto: parsed.declaracionContacto,
   };
+  if (parsed.familiarAtendido) {
+    ingreso.familiar_atendido = parsed.familiarAtendido;
+  }
+  if (!esIncompleta && parsed.declaracionClinica) {
+    ingreso.declaracion_clinica = parsed.declaracionClinica;
+  }
   if (parsed.comentarioAgente) {
     ingreso.comentario_agente = parsed.comentarioAgente;
   }
@@ -178,6 +275,10 @@ export function buildSolicitudMedAvisoDocument(input, timestamps) {
   };
   if (parsed.fechaInicioReposoEstimada) {
     doc.fecha_inicio_reposo_estimada = parsed.fechaInicioReposoEstimada;
+  }
+  const finReposo = parsed.fechaFinReposoEstimada || parsed.fechaInicioReposoEstimada;
+  if (finReposo) {
+    doc.fecha_fin_reposo_estimada = finReposo;
   }
   if (esIncompleta && timestamps.vencimiento_plazo_certificado != null) {
     doc.vencimiento_plazo_certificado = timestamps.vencimiento_plazo_certificado;

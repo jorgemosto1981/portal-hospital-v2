@@ -54,6 +54,7 @@ const FILES_TO_SYNC = [
   "opcionesConsumoSolicitud.js",
   "licenciaMedicaTramosCore.js",
   "licenciaMedicaParametrosCore.js",
+  "avisoMedicoExclusividadPeriodoCore.js",
 ];
 
 function esmToCjs(source, filename) {

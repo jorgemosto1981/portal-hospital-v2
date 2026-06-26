@@ -67,6 +67,7 @@ const colaRematerializacionTriggers = require("./triggers/onColaRematerializacio
 const grillaSyncGrupoMesTriggers = require("./triggers/onGrillaSyncGrupoMes");
 const solicitarReconciliacionGrillaGrupoMes = require("./onCall/grilla/solicitarReconciliacionGrillaGrupoMes");
 const avisoMedicoCajaNegra = require("./onCall/solicitudes/actualizarAvisoMedicoIncompleto");
+const validarPeriodoAvisoMedico = require("./onCall/solicitudes/validarPeriodoAvisoMedicoExclusivo");
 
 module.exports = {
   ...login,
@@ -125,4 +126,5 @@ module.exports = {
   ...colaRematerializacionTriggers,
   ...grillaSyncGrupoMesTriggers,
   ...avisoMedicoCajaNegra,
+  ...validarPeriodoAvisoMedico,
 };

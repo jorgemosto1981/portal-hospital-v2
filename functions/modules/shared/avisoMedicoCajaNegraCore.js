@@ -7,8 +7,16 @@ const {
   resolverHorasDesdeParametroSistema,
 } = require("./licenciaMedicaParametrosCore");
 
+function vencDateToIso(venc) {
+  if (venc && typeof venc.toDate === "function") {
+    return venc.toDate().toISOString();
+  }
+  return null;
+}
+
 const ESTADO_PENDIENTE_CLASIFICACION = "cfg_esa_pendiente_clasificacion_medica";
 const SCHEMA_MED_AVISO = "SOL_MED_AVISO_V1";
+const { validarPeriodoExclusivoAvisoMedico } = require("./avisoMedicoExclusividadValidacion");
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
@@ -44,7 +52,45 @@ async function buscarAvisoIncompletaVigente(db, titularPersonaId) {
     const vencMs =
       venc && typeof venc.toDate === "function" ? venc.toDate().getTime() : NaN;
     if (Number.isFinite(vencMs) && vencMs > now) {
-      return { ok: true, solicitud_id: doc.id, vencimiento_plazo_certificado: venc };
+      const ingreso = ing && typeof ing === "object" ? ing : {};
+      const fechaInicio = String(d.fecha_inicio_reposo_estimada || "").slice(0, 10);
+      const familiar = ingreso.familiar_atendido;
+      const familiarPlain =
+        familiar && typeof familiar === "object"
+          ? {
+              declaracion_grupo_familiar_id: String(familiar.declaracion_grupo_familiar_id || "").trim(),
+              familiar_id: String(familiar.familiar_id || "").trim(),
+              nombre: String(familiar.nombre || "").trim(),
+              apellido: String(familiar.apellido || "").trim(),
+              dni: String(familiar.dni || "").trim(),
+              ...(familiar.parentesco_id ? { parentesco_id: String(familiar.parentesco_id).trim() } : {}),
+            }
+          : null;
+      const contacto = ingreso.declaracion_contacto;
+      const contactoPlain =
+        contacto && typeof contacto === "object"
+          ? {
+              usar_datos_perfil: contacto.usar_datos_perfil === true,
+              telefono_celular: String(contacto.telefono_celular || "").trim(),
+              ...(contacto.telefono_fijo ? { telefono_fijo: String(contacto.telefono_fijo).trim() } : {}),
+              domicilio_declarado: String(contacto.domicilio_declarado || "").trim(),
+              permanece_en_domicilio: contacto.permanece_en_domicilio === true,
+              usar_email_perfil: contacto.usar_email_perfil === true,
+              email: String(contacto.email || "").trim(),
+            }
+          : null;
+
+      return {
+        ok: true,
+        solicitud_id: doc.id,
+        resumen: {
+          fecha_inicio_reposo_estimada: /^\d{4}-\d{2}-\d{2}$/.test(fechaInicio) ? fechaInicio : "",
+          vencimiento_plazo_certificado_iso: vencDateToIso(venc),
+          tipo_ingreso_id: String(ingreso.tipo_ingreso_id || "").trim(),
+          familiar_atendido: familiarPlain,
+          declaracion_contacto: contactoPlain,
+        },
+      };
     }
   }
   return { ok: false, codigo: "SIN_AVISO_INCOMPLETA_VIGENTE" };
@@ -57,6 +103,8 @@ async function buscarAvisoIncompletaVigente(db, titularPersonaId) {
  *   titularPersonaId: string,
  *   adjuntos: Array<{ storage_path: string, content_type?: string, nombre_archivo?: string }>,
  *   fechaInicioReposoEstimada?: string,
+ *   fechaFinReposoEstimada?: string,
+ *   declaracionClinica?: { sintomas?: string, enfermedad?: string, codigo_cie?: string, detalle?: string },
  * }} input
  */
 async function actualizarAvisoMedicoIncompleto(db, input) {
@@ -106,11 +154,51 @@ async function actualizarAvisoMedicoIncompleto(db, input) {
     };
   }
 
-  const fechaYmd =
+  const fechaInicio =
     typeof input.fechaInicioReposoEstimada === "string" &&
     /^\d{4}-\d{2}-\d{2}$/.test(input.fechaInicioReposoEstimada.trim())
       ? input.fechaInicioReposoEstimada.trim()
-      : null;
+      : String(d.fecha_inicio_reposo_estimada || "").slice(0, 10);
+
+  const fechaFin =
+    typeof input.fechaFinReposoEstimada === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(input.fechaFinReposoEstimada.trim())
+      ? input.fechaFinReposoEstimada.trim()
+      : "";
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaInicio)) {
+    return { ok: false, codigo: "FECHA_INICIO_REQUERIDA", mensaje: "Fecha de inicio del reposo inválida." };
+  }
+  if (!fechaFin || fechaFin < fechaInicio) {
+    return {
+      ok: false,
+      codigo: "FECHA_FIN_REQUERIDA",
+      mensaje: "Indicá la fecha estimada de fin del reposo (igual o posterior al inicio).",
+    };
+  }
+
+  const clinIn = input.declaracionClinica && typeof input.declaracionClinica === "object" ? input.declaracionClinica : {};
+  const tieneClin =
+    Boolean(String(clinIn.sintomas || "").trim()) ||
+    Boolean(String(clinIn.enfermedad || "").trim()) ||
+    Boolean(String(clinIn.codigo_cie || "").trim());
+  if (!tieneClin) {
+    return {
+      ok: false,
+      codigo: "CLINICA_REQUERIDA",
+      mensaje: "Indicá síntomas, enfermedad o código CIE al completar el aviso.",
+    };
+  }
+
+  const exclusividad = await validarPeriodoExclusivoAvisoMedico(db, {
+    titularPersonaId,
+    fechaDesde: fechaInicio,
+    fechaHasta: fechaFin,
+    excludeSolicitudId: solicitudId,
+  });
+  if (!exclusividad.ok) {
+    return exclusividad;
+  }
 
   const ingresoActualizado = {
     ...ing,
@@ -121,16 +209,20 @@ async function actualizarAvisoMedicoIncompleto(db, input) {
     })),
     es_licencia_incompleta: false,
     completado_en: FieldValue.serverTimestamp(),
+    declaracion_clinica: {
+      ...(clinIn.sintomas ? { sintomas: String(clinIn.sintomas).slice(0, 2000) } : {}),
+      ...(clinIn.enfermedad ? { enfermedad: String(clinIn.enfermedad).slice(0, 500) } : {}),
+      ...(clinIn.codigo_cie ? { codigo_cie: String(clinIn.codigo_cie).slice(0, 16) } : {}),
+      ...(clinIn.detalle ? { detalle: String(clinIn.detalle).slice(0, 2000) } : {}),
+    },
   };
 
-  /** @type {Record<string, unknown>} */
   const patch = {
     ingreso_medico: ingresoActualizado,
     actualizado_en: FieldValue.serverTimestamp(),
+    fecha_inicio_reposo_estimada: fechaInicio,
+    fecha_fin_reposo_estimada: fechaFin,
   };
-  if (fechaYmd) {
-    patch.fecha_inicio_reposo_estimada = fechaYmd;
-  }
 
   await ref.update(patch);
 

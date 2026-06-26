@@ -635,6 +635,7 @@ export default function PerfilUsuario() {
         </div>
       ) : null}
 
+      <div id="ddjj-grupo-familiar" className="scroll-mt-6">
       <Card className="px-4 py-4 md:px-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -705,6 +706,7 @@ export default function PerfilUsuario() {
           </p>
         )}
       </Card>
+      </div>
 
       <Card className="px-4 py-4 md:px-5">
         <p className="text-base font-semibold text-slate-900">Seguridad de la cuenta</p>

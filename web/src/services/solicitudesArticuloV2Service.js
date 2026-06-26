@@ -16,6 +16,7 @@ import {
 import { buildSolicitudMedAvisoDocument } from "../schemas/solicitudArticulo.schema.js";
 import { calcularVencimientoPlazoCertificado } from "../../../shared/utils/licenciaMedicaParametrosCore.js";
 import { leerPlazoHorasLicenciaIncompleta } from "./cfgParametrosSistemaService.js";
+import { ymdHoyBa } from "../features/solicitudes/ticketeraUtils.js";
 import { dbV2 } from "./firebase.js";
 
 const SOL_ULID_RE = /^sol_[0-9A-HJKMNP-TV-Z]{26}$/i;
@@ -248,9 +249,12 @@ export { esperarValidacionMotorPatronB as esperarValidacionMotorPatronC };
  *   tipoIngresoId: string,
  *   grupoTrabajoIdAncla: string,
  *   adjuntos: Array<{ storage_path: string, content_type?: string, nombre_archivo?: string }>,
- *   fechaInicioReposoEstimada?: string,
+ *   fechaInicioReposoEstimada: string,
+ *   fechaReferenciaHoyBa?: string,
  *   comentarioAgente?: string,
  *   esLicenciaIncompleta?: boolean,
+ *   declaracionContacto: { usar_datos_perfil: boolean, telefono_celular: string, domicilio_declarado: string, permanece_en_domicilio: boolean, telefono_fijo?: string },
+ *   familiarAtendido?: { declaracion_grupo_familiar_id: string, familiar_id: string, nombre: string, apellido: string, dni: string, parentesco_id?: string },
  * }} params
  * @returns {Promise<{ solicitud_id: string, estado_solicitud_id: string }>}
  */
@@ -269,9 +273,14 @@ export async function crearAvisoMedicoCajaNegra(params) {
       tipoIngresoId: params.tipoIngresoId,
       grupoTrabajoIdAncla: params.grupoTrabajoIdAncla,
       adjuntos: params.adjuntos,
-      fechaInicioReposoEstimada: params.fechaInicioReposoEstimada,
+      fechaInicioReposoEstimada: String(params.fechaInicioReposoEstimada || "").trim(),
+      fechaFinReposoEstimada: String(params.fechaFinReposoEstimada || params.fechaInicioReposoEstimada || "").trim(),
+      fechaReferenciaHoyBa: String(params.fechaReferenciaHoyBa || ymdHoyBa()).trim(),
       comentarioAgente: params.comentarioAgente,
       esLicenciaIncompleta: esIncompleta,
+      declaracionContacto: params.declaracionContacto,
+      declaracionClinica: params.declaracionClinica,
+      familiarAtendido: params.familiarAtendido,
     },
     {
       creado_en: serverTimestamp(),

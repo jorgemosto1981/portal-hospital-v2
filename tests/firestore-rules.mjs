@@ -130,7 +130,16 @@ function medAvisoPayloadBase() {
       tipo_ingreso_id: "cfg_tig_enfermedad_propia",
       es_licencia_incompleta: false,
       adjuntos: [{ storage_path: "avisos-med/2026/cert.pdf" }],
+      declaracion_contacto: {
+        usar_datos_perfil: true,
+        telefono_celular: "1166554433",
+        domicilio_declarado: "Calle 1 100",
+        permanece_en_domicilio: true,
+        usar_email_perfil: true,
+        email: "agente@hospital.test",
+      },
     },
+    fecha_inicio_reposo_estimada: "2026-06-26",
     creado_en: new Date(),
     actualizado_en: new Date(),
   };
@@ -166,6 +175,12 @@ function medAvisoIncompletoPayload() {
       es_licencia_incompleta: true,
       adjuntos: [],
       timestamp_aviso_incompleto: "2026-06-24T12:00:00.000Z",
+      declaracion_contacto: {
+        usar_datos_perfil: true,
+        telefono_celular: "1166554433",
+        domicilio_declarado: "Calle 1 100",
+        permanece_en_domicilio: false,
+      },
     },
     vencimiento_plazo_certificado: venc,
   };

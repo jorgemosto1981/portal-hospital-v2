@@ -5,6 +5,15 @@ import { buildSolicitudMedAvisoDocument } from "../schemas/solicitudArticulo.sch
 
 const TS = { creado_en: {}, actualizado_en: {} };
 
+const DECLARACION_CONTACTO = {
+  usar_datos_perfil: true,
+  telefono_celular: "1166554433",
+  domicilio_declarado: "Av. Siempre Viva 742",
+  permanece_en_domicilio: true,
+  usar_email_perfil: true,
+  email: "agente@hospital.test",
+};
+
 describe("crearAvisoMedicoCajaNegra — payload Firestore", () => {
   it("arma documento pendiente clasificación con articulo_id null", () => {
     const doc = buildSolicitudMedAvisoDocument(
@@ -12,6 +21,11 @@ describe("crearAvisoMedicoCajaNegra — payload Firestore", () => {
         personaId: "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ",
         tipoIngresoId: TIPO_INGRESO_MEDICO_ENFERMEDAD_PROPIA,
         grupoTrabajoIdAncla: "gdt_01KQN9WXFXF69Z9DCT5YNJ3TG0",
+        fechaInicioReposoEstimada: "2026-06-26",
+        fechaReferenciaHoyBa: "2026-06-26",
+        declaracionContacto: DECLARACION_CONTACTO,
+        fechaFinReposoEstimada: "2026-06-28",
+        declaracionClinica: { sintomas: "Cefalea" },
         adjuntos: [{ storage_path: "avisos-med/piloto/cert.pdf" }],
       },
       TS,
@@ -30,6 +44,9 @@ describe("crearAvisoMedicoCajaNegra — payload Firestore", () => {
         personaId: "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ",
         tipoIngresoId: TIPO_INGRESO_MEDICO_ENFERMEDAD_PROPIA,
         grupoTrabajoIdAncla: "gdt_01KQN9WXFXF69Z9DCT5YNJ3TG0",
+        fechaInicioReposoEstimada: "2026-06-26",
+        fechaReferenciaHoyBa: "2026-06-26",
+        declaracionContacto: DECLARACION_CONTACTO,
         esLicenciaIncompleta: true,
       },
       { ...TS, vencimiento_plazo_certificado: venc },

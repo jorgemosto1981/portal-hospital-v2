@@ -531,3 +531,8 @@ export function callActualizarAvisoMedicoIncompleto(data) {
 export function callBuscarAvisoIncompletaVigente() {
   return httpsCallable(getFunctionsV2(), "buscarAvisoIncompletaVigente")({});
 }
+
+/** Valida que el período no solape otras licencias/artículos ni asistencia_diaria. */
+export function callValidarPeriodoAvisoMedicoExclusivo(data) {
+  return httpsCallable(getFunctionsV2(), "validarPeriodoAvisoMedicoExclusivo")(data);
+}
