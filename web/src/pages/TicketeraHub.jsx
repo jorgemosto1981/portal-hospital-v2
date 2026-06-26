@@ -120,6 +120,17 @@ export default function TicketeraHub() {
 
       <button
         type="button"
+        onClick={() => nav("/portal/solicitudes/aviso-medico")}
+        className={`${TICKETERA.btnTileBase} border-rose-200 bg-rose-50/50 hover:border-rose-400 hover:bg-rose-50`}
+      >
+        <span className="text-lg font-bold tracking-tight text-rose-950">Aviso médico</span>
+        <span className={`${TICKETERA.nombreTile} text-rose-900/80`}>
+          Enfermedad propia o familiar · certificado adjunto
+        </span>
+      </button>
+
+      <button
+        type="button"
         onClick={() => irLaoWizard(LAO_ARTICULO_ID)}
         className={`${TICKETERA.btnTileBase} ${TICKETERA.btnTileLao}`}
       >

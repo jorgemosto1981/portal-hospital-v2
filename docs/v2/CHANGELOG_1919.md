@@ -26,4 +26,4 @@ Registro de **tags Git** y hitos documentales/código. Detalle operativo en `[PL
 | 2026-06-26 | **`1919-p5-config-rfc`** | Merge `7a8997c`: Paquete P5 opciones consumo 63.j — UAT VERDE |
 | —          | `1919-pre-firestore-clean` | Antes de limpieza/reseed piloto (con export GCS) |
 | 2026-06-26 | (rama `feat/1919-p4-licencias-medicas`) | **P4.1** motor tramos `licenciaMedicaTramosCore` (TDD) — uso en preview Modo B |
-| 2026-06-26 | P4 Caja Negra fase 1–2b: seed estados/tig, Zod `SOL_MED_AVISO_V1`, Rules create aviso, servicio `crearAvisoMedicoCajaNegra` |
+| 2026-06-26 | P4.3 UI agente: `/portal/solicitudes/aviso-medico`, Storage `avisos-med/{year}/{uid}/`, `crearAvisoMedicoCajaNegra` |

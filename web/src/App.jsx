@@ -30,6 +30,7 @@ import BandejaRrhhSolicitudes from "./pages/BandejaRrhhSolicitudes.jsx";
 import GuardArticuloIngreso from "./features/solicitudes/GuardArticuloIngreso.jsx";
 import RedirectTicketeraAlta from "./features/solicitudes/RedirectTicketeraAlta.jsx";
 import TicketeraAltaPage from "./pages/TicketeraAltaPage.jsx";
+import AvisoMedicoPage from "./pages/AvisoMedicoPage.jsx";
 import CheckinSaldosAgente from "./pages/CheckinSaldosAgente.jsx";
 import AltaAgenteOnboardingRRHH from "./pages/AltaAgenteOnboardingRRHH.jsx";
 import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
@@ -126,6 +127,7 @@ export default function App() {
               <Route path="patron-c" element={<RedirectTicketeraAlta />} />
               <Route path="lao" element={<LaoWizardTicketera />} />
               <Route path="lao-formulario" element={<SolicitudLaoAlta />} />
+              <Route path="aviso-medico" element={<AvisoMedicoPage />} />
             </Route>
             <Route path="solicitudes/asuntos-particulares" element={<Solicitud64AAlta />} />
             <Route path="perfil" element={<DatosPersonales />} />
