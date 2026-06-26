@@ -20,3 +20,7 @@ Registro de **tags Git** y hitos documentales/código. Detalle operativo en `[PL
 | 2026-06-26 | P5.0-fix 63.j | Duelo: `cfg_rcd_habiles_compuesto` + `fechaHastaDesdeVersionPatronBAsync` vía calendario institucional |
 | 2026-06-26 | P5.0b + reapply | Listado expone `opciones_consumo_solicitud`; `--reapply` en seed; Firestore piloto sincronizado |
 | —          | `1919-pre-firestore-clean` | Antes de limpieza/reseed piloto (con export GCS) |
+| 2026-06-24 | (rama `feat/1919-p5-config-rfc`) | **P5.2:** ticketera `OpcionConsumoSelect`, borrador Patrón B, enriquecimiento listado oleada 63 |
+| 2026-06-24 | (rama `feat/1919-p5-config-rfc`) | **P5.1b / P5.1b-fix:** Fase S sin bolsa para `cupo_dias_por_ciclo === null` (63-J, 63-D); deploy `firestore.rules`; check-in etiqueta por evento |
+| 2026-06-24 | (rama `feat/1919-p5-config-rfc`) | **P5.3 / P5.3b:** ABM `opciones_consumo_solicitud` en Avanzado; validación UI + bloqueo `formBloqueadoPorCatalogos` |
+| 2026-06-24 | **Paquete P5 — UAT VERDE** | Matriz [`MATRIZ_UAT_P5_OPCIONES_CONSUMO_63J.md`](./MATRIZ_UAT_P5_OPCIONES_CONSUMO_63J.md): UAT-P5-01 … UAT-P5-05 aprobados en piloto; listo para PR → `master` y tag **`1919-p5-config-rfc`** |
