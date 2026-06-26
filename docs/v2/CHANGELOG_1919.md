@@ -25,4 +25,5 @@ Registro de **tags Git** y hitos documentales/código. Detalle operativo en `[PL
 | 2026-06-24 | **Paquete P5 — UAT VERDE** | Matriz [`MATRIZ_UAT_P5_OPCIONES_CONSUMO_63J.md`](./MATRIZ_UAT_P5_OPCIONES_CONSUMO_63J.md): UAT-P5-01 … UAT-P5-05 aprobados en piloto |
 | 2026-06-26 | **`1919-p5-config-rfc`** | Merge `7a8997c`: Paquete P5 opciones consumo 63.j — UAT VERDE |
 | —          | `1919-pre-firestore-clean` | Antes de limpieza/reseed piloto (con export GCS) |
-| 2026-06-26 | (planificación **P4**) | Licencias médicas Arts. 11/14/15 — [`PLAN_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md`](./PLAN_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md) |
+| 2026-06-26 | (rama `feat/1919-p4-licencias-medicas`) | **P4.1** motor tramos `licenciaMedicaTramosCore` (TDD) — uso en preview Modo B |
+| 2026-06-26 | **Arquitectura Caja Negra** | [`RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md`](./RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md) — pausa código; S_MED al clasificar auditor |

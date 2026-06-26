@@ -126,7 +126,8 @@ Reglas de producto (resumen): usuario solo elige rango; norma = `regla_computo_d
 
 - Wizard inicio: enfermedad personal / atención familiar (parámetros RRHH).
 - Bandeja auditoría rol médico.
-- RFC slice cuando exista catálogo en Firestore.
+- **RFC:** [`RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md`](./RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md) (Caja Negra — canónico).
+- Motor tramos P4: [`RFC_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md`](./RFC_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md).
 
 ### Fase 6 — Delegación y extras
 

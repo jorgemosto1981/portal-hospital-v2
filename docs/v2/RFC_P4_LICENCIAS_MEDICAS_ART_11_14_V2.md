@@ -1,6 +1,8 @@
 # RFC P4 — Licencias médicas (Arts. 11, 14, 16/19 y workflow Art. 15)
 
-**Estado:** **Aprobado para implementación** (workshop RRHH 26-jun-2026)  
+> **Flujo agente en producción:** [`RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md`](./RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md) (Modo A). Este RFC detalla el **motor normativo** y el **Modo B** (artículo ya elegido en ticketera, preview P4.1).
+
+**Estado:** **Motor P4.1 implementado** · **Orquestación Caja Negra pendiente** (ver RFC ticketera médico)  
 **Rama:** `feat/1919-p4-licencias-medicas`  
 **Plan:** [`PLAN_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md`](./PLAN_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md)  
 **Motor base:** [`RFC_MOTOR_V2_AS_BUILT.md`](./RFC_MOTOR_V2_AS_BUILT.md) · Patrón B/C existentes
