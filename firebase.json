@@ -14,5 +14,10 @@
   "functions": {
     "source": "functions",
     "predeploy": ["node scripts/sync-shared-to-functions.mjs"]
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8080
+    }
   }
 }

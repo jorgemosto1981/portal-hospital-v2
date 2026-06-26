@@ -51,6 +51,7 @@
     "smoke:fichadas-esperadas": "node scripts/smoke-fichadas-esperadas-dev.mjs",
     "db:migrar-regimen-plus": "node scripts/migrar-regimen-planificado-compuesto-plus.mjs",
     "test:firestore:v2": "node scripts/seed-v2/test-firestore-v2-connection.mjs",
+    "test:firestore:rules": "firebase emulators:exec --only firestore --project demo-hospital-v2 \"node tests/firestore-rules.mjs\"",
     "seed:cfg": "node scripts/seed-v2/seed-cfg.mjs",
     "seed:catalogos-articulos-v2": "node scripts/seed-v2/seed-catalogos-articulos-v2.mjs",
     "verify:catalogos-articulos-v2": "node scripts/seed-v2/verify-catalogos-articulos-v2.mjs",

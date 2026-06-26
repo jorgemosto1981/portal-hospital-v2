@@ -105,6 +105,56 @@ await it("colección no modelada: lectura denegada (deny by default)", async () 
   await assertFails(wdb.doc("eventos_ticket/evt_seeded").get());
 });
 
+const PER_PILOTO = "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ";
+const GDT_PILOTO = "gdt_01KQN9WXFXF69Z9DCT5YNJ3TG0";
+const ART_PILOTO = "art_01KRNK10V10CH7W5M2W6V558GS";
+
+const pilotoCtx = testEnv.authenticatedContext("uid_agente_1", {
+  email: "agent@hospital.test",
+  persona_id: PER_PILOTO,
+});
+const pdb = pilotoCtx.firestore();
+
+function medAvisoPayloadBase() {
+  return {
+    schema_version: "SOL_MED_AVISO_V1",
+    articulo_id: null,
+    version_id_aplicada: null,
+    titular_persona_id: PER_PILOTO,
+    actor_alta_persona_id: PER_PILOTO,
+    grupo_trabajo_id_ancla: GDT_PILOTO,
+    patron_saldo: "MEDICO_AVISO",
+    estado_solicitud_id: "cfg_esa_pendiente_clasificacion_medica",
+    ingreso_medico: {
+      modo: "caja_negra",
+      tipo_ingreso_id: "cfg_tig_enfermedad_propia",
+      adjuntos: [{ storage_path: "avisos-med/2026/cert.pdf" }],
+    },
+    creado_en: new Date(),
+    actualizado_en: new Date(),
+  };
+}
+
+await it("SOL_MED_AVISO_V1: agente crea aviso con articulo_id null", async () => {
+  await assertSucceeds(
+    pdb.doc("solicitudes_articulo/sol_01KQN9WXFXF69Z9DCT5YNJ3TS0").set(medAvisoPayloadBase()),
+  );
+});
+
+await it("SOL_MED_AVISO_V1: rechaza create si articulo_id art_*", async () => {
+  const bad = { ...medAvisoPayloadBase(), articulo_id: ART_PILOTO };
+  await assertFails(
+    pdb.doc("solicitudes_articulo/sol_01KQN9WXFXF69Z9DCT5YNJ3TS1").set(bad),
+  );
+});
+
+await it("SOL_MED_AVISO_V1: rechaza si titular distinto del claim", async () => {
+  const bad = { ...medAvisoPayloadBase(), titular_persona_id: "per_01KQN9WXFXF69Z9DCT5YNJ3TG1" };
+  await assertFails(
+    pdb.doc("solicitudes_articulo/sol_01KQN9WXFXF69Z9DCT5YNJ3TS2").set(bad),
+  );
+});
+
 await testEnv.cleanup();
 
 console.log(`\nResumen: ${passed} ok, ${failed} fallos (projectId=${projectId})`);
