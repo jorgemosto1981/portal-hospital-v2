@@ -45,7 +45,7 @@ No se le pide elegir entre Art. 14, 16 o 23 en el primer pantallazo. Solo:
 | **Identidad** | Un solo **`solicitud_id`** desde el aviso incompleto hasta clasificación / cierre. |
 | **Estado Firestore** | Permanece **`cfg_esa_pendiente_clasificacion_medica`** en aviso incompleto, al completar certificado y hasta que el auditor resuelva. |
 | **Flag** | `ingreso_medico.es_licencia_incompleta`: `true` al create incompleto → `false` al completar (callable §5.6). |
-| **Plazo certificado** | **`vencimiento_plazo_certificado`** (Timestamp Firestore), calculado en create/complete: `creado_en` + **N horas** leídas de **`cfg_parametros_sistema`** (§2.5). **Sin hardcode** de 24/48/72 en código. |
+| **Plazo certificado** | **`vencimiento_plazo_certificado`** (Timestamp Firestore), calculado en create/complete: `creado_en` + **N horas** leídas de **`cfg_parametros_sistema`** (§2.4). **Sin hardcode** de 24/48/72 en código. |
 | **Registro del aviso** | `ingreso_medico.timestamp_aviso_incompleto` (ISO o Timestamp) al create incompleto. |
 | **Motor S_MED** | **No** corre en aviso incompleto ni al completar certificado; solo al **`APROBADA`** (§6). |
 | **Auditoría incompleta** | Aviso de **inasistencia / cobertura** para RRHH; el auditor **no clasifica** mientras `es_licencia_incompleta === true` **o** `adjuntos` vacíos (bloqueo callable §5.3). |
@@ -55,6 +55,19 @@ No se le pide elegir entre Art. 14, 16 o 23 en el primer pantallazo. Solo:
 | **Notificación agente** | UI (y mail futuro) recordando carácter provisorio y fecha límite de **`vencimiento_plazo_certificado`**. |
 
 **Delta as-built (P4.3 en rama):** hoy el create cliente exige **adjunto obligatorio** (Zod + Rules). Tras aprobar este addendum, alinear `solicitudArticulo.schema.js`, Rules y `AvisoMedicoForm` con ramas **completa / incompleta**.
+
+### 0.3 Gobernanza — contexto de sistema (cerrado para implementación)
+
+Precisiones que **no** deben reinterpretarse en código ni en Rules:
+
+| # | Tema | Decisión normativa |
+|---|------|-------------------|
+| G1 | **Inmutabilidad agente** | El agente **no** puede hacer `update` en `solicitudes_articulo` cuando `estado_solicitud_id != cfg_esa_pendiente_clasificacion_medica`. Única excepción en pendiente: completar incompleta vía callable §5.6 (o Rules whitelist equivalente). Tras salir de pendiente (clasificación, rechazo, vencimiento), **todo** cambio de estado/campos médicos es **Admin SDK / callables** (auditor, junta, job). Ver §8.1. |
+| G2 | **Acumulador 35/70** | El **consumo real** del cupo anual y la persistencia definitiva de `licencia_medica.tramos_haberes` ocurren **solo** en transición a **`cfg_esa_aprobada`** (`aplicarLicenciaMedicaAprobada`). **No** consume: aviso incompleto/completo en pendiente, `ESPERANDO_JUNTA`, `RECHAZADA`, vencimiento documental. `sumarConsumoCortaAnualAprobado` solo cuenta histórico `APROBADA`. |
+| G3 | **Plazos configurables** | Cualquier plazo operativo (p. ej. horas para certificado en incompleta) se lee de **`cfg_parametros_sistema`** (§2.4). RRHH cambia `valor_numerico` **sin redeploy** de Functions/Rules/UI. El código solo implementa la fórmula `vencimiento = anchor + param_horas`. |
+| G4 | **Discriminación Modo A/B** | Mismo documento `sol_*`; **Modo A** = `schema_version: SOL_MED_AVISO_V1` sin `articulo_id` hasta clasificación; **post-clasificación** el doc gana `articulo_id`, `version_id_aplicada`, `licencia_medica` (no confundir con ticketera Patrón B del agente). |
+
+**Uso en Cursor:** adjuntar este archivo (`@RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md`) como contexto obligatorio antes de tocar Zod, Rules, servicios o callables del slice médico.
 
 ---
 
@@ -145,6 +158,8 @@ Ejemplo de fila:
 ```
 
 **Lectura:** `crearAvisoMedicoCajaNegra` y jobs de vencimiento leen **`valor_numerico`** (fallback documentado en runbook si el parámetro falta en seed — solo entorno dev).
+
+**Gobernanza (G3):** el valor **24** en el ejemplo JSON es ilustrativo del manual; en producción manda el documento en Firestore, no el RFC.
 
 ### 2.5 Alternativa descartada (referencia)
 
@@ -383,7 +398,7 @@ Response: `solicitud_id`, `estado_solicitud_id`, `vencimiento_plazo_certificado`
 | `sumarConsumoCortaAnualAprobado` | **Solo** solicitudes `cfg_esa_aprobada` (histórico para preview del auditor) |
 | `previsualizarSolicitudPatronB` + `licencia_medica_preview` | **Solo Modo B** (piloto) |
 
-**Acumulador anual (cerrado):** el consumo de la bolsa 35/70 se materializa **únicamente** cuando el documento entra en **`cfg_esa_aprobada`**, lo cual en Caja Negra solo ocurre por **auditor** (≤15 días) o **junta favorable**. El jefe **no** interviene en esa transición. Las consultas históricas de `sumarConsumoCortaAnualAprobado` permanecen filtradas por `APROBADA`.
+**Acumulador anual (cerrado — G2):** el consumo de la bolsa 35/70 se materializa **únicamente** cuando el documento entra en **`cfg_esa_aprobada`**, lo cual en Caja Negra solo ocurre por **auditor** (≤15 días) o **junta favorable**. Rechazos del auditor, vencimientos de incompleta y episodios en junta **no** descuentan cupo hasta `APROBADA`. El jefe **no** interviene en esa transición. Las consultas históricas de `sumarConsumoCortaAnualAprobado` permanecen filtradas por `APROBADA`.
 
 **Función orquestadora propuesta:** `aplicarLicenciaMedicaAprobada(db, solId)` — motor patrón + S_MED + persistencia tramos + fan-out MDC (cuando corresponda).
 
@@ -416,28 +431,64 @@ Alineado a [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BA
 
 ---
 
-## 8. Reglas Firestore (sketch)
+## 8. Reglas Firestore (contrato de seguridad)
 
-- **Create aviso:** solo titular; shape `SOL_MED_AVISO_V1`; estado `PENDIENTE_CLASIFICACION`; sin `articulo_id`; adjuntos opcionales **solo** si `es_licencia_incompleta === true`.
-- **Update aviso:** titular vía **`actualizarAvisoMedicoIncompleto`** (callable); whitelist `ingreso_medico.adjuntos`, `es_licencia_incompleta`, `completado_en`; **no** `update` libre desde cliente salvo reglas acotadas equivalentes.
-- **Clasificación:** solo vía Callable (Admin SDK) o rol auditor con campos whitelist.
-- **Post-aprobación:** inmutabilidad `licencia_medica.tramos_haberes` (RFC P4).
+### 8.1 Create — `SOL_MED_AVISO_V1`
+
+- Solo **titular** (`titular_persona_id == token.persona_id`).
+- `schema_version == 'SOL_MED_AVISO_V1'`.
+- `articulo_id == null`, `version_id_aplicada == null`.
+- `estado_solicitud_id == cfg_esa_pendiente_clasificacion_medica`.
+- **Ausentes en create** (validación `hasOnly` + lógica): `licencia_medica`, `auditor_medico_clasificacion`, `fecha_desde`/`fecha_hasta` definitivas de motor, `dias_solicitados`, `articulo_id` string, campos de clasificación Patrón B/C.
+- `adjuntos` opcionales **solo** si `ingreso_medico.es_licencia_incompleta === true`; si completa, `adjuntos.size() >= 1`.
+- Si incompleta: permitir `vencimiento_plazo_certificado` (Timestamp) en create **solo** si lo escribe callable/Admin; en create cliente directo puede omitirse y calcularse en callable futuro.
+
+### 8.2 Update — agente (inmutabilidad G1)
+
+| Condición | Permiso agente (`update` desde cliente) |
+|-----------|----------------------------------------|
+| `resource.data.estado_solicitud_id == cfg_esa_pendiente_clasificacion_medica` **y** titular | **Solo** whitelist incompleta: `ingreso_medico.adjuntos`, `ingreso_medico.es_licencia_incompleta`, `ingreso_medico.completado_en`, `actualizado_en` — **o** denegar todo `update` y forzar §5.6 callable (recomendado V1: `allow update: if false` salvo callable vía Admin). |
+| `resource.data.estado_solicitud_id != cfg_esa_pendiente_clasificacion_medica` | **`allow update: if false`** para el agente. Sin excepciones. |
+
+**Regla explícita:** en cuanto el estado deja de ser `PENDIENTE_CLASIFICACION_MEDICA` (por auditor, junta, job vencimiento o rechazo), el documento es **inmutable** para el agente. Jefe/RRHH tampoco editan campos médicos (solo marcas de toma de conocimiento vía callables dedicados).
+
+### 8.3 Update / write — sistema
+
+- **Clasificación / junta / vencimiento:** solo Cloud Functions (Admin SDK).
+- **Post-`APROBADA`:** inmutabilidad `licencia_medica.tramos_haberes` y fechas definitivas (RFC P4).
+
+### 8.4 As-built (rama `feat/1919-p4-licencias-medicas`)
+
+Hoy: `allow create` para aviso completo; **`allow update, delete: if false`** global en la colección. Falta: reglas §8.2 diferenciadas o callables §5.6; campos incompleta + `vencimiento_plazo_certificado`.
 
 ---
 
 ## 9. Plan de implementación (post-documentación)
 
-| Orden | Entrega | Dependencia |
-|-------|---------|-------------|
-| 1 | Seed estados + `cfg_tig_*` + **`cfg_parametros_sistema`** (plazos LM) | Este RFC |
-| 2 | Create aviso (completa/incompleta) + Rules | §0.2 |
-| 2b | **`actualizarAvisoMedicoIncompleto`** + job vencimiento §5.7 | Param §2.4 |
-| 3 | Callable clasificar + enganche P4.1 | Motor existente |
-| 4 | UI agente (incompleta/completar) + bandeja auditor | §5.8 |
-| 5 | Junta (P4.2) + MDC | Estados |
-| 6 | Matriz UAT caja negra | — |
+| Orden | Entrega | Dependencia | Estado rama (referencia) |
+|-------|---------|-------------|---------------------------|
+| 1 | Seed estados + `cfg_tig_*` + **`cfg_parametros_sistema`** | Este RFC | **Parcial** — estados/tig OK; faltan parámetros LM |
+| 2 | Zod `SOL_MED_AVISO_V1` + Rules create | §8.1 | **Parcial** — solo aviso **completo** |
+| 2a | UI agente completa + Storage + `crearAvisoMedicoCajaNegra` | — | **Hecho** P4.3 |
+| 2b | Incompleta + `vencimiento_plazo_certificado` (param §2.4) + §5.6 | §0.2 | Pendiente |
+| 2c | Job vencimiento §5.7 | 2b | **Después** del primer persist exitoso incompleta/completa |
+| 3 | Callable clasificar + enganche P4.1 | Motor existente | Pendiente |
+| 4 | Bandeja auditor §5.8 | 3 | Pendiente |
+| 5 | Junta (P4.2) + MDC | Estados | Pendiente |
+| 6 | Matriz UAT caja negra | — | Pendiente |
+
+**Orden recomendado al retomar código:** **2b (persist aviso incompleta + completar)** → smoke agente → **2c (job)** → **3 (auditor)**. No invertir: el job sin create/completar no aporta UAT.
 
 **Congelar** ampliación de preview agente Modo B salvo pruebas internas.
+
+### 9.1 Prompt de arranque (Cursor)
+
+```
+@RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md
+Implementar §9 ítems 1 (param LM) y 2b según §0.2–§0.3 y §8.
+Respetar G1 inmutabilidad, G2 acumulador solo en APROBADA, G3 plazos desde cfg_parametros_sistema.
+No hardcodear horas de plazo. Calcular vencimiento_plazo_certificado en create incompleta.
+```
 
 ---
 
@@ -455,3 +506,4 @@ El archivo [`RFC_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md`](./RFC_P4_LICENCIAS_MEDIC
 | 2026-06-26 | Workshop: `APROBADA` solo medicina/junta; acumulador en `APROBADA`; jefe/RRHH toma de conocimiento sin veto |
 | 2026-06-26 | P4.3 UI agente: `/portal/solicitudes/aviso-medico`, Storage, servicio create (**solo aviso completo** — ver delta §0.2) |
 | 2026-06-26 | **Addendum Licencia Incompleta:** mismo `sol_id`, plazos `cfg_parametros_sistema`, §5.6–5.8; pausa código hasta alinear Zod/Rules |
+| 2026-06-26 | **§0.3 Gobernanza** (G1–G4), **§8** inmutabilidad agente, **§9** estado as-built + prompt Cursor |
