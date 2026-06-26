@@ -16,7 +16,7 @@ const {
   ESTADO_SOLICITUD_EN_REVISION_JEFE,
 } = require("../modules/shared/solicitudesArticuloEstados");
 const { runPatronBAltaMotorV2 } = require("../modules/shared/patronBAltaMotorV2");
-const { esArticuloPatronBPorEventoSinTopeAnual } = require("../modules/shared/opcionesConsumoSolicitud");
+const { esArticuloPatronBSinCupoAnualCiclo } = require("../modules/shared/opcionesConsumoSolicitud");
 const {
   resolverCadenaAutorizacion,
   buildAutorizacionSnapshotFields,
@@ -165,7 +165,7 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
 
     const diasConsumo = motor.dias_consumo;
     const sinDescuentoBolsaCiclo =
-      motor.sin_descuento_bolsa_ciclo === true || esArticuloPatronBPorEventoSinTopeAnual(versionData);
+      motor.sin_descuento_bolsa_ciclo === true || esArticuloPatronBSinCupoAnualCiclo(versionData);
     const motorOkPayload = {
       estado_solicitud_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
       hlc_id_elegibilidad: motor.hlc_id || null,

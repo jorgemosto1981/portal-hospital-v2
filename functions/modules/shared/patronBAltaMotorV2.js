@@ -38,7 +38,7 @@ const { tokenHasRrhhLaborAccess } = require("./laborProfile");
 const {
   resolvePatronBConsumoDesdeSolicitud,
   CODIGOS_CONSUMO,
-  esArticuloPatronBPorEventoSinTopeAnual,
+  esArticuloPatronBSinCupoAnualCiclo,
 } = require("./opcionesConsumoSolicitud");
 const {
   diasSolicitadosDesdeVersion,
@@ -258,14 +258,14 @@ function faseS(db, personaId, articuloId, anioCiclo, diasPedidos, versionData) {
   return {
     id: "S",
     async run() {
-      if (esArticuloPatronBPorEventoSinTopeAnual(versionData)) {
+      if (esArticuloPatronBSinCupoAnualCiclo(versionData)) {
         return {
           checks: [
             motorCheck(
               "S",
               "SALDO_EVENTO_SIN_CICLO",
               "ok",
-              "Sin tope anual: saldo validado por evento y opción de consumo (Fase T).",
+              "Sin cupo anual: control por evento (Fase T); no descuenta bolsa de ciclo.",
             ),
           ],
           data: { sin_descuento_bolsa_ciclo: true },

@@ -8,7 +8,7 @@ function saldoInicial(cupo, usados) {
 }
 
 /**
- * @param {{ articulosPatron: Array<{ id: string, codigo: string, nombre: string, cupoDiasPorCiclo: number | null, validacionPorEventoSinTopeAnual?: boolean, versionId: string }>, loading: boolean, anioA: number, diasPorArticulo: Record<string, string>, onDiasChange: (articuloId: string, value: string) => void, disabled?: boolean }}
+ * @param {{ articulosPatron: Array<{ id: string, codigo: string, nombre: string, cupoDiasPorCiclo: number | null, validacionSinCupoAnual?: boolean, versionId: string }>, loading: boolean, anioA: number, diasPorArticulo: Record<string, string>, onDiasChange: (articuloId: string, value: string) => void, disabled?: boolean }}
  */
 export function CheckinPatronBTab({
   articulosPatron,
@@ -77,7 +77,7 @@ export function CheckinPatronBTab({
                 <td className="px-3 py-3 align-top">
                   <span className="font-semibold text-slate-900">{row.codigo}</span>
                   <span className="mt-0.5 block text-xs text-slate-500">{row.nombre || row.id}</span>
-                  {row.validacionPorEventoSinTopeAnual ? (
+                  {row.validacionSinCupoAnual ? (
                     <span className="mt-1 block text-xs font-medium text-violet-900">
                       Validación por evento (Sin tope anual)
                     </span>
@@ -97,16 +97,16 @@ export function CheckinPatronBTab({
                     inputMode="numeric"
                     min={0}
                     step={1}
-                    disabled={disabled || row.validacionPorEventoSinTopeAnual}
+                    disabled={disabled || row.validacionSinCupoAnual}
                     value={diasPorArticulo[row.id] ?? ""}
                     onChange={(e) => onDiasChange(row.id, e.target.value)}
-                    placeholder={row.validacionPorEventoSinTopeAnual ? "N/A" : "—"}
+                    placeholder={row.validacionSinCupoAnual ? "N/A" : "—"}
                     className="min-h-11 w-full max-w-[7rem] rounded-lg border border-slate-200 px-2 text-base disabled:bg-slate-50 disabled:text-slate-400"
                   />
                 </td>
                 <td className="px-3 py-3 align-top">
                   <span className="inline-flex min-h-11 items-center font-medium text-slate-800">
-                    {row.validacionPorEventoSinTopeAnual
+                    {row.validacionSinCupoAnual
                       ? "Validación por evento (Sin tope anual)"
                       : row.saldo != null
                         ? `${row.saldo} días`

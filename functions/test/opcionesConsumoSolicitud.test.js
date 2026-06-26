@@ -17,6 +17,7 @@ const {
   mapOpcionesParaListadoCliente,
   versionTieneOpcionesConsumoActivas,
   esArticuloPatronBPorEventoSinTopeAnual,
+  esArticuloPatronBSinCupoAnualCiclo,
 } = require("../modules/shared/opcionesConsumoSolicitud");
 
 const SPECS_PATH = join(__dirname, "..", "..", "docs/v2/seeds/oleada_63_p2/OLEADA_63_P2_SPECS.json");
@@ -68,12 +69,27 @@ describe("opcionesConsumoSolicitud — fixture 63.j", () => {
     assert.equal(rows[1].regla_computo_dias_id, "cfg_rcd_habiles_compuesto");
   });
 
-  it("esArticuloPatronBPorEventoSinTopeAnual cuando cupo null y hay opciones", () => {
+  it("esArticuloPatronBPorEventoSinTopeAnual exige opciones activas", () => {
     assert.equal(esArticuloPatronBPorEventoSinTopeAnual(versionData), true);
     assert.equal(
       esArticuloPatronBPorEventoSinTopeAnual({
+        bloque_topes_plazos_computo: { cupo_dias_por_ciclo: null, tope_dias_por_evento: 1 },
+      }),
+      false,
+    );
+  });
+
+  it("esArticuloPatronBSinCupoAnualCiclo con cupo null (63.j y 63.d)", () => {
+    assert.equal(esArticuloPatronBSinCupoAnualCiclo(versionData), true);
+    assert.equal(
+      esArticuloPatronBSinCupoAnualCiclo({
+        bloque_topes_plazos_computo: { cupo_dias_por_ciclo: null, tope_dias_por_evento: 1 },
+      }),
+      true,
+    );
+    assert.equal(
+      esArticuloPatronBSinCupoAnualCiclo({
         bloque_topes_plazos_computo: { cupo_dias_por_ciclo: 6 },
-        opciones_consumo_solicitud: versionData.opciones_consumo_solicitud,
       }),
       false,
     );

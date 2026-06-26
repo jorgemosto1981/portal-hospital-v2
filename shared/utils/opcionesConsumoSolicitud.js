@@ -69,6 +69,16 @@ export function esArticuloPatronBPorEventoSinTopeAnual(versionData) {
 }
 
 /**
+ * Patrón B sin cupo anual en versión (63.d, 63.j, etc.) — Fase S no aplica bolsa de ciclo.
+ * @param {Record<string, unknown> | null | undefined} versionData
+ */
+export function esArticuloPatronBSinCupoAnualCiclo(versionData) {
+  const topes =
+    versionData && typeof versionData === "object" ? versionData.bloque_topes_plazos_computo || {} : {};
+  return topes.cupo_dias_por_ciclo == null;
+}
+
+/**
  * @param {Record<string, unknown> | null | undefined} versionData
  * @param {string | null | undefined} opcionConsumoId
  * @returns {{ ok: true, opcion: OpcionConsumoSolicitudRow } | { ok: false, codigo: string }}

@@ -119,15 +119,22 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
 
   if (!motor.eligible) return base;
 
+  const sinBolsaCiclo = motor.sin_descuento_bolsa_ciclo === true;
+
   return {
     ...base,
-    saldo_ciclo: {
-      anio_ciclo_consumo: motor.anio_ciclo_consumo,
-      dias_consumo: motor.dias_consumo,
-      saldo_disponible: motor.saldo_disponible,
-      saldo_restante_preview: motor.saldo_restante_preview,
-      bolsa_id: motor.bolsa_id || null,
-    },
+    sin_descuento_bolsa_ciclo: sinBolsaCiclo,
+    ...(sinBolsaCiclo
+      ? {}
+      : {
+          saldo_ciclo: {
+            anio_ciclo_consumo: motor.anio_ciclo_consumo,
+            dias_consumo: motor.dias_consumo,
+            saldo_disponible: motor.saldo_disponible,
+            saldo_restante_preview: motor.saldo_restante_preview,
+            bolsa_id: motor.bolsa_id || null,
+          },
+        }),
     frecuencia_mes: motor.frecuencia_mes || null,
     calendario_resumen: motor.calendario_resumen || null,
     modo_computo: motor.modo_computo || null,
