@@ -30,6 +30,10 @@ export const LABELS = Object.freeze({
   fecha_desde: "Vigente desde",
   fecha_hasta: "Vigente hasta",
 
+  opciones_consumo_solicitud: "Opciones de consumo por solicitud",
+  opciones_consumo_solicitud_help:
+    "Causales que el agente elige en la ticketera (ej. vínculo en duelo 63.j). Cada fila define días por evento y regla de cómputo. Requiere al menos una opción activa si configurás la tabla.",
+
   // --- Impacto económico (Bloque 2) ---
   justifica_sueldo_id: "Justificación de haberes",
   suma_para_sac: "Impacta en cálculo de SAC",
