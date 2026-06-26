@@ -100,6 +100,8 @@ tramos = { "100": n100, "60": n60, "0": n0 }
 
 ## 5. Workflow y estados (Arts. 11 y 15)
 
+> **Flujo producción (Caja Negra):** ver [`RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md`](./RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md) §3. El **jefe no aprueba** licencias médicas; solo **toma de conocimiento** tras `APROBADA` otorgada por auditor o junta. El diagrama §5.3 inferior aplica al **Modo B** (ticketera con artículo conocido, licencias no médicas o piloto).
+
 ### 5.1 Catálogo nuevo
 
 | ID | Etiqueta UI |
@@ -110,12 +112,11 @@ Constante shared propuesta: `ESTADO_SOLICITUD_ARTICULO_ESPERANDO_DICTAMEN_JUNTA`
 
 ### 5.2 Disparador junta (continuidad > 15 días)
 
-Tras **motor onCreate exitoso** (o tras previsualización si se confirma en UI):
+En **Caja Negra (Modo A):** tras clasificación del auditor, si `dias_solicitados > 15` → `cfg_esa_esperando_dictamen_junta`; si ≤15 → **`cfg_esa_aprobada` directo** (sin paso por jefe).
 
-- Si `dias_solicitados` (continuos en el episodio) **> 15** y `es_licencia_medica` → `estado_solicitud_id = cfg_esa_esperando_dictamen_junta` en lugar de `cfg_esa_en_revision_jefe`.
-- **Política P4:** disparador en **onCreate** post-motor; RRHH/medicina resuelve dictamen antes de jefe final.
+En **Modo B** (piloto): puede mantenerse lógica legacy con `onCreate` hasta unificar implementación.
 
-### 5.3 Diagrama de estados
+### 5.3 Diagrama de estados (Modo B / referencia histórica — no Caja Negra)
 
 ```mermaid
 stateDiagram-v2

@@ -26,4 +26,4 @@ Registro de **tags Git** y hitos documentales/código. Detalle operativo en `[PL
 | 2026-06-26 | **`1919-p5-config-rfc`** | Merge `7a8997c`: Paquete P5 opciones consumo 63.j — UAT VERDE |
 | —          | `1919-pre-firestore-clean` | Antes de limpieza/reseed piloto (con export GCS) |
 | 2026-06-26 | (rama `feat/1919-p4-licencias-medicas`) | **P4.1** motor tramos `licenciaMedicaTramosCore` (TDD) — uso en preview Modo B |
-| 2026-06-26 | **Arquitectura Caja Negra** | [`RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md`](./RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md) — pausa código; S_MED al clasificar auditor |
+| 2026-06-26 | **Workshop Caja Negra** | `APROBADA` solo auditor/junta; acumulador en `APROBADA`; jefe/RRHH toma de conocimiento |

@@ -91,9 +91,12 @@ flowchart LR
 
 ### P4.2 — Workflow junta médica (Arts. 11 y 15)
 
-**Disparadores (RFC a numerar):**
+**Caja Negra:** otorgamiento = `APROBADA` por auditor (≤15 d) o junta; jefe/RRHH = toma de conocimiento únicamente ([`RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md`](./RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md) §3–§6.1).
 
-- Duración **continua** &gt; 15 días → transición automática a `cfg_esa_esperando_dictamen_junta` tras validación motor inicial (o tras aprobación jefe, según política RRHH — **decisión en P4.0**).
+**Disparadores:**
+
+- Duración **continua** &gt; 15 días → `cfg_esa_esperando_dictamen_junta` tras clasificación auditor (no `APROBADA` hasta dictamen).
+- ≤ 15 días → auditor fija **`cfg_esa_aprobada`** y corre S_MED en el mismo acto.
 - Reenvío a junta Santa Fe / Rosario: metadatos de sede (`junta_medica_sede_id` catálogo) sin integración externa en V2.
 
 **Componentes**
@@ -103,6 +106,7 @@ flowchart LR
 | Trigger onCreate / onUpdate | Si `requiere_junta_medica`, no avanzar a estados finales sin registro de dictamen. |
 | Bandeja RRHH / Medicina | Vista filtrada por estado + `es_licencia_medica` (puede ser P4.3 UI mínima). |
 | Check-in | Etiqueta distinta a “validación por evento” P5; mostrar tramo proyectado y estado junta. |
+| Jefe / RRHH | Bandeja con **`APROBADA`** + toma de conocimiento; **sin** rechazo médico. |
 
 **Estados intermedios:** alinear nomenclatura con `ESPERANDO_DICTAMEN_JUNTA` del brief; implementación = fila en `cfg_estado_solicitud_articulo` + constantes shared (`ESTADO_SOLICITUD_*`).
 
