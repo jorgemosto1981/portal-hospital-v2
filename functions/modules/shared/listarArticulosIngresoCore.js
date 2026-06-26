@@ -20,6 +20,10 @@ const {
 } = require("./patronBFechasSolicitud");
 const { readModoCalculo } = require("./validarFechasArticuloRuntime");
 const { getAllDocsChunked } = require("./firestoreGetAllChunked");
+const {
+  mapOpcionesParaListadoCliente,
+  versionTieneOpcionesConsumoActivas,
+} = require("./opcionesConsumoSolicitud");
 
 const CFG_EST_VER_PUBLICADA = "cfg_est_ver_publicada";
 
@@ -187,8 +191,15 @@ async function listarArticulosIngresoPatronB(params) {
       continue;
     }
 
-    const diasSolicitados = diasSolicitadosDesdeVersion(versionData);
-    const fechaHasta = await fechaHastaDesdeVersionPatronBAsync(db, fechaDesde, diasSolicitados, versionData);
+    const requiereOpcion = versionTieneOpcionesConsumoActivas(versionData);
+    const opcionesCliente = requiereOpcion ? mapOpcionesParaListadoCliente(versionData) : [];
+
+    let diasSolicitados = null;
+    let fechaHasta = null;
+    if (!requiereOpcion) {
+      diasSolicitados = diasSolicitadosDesdeVersion(versionData);
+      fechaHasta = await fechaHastaDesdeVersionPatronBAsync(db, fechaDesde, diasSolicitados, versionData);
+    }
 
     articulos.push({
       articulo_id: articuloId,
@@ -196,6 +207,8 @@ async function listarArticulosIngresoPatronB(params) {
       codigo_grilla: String(core.codigo || core.nombre_corto || "").trim() || "ART",
       nombre: String(core.nombre || core.codigo || "").trim(),
       patron_saldo: patron || PATRON_SALDO_B,
+      requiere_opcion_consumo: requiereOpcion,
+      ...(requiereOpcion ? { opciones_consumo_solicitud: opcionesCliente } : {}),
       dias_solicitados: diasSolicitados,
       fecha_hasta: fechaHasta,
       regla_computo_dias_id: String(versionData?.bloque_topes_plazos_computo?.regla_computo_dias_id || "").trim() || null,

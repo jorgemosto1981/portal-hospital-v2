@@ -35,4 +35,19 @@ describe("ticketeraRouteUtils", () => {
     });
     expect(row?.patron_saldo).toBe("C");
   });
+
+  it("filaArticuloIngresoDesdeCallable propaga opciones de consumo", () => {
+    const row = filaArticuloIngresoDesdeCallable({
+      articulo_id: "art_x",
+      requiere_opcion_consumo: true,
+      dias_solicitados: null,
+      fecha_hasta: null,
+      opciones_consumo_solicitud: [
+        { id: "oc_63j_hermanos", etiqueta_ui: "Hermanos", dias_por_evento: 3 },
+      ],
+    });
+    expect(row?.requiere_opcion_consumo).toBe(true);
+    expect(row?.dias_solicitados).toBeNull();
+    expect(row?.opciones_consumo_solicitud).toHaveLength(1);
+  });
 });
