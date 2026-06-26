@@ -11,6 +11,7 @@ const {
   fechaHastaDesdeVersionPatronBAsync,
 } = require("../../modules/shared/patronBFechasSolicitud");
 const { resolvePatronBConsumoDesdeSolicitud } = require("../../modules/shared/opcionesConsumoSolicitud");
+const { buildLicenciaMedicaPreviewParaPatronB } = require("../../modules/shared/licenciaMedicaPreviewPatronB");
 
 const previsualizarSolicitudPatronB = onCall(async (request) => {
   if (!request.auth) {
@@ -121,9 +122,17 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
 
   const sinBolsaCiclo = motor.sin_descuento_bolsa_ciclo === true;
 
+  const licencia_medica_preview = await buildLicenciaMedicaPreviewParaPatronB(db, {
+    versionData,
+    titular_persona_id: personaId,
+    anio_calendario: pDesde.y,
+    dias_solicitados: diasSolicitados,
+  });
+
   return {
     ...base,
     sin_descuento_bolsa_ciclo: sinBolsaCiclo,
+    ...(licencia_medica_preview ? { licencia_medica_preview } : {}),
     ...(sinBolsaCiclo
       ? {}
       : {

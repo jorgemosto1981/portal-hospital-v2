@@ -52,6 +52,7 @@ const FILES_TO_SYNC = [
   "topeMovimientosConfig.js",
   "topeMovimientosGestionTurno.js",
   "opcionesConsumoSolicitud.js",
+  "licenciaMedicaTramosCore.js",
 ];
 
 function esmToCjs(source, filename) {
