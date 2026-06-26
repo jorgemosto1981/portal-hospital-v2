@@ -19,6 +19,9 @@ const perIdSchema = z.string().regex(new RegExp(`^per_${ULID}$`, "i"));
 const verIdSchema = z.string().regex(new RegExp(`^ver_${ULID}$`, "i"));
 const gdtIdSchema = z.string().regex(new RegExp(`^gdt_${ULID}$`, "i"));
 const ymdSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const opcionConsumoIdSchema = z
+  .string()
+  .regex(/^oc_[a-z0-9_]+$/i, "opcion_consumo_id estable oc_*");
 
 /** Parámetros de alta desde UI / hook (antes de timestamps Firestore). */
 export const solicitudPatronBAltaInputSchema = z
@@ -27,16 +30,14 @@ export const solicitudPatronBAltaInputSchema = z
     articuloId: artIdSchema,
     versionIdAplicada: verIdSchema,
     fechaDesde: ymdSchema,
+    fechaHasta: ymdSchema.optional(),
     diasSolicitados: z.number().int().min(1).max(31),
     grupoTrabajoIdAncla: gdtIdSchema,
+    opcionConsumoId: opcionConsumoIdSchema.optional(),
   })
   .strict();
 
-/**
- * Documento borrador Patrón B (claves permitidas en Rules + setDoc).
- * `creado_en` / `actualizado_en`: FieldValue en runtime (no validados aquí).
- */
-export const solicitudArticuloCreateShapePatronBSchema = z
+const solicitudPatronBShapeBaseSchema = z
   .object({
     articulo_id: artIdSchema,
     titular_persona_id: perIdSchema,
@@ -50,12 +51,30 @@ export const solicitudArticuloCreateShapePatronBSchema = z
     estado_solicitud_id: z.literal(ESTADO_SOLICITUD_ARTICULO_BORRADOR),
     schema_version: z.literal(SCHEMA_SOLICITUD_PATRON_B),
     grupo_trabajo_id_ancla: gdtIdSchema,
+    opcion_consumo_id: opcionConsumoIdSchema.optional(),
     creado_en: z.unknown(),
     actualizado_en: z.unknown(),
   })
-  .strict()
-  .refine((d) => d.fecha_hasta === d.fecha_desde, {
-    message: "fecha_hasta debe ser igual a fecha_desde (MVP 1 día/evento).",
+  .strict();
+
+/**
+ * Documento borrador Patrón B (claves permitidas en Rules + setDoc).
+ * `creado_en` / `actualizado_en`: FieldValue en runtime (no validados aquí).
+ */
+export const solicitudArticuloCreateShapePatronBSchema = solicitudPatronBShapeBaseSchema
+  .refine(
+    (d) =>
+      d.dias_solicitados > 1 ||
+      d.opcion_consumo_id != null ||
+      d.fecha_hasta === d.fecha_desde,
+    {
+      message:
+        "fecha_hasta debe ser igual a fecha_desde salvo multi-día u opción de consumo.",
+      path: ["fecha_hasta"],
+    },
+  )
+  .refine((d) => d.fecha_hasta >= d.fecha_desde, {
+    message: "fecha_hasta no puede ser anterior a fecha_desde.",
     path: ["fecha_hasta"],
   })
   .refine((d) => d.anio_ciclo_consumo === Number(d.fecha_desde.slice(0, 4)), {
@@ -70,13 +89,15 @@ export const solicitudArticuloCreateShapePatronBSchema = z
 export function buildSolicitudPatronBBorradorDocument(input, timestamps) {
   const parsed = solicitudPatronBAltaInputSchema.parse(input);
   const fechaDesde = parsed.fechaDesde;
+  const fechaHasta =
+    parsed.fechaHasta && parsed.fechaHasta >= fechaDesde ? parsed.fechaHasta : fechaDesde;
   const doc = {
     articulo_id: parsed.articuloId,
     titular_persona_id: parsed.personaId,
     actor_alta_persona_id: parsed.personaId,
     version_id_aplicada: parsed.versionIdAplicada,
     fecha_desde: fechaDesde,
-    fecha_hasta: fechaDesde,
+    fecha_hasta: fechaHasta,
     anio_ciclo_consumo: Number(fechaDesde.slice(0, 4)),
     dias_solicitados: parsed.diasSolicitados,
     patron_saldo: "B",
@@ -86,6 +107,9 @@ export function buildSolicitudPatronBBorradorDocument(input, timestamps) {
     creado_en: timestamps.creado_en,
     actualizado_en: timestamps.actualizado_en,
   };
+  if (parsed.opcionConsumoId) {
+    doc.opcion_consumo_id = parsed.opcionConsumoId;
+  }
   return solicitudArticuloCreateShapePatronBSchema.parse(doc);
 }
 

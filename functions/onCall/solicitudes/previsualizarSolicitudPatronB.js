@@ -8,8 +8,9 @@ const { isPortalRoleUsuario } = require("../../modules/shared/solicitudElegibili
 const { runPatronBAltaMotorV2 } = require("../../modules/shared/patronBAltaMotorV2");
 const {
   diasSolicitadosDesdeVersion,
-  fechaHastaDesdeVersionPatronB,
+  fechaHastaDesdeVersionPatronBAsync,
 } = require("../../modules/shared/patronBFechasSolicitud");
+const { resolvePatronBConsumoDesdeSolicitud } = require("../../modules/shared/opcionesConsumoSolicitud");
 
 const previsualizarSolicitudPatronB = onCall(async (request) => {
   if (!request.auth) {
@@ -59,11 +60,21 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
       : typeof d.grupo_de_trabajo_id === "string"
         ? d.grupo_de_trabajo_id.trim()
         : "";
+  const opcionConsumoId =
+    typeof d.opcion_consumo_id === "string" ? d.opcion_consumo_id.trim() : "";
 
+  const consumo = resolvePatronBConsumoDesdeSolicitud(versionData, {
+    opcion_consumo_id: opcionConsumoId || undefined,
+    dias_solicitados: Number.isFinite(diasRaw) && diasRaw > 0 ? Math.floor(diasRaw) : undefined,
+  });
   const diasVersion = diasSolicitadosDesdeVersion(versionData);
-  const diasSolicitados =
-    Number.isFinite(diasRaw) && diasRaw > 0 ? Math.floor(diasRaw) : diasVersion;
-  const fechaHasta = fechaHastaDesdeVersionPatronB(fechaDesde, diasSolicitados);
+  const diasSolicitados = consumo.ok
+    ? consumo.diasPedidos
+    : Number.isFinite(diasRaw) && diasRaw > 0
+      ? Math.floor(diasRaw)
+      : diasVersion;
+  const versionEff = consumo.ok ? consumo.versionEff : versionData;
+  const fechaHasta = await fechaHastaDesdeVersionPatronBAsync(db, fechaDesde, diasSolicitados, versionEff);
 
   const motor = await runPatronBAltaMotorV2({
     db,
@@ -76,6 +87,7 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
       dias_solicitados: diasSolicitados,
       anio_ciclo_consumo: pDesde.y,
       grupo_trabajo_id_ancla: grupoTrabajoId || null,
+      ...(opcionConsumoId ? { opcion_consumo_id: opcionConsumoId } : {}),
     },
     authToken: request.auth.token,
     versionData,
@@ -98,6 +110,7 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
     persona_id: personaId,
     articulo_id: articuloId,
     version_id: versionId,
+    opcion_consumo_id: motor.opcion_consumo_id || opcionConsumoId || null,
     hlc_id: motor.hlc_id || null,
     motor_snapshot: motor.motor_snapshot || null,
     checks: motor.checks || [],
@@ -106,15 +119,22 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
 
   if (!motor.eligible) return base;
 
+  const sinBolsaCiclo = motor.sin_descuento_bolsa_ciclo === true;
+
   return {
     ...base,
-    saldo_ciclo: {
-      anio_ciclo_consumo: motor.anio_ciclo_consumo,
-      dias_consumo: motor.dias_consumo,
-      saldo_disponible: motor.saldo_disponible,
-      saldo_restante_preview: motor.saldo_restante_preview,
-      bolsa_id: motor.bolsa_id || null,
-    },
+    sin_descuento_bolsa_ciclo: sinBolsaCiclo,
+    ...(sinBolsaCiclo
+      ? {}
+      : {
+          saldo_ciclo: {
+            anio_ciclo_consumo: motor.anio_ciclo_consumo,
+            dias_consumo: motor.dias_consumo,
+            saldo_disponible: motor.saldo_disponible,
+            saldo_restante_preview: motor.saldo_restante_preview,
+            bolsa_id: motor.bolsa_id || null,
+          },
+        }),
     frecuencia_mes: motor.frecuencia_mes || null,
     calendario_resumen: motor.calendario_resumen || null,
     modo_computo: motor.modo_computo || null,

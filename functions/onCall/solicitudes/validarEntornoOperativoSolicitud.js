@@ -30,6 +30,8 @@ const validarEntornoOperativoSolicitudCallable = onCall(async (request) => {
         : "";
   const fechaDesde = typeof d.fecha_desde === "string" ? d.fecha_desde.trim().slice(0, 10) : "";
   const diasRaw = Number(d.dias_solicitados);
+  const opcionConsumoId =
+    typeof d.opcion_consumo_id === "string" ? d.opcion_consumo_id.trim() : "";
   const grupoTrabajoIdAncla =
     typeof d.grupo_trabajo_id_ancla === "string"
       ? d.grupo_trabajo_id_ancla.trim()
@@ -48,6 +50,7 @@ const validarEntornoOperativoSolicitudCallable = onCall(async (request) => {
     versionId,
     fechaDesde,
     diasSolicitados: Number.isFinite(diasRaw) && diasRaw > 0 ? diasRaw : undefined,
+    opcionConsumoId: opcionConsumoId || null,
     grupoTrabajoIdAncla: grupoTrabajoIdAncla || null,
     authToken: request.auth.token,
   });

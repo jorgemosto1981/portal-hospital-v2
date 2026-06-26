@@ -28,6 +28,10 @@ export function filaArticuloIngresoDesdeCallable(art) {
     dias_solicitados: art?.dias_solicitados ?? null,
     fecha_hasta: art?.fecha_hasta ?? null,
     regla_computo_dias_id: art?.regla_computo_dias_id ?? null,
+    requiere_opcion_consumo: art?.requiere_opcion_consumo === true,
+    opciones_consumo_solicitud: Array.isArray(art?.opciones_consumo_solicitud)
+      ? art.opciones_consumo_solicitud
+      : [],
   };
 }
 

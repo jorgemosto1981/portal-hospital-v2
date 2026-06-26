@@ -217,6 +217,25 @@ service cloud.firestore {
         && id.matches('(?i)^gdt_[0-9A-HJKMNP-TV-Z]{26}$');
     }
 
+    function solicitudPatronBFechaHastaValida(d) {
+      return d.fecha_hasta.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && d.fecha_hasta >= d.fecha_desde
+        && (
+          d.dias_solicitados > 1
+          || ('opcion_consumo_id' in d)
+          || d.fecha_hasta == d.fecha_desde
+        );
+    }
+
+    function solicitudPatronBOpcionConsumoValida(d) {
+      return !('opcion_consumo_id' in d)
+        || (
+          d.opcion_consumo_id is string
+          && d.opcion_consumo_id.size() >= 3
+          && d.opcion_consumo_id.matches('(?i)^oc_[a-z0-9_]+$')
+        );
+    }
+
     function solicitudArticuloPatronBFieldsValid(d) {
       return d.articulo_id is string
         && cfgArticuloIdValidAgente(d.articulo_id)
@@ -231,7 +250,8 @@ service cloud.firestore {
         && d.fecha_desde is string
         && d.fecha_desde.matches('^\\d{4}-\\d{2}-\\d{2}$')
         && d.fecha_hasta is string
-        && d.fecha_hasta == d.fecha_desde
+        && solicitudPatronBFechaHastaValida(d)
+        && solicitudPatronBOpcionConsumoValida(d)
         && d.anio_ciclo_consumo is int
         && d.anio_ciclo_consumo >= 1900
         && d.anio_ciclo_consumo <= 2200
@@ -304,6 +324,7 @@ service cloud.firestore {
           'patron_saldo',
           'estado_solicitud_id',
           'schema_version',
+          'opcion_consumo_id',
           'creado_en',
           'actualizado_en',
         ]);

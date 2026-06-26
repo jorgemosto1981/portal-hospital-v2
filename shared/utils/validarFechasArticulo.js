@@ -9,6 +9,7 @@ import {
   contarDiasHabilesDesdeIndice,
   contarDiasHabilesSimpleInclusive,
   fechaHastaPorDiasHabilesDesdeIndice,
+  fechaHastaPorDiasCorridosInclusive,
   normalizarYmdCalendario,
 } from "./calendarInstitucionalCore.js";
 import {
@@ -137,6 +138,12 @@ export function validarFechasArticulo(input) {
       fechaHasta = fechaHastaPorDiasHabilesDesdeIndice(fechaDesde, diasSolicitados, indice, {
         incluyeFeriadosInstitucionales: incluyeFeriadosInstitucionales,
       });
+    }
+  } else if (modo === MODO_COMPUTO_CORRIDOS) {
+    if (diasSolicitados > 1 && (!fechaHasta || fechaHasta === fechaDesde)) {
+      fechaHasta = fechaHastaPorDiasCorridosInclusive(fechaDesde, diasSolicitados);
+    } else if (!fechaHasta) {
+      fechaHasta = fechaDesde;
     }
   } else if (!fechaHasta) {
     fechaHasta = fechaDesde;

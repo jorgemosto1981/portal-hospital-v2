@@ -36,6 +36,7 @@ export function useArticulosPorPatron(articulos, patronObjetivo, anioA, enabled)
             ...a,
             versionId: meta.versionId,
             cupoDiasPorCiclo: meta.cupoDiasPorCiclo,
+            validacionSinCupoAnual: meta.validacionSinCupoAnual === true,
             metaError: meta.error,
           });
         } else if (meta.error || !meta.patron) {

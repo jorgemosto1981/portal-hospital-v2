@@ -96,7 +96,7 @@ Criterios verificados sin contradicción entre plan, módulo, RFC P0, grilla, fi
 | pre-impl-b1-b7   | Protocolo §11.1 (commit P0, tag G1, rama P1)              | Pendiente        |
 | p1-ticketera     | Deshardcode S1                                            | Pendiente        |
 | p2-oleada-63     | Altas Firestore + UAT                                     | Pendiente        |
-| p5-config-ui     | `opciones_consumo_solicitud[]`, vigencias ABM, C2         | Pendiente        |
+| p5-config-ui     | `opciones_consumo_solicitud[]`, vigencias ABM, C2         | **P5.0 OK** (`c0075f9`); P5.1 motor + P5.2 ticketera pendientes |
 | p6-grilla-franja | `licenciaCubreSegmento`, arts. 65–70 bis                  | Backlog          |
 
 

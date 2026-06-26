@@ -4,6 +4,7 @@
  * Uso (raiz repo):
  *   node scripts/seed-v2/apply-oleada-63-p2.mjs --dry-run
  *   node scripts/seed-v2/apply-oleada-63-p2.mjs --apply
+ *   node scripts/seed-v2/apply-oleada-63-p2.mjs --apply --reapply
  */
 import "../load-env-v2.mjs";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -26,6 +27,7 @@ const APPLIED_PATH = join(repoRoot, "docs/v2/seeds/oleada_63_p2/applied-ids.json
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const APPLY = process.argv.includes("--apply");
+const REAPPLY = process.argv.includes("--reapply");
 
 if (!DRY_RUN && !APPLY) {
   console.error("Indicá --dry-run o --apply");
@@ -64,7 +66,7 @@ function validateBuilt(built) {
   if (!coreRes.success) {
     errors.push(...coreRes.error.issues.map((i) => `core.${i.path.join(".")}: ${i.message}`));
   }
-  const verRes = cfgArticuloVersionSchema.safeParse(built.versionForZod);
+  const verRes = cfgArticuloVersionSchema.safeParse(built.version);
   if (!verRes.success) {
     errors.push(...verRes.error.issues.map((i) => `version.${i.path.join(".")}: ${i.message}`));
   }
@@ -147,6 +149,27 @@ for (const entry of specRoot.articulos) {
         `Idempotencia: codigo ${codigo} ya existe como ${doc.id} (esperado ${mapped.artId})`,
       );
       process.exit(3);
+    }
+    if (REAPPLY) {
+      const coreRef = db.collection("cfg_articulos").doc(mapped.artId);
+      const verRef = coreRef.collection("versiones").doc(mapped.verId);
+      batch.set(
+        coreRef,
+        {
+          ...built.core,
+          seed_oleada_63_p2: true,
+          seed_oleada_63_p2_reaplicado_en: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+      batch.set(verRef, {
+        ...built.version,
+        seed_oleada_63_p2: true,
+        seed_oleada_63_p2_reaplicado_en: FieldValue.serverTimestamp(),
+      });
+      writes += 2;
+      console.log(`[apply] reapply ${codigo} ${mapped.artId} / ${mapped.verId}`);
+      continue;
     }
     console.log(`[apply] skip existente ${codigo} -> ${doc.id}`);
     continue;

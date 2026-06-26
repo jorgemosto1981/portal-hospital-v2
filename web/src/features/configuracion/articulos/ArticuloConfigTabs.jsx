@@ -28,6 +28,8 @@ import {
 } from "./laoMotorConfigFields.js";
 import { FieldCheck, FieldColor, FieldMultiSelect, FieldNumber, FieldPersonaSearch, FieldSelect, FieldText } from "./fieldWidgets.jsx";
 import MatrizAntiguedadEditor from "./MatrizAntiguedadEditor.jsx";
+import OpcionesConsumoSolicitudEditor from "./OpcionesConsumoSolicitudEditor.jsx";
+import { opcionesConsumoTienenErroresUi } from "./opcionesConsumoSolicitudRowValidation.js";
 
 /**
  * Estado inicial alineado a los campos de {@link cfgArticuloVersionSchema} (borrador UI).
@@ -126,6 +128,7 @@ export function createEmptyArticuloVersionForm() {
       plazo_doc_posterior_dias: "",
       accion_incumplimiento_doc_id: "",
     },
+    opciones_consumo_solicitud: [],
   };
 }
 
@@ -392,6 +395,33 @@ export function buildVersionPayloadForZod(raw) {
     plazo_doc_posterior_dias: numOrUndef(out.bloque_documentacion_convivencia.plazo_doc_posterior_dias),
   };
 
+  const opcionesRaw = out.opciones_consumo_solicitud;
+  if (!Array.isArray(opcionesRaw) || opcionesRaw.length === 0) {
+    delete out.opciones_consumo_solicitud;
+  } else {
+    const cleaned = opcionesRaw
+      .map((r) => {
+        if (!r || typeof r !== "object") return null;
+        const id = trimOrUndef(r.id);
+        if (!id) return null;
+        const etiqueta = String(r.etiqueta_ui ?? "").trim();
+        const row = {
+          id: String(id).toLowerCase(),
+          etiqueta_ui: etiqueta || "Opción",
+          dias_por_evento: Math.min(31, Math.max(1, Math.floor(Number(r.dias_por_evento)) || 1)),
+          activo: r.activo !== false,
+        };
+        const sarh = trimOrUndef(r.codigo_sarh);
+        if (sarh) row.codigo_sarh = sarh;
+        const regla = trimOrUndef(r.regla_computo_id);
+        if (regla) row.regla_computo_id = regla;
+        return row;
+      })
+      .filter(Boolean);
+    if (cleaned.length) out.opciones_consumo_solicitud = cleaned;
+    else delete out.opciones_consumo_solicitud;
+  }
+
   return out;
 }
 
@@ -612,6 +642,13 @@ export default function ArticuloConfigTabs() {
   }, [parseResult]);
 
   const matrizBloqueaGuardar = form.bloque_identidad_naturaleza.es_lao_anual && matrizLaoFeedback.errors.length > 0;
+
+  const opcionesBloqueaGuardar = useMemo(() => {
+    const topeEvento = Number(form.bloque_topes_plazos_computo?.tope_dias_por_evento);
+    const tope =
+      Number.isFinite(topeEvento) && topeEvento > 0 ? Math.floor(topeEvento) : null;
+    return opcionesConsumoTienenErroresUi(form.opciones_consumo_solicitud, tope);
+  }, [form.opciones_consumo_solicitud, form.bloque_topes_plazos_computo?.tope_dias_por_evento]);
 
   return (
     <div className="space-y-6">
@@ -997,6 +1034,13 @@ export default function ArticuloConfigTabs() {
       {/* ═══════════════ PESTAÑA 3: AVANZADO ═══════════════ */}
       {tab === "avanzado" && (
         <div className="space-y-6">
+          <OpcionesConsumoSolicitudEditor
+            form={form}
+            setForm={setForm}
+            getOptions={getOptions}
+            disabled={formBloqueadoPorCatalogos}
+          />
+
           {/* --- Sección: Caducidad y arrastre --- */}
           <Card className="space-y-4 p-4 shadow-sm md:p-6">
             <h3 className="text-sm font-semibold text-slate-700">Vencimiento y arrastre de saldo</h3>
@@ -1082,7 +1126,7 @@ export default function ArticuloConfigTabs() {
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"
-          disabled={saving || formBloqueadoPorCatalogos || matrizBloqueaGuardar}
+          disabled={saving || formBloqueadoPorCatalogos || matrizBloqueaGuardar || opcionesBloqueaGuardar}
           className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:scale-[0.99] disabled:opacity-50 md:hover:bg-emerald-700"
         >
           {saving ? "Guardando…" : "Guardar"}

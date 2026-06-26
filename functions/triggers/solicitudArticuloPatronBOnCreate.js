@@ -16,6 +16,7 @@ const {
   ESTADO_SOLICITUD_EN_REVISION_JEFE,
 } = require("../modules/shared/solicitudesArticuloEstados");
 const { runPatronBAltaMotorV2 } = require("../modules/shared/patronBAltaMotorV2");
+const { esArticuloPatronBSinCupoAnualCiclo } = require("../modules/shared/opcionesConsumoSolicitud");
 const {
   resolverCadenaAutorizacion,
   buildAutorizacionSnapshotFields,
@@ -163,7 +164,8 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
     ).trim();
 
     const diasConsumo = motor.dias_consumo;
-    const salRef = db.collection(COL_SALDOS).doc(motor.saldo_doc_id);
+    const sinDescuentoBolsaCiclo =
+      motor.sin_descuento_bolsa_ciclo === true || esArticuloPatronBSinCupoAnualCiclo(versionData);
     const motorOkPayload = {
       estado_solicitud_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
       hlc_id_elegibilidad: motor.hlc_id || null,
@@ -171,6 +173,12 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
       actualizado_en: FieldValue.serverTimestamp(),
       motor_descuento_aplicado: false,
     };
+    if (motor.fecha_hasta && String(motor.fecha_hasta).slice(0, 10) >= String(d.fecha_desde || "").slice(0, 10)) {
+      motorOkPayload.fecha_hasta = String(motor.fecha_hasta).slice(0, 10);
+    }
+    if (d.opcion_consumo_id) {
+      motorOkPayload.opcion_consumo_id = String(d.opcion_consumo_id).trim();
+    }
 
     let evtIdPostTx = null;
     let ticketEventPostTx = null;
@@ -182,6 +190,46 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
         const cur = sSnap.data() || {};
         if (cur.estado_solicitud_id !== ESTADO_SOLICITUD_BORRADOR) return;
 
+        const titularId = String(cur.titular_persona_id || d.titular_persona_id || "").trim();
+        evtIdPostTx = `evt_${ulid()}`;
+        ticketEventPostTx = {
+          tipo_evento: TIPO_EVENTO_TICKET.SOLICITUD_CREADA_REVISION_JEFE,
+          actor_persona_id: titularId || null,
+          titular_persona_id: titularId || null,
+          estado_anterior_id: ESTADO_SOLICITUD_BORRADOR,
+          estado_nuevo_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
+          origen: ORIGEN_EVENTO.TRIGGER,
+          accion: sinDescuentoBolsaCiclo ? "patron_b_on_create_sin_bolsa_ciclo" : "patron_b_on_create_ok",
+          metadata: {
+            articulo_id: motor.articulo_id || cur.articulo_id || null,
+            version_id_aplicada: cur.version_id_aplicada || d.version_id_aplicada || null,
+            grupo_trabajo_id_ancla: grupoTrabajoIdAncla || null,
+            grupos_trabajo_involucrados_ids: gruposTrabajoInvolucradosIds,
+            fecha_desde: String(cur.fecha_desde || d.fecha_desde || "").slice(0, 10),
+          },
+        };
+        await registrarEventoTicket(db, solId, ticketEventPostTx, {
+          writer: tx,
+          evento_id: evtIdPostTx,
+        });
+
+        if (sinDescuentoBolsaCiclo) {
+          tx.update(solRef, {
+            ...motorOkPayload,
+            ...snapshotAutorizacion,
+            motor_descuento_aplicado: false,
+            motor_bolsa_id: null,
+            motor_dias_descontados: diasConsumo,
+            motor_snapshot: motor.motor_snapshot || null,
+            config_usada: motor.config_usada || null,
+            grupo_trabajo_id_ancla: grupoTrabajoIdAncla || null,
+            grupos_trabajo_involucrados_ids: gruposTrabajoInvolucradosIds,
+            _debito_origen: [],
+          });
+          return;
+        }
+
+        const salRef = db.collection(COL_SALDOS).doc(motor.saldo_doc_id);
         const salSnap = await tx.get(salRef);
         if (!salSnap.exists) {
           tx.update(solRef, {
@@ -228,29 +276,6 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
           [`bolsas.${match.bolsaId}.disponible`]: disp - diasConsumo,
           [`bolsas.${match.bolsaId}.ultima_actualizacion`]: FieldValue.serverTimestamp(),
           "metadata.ultima_sincronizacion": FieldValue.serverTimestamp(),
-        });
-
-        const titularId = String(cur.titular_persona_id || d.titular_persona_id || "").trim();
-        evtIdPostTx = `evt_${ulid()}`;
-        ticketEventPostTx = {
-          tipo_evento: TIPO_EVENTO_TICKET.SOLICITUD_CREADA_REVISION_JEFE,
-          actor_persona_id: titularId || null,
-          titular_persona_id: titularId || null,
-          estado_anterior_id: ESTADO_SOLICITUD_BORRADOR,
-          estado_nuevo_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
-          origen: ORIGEN_EVENTO.TRIGGER,
-          accion: "patron_b_on_create_ok",
-          metadata: {
-            articulo_id: motor.articulo_id || cur.articulo_id || null,
-            version_id_aplicada: cur.version_id_aplicada || d.version_id_aplicada || null,
-            grupo_trabajo_id_ancla: grupoTrabajoIdAncla || null,
-            grupos_trabajo_involucrados_ids: gruposTrabajoInvolucradosIds,
-            fecha_desde: String(cur.fecha_desde || d.fecha_desde || "").slice(0, 10),
-          },
-        };
-        await registrarEventoTicket(db, solId, ticketEventPostTx, {
-          writer: tx,
-          evento_id: evtIdPostTx,
         });
 
         tx.update(solRef, {

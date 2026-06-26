@@ -135,8 +135,10 @@ export async function crearSolicitudArticuloPatronBBorrador(params) {
       articuloId: params.articuloId,
       versionIdAplicada: params.versionIdAplicada,
       fechaDesde: params.fechaDesde,
+      fechaHasta: params.fechaHasta,
       diasSolicitados: Number(params.diasSolicitados ?? 1),
       grupoTrabajoIdAncla: params.grupoTrabajoIdAncla,
+      opcionConsumoId: params.opcionConsumoId,
     },
     { creado_en: serverTimestamp(), actualizado_en: serverTimestamp() },
   );

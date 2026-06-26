@@ -20,6 +20,7 @@ export default function PatronBPreviewInfo({ preview, error, cargando }) {
   if (!preview) return null;
 
   const eligible = preview.eligible === true || preview.ok === true;
+  const sinBolsaCiclo = preview.sin_descuento_bolsa_ciclo === true;
   const saldo = preview.saldo_ciclo && typeof preview.saldo_ciclo === "object" ? preview.saldo_ciclo : null;
 
   if (!eligible) return null;
@@ -56,7 +57,13 @@ export default function PatronBPreviewInfo({ preview, error, cargando }) {
             )}
           </p>
         ) : null}
-        {saldo ? (
+        {sinBolsaCiclo ? (
+          <p className="text-violet-900">
+            Sin cupo anual en configurador: el límite se controla por evento al validar la solicitud (no descuenta
+            bolsa de check-in).
+          </p>
+        ) : null}
+        {saldo && saldo.saldo_disponible != null ? (
           <p>
             Saldo ciclo {saldo.anio_ciclo_consumo}: disponible{" "}
             <strong>{saldo.saldo_disponible}</strong> → tras envío{" "}
