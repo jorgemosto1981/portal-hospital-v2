@@ -27,3 +27,4 @@ Registro de **tags Git** y hitos documentales/código. Detalle operativo en `[PL
 | —          | `1919-pre-firestore-clean` | Antes de limpieza/reseed piloto (con export GCS) |
 | 2026-06-26 | (rama `feat/1919-p4-licencias-medicas`) | **P4.1** motor tramos `licenciaMedicaTramosCore` (TDD) — uso en preview Modo B |
 | 2026-06-26 | P4.3 UI agente: `/portal/solicitudes/aviso-medico`, Storage `avisos-med/{year}/{uid}/`, `crearAvisoMedicoCajaNegra` |
+| 2026-06-26 | RFC Caja Negra §0.2 Licencia Incompleta — plazos `cfg_parametros_sistema`, §5.6–5.8; pausa código post-P4.3 |
