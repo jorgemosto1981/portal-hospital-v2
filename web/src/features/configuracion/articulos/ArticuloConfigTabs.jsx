@@ -29,6 +29,7 @@ import {
 import { FieldCheck, FieldColor, FieldMultiSelect, FieldNumber, FieldPersonaSearch, FieldSelect, FieldText } from "./fieldWidgets.jsx";
 import MatrizAntiguedadEditor from "./MatrizAntiguedadEditor.jsx";
 import OpcionesConsumoSolicitudEditor from "./OpcionesConsumoSolicitudEditor.jsx";
+import { opcionesConsumoTienenErroresUi } from "./opcionesConsumoSolicitudRowValidation.js";
 
 /**
  * Estado inicial alineado a los campos de {@link cfgArticuloVersionSchema} (borrador UI).
@@ -642,6 +643,13 @@ export default function ArticuloConfigTabs() {
 
   const matrizBloqueaGuardar = form.bloque_identidad_naturaleza.es_lao_anual && matrizLaoFeedback.errors.length > 0;
 
+  const opcionesBloqueaGuardar = useMemo(() => {
+    const topeEvento = Number(form.bloque_topes_plazos_computo?.tope_dias_por_evento);
+    const tope =
+      Number.isFinite(topeEvento) && topeEvento > 0 ? Math.floor(topeEvento) : null;
+    return opcionesConsumoTienenErroresUi(form.opciones_consumo_solicitud, tope);
+  }, [form.opciones_consumo_solicitud, form.bloque_topes_plazos_computo?.tope_dias_por_evento]);
+
   return (
     <div className="space-y-6">
       {loadingVersion && (
@@ -1118,7 +1126,7 @@ export default function ArticuloConfigTabs() {
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"
-          disabled={saving || formBloqueadoPorCatalogos || matrizBloqueaGuardar}
+          disabled={saving || formBloqueadoPorCatalogos || matrizBloqueaGuardar || opcionesBloqueaGuardar}
           className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:scale-[0.99] disabled:opacity-50 md:hover:bg-emerald-700"
         >
           {saving ? "Guardando…" : "Guardar"}
