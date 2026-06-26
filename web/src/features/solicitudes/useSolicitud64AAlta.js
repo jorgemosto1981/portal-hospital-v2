@@ -11,6 +11,7 @@ import {
   esperarValidacionMotorPatronB,
 } from "../../services/solicitudesArticuloV2Service.js";
 import {
+  articuloRequiereOpcionConsumo,
   articuloTieneDiasPreestablecidos,
   fechasSolicitudCompletas,
   resolverDiasSolicitadosPatronB,
@@ -55,17 +56,24 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
   const [entornoMensajes, setEntornoMensajes] = useState(/** @type {string[]} */ ([]));
   const [fechaHastaCalc, setFechaHastaCalc] = useState("");
   const [fechaHastaManual, setFechaHastaManual] = useState("");
+  const [opcionConsumoId, setOpcionConsumoId] = useState("");
 
-  const diasPreestablecidos = useMemo(
-    () => articuloTieneDiasPreestablecidos(articuloSel),
-    [articuloSel],
-  );
+  const requiereOpcionConsumo = articuloRequiereOpcionConsumo(articuloSel);
+
+  const diasPreestablecidos = useMemo(() => {
+    if (requiereOpcionConsumo) return Boolean(opcionConsumoId);
+    return articuloTieneDiasPreestablecidos(articuloSel);
+  }, [articuloSel, opcionConsumoId, requiereOpcionConsumo]);
 
   const fechaHastaPreest =
     (fechaHastaCalc && RX_YMD.test(fechaHastaCalc) ? fechaHastaCalc : null) ||
+    (preview?.fecha_hasta && RX_YMD.test(String(preview.fecha_hasta))
+      ? String(preview.fecha_hasta).slice(0, 10)
+      : null) ||
     (articuloSel?.fecha_hasta && RX_YMD.test(String(articuloSel.fecha_hasta))
       ? String(articuloSel.fecha_hasta)
-      : fechaDesde);
+      : null) ||
+    fechaDesde;
 
   const fechaHasta = diasPreestablecidos
     ? fechaHastaPreest
@@ -73,12 +81,45 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
       ? fechaHastaManual
       : fechaHastaPreest;
 
-  const fechasCompletas = fechasSolicitudCompletas(fechaDesde, fechaHasta);
+  const fechasListasParaEntorno = useMemo(() => {
+    if (!RX_YMD.test(fechaDesde)) return false;
+    if (requiereOpcionConsumo) return Boolean(opcionConsumoId);
+    return fechasSolicitudCompletas(fechaDesde, fechaHasta);
+  }, [fechaDesde, fechaHasta, opcionConsumoId, requiereOpcionConsumo]);
+
+  const fechasCompletas = useMemo(() => {
+    if (!fechasListasParaEntorno) return false;
+    if (requiereOpcionConsumo && fechaHastaCalc && RX_YMD.test(fechaHastaCalc)) {
+      return fechasSolicitudCompletas(fechaDesde, fechaHastaCalc);
+    }
+    if (requiereOpcionConsumo && entornoOk) {
+      return fechasSolicitudCompletas(fechaDesde, fechaHasta);
+    }
+    if (requiereOpcionConsumo) return true;
+    return fechasSolicitudCompletas(fechaDesde, fechaHasta);
+  }, [
+    entornoOk,
+    fechaDesde,
+    fechaHasta,
+    fechaHastaCalc,
+    fechasListasParaEntorno,
+    requiereOpcionConsumo,
+  ]);
+
+  const diasDesdeOpcion = useMemo(() => {
+    if (!requiereOpcionConsumo || !opcionConsumoId) return null;
+    const ops = articuloSel?.opciones_consumo_solicitud;
+    if (!Array.isArray(ops)) return null;
+    const row = ops.find((o) => String(o?.id || "") === opcionConsumoId);
+    const d = Number(row?.dias_por_evento);
+    return Number.isFinite(d) && d > 0 ? Math.floor(d) : null;
+  }, [articuloSel?.opciones_consumo_solicitud, opcionConsumoId, requiereOpcionConsumo]);
 
   const diasDesdeArticulo =
-    Number.isFinite(Number(articuloSel?.dias_solicitados)) && Number(articuloSel.dias_solicitados) > 0
+    diasDesdeOpcion ??
+    (Number.isFinite(Number(articuloSel?.dias_solicitados)) && Number(articuloSel.dias_solicitados) > 0
       ? Math.floor(Number(articuloSel.dias_solicitados))
-      : 1;
+      : 1);
 
   const diasSolicitados = resolverDiasSolicitadosPatronB(
     fechaDesde,
@@ -88,7 +129,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
   );
 
   const recargarGrupos = useCallback(async () => {
-    if (!/^per_/i.test(personaId) || !fechasCompletas) {
+    if (!/^per_/i.test(personaId) || !fechasListasParaEntorno) {
       setGruposVigentes([]);
       setGrupoAnclaId("");
       return;
@@ -115,7 +156,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     } finally {
       setGruposCargando(false);
     }
-  }, [fechaDesde, fechasCompletas, personaId]);
+  }, [fechaDesde, fechasListasParaEntorno, personaId]);
 
   useEffect(() => {
     recargarGrupos();
@@ -165,6 +206,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     setFechaHastaCalc("");
     setFechaHastaManual("");
     setGrupoAnclaId("");
+    setOpcionConsumoId("");
   }, [fechaDesde, articuloSel?.articulo_id, articuloSel?.version_id]);
 
   useEffect(() => {
@@ -188,8 +230,13 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     if (!articuloSel || validandoEntorno || !/^per_/i.test(personaId)) {
       return { success: false };
     }
-    if (!fechasCompletas) {
+    if (!fechasListasParaEntorno) {
       setEntornoMensajes(["Completá las fechas del permiso."]);
+      setEntornoOk(false);
+      return { success: false };
+    }
+    if (requiereOpcionConsumo && !opcionConsumoId) {
+      setEntornoMensajes(["Elegí el vínculo con el fallecido."]);
       setEntornoOk(false);
       return { success: false };
     }
@@ -208,6 +255,9 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
       };
       if (/^gdt_/i.test(grupoAnclaId)) {
         body.grupo_trabajo_id_ancla = grupoAnclaId;
+      }
+      if (opcionConsumoId) {
+        body.opcion_consumo_id = opcionConsumoId;
       }
 
       const res = await callValidarEntornoOperativoSolicitud(body);
@@ -257,10 +307,12 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     articuloSel,
     diasSolicitados,
     fechaDesde,
-    fechasCompletas,
+    fechasListasParaEntorno,
     grupoAnclaId,
     gruposVigentes,
+    opcionConsumoId,
     personaId,
+    requiereOpcionConsumo,
     validandoEntorno,
   ]);
 
@@ -286,9 +338,14 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
       if (/^gdt_/i.test(grupoAnclaId)) {
         body.grupo_trabajo_id_ancla = grupoAnclaId;
       }
+      if (opcionConsumoId) {
+        body.opcion_consumo_id = opcionConsumoId;
+      }
       const res = await callPrevisualizarSolicitudPatronB(body);
       const data = res?.data && typeof res.data === "object" ? res.data : null;
       setPreview(data);
+      const fh = String(data?.fecha_hasta || "").slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(fh)) setFechaHastaCalc(fh);
       if (data?.grupo_trabajo_id_ancla && /^gdt_/i.test(String(data.grupo_trabajo_id_ancla))) {
         setGrupoAnclaId(String(data.grupo_trabajo_id_ancla));
       }
@@ -306,9 +363,11 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     fechaDesde,
     grupoAnclaId,
     grupoAnclaOk,
+    opcionConsumoId,
     personaId,
     previewCargando,
     entornoOk,
+    requiereOpcionConsumo,
   ]);
 
   const previewVigente =
@@ -317,7 +376,8 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     articuloSel &&
     String(preview.articulo_id) === String(articuloSel.articulo_id) &&
     String(preview.fecha_desde) === fechaDesde &&
-    Number(preview.dias_solicitados) === diasSolicitados;
+    Number(preview.dias_solicitados) === diasSolicitados &&
+    (!requiereOpcionConsumo || String(preview.opcion_consumo_id || "") === opcionConsumoId);
 
   const puedeEnviarTrasPreview =
     previewVigente && (preview.eligible === true || preview.ok === true);
@@ -327,7 +387,25 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     setPreviewError("");
     setEntornoOk(false);
     setEntornoMensajes([]);
+    setFechaHastaCalc("");
   }, []);
+
+  const cambiarOpcionConsumo = useCallback(
+    (id) => {
+      setOpcionConsumoId(String(id || "").trim());
+      reiniciarValidacionYPreview();
+    },
+    [reiniciarValidacionYPreview],
+  );
+
+  const setFechaDesdeConReset = useCallback(
+    (v) => {
+      setFechaDesde(v);
+      setOpcionConsumoId("");
+      reiniciarValidacionYPreview();
+    },
+    [reiniciarValidacionYPreview],
+  );
 
   const resetTrasEnvio = useCallback(() => {
     setPreview(null);
@@ -336,6 +414,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     setEntornoOk(false);
     setEntornoMensajes([]);
     setFechaHastaCalc("");
+    setOpcionConsumoId("");
     const fijado = String(articuloIdInicial || "").trim();
     const match = fijado ? articulos.find((x) => String(x.articulo_id || "") === fijado) : null;
     setArticuloSel(match || (articulos.length === 1 ? articulos[0] : null));
@@ -349,13 +428,16 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
       if (!grupoAnclaOk) {
         throw new Error("Elegí el grupo de trabajo sobre el que pedís la licencia.");
       }
+      const fh = String(preview?.fecha_hasta || fechaHasta).slice(0, 10);
       const { solicitud_id } = await crearSolicitudArticuloPatronBBorrador({
         personaId,
         articuloId: articuloSel.articulo_id,
         versionIdAplicada: articuloSel.version_id,
         fechaDesde,
+        fechaHasta: /^\d{4}-\d{2}-\d{2}$/.test(fh) ? fh : undefined,
         diasSolicitados,
         grupoTrabajoIdAncla: grupoAnclaId,
+        opcionConsumoId: opcionConsumoId || undefined,
       });
       const motor = await esperarValidacionMotorPatronB(solicitud_id);
       resetTrasEnvio();
@@ -376,10 +458,13 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     fechaDesde,
     grupoAnclaId,
     grupoAnclaOk,
+    opcionConsumoId,
     personaId,
     puedeEnviarTrasPreview,
     resetTrasEnvio,
     entornoOk,
+    preview,
+    fechaHasta,
   ]);
 
   const setFechaHasta = useCallback(
@@ -397,7 +482,11 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     diasSolicitados,
     diasPreestablecidos,
     fechasCompletas,
-    setFechaDesde,
+    fechasListasParaEntorno,
+    requiereOpcionConsumo,
+    opcionConsumoId,
+    cambiarOpcionConsumo,
+    setFechaDesde: setFechaDesdeConReset,
     setFechaHasta,
     articulos,
     articuloSel,

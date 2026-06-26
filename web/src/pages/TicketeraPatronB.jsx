@@ -118,6 +118,10 @@ export default function TicketeraPatronB() {
         entornoMensajes={form.entornoMensajes}
         entornoOk={form.entornoOk}
         reiniciarValidacionYPreview={form.reiniciarValidacionYPreview}
+        requiereOpcionConsumo={form.requiereOpcionConsumo}
+        opcionConsumoId={form.opcionConsumoId}
+        onOpcionConsumoChange={form.cambiarOpcionConsumo}
+        fechasListasParaEntorno={form.fechasListasParaEntorno}
         titulo=""
         descripcion=""
       />

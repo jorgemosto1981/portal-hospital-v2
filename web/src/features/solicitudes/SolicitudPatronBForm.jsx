@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import OpcionConsumoSelect from "./OpcionConsumoSelect.jsx";
 import PatronBPreviewInfo from "./PatronBPreviewInfo.jsx";
 import { TICKETERA } from "./ticketeraUi.js";
 import { etiquetaArticulo, mensajeBloqueoPreview } from "./ticketeraUtils.js";
@@ -118,6 +119,10 @@ export default function SolicitudPatronBForm({
   diasSolicitados,
   diasPreestablecidos = true,
   fechasCompletas = false,
+  fechasListasParaEntorno = false,
+  requiereOpcionConsumo = false,
+  opcionConsumoId = "",
+  onOpcionConsumoChange,
   articulos,
   articuloSel,
   setArticuloSel,
@@ -171,11 +176,14 @@ export default function SolicitudPatronBForm({
   const puedeContinuarPaso1 = Boolean(articuloSel) && !cargando && /^per_/i.test(personaId);
 
   const tieneFechaDesde = /^\d{4}-\d{2}-\d{2}$/.test(fechaDesde);
-  const mostrarFechaHasta = tieneFechaDesde;
-  const mostrarGrupo = fechasCompletas;
+  const opcionConsumoOk = !requiereOpcionConsumo || Boolean(opcionConsumoId);
+  const mostrarFechaHasta =
+    tieneFechaDesde && (!requiereOpcionConsumo || opcionConsumoOk);
+  const mostrarGrupo = fechasListasParaEntorno || fechasCompletas;
   const puedeValidarPaso2 =
     puedeContinuarPaso1 &&
-    fechasCompletas &&
+    opcionConsumoOk &&
+    (fechasListasParaEntorno || fechasCompletas) &&
     !gruposCargando &&
     !validandoEntorno &&
     !previewCargando &&
@@ -294,6 +302,15 @@ export default function SolicitudPatronBForm({
               </div>
             ) : null}
 
+            {requiereOpcionConsumo ? (
+              <OpcionConsumoSelect
+                opciones={articuloSel?.opciones_consumo_solicitud}
+                value={opcionConsumoId}
+                onChange={(id) => onOpcionConsumoChange?.(id)}
+                disabled={validandoEntorno || previewCargando || enviando}
+              />
+            ) : null}
+
             <label className="block space-y-1">
               <span className={TICKETERA.label}>Fecha de inicio</span>
               <input
@@ -324,9 +341,11 @@ export default function SolicitudPatronBForm({
                   aria-readonly={diasPreestablecidos ? "true" : undefined}
                 />
                 <span className="text-xs text-slate-500">
-                  {diasPreestablecidos
-                    ? `Definida por el artículo · ${diasSolicitados} ${diasSolicitados === 1 ? "día" : "días"}`
-                    : `Seleccioná el último día del permiso (${diasSolicitados} ${diasSolicitados === 1 ? "día" : "días"})`}
+                  {requiereOpcionConsumo && !entornoOk
+                    ? "Se calculará con el calendario institucional al validar la solicitud."
+                    : diasPreestablecidos
+                      ? `Definida por el artículo · ${diasSolicitados} ${diasSolicitados === 1 ? "día laborable" : "días laborables"}`
+                      : `Seleccioná el último día del permiso (${diasSolicitados} ${diasSolicitados === 1 ? "día" : "días"})`}
                 </span>
               </label>
             ) : null}

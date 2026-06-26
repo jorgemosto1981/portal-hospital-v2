@@ -4,9 +4,14 @@ const RX_YMD = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Días fijados por versión (p. ej. tope 1 día en 64-A) → fecha hasta automática.
- * @param {{ dias_solicitados?: number } | null | undefined} articuloSel
+ * @param {{ dias_solicitados?: number | null, requiere_opcion_consumo?: boolean } | null | undefined} articuloSel
  */
+export function articuloRequiereOpcionConsumo(articuloSel) {
+  return articuloSel?.requiere_opcion_consumo === true;
+}
+
 export function articuloTieneDiasPreestablecidos(articuloSel) {
+  if (articuloRequiereOpcionConsumo(articuloSel)) return false;
   if (!articuloSel) return true;
   const d = Number(articuloSel.dias_solicitados);
   return !Number.isFinite(d) || d <= 1;
