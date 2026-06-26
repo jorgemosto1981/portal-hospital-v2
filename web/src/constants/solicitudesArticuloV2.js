@@ -3,9 +3,22 @@ export const ESTADO_SOLICITUD_ARTICULO_BORRADOR = "cfg_esa_borrador";
 export const ESTADO_SOLICITUD_ARTICULO_RECHAZADA = "cfg_esa_rechazada";
 export const ESTADO_SOLICITUD_ARTICULO_EN_REVISION_JEFE = "cfg_esa_en_revision_jefe";
 
+export const ESTADO_SOLICITUD_ARTICULO_PENDIENTE_CLASIFICACION_MEDICA =
+  "cfg_esa_pendiente_clasificacion_medica";
+export const ESTADO_SOLICITUD_ARTICULO_ESPERANDO_DICTAMEN_JUNTA =
+  "cfg_esa_esperando_dictamen_junta";
+export const ESTADO_SOLICITUD_ARTICULO_APROBADA = "cfg_esa_aprobada";
+
+export const TIPO_INGRESO_MEDICO_ENFERMEDAD_PROPIA = "cfg_tig_enfermedad_propia";
+export const TIPO_INGRESO_MEDICO_ATENCION_FAMILIAR = "cfg_tig_atencion_familiar";
+
 export const SCHEMA_SOLICITUD_LAO = 1;
 export const SCHEMA_SOLICITUD_PATRON_B = 2;
 export const SCHEMA_SOLICITUD_PATRON_C = 3;
+/** Aviso médico Caja Negra — @see RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md */
+export const SCHEMA_SOLICITUD_MED_AVISO = "SOL_MED_AVISO_V1";
+
+export const PATRON_SALDO_MEDICO_AVISO = "MEDICO_AVISO";
 
 /** Piloto ticketera Patrón B — @see docs/v2/ARTICULOS_BASICOS_OPERATIVOS_V2.md */
 export const ARTICULO_64A_ID = "art_01KRNK10V10CH7W5M2W6V558GS";

@@ -1,7 +1,7 @@
 # Plan P4 — Licencias médicas (Arts. 11, 14 y workflow Art. 15)
 
 **Épica:** Decreto 1919 / Bloque B — licencias médicas  
-**Estado:** **Planificación** — **pausa código** tras P4.1; flujo canónico agente = **Caja Negra** ([`RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md`](./RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md)). Motor S_MED (P4.1) se invoca al **clasificar** en bandeja auditor, no en preview del agente.  
+**Estado:** **Planificación** — **pausa código** tras P4.1; flujo canónico agente = **Caja Negra** ([`RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md`](./RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md)). Motor S_MED (P4.1) se materializa al pasar a **`APROBADA`** (auditor ≤15 d o junta favorable); en clasificación solo **preview** si el destino es Junta.  
 **Rama prevista:** `feat/1919-p4-licencias-medicas`  
 **Tag de cierre previsto:** `1919-p4-licencias-medicas`
 
@@ -22,7 +22,7 @@
 | Riesgo haberes | Art. 14 exige **tramos acumulativos** en año calendario (100 % → 60 % → sin goce), no una bolsa fija. |
 | Auditoría | Art. 11 / 15 obligan **circuito de junta médica** cuando el episodio supera umbrales (p. ej. 15 días continuos). |
 
-**Criterio de éxito:** el agente avisa sin elegir artículo; el auditor clasifica; el sistema calcula tramos y estados hasta cierre RRHH/SARH.
+**Criterio de éxito:** el agente avisa sin elegir artículo; medicina otorga o rechaza; el sistema calcula tramos al **`APROBADA`**; jefe y RRHH toman conocimiento para cobertura y liquidación.
 
 **Modos:** **A** Caja Negra (producción) · **B** artículo conocido en ticketera (piloto motor — ver RFC P4 §7 preview).
 

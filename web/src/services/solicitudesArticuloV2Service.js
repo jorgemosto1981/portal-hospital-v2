@@ -13,6 +13,7 @@ import {
   buildSolicitudPatronBBorradorDocument,
   buildSolicitudPatronCBorradorDocument,
 } from "../schemas/solicitudArticuloCreate.schema.js";
+import { buildSolicitudMedAvisoDocument } from "../schemas/solicitudArticulo.schema.js";
 import { dbV2 } from "./firebase.js";
 
 const SOL_ULID_RE = /^sol_[0-9A-HJKMNP-TV-Z]{26}$/i;
@@ -234,3 +235,45 @@ export async function crearSolicitudArticuloPatronCBorrador(params) {
  * Reutiliza la misma lógica de polling que Patrón B.
  */
 export { esperarValidacionMotorPatronB as esperarValidacionMotorPatronC };
+
+// ---------------------------------------------------------------------------
+// Aviso médico Caja Negra (SOL_MED_AVISO_V1) — sin trigger Patrón B
+// ---------------------------------------------------------------------------
+
+/**
+ * @param {{
+ *   personaId: string,
+ *   tipoIngresoId: string,
+ *   grupoTrabajoIdAncla: string,
+ *   adjuntos: Array<{ storage_path: string, content_type?: string, nombre_archivo?: string }>,
+ *   fechaInicioReposoEstimada?: string,
+ *   comentarioAgente?: string,
+ * }} params
+ * @returns {Promise<{ solicitud_id: string, estado_solicitud_id: string }>}
+ */
+export async function crearAvisoMedicoCajaNegra(params) {
+  const payload = buildSolicitudMedAvisoDocument(
+    {
+      personaId: params.personaId,
+      tipoIngresoId: params.tipoIngresoId,
+      grupoTrabajoIdAncla: params.grupoTrabajoIdAncla,
+      adjuntos: params.adjuntos,
+      fechaInicioReposoEstimada: params.fechaInicioReposoEstimada,
+      comentarioAgente: params.comentarioAgente,
+    },
+    { creado_en: serverTimestamp(), actualizado_en: serverTimestamp() },
+  );
+
+  const solicitud_id = `sol_${ulid()}`;
+  if (!SOL_ULID_RE.test(solicitud_id)) {
+    throw new Error("No se pudo generar solicitud_id.");
+  }
+
+  const ref = doc(dbV2, "solicitudes_articulo", solicitud_id);
+  await setDoc(ref, payload);
+
+  return {
+    solicitud_id,
+    estado_solicitud_id: payload.estado_solicitud_id,
+  };
+}

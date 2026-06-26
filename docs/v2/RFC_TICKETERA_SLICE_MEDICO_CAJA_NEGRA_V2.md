@@ -106,7 +106,8 @@ RRHH parametriza textos y si familiar exige DDJJ vigente (gate en create).
 | `cfg_esa_esperando_dictamen_junta` | `ESPERANDO_DICTAMEN_JUNTA` | Esperando dictamen de junta | Junta / medicina provincial |
 | `cfg_esa_aprobada` | `APROBADA` | Licencia médica otorgada | **Solo** auditor (≤15 d) o junta (favorable) |
 | `cfg_esa_rechazada` | `RECHAZADA` | No otorgada | **Solo** auditor o junta (desfavorable) |
-| *(no usar en slice médico)* | `EN_REVISION_JEFE` | — | Licencias **no médicas** (64-A, etc.) |
+
+**No aplica en slice médico:** `cfg_esa_en_revision_jefe` (circuito licencias ordinarias / Patrón B no médico).
 
 **Política “a determinar”:** en `PENDIENTE_CLASIFICACION_MEDICA` **no hay timeout automático** ([`HANDOFF_SESION_2026-05-13_TICKETERA.md`](./HANDOFF_SESION_2026-05-13_TICKETERA.md)).
 
@@ -116,24 +117,24 @@ RRHH parametriza textos y si familiar exige DDJJ vigente (gate en create).
 stateDiagram-v2
   direction TB
   [*] --> PendienteClasificacion: Agente envía aviso + certificado
-  PendienteClasificacion --> Rechazada: Auditor rechaza
-  PendienteClasificacion --> Aprobada: Auditor clasifica y días <= 15
-  PendienteClasificacion --> EsperandoJunta: Auditor clasifica y días > 15
-  EsperandoJunta --> Rechazada: Junta dictamen desfavorable
-  EsperandoJunta --> Aprobada: Junta dictamen favorable
-  Aprobada --> TomaConocimientoJefe: Notificación organizativa
-  Aprobada --> TomaConocimientoRrhh: Visibilidad / liquidación
-  TomaConocimientoJefe --> [*]
-  TomaConocimientoRrhh --> [*]
+  PendienteClasificacion --> Rechazada: Auditor rechaza aviso
+  PendienteClasificacion --> ClasificadaMotor: Auditor clasifica (art., fechas)
+  ClasificadaMotor --> EsperandoJunta: días continuos > 15
+  ClasificadaMotor --> Aprobada: días continuos <= 15
+  EsperandoJunta --> Rechazada: Dictamen junta desfavorable
+  EsperandoJunta --> Aprobada: Dictamen junta favorable
+  Aprobada --> [*]
   Rechazada --> [*]
 
-  note right of Aprobada
-    S_MED + tramos persistidos
-    Acumulador 35/70 consume aquí
-  end note
+  state PendienteClasificacion {
+    [*] --> cfg_esa_pendiente_clasificacion_medica
+  }
+  state EsperandoJunta {
+    [*] --> cfg_esa_esperando_dictamen_junta
+  }
 ```
 
-**`TomaConocimientoJefe` / `TomaConocimientoRrhh`:** no son estados de `cfg_estado_solicitud_articulo`; son **marcas** en el documento (`jefe_toma_conocimiento_*`, `rrhh_toma_conocimiento_*`) con el doc ya en `APROBADA`. El jefe **no** puede devolver el estado a `RECHAZADA`.
+`ClasificadaMotor` es paso lógico del callable; el estado Firestore resultante es **`cfg_esa_esperando_dictamen_junta`** o **`cfg_esa_aprobada`**. Jefe y RRHH solo **toman conocimiento** con el documento ya en `APROBADA` (sin `cfg_esa_en_revision_jefe` en este slice).
 
 ### 3.3 Matriz de transiciones (quién puede)
 
@@ -206,10 +207,10 @@ Callable propuesto: **`clasificarSolicitudMedicaAuditor`** (nombre tentativo).
 1. Validar transición y permisos (`AUDITOR_MEDICO`).
 2. Cargar versión; resolver patrón B/C; ejecutar **motor de elegibilidad** (superposición, fechas, gates larga, etc.) **sin** contar aún en acumulador anual.
 3. Calcular **preview** de tramos (`calcularTramosLicenciaMedicaCorta` + `sumarConsumoCortaAnualAprobado` solo sobre **`APROBADA`** previas) para mostrar al auditor antes de confirmar.
-4. Si `dictamen_favorable === false` → `RECHAZADA`; fin (sin `licencia_medica` definitiva).
-5. Si `dias_solicitados > 15` (continuos) → `ESPERANDO_JUNTA`; persistir clasificación (`articulo_id`, fechas, `auditor_medico_clasificacion`); **no** `APROBADA` ni consumo acumulador aún.
-6. Si `dias_solicitados ≤ 15` → `APROBADA` → ejecutar **`aplicarLicenciaMedicaAprobada`** (persistir `licencia_medica.tramos_haberes`, MDC según reglas, `evt_*`).
-7. Callable separado **`registrarDictamenJuntaMedica`**: si favorable → `APROBADA` + paso 6; si no → `RECHAZADA`.
+4. Si `dictamen_favorable === false` → `cfg_esa_rechazada`; fin (sin `licencia_medica` definitiva).
+5. **Destino tras clasificación favorable:** si `dias_solicitados > 15` (continuos) → `estado_solicitud_id = cfg_esa_esperando_dictamen_junta`; si no → **`estado_solicitud_id = cfg_esa_aprobada`** (en este acto `aplicarLicenciaMedicaAprobada` / `sumarConsumoCortaAnualAprobado`).
+6. En **`cfg_esa_esperando_dictamen_junta`:** persistir clasificación (`articulo_id`, fechas, `auditor_medico_clasificacion`); **sin** consumo acumulador hasta dictamen favorable.
+7. Callable **`registrarDictamenJuntaMedica`:** favorable → `cfg_esa_aprobada` + `aplicarLicenciaMedicaAprobada`; desfavorable → `cfg_esa_rechazada`.
 8. **No** usar `cfg_esa_en_revision_jefe` en este slice. **No** descuento de bolsa ciclo clásica si la ficha corta lo prohíbe (P5/P4).
 
 ### 5.4 Response (éxito — otorgamiento directo ≤15 días)
@@ -231,7 +232,7 @@ Callable propuesto: **`clasificarSolicitudMedicaAuditor`** (nombre tentativo).
     "dias_solicitud_total": 3,
     "requiere_junta_medica": false
   },
-  "mensaje_ui": "Licencia otorgada. 1 día al 100% y 2 al 60%. El jefe y RRHH fueron notificados para toma de conocimiento.",
+  "mensaje_ui": "Clasificación registrada. Licencia médica aprobada; el jefe y RRHH recibirán el aviso para toma de conocimiento.",
   "motor_snapshot": { }
 }
 ```
@@ -335,3 +336,4 @@ El archivo [`RFC_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md`](./RFC_P4_LICENCIAS_MEDIC
 |-------|--------|
 | 2026-06-26 | RFC creado; unificación Caja Negra vs P4.1; entidad `solicitudes_articulo`; contrato auditor |
 | 2026-06-26 | Workshop: `APROBADA` solo medicina/junta; acumulador en `APROBADA`; jefe/RRHH toma de conocimiento sin veto |
+| 2026-06-26 | Diagrama §3.2 `ClasificadaMotor`; seeds + Zod `SOL_MED_AVISO_V1` (fase 1–2 código) |

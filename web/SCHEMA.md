@@ -53,8 +53,9 @@ Cualquier cambio de forma o permisos: actualizar **primero** la documentación a
 | Tema | Ubicación |
 |------|-----------|
 | Zod create + builder | `web/src/schemas/solicitudArticuloCreate.schema.js` |
+| Unión create (B / C / aviso médico) | `web/src/schemas/solicitudArticulo.schema.js` — `SOL_MED_AVISO_V1`, `articulo_id: null` |
 | Escritura Firestore | `web/src/services/solicitudesArticuloV2Service.js` → `crearSolicitudArticuloPatronBBorrador` |
-| Rules `hasOnly` | `firebase-v2/firestore.rules` — `solicitudArticuloCreateShapePatronB` |
+| Rules `hasOnly` | `firebase-v2/firestore.rules` — `solicitudArticuloCreateShapePatronB` · `solicitudArticuloCreateShapeMedAviso` |
 | Doc evidencia | [`docs/v2/TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md`](../docs/v2/TICKETERA_EVIDENCIA_2026-05-21_CREATE_PATRON_B.md) |
 
 Campos obligatorios en create: `version_id_aplicada`, `grupo_trabajo_id_ancla`, fechas, `schema_version` = 2, `patron_saldo` = `B`.

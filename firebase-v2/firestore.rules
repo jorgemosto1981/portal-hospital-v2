@@ -372,10 +372,64 @@ service cloud.firestore {
         ]);
     }
 
+    function solicitudMedAvisoTipoIngresoValid(id) {
+      return id is string
+        && id in ['cfg_tig_enfermedad_propia', 'cfg_tig_atencion_familiar'];
+    }
+
+    function solicitudMedAvisoIngresoValid(ing) {
+      return ing is map
+        && ing.modo == 'caja_negra'
+        && solicitudMedAvisoTipoIngresoValid(ing.tipo_ingreso_id)
+        && ing.adjuntos is list
+        && ing.adjuntos.size() >= 1
+        && ing.adjuntos.size() <= 10
+        && (!('comentario_agente' in ing)
+          || (ing.comentario_agente is string && ing.comentario_agente.size() <= 2000));
+    }
+
+    function solicitudArticuloMedAvisoFieldsValid(d) {
+      return d.schema_version == 'SOL_MED_AVISO_V1'
+        && d.articulo_id == null
+        && d.version_id_aplicada == null
+        && d.titular_persona_id is string
+        && cfgPersonaIdValid(d.titular_persona_id)
+        && d.actor_alta_persona_id is string
+        && cfgPersonaIdValid(d.actor_alta_persona_id)
+        && d.grupo_trabajo_id_ancla is string
+        && grupoTrabajoIdValid(d.grupo_trabajo_id_ancla)
+        && d.patron_saldo == 'MEDICO_AVISO'
+        && d.estado_solicitud_id == 'cfg_esa_pendiente_clasificacion_medica'
+        && solicitudMedAvisoIngresoValid(d.ingreso_medico)
+        && (!('fecha_inicio_reposo_estimada' in d)
+          || (d.fecha_inicio_reposo_estimada is string
+            && d.fecha_inicio_reposo_estimada.matches('^\\d{4}-\\d{2}-\\d{2}$')));
+    }
+
+    function solicitudArticuloCreateShapeMedAviso() {
+      let d = request.resource.data;
+      return solicitudArticuloMedAvisoFieldsValid(d)
+        && d.keys().hasOnly([
+          'schema_version',
+          'articulo_id',
+          'version_id_aplicada',
+          'titular_persona_id',
+          'actor_alta_persona_id',
+          'grupo_trabajo_id_ancla',
+          'patron_saldo',
+          'estado_solicitud_id',
+          'ingreso_medico',
+          'fecha_inicio_reposo_estimada',
+          'creado_en',
+          'actualizado_en',
+        ]);
+    }
+
     function solicitudArticuloCreateShape() {
       return solicitudArticuloCreateShapeLao()
         || solicitudArticuloCreateShapePatronB()
-        || solicitudArticuloCreateShapePatronC();
+        || solicitudArticuloCreateShapePatronC()
+        || solicitudArticuloCreateShapeMedAviso();
     }
 
     /** Alta operativa: el agente crea solo su solicitud en BORRADOR; transiciones las aplica el backend.

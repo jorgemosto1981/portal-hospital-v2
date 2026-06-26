@@ -9,7 +9,8 @@
     "shape_por_coleccion": {
       "cfg_calendario_feriados_institucional": "Diccionario §6: fecha (YYYY-MM-DD), tipo, alcance_efector_id (nullable), activo + metadatos cfg comunes donde aplique.",
       "cfg_paso_workflow_articulo": "Prefijo cfg_pwa_; puede extenderse con horas_max_resolucion, cfg_accion_vencimiento_id, etc. (MODULO_CONFIGURACION_ARTICULOS_V2 / matriz SLA).",
-      "cfg_tipo_evento_filas_articulos": "Prefijo cfg_tev_art_; modulo_origen = articulos; codigo_interno según diccionario §5."
+      "cfg_tipo_evento_filas_articulos": "Prefijo cfg_tev_art_; modulo_origen = articulos; codigo_interno según diccionario §5.",
+      "cfg_tipo_ingreso_medico": "Prefijo cfg_tig_; aviso agente Caja Negra (RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2)."
     },
     "equivalencias_pendientes_rfc": [
       "cfg_unidad_plazo (PF §3.2) vs cfg_tipo_computo_plazo cfg_tcp_* (plazo documental modular) — no mezclar filas hasta RFC (diccionario §2 nota).",
@@ -264,6 +265,46 @@
       "codigo_interno": "CANCELADA",
       "titulo_ui": "Cancelada por titular o sistema",
       "orden": 60,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_esa_pendiente_clasificacion_medica",
+      "codigo_interno": "PENDIENTE_CLASIFICACION_MEDICA",
+      "titulo_ui": "Pendiente de clasificación médica",
+      "descripcion_ui": "Aviso Caja Negra; aguarda Médico Auditor.",
+      "orden": 70,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_esa_esperando_dictamen_junta",
+      "codigo_interno": "ESPERANDO_DICTAMEN_JUNTA",
+      "titulo_ui": "Esperando dictamen de junta",
+      "descripcion_ui": "Episodio > 15 días continuos; aguarda junta médica.",
+      "orden": 80,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_tipo_ingreso_medico": [
+    {
+      "id": "cfg_tig_enfermedad_propia",
+      "codigo_interno": "ENFERMEDAD_PROPIA",
+      "titulo_ui": "Es para mí (enfermedad propia)",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_tig_atencion_familiar",
+      "codigo_interno": "ATENCION_FAMILIAR",
+      "titulo_ui": "Atención de familiar enfermo",
+      "orden": 20,
       "activo": true,
       "vigente_desde": null,
       "vigente_hasta": null
