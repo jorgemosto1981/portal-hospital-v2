@@ -8,7 +8,7 @@ const { isPortalRoleUsuario } = require("../../modules/shared/solicitudElegibili
 const { runPatronBAltaMotorV2 } = require("../../modules/shared/patronBAltaMotorV2");
 const {
   diasSolicitadosDesdeVersion,
-  fechaHastaDesdeVersionPatronB,
+  fechaHastaDesdeVersionPatronBAsync,
 } = require("../../modules/shared/patronBFechasSolicitud");
 const { resolvePatronBConsumoDesdeSolicitud } = require("../../modules/shared/opcionesConsumoSolicitud");
 
@@ -74,7 +74,7 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
       ? Math.floor(diasRaw)
       : diasVersion;
   const versionEff = consumo.ok ? consumo.versionEff : versionData;
-  const fechaHasta = fechaHastaDesdeVersionPatronB(fechaDesde, diasSolicitados, versionEff);
+  const fechaHasta = await fechaHastaDesdeVersionPatronBAsync(db, fechaDesde, diasSolicitados, versionEff);
 
   const motor = await runPatronBAltaMotorV2({
     db,

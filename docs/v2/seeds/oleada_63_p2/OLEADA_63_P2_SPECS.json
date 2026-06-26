@@ -55,7 +55,7 @@
       "inciso_normativo": "Art. 63 inc. j — Decreto 1919/89",
       "codigo_sarh": "63J",
       "color_ui": "#2563EB",
-      "regla_computo_dias_id": "cfg_rcd_corridos",
+      "regla_computo_dias_id": "cfg_rcd_habiles_compuesto",
       "tope_dias_por_evento": 5,
       "cupo_dias_por_ciclo": null,
       "tope_frecuencia_mensual": null,
@@ -65,7 +65,7 @@
           "etiqueta_ui": "Cónyuge / conviviente, hijos, padres",
           "codigo_sarh": "63J",
           "dias_por_evento": 5,
-          "regla_computo_id": "cfg_rcd_corridos",
+          "regla_computo_id": "cfg_rcd_habiles_compuesto",
           "activo": true
         },
         {
@@ -73,7 +73,7 @@
           "etiqueta_ui": "Hermanos",
           "codigo_sarh": "63J",
           "dias_por_evento": 3,
-          "regla_computo_id": "cfg_rcd_corridos",
+          "regla_computo_id": "cfg_rcd_habiles_compuesto",
           "activo": true
         },
         {
@@ -81,7 +81,7 @@
           "etiqueta_ui": "Abuelos y nietos",
           "codigo_sarh": "63J",
           "dias_por_evento": 2,
-          "regla_computo_id": "cfg_rcd_corridos",
+          "regla_computo_id": "cfg_rcd_habiles_compuesto",
           "activo": true
         },
         {
@@ -89,7 +89,7 @@
           "etiqueta_ui": "Tíos y sobrinos (consanguíneos directos)",
           "codigo_sarh": "63J",
           "dias_por_evento": 1,
-          "regla_computo_id": "cfg_rcd_corridos",
+          "regla_computo_id": "cfg_rcd_habiles_compuesto",
           "activo": true
         }
       ]

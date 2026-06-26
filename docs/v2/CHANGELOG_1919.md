@@ -17,4 +17,5 @@ Registro de **tags Git** y hitos documentales/código. Detalle operativo en `[PL
 | 2026-06-24 | (rama `feat/1919-p5-config-rfc`) | **P5.0:** Zod `opciones_consumo_solicitud[]`, `shared/utils/opcionesConsumoSolicitud.js`, seeds oleada 63 validadas en dry-run |
 | 2026-06-24 | `c0075f9` (pausa sesión P5) | P5.0 en remoto; siguiente: **P5.1 motor** (`runPatronBAltaMotorV2`, fechas corridos, rules create) → P5.2 ticketera |
 | 2026-06-26 | (rama `feat/1919-p5-config-rfc`) | **P5.1:** motor `opcion_consumo_id`, fechas corridos multi-día, rules + schema create |
+| 2026-06-26 | P5.0-fix 63.j | Duelo: `cfg_rcd_habiles_compuesto` + `fechaHastaDesdeVersionPatronBAsync` vía calendario institucional |
 | —          | `1919-pre-firestore-clean` | Antes de limpieza/reseed piloto (con export GCS) |

@@ -16,7 +16,7 @@ const {
 } = require("../shared/solicitudPatronBAltaMotor");
 const { resolverGrupoTrabajoIdAnclaParaSolicitud } = require("../shared/solicitudGrupoTrabajoAncla");
 const {
-  fechaHastaDesdeVersionPatronB,
+  fechaHastaDesdeVersionPatronBAsync,
 } = require("../shared/patronBFechasSolicitud");
 const { resolvePatronBConsumoDesdeSolicitud } = require("../shared/opcionesConsumoSolicitud");
 const { evaluarGrillaTurnoEntorno } = require("./grillaTurnoEntornoGate");
@@ -188,7 +188,7 @@ async function validarEntornoOperativoSolicitud(params) {
   }
   ctx.diasSolicitados = consumo.diasPedidos;
   const versionEff = consumo.versionEff;
-  ctx.fechaHasta = fechaHastaDesdeVersionPatronB(ctx.fechaDesde, ctx.diasSolicitados, versionEff);
+  ctx.fechaHasta = await fechaHastaDesdeVersionPatronBAsync(db, ctx.fechaDesde, ctx.diasSolicitados, versionEff);
 
   const fechasVal = await validarFechasArticuloEnMotor(db, {
     versionData: versionEff,

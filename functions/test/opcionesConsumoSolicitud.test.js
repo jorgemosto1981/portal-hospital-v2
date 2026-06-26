@@ -26,7 +26,7 @@ const spec63j = JSON.parse(readFileSync(SPECS_PATH, "utf8")).articulos.find((a) 
 describe("opcionesConsumoSolicitud — fixture 63.j", () => {
   const versionData = {
     bloque_topes_plazos_computo: {
-      regla_computo_dias_id: "cfg_rcd_corridos",
+      regla_computo_dias_id: "cfg_rcd_habiles_compuesto",
       tope_dias_por_evento: 5,
     },
     opciones_consumo_solicitud: spec63j.opciones_consumo_solicitud,
@@ -51,12 +51,12 @@ describe("opcionesConsumoSolicitud — fixture 63.j", () => {
     assert.equal(r.codigo, "OPCION_CONSUMO_REQUERIDA");
   });
 
-  it("versionDataConOpcionAplicada mantiene corridos", () => {
+  it("versionDataConOpcionAplicada usa hábiles compuesto y calendario", () => {
     const r = resolverOpcionConsumo(versionData, "oc_63j_tios_sobrinos");
     assert.equal(r.ok, true);
     const eff = versionDataConOpcionAplicada(versionData, r.opcion);
-    assert.equal(eff.bloque_topes_plazos_computo.regla_computo_dias_id, "cfg_rcd_corridos");
-    assert.equal(eff.bloque_topes_plazos_computo.usa_calendario_institucional, false);
+    assert.equal(eff.bloque_topes_plazos_computo.regla_computo_dias_id, "cfg_rcd_habiles_compuesto");
+    assert.equal(eff.bloque_topes_plazos_computo.usa_calendario_institucional, true);
   });
 
   it("mapOpcionesParaListadoCliente expone campos wizard", () => {
@@ -64,7 +64,7 @@ describe("opcionesConsumoSolicitud — fixture 63.j", () => {
     assert.equal(rows.length, 4);
     assert.equal(rows[1].id, "oc_63j_hermanos");
     assert.equal(rows[1].dias_por_evento, 3);
-    assert.equal(rows[1].regla_computo_dias_id, "cfg_rcd_corridos");
+    assert.equal(rows[1].regla_computo_dias_id, "cfg_rcd_habiles_compuesto");
   });
 });
 

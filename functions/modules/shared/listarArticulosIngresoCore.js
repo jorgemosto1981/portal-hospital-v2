@@ -16,7 +16,7 @@ const {
 } = require("./ticketeraArticulosMvp");
 const {
   diasSolicitadosDesdeVersion,
-  fechaHastaDesdeVersionPatronB,
+  fechaHastaDesdeVersionPatronBAsync,
 } = require("./patronBFechasSolicitud");
 const { readModoCalculo } = require("./validarFechasArticuloRuntime");
 const { getAllDocsChunked } = require("./firestoreGetAllChunked");
@@ -188,7 +188,7 @@ async function listarArticulosIngresoPatronB(params) {
     }
 
     const diasSolicitados = diasSolicitadosDesdeVersion(versionData);
-    const fechaHasta = fechaHastaDesdeVersionPatronB(fechaDesde, diasSolicitados);
+    const fechaHasta = await fechaHastaDesdeVersionPatronBAsync(db, fechaDesde, diasSolicitados, versionData);
 
     articulos.push({
       articulo_id: articuloId,

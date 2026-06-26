@@ -41,7 +41,7 @@ const {
 } = require("./opcionesConsumoSolicitud");
 const {
   diasSolicitadosDesdeVersion,
-  fechaHastaDesdeVersionPatronB,
+  fechaHastaDesdeVersionPatronBAsync,
 } = require("./patronBFechasSolicitud");
 
 const MOTOR_VERSION_B = "patron-b-v2";
@@ -363,7 +363,7 @@ async function runPatronBAltaMotorV2(params) {
 
   const versionEff = consumo.versionEff;
   const diasPedidos = consumo.diasPedidos;
-  const fechaHastaPre = fechaHastaDesdeVersionPatronB(fechaDesde, diasPedidos, versionEff);
+  const fechaHastaPre = await fechaHastaDesdeVersionPatronBAsync(db, fechaDesde, diasPedidos, versionEff);
   const fechaHasta =
     fechaHastaIn && fechaHastaIn >= fechaDesde ? fechaHastaIn : fechaHastaPre;
 
