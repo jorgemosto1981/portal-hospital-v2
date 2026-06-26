@@ -1,0 +1,171 @@
+# Plan P4 — Licencias médicas (Arts. 11, 14 y workflow Art. 15)
+
+**Épica:** Decreto 1919 / Bloque B — licencias médicas  
+**Estado:** **Planificación** (post-tag `1919-p5-config-rfc`, merge `7a8997c`)  
+**Rama prevista:** `feat/1919-p4-licencias-medicas`  
+**Tag de cierre previsto:** `1919-p4-licencias-medicas`
+
+**Relación con roadmap histórico:** en [`PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md`](./PLAN_LINEAMIENTOS_DECRETO_1919_MOTOR_SOLICITUDES_V2.md) §11 el ítem “P4 (52, 54)” queda **re-etiquetado** como backlog **P4bis** (franquicias / otros incisos). El **P4 activo** de esta épica es **médico (11 + 14 + junta 15)**.
+
+**Precedentes técnicos cerrados (P5):** opciones dinámicas, calendario institucional en Patrón B, Fase S con `SALDO_EVENTO_SIN_CICLO`, ABM RRHH con Zod estricto, rules Firestore alineadas.
+
+**Fichas normativas:** [`LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md`](./LINEAMIENTOS_DECRETO_1919_89_POR_ARTICULO_V2.md) — Bloque B (⬛ hasta este paquete).  
+**Motor as-built:** [`RFC_MOTOR_V2_AS_BUILT.md`](./RFC_MOTOR_V2_AS_BUILT.md).
+
+---
+
+## 1. Objetivo de negocio
+
+| Prioridad | Motivo |
+|-----------|--------|
+| Volumen | Licencias médicas corta/larga concentran la mayor parte del ausentismo transaccional. |
+| Riesgo haberes | Art. 14 exige **tramos acumulativos** en año calendario (100 % → 60 % → sin goce), no una bolsa fija. |
+| Auditoría | Art. 11 / 15 obligan **circuito de junta médica** cuando el episodio supera umbrales (p. ej. 15 días continuos). |
+
+**Criterio de éxito:** agente y RRHH pueden iniciar, auditar y cerrar un episodio médico con tramo de haberes calculado automáticamente y estados intermedios trazables en Firestore + ticketera.
+
+---
+
+## 2. Alcance por pista (esqueleto acordado)
+
+```mermaid
+flowchart LR
+  P40[P4.0 RFC y contrato]
+  P41[P4.1 Motor tramos Art. 14]
+  P42[P4.2 Workflow junta 11/15]
+  P43[P4.3 Ticketera y adjuntos]
+  P44[P4.4 UAT y seeds]
+  P40 --> P41
+  P40 --> P42
+  P41 --> P43
+  P42 --> P43
+  P43 --> P44
+```
+
+### P4.0 — RFC y contrato de datos
+
+**Entregables**
+
+| Ítem | Descripción |
+|------|-------------|
+| `RFC_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md` | Estados, tramos, consultas históricas, impacto liquidación (solo metadatos en V2). |
+| Zod versión artículo | Extender `bloque_identidad_naturaleza` / bloques impacto donde aplique: `es_licencia_medica: true`, causales Art. 19 (catálogo), flags de **modo cómputo médico** (continua vs intermitente si aplica). |
+| Zod solicitud | Campos de episodio: `dias_solicitados`, `tramo_haberes_proyectado` (snapshot motor), `requiere_junta_medica`, `junta_medica_id` (opcional), enlaces certificado. |
+| Catálogo `cfg_estado_solicitud_articulo` | Nuevo valor propuesto: `cfg_esa_esperando_dictamen_junta` (nombre UI: *Esperando dictamen de junta*). Validar convivencia con `cfg_esa_borrador`, `cfg_esa_en_revision_jefe`, `cfg_esa_rechazada`. |
+| Firestore rules | Rama create/update Patrón B/C médico; inmutabilidad de tramo post-aprobación. |
+
+**Punto de partida en repo (ya existe, no reimplementar):**
+
+- `es_licencia_medica`, `requiere_dictamen` en `articulo.schema.js` y resolvers Patrón B/C (`patronBMotorConfigResolver.js`, `patronCMotorConfigResolver.js`).
+- Auto-activación de adjunto obligatorio al marcar caja negra en configurador (`ArticuloConfigTabs`).
+- Borrador Patrón C en `solicitudArticuloCreate.schema.js` / `crearSolicitudArticuloPatronCBorrador`.
+
+**Fuera de alcance P4.0 (explícito):** integración SARH liquidación; solo persistir metadatos de tramo para export futuro.
+
+---
+
+### P4.1 — Motor de tramos (Art. 14)
+
+**Regla de negocio (año calendario, por agente, episodios `es_licencia_medica`):**
+
+| Tramo acumulado (días aprobados en el año) | Haberes |
+|-------------------------------------------|---------|
+| 0–35 | 100 % |
+| 36–70 | 60 % |
+| 71+ | Sin remuneración |
+
+**Diseño motor (Fase S extendida o subfase `S_MED`):**
+
+1. **Consulta histórica:** sumar días consumidos en solicitudes **aprobadas** del año calendario actual para artículos con `es_licencia_medica` (misma persona, mismo `correspondencia_anio` o año civil según RFC).
+2. **Proyección:** dado el pedido actual, calcular **split exacto por día/cantidad** al cruzar 35/70 (ver RFC — no tramo dominante).
+3. **Respuesta callable:** `previsualizarSolicitudPatronB/C` devuelve `tramos_haberes_resumen` + flag si el episodio cruza límites 35/70.
+4. **Persistencia onCreate:** snapshot en `solicitudes_articulo` para auditoría (`motor_auditoria` o mapa dedicado `licencia_medica_tramos`).
+
+**Reutilización P5:** cómputo de días con `calendarInstitucionalCore` cuando la versión use hábiles; no confundir con `opciones_consumo_solicitud` (duelo). Art. 14 usa **topes por tramo anual**, no `cupo_dias_por_ciclo` clásico.
+
+**Tests obligatorios:** casos borde en 34→35, 69→70, año nuevo reinicia acumulador; solicitud que parte en 100 % y termina en 60 % en un mismo pedido multi-día.
+
+---
+
+### P4.2 — Workflow junta médica (Arts. 11 y 15)
+
+**Disparadores (RFC a numerar):**
+
+- Duración **continua** &gt; 15 días → transición automática a `cfg_esa_esperando_dictamen_junta` tras validación motor inicial (o tras aprobación jefe, según política RRHH — **decisión en P4.0**).
+- Reenvío a junta Santa Fe / Rosario: metadatos de sede (`junta_medica_sede_id` catálogo) sin integración externa en V2.
+
+**Componentes**
+
+| Capa | Acción |
+|------|--------|
+| Trigger onCreate / onUpdate | Si `requiere_junta_medica`, no avanzar a estados finales sin registro de dictamen. |
+| Bandeja RRHH / Medicina | Vista filtrada por estado + `es_licencia_medica` (puede ser P4.3 UI mínima). |
+| Check-in | Etiqueta distinta a “validación por evento” P5; mostrar tramo proyectado y estado junta. |
+
+**Estados intermedios:** alinear nomenclatura con `ESPERANDO_DICTAMEN_JUNTA` del brief; implementación = fila en `cfg_estado_solicitud_articulo` + constantes shared (`ESTADO_SOLICITUD_*`).
+
+---
+
+### P4.3 — Ticketera, certificados y previsualización
+
+- Wizard médico: Patrón C (rango continuo) como default Art. 14; Patrón B solo si ficha lo define.
+- Certificado obligatorio (`requiere_adjunto_obligatorio` ya cableado); plazos Art. 19 en copy UI.
+- `PatronBPreviewInfo` / equivalente C: bloque **Tramo de haberes proyectado** (100/60/sin goce).
+- `validarEntornoOperativoSolicitud`: gates adicionales si junta pendiente o tramo sin goce puro (warning, no bloqueo salvo política).
+
+---
+
+### P4.4 — Seeds, deploy y UAT
+
+| Artefacto | Contenido |
+|-----------|-----------|
+| Seeds | `art_*` / `ver_*` para **corta (Art. 14)** y **larga (Arts. 16/19)** en piloto; specs JSON + `apply` idempotente. |
+| Deploy | Functions: previsualizar, onCreate, listado; rules; hosting. |
+| Matriz | `MATRIZ_UAT_P4_LICENCIAS_MEDICAS.md` (plantilla UAT-P4-01 … en P4.4). |
+
+**Piloto de referencia:** `per_01KQN9WXFXF69Z9DCT5YNJ3TFZ` (DNI 28914247), mismo criterio que P2/P5.
+
+---
+
+## 3. Matriz de dependencias técnicas
+
+| Dependencia | Estado |
+|-------------|--------|
+| Patrón B motor + calendario | ✅ P5 |
+| `es_licencia_medica` en configurador | ✅ flag existente |
+| Patrón C borrador + trigger | ✅ base; extender médico |
+| Acumulador anual Art. 14 | ❌ P4.1 |
+| Estado junta médica | ❌ P4.0 catálogo + P4.2 |
+| Fichas LINEAMIENTOS Bloque B completas | ⏳ redacción en paralelo a P4.0 |
+
+---
+
+## 4. Orden de ejecución Git (propuesto)
+
+| Paso | Acción |
+|------|--------|
+| 1 | `git checkout master` · `git pull` · `git checkout -b feat/1919-p4-licencias-medicas` |
+| 2 | Commit `docs(1919): plan y RFC borrador P4 licencias médicas` (P4.0 doc only) |
+| 3 | PRs acotados: P4.1 motor → P4.2 workflow → P4.3 UI → P4.4 UAT |
+| 4 | Tag `1919-p4-licencias-medicas` en merge a `master` |
+
+**Convención commits:** prefijo `1919:` o `feat(1919):` / `fix(1919):` como en P5.
+
+---
+
+## 5. Decisiones de negocio (workshop — cerradas)
+
+| Tema | Decisión |
+|------|----------|
+| **Granularidad tramo (35/70)** | **Split exacto** por día/cantidad. Snapshot con desglose `tramos: { "100": n, "60": m, "0": k }` (export SARH). |
+| **Corta vs larga** | **Dos `art_*` distintos:** corta = Art. 14 (contador anual ciego); larga = Arts. 16/19 (causal catalogada, tope ~2 años continuos, goce distinto, sin reinicio a fin de año). |
+| **Reagravamiento** | **Corta:** toda solicitud suma al mismo acumulador del año civil. **Larga (V2):** bloquear alta sin dictamen favorable; `episodio_seguimiento_id` en backlog post-V2. |
+| **P4bis (52, 54)** | No mezclar en esta rama. |
+
+Detalle técnico: [`RFC_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md`](./RFC_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md).
+
+---
+
+## 6. Próximo paso inmediato
+
+Implementación **P4.1** (`runLicenciaMedicaTramosV2` / Fase `S_MED`) tras merge del RFC en la rama.

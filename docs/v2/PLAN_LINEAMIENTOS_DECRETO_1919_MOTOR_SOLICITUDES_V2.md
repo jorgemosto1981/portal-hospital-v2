@@ -243,6 +243,8 @@ flowchart LR
 | **P5**  | UI configurador + motores leen nuevos campos       |
 | **P6**  | Grilla por tramo                                   |
 
+**Actualización (26-jun-2026):** **P5 cerrado** (`1919-p5-config-rfc`). **P4 activo** = licencias médicas Arts. 11/14/15 — ver [`PLAN_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md`](./PLAN_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md). El ítem histórico “P4 (52, 54)” pasa a backlog **P4bis** en ese plan.
+
 
 **Gobernanza Git:** baseline + tags `1919-p0`…`p6`; PR por paquete; prefijo commit `1919:`.
 
