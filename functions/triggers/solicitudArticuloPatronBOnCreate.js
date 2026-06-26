@@ -171,6 +171,12 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
       actualizado_en: FieldValue.serverTimestamp(),
       motor_descuento_aplicado: false,
     };
+    if (motor.fecha_hasta && String(motor.fecha_hasta).slice(0, 10) >= String(d.fecha_desde || "").slice(0, 10)) {
+      motorOkPayload.fecha_hasta = String(motor.fecha_hasta).slice(0, 10);
+    }
+    if (d.opcion_consumo_id) {
+      motorOkPayload.opcion_consumo_id = String(d.opcion_consumo_id).trim();
+    }
 
     let evtIdPostTx = null;
     let ticketEventPostTx = null;

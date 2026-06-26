@@ -227,6 +227,26 @@ export function fechaHastaPorDiasHabilesDesdeIndice(fechaDesde, cantidadDiasHabi
   return last;
 }
 
+/**
+ * Último día del evento en cómputo **corridos** (cantidad inclusive desde fechaDesde).
+ * @param {string} fechaDesdeYmd
+ * @param {number} cantidadDiasCorridos
+ * @returns {string}
+ */
+export function fechaHastaPorDiasCorridosInclusive(fechaDesdeYmd, cantidadDiasCorridos) {
+  const desde = normalizarYmdCalendario(fechaDesdeYmd);
+  if (!desde) return "";
+  const dias =
+    Number.isFinite(cantidadDiasCorridos) && cantidadDiasCorridos > 0
+      ? Math.floor(cantidadDiasCorridos)
+      : 1;
+  if (dias <= 1) return desde;
+  const [y, m, d] = desde.split("-").map((x) => Number(x));
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + dias - 1);
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+}
+
 /** @param {string} desdeYmd @param {string} hastaYmd */
 export function contarDiasCorridosInclusive(desdeYmd, hastaYmd) {
   return iterarYmdInclusive(desdeYmd, hastaYmd).length;

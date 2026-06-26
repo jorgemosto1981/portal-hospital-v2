@@ -25,6 +25,22 @@ describe("validarFechasArticulo", () => {
     assert.equal(ymdFinHorizonteAgenteBase("2026-05-15"), "2026-06-30");
   });
 
+  it("corridos: deriva fecha_hasta multi-día", () => {
+    const versionData = {
+      bloque_topes_plazos_computo: { regla_computo_dias_id: CFG_RCD_CORRIDOS },
+    };
+    const r = validarFechasArticulo({
+      versionData,
+      fechaDesde: "2026-06-02",
+      fechaHasta: "2026-06-02",
+      diasSolicitados: 3,
+      refYmd: "2026-06-01",
+      omitirHorizonte: true,
+    });
+    assert.equal(r.ok, true);
+    assert.equal(r.fecha_hasta, "2026-06-04");
+  });
+
   it("corridos: exige coherencia con días de calendario", () => {
     const versionData = {
       bloque_topes_plazos_computo: { regla_computo_dias_id: CFG_RCD_CORRIDOS },

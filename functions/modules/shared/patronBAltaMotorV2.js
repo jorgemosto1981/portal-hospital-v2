@@ -35,8 +35,24 @@ const { resolverGrupoTrabajoIdAnclaParaSolicitud } = require("./solicitudGrupoTr
 const { validarGrillaHorariaParaSolicitud } = require("./mdcGrillaHorariaGate");
 const { validarFechasArticuloEnMotor, readModoCalculo } = require("./validarFechasArticuloRuntime");
 const { tokenHasRrhhLaborAccess } = require("./laborProfile");
+const {
+  resolvePatronBConsumoDesdeSolicitud,
+  CODIGOS_CONSUMO,
+} = require("./opcionesConsumoSolicitud");
+const {
+  diasSolicitadosDesdeVersion,
+  fechaHastaDesdeVersionPatronB,
+} = require("./patronBFechasSolicitud");
 
 const MOTOR_VERSION_B = "patron-b-v2";
+
+const MENSAJES_OPCION_CONSUMO = {
+  [CODIGOS_CONSUMO.OPCION_CONSUMO_REQUERIDA]: "Debe elegir el vínculo (opcion_consumo_id).",
+  [CODIGOS_CONSUMO.OPCION_CONSUMO_INVALIDA]: "La opción de consumo no es válida para este artículo.",
+  [CODIGOS_CONSUMO.SIN_OPCIONES_CONSUMO]: "El artículo no admite opciones de consumo.",
+  [CODIGOS_CONSUMO.DIAS_NO_COINCIDEN_OPCION]:
+    "Los días solicitados no coinciden con la opción de vínculo elegida.",
+};
 
 function patronFromVersion(versionData) {
   const ident = versionData?.bloque_identidad_naturaleza || {};
@@ -327,8 +343,7 @@ async function runPatronBAltaMotorV2(params) {
   const personaId = String(solicitud.titular_persona_id || "").trim();
   const articuloId = String(solicitud.articulo_id || "").trim();
   const fechaDesde = String(solicitud.fecha_desde || "").slice(0, 10);
-  const fechaHasta = String(solicitud.fecha_hasta || "").slice(0, 10);
-  const diasSolicitados = Number(solicitud.dias_solicitados);
+  const fechaHastaIn = String(solicitud.fecha_hasta || "").slice(0, 10);
   const anioCiclo = Number(solicitud.anio_ciclo_consumo);
 
   const pDesde = parseYmd(fechaDesde);
@@ -339,11 +354,23 @@ async function runPatronBAltaMotorV2(params) {
     return buildRejection([CODIGO_FECHA_RANGO], ["anio_ciclo_consumo no coincide con fecha_desde."], versionData, versionId);
   }
 
-  const cfg = resolvePatronBMotorConfig(versionData);
-  const configUsada = buildPatronBConfigUsada(cfg, versionId);
-  const contextoAuditoria = ensamblarContextoDeAuditoria(versionData);
+  const consumo = resolvePatronBConsumoDesdeSolicitud(versionData, solicitud);
+  if (!consumo.ok) {
+    const codigo = consumo.codigo || CODIGOS_CONSUMO.OPCION_CONSUMO_INVALIDA;
+    const mensaje = MENSAJES_OPCION_CONSUMO[codigo] || mensajeParaCodigo(codigo) || codigo;
+    return buildRejection([codigo], [mensaje], versionData, versionId);
+  }
 
-  const diasPedidos = Number.isFinite(diasSolicitados) && diasSolicitados > 0 ? Math.floor(diasSolicitados) : 1;
+  const versionEff = consumo.versionEff;
+  const diasPedidos = consumo.diasPedidos;
+  const fechaHastaPre = fechaHastaDesdeVersionPatronB(fechaDesde, diasPedidos, versionEff);
+  const fechaHasta =
+    fechaHastaIn && fechaHastaIn >= fechaDesde ? fechaHastaIn : fechaHastaPre;
+
+  const cfg = resolvePatronBMotorConfig(versionEff);
+  const configUsada = buildPatronBConfigUsada(cfg, versionId);
+  const contextoAuditoria = ensamblarContextoDeAuditoria(versionEff);
+
   const topeMes = Number(cfg.tope_frecuencia_mensual);
 
   const [personaSnap, hlcSnap] = await Promise.all([
@@ -362,10 +389,10 @@ async function runPatronBAltaMotorV2(params) {
   });
 
   const fases = [
-    faseP(versionData),
-    faseC(db, versionData, fechaDesde, fechaHasta, diasPedidos, authToken),
-    faseE(db, versionData, personaId, fechaDesde, hlcArray, diasExternos, authToken, excludeSolId),
-    faseW(versionData, fechaDesde),
+    faseP(versionEff),
+    faseC(db, versionEff, fechaDesde, fechaHasta, diasPedidos, authToken),
+    faseE(db, versionEff, personaId, fechaDesde, hlcArray, diasExternos, authToken, excludeSolId),
+    faseW(versionEff, fechaDesde),
     faseF(db, personaId, articuloId, fechaDesde, topeMes, excludeSolId),
     faseT(diasPedidos, cfg),
     faseS(db, personaId, articuloId, anioCiclo, diasPedidos),
@@ -416,9 +443,11 @@ async function runPatronBAltaMotorV2(params) {
     saldo_disponible: pipeline.ctx.saldo_disponible ?? null,
     saldo_restante_preview: pipeline.ctx.saldo_restante_preview ?? null,
     frecuencia_mes: pipeline.ctx.frecuencia_mes || null,
-    fecha_hasta: pipeline.ctx.fechaHastaEff || fechaDesde,
+    fecha_hasta: pipeline.ctx.fechaHastaEff || fechaHastaPre || fechaDesde,
+    opcion_consumo_id: consumo.opcion_consumo_id || null,
+    codigo_sarh_opcion: consumo.opcion?.codigo_sarh || null,
     calendario_resumen: pipeline.ctx.fechasVal?.calendario_resumen || null,
-    modo_computo: pipeline.ctx.fechasVal?.modo_computo || readModoCalculo(versionData).modo,
+    modo_computo: pipeline.ctx.fechasVal?.modo_computo || readModoCalculo(versionEff).modo,
     usa_calendario_institucional: pipeline.ctx.fechasVal?.usa_calendario_institucional === true,
     incluye_feriados_institucionales: pipeline.ctx.fechasVal?.incluye_feriados_institucionales === true,
     articulo_id: articuloId,

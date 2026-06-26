@@ -12,6 +12,7 @@ const {
   leerOpcionesConsumoDesdeVersion,
   filtrarOpcionesActivas,
   resolverOpcionConsumo,
+  resolvePatronBConsumoDesdeSolicitud,
   versionDataConOpcionAplicada,
   mapOpcionesParaListadoCliente,
   versionTieneOpcionesConsumoActivas,
@@ -72,5 +73,21 @@ describe("opcionesConsumoSolicitud — sin opciones", () => {
     const r = resolverOpcionConsumo({ bloque_topes_plazos_computo: {} }, "oc_x");
     assert.equal(r.ok, false);
     assert.equal(r.codigo, "SIN_OPCIONES_CONSUMO");
+  });
+});
+
+describe("resolvePatronBConsumoDesdeSolicitud", () => {
+  const versionData = {
+    bloque_topes_plazos_computo: { regla_computo_dias_id: "cfg_rcd_corridos", tope_dias_por_evento: 5 },
+    opciones_consumo_solicitud: spec63j.opciones_consumo_solicitud,
+  };
+
+  it("rechaza días distintos a la opción", () => {
+    const r = resolvePatronBConsumoDesdeSolicitud(versionData, {
+      opcion_consumo_id: "oc_63j_hermanos",
+      dias_solicitados: 5,
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.codigo, "DIAS_NO_COINCIDEN_OPCION");
   });
 });

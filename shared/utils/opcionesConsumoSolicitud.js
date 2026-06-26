@@ -103,6 +103,7 @@ export function versionDataConOpcionAplicada(versionData, opcion) {
   const reglaId = reglaComputoDiasIdDesdeOpcion(opcion, base);
   topes.regla_computo_dias_id = reglaId;
   topes.usa_calendario_institucional = reglaId !== "cfg_rcd_corridos";
+  topes.tope_dias_por_evento = opcion.dias_por_evento;
   return {
     ...base,
     bloque_topes_plazos_computo: topes,
@@ -122,3 +123,58 @@ export function mapOpcionesParaListadoCliente(versionData) {
     codigo_sarh: o.codigo_sarh || null,
   }));
 }
+
+const CODIGOS_CONSUMO = {
+  SIN_OPCIONES_CONSUMO: "SIN_OPCIONES_CONSUMO",
+  OPCION_CONSUMO_REQUERIDA: "OPCION_CONSUMO_REQUERIDA",
+  OPCION_CONSUMO_INVALIDA: "OPCION_CONSUMO_INVALIDA",
+  DIAS_NO_COINCIDEN_OPCION: "DIAS_NO_COINCIDEN_OPCION",
+};
+
+/**
+ * Resuelve versión efectiva y días para motor Patrón B / preview.
+ * @param {Record<string, unknown>} versionData
+ * @param {Record<string, unknown>} solicitud
+ */
+export function resolvePatronBConsumoDesdeSolicitud(versionData, solicitud) {
+  const tieneOpciones = versionTieneOpcionesConsumoActivas(versionData);
+  if (!tieneOpciones) {
+    const diasRaw = Number(solicitud.dias_solicitados);
+    const diasPedidos =
+      Number.isFinite(diasRaw) && diasRaw > 0 ? Math.floor(diasRaw) : 1;
+    return {
+      ok: true,
+      versionEff: versionData,
+      diasPedidos,
+      opcion: null,
+      opcion_consumo_id: null,
+    };
+  }
+
+  const opcionId =
+    typeof solicitud.opcion_consumo_id === "string" ? solicitud.opcion_consumo_id.trim() : "";
+  const res = resolverOpcionConsumo(versionData, opcionId);
+  if (!res.ok) {
+    return { ok: false, codigo: res.codigo };
+  }
+
+  const diasPedidos = res.opcion.dias_por_evento;
+  const diasPayload = Number(solicitud.dias_solicitados);
+  if (
+    Number.isFinite(diasPayload) &&
+    diasPayload > 0 &&
+    Math.floor(diasPayload) !== diasPedidos
+  ) {
+    return { ok: false, codigo: CODIGOS_CONSUMO.DIAS_NO_COINCIDEN_OPCION };
+  }
+
+  return {
+    ok: true,
+    versionEff: versionDataConOpcionAplicada(versionData, res.opcion),
+    diasPedidos,
+    opcion: res.opcion,
+    opcion_consumo_id: res.opcion.id,
+  };
+}
+
+export { CODIGOS_CONSUMO };

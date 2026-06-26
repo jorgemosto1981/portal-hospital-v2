@@ -16,9 +16,9 @@ const {
 } = require("../shared/solicitudPatronBAltaMotor");
 const { resolverGrupoTrabajoIdAnclaParaSolicitud } = require("../shared/solicitudGrupoTrabajoAncla");
 const {
-  diasSolicitadosDesdeVersion,
   fechaHastaDesdeVersionPatronB,
 } = require("../shared/patronBFechasSolicitud");
+const { resolvePatronBConsumoDesdeSolicitud } = require("../shared/opcionesConsumoSolicitud");
 const { evaluarGrillaTurnoEntorno } = require("./grillaTurnoEntornoGate");
 const { tokenHasRrhhLaborAccess } = require("../shared/laborProfile");
 const { validarFechasArticuloEnMotor } = require("../shared/validarFechasArticuloRuntime");
@@ -115,6 +115,7 @@ function failBase(ctx, codigos, mensajes, extra = {}) {
  *   versionId: string,
  *   fechaDesde: string,
  *   diasSolicitados?: number,
+ *   opcionConsumoId?: string | null,
  *   grupoTrabajoIdAncla?: string | null,
  *   authToken?: unknown,
  * }} params
@@ -127,6 +128,7 @@ async function validarEntornoOperativoSolicitud(params) {
     versionId,
     fechaDesde,
     diasSolicitados: diasIn,
+    opcionConsumoId,
     grupoTrabajoIdAncla,
     authToken,
   } = params;
@@ -175,13 +177,21 @@ async function validarEntornoOperativoSolicitud(params) {
     return failBase(ctx, ["PATRON_INVALIDO"], ["El artículo no tiene un patrón de saldo válido (B o C)."], { checks: buildChecks() });
   }
 
-  const diasVersion = diasSolicitadosDesdeVersion(versionData);
-  ctx.diasSolicitados =
-    Number.isFinite(Number(diasIn)) && Number(diasIn) > 0 ? Math.floor(Number(diasIn)) : diasVersion;
-  ctx.fechaHasta = fechaHastaDesdeVersionPatronB(ctx.fechaDesde, ctx.diasSolicitados);
+  const consumo = resolvePatronBConsumoDesdeSolicitud(versionData, {
+    opcion_consumo_id: opcionConsumoId || undefined,
+    dias_solicitados:
+      Number.isFinite(Number(diasIn)) && Number(diasIn) > 0 ? Math.floor(Number(diasIn)) : undefined,
+  });
+  if (!consumo.ok) {
+    const codigo = consumo.codigo || "OPCION_CONSUMO_INVALIDA";
+    return failBase(ctx, [codigo], [mensajeParaCodigo(codigo) || codigo], { checks: buildChecks() });
+  }
+  ctx.diasSolicitados = consumo.diasPedidos;
+  const versionEff = consumo.versionEff;
+  ctx.fechaHasta = fechaHastaDesdeVersionPatronB(ctx.fechaDesde, ctx.diasSolicitados, versionEff);
 
   const fechasVal = await validarFechasArticuloEnMotor(db, {
-    versionData,
+    versionData: versionEff,
     fechaDesde: ctx.fechaDesde,
     fechaHasta: ctx.fechaHasta,
     diasSolicitados: ctx.diasSolicitados,

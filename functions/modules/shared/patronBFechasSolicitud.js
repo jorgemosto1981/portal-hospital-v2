@@ -2,14 +2,24 @@
 
 /**
  * Días y fecha_hasta Patrón B para listado / preview (sin persistir).
- * El motor de alta MVP exige fecha_hasta === fecha_desde cuando el evento es 1 día.
+ * Multi-día en corridos: fecha_desde + (dias - 1) calendario.
  */
+
+const { readModoCalculo } = require("./validarFechasArticuloRuntime");
+const { MODO_COMPUTO_CORRIDOS } = require("./modoComputoCalendario");
+const { fechaHastaPorDiasCorridosInclusive } = require("./calendarInstitucionalCore");
+const {
+  versionTieneOpcionesConsumoActivas,
+} = require("./opcionesConsumoSolicitud");
 
 /**
  * @param {Record<string, unknown> | null | undefined} versionData
  * @returns {number}
  */
 function diasSolicitadosDesdeVersion(versionData) {
+  if (versionTieneOpcionesConsumoActivas(versionData)) {
+    return 1;
+  }
   const topes =
     versionData && typeof versionData === "object"
       ? versionData.bloque_topes_plazos_computo || {}
@@ -22,13 +32,22 @@ function diasSolicitadosDesdeVersion(versionData) {
 /**
  * @param {string} fechaDesdeYmd
  * @param {number} diasSolicitados
+ * @param {Record<string, unknown> | null | undefined} [versionData]
  * @returns {string}
  */
-function fechaHastaDesdeVersionPatronB(fechaDesdeYmd, diasSolicitados) {
+function fechaHastaDesdeVersionPatronB(fechaDesdeYmd, diasSolicitados, versionData) {
+  const desde = String(fechaDesdeYmd || "").slice(0, 10);
   const dias = Number.isFinite(diasSolicitados) && diasSolicitados > 0 ? Math.floor(diasSolicitados) : 1;
-  if (dias <= 1) return String(fechaDesdeYmd || "").slice(0, 10);
-  // Multi-día hábil: Fase 2.3+ (motor hoy solo 1 día calendario).
-  return String(fechaDesdeYmd || "").slice(0, 10);
+  if (dias <= 1) return desde;
+
+  if (versionData && typeof versionData === "object") {
+    const modo = readModoCalculo(versionData).modo;
+    if (modo === MODO_COMPUTO_CORRIDOS) {
+      return fechaHastaPorDiasCorridosInclusive(desde, dias);
+    }
+  }
+
+  return desde;
 }
 
 module.exports = { diasSolicitadosDesdeVersion, fechaHastaDesdeVersionPatronB };
