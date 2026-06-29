@@ -400,10 +400,16 @@ service cloud.firestore {
           || (c.telefono_fijo is string && c.telefono_fijo.size() <= 32));
     }
 
+    function solicitudMedAvisoDeclaracionGrupoFamiliarIdValid(id) {
+      return id is string
+        && id.matches('^gf_.+')
+        && id.size() >= 8
+        && id.size() <= 128;
+    }
+
     function solicitudMedAvisoFamiliarAtendidoValid(f) {
       return f is map
-        && f.declaracion_grupo_familiar_id is string
-        && f.declaracion_grupo_familiar_id.matches('^gf_[0-9A-HJKMNP-TV-Z]{26}$')
+        && solicitudMedAvisoDeclaracionGrupoFamiliarIdValid(f.declaracion_grupo_familiar_id)
         && f.familiar_id is string
         && f.familiar_id.size() >= 1
         && f.familiar_id.size() <= 64

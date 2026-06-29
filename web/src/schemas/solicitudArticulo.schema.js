@@ -60,7 +60,11 @@ export const declaracionClinicaAvisoSchema = z
 
 export const familiarAtendidoAvisoSchema = z
   .object({
-    declaracion_grupo_familiar_id: z.string().regex(/^gf_[0-9A-HJKMNP-TV-Z]{26}$/i),
+    declaracion_grupo_familiar_id: z
+      .string()
+      .min(8)
+      .max(128)
+      .regex(/^gf_/i, "declaracion_grupo_familiar_id debe comenzar con gf_"),
     familiar_id: z.string().min(1).max(64),
     nombre: z.string().min(1).max(120),
     apellido: z.string().min(1).max(120),

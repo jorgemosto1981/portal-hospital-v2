@@ -180,6 +180,8 @@ function medAvisoIncompletoPayload() {
         telefono_celular: "1166554433",
         domicilio_declarado: "Calle 1 100",
         permanece_en_domicilio: false,
+        usar_email_perfil: true,
+        email: "agente@hospital.test",
       },
     },
     vencimiento_plazo_certificado: venc,
@@ -189,6 +191,29 @@ function medAvisoIncompletoPayload() {
 await it("SOL_MED_AVISO_V1: agente crea aviso incompleto sin adjuntos", async () => {
   await assertSucceeds(
     pdb.doc("solicitudes_articulo/sol_01KQN9WXFXF69Z9DCT5YNJ3TS3").set(medAvisoIncompletoPayload()),
+  );
+});
+
+await it("SOL_MED_AVISO_V1: atención familiar con id DDJJ determinístico", async () => {
+  const payload = {
+    ...medAvisoPayloadBase(),
+    ingreso_medico: {
+      modo: "caja_negra",
+      tipo_ingreso_id: "cfg_tig_atencion_familiar",
+      es_licencia_incompleta: false,
+      adjuntos: [{ storage_path: "avisos-med/2026/cert.pdf" }],
+      declaracion_contacto: medAvisoPayloadBase().ingreso_medico.declaracion_contacto,
+      familiar_atendido: {
+        declaracion_grupo_familiar_id: `gf_${PER_PILOTO}_v1`,
+        familiar_id: "linea_0",
+        nombre: "Juan",
+        apellido: "Pérez",
+        dni: "30123456",
+      },
+    },
+  };
+  await assertSucceeds(
+    pdb.doc("solicitudes_articulo/sol_01KQN9WXFXF69Z9DCT5YNJ3TS6").set(payload),
   );
 });
 
