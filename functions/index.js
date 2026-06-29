@@ -30,6 +30,7 @@ const acreditarLaoBolsaAgente = require("./onCall/solicitudes/acreditarLaoBolsaA
 const solicitudArticuloTriggers = require("./triggers/solicitudArticuloLaoOnCreate");
 const solicitudPatronBTriggers = require("./triggers/solicitudArticuloPatronBOnCreate");
 const solicitudPatronCTriggers = require("./triggers/solicitudArticuloPatronCOnCreate");
+const solicitudMedAvisoTriggers = require("./triggers/solicitudArticuloMedAvisoOnCreate");
 const resolverContextoLaboralSolicitud = require("./onCall/solicitudes/resolverContextoLaboralSolicitud");
 const listarArticulosIngresoAgente = require("./onCall/solicitudes/listarArticulosIngresoAgente");
 const previsualizarSolicitudPatronB = require("./onCall/solicitudes/previsualizarSolicitudPatronB");
@@ -90,6 +91,7 @@ module.exports = {
   ...solicitudArticuloTriggers,
   ...solicitudPatronBTriggers,
   ...solicitudPatronCTriggers,
+  ...solicitudMedAvisoTriggers,
   ...resolverContextoLaboralSolicitud,
   ...listarArticulosIngresoAgente,
   ...previsualizarSolicitudPatronB,

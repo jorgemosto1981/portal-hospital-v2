@@ -14,7 +14,7 @@ import {
   buildSolicitudPatronCBorradorDocument,
 } from "../schemas/solicitudArticuloCreate.schema.js";
 import { buildSolicitudMedAvisoDocument } from "../schemas/solicitudArticulo.schema.js";
-import { calcularVencimientoPlazoCertificado } from "../../../shared/utils/licenciaMedicaParametrosCore.js";
+import { calcularVencimientoPlazoCertificadoDesdeInicioLicencia } from "../../../shared/utils/licenciaMedicaParametrosCore.js";
 import { leerPlazoHorasLicenciaIncompleta } from "./cfgParametrosSistemaService.js";
 import { ymdHoyBa } from "../features/solicitudes/ticketeraUtils.js";
 import { dbV2 } from "./firebase.js";
@@ -263,7 +263,8 @@ export async function crearAvisoMedicoCajaNegra(params) {
   let vencimientoTs;
   if (esIncompleta) {
     const horas = await leerPlazoHorasLicenciaIncompleta();
-    const venc = calcularVencimientoPlazoCertificado(new Date(), horas);
+    const inicioYmd = String(params.fechaInicioReposoEstimada || "").trim();
+    const venc = calcularVencimientoPlazoCertificadoDesdeInicioLicencia(inicioYmd, horas);
     vencimientoTs = Timestamp.fromDate(venc);
   }
 

@@ -38,6 +38,7 @@ function clampFechaNoRetroactiva(ymd) {
  *   telCelular: string,
  *   telFijo: string,
  *   domicilio: string,
+ *   domicilioAlternativo: string,
  *   usarEmailPerfil: boolean,
  *   email: string,
  *   permaneceEnDomicilio: boolean,
@@ -47,7 +48,13 @@ function armarDeclaracionContacto(p) {
   const usar = p.usarPerfil === true;
   const cel = usar ? p.perfilContacto.telefono_celular : String(p.telCelular || "").trim();
   const fijoRaw = usar ? p.perfilContacto.telefono_fijo : String(p.telFijo || "").trim();
-  const dom = usar ? p.perfilContacto.domicilio_declarado : String(p.domicilio || "").trim();
+  const dom = (() => {
+    if (p.permaneceEnDomicilio === false) {
+      const alt = String(p.domicilioAlternativo || "").trim();
+      if (alt.length >= 3) return alt;
+    }
+    return usar ? p.perfilContacto.domicilio_declarado : String(p.domicilio || "").trim();
+  })();
   const usarEmail = p.usarEmailPerfil === true;
   const mail = usarEmail ? p.perfilContacto.email : String(p.email || "").trim();
   return {
@@ -71,19 +78,17 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
   const [fechaInicioReposo, setFechaInicioReposoRaw] = useState(fechaMinimaYmd);
   const [fechaFinReposo, setFechaFinReposoRaw] = useState(fechaMinimaYmd);
   const [comentarioAgente, setComentarioAgente] = useState("");
+  const [modoAlta, setModoAltaRaw] = useState(/** @type {null | "con_certificado" | "sin_certificado"} */ (null));
   const [esLicenciaIncompleta, setEsLicenciaIncompleta] = useState(false);
+  const [aceptoPlazoProvisorio, setAceptoPlazoProvisorio] = useState(false);
   const [plazoHorasCertificado, setPlazoHorasCertificado] = useState(/** @type {number | null} */ (null));
-  const [avisoIncompletoVigente, setAvisoIncompletoVigente] = useState(
-    /** @type {{
-     *   solicitud_id: string,
-     *   resumen?: {
-     *     fecha_inicio_reposo_estimada?: string,
-     *     vencimiento_plazo_certificado_iso?: string | null,
-     *     tipo_ingreso_id?: string,
-     *     familiar_atendido?: Record<string, string> | null,
-     *     declaracion_contacto?: Record<string, unknown> | null,
-     *   },
-     * } | null} */ (null),
+  const [avisosProvisoriosVigentes, setAvisosProvisoriosVigentes] = useState(
+    /** @type {Array<{ solicitud_id: string, resumen?: Record<string, unknown> }>} */ ([]),
+  );
+  const [permiteNuevoProvisorio, setPermiteNuevoProvisorio] = useState(true);
+  const [maxProvisoriosVigentes, setMaxProvisoriosVigentes] = useState(2);
+  const [avisoCompletarActivo, setAvisoCompletarActivo] = useState(
+    /** @type {{ solicitud_id: string, resumen?: Record<string, unknown> } | null} */ (null),
   );
   const [completarModalAbierto, setCompletarModalAbierto] = useState(false);
   const [archivoCompletar, setArchivoCompletar] = useState(/** @type {File | null} */ (null));
@@ -99,7 +104,9 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
   );
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
-  const [exito, setExito] = useState(/** @type {{ solicitud_id: string, provisorio?: boolean } | null} */ (null));
+  const [exito, setExito] = useState(
+    /** @type {{ solicitud_id: string, provisorio?: boolean, fechaInicioLicenciaYmd?: string } | null} */ (null),
+  );
 
   const [perfilCargando, setPerfilCargando] = useState(false);
   const [perfilContacto, setPerfilContacto] = useState({
@@ -114,11 +121,10 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
   const [contactoTelCelular, setContactoTelCelular] = useState("");
   const [contactoTelFijo, setContactoTelFijo] = useState("");
   const [contactoDomicilio, setContactoDomicilio] = useState("");
-  const [sintomas, setSintomas] = useState("");
-  const [enfermedad, setEnfermedad] = useState("");
-  const [codigoCie, setCodigoCie] = useState("");
+  const [domicilioReposoAlternativo, setDomicilioReposoAlternativo] = useState("");
+  const [detalleClinicoPrincipal, setDetalleClinicoPrincipal] = useState("");
   const [detalleClinico, setDetalleClinico] = useState("");
-  const [permaneceEnDomicilio, setPermaneceEnDomicilio] = useState(/** @type {boolean | null} */ (null));
+  const [permaneceEnDomicilio, setPermaneceEnDomicilio] = useState(/** @type {boolean} */ (true));
 
   const [ddjjCargando, setDdjjCargando] = useState(false);
   const [ddjjDisponible, setDdjjDisponible] = useState(/** @type {Record<string, unknown> | null} */ (null));
@@ -127,15 +133,13 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
   );
   const [familiarAtendidoId, setFamiliarAtendidoId] = useState("");
 
-  const bloqueadoPorIncompleta = Boolean(avisoIncompletoVigente?.solicitud_id);
+  const tieneProvisoriosPendientes = avisosProvisoriosVigentes.length > 0;
   const fechaRef = clampFechaNoRetroactiva(fechaInicioReposo);
 
   const fechaRefCompletar = useMemo(() => {
-    const v = String(fechaInicioReposo || "").slice(0, 10);
-    if (RX_YMD.test(v)) return v;
-    const r = String(avisoIncompletoVigente?.resumen?.fecha_inicio_reposo_estimada || "").slice(0, 10);
+    const r = String(avisoCompletarActivo?.resumen?.fecha_inicio_reposo_estimada || "").slice(0, 10);
     return RX_YMD.test(r) ? r : fechaMinimaYmd;
-  }, [avisoIncompletoVigente, fechaInicioReposo, fechaMinimaYmd]);
+  }, [avisoCompletarActivo, fechaMinimaYmd]);
 
   const setFechaFinReposo = useCallback((val) => {
     const v = clampFechaNoRetroactiva(val);
@@ -148,22 +152,13 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
     setFechaFinReposoRaw((prev) => (prev < v ? v : prev));
   }, []);
 
-  const setFechaInicioReposoCompletar = useCallback((val) => {
-    const v = String(val || "").slice(0, 10);
-    if (!RX_YMD.test(v)) return;
-    setFechaInicioReposoRaw(v);
-    setFechaFinReposoRaw((prev) => (prev < v ? v : prev));
-  }, []);
-
   const setFechaFinReposoCompletar = useCallback(
     (val) => {
       const v = String(val || "").slice(0, 10);
       if (!RX_YMD.test(v)) return;
-      const min = String(fechaInicioReposo || "").slice(0, 10);
-      const floor = RX_YMD.test(min) ? min : fechaRefCompletar;
-      setFechaFinReposoRaw(v < floor ? floor : v);
+      setFechaFinReposoRaw(v < fechaRefCompletar ? fechaRefCompletar : v);
     },
-    [fechaInicioReposo, fechaRefCompletar],
+    [fechaRefCompletar],
   );
 
   const setTipoIngresoId = useCallback((id) => {
@@ -185,8 +180,49 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
   } = useLaoWizardGrupoAncla({
     personaId,
     fechaRefYmd: fechaRef,
-    enabled: /^per_/i.test(personaId) && !bloqueadoPorIncompleta,
+    enabled: /^per_/i.test(personaId),
+    anclaAutomaticaSiMultiples: true,
   });
+
+  const cargarAvisosProvisorios = useCallback(async () => {
+    if (!/^per_/i.test(personaId)) {
+      setAvisosProvisoriosVigentes([]);
+      setPermiteNuevoProvisorio(true);
+      return;
+    }
+    setBuscandoAvisoPendiente(true);
+    try {
+      const res = await callBuscarAvisoIncompletaVigente();
+      const data = res?.data;
+      /** @type {Array<{ solicitud_id: string, resumen?: Record<string, unknown> }>} */
+      let lista = [];
+      if (Array.isArray(data?.avisos)) {
+        lista = data.avisos
+          .map((row) => ({
+            solicitud_id: String(row?.solicitud_id || ""),
+            resumen: row?.resumen && typeof row.resumen === "object" ? row.resumen : undefined,
+          }))
+          .filter((row) => /^sol_/i.test(row.solicitud_id));
+      } else if (data?.ok && data.solicitud_id) {
+        lista = [
+          {
+            solicitud_id: String(data.solicitud_id),
+            resumen: data.resumen && typeof data.resumen === "object" ? data.resumen : undefined,
+          },
+        ];
+      }
+      setAvisosProvisoriosVigentes(lista);
+      setPermiteNuevoProvisorio(data?.permite_nuevo_provisorio !== false);
+      if (Number.isFinite(Number(data?.max_provisorios_vigentes))) {
+        setMaxProvisoriosVigentes(Math.floor(Number(data.max_provisorios_vigentes)));
+      }
+    } catch {
+      setAvisosProvisoriosVigentes([]);
+      setPermiteNuevoProvisorio(true);
+    } finally {
+      setBuscandoAvisoPendiente(false);
+    }
+  }, [personaId]);
 
   useEffect(() => {
     if (!/^per_/i.test(personaId)) return;
@@ -206,34 +242,18 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
 
   useEffect(() => {
     if (!/^per_/i.test(personaId)) {
-      setAvisoIncompletoVigente(null);
+      setAvisosProvisoriosVigentes([]);
       return;
     }
     let cancelled = false;
-    setBuscandoAvisoPendiente(true);
     (async () => {
-      try {
-        const res = await callBuscarAvisoIncompletaVigente();
-        const data = res?.data;
-        if (cancelled) return;
-        if (data?.ok && data.solicitud_id) {
-          setAvisoIncompletoVigente({
-            solicitud_id: String(data.solicitud_id),
-            resumen: data.resumen && typeof data.resumen === "object" ? data.resumen : undefined,
-          });
-        } else {
-          setAvisoIncompletoVigente(null);
-        }
-      } catch {
-        if (!cancelled) setAvisoIncompletoVigente(null);
-      } finally {
-        if (!cancelled) setBuscandoAvisoPendiente(false);
-      }
+      await cargarAvisosProvisorios();
+      if (cancelled) return;
     })();
     return () => {
       cancelled = true;
     };
-  }, [personaId]);
+  }, [personaId, cargarAvisosProvisorios]);
 
   useEffect(() => {
     if (!/^per_/i.test(personaId)) {
@@ -299,42 +319,48 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
   const onToggleContactoUsaPerfil = useCallback(
     (usaPerfil) => {
       setContactoUsaPerfil(usaPerfil);
+      setEmailUsaPerfil(usaPerfil);
       if (usaPerfil) {
         setContactoTelCelular(perfilContacto.telefono_celular);
         setContactoTelFijo(perfilContacto.telefono_fijo);
         setContactoDomicilio(perfilContacto.domicilio_declarado);
+        setContactoEmail(perfilContacto.email);
       }
       setError("");
     },
     [perfilContacto],
   );
 
+  const setModoAlta = useCallback((modo) => {
+    setModoAltaRaw(modo);
+    const inc = modo === "sin_certificado";
+    setEsLicenciaIncompleta(inc);
+    if (inc) {
+      setArchivo(null);
+      setAdjuntoSubido(null);
+      setAceptoPlazoProvisorio(false);
+    } else {
+      setAceptoPlazoProvisorio(false);
+    }
+    setError("");
+  }, []);
+
   const fechaFinRef = clampFechaNoRetroactiva(
     RX_YMD.test(fechaFinReposo) && fechaFinReposo >= fechaRef ? fechaFinReposo : fechaRef,
   );
 
   const declaracionClinicaPayload = useMemo(() => {
+    const principal = String(detalleClinicoPrincipal || "").trim();
     const payload = {
-      ...(sintomas.trim() ? { sintomas: sintomas.trim() } : {}),
-      ...(enfermedad.trim() ? { enfermedad: enfermedad.trim() } : {}),
-      ...(codigoCie.trim() ? { codigo_cie: codigoCie.trim() } : {}),
+      ...(principal ? { sintomas: principal } : {}),
       ...(detalleClinico.trim() ? { detalle: detalleClinico.trim() } : {}),
     };
     return Object.keys(payload).length ? payload : null;
-  }, [codigoCie, detalleClinico, enfermedad, sintomas]);
+  }, [detalleClinico, detalleClinicoPrincipal]);
 
-  const clinicaOk =
-    esLicenciaIncompleta && !bloqueadoPorIncompleta
-      ? true
-      : Boolean(
-          declaracionClinicaPayload &&
-            (declaracionClinicaPayload.sintomas ||
-              declaracionClinicaPayload.enfermedad ||
-              declaracionClinicaPayload.codigo_cie),
-        );
+  const clinicaOk = Boolean(declaracionClinicaPayload?.sintomas);
 
-  const fechaFinOk =
-    esLicenciaIncompleta && !bloqueadoPorIncompleta
+  const fechaFinOk = esLicenciaIncompleta
       ? true
       : RX_YMD.test(fechaFinRef) && fechaFinRef >= fechaRef;
 
@@ -344,30 +370,35 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
   }, [familiaresOpciones, familiarAtendidoId]);
 
   const declaracionContactoLista = useMemo(() => {
+    const omitirPermanenciaReposo = esLicenciaIncompleta && !completarModalAbierto;
     const dc = armarDeclaracionContacto({
       usarPerfil: contactoUsaPerfil,
       perfilContacto,
       telCelular: contactoTelCelular,
       telFijo: contactoTelFijo,
       domicilio: contactoDomicilio,
+      domicilioAlternativo: domicilioReposoAlternativo,
       usarEmailPerfil: emailUsaPerfil,
       email: contactoEmail,
-      permaneceEnDomicilio: permaneceEnDomicilio === true,
+      permaneceEnDomicilio: omitirPermanenciaReposo ? true : permaneceEnDomicilio === true,
     });
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dc.email);
-    return (
-      dc.telefono_celular.length >= 6 &&
-      dc.domicilio_declarado.length >= 3 &&
-      permaneceEnDomicilio !== null &&
-      emailOk
-    );
+    const domOk = omitirPermanenciaReposo
+      ? dc.domicilio_declarado.length >= 3
+      : permaneceEnDomicilio === false
+        ? String(domicilioReposoAlternativo || "").trim().length >= 3
+        : dc.domicilio_declarado.length >= 3;
+    return dc.telefono_celular.length >= 6 && domOk && emailOk;
   }, [
+    completarModalAbierto,
     contactoDomicilio,
     contactoEmail,
     contactoTelCelular,
     contactoTelFijo,
     contactoUsaPerfil,
+    domicilioReposoAlternativo,
     emailUsaPerfil,
+    esLicenciaIncompleta,
     perfilContacto,
     permaneceEnDomicilio,
   ]);
@@ -385,12 +416,7 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
     return raw;
   }, [fechaFinReposo, fechaRefCompletar]);
 
-  const clinicaOkCompletar = Boolean(
-    declaracionClinicaPayload &&
-      (declaracionClinicaPayload.sintomas ||
-        declaracionClinicaPayload.enfermedad ||
-        declaracionClinicaPayload.codigo_cie),
-  );
+  const clinicaOkCompletar = Boolean(declaracionClinicaPayload?.sintomas);
 
   const fechaFinOkCompletar =
     RX_YMD.test(fechaFinRefCompletar) && fechaFinRefCompletar >= fechaRefCompletar;
@@ -401,7 +427,7 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
     Boolean(adjuntoCompletarSubido?.storage_path) || Boolean(archivoCompletar);
 
   const puedeCompletar = useMemo(() => {
-    if (!bloqueadoPorIncompleta || !completarModalAbierto) return false;
+    if (!avisoCompletarActivo?.solicitud_id || !completarModalAbierto) return false;
     if (!/^per_/i.test(personaId)) return false;
     return (
       tieneAdjuntoCompletar &&
@@ -411,7 +437,7 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
       declaracionContactoLista
     );
   }, [
-    bloqueadoPorIncompleta,
+    avisoCompletarActivo,
     clinicaOkCompletar,
     completarModalAbierto,
     declaracionContactoLista,
@@ -423,14 +449,15 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
 
   const puedeEnviar = useMemo(() => {
     if (!/^per_/i.test(personaId)) return false;
-    if (bloqueadoPorIncompleta) return false;
+    if (modoAlta == null) return false;
     if (!grupoAnclaOk) return false;
     if (!fechaReposoValida || !fechaFinOk) return false;
     if (!declaracionContactoLista) return false;
     if (!familiarOk) return false;
-    if (!clinicaOk && !esLicenciaIncompleta) return false;
+    if (!clinicaOk) return false;
     if (esLicenciaIncompleta) {
-      // aviso provisorio sin certificado
+      if (!permiteNuevoProvisorio) return false;
+      if (!aceptoPlazoProvisorio) return false;
     } else if (!tieneAdjunto) {
       return false;
     }
@@ -442,15 +469,16 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
     }
     return true;
   }, [
-    bloqueadoPorIncompleta,
+    aceptoPlazoProvisorio,
     clinicaOk,
     declaracionContactoLista,
-    emailUsaPerfil,
     esLicenciaIncompleta,
     familiarOk,
     fechaFinOk,
     fechaReposoValida,
     grupoAnclaOk,
+    modoAlta,
+    permiteNuevoProvisorio,
     personaId,
     tieneAdjunto,
     tipoIngresoId,
@@ -463,13 +491,8 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
   }, []);
 
   const onToggleLicenciaIncompleta = useCallback((checked) => {
-    setEsLicenciaIncompleta(checked);
-    if (checked) {
-      setArchivo(null);
-      setAdjuntoSubido(null);
-    }
-    setError("");
-  }, []);
+    setModoAlta(checked ? "sin_certificado" : "con_certificado");
+  }, [setModoAlta]);
 
   const buildPayloadAlta = useCallback(() => {
     const declaracionContacto = armarDeclaracionContacto({
@@ -478,9 +501,10 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
       telCelular: contactoTelCelular,
       telFijo: contactoTelFijo,
       domicilio: contactoDomicilio,
+      domicilioAlternativo: domicilioReposoAlternativo,
       usarEmailPerfil: emailUsaPerfil,
       email: contactoEmail,
-      permaneceEnDomicilio: permaneceEnDomicilio === true,
+      permaneceEnDomicilio: esLicenciaIncompleta ? true : permaneceEnDomicilio === true,
     });
     const fin = esLicenciaIncompleta ? fechaRef : fechaFinRef;
     return {
@@ -501,21 +525,22 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
     contactoTelFijo,
     contactoUsaPerfil,
     declaracionClinicaPayload,
+    domicilioReposoAlternativo,
     emailUsaPerfil,
     esLicenciaIncompleta,
     familiarPayload,
     fechaFinRef,
     fechaMinimaYmd,
     fechaRef,
+    permaneceEnDomicilio,
     tipoIngresoId,
   ]);
 
   const hidratarFormularioCompletar = useCallback(() => {
-    const resumen = avisoIncompletoVigente?.resumen;
+    const resumen = avisoCompletarActivo?.resumen;
     if (!resumen) return;
     const inicio = String(resumen.fecha_inicio_reposo_estimada || "").slice(0, 10);
     if (RX_YMD.test(inicio)) {
-      setFechaInicioReposoRaw(inicio);
       setFechaFinReposoRaw(inicio);
     }
     const dc = resumen.declaracion_contacto;
@@ -530,21 +555,31 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
       if (dc.usar_email_perfil !== true) {
         setContactoEmail(String(dc.email || ""));
       }
-      setPermaneceEnDomicilio(dc.permanece_en_domicilio === true ? true : dc.permanece_en_domicilio === false ? false : null);
+      setPermaneceEnDomicilio(dc.permanece_en_domicilio === false ? false : true);
     }
     setArchivoCompletar(null);
     setAdjuntoCompletarSubido(null);
     setErrorCompletar("");
-  }, [avisoIncompletoVigente]);
+  }, [avisoCompletarActivo]);
 
-  const abrirCompletarModal = useCallback(() => {
+  const abrirCompletarModal = useCallback(
+    (aviso) => {
+      if (!aviso?.solicitud_id) return;
+      setAvisoCompletarActivo(aviso);
+      setCompletarModalAbierto(true);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!completarModalAbierto || !avisoCompletarActivo?.solicitud_id) return;
     hidratarFormularioCompletar();
-    setCompletarModalAbierto(true);
-  }, [hidratarFormularioCompletar]);
+  }, [avisoCompletarActivo, completarModalAbierto, hidratarFormularioCompletar]);
 
   const cerrarCompletarModal = useCallback(() => {
     if (enviandoCompletar) return;
     setCompletarModalAbierto(false);
+    setAvisoCompletarActivo(null);
     setErrorCompletar("");
     setArchivoCompletar(null);
     setAdjuntoCompletarSubido(null);
@@ -563,6 +598,7 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
       telCelular: contactoTelCelular,
       telFijo: contactoTelFijo,
       domicilio: contactoDomicilio,
+      domicilioAlternativo: domicilioReposoAlternativo,
       usarEmailPerfil: emailUsaPerfil,
       email: contactoEmail,
       permaneceEnDomicilio: permaneceEnDomicilio === true,
@@ -580,6 +616,7 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
     contactoTelFijo,
     contactoUsaPerfil,
     declaracionClinicaPayload,
+    domicilioReposoAlternativo,
     emailUsaPerfil,
     fechaFinRefCompletar,
     fechaRefCompletar,
@@ -588,11 +625,12 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
   ]);
 
   const validarPeriodoExclusivo = useCallback(
-    async (desde, hasta, excludeSolicitudId = "") => {
+    async (desde, hasta, excludeSolicitudId = "", opts = {}) => {
       await callValidarPeriodoAvisoMedicoExclusivo({
         fecha_desde: desde,
         fecha_hasta: hasta || desde,
         exclude_solicitud_id: excludeSolicitudId || undefined,
+        es_alta_licencia_incompleta: opts.esAltaLicenciaIncompleta === true,
       });
     },
     [],
@@ -611,7 +649,9 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
       }
 
       if (esLicenciaIncompleta) {
-        await validarPeriodoExclusivo(altaExtra.fechaInicioReposoEstimada, hastaPeriodo);
+        await validarPeriodoExclusivo(altaExtra.fechaInicioReposoEstimada, hastaPeriodo, "", {
+          esAltaLicenciaIncompleta: true,
+        });
         const res = await crearAvisoMedicoCajaNegra({
           personaId,
           tipoIngresoId,
@@ -621,7 +661,12 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
           esLicenciaIncompleta: true,
           ...altaExtra,
         });
-        setExito({ solicitud_id: res.solicitud_id, provisorio: true });
+        setExito({
+          solicitud_id: res.solicitud_id,
+          provisorio: true,
+          fechaInicioLicenciaYmd: altaExtra.fechaInicioReposoEstimada,
+        });
+        await cargarAvisosProvisorios();
         return;
       }
 
@@ -673,7 +718,7 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
   ]);
 
   const enviarCompletar = useCallback(async () => {
-    if (!puedeCompletar || enviandoCompletar || !avisoIncompletoVigente?.solicitud_id) return;
+    if (!puedeCompletar || enviandoCompletar || !avisoCompletarActivo?.solicitud_id) return;
     setEnviandoCompletar(true);
     setErrorCompletar("");
     try {
@@ -683,7 +728,7 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
       await validarPeriodoExclusivo(
         payload.fechaInicioReposoEstimada,
         hastaPeriodo,
-        avisoIncompletoVigente.solicitud_id,
+        avisoCompletarActivo.solicitud_id,
       );
 
       let adjunto = adjuntoCompletarSubido;
@@ -698,10 +743,10 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
         setAdjuntoCompletarSubido(adjunto);
       }
 
+      const solId = avisoCompletarActivo.solicitud_id;
       const res = await callActualizarAvisoMedicoIncompleto({
-        solicitud_id: avisoIncompletoVigente.solicitud_id,
+        solicitud_id: solId,
         adjuntos: [adjunto],
-        fecha_inicio_reposo_estimada: payload.fechaInicioReposoEstimada,
         fecha_fin_reposo_estimada: hastaPeriodo,
         declaracion_clinica: payload.declaracionClinica,
         declaracion_contacto: payload.declaracionContacto,
@@ -711,8 +756,9 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
         throw new Error(data?.mensaje || "No se pudo completar el aviso.");
       }
       setCompletarModalAbierto(false);
-      setExito({ solicitud_id: avisoIncompletoVigente.solicitud_id });
-      setAvisoIncompletoVigente(null);
+      setAvisoCompletarActivo(null);
+      setExito({ solicitud_id: solId });
+      await cargarAvisosProvisorios();
     } catch (e) {
       setErrorCompletar(e?.message || "No se pudo completar el aviso. Intentá de nuevo.");
     } finally {
@@ -722,8 +768,9 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
     adjuntoCompletarSubido,
     archivoCompletar,
     authUid,
-    avisoIncompletoVigente,
+    avisoCompletarActivo,
     buildPayloadCompletar,
+    cargarAvisosProvisorios,
     enviandoCompletar,
     puedeCompletar,
     validarPeriodoExclusivo,
@@ -735,8 +782,13 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
     setArchivo(null);
     setAdjuntoSubido(null);
     setComentarioAgente("");
+    setModoAltaRaw(null);
     setEsLicenciaIncompleta(false);
-    setPermaneceEnDomicilio(null);
+    setAceptoPlazoProvisorio(false);
+    setPermaneceEnDomicilio(true);
+    setDomicilioReposoAlternativo("");
+    setDetalleClinicoPrincipal("");
+    setDetalleClinico("");
   }, []);
 
   return {
@@ -746,16 +798,22 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
     setFechaInicioReposo,
     fechaFinReposo,
     setFechaFinReposo,
-    setFechaInicioReposoCompletar,
     setFechaFinReposoCompletar,
     fechaMinimaYmd,
     comentarioAgente,
     setComentarioAgente,
+    modoAlta,
+    setModoAlta,
     esLicenciaIncompleta,
     onToggleLicenciaIncompleta,
+    aceptoPlazoProvisorio,
+    setAceptoPlazoProvisorio,
     plazoHorasCertificado,
-    bloqueadoPorIncompleta,
-    avisoIncompletoVigente,
+    avisosProvisoriosVigentes,
+    permiteNuevoProvisorio,
+    maxProvisoriosVigentes,
+    tieneProvisoriosPendientes,
+    avisoCompletarActivo,
     buscandoAvisoPendiente,
     completarModalAbierto,
     abrirCompletarModal,
@@ -782,12 +840,8 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
     onToggleEmailUsaPerfil,
     contactoEmail,
     setContactoEmail,
-    sintomas,
-    setSintomas,
-    enfermedad,
-    setEnfermedad,
-    codigoCie,
-    setCodigoCie,
+    detalleClinicoPrincipal,
+    setDetalleClinicoPrincipal,
     detalleClinico,
     setDetalleClinico,
     contactoTelCelular,
@@ -796,6 +850,8 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
     setContactoTelFijo,
     contactoDomicilio,
     setContactoDomicilio,
+    domicilioReposoAlternativo,
+    setDomicilioReposoAlternativo,
     permaneceEnDomicilio,
     setPermaneceEnDomicilio,
     ddjjCargando,

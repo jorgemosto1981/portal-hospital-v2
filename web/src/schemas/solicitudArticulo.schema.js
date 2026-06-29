@@ -161,6 +161,18 @@ export const solicitudMedAvisoAltaInputSchema = solicitudMedAvisoAltaInputBase
           path: ["adjuntos"],
         });
       }
+      const clinInc = data.declaracionClinica || {};
+      const tieneManifestacionInc =
+        Boolean(String(clinInc.sintomas || "").trim()) ||
+        Boolean(String(clinInc.enfermedad || "").trim()) ||
+        Boolean(String(clinInc.codigo_cie || "").trim());
+      if (!tieneManifestacionInc) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Indicá síntomas, enfermedad o código CIE.",
+          path: ["declaracionClinica"],
+        });
+      }
       return;
     }
     if (!data.fechaFinReposoEstimada) {
@@ -252,7 +264,7 @@ export function buildSolicitudMedAvisoDocument(input, timestamps) {
   if (parsed.familiarAtendido) {
     ingreso.familiar_atendido = parsed.familiarAtendido;
   }
-  if (!esIncompleta && parsed.declaracionClinica) {
+  if (parsed.declaracionClinica) {
     ingreso.declaracion_clinica = parsed.declaracionClinica;
   }
   if (parsed.comentarioAgente) {

@@ -19,6 +19,7 @@ const { contarPersonasVigentesGrupoMes } = require("../shared/grillaMesAgenteCor
 const {
   ESTADO_SOLICITUD_EN_REVISION_JEFE,
   ESTADO_SOLICITUD_EN_REVISION_RRHH,
+  ESTADO_SOLICITUD_PENDIENTE_CLASIFICACION_MEDICA,
 } = require("../shared/solicitudesArticuloEstados");
 
 /**
@@ -84,7 +85,9 @@ async function assertPeriodoNoCerrado(firestore, personaId, fechaYmd, grupoTraba
 function esEstadoSolicitudEnTramite(estadoSolicitudId) {
   const est = String(estadoSolicitudId || "").trim();
   return (
-    est === ESTADO_SOLICITUD_EN_REVISION_JEFE || est === ESTADO_SOLICITUD_EN_REVISION_RRHH
+    est === ESTADO_SOLICITUD_EN_REVISION_JEFE ||
+    est === ESTADO_SOLICITUD_EN_REVISION_RRHH ||
+    est === ESTADO_SOLICITUD_PENDIENTE_CLASIFICACION_MEDICA
   );
 }
 

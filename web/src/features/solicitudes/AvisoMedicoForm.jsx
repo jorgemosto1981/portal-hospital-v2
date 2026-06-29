@@ -5,7 +5,33 @@ import {
   TIPO_INGRESO_MEDICO_ENFERMEDAD_PROPIA,
 } from "../../constants/solicitudesArticuloV2.js";
 import CompletarAvisoMedicoModal from "./CompletarAvisoMedicoModal.jsx";
+import AvisoMedicoDatosContacto from "./AvisoMedicoDatosContacto.jsx";
+import { textoExitoAvisoProvisorio, textoInformativoPlazoCertificado } from "./avisoMedicoPlazoUi.js";
+import {
+  etiquetaTipoAvisoMedico,
+  formatVencimientoProvisorioEs,
+  formatYmdEs,
+} from "./avisoMedicoProvisorioUi.js";
 import { TICKETERA } from "./ticketeraUi.js";
+
+const OPCIONES_MODO_ALTA = [
+  {
+    id: "con_certificado",
+    titulo: "Tengo certificado médico",
+    subtitulo: "Adjuntá el documento y completá el aviso en un solo paso.",
+  },
+  {
+    id: "sin_certificado",
+    titulo: "Aún no tengo certificado",
+    subtitulo: "Registrá un aviso provisorio y subí el certificado después (mismo trámite).",
+  },
+];
+
+function etiquetasGruposTrabajoVigentes(grupos) {
+  return (grupos || [])
+    .map((g) => String(g.etiqueta_ui || g.nombre || g.grupo_de_trabajo_id || "").trim())
+    .filter(Boolean);
+}
 
 const OPCIONES_TIPO = [
   {
@@ -32,28 +58,24 @@ export default function AvisoMedicoForm({
   setFechaInicioReposo,
   fechaFinReposo = "",
   setFechaFinReposo,
-  setFechaInicioReposoCompletar,
   setFechaFinReposoCompletar,
-  emailUsaPerfil = true,
-  onToggleEmailUsaPerfil,
-  contactoEmail = "",
-  setContactoEmail,
-  sintomas = "",
-  setSintomas,
-  enfermedad = "",
-  setEnfermedad,
-  codigoCie = "",
-  setCodigoCie,
+  fechaMinimaYmd = "",
+  modoAlta = null,
+  setModoAlta,
+  aceptoPlazoProvisorio = false,
+  setAceptoPlazoProvisorio,
+  detalleClinicoPrincipal = "",
+  setDetalleClinicoPrincipal,
   detalleClinico = "",
   setDetalleClinico,
-  fechaMinimaYmd = "",
-  comentarioAgente,
-  setComentarioAgente,
-  esLicenciaIncompleta = false,
-  onToggleLicenciaIncompleta,
+  domicilioReposoAlternativo = "",
+  setDomicilioReposoAlternativo,
   plazoHorasCertificado = null,
-  bloqueadoPorIncompleta = false,
-  avisoIncompletoVigente = null,
+  avisosProvisoriosVigentes = [],
+  permiteNuevoProvisorio = true,
+  maxProvisoriosVigentes = 2,
+  tieneProvisoriosPendientes = false,
+  avisoCompletarActivo = null,
   buscandoAvisoPendiente = false,
   completarModalAbierto = false,
   onAbrirCompletarModal,
@@ -67,22 +89,21 @@ export default function AvisoMedicoForm({
   archivo,
   onSeleccionarArchivo,
   gruposVigentes = [],
-  grupoAnclaId,
-  setGrupoAnclaId,
-  requiereSeleccionGrupo = false,
   gruposCargando = false,
   gruposError = "",
   perfilCargando = false,
-  perfilContacto = { telefono_celular: "", telefono_fijo: "", domicilio_declarado: "" },
+  perfilContacto = { telefono_celular: "", telefono_fijo: "", domicilio_declarado: "", email: "" },
   contactoUsaPerfil = true,
   onToggleContactoUsaPerfil,
+  contactoEmail = "",
+  setContactoEmail,
   contactoTelCelular = "",
   setContactoTelCelular,
   contactoTelFijo = "",
   setContactoTelFijo,
   contactoDomicilio = "",
   setContactoDomicilio,
-  permaneceEnDomicilio = null,
+  permaneceEnDomicilio = true,
   setPermaneceEnDomicilio,
   ddjjCargando = false,
   ddjjDisponible = null,
@@ -96,13 +117,19 @@ export default function AvisoMedicoForm({
   onEnviar,
   onReiniciar,
 }) {
-  const plazoLabel =
+  const plazoHoras =
     plazoHorasCertificado != null && Number.isFinite(plazoHorasCertificado)
-      ? String(plazoHorasCertificado)
-      : "24";
+      ? plazoHorasCertificado
+      : null;
 
   if (exito?.solicitud_id) {
     const provisorio = exito.provisorio === true;
+    const textoPlazo = provisorio
+      ? textoExitoAvisoProvisorio(
+          plazoHoras,
+          exito.fechaInicioLicenciaYmd || fechaInicioReposo,
+        )
+      : null;
     return (
       <div className="space-y-4">
         <div className={TICKETERA.confirmCard}>
@@ -110,15 +137,10 @@ export default function AvisoMedicoForm({
             {provisorio ? "Aviso provisorio registrado" : "Tu aviso fue recibido"}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-emerald-900/90">
-            {provisorio ? (
+            {provisorio ? textoPlazo : (
               <>
-                Tenés <strong>{plazoLabel} horas</strong> para subir el certificado médico sobre el mismo
-                trámite. Si vence el plazo sin certificado, el aviso puede invalidarse automáticamente.
-              </>
-            ) : (
-              <>
-                Medicina laboral revisará tu certificado y te notificará cuando haya novedades. No
-                necesitás elegir artículo ni tramos de sueldo en este paso.
+                El Médico Auditor revisará tu solicitud de licencia y se registrarán las novedades en este Portal
+                Digital. Podés consultar siempre el estado de tu solicitud.
               </>
             )}
           </p>
@@ -137,9 +159,10 @@ export default function AvisoMedicoForm({
   }
 
   const sinPersona = !claimsLoading && !/^per_/i.test(personaId);
-  const requierePeriodoCompleto = !esLicenciaIncompleta;
-  const ocultarCertificado = esLicenciaIncompleta;
-  const botonLabel = esLicenciaIncompleta
+  const requierePeriodoCompleto = modoAlta === "con_certificado";
+  const ocultarCertificado = modoAlta === "sin_certificado";
+  const mostrarFormulario = modoAlta != null;
+  const botonLabel = modoAlta === "sin_certificado"
     ? enviando
       ? "Registrando aviso…"
       : "Registrar aviso provisorio"
@@ -152,9 +175,9 @@ export default function AvisoMedicoForm({
       <header>
         <h1 className="text-xl font-semibold tracking-tight text-slate-900">Aviso de licencia médica</h1>
         <p className={`mt-1 ${TICKETERA.hubIntro}`}>
-          {bloqueadoPorIncompleta
-            ? "Tenés un aviso provisorio pendiente de certificado. Completalo antes de cargar uno nuevo."
-            : "Contanos si el reposo es para vos o para un familiar y adjuntá el certificado. Un médico auditor clasificará tu caso."}
+          {tieneProvisoriosPendientes
+            ? `Tenés ${avisosProvisoriosVigentes.length} aviso${avisosProvisoriosVigentes.length === 1 ? "" : "s"} provisorio${avisosProvisoriosVigentes.length === 1 ? "" : "s"} pendiente${avisosProvisoriosVigentes.length === 1 ? "" : "s"} de certificado. Podés registrar hasta ${maxProvisoriosVigentes} en paralelo si las fechas no se superponen.`
+            : "Elegí si tenés certificado o registrá un aviso provisorio. Un médico auditor clasificará tu caso."}
         </p>
       </header>
 
@@ -162,21 +185,45 @@ export default function AvisoMedicoForm({
         <p className={`text-sm ${TICKETERA.muted}`}>Verificando avisos pendientes…</p>
       ) : null}
 
-      {bloqueadoPorIncompleta && avisoIncompletoVigente?.solicitud_id ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-950">
-          <p className="font-medium">Completar solicitud existente</p>
-          <p className="mt-1 text-amber-900/90">
-            Tenés un aviso sin certificado vigente (ref.{" "}
-            <span className="font-mono text-xs">{avisoIncompletoVigente.solicitud_id}</span>). Subí el
-            documento dentro de las <strong>{plazoLabel} horas</strong> desde el aviso provisorio.
-          </p>
-          <button
-            type="button"
-            onClick={onAbrirCompletarModal}
-            className={`mt-3 ${TICKETERA.btnPrimary}`}
-          >
-            Completar solicitud existente
-          </button>
+      {tieneProvisoriosPendientes ? (
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-amber-950">Avisos provisorios vigentes</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {avisosProvisoriosVigentes.map((aviso) => {
+              const resumen = aviso.resumen || {};
+              const desde = resumen.fecha_inicio_reposo_estimada;
+              const vencIso = resumen.vencimiento_plazo_certificado_iso;
+              return (
+                <div
+                  key={aviso.solicitud_id}
+                  className="flex flex-col rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-950"
+                >
+                  <p className="font-semibold text-amber-950">{etiquetaTipoAvisoMedico(resumen.tipo_ingreso_id)}</p>
+                  <p className="mt-2">
+                    <span className="font-medium">Desde:</span> {formatYmdEs(desde)}
+                  </p>
+                  <p className="mt-1">
+                    <span className="font-medium">Vencimiento del plazo:</span>{" "}
+                    {formatVencimientoProvisorioEs(vencIso)}
+                  </p>
+                  <p className="mt-1 font-mono text-[10px] text-amber-900/70">{aviso.solicitud_id}</p>
+                  <button
+                    type="button"
+                    onClick={() => onAbrirCompletarModal?.(aviso)}
+                    className={`mt-3 ${TICKETERA.btnPrimary}`}
+                  >
+                    Completar con certificado
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          {!permiteNuevoProvisorio ? (
+            <p className="text-sm text-amber-900">
+              Ya alcanzaste el máximo de {maxProvisoriosVigentes} avisos provisorios vigentes. Completá uno para
+              registrar otro.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -184,7 +231,38 @@ export default function AvisoMedicoForm({
         <p className="text-sm text-amber-800">Tu sesión no tiene persona vinculada. Volvé a iniciar sesión.</p>
       ) : null}
 
-      {!bloqueadoPorIncompleta ? (
+      {!sinPersona && modoAlta == null ? (
+        <fieldset className={`${TICKETERA.card} ${TICKETERA.cardPad}`} disabled={enviando}>
+          <legend className={TICKETERA.label}>¿Cómo querés registrar el aviso?</legend>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {OPCIONES_MODO_ALTA.map((op) => {
+              const deshabilitado = op.id === "sin_certificado" && !permiteNuevoProvisorio;
+              return (
+              <button
+                key={op.id}
+                type="button"
+                disabled={deshabilitado}
+                onClick={() => setModoAlta?.(op.id)}
+                className={[
+                  "flex flex-col rounded-xl border px-3 py-4 text-left text-sm transition-colors",
+                  deshabilitado
+                    ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400"
+                    : "border-slate-200 bg-white hover:border-sky-300 hover:bg-sky-50/50",
+                ].join(" ")}
+              >
+                <span className="font-semibold text-slate-900">{op.titulo}</span>
+                <span className="mt-1 text-xs text-slate-600">{op.subtitulo}</span>
+                {deshabilitado ? (
+                  <span className="mt-2 text-xs text-amber-800">Máximo de avisos provisorios vigentes alcanzado.</span>
+                ) : null}
+              </button>
+            );
+            })}
+          </div>
+        </fieldset>
+      ) : null}
+
+      {mostrarFormulario ? (
         <fieldset className={`${TICKETERA.card} ${TICKETERA.cardPad}`} disabled={sinPersona || enviando}>
           <legend className={TICKETERA.label}>¿De qué se trata?</legend>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -258,12 +336,28 @@ export default function AvisoMedicoForm({
         </fieldset>
       ) : null}
 
-      {!bloqueadoPorIncompleta ? (
+      {mostrarFormulario ? (
       <>
       <div className={`${TICKETERA.card} ${TICKETERA.cardPad} space-y-4`}>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <p className="text-sm text-slate-700">
+            Modalidad:{" "}
+            <span className="font-medium text-slate-900">
+              {modoAlta === "sin_certificado" ? "Aviso provisorio" : "Con certificado"}
+            </span>
+          </p>
+          <button
+            type="button"
+            className="text-sm font-medium text-sky-800 underline"
+            onClick={() => setModoAlta?.(null)}
+            disabled={enviando}
+          >
+            Cambiar opción
+          </button>
+        </div>
         <div>
           <label htmlFor="fecha_inicio_reposo" className={TICKETERA.label}>
-            Fecha estimada de inicio del reposo
+            Fecha de inicio de la licencia <span className="text-red-600">*</span>
           </label>
           <input
             id="fecha_inicio_reposo"
@@ -280,7 +374,7 @@ export default function AvisoMedicoForm({
         {requierePeriodoCompleto ? (
           <div>
             <label htmlFor="fecha_fin_reposo" className={TICKETERA.label}>
-              Fecha estimada de fin del reposo
+              Fecha de fin de licencia <span className="text-red-600">*</span>
             </label>
             <input
               id="fecha_fin_reposo"
@@ -294,275 +388,99 @@ export default function AvisoMedicoForm({
           </div>
         ) : null}
 
+        <AvisoMedicoDatosContacto
+          disabled={sinPersona || enviando}
+          perfilContacto={perfilContacto}
+          contactoUsaPerfil={contactoUsaPerfil}
+          onElegirUsarPerfil={onToggleContactoUsaPerfil}
+          contactoTelCelular={contactoTelCelular}
+          setContactoTelCelular={setContactoTelCelular}
+          contactoTelFijo={contactoTelFijo}
+          setContactoTelFijo={setContactoTelFijo}
+          contactoDomicilio={contactoDomicilio}
+          setContactoDomicilio={setContactoDomicilio}
+          contactoEmail={contactoEmail}
+          setContactoEmail={setContactoEmail}
+          permaneceEnDomicilio={permaneceEnDomicilio}
+          setPermaneceEnDomicilio={setPermaneceEnDomicilio}
+          domicilioReposoAlternativo={domicilioReposoAlternativo}
+          setDomicilioReposoAlternativo={setDomicilioReposoAlternativo}
+          mostrarPermanenciaReposo={modoAlta !== "sin_certificado"}
+        />
+
         <fieldset className="space-y-3 border-t border-slate-100 pt-4" disabled={sinPersona || enviando}>
-            <legend className={TICKETERA.label}>Datos de contacto para este aviso</legend>
-            <p className="text-xs text-slate-600">
-              Confirmá si tu teléfono y domicilio del perfil están actualizados, o informá otros datos solo para
-              este trámite.
+          <legend className={TICKETERA.label}>Información clínica</legend>
+          <div>
+            <label htmlFor="detalle_clinico_principal" className={TICKETERA.label}>
+              Detallar Síntomas / Enfermedad / CIE <span className="text-red-600">*</span>
+            </label>
+            <textarea
+              id="detalle_clinico_principal"
+              rows={3}
+              maxLength={2000}
+              className={`mt-1 ${TICKETERA.input} resize-y`}
+              value={detalleClinicoPrincipal}
+              onChange={(e) => setDetalleClinicoPrincipal(e.target.value)}
+              placeholder="Síntomas, diagnóstico presunto o código CIE si lo conocés."
+            />
+          </div>
+          {modoAlta !== "sin_certificado" ? (
+          <div>
+            <label htmlFor="detalle_clinico" className={TICKETERA.label}>
+              {modoAlta === "con_certificado"
+                ? "Detallar tratamiento indicado, medicación y/o toda información complementaria (opcional)"
+                : "Detalles adicionales (opcional)"}
+            </label>
+            <textarea
+              id="detalle_clinico"
+              rows={2}
+              maxLength={2000}
+              className={`mt-1 ${TICKETERA.input} resize-y`}
+              value={detalleClinico}
+              onChange={(e) => setDetalleClinico(e.target.value)}
+            />
+          </div>
+          ) : null}
+        </fieldset>
+
+        {gruposCargando ? <p className={TICKETERA.muted}>Cargando tus grupos de trabajo…</p> : null}
+        {gruposError ? <p className="text-sm text-red-700">{gruposError}</p> : null}
+
+        {!gruposCargando && gruposVigentes.length > 0 ? (
+          <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-3 text-sm text-slate-800">
+            <p className={TICKETERA.label}>Tus grupos de trabajo actuales</p>
+            <p className="mt-1 text-xs text-slate-600">
+              La licencia se registra sobre tu persona y puede impactar en todos tus sectores. No tenés que
+              elegir un grupo para este trámite.
             </p>
-
-            <div className="space-y-2">
-              <label className="flex cursor-pointer items-start gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="contacto_origen"
-                  checked={contactoUsaPerfil}
-                  onChange={() => onToggleContactoUsaPerfil?.(true)}
-                  className="mt-0.5 h-4 w-4 border-slate-300 text-sky-600"
-                />
-                <span>Los datos de mi perfil son correctos</span>
-              </label>
-              <label className="flex cursor-pointer items-start gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="contacto_origen"
-                  checked={!contactoUsaPerfil}
-                  onChange={() => onToggleContactoUsaPerfil?.(false)}
-                  className="mt-0.5 h-4 w-4 border-slate-300 text-sky-600"
-                />
-                <span>Quiero usar otros datos solo para este aviso</span>
-              </label>
-            </div>
-
-            {contactoUsaPerfil ? (
-              <div className="rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-slate-800">
-                <p>
-                  <span className="font-medium">Teléfono:</span>{" "}
-                  {perfilContacto.telefono_celular || "—"}
-                  {perfilContacto.telefono_fijo ? ` / ${perfilContacto.telefono_fijo}` : ""}
-                </p>
-                <p className="mt-1">
-                  <span className="font-medium">Domicilio:</span> {perfilContacto.domicilio_declarado || "—"}
-                </p>
-                {!perfilContacto.telefono_celular || !perfilContacto.domicilio_declarado ? (
-                  <p className="mt-2 text-xs text-amber-800">
-                    Completá teléfono y domicilio en{" "}
-                    <Link to="/portal/mi-perfil" className="underline">
-                      Mi perfil
-                    </Link>{" "}
-                    o elegí “otros datos para este aviso”.
-                  </p>
-                ) : null}
-                <p className="mt-2">
-                  <span className="font-medium">Correo:</span> {perfilContacto.email || "—"}
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <label htmlFor="contacto_tel_cel" className={TICKETERA.label}>
-                    Teléfono celular
-                  </label>
-                  <input
-                    id="contacto_tel_cel"
-                    type="tel"
-                    className={`mt-1 ${TICKETERA.input}`}
-                    value={contactoTelCelular}
-                    onChange={(e) => setContactoTelCelular(e.target.value)}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label htmlFor="contacto_tel_fijo" className={TICKETERA.label}>
-                    Teléfono fijo (opcional)
-                  </label>
-                  <input
-                    id="contacto_tel_fijo"
-                    type="tel"
-                    className={`mt-1 ${TICKETERA.input}`}
-                    value={contactoTelFijo}
-                    onChange={(e) => setContactoTelFijo(e.target.value)}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label htmlFor="contacto_domicilio" className={TICKETERA.label}>
-                    Domicilio durante el aviso
-                  </label>
-                  <textarea
-                    id="contacto_domicilio"
-                    rows={2}
-                    maxLength={512}
-                    className={`mt-1 ${TICKETERA.input} resize-y`}
-                    value={contactoDomicilio}
-                    onChange={(e) => setContactoDomicilio(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2 border-t border-slate-100 pt-3">
-              <p className="text-sm font-medium text-slate-800">Correo electrónico</p>
-              <label className="flex cursor-pointer items-start gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="email_origen"
-                  checked={emailUsaPerfil}
-                  onChange={() => onToggleEmailUsaPerfil?.(true)}
-                  className="mt-0.5 h-4 w-4 border-slate-300 text-sky-600"
-                />
-                <span>Usar el correo de mi perfil</span>
-              </label>
-              <label className="flex cursor-pointer items-start gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="email_origen"
-                  checked={!emailUsaPerfil}
-                  onChange={() => onToggleEmailUsaPerfil?.(false)}
-                  className="mt-0.5 h-4 w-4 border-slate-300 text-sky-600"
-                />
-                <span>Otro correo solo para este aviso</span>
-              </label>
-              {!emailUsaPerfil ? (
-                <input
-                  type="email"
-                  className={TICKETERA.input}
-                  value={contactoEmail}
-                  onChange={(e) => setContactoEmail(e.target.value)}
-                  placeholder="nombre@ejemplo.com"
-                />
-              ) : null}
-            </div>
-
-            <div>
-              <p className={`${TICKETERA.label} mb-2`}>¿Permanecerás en el domicilio declarado durante el reposo?</p>
-              <div className="flex flex-wrap gap-4 text-sm">
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="radio"
-                    name="permanece_domicilio"
-                    checked={permaneceEnDomicilio === true}
-                    onChange={() => setPermaneceEnDomicilio?.(true)}
-                    className="h-4 w-4 border-slate-300 text-sky-600"
-                  />
-                  Sí
-                </label>
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="radio"
-                    name="permanece_domicilio"
-                    checked={permaneceEnDomicilio === false}
-                    onChange={() => setPermaneceEnDomicilio?.(false)}
-                    className="h-4 w-4 border-slate-300 text-sky-600"
-                  />
-                  No
-                </label>
-              </div>
-            </div>
-          </fieldset>
-
-        {requierePeriodoCompleto ? (
-          <fieldset className="space-y-3 border-t border-slate-100 pt-4" disabled={sinPersona || enviando}>
-            <legend className={TICKETERA.label}>Información clínica (aviso completo)</legend>
-            <p className="text-xs text-slate-600">Completá al menos uno: síntomas, enfermedad o código CIE.</p>
-            <div>
-              <label htmlFor="sintomas" className={TICKETERA.label}>
-                Síntomas
-              </label>
-              <textarea
-                id="sintomas"
-                rows={2}
-                maxLength={2000}
-                className={`mt-1 ${TICKETERA.input} resize-y`}
-                value={sintomas}
-                onChange={(e) => setSintomas(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="enfermedad" className={TICKETERA.label}>
-                Enfermedad / diagnóstico presunto
-              </label>
-              <input
-                id="enfermedad"
-                type="text"
-                maxLength={500}
-                className={`mt-1 ${TICKETERA.input}`}
-                value={enfermedad}
-                onChange={(e) => setEnfermedad(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="codigo_cie" className={TICKETERA.label}>
-                Código CIE (si lo conocés)
-              </label>
-              <input
-                id="codigo_cie"
-                type="text"
-                maxLength={16}
-                className={`mt-1 ${TICKETERA.input}`}
-                value={codigoCie}
-                onChange={(e) => setCodigoCie(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="detalle_clinico" className={TICKETERA.label}>
-                Detalle adicional
-              </label>
-              <textarea
-                id="detalle_clinico"
-                rows={2}
-                maxLength={2000}
-                className={`mt-1 ${TICKETERA.input} resize-y`}
-                value={detalleClinico}
-                onChange={(e) => setDetalleClinico(e.target.value)}
-                placeholder="Cualquier dato que consideres relevante para medicina laboral."
-              />
-            </div>
-          </fieldset>
+            <p className="mt-2 font-medium text-slate-900">
+              {etiquetasGruposTrabajoVigentes(gruposVigentes).join(" · ") || "—"}
+            </p>
+          </div>
         ) : null}
 
-        <>
-            {gruposCargando ? <p className={TICKETERA.muted}>Cargando grupo de trabajo…</p> : null}
-            {gruposError ? <p className="text-sm text-red-700">{gruposError}</p> : null}
+        {!gruposCargando && gruposVigentes.length === 0 && !gruposError ? (
+          <p className="text-sm text-amber-800">
+            No encontramos grupos de trabajo vigentes para la fecha elegida. Revisá tu situación laboral con
+            RRHH antes de continuar.
+          </p>
+        ) : null}
 
-            {requiereSeleccionGrupo ? (
-              <div>
-                <label htmlFor="grupo_ancla" className={TICKETERA.label}>
-                  Grupo de trabajo
-                </label>
-                <select
-                  id="grupo_ancla"
-                  className={`mt-1.5 ${TICKETERA.select}`}
-                  value={grupoAnclaId}
-                  onChange={(e) => setGrupoAnclaId(e.target.value)}
-                  disabled={sinPersona || enviando}
-                >
-                  <option value="">Seleccioná…</option>
-                  {gruposVigentes.map((g) => {
-                    const id = String(g.grupo_de_trabajo_id || "");
-                    const label = String(g.etiqueta_ui || g.nombre || id);
-                    return (
-                      <option key={id} value={id}>
-                        {label}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-            ) : null}
-
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-3">
+        {modoAlta === "sin_certificado" ? (
+          <div className="space-y-3 rounded-xl border border-sky-100 bg-sky-50/60 px-3 py-3 text-sm text-sky-950">
+            <p>{textoInformativoPlazoCertificado(plazoHoras, fechaInicioReposo)}</p>
+            <label className="flex cursor-pointer items-start gap-3">
               <input
                 type="checkbox"
                 className="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-600"
-                checked={esLicenciaIncompleta}
-                onChange={(e) => onToggleLicenciaIncompleta?.(e.target.checked)}
+                checked={aceptoPlazoProvisorio}
+                onChange={(e) => setAceptoPlazoProvisorio?.(e.target.checked)}
                 disabled={sinPersona || enviando}
               />
-              <span className="text-sm text-slate-800">
-                <span className="font-medium">¿No poseo certificado médico en este momento?</span>
-                <span className="mt-1 block text-xs text-slate-600">
-                  Podés registrar un aviso provisorio y subir el certificado después (mismo trámite).
-                </span>
-              </span>
+              <span className="font-medium">Comprendo y acepto</span>
             </label>
-
-            {esLicenciaIncompleta ? (
-              <div className="rounded-lg border border-sky-100 bg-sky-50/60 px-3 py-2.5 text-sm text-sky-950">
-                Tenés <strong>{plazoLabel} horas</strong> para cargar el certificado. Pasado ese plazo, el aviso
-                provisorio puede invalidarse si no completás la documentación.
-              </div>
-            ) : null}
-          </>
-
+          </div>
+        ) : null}
         {!ocultarCertificado ? (
           <div>
             <label htmlFor="certificado_medico" className={TICKETERA.label}>
@@ -585,24 +503,7 @@ export default function AvisoMedicoForm({
             )}
           </div>
         ) : null}
-
-        <div>
-            <label htmlFor="comentario_agente" className={TICKETERA.label}>
-              Comentario (opcional)
-            </label>
-            <textarea
-              id="comentario_agente"
-              rows={3}
-              maxLength={2000}
-              className={`mt-1.5 ${TICKETERA.input} min-h-[5rem] resize-y`}
-              value={comentarioAgente}
-              onChange={(e) => setComentarioAgente(e.target.value)}
-              placeholder="Ej.: certificado del efector, teléfono de contacto…"
-              disabled={sinPersona || enviando}
-            />
-          </div>
       </div>
-
       {error ? <div className={TICKETERA.alertError}>{error}</div> : null}
 
       <button
@@ -613,7 +514,7 @@ export default function AvisoMedicoForm({
       >
         {botonLabel}
       </button>
-      {!ocultarCertificado && !archivo && !sinPersona && !esLicenciaIncompleta ? (
+      {!ocultarCertificado && !archivo && !sinPersona && modoAlta === "con_certificado" ? (
         <p className="text-center text-xs text-slate-500">Adjuntá el certificado para habilitar el envío.</p>
       ) : null}
       </>
@@ -622,18 +523,15 @@ export default function AvisoMedicoForm({
       <CompletarAvisoMedicoModal
         abierto={completarModalAbierto}
         onCerrar={onCerrarCompletarModal}
-        avisoIncompletoVigente={avisoIncompletoVigente}
+        avisoIncompletoVigente={avisoCompletarActivo}
         plazoHorasCertificado={plazoHorasCertificado}
-        fechaInicioReposo={fechaInicioReposo}
-        setFechaInicioReposo={setFechaInicioReposoCompletar}
+        fechaInicioReposo={avisoCompletarActivo?.resumen?.fecha_inicio_reposo_estimada || ""}
         fechaFinReposo={fechaFinReposo}
         setFechaFinReposo={setFechaFinReposoCompletar}
         fechaMinimaYmd={fechaMinimaYmd}
         perfilContacto={perfilContacto}
         contactoUsaPerfil={contactoUsaPerfil}
         onToggleContactoUsaPerfil={onToggleContactoUsaPerfil}
-        emailUsaPerfil={emailUsaPerfil}
-        onToggleEmailUsaPerfil={onToggleEmailUsaPerfil}
         contactoEmail={contactoEmail}
         setContactoEmail={setContactoEmail}
         contactoTelCelular={contactoTelCelular}
@@ -644,12 +542,10 @@ export default function AvisoMedicoForm({
         setContactoDomicilio={setContactoDomicilio}
         permaneceEnDomicilio={permaneceEnDomicilio}
         setPermaneceEnDomicilio={setPermaneceEnDomicilio}
-        sintomas={sintomas}
-        setSintomas={setSintomas}
-        enfermedad={enfermedad}
-        setEnfermedad={setEnfermedad}
-        codigoCie={codigoCie}
-        setCodigoCie={setCodigoCie}
+        domicilioReposoAlternativo={domicilioReposoAlternativo}
+        setDomicilioReposoAlternativo={setDomicilioReposoAlternativo}
+        detalleClinicoPrincipal={detalleClinicoPrincipal}
+        setDetalleClinicoPrincipal={setDetalleClinicoPrincipal}
         detalleClinico={detalleClinico}
         setDetalleClinico={setDetalleClinico}
         archivo={archivoCompletar}

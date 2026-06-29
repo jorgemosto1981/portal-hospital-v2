@@ -388,6 +388,57 @@ Response: `solicitud_id`, `estado_solicitud_id`, `vencimiento_plazo_certificado`
 - Vista RRHH ampliada: incluir incompletas con badge **“Provisoria”** y countdown hasta `vencimiento_plazo_certificado`.
 - Incompletas vencidas: ocultar de “completar” agente; mostrar en panel incumplimientos.
 
+### 5.9 Proyección grilla operativa (`asistencia_diaria` + `vis_*`)
+
+**Principio:** el aviso médico y la licencia médica resultante son **la misma solicitud** (`sol_*`). Deben registrarse en grilla con el **mismo patrón MDC** que el resto de artículos: doble capa materializada por día y por `gdt_*` involucrado.
+
+| Capa | Colección / campo | Rol |
+|------|-------------------|-----|
+| **Asistencia diaria** | `asistencia_diaria/{asi_*}.aportes_normativos.{sol_id}` | Registro institucional del trámite/licencia por día (estado instancia, artículo cuando exista, `codigo_grilla`, ancla). |
+| **Vista grilla** | `vistas_grilla_mes_agente/{vis_*}.dias[DD].eventos[]` | Lo que ve RRHH/jefe/agente en calendario (`codigo_grilla`, color, `estado_solicitud_id`, `nivel_ocupacion_dia_id`). |
+
+Referencia de pipeline: [`ANALISIS_IMPACTO_GRILLA_ARTICULOS_1919_V2.md`](./ANALISIS_IMPACTO_GRILLA_ARTICULOS_1919_V2.md) §3 · [`mdcWorkerCore.js`](../../functions/modules/shared/mdcWorkerCore.js) · [`mdcFanOutVis.js`](../../functions/modules/shared/mdcFanOutVis.js).
+
+**Identidad visual pre-clasificación (Modo A):**
+
+| Situación | `codigo_grilla` | Color UI (MDC pendiente) | `nivel_ocupacion_dia_id` |
+|-----------|-----------------|--------------------------|---------------------------|
+| Aviso **provisorio** (`es_licencia_incompleta`) | `LM-P` | Naranja (`#F59E0B`) | `cfg_nod_exclusivo` |
+| Aviso **completo** pendiente auditoría | `LM` | Naranja | `cfg_nod_exclusivo` |
+| Post-clasificación **aprobada** | `visualizacion.codigo_grilla` del `art_*` clasificado | Azul (`#3B82F6`) | Según versión publicada |
+
+Rango de días proyectado: `fecha_inicio_reposo_estimada` → `fecha_fin_reposo_estimada` (hasta clasificación); tras clasificación, **`fecha_desde` / `fecha_hasta` definitivas** del auditor (resincronizar si el rango cambia).
+
+#### 5.9.1 Matriz estado solicitud → comando MDC → efecto en `asi_*` / `vis_*`
+
+Un **mismo `sol_id`** debe **mutar** en asistencia y grilla cuando cambia `estado_solicitud_id` o el contenido normativo (artículo, fechas, código). No crear un segundo documento de solicitud.
+
+| Transición (evento) | `estado_solicitud_id` destino | Comando MDC | Efecto esperado |
+|---------------------|-------------------------------|-------------|-----------------|
+| Alta aviso (create agente) | `cfg_esa_pendiente_clasificacion_medica` | `PROYECTAR_PENDIENTE` | Escribe/merge `aportes_normativos.{sol_id}` pendiente; agrega evento en `vis_*` por día (naranja, `LM-P` o `LM`). |
+| Completar certificado (§5.6) | *(idem pendiente clasificación)* | Resync: `REVERTIR` rango anterior si cambió + `PROYECTAR_PENDIENTE` | Actualiza código (`LM-P`→`LM`) y/o días en `asi_*` y `eventos[]`. |
+| Clasificación favorable ≤15 d | `cfg_esa_aprobada` | `CONSOLIDAR_APROBADO` | `aportes_normativos` aprobado; evento azul con `codigo_grilla` del artículo; `licenciaCubreDiaFichada` según reglas F. |
+| Clasificación favorable >15 d | `cfg_esa_esperando_dictamen_junta` | `PROYECTAR_PENDIENTE` *(actualizar metadatos)* | Mantiene cobertura/aviso en grilla **sin** consumo S_MED; puede actualizar copy/código intermedio (`LM` + badge junta en bandeja). |
+| Dictamen junta favorable | `cfg_esa_aprobada` | `CONSOLIDAR_APROBADO` | Igual fila aprobada ≤15 d. |
+| Rechazo auditor / dictamen desfavorable / vencimiento incompleta (§5.7) | `cfg_esa_rechazada` | `REVERTIR_PROYECCION` | Quita evento de `vis_*` y limpia aporte en `asi_*` para el rango afectado. |
+
+**Orquestación propuesta (cerrar en código):**
+
+| Pieza | Responsabilidad |
+|-------|-----------------|
+| `onSolicitudArticuloMedAvisoOnCreate` | Disparar primera proyección al alta. |
+| `actualizarAvisoMedicoIncompleto` | Resincronizar tras completar certificado. |
+| `clasificarSolicitudMedicaAuditor` | Tras `update` exitoso → MDC según destino (`CONSOLIDAR` / mantener pendiente / `REVERTIR` si rechazo). |
+| `registrarDictamenJuntaMedica` (P4.2) | `CONSOLIDAR_APROBADO` o `REVERTIR_PROYECCION`. |
+| `procesarVencimientosLicenciaIncompleta` (§5.7) | `REVERTIR_PROYECCION` + cierre `sol_*`. |
+| `aplicarLicenciaMedicaAprobada` (§6) | S_MED + persistencia tramos + **fan-out MDC aprobado** (mismo `sol_id`). |
+
+**Idempotencia:** reutilizar `mdc_comandos_aplicados`; en resync (completar / cambio de fechas) limpiar idempotencia del comando antes de reemitir (patrón `avisoMedicoGrillaMdcCore.resincronizarProyeccionAvisoMedicoGrilla`).
+
+**Gobernanza período cerrado:** `cfg_esa_pendiente_clasificacion_medica` cuenta como **en trámite** para gates de liquidación (misma familia que `en_revision_jefe`).
+
+**Fuera de alcance V1:** pintar sub-franjas parciales en celda; el aviso Caja Negra V1 es **día exclusivo** hasta que la versión del artículo clasificado indique `cfg_nod_parcial`.
+
 ---
 
 ## 6. Reutilización del motor P4.1 (sin reescribir matemática)
@@ -470,11 +521,13 @@ Hoy: `allow create` para aviso completo; **`allow update, delete: if false`** gl
 | 1 | Seed estados + `cfg_tig_*` + **`cfg_parametros_sistema`** | Este RFC | **Hecho** (param LM en seed; aplicar en piloto) |
 | 2 | Zod `SOL_MED_AVISO_V1` + Rules create | §8.1 | **Parcial** — solo aviso **completo** |
 | 2a | UI agente completa + Storage + `crearAvisoMedicoCajaNegra` | — | **Hecho** P4.3 |
-| 2b | Incompleta + `vencimiento_plazo_certificado` (param §2.4) + §5.6 | §0.2 | Pendiente |
-| 2c | Job vencimiento §5.7 | 2b | **Después** del primer persist exitoso incompleta/completa |
-| 3 | Callable clasificar + enganche P4.1 | Motor existente | Pendiente |
+| 2b | Incompleta + `vencimiento_plazo_certificado` (param §2.4) + §5.6 | §0.2 | **Hecho** (UI + callable completar) |
+| 2c | Job vencimiento §5.7 | 2b | Pendiente |
+| **2d** | **Grilla MDC aviso** — `asi_*` + `vis_*` en alta y completar (§5.9) | 2b | **Hecho** (trigger create + resync completar; códigos `LM-P` / `LM`) |
+| 3 | Callable clasificar + enganche P4.1 | Motor existente | **Parcial** — callable + tramos preview; MDC post-clasificación en **3a** |
+| **3a** | **MDC post-auditoría** — mutación estado en `asi_*`/`vis_*` (§5.9.1) | 3 + `aplicarLicenciaMedicaAprobada` | **Parcial** — **Hecho** vía `clasificarSolicitudMedicaAuditor` + `mutarEstadoSolicitudMedicaMdc` (rechazo / aprobada / esperando junta); pendiente job §5.7, dictamen junta P4.2 y `aplicarLicenciaMedicaAprobada` |
 | 4 | Bandeja auditor §5.8 | 3 | Pendiente |
-| 5 | Junta (P4.2) + MDC | Estados | Pendiente |
+| 5 | Junta (P4.2) + MDC dictamen | 3a | Pendiente |
 | 6 | Matriz UAT caja negra | — | Pendiente |
 
 **Orden recomendado al retomar código:** **2b (persist aviso incompleta + completar)** → smoke agente → **2c (job)** → **3 (auditor)**. No invertir: el job sin create/completar no aporta UAT.
@@ -507,3 +560,5 @@ El archivo [`RFC_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md`](./RFC_P4_LICENCIAS_MEDIC
 | 2026-06-26 | P4.3 UI agente: `/portal/solicitudes/aviso-medico`, Storage, servicio create (**solo aviso completo** — ver delta §0.2) |
 | 2026-06-26 | **Addendum Licencia Incompleta:** mismo `sol_id`, plazos `cfg_parametros_sistema`, §5.6–5.8; pausa código hasta alinear Zod/Rules |
 | 2026-06-26 | **§0.3 Gobernanza** (G1–G4), **§8** inmutabilidad agente, **§9** estado as-built + prompt Cursor |
+| 2026-06-29 | **§5.9** proyección `asi_*`/`vis_*`, matriz MDC por mutación de estado; §9 ítems **2d** y **3a** |
+| 2026-06-29 | **Código 3a:** `mutarEstadoSolicitudMedicaMdc.js` + enganche en `clasificarSolicitudMedicaAuditorCore` |

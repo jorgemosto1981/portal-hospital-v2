@@ -2,6 +2,10 @@
 
 const { FieldValue } = require("./context");
 const { SCHEMA_MED_AVISO, ESTADO_PENDIENTE_CLASIFICACION } = require("./avisoMedicoCajaNegraCore");
+const { resolverRangoYmdAvisoMedico } = require("./avisoMedicoGrillaMdcPayload");
+const {
+  mutarEstadoSolicitudMedicaMdc,
+} = require("./mutarEstadoSolicitudMedicaMdc");
 const { iterarYmdInclusive } = require("./mdcRdaDocumentIds");
 const {
   esLicenciaMedicaCortaAnual,
@@ -114,6 +118,8 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
       : {}),
   };
 
+  const rangoProyeccionAnterior = resolverRangoYmdAvisoMedico(d);
+
   if (!dictamenFavorable) {
     await ref.update({
       estado_solicitud_id: ESTADO_RECHAZADA,
@@ -123,11 +129,17 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
       },
       actualizado_en: FieldValue.serverTimestamp(),
     });
+    const mdc = await mutarEstadoSolicitudMedicaMdc(db, {
+      solicitudId,
+      estadoDestino: ESTADO_RECHAZADA,
+      rangoProyeccionAnterior,
+    });
     return {
       ok: true,
       solicitud_id: solicitudId,
       estado_solicitud_id: ESTADO_RECHAZADA,
       mensaje_ui: "Solicitud rechazada por medicina laboral.",
+      mdc_mutacion: mdc,
     };
   }
 
@@ -194,6 +206,12 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
 
   await ref.update(patch);
 
+  const mdc = await mutarEstadoSolicitudMedicaMdc(db, {
+    solicitudId,
+    estadoDestino,
+    rangoProyeccionAnterior,
+  });
+
   return {
     ok: true,
     solicitud_id: solicitudId,
@@ -204,6 +222,7 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
     mensaje_ui: requiereJunta
       ? "Clasificación registrada. La solicitud quedó a la espera del dictamen de junta médica."
       : "Licencia médica otorgada. Medicina laboral aplicó los tramos de haberes.",
+    mdc_mutacion: mdc,
   };
 }
 

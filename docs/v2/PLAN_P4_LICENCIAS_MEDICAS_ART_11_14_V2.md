@@ -119,6 +119,40 @@ flowchart LR
 - `PatronBPreviewInfo` / equivalente C: bloque **Tramo de haberes proyectado** (100/60/sin goce).
 - `validarEntornoOperativoSolicitud`: gates adicionales si junta pendiente o tramo sin goce puro (warning, no bloqueo salvo política).
 
+### P4.3b — Grilla operativa (`asistencia_diaria` + `vistas_grilla_mes_agente`)
+
+**Requisito de negocio:** los avisos provisorios y completos deben **verse en grilla** y quedar **registrados** como cualquier licencia, respetando las características de cada fase (código, color, ocupación del día, rango de fechas). El **mismo `solicitud_id`** acompaña todo el ciclo hasta cierre; los cambios de estado por auditoría médica, junta o vencimiento documental deben **actualizar** los registros materializados, no duplicar solicitudes.
+
+**Modelo (alineado a [`RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md`](./RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md) §5.9):**
+
+```mermaid
+stateDiagram-v2
+  [*] --> ProyectadoPendiente: create / completar
+  ProyectadoPendiente: asi_* + vis_* naranja LM-P o LM
+  ProyectadoPendiente --> ConsolidadoAprobado: auditor/junta APROBADA
+  ProyectadoPendiente --> Revertido: RECHAZADA / vencimiento incompleta
+  ConsolidadoAprobado: asi_* + vis_* azul codigo art_*
+  Revertido: sin evento sol_id en vis_*
+```
+
+| Fase P4 | Entrega grilla | Estado implementación |
+|---------|----------------|------------------------|
+| Alta aviso + completar certificado | `PROYECTAR_PENDIENTE` → `asi_*` + `vis_*` (`LM-P` / `LM`) | ✅ código rama (`avisoMedicoGrillaMdc*`, trigger onCreate, resync completar) |
+| Clasificación auditor | `CONSOLIDAR_APROBADO` o mantener pendiente (junta) o `REVERTIR` (rechazo) | ✅ `mutarEstadoSolicitudMedicaMdc` enganchado en `clasificarSolicitudMedicaAuditorCore` |
+| Dictamen junta (P4.2) | `CONSOLIDAR` / `REVERTIR` | ❌ |
+| Job vencimiento incompleta | `REVERTIR` | ❌ |
+| `aplicarLicenciaMedicaAprobada` | S_MED + MDC aprobado mismo `sol_id` | ❌ |
+
+**Criterios de aceptación (UAT grilla):**
+
+1. Día de inicio de reposo con aviso provisorio muestra chip **`LM-P`** naranja en grilla del `gdt_*` ancla (y fan-out a grupos vigentes).
+2. Tras completar certificado, mismo `sol_id` pasa a **`LM`** (y extiende días si cambió `fecha_fin_reposo_estimada`).
+3. Tras clasificación favorable, mismo `sol_id` muestra **`codigo_grilla` del artículo** en azul, con `aportes_normativos` en estado aprobado.
+4. Tras rechazo o vencimiento sin certificado, desaparece el evento de la celda y se limpia el aporte diario.
+5. Modal detalle grilla (`obtenerResumenSolicitudArticuloGrilla`) muestra fechas estimadas y etiqueta de aviso pre-clasificación.
+
+**Dependencias técnicas:** despliegue **Functions** (trigger + callables); avisos históricos sin proyección → callable `reprocesarMdcSolicitudPatronB` con `solicitud_id` en estado pendiente clasificación.
+
 ---
 
 ### P4.4 — Seeds, deploy y UAT
@@ -142,6 +176,7 @@ flowchart LR
 | Patrón C borrador + trigger | ✅ base; extender médico |
 | Acumulador anual Art. 14 | ❌ P4.1 |
 | Estado junta médica | ❌ P4.0 catálogo + P4.2 |
+| **MDC grilla aviso (asi_* / vis_*)** | **Parcial** — alta + completar + clasificar auditor ✅; job vencimiento y dictamen junta ❌ |
 | Fichas LINEAMIENTOS Bloque B completas | ⏳ redacción en paralelo a P4.0 |
 
 ---
@@ -152,7 +187,7 @@ flowchart LR
 |------|--------|
 | 1 | `git checkout master` · `git pull` · `git checkout -b feat/1919-p4-licencias-medicas` |
 | 2 | Commit `docs(1919): plan y RFC borrador P4 licencias médicas` (P4.0 doc only) |
-| 3 | PRs acotados: P4.1 motor → P4.2 workflow → P4.3 UI → P4.4 UAT |
+| 3 | PRs acotados: P4.1 motor → P4.2 workflow → P4.3 UI → **P4.3b grilla MDC** → P4.4 UAT |
 | 4 | Tag `1919-p4-licencias-medicas` en merge a `master` |
 
 **Convención commits:** prefijo `1919:` o `feat(1919):` / `fix(1919):` como en P5.
@@ -174,4 +209,5 @@ Detalle técnico: [`RFC_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md`](./RFC_P4_LICENCIA
 
 ## 6. Próximo paso inmediato
 
-Implementación **P4.1** (`runLicenciaMedicaTramosV2` / Fase `S_MED`) tras merge del RFC en la rama.
+1. **P4.3b (cierre):** job vencimiento incompleta §5.7 (`REVERTIR_PROYECCION`), dictamen junta P4.2 y `aplicarLicenciaMedicaAprobada` según matriz §5.9.1 del RFC Caja Negra. *(Clasificación auditor → MDC ya enganchada en `mutarEstadoSolicitudMedicaMdc`.)*
+2. **P4.1:** `runLicenciaMedicaTramosV2` / Fase `S_MED` tras merge del RFC en la rama.

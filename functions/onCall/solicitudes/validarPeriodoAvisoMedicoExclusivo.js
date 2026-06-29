@@ -13,11 +13,13 @@ const validarPeriodoAvisoMedicoExclusivo = onCall(async (request) => {
   const excludeSolicitudId =
     typeof d.exclude_solicitud_id === "string" ? d.exclude_solicitud_id.trim() : "";
 
+  const esAltaLicenciaIncompleta = d.es_alta_licencia_incompleta === true;
   const result = await validarPeriodoExclusivoAvisoMedico(db, {
     titularPersonaId,
     fechaDesde,
     fechaHasta: fechaHasta || fechaDesde,
     excludeSolicitudId,
+    esAltaLicenciaIncompleta,
   });
 
   if (!result.ok) {

@@ -1,23 +1,13 @@
 import { Link } from "react-router-dom";
 
 import { TIPO_INGRESO_MEDICO_ATENCION_FAMILIAR } from "../../constants/solicitudesArticuloV2.js";
+import AvisoMedicoDatosContacto from "./AvisoMedicoDatosContacto.jsx";
 import { TICKETERA } from "./ticketeraUi.js";
 
-function formatYmdEs(ymd) {
-  const m = String(ymd || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return "—";
-  return `${m[3]}/${m[2]}/${m[1]}`;
-}
-
-function formatIsoEs(iso) {
-  const d = new Date(String(iso || ""));
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("es-AR", {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: "America/Argentina/Buenos_Aires",
-  });
-}
+import {
+  formatVencimientoProvisorioEs,
+  formatYmdEs,
+} from "./avisoMedicoProvisorioUi.js";
 
 function textoPlazoRestante(iso) {
   const fin = new Date(String(iso || "")).getTime();
@@ -43,15 +33,12 @@ export default function CompletarAvisoMedicoModal({
   avisoIncompletoVigente = null,
   plazoHorasCertificado = null,
   fechaInicioReposo = "",
-  setFechaInicioReposo,
   fechaFinReposo = "",
   setFechaFinReposo,
   fechaMinimaYmd = "",
   perfilContacto = { telefono_celular: "", telefono_fijo: "", domicilio_declarado: "", email: "" },
   contactoUsaPerfil = true,
   onToggleContactoUsaPerfil,
-  emailUsaPerfil = true,
-  onToggleEmailUsaPerfil,
   contactoEmail = "",
   setContactoEmail,
   contactoTelCelular = "",
@@ -60,14 +47,12 @@ export default function CompletarAvisoMedicoModal({
   setContactoTelFijo,
   contactoDomicilio = "",
   setContactoDomicilio,
-  permaneceEnDomicilio = null,
+  permaneceEnDomicilio = true,
   setPermaneceEnDomicilio,
-  sintomas = "",
-  setSintomas,
-  enfermedad = "",
-  setEnfermedad,
-  codigoCie = "",
-  setCodigoCie,
+  domicilioReposoAlternativo = "",
+  setDomicilioReposoAlternativo,
+  detalleClinicoPrincipal = "",
+  setDetalleClinicoPrincipal,
   detalleClinico = "",
   setDetalleClinico,
   archivo = null,
@@ -80,10 +65,6 @@ export default function CompletarAvisoMedicoModal({
   if (!abierto || !avisoIncompletoVigente?.solicitud_id) return null;
 
   const resumen = avisoIncompletoVigente.resumen || {};
-  const plazoLabel =
-    plazoHorasCertificado != null && Number.isFinite(plazoHorasCertificado)
-      ? String(plazoHorasCertificado)
-      : "24";
   const esFamiliar = resumen.tipo_ingreso_id === TIPO_INGRESO_MEDICO_ATENCION_FAMILIAR;
   const fam = resumen.familiar_atendido;
   const fechaDesde = resumen.fecha_inicio_reposo_estimada || fechaInicioReposo;
@@ -108,15 +89,18 @@ export default function CompletarAvisoMedicoModal({
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
-          <div className="rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-3 text-sm text-amber-950">
+          <div className="rounded-xl border border-slate-100 bg-slate-50/90 px-3 py-3 text-sm text-slate-800">
             <p>
-              <span className="font-medium">Reposo desde (aviso incompleto):</span>{" "}
-              {formatYmdEs(fechaDesde)}
+              <span className="font-medium">Fecha de inicio de la licencia:</span> {formatYmdEs(fechaDesde)}
             </p>
-            <p className="mt-1.5">
-              <span className="font-medium">Vencimiento del plazo ({plazoLabel} h):</span>{" "}
-              {formatIsoEs(vencIso)}
+            <p className="mt-1.5 text-xs text-slate-600">
+              Este dato corresponde al aviso provisorio y no se puede modificar al completar el certificado.
             </p>
+            {vencIso ? (
+              <p className="mt-2">
+                <span className="font-medium">Vencimiento del plazo:</span> {formatVencimientoProvisorioEs(vencIso)}
+              </p>
+            ) : null}
             {vencIso ? <p className="mt-1 text-xs text-amber-900/90">{textoPlazoRestante(vencIso)}</p> : null}
           </div>
 
@@ -136,30 +120,13 @@ export default function CompletarAvisoMedicoModal({
           ) : null}
 
           <div>
-            <label htmlFor="modal_fecha_inicio" className={TICKETERA.label}>
-              Fecha de inicio del reposo
-            </label>
-            <input
-              id="modal_fecha_inicio"
-              type="date"
-              className={`mt-1.5 ${TICKETERA.input}`}
-              value={fechaInicioReposo}
-              onChange={(e) => setFechaInicioReposo?.(e.target.value)}
-              disabled={enviando}
-            />
-            <p className="mt-1 text-xs text-slate-500">
-              Corresponde al aviso provisorio. Podés ajustarla si el certificado indica otra fecha de inicio.
-            </p>
-          </div>
-
-          <div>
             <label htmlFor="modal_fecha_fin" className={TICKETERA.label}>
-              Fecha estimada de fin del reposo <span className="text-red-600">*</span>
+              Fecha de fin de licencia <span className="text-red-600">*</span>
             </label>
             <input
               id="modal_fecha_fin"
               type="date"
-              min={fechaInicioReposo || fechaMinimaYmd || undefined}
+              min={fechaDesde || fechaMinimaYmd || undefined}
               className={`mt-1.5 ${TICKETERA.input}`}
               value={fechaFinReposo}
               onChange={(e) => setFechaFinReposo?.(e.target.value)}
@@ -167,157 +134,54 @@ export default function CompletarAvisoMedicoModal({
             />
           </div>
 
-          <fieldset className="space-y-3 border-t border-slate-100 pt-4" disabled={enviando}>
-            <legend className={TICKETERA.label}>Datos de contacto</legend>
-            <div className="space-y-2">
-              <label className="flex cursor-pointer items-start gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="modal_contacto_origen"
-                  checked={contactoUsaPerfil}
-                  onChange={() => onToggleContactoUsaPerfil?.(true)}
-                  className="mt-0.5 h-4 w-4 border-slate-300 text-sky-600"
-                />
-                <span>Los datos de mi perfil son correctos</span>
-              </label>
-              <label className="flex cursor-pointer items-start gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="modal_contacto_origen"
-                  checked={!contactoUsaPerfil}
-                  onChange={() => onToggleContactoUsaPerfil?.(false)}
-                  className="mt-0.5 h-4 w-4 border-slate-300 text-sky-600"
-                />
-                <span>Otros datos solo para este aviso</span>
-              </label>
-            </div>
-            {contactoUsaPerfil ? (
-              <div className="rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-slate-800">
-                <p>
-                  <span className="font-medium">Teléfono:</span> {perfilContacto.telefono_celular || "—"}
-                  {perfilContacto.telefono_fijo ? ` / ${perfilContacto.telefono_fijo}` : ""}
-                </p>
-                <p className="mt-1">
-                  <span className="font-medium">Domicilio:</span> {perfilContacto.domicilio_declarado || "—"}
-                </p>
-                <p className="mt-2">
-                  <span className="font-medium">Correo:</span> {perfilContacto.email || "—"}
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-3">
-                <input
-                  type="tel"
-                  className={TICKETERA.input}
-                  placeholder="Teléfono celular"
-                  value={contactoTelCelular}
-                  onChange={(e) => setContactoTelCelular?.(e.target.value)}
-                />
-                <input
-                  type="tel"
-                  className={TICKETERA.input}
-                  placeholder="Teléfono fijo (opcional)"
-                  value={contactoTelFijo}
-                  onChange={(e) => setContactoTelFijo?.(e.target.value)}
-                />
-                <textarea
-                  rows={2}
-                  className={`${TICKETERA.input} resize-y`}
-                  placeholder="Domicilio durante el aviso"
-                  value={contactoDomicilio}
-                  onChange={(e) => setContactoDomicilio?.(e.target.value)}
-                />
-              </div>
-            )}
-            <div className="space-y-2 border-t border-slate-100 pt-3">
-              <p className="text-sm font-medium text-slate-800">Correo electrónico</p>
-              <label className="flex cursor-pointer items-start gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="modal_email_origen"
-                  checked={emailUsaPerfil}
-                  onChange={() => onToggleEmailUsaPerfil?.(true)}
-                  className="mt-0.5 h-4 w-4 border-slate-300 text-sky-600"
-                />
-                <span>Usar el correo de mi perfil</span>
-              </label>
-              <label className="flex cursor-pointer items-start gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="modal_email_origen"
-                  checked={!emailUsaPerfil}
-                  onChange={() => onToggleEmailUsaPerfil?.(false)}
-                  className="mt-0.5 h-4 w-4 border-slate-300 text-sky-600"
-                />
-                <span>Otro correo para este aviso</span>
-              </label>
-              {!emailUsaPerfil ? (
-                <input
-                  type="email"
-                  className={TICKETERA.input}
-                  value={contactoEmail}
-                  onChange={(e) => setContactoEmail?.(e.target.value)}
-                />
-              ) : null}
-            </div>
-            <div>
-              <p className={`${TICKETERA.label} mb-2`}>¿Permanecerás en el domicilio declarado?</p>
-              <div className="flex flex-wrap gap-4 text-sm">
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="radio"
-                    name="modal_permanece"
-                    checked={permaneceEnDomicilio === true}
-                    onChange={() => setPermaneceEnDomicilio?.(true)}
-                    className="h-4 w-4 border-slate-300 text-sky-600"
-                  />
-                  Sí
-                </label>
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="radio"
-                    name="modal_permanece"
-                    checked={permaneceEnDomicilio === false}
-                    onChange={() => setPermaneceEnDomicilio?.(false)}
-                    className="h-4 w-4 border-slate-300 text-sky-600"
-                  />
-                  No
-                </label>
-              </div>
-            </div>
-          </fieldset>
+          <AvisoMedicoDatosContacto
+            disabled={enviando}
+            perfilContacto={perfilContacto}
+            contactoUsaPerfil={contactoUsaPerfil}
+            onElegirUsarPerfil={onToggleContactoUsaPerfil}
+            contactoTelCelular={contactoTelCelular}
+            setContactoTelCelular={setContactoTelCelular}
+            contactoTelFijo={contactoTelFijo}
+            setContactoTelFijo={setContactoTelFijo}
+            contactoDomicilio={contactoDomicilio}
+            setContactoDomicilio={setContactoDomicilio}
+            contactoEmail={contactoEmail}
+            setContactoEmail={setContactoEmail}
+            permaneceEnDomicilio={permaneceEnDomicilio}
+            setPermaneceEnDomicilio={setPermaneceEnDomicilio}
+            domicilioReposoAlternativo={domicilioReposoAlternativo}
+            setDomicilioReposoAlternativo={setDomicilioReposoAlternativo}
+            idPrefix="modal"
+          />
 
           <fieldset className="space-y-3 border-t border-slate-100 pt-4" disabled={enviando}>
             <legend className={TICKETERA.label}>Información clínica</legend>
-            <p className="text-xs text-slate-600">Al menos uno: síntomas, enfermedad o código CIE.</p>
-            <textarea
-              rows={2}
-              className={`${TICKETERA.input} resize-y`}
-              placeholder="Síntomas"
-              value={sintomas}
-              onChange={(e) => setSintomas?.(e.target.value)}
-            />
-            <input
-              type="text"
-              className={TICKETERA.input}
-              placeholder="Enfermedad / diagnóstico presunto"
-              value={enfermedad}
-              onChange={(e) => setEnfermedad?.(e.target.value)}
-            />
-            <input
-              type="text"
-              className={TICKETERA.input}
-              placeholder="Código CIE (opcional)"
-              value={codigoCie}
-              onChange={(e) => setCodigoCie?.(e.target.value)}
-            />
-            <textarea
-              rows={2}
-              className={`${TICKETERA.input} resize-y`}
-              placeholder="Detalle adicional"
-              value={detalleClinico}
-              onChange={(e) => setDetalleClinico?.(e.target.value)}
-            />
+            <div>
+              <label htmlFor="modal_detalle_clinico_principal" className={TICKETERA.label}>
+                Detallar Síntomas / Enfermedad / CIE <span className="text-red-600">*</span>
+              </label>
+              <textarea
+                id="modal_detalle_clinico_principal"
+                rows={3}
+                maxLength={2000}
+                className={`mt-1 ${TICKETERA.input} resize-y`}
+                value={detalleClinicoPrincipal}
+                onChange={(e) => setDetalleClinicoPrincipal?.(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="modal_detalle_clinico" className={TICKETERA.label}>
+                Detallar tratamiento indicado, medicación y/o toda información complementaria (opcional)
+              </label>
+              <textarea
+                id="modal_detalle_clinico"
+                rows={2}
+                maxLength={2000}
+                className={`mt-1 ${TICKETERA.input} resize-y`}
+                value={detalleClinico}
+                onChange={(e) => setDetalleClinico?.(e.target.value)}
+              />
+            </div>
           </fieldset>
 
           <div>

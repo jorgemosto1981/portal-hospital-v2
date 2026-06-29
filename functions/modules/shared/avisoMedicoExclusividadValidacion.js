@@ -7,6 +7,10 @@ const {
 } = require("./avisoMedicoExclusividadPeriodoCore");
 const { iterarYmdInclusive, buildAsiDocumentId } = require("./mdcRdaDocumentIds");
 const { COL_ASISTENCIA_DIARIA } = require("./mdcComandosConstants");
+const {
+  MAX_AVISOS_PROVISORIOS_VIGENTES,
+  listarAvisosIncompletosVigentes,
+} = require("./avisoMedicoProvisoriosVigentesCore");
 
 /**
  * Cada día del rango debe quedar libre de otras solicitudes activas y aportes en asistencia_diaria.
@@ -17,6 +21,7 @@ const { COL_ASISTENCIA_DIARIA } = require("./mdcComandosConstants");
  *   fechaDesde: string,
  *   fechaHasta?: string,
  *   excludeSolicitudId?: string,
+ *   esAltaLicenciaIncompleta?: boolean,
  * }} input
  */
 async function validarPeriodoExclusivoAvisoMedico(firestore, input) {
@@ -37,6 +42,17 @@ async function validarPeriodoExclusivoAvisoMedico(firestore, input) {
       codigo: "FECHA_HASTA_INVALIDA",
       mensaje: "La fecha de fin debe ser igual o posterior al inicio del reposo.",
     };
+  }
+
+  if (input.esAltaLicenciaIncompleta === true) {
+    const vigentes = await listarAvisosIncompletosVigentes(firestore, titular);
+    if (vigentes.length >= MAX_AVISOS_PROVISORIOS_VIGENTES) {
+      return {
+        ok: false,
+        codigo: "MAX_AVISOS_PROVISORIOS_VIGENTES",
+        mensaje: `Ya tenés ${MAX_AVISOS_PROVISORIOS_VIGENTES} avisos provisorios vigentes. Completá uno antes de registrar otro.`,
+      };
+    }
   }
 
   const snap = await firestore.collection("solicitudes_articulo").where("titular_persona_id", "==", titular).get();

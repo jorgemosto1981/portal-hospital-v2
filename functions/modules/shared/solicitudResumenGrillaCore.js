@@ -2,6 +2,8 @@
 
 const { loadArticuloDisplay } = require("./solicitudBandejaJefeCore");
 const { buildPersonaLabel } = require("./eventosV2");
+const { SCHEMA_MED_AVISO } = require("./avisoMedicoProvisoriosVigentesCore");
+const { resolverCodigoGrillaAvisoMedico, resolverRangoYmdAvisoMedico } = require("./avisoMedicoGrillaMdcPayload");
 
 const COL_SOL = "solicitudes_articulo";
 const COL_PERSONAS = "personas";
@@ -63,7 +65,16 @@ async function obtenerResumenSolicitudArticuloGrilla(db, solId, revisorPersonaId
 
   const artCache = new Map();
   const personaCache = new Map();
-  const artDisplay = await loadArticuloDisplay(db, String(sol.articulo_id || ""), artCache);
+  const schemaMed = String(sol.schema_version || "") === SCHEMA_MED_AVISO;
+  const artDisplay = schemaMed
+    ? {
+        codigo_grilla: resolverCodigoGrillaAvisoMedico(sol),
+        articulo_label:
+          sol.ingreso_medico?.es_licencia_incompleta === true
+            ? "Aviso médico provisorio"
+            : "Aviso médico (pendiente clasificación)",
+      }
+    : await loadArticuloDisplay(db, String(sol.articulo_id || ""), artCache);
 
   const titularId = String(sol.titular_persona_id || "").trim();
   const jefeId = String(sol.jefe_revision_persona_id || "").trim();
@@ -75,14 +86,18 @@ async function obtenerResumenSolicitudArticuloGrilla(db, solId, revisorPersonaId
     resolvePersonaLabel(db, rrhhTcId, personaCache),
   ]);
 
+  const rangoMed = schemaMed ? resolverRangoYmdAvisoMedico(sol) : null;
+
   return {
     ok: true,
     solicitud_id: id,
     titular_persona_id: titularId || null,
     titular_label: titularLabel,
     estado_solicitud_id: String(sol.estado_solicitud_id || "") || null,
-    fecha_desde: String(sol.fecha_desde || "").slice(0, 10) || null,
-    fecha_hasta: String(sol.fecha_hasta || "").slice(0, 10) || null,
+    fecha_desde:
+      (schemaMed && rangoMed?.fecha_desde) || String(sol.fecha_desde || "").slice(0, 10) || null,
+    fecha_hasta:
+      (schemaMed && rangoMed?.fecha_hasta) || String(sol.fecha_hasta || "").slice(0, 10) || null,
     articulo_id: String(sol.articulo_id || "") || null,
     codigo_grilla: artDisplay.codigo_grilla || null,
     articulo_label: artDisplay.articulo_label || null,

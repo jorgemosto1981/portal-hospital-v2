@@ -38,9 +38,14 @@ function normalizarDeclaracionContactoAviso(raw) {
   };
 }
 
-const ESTADO_PENDIENTE_CLASIFICACION = "cfg_esa_pendiente_clasificacion_medica";
-const SCHEMA_MED_AVISO = "SOL_MED_AVISO_V1";
+const {
+  ESTADO_PENDIENTE_CLASIFICACION,
+  SCHEMA_MED_AVISO,
+  MAX_AVISOS_PROVISORIOS_VIGENTES,
+  listarAvisosIncompletosVigentes,
+} = require("./avisoMedicoProvisoriosVigentesCore");
 const { validarPeriodoExclusivoAvisoMedico } = require("./avisoMedicoExclusividadValidacion");
+const { resincronizarProyeccionAvisoMedicoGrillaAsync } = require("./avisoMedicoGrillaMdcCore");
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
@@ -59,65 +64,27 @@ async function buscarAvisoIncompletaVigente(db, titularPersonaId) {
   if (!/^per_/i.test(titular)) {
     return { ok: false, codigo: "TITULAR_INVALIDO" };
   }
-  const qs = await db
-    .collection("solicitudes_articulo")
-    .where("titular_persona_id", "==", titular)
-    .where("estado_solicitud_id", "==", ESTADO_PENDIENTE_CLASIFICACION)
-    .limit(10)
-    .get();
-
-  const now = Date.now();
-  for (const doc of qs.docs) {
-    const d = doc.data() || {};
-    if (d.schema_version !== SCHEMA_MED_AVISO) continue;
-    const ing = d.ingreso_medico;
-    if (!ing || ing.es_licencia_incompleta !== true) continue;
-    const venc = d.vencimiento_plazo_certificado;
-    const vencMs =
-      venc && typeof venc.toDate === "function" ? venc.toDate().getTime() : NaN;
-    if (Number.isFinite(vencMs) && vencMs > now) {
-      const ingreso = ing && typeof ing === "object" ? ing : {};
-      const fechaInicio = String(d.fecha_inicio_reposo_estimada || "").slice(0, 10);
-      const familiar = ingreso.familiar_atendido;
-      const familiarPlain =
-        familiar && typeof familiar === "object"
-          ? {
-              declaracion_grupo_familiar_id: String(familiar.declaracion_grupo_familiar_id || "").trim(),
-              familiar_id: String(familiar.familiar_id || "").trim(),
-              nombre: String(familiar.nombre || "").trim(),
-              apellido: String(familiar.apellido || "").trim(),
-              dni: String(familiar.dni || "").trim(),
-              ...(familiar.parentesco_id ? { parentesco_id: String(familiar.parentesco_id).trim() } : {}),
-            }
-          : null;
-      const contacto = ingreso.declaracion_contacto;
-      const contactoPlain =
-        contacto && typeof contacto === "object"
-          ? {
-              usar_datos_perfil: contacto.usar_datos_perfil === true,
-              telefono_celular: String(contacto.telefono_celular || "").trim(),
-              ...(contacto.telefono_fijo ? { telefono_fijo: String(contacto.telefono_fijo).trim() } : {}),
-              domicilio_declarado: String(contacto.domicilio_declarado || "").trim(),
-              permanece_en_domicilio: contacto.permanece_en_domicilio === true,
-              usar_email_perfil: contacto.usar_email_perfil === true,
-              email: String(contacto.email || "").trim(),
-            }
-          : null;
-
-      return {
-        ok: true,
-        solicitud_id: doc.id,
-        resumen: {
-          fecha_inicio_reposo_estimada: /^\d{4}-\d{2}-\d{2}$/.test(fechaInicio) ? fechaInicio : "",
-          vencimiento_plazo_certificado_iso: vencDateToIso(venc),
-          tipo_ingreso_id: String(ingreso.tipo_ingreso_id || "").trim(),
-          familiar_atendido: familiarPlain,
-          declaracion_contacto: contactoPlain,
-        },
-      };
-    }
+  const avisos = await listarAvisosIncompletosVigentes(db, titular);
+  const permiteNuevo = avisos.length < MAX_AVISOS_PROVISORIOS_VIGENTES;
+  if (!avisos.length) {
+    return {
+      ok: false,
+      codigo: "SIN_AVISO_INCOMPLETA_VIGENTE",
+      avisos: [],
+      max_provisorios_vigentes: MAX_AVISOS_PROVISORIOS_VIGENTES,
+      permite_nuevo_provisorio: true,
+    };
   }
-  return { ok: false, codigo: "SIN_AVISO_INCOMPLETA_VIGENTE" };
+  const primero = avisos[0];
+  return {
+    ok: true,
+    avisos,
+    count: avisos.length,
+    max_provisorios_vigentes: MAX_AVISOS_PROVISORIOS_VIGENTES,
+    permite_nuevo_provisorio: permiteNuevo,
+    solicitud_id: primero.solicitud_id,
+    resumen: primero.resumen,
+  };
 }
 
 /**
@@ -187,11 +154,9 @@ async function actualizarAvisoMedicoIncompleto(db, input) {
     };
   }
 
-  const fechaInicio =
-    typeof input.fechaInicioReposoEstimada === "string" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(input.fechaInicioReposoEstimada.trim())
-      ? input.fechaInicioReposoEstimada.trim()
-      : String(d.fecha_inicio_reposo_estimada || "").slice(0, 10);
+  const fechaInicio = String(d.fecha_inicio_reposo_estimada || "").slice(0, 10);
+  const fechaDesdeAnterior = fechaInicio;
+  const fechaHastaAnterior = String(d.fecha_fin_reposo_estimada || fechaInicio || "").slice(0, 10);
 
   const fechaFin =
     typeof input.fechaFinReposoEstimada === "string" &&
@@ -206,7 +171,7 @@ async function actualizarAvisoMedicoIncompleto(db, input) {
     return {
       ok: false,
       codigo: "FECHA_FIN_REQUERIDA",
-      mensaje: "Indicá la fecha estimada de fin del reposo (igual o posterior al inicio).",
+      mensaje: "Indicá la fecha de fin de licencia (igual o posterior al inicio).",
     };
   }
 
@@ -269,6 +234,11 @@ async function actualizarAvisoMedicoIncompleto(db, input) {
 
   await ref.update(patch);
 
+  resincronizarProyeccionAvisoMedicoGrillaAsync(db, solicitudId, {
+    fechaDesdeAnterior,
+    fechaHastaAnterior,
+  });
+
   return {
     ok: true,
     solicitud_id: solicitudId,
@@ -280,6 +250,7 @@ async function actualizarAvisoMedicoIncompleto(db, input) {
 module.exports = {
   ESTADO_PENDIENTE_CLASIFICACION,
   SCHEMA_MED_AVISO,
+  MAX_AVISOS_PROVISORIOS_VIGENTES,
   leerPlazoHorasLicenciaIncompleta,
   normalizarDeclaracionContactoAviso,
   buscarAvisoIncompletaVigente,

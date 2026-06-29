@@ -3,6 +3,12 @@
  * IDs = documentos en `cfg_parametros_sistema`.
  */
 
+import {
+  civilDateInZonaToUtcAnchorMs,
+  formatYmdEnZona,
+  ZONA_HORARIA_INSTITUCIONAL,
+} from "./fechaInstitucionalBa.js";
+
 export const PARAM_LM_INCOMPLETA_PLAZO_HORAS = "param_lm_incompleta_plazo_horas";
 export const PARAM_LM_INCOMPLETA_AVISO_OBLIGACION_HORAS =
   "param_lm_incompleta_aviso_obligacion_horas";
@@ -29,6 +35,7 @@ export function resolverHorasDesdeParametroSistema(docData, opts = {}) {
  * @param {Date} anchor
  * @param {number} horas
  * @returns {Date}
+ * @deprecated Preferir {@link calcularVencimientoPlazoCertificadoDesdeInicioLicencia} (ancla = fecha inicio licencia).
  */
 export function calcularVencimientoPlazoCertificado(anchor, horas) {
   if (!(anchor instanceof Date) || Number.isNaN(anchor.getTime())) {
@@ -39,4 +46,50 @@ export function calcularVencimientoPlazoCertificado(anchor, horas) {
     throw new Error("HORAS_PLAZO_INVALIDAS");
   }
   return new Date(anchor.getTime() + h * 3600 * 1000);
+}
+
+const RX_YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Días calendario de plazo a partir del parámetro en horas (24 h → 1 día completo adicional).
+ * @param {number} horas
+ */
+export function diasCalendarioPlazoDesdeHorasParametro(horas) {
+  const h = Number(horas);
+  if (!Number.isFinite(h) || h <= 0) {
+    throw new Error("HORAS_PLAZO_INVALIDAS");
+  }
+  return Math.max(1, Math.ceil(h / 24));
+}
+
+/**
+ * @param {string} ymd
+ * @param {number} dias
+ * @returns {string}
+ */
+export function sumarDiasCalendarioYmd(ymd, dias) {
+  if (!RX_YMD.test(String(ymd || ""))) {
+    throw new Error("FECHA_INICIO_YMD_INVALIDA");
+  }
+  const n = Math.max(0, Math.floor(Number(dias)));
+  const [y, m, d] = String(ymd).split("-").map(Number);
+  let anchor = civilDateInZonaToUtcAnchorMs(y, m, d, ZONA_HORARIA_INSTITUCIONAL);
+  anchor += n * 24 * 60 * 60 * 1000;
+  return formatYmdEnZona(anchor, ZONA_HORARIA_INSTITUCIONAL);
+}
+
+/**
+ * Vencimiento del plazo provisorio: desde la fecha de inicio de la licencia,
+ * al cierre del día calendario (23:59:59.999 BA) tras `ceil(horas/24)` días completos.
+ *
+ * @param {string} fechaInicioYmd `YYYY-MM-DD`
+ * @param {number} horas parámetro `param_lm_incompleta_plazo_horas`
+ * @returns {Date}
+ */
+export function calcularVencimientoPlazoCertificadoDesdeInicioLicencia(fechaInicioYmd, horas) {
+  const dias = diasCalendarioPlazoDesdeHorasParametro(horas);
+  const ymdFin = sumarDiasCalendarioYmd(fechaInicioYmd, dias);
+  const [y, m, d] = ymdFin.split("-").map(Number);
+  const inicioDiaSiguiente = civilDateInZonaToUtcAnchorMs(y, m, d, ZONA_HORARIA_INSTITUCIONAL) + 24 * 60 * 60 * 1000;
+  return new Date(inicioDiaSiguiente - 1);
 }

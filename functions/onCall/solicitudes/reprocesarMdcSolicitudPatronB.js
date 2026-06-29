@@ -3,6 +3,9 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db } = require("../../modules/shared/context");
 const { loadArticuloDisplay } = require("../../modules/shared/solicitudBandejaJefeCore");
+const { resolverCodigoGrillaAvisoMedico } = require("../../modules/shared/avisoMedicoGrillaMdcPayload");
+const { SCHEMA_MED_AVISO } = require("../../modules/shared/avisoMedicoProvisoriosVigentesCore");
+const { proyectarAvisoMedicoEnGrilla, limpiarIdempotenciaMdc } = require("../../modules/shared/avisoMedicoGrillaMdcCore");
 const {
   encolarComandoMdcTicketera,
   buildMdcPayloadDesdeSolicitud,
@@ -18,6 +21,7 @@ const COMANDO_POR_ESTADO = {
   cfg_esa_en_revision_rrhh: MDC_COMANDO_AUTORIZAR_JEFE,
   cfg_esa_aprobada: MDC_COMANDO_CONSOLIDAR_APROBADO,
   cfg_esa_rechazada: MDC_COMANDO_REVERTIR_PROYECCION,
+  cfg_esa_pendiente_clasificacion_medica: MDC_COMANDO_PROYECTAR_PENDIENTE,
 };
 
 /**
@@ -50,10 +54,27 @@ const reprocesarMdcSolicitudPatronB = onCall(async (request) => {
     );
   }
 
+  const schemaMed = String(sol.schema_version || "") === SCHEMA_MED_AVISO;
+  if (schemaMed && estado === "cfg_esa_pendiente_clasificacion_medica") {
+    await limpiarIdempotenciaMdc(db, solId, MDC_COMANDO_PROYECTAR_PENDIENTE);
+    const result = await proyectarAvisoMedicoEnGrilla(db, solId, sol);
+    return {
+      ok: result.ok === true,
+      solicitud_id: solId,
+      comando,
+      estado_solicitud_id: estado,
+      dias_afectados: result.dias_afectados ?? null,
+      skipped: result.skipped === true,
+      codigo: result.codigo || null,
+    };
+  }
+
   const artCache = new Map();
-  const artDisplay = await loadArticuloDisplay(db, String(sol.articulo_id || ""), artCache);
+  const codigoGrilla = schemaMed
+    ? resolverCodigoGrillaAvisoMedico(sol)
+    : (await loadArticuloDisplay(db, String(sol.articulo_id || ""), artCache)).codigo_grilla;
   const payload = buildMdcPayloadDesdeSolicitud(
-    { ...sol, codigo_grilla: artDisplay.codigo_grilla },
+    { ...sol, codigo_grilla: codigoGrilla },
     comando,
   );
 

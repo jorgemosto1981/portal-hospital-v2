@@ -103,6 +103,8 @@ describe("actualizarAvisoMedicoIncompleto", () => {
         titular_persona_id: "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ",
         estado_solicitud_id: "cfg_esa_pendiente_clasificacion_medica",
         schema_version: "SOL_MED_AVISO_V1",
+        fecha_inicio_reposo_estimada: "2026-06-25",
+        fecha_fin_reposo_estimada: "2026-06-25",
         ingreso_medico: { modo: "caja_negra", es_licencia_incompleta: true, adjuntos: [] },
         vencimiento_plazo_certificado: vencFuture,
       },

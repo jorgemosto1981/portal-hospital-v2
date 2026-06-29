@@ -26,6 +26,10 @@ const {
   assertNuevaSolicitudNoEnPeriodoCerrado,
   esEstadoSolicitudEnTramite,
 } = require("../asistencia/asistenciaPeriodoLiquidacion");
+const {
+  esSolicitudMedAviso,
+  mapSolicitudMedAvisoParaMdc,
+} = require("./avisoMedicoGrillaMdcPayload");
 
 /**
  * @param {string} solId
@@ -302,7 +306,12 @@ async function aplicarReversoDia(db, p, ymd) {
  * @param {string} comando
  */
 function buildMdcPayloadDesdeSolicitud(sol, comando) {
-  const d = sol || {};
+  let d = sol || {};
+  const solId = String(d.id || d.sol_id || "").trim();
+  if (esSolicitudMedAviso(d) && solId) {
+    const mapped = mapSolicitudMedAvisoParaMdc(d, solId);
+    if (mapped) d = mapped;
+  }
   return {
     comando,
     comando_version: MDC_COMANDO_VERSION,

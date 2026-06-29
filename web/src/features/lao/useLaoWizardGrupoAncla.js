@@ -7,9 +7,14 @@ const RX_GDT = /^gdt_/i;
 
 /**
  * Grupos HLg vigentes para ancla de solicitud LAO (paridad 64-A).
- * @param {{ personaId?: string, fechaRefYmd?: string, enabled?: boolean }} params
+ * @param {{ personaId?: string, fechaRefYmd?: string, enabled?: boolean, anclaAutomaticaSiMultiples?: boolean }} params
  */
-export function useLaoWizardGrupoAncla({ personaId = "", fechaRefYmd = "", enabled = true }) {
+export function useLaoWizardGrupoAncla({
+  personaId = "",
+  fechaRefYmd = "",
+  enabled = true,
+  anclaAutomaticaSiMultiples = false,
+}) {
   const [gruposVigentes, setGruposVigentes] = useState(/** @type {Array<Record<string, unknown>>} */ ([]));
   const [grupoAnclaId, setGrupoAnclaId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -43,6 +48,12 @@ export function useLaoWizardGrupoAncla({ personaId = "", fechaRefYmd = "", enabl
         setGrupoAnclaId(sugerido);
       } else if (vigentes.length === 1) {
         setGrupoAnclaId(String(vigentes[0]?.grupo_de_trabajo_id || ""));
+      } else if (anclaAutomaticaSiMultiples && vigentes.length > 1) {
+        const pick =
+          sugerido && vigentes.some((g) => g.grupo_de_trabajo_id === sugerido)
+            ? sugerido
+            : String(vigentes[0]?.grupo_de_trabajo_id || "");
+        setGrupoAnclaId(pick);
       } else {
         setGrupoAnclaId("");
       }
@@ -53,13 +64,13 @@ export function useLaoWizardGrupoAncla({ personaId = "", fechaRefYmd = "", enabl
     } finally {
       setIsLoading(false);
     }
-  }, [fechaRefYmd, puedeConsultar, personaId]);
+  }, [anclaAutomaticaSiMultiples, fechaRefYmd, puedeConsultar, personaId]);
 
   useEffect(() => {
     void recargar();
   }, [recargar]);
 
-  const requiereSeleccionGrupo = gruposVigentes.length > 1;
+  const requiereSeleccionGrupo = !anclaAutomaticaSiMultiples && gruposVigentes.length > 1;
   const grupoAnclaOk = gruposVigentes.length > 0 && RX_GDT.test(grupoAnclaId);
 
   return {
