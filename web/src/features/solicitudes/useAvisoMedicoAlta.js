@@ -704,6 +704,7 @@ export function useAvisoMedicoAlta({ personaId, authUid }) {
         fecha_inicio_reposo_estimada: payload.fechaInicioReposoEstimada,
         fecha_fin_reposo_estimada: hastaPeriodo,
         declaracion_clinica: payload.declaracionClinica,
+        declaracion_contacto: payload.declaracionContacto,
       });
       const data = res?.data;
       if (!data?.ok) {

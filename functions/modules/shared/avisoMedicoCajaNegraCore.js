@@ -14,6 +14,30 @@ function vencDateToIso(venc) {
   return null;
 }
 
+/**
+ * @param {unknown} raw
+ */
+function normalizarDeclaracionContactoAviso(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const o = /** @type {Record<string, unknown>} */ (raw);
+  const cel = String(o.telefono_celular || "").trim();
+  const dom = String(o.domicilio_declarado || "").trim();
+  const mail = String(o.email || "").trim();
+  if (cel.length < 6 || dom.length < 3 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+    return null;
+  }
+  const fijo = String(o.telefono_fijo || "").trim();
+  return {
+    usar_datos_perfil: o.usar_datos_perfil === true,
+    telefono_celular: cel.slice(0, 32),
+    ...(fijo ? { telefono_fijo: fijo.slice(0, 32) } : {}),
+    domicilio_declarado: dom.slice(0, 512),
+    permanece_en_domicilio: o.permanece_en_domicilio === true,
+    usar_email_perfil: o.usar_email_perfil === true,
+    email: mail.slice(0, 256),
+  };
+}
+
 const ESTADO_PENDIENTE_CLASIFICACION = "cfg_esa_pendiente_clasificacion_medica";
 const SCHEMA_MED_AVISO = "SOL_MED_AVISO_V1";
 const { validarPeriodoExclusivoAvisoMedico } = require("./avisoMedicoExclusividadValidacion");
@@ -105,6 +129,15 @@ async function buscarAvisoIncompletaVigente(db, titularPersonaId) {
  *   fechaInicioReposoEstimada?: string,
  *   fechaFinReposoEstimada?: string,
  *   declaracionClinica?: { sintomas?: string, enfermedad?: string, codigo_cie?: string, detalle?: string },
+ *   declaracionContacto?: {
+ *     usar_datos_perfil: boolean,
+ *     telefono_celular: string,
+ *     telefono_fijo?: string,
+ *     domicilio_declarado: string,
+ *     permanece_en_domicilio: boolean,
+ *     usar_email_perfil: boolean,
+ *     email: string,
+ *   },
  * }} input
  */
 async function actualizarAvisoMedicoIncompleto(db, input) {
@@ -190,6 +223,15 @@ async function actualizarAvisoMedicoIncompleto(db, input) {
     };
   }
 
+  const contactoNorm = normalizarDeclaracionContactoAviso(input.declaracionContacto);
+  if (!contactoNorm) {
+    return {
+      ok: false,
+      codigo: "CONTACTO_REQUERIDO",
+      mensaje: "Confirmá teléfono, domicilio y correo de contacto para el aviso.",
+    };
+  }
+
   const exclusividad = await validarPeriodoExclusivoAvisoMedico(db, {
     titularPersonaId,
     fechaDesde: fechaInicio,
@@ -215,6 +257,7 @@ async function actualizarAvisoMedicoIncompleto(db, input) {
       ...(clinIn.codigo_cie ? { codigo_cie: String(clinIn.codigo_cie).slice(0, 16) } : {}),
       ...(clinIn.detalle ? { detalle: String(clinIn.detalle).slice(0, 2000) } : {}),
     },
+    declaracion_contacto: contactoNorm,
   };
 
   const patch = {
@@ -238,6 +281,7 @@ module.exports = {
   ESTADO_PENDIENTE_CLASIFICACION,
   SCHEMA_MED_AVISO,
   leerPlazoHorasLicenciaIncompleta,
+  normalizarDeclaracionContactoAviso,
   buscarAvisoIncompletaVigente,
   actualizarAvisoMedicoIncompleto,
   calcularVencimientoPlazoCertificado,

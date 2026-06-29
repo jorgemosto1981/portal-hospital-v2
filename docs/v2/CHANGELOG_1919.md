@@ -30,3 +30,4 @@ Registro de **tags Git** y hitos documentales/código. Detalle operativo en `[PL
 | 2026-06-26 | RFC Caja Negra §0.2 Licencia Incompleta — plazos `cfg_parametros_sistema`, §5.6–5.8; pausa código post-P4.3 |
 | 2026-06-26 | (rama `feat/1919-p4-licencias-medicas`) | **P4.3b:** exclusividad período aviso, Zod contacto/clínica/familiar/fin reposo, modal completar incompleta |
 | 2026-06-24 | **PAUSA P4** | Handoff [`HANDOFF_SESION_2026-06-24_P4_AVISO_MEDICO_PAUSA.md`](./HANDOFF_SESION_2026-06-24_P4_AVISO_MEDICO_PAUSA.md) — commit local + push; **sin deploy** del paquete modal/resumen/exclusividad |
+| 2026-06-29 | (rama `feat/1919-p4-licencias-medicas`) | **P4.3c:** `declaracion_contacto` al completar incompleta; callable `clasificarSolicitudMedicaAuditor` (corta anual ≤15 / junta >15) |

@@ -20,6 +20,8 @@ const actualizarAvisoMedicoIncompletoCallable = onCall(async (request) => {
     typeof d.fecha_fin_reposo_estimada === "string" ? d.fecha_fin_reposo_estimada.trim() : undefined;
   const declaracionClinica =
     d.declaracion_clinica && typeof d.declaracion_clinica === "object" ? d.declaracion_clinica : undefined;
+  const declaracionContacto =
+    d.declaracion_contacto && typeof d.declaracion_contacto === "object" ? d.declaracion_contacto : undefined;
 
   const result = await actualizarAvisoMedicoIncompleto(db, {
     solicitudId,
@@ -28,6 +30,7 @@ const actualizarAvisoMedicoIncompletoCallable = onCall(async (request) => {
     fechaInicioReposoEstimada,
     fechaFinReposoEstimada,
     declaracionClinica,
+    declaracionContacto,
   });
 
   if (!result.ok) {

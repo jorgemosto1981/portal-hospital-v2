@@ -536,3 +536,8 @@ export function callBuscarAvisoIncompletaVigente() {
 export function callValidarPeriodoAvisoMedicoExclusivo(data) {
   return httpsCallable(getFunctionsV2(), "validarPeriodoAvisoMedicoExclusivo")(data);
 }
+
+/** Clasificación médica auditor — aviso Caja Negra completo. */
+export function callClasificarSolicitudMedicaAuditor(data) {
+  return httpsCallable(getFunctionsV2(), "clasificarSolicitudMedicaAuditor")(data);
+}

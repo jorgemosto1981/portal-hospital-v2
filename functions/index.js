@@ -68,6 +68,7 @@ const grillaSyncGrupoMesTriggers = require("./triggers/onGrillaSyncGrupoMes");
 const solicitarReconciliacionGrillaGrupoMes = require("./onCall/grilla/solicitarReconciliacionGrillaGrupoMes");
 const avisoMedicoCajaNegra = require("./onCall/solicitudes/actualizarAvisoMedicoIncompleto");
 const validarPeriodoAvisoMedico = require("./onCall/solicitudes/validarPeriodoAvisoMedicoExclusivo");
+const clasificarSolicitudMedicaAuditor = require("./onCall/solicitudes/clasificarSolicitudMedicaAuditor");
 
 module.exports = {
   ...login,
@@ -127,4 +128,5 @@ module.exports = {
   ...grillaSyncGrupoMesTriggers,
   ...avisoMedicoCajaNegra,
   ...validarPeriodoAvisoMedico,
+  ...clasificarSolicitudMedicaAuditor,
 };
