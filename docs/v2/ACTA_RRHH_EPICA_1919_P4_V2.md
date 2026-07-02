@@ -49,17 +49,29 @@
 
 ## Evidencia técnica (repo)
 
-- Rama: `feat/1919-p4-licencias-largas` (motor P4 + P4.4; merge objetivo `master`)
+- Rama activa oleada bandeja auditor: **`feat/1919-p4-visor-auditor`** @ `92cb14e` (push `origin`; **no mergeado** a `master` al 2026-07-02)
+- Rama histórica motor P4 + P4.4: `feat/1919-p4-licencias-largas` (contenido absorbido en rama visor)
+- `master` @ `7a8997c` — Paquete P5 opciones consumo (UAT VERDE)
 - Smokes: `scripts/smoke/med-*.mjs` (clasificación, junta, vencimiento, rechazo MDC)
 - Seed Art. 14: `applied-ids.json` en `docs/v2/seeds/p4_art14/`
+- Deploy piloto bandeja P0/P2/P3: hosting + callables `listarArticulosLicenciaMedicaAuditor`, `previsualizarClasificacionMedicaAuditor` (ver handoff pausa)
 
-## Backlog post-firma (UI auditoría médica)
+## Oleada UI bandeja auditor (2026-07-02) — pausada pendiente UAT
 
-Tras OK RRHH del **motor** y bandejas mínimas, la oleada de **herramienta de decisión** del médico auditor (visor certificado, clasificación sustantiva, preview tramos, historial normativo) queda priorizada y acotada en:
+| Entregable | Estado código | UAT |
+|------------|---------------|-----|
+| P0 visor certificado | Desplegado | Checklist brechas §6.1 |
+| P2 selector artículo imputado | Desplegado | Checklist brechas §6.4 |
+| P3 preview tramos/consumo | Desplegado | Incluido en §6.4 pasos 1–2 |
+| P1 ficha `ingreso_medico` | Pendiente | — |
+| Cierre formal acta | Pendiente firma | Tras UAT verde |
+
+Documentación de continuidad:
 
 - [`BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md`](./BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md)
+- [`HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md`](./HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md)
 
-Soporte operativo piloto hasta esa UI: `scripts/inspect-solicitud.mjs` (back-office, lectura `sol_*`).
+Soporte operativo piloto: `scripts/inspect-solicitud.mjs` (local, no versionado por defecto).
 
 ## Firmas
 

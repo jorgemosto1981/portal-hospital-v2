@@ -4,7 +4,7 @@
 
 **Audiencia:** RRHH, medicina laboral, equipo de desarrollo.  
 **Estado motor:** validado por smokes `scripts/smoke/med-*.mjs` y UAT de circuito Art. 14 / derivación junta.  
-**Estado UI auditor:** MVP cola + metadatos + dictamen (no módulo clínico completo).
+**Estado UI auditor:** P0 visor + P2 selector artículo + P3 preview entregados en piloto; **PAUSA implementación** @ `92cb14e` — UAT §6.1/§6.4 pendiente. Handoff: [`HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md`](./HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md).
 
 **Referencias normativas:**
 
@@ -36,8 +36,8 @@ El riesgo actual **no** es integridad de datos ni desborde del motor; es **produ
 | **Visor clínico** | **P0 entregado** (`VisorPDF`, DTO `certificado_adjuntos`) | PDF certificado + ficha `ingreso_medico` (tipo ingreso, contacto — **P1**) |
 | **Adjuntos** | Listado + visor en bandeja (Storage `getDownloadURL`) | Callable de lectura solo si Rules se endurecen |
 | **Diagnóstico CIE-10** | Solo si el aviso ya trae `cie10` (Patrón B / larga); Caja Negra pura: vacío | Lectura en bandeja; larga: obligatorio antes de clasificar (backend ya valida) |
-| **Clasificación sustantiva** | Dictamen favorable/desfavorable + observación; fechas del ítem de lista | Elegir `articulo_id` / versión, ajustar `fecha_desde`/`fecha_hasta` definitivas, causal Art. 19 si larga |
-| **Preview tramos / consumo** | No en UI | `calcularTramosLicenciaMedicaCorta` + consumo anual aprobado **antes** de confirmar (§5.3) |
+| **Clasificación sustantiva** | **P2** — selector `articulo_id`/versión + dictamen; fechas aún desde listado | Ajustar `fecha_desde`/`fecha_hasta` en UI; causal Art. 19 editable si larga |
+| **Preview tramos / consumo** | **P3** — `previsualizarClasificacionMedicaAuditor` + `BandejaAuditorPreviewTramos` | Mismo motor; validar copy RRHH en piloto |
 | **Historial** | No en UI | **Licencias médicas normativas** del agente (aprobadas en el año), no historia clínica EMR |
 | **Señales §5.8** | Filtros completas/provisorias | Badge provisoria, countdown plazo, panel incumplimientos RRHH (parcial en roadmap) |
 | **Bandeja junta** | Misma familia: metadatos + dictamen | Mismas brechas de certificado y contexto de consumo |
@@ -67,8 +67,8 @@ Orden alineado al RFC y al bloqueo real del auditor:
 |-----------|------|----------------|
 | **P0** | Visor de certificado (adjuntos Storage) | **Hecho** — rama `feat/1919-p4-visor-auditor` @ `a3f00b5` |
 | **P1** | Callable o ampliación de listado: **detalle aviso** (`ingreso_medico`, adjuntos metadata, tipo ingreso) | Sustituir ida a Console |
-| **P2** | Selector artículo + versión (Art. 14 / 16) y edición de fechas en clasificación | **En curso** — selector + `articulo_id` en clasificar/preview; fechas editables pendiente |
-| **P3** | Preview consumo anual + tramos 35/70 antes de confirmar | Reduce error normativo; motor ya existe |
+| **P2** | Selector artículo + versión (Art. 14 / 16) y edición de fechas en clasificación | **Hecho** selector + clasificar/preview @ `92cb14e`; **pendiente** fechas editables |
+| **P3** | Preview consumo anual + tramos 35/70 antes de confirmar | **Hecho** @ `92cb14e` — UAT §6.4 paso 1–2 |
 | **P4** | Panel historial LM aprobadas del titular (año calendario) | Contexto normativo, no clínico |
 | **P5** | Señales §5.8 ampliadas (countdown incompleta, RRHH) | Operación mesa |
 
@@ -187,6 +187,7 @@ Referencia: `sol_01KWHASRGSX2W154CEGSW57R1Y` (17 días, sin `articulo_id` en alt
 
 | Fecha | Cambio |
 |-------|--------|
+| 2026-07-02 | **PAUSA** — handoff sesión bandeja auditor; estado UI + matriz P2/P3 hecho |
 | 2026-07-02 | P2 imputación artículo §6.3–6.4; P3 preview checklist |
 | 2026-07-02 | P0 visor + checklist §6.1; diseño DTO P3 §6.2 |
 | 2026-07-02 | Borrador inicial — brechas post-UAT piloto bandeja auditor (P4 + P4.4 motor) |

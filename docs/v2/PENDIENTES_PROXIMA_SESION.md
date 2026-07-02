@@ -1,5 +1,15 @@
 # Punto de Continuación — Próxima Sesión
 
+> **RETOMAR AQUÍ — épica 1919 bandeja auditor médica (jul-2026):**  
+> **Rama:** `feat/1919-p4-visor-auditor` @ **`92cb14e`** (sync `origin`)  
+> **Estado:** **PAUSA implementación** — código P0/P2/P3 desplegado en piloto; **UAT pendiente** §6.1 y §6.4  
+> **Handoff SSoT:** [`HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md`](./HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md)  
+> **Brechas / checklists:** [`BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md`](./BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md)  
+> **Caso piloto:** `sol_01KWHASRGSX2W154CEGSW57R1Y` · DNI 28914247 · https://portal-hospital-v2.web.app/portal/medico/solicitudes  
+> **Siguiente:** UAT usuario → merge rama a `master` si verde → firma acta P4  
+
+---
+
 > **RETOMAR AQUÍ — producto grilla post-piloto jun-2026:**  
 > **1)** ~~Lectura snapshot / `grilla_sync` / RFC CVC-0 + test listar~~ ✅  
 > **2)** ~~Épica B B1–B4~~ ✅ prod · backlog opcional **B3/B5**  
