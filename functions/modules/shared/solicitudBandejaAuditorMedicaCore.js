@@ -6,6 +6,9 @@ const { resolverRangoYmdEfectivoAvisoMedico } = require("./avisoMedicoGrillaMdcP
 const { loadArticuloDisplay, loadPersonaBandeja } = require("./solicitudBandejaJefeCore");
 const { enriquecerItemBandejaAuditorLarga } = require("./solicitudBandejaAuditorMedicaLargaMeta");
 const {
+  mapearAdjuntosBandejaAuditor,
+} = require("./solicitudBandejaAuditorCertificados");
+const {
   parseBandejaListPageOpts,
   paginarBandejaOrdenada,
   resolverPersonaIdsPorDni,
@@ -124,6 +127,7 @@ async function listarSolicitudesBandejaAuditorMedica(db, opts = {}) {
       { causalCache, versionCache: versionLargaCache },
     );
 
+    const certificado_adjuntos = mapearAdjuntosBandejaAuditor(sol);
     const item = {
       solicitud_id: sol.id,
       articulo_id: artId,
@@ -145,6 +149,8 @@ async function listarSolicitudesBandejaAuditorMedica(db, opts = {}) {
       vencimiento_plazo_certificado: sol.vencimiento_plazo_certificado || null,
       puede_clasificar: !incompleta,
       etiqueta_estado: etiquetaBandejaAuditor(sol, incompleta),
+      certificado_adjuntos,
+      tiene_certificado: certificado_adjuntos.length > 0,
       ...largaMeta,
     };
 
@@ -176,6 +182,7 @@ module.exports = {
   listarSolicitudesBandejaAuditorMedica,
   itemPasaFiltroIncompleta,
   esIncompletaMedica,
+  mapearAdjuntosBandejaAuditor,
   FILTRO_COMPLETAS,
   FILTRO_PROVISORIAS,
   FILTRO_TODAS,

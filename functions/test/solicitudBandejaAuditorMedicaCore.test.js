@@ -6,6 +6,7 @@ const assert = require("node:assert/strict");
 const {
   itemPasaFiltroIncompleta,
   esIncompletaMedica,
+  mapearAdjuntosBandejaAuditor,
   FILTRO_COMPLETAS,
   FILTRO_PROVISORIAS,
   FILTRO_TODAS,
@@ -58,6 +59,32 @@ describe("solicitudBandejaAuditorMedicaCore", () => {
     assert.equal(
       resolverCausalLargaIdDesdeSol({ causal_larga_duracion_id: "cfg_cld_abc" }),
       "cfg_cld_abc",
+    );
+  });
+
+  it("mapearAdjuntosBandejaAuditor expone storage_path para visor", () => {
+    const rows = mapearAdjuntosBandejaAuditor({
+      ingreso_medico: {
+        adjuntos: [
+          {
+            storage_path: "avisos-med/2026/uid/cert.pdf",
+            nombre_archivo: "cert.pdf",
+            content_type: "application/pdf",
+          },
+        ],
+      },
+    });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].storage_path, "avisos-med/2026/uid/cert.pdf");
+    assert.equal(rows[0].es_pdf, true);
+  });
+
+  it("mapearAdjuntosBandejaAuditor ignora filas sin path", () => {
+    assert.deepEqual(
+      mapearAdjuntosBandejaAuditor({
+        ingreso_medico: { adjuntos: [{ nombre_archivo: "x" }] },
+      }),
+      [],
     );
   });
 });

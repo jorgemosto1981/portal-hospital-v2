@@ -1,4 +1,5 @@
 import BandejaSolicitudExpandDatos from "./BandejaSolicitudExpandDatos.jsx";
+import VisorPDF from "../../components/medico/VisorPDF.jsx";
 
 function textoDiagnostico(sel) {
   const cod = String(sel?.cie10_codigo || "").trim();
@@ -20,6 +21,8 @@ export default function BandejaAuditorSolicitudDetalle({
   const esLarga = sel.es_licencia_larga === true;
   const juntaHint = dias > 15;
   const diagnostico = textoDiagnostico(sel);
+  const adjuntos = Array.isArray(sel.certificado_adjuntos) ? sel.certificado_adjuntos : [];
+  const tieneCertificado = sel.tiene_certificado === true || adjuntos.length > 0;
 
   return (
     <div className="space-y-4 border-t border-teal-100 bg-teal-50/30 px-4 py-4">
@@ -29,6 +32,22 @@ export default function BandejaAuditorSolicitudDetalle({
           <BandejaSolicitudExpandDatos sel={sel} variant="auditor" />
         </div>
       </div>
+
+      <section className="space-y-2 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Certificado médico</p>
+        {tieneCertificado && adjuntos[0] ? (
+          <>
+            {adjuntos.length > 1 ? (
+              <p className="text-xs text-slate-500">
+                {adjuntos.length} archivos en el aviso — mostrando el primero.
+              </p>
+            ) : null}
+            <VisorPDF adjunto={adjuntos[0]} />
+          </>
+        ) : (
+          <p className="text-sm text-slate-500">Sin certificado adjunto en este aviso.</p>
+        )}
+      </section>
 
       {esLarga ? (
         <section className="space-y-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
