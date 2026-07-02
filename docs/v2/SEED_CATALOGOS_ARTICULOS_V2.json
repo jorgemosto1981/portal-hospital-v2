@@ -17,6 +17,7 @@
       "cfg_unidad_plazo (PF §3.2) vs cfg_tipo_computo_plazo cfg_tcp_* (plazo documental modular) — no mezclar filas hasta RFC (diccionario §2 nota).",
       "Matriz Bloque 4 ambito_consumo_id: no figura colección dedicada en diccionario §2; incluido aquí como cfg_ambito_consumo propuesto para cierre de FK."
     ],
+    "cie10_catalogo": "docs/v2/seeds/cie10/CIE10_CFG_NORMALIZADO.json → colección cfg_cie10 (import: scripts/import-cie10.mjs)",
     "coleccion_implicita_diccionario": "cfg_justifica_sueldo (prefijo cfg_js_* sugerido en diccionario §2 nota Bloque 2) — incluida como propuesta explícita.",
     "prefijos_id_documento": {
       "cfg_tipo_articulo": "cfg_ta_* (diccionario §1)",

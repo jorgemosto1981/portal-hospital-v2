@@ -214,6 +214,21 @@ async function main() {
     total += n;
   }
 
+  const cie10Path = join(repoRoot, "docs", "v2", "seeds", "cie10", "CIE10_CFG_NORMALIZADO.json");
+  try {
+    const cieRaw = JSON.parse(readFileSync(cie10Path, "utf8"));
+    const cieRows = Array.isArray(cieRaw.cfg_cie10) ? cieRaw.cfg_cie10 : [];
+    const nCie = await writeCollectionReplace(cieRows, "cfg_cie10");
+    report.colecciones.cfg_cie10_desde_cie10_seed = nCie;
+    total += nCie;
+  } catch (e) {
+    if (e && typeof e === "object" && "code" in e && e.code === "ENOENT") {
+      console.warn("[seed-articulos-v2] cfg_cie10: sin CIE10_CFG_NORMALIZADO.json — skip");
+    } else {
+      throw e;
+    }
+  }
+
   report.total_documentos = total;
 
   const outPath = join(__dirname, "seed-catalogos-articulos-v2-report.json");

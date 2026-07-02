@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   callListarArticulosIngresoAgente,
+  callListarColeccionPublicaTemporal,
   callPrevisualizarSolicitudPatronB,
   callResolverContextoLaboralSolicitud,
   callValidarEntornoOperativoSolicitud,
@@ -18,6 +19,7 @@ import {
   resolverDiasSolicitadosPatronB,
 } from "./patronBFechasUi.js";
 import { formatearMensajesEntorno } from "./formatearMensajeEntorno.js";
+import { articuloEsLicenciaMedicaLarga } from "./licenciaMedicaLargaUi.js";
 
 const RX_YMD = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -58,8 +60,15 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
   const [fechaHastaCalc, setFechaHastaCalc] = useState("");
   const [fechaHastaManual, setFechaHastaManual] = useState("");
   const [opcionConsumoId, setOpcionConsumoId] = useState("");
+  const [causalLargaDuracionId, setCausalLargaDuracionId] = useState("");
+  const [cie10Codigo, setCie10Codigo] = useState("");
+  const [cie10Descripcion, setCie10Descripcion] = useState("");
+  const [catalogoCausalLarga, setCatalogoCausalLarga] = useState(/** @type {Array<Record<string, unknown>>} */ ([]));
+  const [catalogoCie10, setCatalogoCie10] = useState(/** @type {Array<Record<string, unknown>>} */ ([]));
+  const [catalogosLargaCargando, setCatalogosLargaCargando] = useState(false);
 
-  const requiereOpcionConsumo = articuloRequiereOpcionConsumo(articuloSel);
+  const requiereLicenciaMedicaLarga = articuloEsLicenciaMedicaLarga(articuloSel);
+  const requiereOpcionConsumo = articuloRequiereOpcionConsumo(articuloSel) && !requiereLicenciaMedicaLarga;
 
   const diasPreestablecidos = useMemo(() => {
     if (requiereOpcionConsumo) return Boolean(opcionConsumoId);
@@ -162,6 +171,45 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
   useEffect(() => {
     recargarGrupos();
   }, [recargarGrupos]);
+
+  useEffect(() => {
+    if (!requiereLicenciaMedicaLarga) {
+      setCatalogoCausalLarga([]);
+      setCatalogoCie10([]);
+      return;
+    }
+    let cancel = false;
+    (async () => {
+      setCatalogosLargaCargando(true);
+      try {
+        const [causalRes, cieRes] = await Promise.all([
+          callListarColeccionPublicaTemporal({ collectionName: "cfg_causal_larga_duracion" }),
+          callListarColeccionPublicaTemporal({ collectionName: "cfg_cie10" }),
+        ]);
+        if (cancel) return;
+        const causales = causalRes?.data?.items || [];
+        const cie = cieRes?.data?.items || [];
+        setCatalogoCausalLarga(Array.isArray(causales) ? causales : []);
+        setCatalogoCie10(Array.isArray(cie) ? cie : []);
+      } catch {
+        if (!cancel) {
+          setCatalogoCausalLarga([]);
+          setCatalogoCie10([]);
+        }
+      } finally {
+        if (!cancel) setCatalogosLargaCargando(false);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [requiereLicenciaMedicaLarga, articuloSel?.articulo_id]);
+
+  const largaMedicaOk =
+    !requiereLicenciaMedicaLarga ||
+    (/^cfg_cld_/i.test(causalLargaDuracionId) &&
+      cie10Codigo.length >= 2 &&
+      cie10Descripcion.length >= 3);
 
   const recargar = useCallback(async () => {
     if (!/^per_/i.test(personaId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaDesde)) {
@@ -344,6 +392,9 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
       if (opcionConsumoId) {
         body.opcion_consumo_id = opcionConsumoId;
       }
+      if (requiereLicenciaMedicaLarga) {
+        body.causal_larga_duracion_id = causalLargaDuracionId;
+      }
       const res = await callPrevisualizarSolicitudPatronB(body);
       const data = res?.data && typeof res.data === "object" ? res.data : null;
       setPreview(data);
@@ -371,6 +422,8 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     previewCargando,
     entornoOk,
     requiereOpcionConsumo,
+    requiereLicenciaMedicaLarga,
+    causalLargaDuracionId,
   ]);
 
   const previewVigente =
@@ -380,7 +433,9 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     String(preview.articulo_id) === String(articuloSel.articulo_id) &&
     String(preview.fecha_desde) === fechaDesde &&
     Number(preview.dias_solicitados) === diasSolicitados &&
-    (!requiereOpcionConsumo || String(preview.opcion_consumo_id || "") === opcionConsumoId);
+    (!requiereOpcionConsumo || String(preview.opcion_consumo_id || "") === opcionConsumoId) &&
+    (!requiereLicenciaMedicaLarga ||
+      String(preview.causal_larga_duracion_id || "") === causalLargaDuracionId);
 
   const puedeEnviarTrasPreview =
     previewVigente && (preview.eligible === true || preview.ok === true);
@@ -392,6 +447,23 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     setEntornoMensajes([]);
     setFechaHastaCalc("");
   }, []);
+
+  const cambiarCausalLarga = useCallback(
+    (id) => {
+      setCausalLargaDuracionId(String(id || "").trim());
+      reiniciarValidacionYPreview();
+    },
+    [reiniciarValidacionYPreview],
+  );
+
+  const cambiarCie10 = useCallback(
+    ({ codigo, descripcion }) => {
+      setCie10Codigo(String(codigo || "").trim().toUpperCase());
+      setCie10Descripcion(String(descripcion || "").trim());
+      reiniciarValidacionYPreview();
+    },
+    [reiniciarValidacionYPreview],
+  );
 
   const cambiarOpcionConsumo = useCallback(
     (id) => {
@@ -405,6 +477,9 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     (v) => {
       setFechaDesde(v);
       setOpcionConsumoId("");
+      setCausalLargaDuracionId("");
+      setCie10Codigo("");
+      setCie10Descripcion("");
       reiniciarValidacionYPreview();
     },
     [reiniciarValidacionYPreview],
@@ -441,6 +516,11 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
         diasSolicitados,
         grupoTrabajoIdAncla: grupoAnclaId,
         opcionConsumoId: opcionConsumoId || undefined,
+        causalLargaDuracionId: requiereLicenciaMedicaLarga ? causalLargaDuracionId : undefined,
+        cie10:
+          requiereLicenciaMedicaLarga && cie10Codigo && cie10Descripcion
+            ? { codigo: cie10Codigo, descripcion: cie10Descripcion }
+            : undefined,
       });
       const motor = await esperarValidacionMotorPatronB(solicitud_id);
       resetTrasEnvio();
@@ -517,5 +597,14 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     entornoOk,
     entornoMensajes,
     reiniciarValidacionYPreview,
+    requiereLicenciaMedicaLarga,
+    largaMedicaOk,
+    causalLargaDuracionId,
+    cambiarCausalLarga,
+    cie10Codigo,
+    cambiarCie10,
+    catalogoCausalLarga,
+    catalogoCie10,
+    catalogosLargaCargando,
   };
 }

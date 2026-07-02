@@ -1,0 +1,22 @@
+[
+  { "codigo": "J00", "descripcion": "Nasofaringitis aguda [resfriado común]" },
+  { "codigo": "J06.9", "descripcion": "Infección aguda de las vías respiratorias superiores, no especificada" },
+  { "codigo": "J18.9", "descripcion": "Neumonía, no especificada" },
+  { "codigo": "I10", "descripcion": "Hipertensión esencial (primaria)" },
+  { "codigo": "E11.9", "descripcion": "Diabetes mellitus tipo 2 sin complicaciones" },
+  { "codigo": "M54.5", "descripcion": "Lumbago no especificado" },
+  { "codigo": "F32.9", "descripcion": "Episodio depresivo, no especificado" },
+  { "codigo": "F41.9", "descripcion": "Trastorno de ansiedad, no especificado" },
+  { "codigo": "K29.7", "descripcion": "Gastritis, no especificada" },
+  { "codigo": "N39.0", "descripcion": "Infección de vías urinarias, sitio no especificado" },
+  { "codigo": "S72.0", "descripcion": "Fractura del cuello del fémur" },
+  { "codigo": "Z51.1", "descripcion": "Sesión de quimioterapia por neoplasia" },
+  { "codigo": "C50.9", "descripcion": "Neoplasia maligna de mama, parte no especificada" },
+  { "codigo": "G43.9", "descripcion": "Migraña, no especificada" },
+  { "codigo": "J45.9", "descripcion": "Asma, no especificada" },
+  { "codigo": "I25.9", "descripcion": "Enfermedad isquémica crónica del corazón, no especificada" },
+  { "codigo": "B34.9", "descripcion": "Infección viral, no especificada" },
+  { "codigo": "R53", "descripcion": "Malestar y fatiga" },
+  { "codigo": "O80", "descripcion": "Parto único espontáneo" },
+  { "codigo": "Z73.0", "descripcion": "Agotamiento" }
+]

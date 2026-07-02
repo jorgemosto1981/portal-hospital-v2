@@ -121,6 +121,15 @@ export default function TicketeraPatronB() {
         requiereOpcionConsumo={form.requiereOpcionConsumo}
         opcionConsumoId={form.opcionConsumoId}
         onOpcionConsumoChange={form.cambiarOpcionConsumo}
+        requiereLicenciaMedicaLarga={form.requiereLicenciaMedicaLarga}
+        largaMedicaOk={form.largaMedicaOk}
+        causalLargaDuracionId={form.causalLargaDuracionId}
+        onCausalLargaChange={form.cambiarCausalLarga}
+        cie10Codigo={form.cie10Codigo}
+        onCie10Change={form.cambiarCie10}
+        catalogoCausalLarga={form.catalogoCausalLarga}
+        catalogoCie10={form.catalogoCie10}
+        catalogosLargaCargando={form.catalogosLargaCargando}
         fechasListasParaEntorno={form.fechasListasParaEntorno}
         titulo=""
         descripcion=""

@@ -70,6 +70,20 @@ export default function PatronBPreviewInfo({ preview, error, cargando }) {
             <strong>{saldo.saldo_restante_preview}</strong> (consumo {saldo.dias_consumo}).
           </p>
         ) : null}
+        {preview.licencia_medica_preview &&
+        typeof preview.licencia_medica_preview === "object" ? (
+          <div className="rounded-lg border border-violet-200 bg-violet-50/80 px-3 py-2 text-violet-950">
+            <p className="font-medium">Licencia médica — proyección</p>
+            <p className="mt-1 text-sm">
+              {String(preview.licencia_medica_preview.mensaje_ui || "")}
+            </p>
+            {preview.licencia_medica_preview.mensaje_ui_corto ? (
+              <p className="mt-1 font-mono text-xs">
+                {String(preview.licencia_medica_preview.mensaje_ui_corto)}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </section>
   );

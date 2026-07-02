@@ -1,0 +1,190 @@
+{
+  "_meta": {
+    "fuente": "OPS/OMS — normalizado por scripts/import-cie10.mjs",
+    "generado_en": "2026-07-02T11:13:16.005Z",
+    "entrada": "E:\\web nueva\\portal-hospital-v2\\docs\\v2\\seeds\\cie10\\CIE10_OPS_PILOTO.json",
+    "total": 20
+  },
+  "cfg_cie10": [
+    {
+      "id": "cfg_cie10_j00",
+      "codigo_interno": "J00",
+      "titulo_ui": "Nasofaringitis aguda [resfriado común]",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_j06_9",
+      "codigo_interno": "J06.9",
+      "titulo_ui": "Infección aguda de las vías respiratorias superiores, no especificada",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_j18_9",
+      "codigo_interno": "J18.9",
+      "titulo_ui": "Neumonía, no especificada",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_i10",
+      "codigo_interno": "I10",
+      "titulo_ui": "Hipertensión esencial (primaria)",
+      "orden": 40,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_e11_9",
+      "codigo_interno": "E11.9",
+      "titulo_ui": "Diabetes mellitus tipo 2 sin complicaciones",
+      "orden": 50,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_m54_5",
+      "codigo_interno": "M54.5",
+      "titulo_ui": "Lumbago no especificado",
+      "orden": 60,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_f32_9",
+      "codigo_interno": "F32.9",
+      "titulo_ui": "Episodio depresivo, no especificado",
+      "orden": 70,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_f41_9",
+      "codigo_interno": "F41.9",
+      "titulo_ui": "Trastorno de ansiedad, no especificado",
+      "orden": 80,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_k29_7",
+      "codigo_interno": "K29.7",
+      "titulo_ui": "Gastritis, no especificada",
+      "orden": 90,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_n39_0",
+      "codigo_interno": "N39.0",
+      "titulo_ui": "Infección de vías urinarias, sitio no especificado",
+      "orden": 100,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_s72_0",
+      "codigo_interno": "S72.0",
+      "titulo_ui": "Fractura del cuello del fémur",
+      "orden": 110,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_z51_1",
+      "codigo_interno": "Z51.1",
+      "titulo_ui": "Sesión de quimioterapia por neoplasia",
+      "orden": 120,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_c50_9",
+      "codigo_interno": "C50.9",
+      "titulo_ui": "Neoplasia maligna de mama, parte no especificada",
+      "orden": 130,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_g43_9",
+      "codigo_interno": "G43.9",
+      "titulo_ui": "Migraña, no especificada",
+      "orden": 140,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_j45_9",
+      "codigo_interno": "J45.9",
+      "titulo_ui": "Asma, no especificada",
+      "orden": 150,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_i25_9",
+      "codigo_interno": "I25.9",
+      "titulo_ui": "Enfermedad isquémica crónica del corazón, no especificada",
+      "orden": 160,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_b34_9",
+      "codigo_interno": "B34.9",
+      "titulo_ui": "Infección viral, no especificada",
+      "orden": 170,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_r53",
+      "codigo_interno": "R53",
+      "titulo_ui": "Malestar y fatiga",
+      "orden": 180,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_o80",
+      "codigo_interno": "O80",
+      "titulo_ui": "Parto único espontáneo",
+      "orden": 190,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cie10_z73_0",
+      "codigo_interno": "Z73.0",
+      "titulo_ui": "Agotamiento",
+      "orden": 200,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ]
+}

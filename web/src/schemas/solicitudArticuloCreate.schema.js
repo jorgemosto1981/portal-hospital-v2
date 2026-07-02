@@ -11,6 +11,7 @@ import {
   SCHEMA_SOLICITUD_PATRON_B,
   SCHEMA_SOLICITUD_PATRON_C,
 } from "../constants/solicitudesArticuloV2.js";
+import { cie10SolicitudMapSchema, cfgCldIdSchema, TOPE_DIAS_LICENCIA_MEDICA_LARGA } from "./solicitudMedLargaCie10.schema.js";
 
 const ULID = "[0-9A-HJKMNP-TV-Z]{26}";
 
@@ -31,11 +32,46 @@ export const solicitudPatronBAltaInputSchema = z
     versionIdAplicada: verIdSchema,
     fechaDesde: ymdSchema,
     fechaHasta: ymdSchema.optional(),
-    diasSolicitados: z.number().int().min(1).max(31),
+    diasSolicitados: z.number().int().min(1).max(TOPE_DIAS_LICENCIA_MEDICA_LARGA),
     grupoTrabajoIdAncla: gdtIdSchema,
     opcionConsumoId: opcionConsumoIdSchema.optional(),
+    causalLargaDuracionId: cfgCldIdSchema.optional(),
+    cie10: z
+      .object({
+        codigo: z.string().min(2).max(12),
+        descripcion: z.string().min(3).max(500),
+      })
+      .strict()
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    const esLarga = Boolean(data.causalLargaDuracionId && data.cie10);
+    if (esLarga) {
+      if (data.diasSolicitados > TOPE_DIAS_LICENCIA_MEDICA_LARGA) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["diasSolicitados"],
+          message: "Licencia larga: excede tope de episodio.",
+        });
+      }
+      return;
+    }
+    if (data.diasSolicitados > 31) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["diasSolicitados"],
+        message: "Patrón B estándar: máximo 31 días por solicitud.",
+      });
+    }
+    if (data.causalLargaDuracionId || data.cie10) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["causalLargaDuracionId"],
+        message: "Licencia larga requiere causal Art. 19 y CIE-10.",
+      });
+    }
+  });
 
 const solicitudPatronBShapeBaseSchema = z
   .object({
@@ -46,12 +82,14 @@ const solicitudPatronBShapeBaseSchema = z
     fecha_desde: ymdSchema,
     fecha_hasta: ymdSchema,
     anio_ciclo_consumo: z.number().int().min(1900).max(2200),
-    dias_solicitados: z.number().int().min(1).max(31),
+    dias_solicitados: z.number().int().min(1).max(TOPE_DIAS_LICENCIA_MEDICA_LARGA),
     patron_saldo: z.literal("B"),
     estado_solicitud_id: z.literal(ESTADO_SOLICITUD_ARTICULO_BORRADOR),
     schema_version: z.literal(SCHEMA_SOLICITUD_PATRON_B),
     grupo_trabajo_id_ancla: gdtIdSchema,
     opcion_consumo_id: opcionConsumoIdSchema.optional(),
+    causal_larga_duracion_id: cfgCldIdSchema.optional(),
+    cie10: cie10SolicitudMapSchema.optional(),
     creado_en: z.unknown(),
     actualizado_en: z.unknown(),
   })
@@ -80,6 +118,33 @@ export const solicitudArticuloCreateShapePatronBSchema = solicitudPatronBShapeBa
   .refine((d) => d.anio_ciclo_consumo === Number(d.fecha_desde.slice(0, 4)), {
     message: "anio_ciclo_consumo debe coincidir con el año de fecha_desde.",
     path: ["anio_ciclo_consumo"],
+  })
+  .superRefine((d, ctx) => {
+    const esLarga = Boolean(d.causal_larga_duracion_id && d.cie10);
+    if (esLarga) {
+      if (d.dias_solicitados > TOPE_DIAS_LICENCIA_MEDICA_LARGA) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["dias_solicitados"],
+          message: "Excede tope episodio larga.",
+        });
+      }
+      return;
+    }
+    if (d.dias_solicitados > 31) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["dias_solicitados"],
+        message: "Máximo 31 días en Patrón B estándar.",
+      });
+    }
+    if (d.causal_larga_duracion_id || d.cie10) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["causal_larga_duracion_id"],
+        message: "Faltan causal o CIE-10 para licencia larga.",
+      });
+    }
   });
 
 /**
@@ -109,6 +174,14 @@ export function buildSolicitudPatronBBorradorDocument(input, timestamps) {
   };
   if (parsed.opcionConsumoId) {
     doc.opcion_consumo_id = parsed.opcionConsumoId;
+  }
+  if (parsed.causalLargaDuracionId && parsed.cie10) {
+    doc.causal_larga_duracion_id = parsed.causalLargaDuracionId;
+    doc.cie10 = cie10SolicitudMapSchema.parse({
+      codigo: parsed.cie10.codigo,
+      descripcion: parsed.cie10.descripcion,
+      fecha_imputacion: timestamps.creado_en,
+    });
   }
   return solicitudArticuloCreateShapePatronBSchema.parse(doc);
 }

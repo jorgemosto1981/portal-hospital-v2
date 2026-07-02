@@ -1,4 +1,5 @@
 import { contarDiasCorridosInclusive } from "../../../../shared/utils/calendarInstitucionalCore.js";
+import { articuloEsLicenciaMedicaLarga } from "./licenciaMedicaLargaUi.js";
 
 const RX_YMD = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -13,6 +14,7 @@ export function articuloRequiereOpcionConsumo(articuloSel) {
 }
 
 export function articuloTieneDiasPreestablecidos(articuloSel) {
+  if (articuloEsLicenciaMedicaLarga(articuloSel)) return false;
   if (articuloRequiereOpcionConsumo(articuloSel)) return false;
   if (!articuloSel) return true;
   const d = Number(articuloSel.dias_solicitados);

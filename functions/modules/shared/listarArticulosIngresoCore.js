@@ -213,6 +213,19 @@ async function listarArticulosIngresoPatronB(params) {
       fecha_hasta: fechaHasta,
       regla_computo_dias_id: String(versionData?.bloque_topes_plazos_computo?.regla_computo_dias_id || "").trim() || null,
       ...(() => {
+        const ident = versionData?.bloque_identidad_naturaleza;
+        const modoLm = String(ident?.modo_licencia_medica_id || "").trim();
+        const esLarga =
+          ident?.es_licencia_medica === true && modoLm === "cfg_mlm_larga_episodio";
+        if (!esLarga) return {};
+        return {
+          modo_licencia_medica_id: modoLm,
+          requiere_causal_larga: true,
+          requiere_cie10: true,
+          tope_dias_solicitud: 730,
+        };
+      })(),
+      ...(() => {
         const m = readModoCalculo(versionData);
         return {
           modo_computo: m.modo,

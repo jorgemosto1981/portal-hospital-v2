@@ -42,6 +42,18 @@ function resolverCausalLargaDuracionId(input, d) {
 }
 
 /**
+ * @param {Record<string, unknown>} d
+ */
+function resolverCie10DesdeSolicitud(d) {
+  const c = d.cie10;
+  if (!c || typeof c !== "object") return null;
+  const codigo = String(c.codigo || "").trim();
+  const descripcion = String(c.descripcion || "").trim();
+  if (!codigo || !descripcion) return null;
+  return { codigo, descripcion, fecha_imputacion: c.fecha_imputacion ?? null };
+}
+
+/**
  * @param {import("firebase-admin/firestore").Firestore} db
  * @param {string} articuloId
  * @param {string} versionId
@@ -193,6 +205,14 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
           "Licencia larga: indicá causal_larga_duracion_id (Art. 19) en el aviso o en la clasificación.",
       };
     }
+    const cie10 = resolverCie10DesdeSolicitud(d);
+    if (!cie10) {
+      return {
+        ok: false,
+        codigo: "CIE10_REQUERIDO",
+        mensaje: "Licencia larga: falta diagnóstico CIE-10 en la solicitud.",
+      };
+    }
   }
 
   /** @type {Record<string, unknown>} */
@@ -209,12 +229,15 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
       dias_solicitados: dias,
       requiere_junta_medica: requiereJunta,
       ...(esLarga ? { causal_larga_duracion_id: causalLargaId } : {}),
+      ...(esLarga ? { cie10: resolverCie10DesdeSolicitud(d) } : {}),
     },
     actualizado_en: FieldValue.serverTimestamp(),
   };
 
   if (esLarga) {
     patch.causal_larga_duracion_id = causalLargaId;
+    const cie10 = resolverCie10DesdeSolicitud(d);
+    if (cie10) patch.cie10 = cie10;
   }
 
   const gdt = String(input.grupoTrabajoIdAncla || d.grupo_trabajo_id_ancla || "").trim();

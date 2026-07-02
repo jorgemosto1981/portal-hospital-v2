@@ -232,6 +232,34 @@ service cloud.firestore {
         );
     }
 
+    function solicitudCie10MapValid(m) {
+      return m is map
+        && m.keys().hasOnly(['codigo', 'descripcion', 'fecha_imputacion'])
+        && m.codigo is string
+        && m.codigo.size() >= 2
+        && m.codigo.size() <= 12
+        && m.descripcion is string
+        && m.descripcion.size() >= 3
+        && m.descripcion.size() <= 500
+        && m.fecha_imputacion is timestamp;
+    }
+
+    function solicitudPatronBLargaExtrasValid(d) {
+      return d.causal_larga_duracion_id is string
+        && d.causal_larga_duracion_id.matches('(?i)^cfg_cld_')
+        && d.cie10 is map
+        && solicitudCie10MapValid(d.cie10);
+    }
+
+    function solicitudPatronBDiasSolicitadosValidos(d) {
+      return d.dias_solicitados is int
+        && d.dias_solicitados >= 1
+        && (
+          (d.dias_solicitados <= 31 && !('causal_larga_duracion_id' in d))
+          || (solicitudPatronBLargaExtrasValid(d) && d.dias_solicitados <= 730)
+        );
+    }
+
     function solicitudPatronBOpcionConsumoValida(d) {
       return !('opcion_consumo_id' in d)
         || (
@@ -260,9 +288,7 @@ service cloud.firestore {
         && d.anio_ciclo_consumo is int
         && d.anio_ciclo_consumo >= 1900
         && d.anio_ciclo_consumo <= 2200
-        && d.dias_solicitados is int
-        && d.dias_solicitados >= 1
-        && d.dias_solicitados <= 31
+        && solicitudPatronBDiasSolicitadosValidos(d)
         && d.patron_saldo == 'B'
         && d.estado_solicitud_id == 'cfg_esa_borrador'
         && d.schema_version == 2;
@@ -315,8 +341,7 @@ service cloud.firestore {
 
     function solicitudArticuloCreateShapePatronB() {
       let d = request.resource.data;
-      return solicitudArticuloPatronBFieldsValid(d)
-        && d.keys().hasOnly([
+      let keysBase = [
           'articulo_id',
           'titular_persona_id',
           'actor_alta_persona_id',
@@ -332,7 +357,12 @@ service cloud.firestore {
           'opcion_consumo_id',
           'creado_en',
           'actualizado_en',
-        ]);
+        ];
+      let keysLarga = keysBase.concat(['causal_larga_duracion_id', 'cie10']);
+      return (solicitudArticuloPatronBFieldsValid(d) && d.keys().hasOnly(keysBase))
+        || (solicitudArticuloPatronBFieldsValid(d)
+          && solicitudPatronBLargaExtrasValid(d)
+          && d.keys().hasOnly(keysLarga));
     }
 
     function solicitudArticuloPatronCFieldsValid(d) {

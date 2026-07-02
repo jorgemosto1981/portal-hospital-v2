@@ -133,9 +133,13 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
     dictamen_favorable: d.dictamen_favorable === true,
   });
 
+  const causal_larga_duracion_id =
+    typeof d.causal_larga_duracion_id === "string" ? d.causal_larga_duracion_id.trim() : null;
+
   return {
     ...base,
     sin_descuento_bolsa_ciclo: sinBolsaCiclo,
+    ...(causal_larga_duracion_id ? { causal_larga_duracion_id } : {}),
     ...(licencia_medica_preview ? { licencia_medica_preview } : {}),
     ...(sinBolsaCiclo
       ? {}

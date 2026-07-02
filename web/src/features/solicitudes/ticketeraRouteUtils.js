@@ -32,6 +32,10 @@ export function filaArticuloIngresoDesdeCallable(art) {
     opciones_consumo_solicitud: Array.isArray(art?.opciones_consumo_solicitud)
       ? art.opciones_consumo_solicitud
       : [],
+    modo_licencia_medica_id: art?.modo_licencia_medica_id ?? null,
+    requiere_causal_larga: art?.requiere_causal_larga === true,
+    requiere_cie10: art?.requiere_cie10 === true,
+    tope_dias_solicitud: art?.tope_dias_solicitud ?? null,
   };
 }
 

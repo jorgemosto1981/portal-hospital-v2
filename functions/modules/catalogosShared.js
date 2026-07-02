@@ -59,6 +59,8 @@ const COLECCIONES_PUBLICAS_TEMPORALES = new Set([
   "cfg_tipo_consentimiento",
   "cfg_textos_legales",
   "cfg_idioma",
+  "cfg_causal_larga_duracion",
+  "cfg_cie10",
 ]);
 
 const COLECCIONES_ESCRITURA_LABORAL_TEMPORAL = new Set([

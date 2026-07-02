@@ -76,6 +76,9 @@ const CFG_COLECCIONES_ARTICULOS_V2 = [
   "cfg_unidad_plazo",
   "cfg_ambito_consumo",
   "cfg_justifica_sueldo",
+  "cfg_modo_licencia_medica",
+  "cfg_causal_larga_duracion",
+  "cfg_cie10",
 ];
 
 const CFG_COLECCIONES_RRHH = new Set([

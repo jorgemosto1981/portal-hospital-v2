@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 
 import OpcionConsumoSelect from "./OpcionConsumoSelect.jsx";
+import CausalLargaSelect from "./CausalLargaSelect.jsx";
+import Cie10Select from "./Cie10Select.jsx";
 import PatronBPreviewInfo from "./PatronBPreviewInfo.jsx";
 import { TICKETERA } from "./ticketeraUi.js";
 import { etiquetaArticulo, mensajeBloqueoPreview } from "./ticketeraUtils.js";
@@ -123,6 +125,15 @@ export default function SolicitudPatronBForm({
   requiereOpcionConsumo = false,
   opcionConsumoId = "",
   onOpcionConsumoChange,
+  requiereLicenciaMedicaLarga = false,
+  largaMedicaOk = true,
+  causalLargaDuracionId = "",
+  onCausalLargaChange,
+  cie10Codigo = "",
+  onCie10Change,
+  catalogoCausalLarga = [],
+  catalogoCie10 = [],
+  catalogosLargaCargando = false,
   articulos,
   articuloSel,
   setArticuloSel,
@@ -177,12 +188,14 @@ export default function SolicitudPatronBForm({
 
   const tieneFechaDesde = /^\d{4}-\d{2}-\d{2}$/.test(fechaDesde);
   const opcionConsumoOk = !requiereOpcionConsumo || Boolean(opcionConsumoId);
+  const largaDatosOk = !requiereLicenciaMedicaLarga || largaMedicaOk;
   const mostrarFechaHasta =
-    tieneFechaDesde && (!requiereOpcionConsumo || opcionConsumoOk);
+    tieneFechaDesde && opcionConsumoOk && largaDatosOk;
   const mostrarGrupo = fechasListasParaEntorno || fechasCompletas;
   const puedeValidarPaso2 =
     puedeContinuarPaso1 &&
     opcionConsumoOk &&
+    largaDatosOk &&
     (fechasListasParaEntorno || fechasCompletas) &&
     !gruposCargando &&
     !validandoEntorno &&
@@ -300,6 +313,26 @@ export default function SolicitudPatronBForm({
                   </p>
                 ) : null}
               </div>
+            ) : null}
+
+            {requiereLicenciaMedicaLarga ? (
+              <>
+                {catalogosLargaCargando ? (
+                  <p className={TICKETERA.muted}>Cargando catálogos médicos (causal y CIE-10)…</p>
+                ) : null}
+                <CausalLargaSelect
+                  opciones={catalogoCausalLarga}
+                  value={causalLargaDuracionId}
+                  onChange={(id) => onCausalLargaChange?.(id)}
+                  disabled={validandoEntorno || previewCargando || enviando}
+                />
+                <Cie10Select
+                  opciones={catalogoCie10}
+                  valueCodigo={cie10Codigo}
+                  onChange={(payload) => onCie10Change?.(payload)}
+                  disabled={validandoEntorno || previewCargando || enviando}
+                />
+              </>
             ) : null}
 
             {requiereOpcionConsumo ? (
