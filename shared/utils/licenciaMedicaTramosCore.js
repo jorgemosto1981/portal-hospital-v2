@@ -33,6 +33,13 @@ export function esLicenciaMedicaCortaAnual(versionData) {
 }
 
 /**
+ * @param {unknown} versionData
+ */
+export function esLicenciaMedicaLargaEpisodio(versionData) {
+  return leerModoLicenciaMedicaDesdeVersion(versionData) === CFG_MLM_LARGA_EPISODIO;
+}
+
+/**
  * @param {{ consumido_previo?: unknown, dias_solicitados?: unknown }} params
  */
 export function calcularTramosLicenciaMedicaCorta(params) {

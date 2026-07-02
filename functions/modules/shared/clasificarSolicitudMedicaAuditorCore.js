@@ -9,8 +9,12 @@ const {
 const { iterarYmdInclusive } = require("./mdcRdaDocumentIds");
 const {
   esLicenciaMedicaCortaAnual,
+  esLicenciaMedicaLargaEpisodio,
+  leerModoLicenciaMedicaDesdeVersion,
 } = require("./licenciaMedicaTramosCore");
+const { proyectarEpisodioContinuo } = require("./licenciaMedicaEpisodioCore");
 const { aplicarLicenciaMedicaAprobada } = require("./aplicarLicenciaMedicaAprobadaCore");
+const { sumarConsumoEpisodioLargaAprobado } = require("./licenciaMedicaConsumoEpisodio");
 
 const ESTADO_RECHAZADA = "cfg_esa_rechazada";
 const ESTADO_APROBADA = "cfg_esa_aprobada";
@@ -22,6 +26,19 @@ const ESTADO_ESPERANDO_JUNTA = "cfg_esa_esperando_dictamen_junta";
  */
 function diasCorridosInclusive(desde, hasta) {
   return iterarYmdInclusive(desde, hasta).length;
+}
+
+/**
+ * @param {{ causalLargaDuracionId?: string }} input
+ * @param {Record<string, unknown>} d
+ */
+function resolverCausalLargaDuracionId(input, d) {
+  const lm = d.licencia_medica && typeof d.licencia_medica === "object" ? d.licencia_medica : null;
+  const desdeLm =
+    lm && typeof lm.causal_larga_duracion_id === "string" ? lm.causal_larga_duracion_id : "";
+  return String(
+    input.causalLargaDuracionId || d.causal_larga_duracion_id || desdeLm || "",
+  ).trim();
 }
 
 /**
@@ -56,6 +73,7 @@ async function cargarVersionArticulo(db, articuloId, versionId) {
  *   grupoTrabajoIdAncla?: string,
  *   observacionAuditor?: string,
  *   dictamenFavorable: boolean,
+ *   causalLargaDuracionId?: string,
  * }} input
  */
 async function clasificarSolicitudMedicaAuditor(db, input) {
@@ -143,11 +161,14 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
 
   const ver = await cargarVersionArticulo(db, articuloId, versionIdAplicada);
   if (!ver.ok) return ver;
-  if (!esLicenciaMedicaCortaAnual(ver.versionData)) {
+
+  const esCorta = esLicenciaMedicaCortaAnual(ver.versionData);
+  const esLarga = esLicenciaMedicaLargaEpisodio(ver.versionData);
+  if (!esCorta && !esLarga) {
     return {
       ok: false,
-      codigo: "ARTICULO_NO_CORTA_ANUAL",
-      mensaje: "En esta fase solo se clasifican artículos de licencia médica corta anual.",
+      codigo: "ARTICULO_NO_LICENCIA_MEDICA",
+      mensaje: "El artículo no es licencia médica corta ni larga episodio.",
     };
   }
 
@@ -159,6 +180,20 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
   const titular = String(d.titular_persona_id || "").trim();
   const requiereJunta = dias > 15;
   const estadoDestino = requiereJunta ? ESTADO_ESPERANDO_JUNTA : ESTADO_APROBADA;
+  const modoLicencia = leerModoLicenciaMedicaDesdeVersion(ver.versionData);
+
+  let causalLargaId = null;
+  if (esLarga) {
+    causalLargaId = resolverCausalLargaDuracionId(input, d);
+    if (!/^cfg_cld_/i.test(causalLargaId)) {
+      return {
+        ok: false,
+        codigo: "CAUSAL_LARGA_REQUERIDA",
+        mensaje:
+          "Licencia larga: indicá causal_larga_duracion_id (Art. 19) en el aviso o en la clasificación.",
+      };
+    }
+  }
 
   /** @type {Record<string, unknown>} */
   const patch = {
@@ -173,9 +208,14 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
       dictamen_favorable: true,
       dias_solicitados: dias,
       requiere_junta_medica: requiereJunta,
+      ...(esLarga ? { causal_larga_duracion_id: causalLargaId } : {}),
     },
     actualizado_en: FieldValue.serverTimestamp(),
   };
+
+  if (esLarga) {
+    patch.causal_larga_duracion_id = causalLargaId;
+  }
 
   const gdt = String(input.grupoTrabajoIdAncla || d.grupo_trabajo_id_ancla || "").trim();
   if (/^gdt_/i.test(gdt)) {
@@ -183,6 +223,8 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
   }
 
   let tramosCalc = { tramos_haberes: {} };
+  let episodioPreview = null;
+
   if (!requiereJunta) {
     const aplicado = await aplicarLicenciaMedicaAprobada(db, {
       titular_persona_id: titular,
@@ -190,10 +232,30 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
       fecha_hasta: fechaHasta,
       dias_solicitados: dias,
       requiere_junta_medica: false,
+      modo_licencia_medica_id: modoLicencia || undefined,
+      causal_larga_duracion_id: causalLargaId,
     });
     if (!aplicado.ok) return aplicado;
     patch.licencia_medica = aplicado.licencia_medica;
-    tramosCalc = { tramos_haberes: aplicado.tramos_haberes };
+    tramosCalc = { tramos_haberes: aplicado.tramos_haberes || {} };
+    episodioPreview = aplicado.episodio_preview || null;
+  } else if (esLarga) {
+    const consumido_previo_episodio = await sumarConsumoEpisodioLargaAprobado(db, {
+      titular_persona_id: titular,
+      fecha_desde: fechaDesde,
+    });
+    const proy = proyectarEpisodioContinuo({
+      consumido_previo_episodio,
+      dias_solicitados: dias,
+    });
+    if (proy.excede_tope_continuo) {
+      return {
+        ok: false,
+        codigo: "EXCEDE_TOPE_EPISODIO",
+        mensaje: `El episodio continuo superaría ${proy.tope_episodio_dias} días.`,
+      };
+    }
+    episodioPreview = proy;
   }
 
   await ref.update(patch);
@@ -204,6 +266,13 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
     rangoProyeccionAnterior,
   });
 
+  const mensajeJunta = esLarga
+    ? "Clasificación registrada (licencia larga). La solicitud quedó a la espera del dictamen de junta médica."
+    : "Clasificación registrada. La solicitud quedó a la espera del dictamen de junta médica.";
+  const mensajeAprobada = esLarga
+    ? "Licencia médica larga otorgada. Episodio continuo registrado (S_MED_LARGA)."
+    : "Licencia médica otorgada. Medicina laboral aplicó los tramos de haberes.";
+
   return {
     ok: true,
     solicitud_id: solicitudId,
@@ -211,9 +280,9 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
     dias_solicitados: dias,
     requiere_junta_medica: requiereJunta,
     preview_tramos: tramosCalc.tramos_haberes,
-    mensaje_ui: requiereJunta
-      ? "Clasificación registrada. La solicitud quedó a la espera del dictamen de junta médica."
-      : "Licencia médica otorgada. Medicina laboral aplicó los tramos de haberes.",
+    ...(esLarga && causalLargaId ? { causal_larga_duracion_id: causalLargaId } : {}),
+    ...(episodioPreview ? { preview_episodio: episodioPreview } : {}),
+    mensaje_ui: requiereJunta ? mensajeJunta : mensajeAprobada,
     mdc_mutacion: mdc,
   };
 }

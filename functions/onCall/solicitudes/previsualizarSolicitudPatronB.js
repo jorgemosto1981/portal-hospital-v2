@@ -126,7 +126,11 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
     versionData,
     titular_persona_id: personaId,
     anio_calendario: pDesde.y,
+    fecha_desde: fechaDesde,
     dias_solicitados: diasSolicitados,
+    causal_larga_duracion_id:
+      typeof d.causal_larga_duracion_id === "string" ? d.causal_larga_duracion_id.trim() : null,
+    dictamen_favorable: d.dictamen_favorable === true,
   });
 
   return {

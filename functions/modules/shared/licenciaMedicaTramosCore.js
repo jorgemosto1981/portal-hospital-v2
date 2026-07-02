@@ -38,6 +38,13 @@ function esLicenciaMedicaCortaAnual(versionData) {
 }
 
 /**
+ * @param {unknown} versionData
+ */
+function esLicenciaMedicaLargaEpisodio(versionData) {
+  return leerModoLicenciaMedicaDesdeVersion(versionData) === CFG_MLM_LARGA_EPISODIO;
+}
+
+/**
  * @param {{ consumido_previo?: unknown, dias_solicitados?: unknown }} params
  */
 function calcularTramosLicenciaMedicaCorta(params) {
@@ -165,4 +172,4 @@ function normalizarEnteroPositivo(v) {
   return Math.floor(n);
 }
 
-module.exports = { LIMITE_TRAMO_100, LIMITE_TRAMO_60, CUPO_TRAMO_60, CFG_MLM_CORTA_ANUAL, CFG_MLM_LARGA_EPISODIO, ESTADO_SOLICITUD_APROBADA, leerModoLicenciaMedicaDesdeVersion, esLicenciaMedicaCortaAnual, calcularTramosLicenciaMedicaCorta, buildLicenciaMedicaPreviewCorta };
+module.exports = { LIMITE_TRAMO_100, LIMITE_TRAMO_60, CUPO_TRAMO_60, CFG_MLM_CORTA_ANUAL, CFG_MLM_LARGA_EPISODIO, ESTADO_SOLICITUD_APROBADA, leerModoLicenciaMedicaDesdeVersion, esLicenciaMedicaCortaAnual, esLicenciaMedicaLargaEpisodio, calcularTramosLicenciaMedicaCorta, buildLicenciaMedicaPreviewCorta };

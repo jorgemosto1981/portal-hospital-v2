@@ -370,7 +370,6 @@ function refineOpcionesConsumoVersion(data, ctx) {
 }
 
 const CFG_MLM_CORTA = "cfg_mlm_corta_anual";
-const CFG_MLM_LARGA = "cfg_mlm_larga_episodio";
 
 /**
  * @param {import("zod").infer<typeof cfgArticuloVersionObjectSchema>} data
@@ -388,13 +387,7 @@ function refineLicenciaMedicaVersion(data, ctx) {
     });
     return;
   }
-  if (modo === CFG_MLM_LARGA && !String(ident.causal_larga_duracion_id || "").trim()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["bloque_identidad_naturaleza", "causal_larga_duracion_id"],
-      message: "Licencia larga requiere causal_larga_duracion_id.",
-    });
-  }
+  // causal_larga_duracion_id: en solicitud / wizard (catálogo Art. 19), no en ficha publicada.
 }
 
 const cfgArticuloVersionObjectSchema = z.object({

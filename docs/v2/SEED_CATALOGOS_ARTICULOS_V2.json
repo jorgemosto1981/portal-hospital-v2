@@ -1431,6 +1431,55 @@
       "activo": true,
       "vigente_desde": null,
       "vigente_hasta": null
+    },
+    {
+      "id": "cfg_ac_episodio_continuo",
+      "codigo_interno": "EPISODIO_CONTINUO",
+      "titulo_ui": "Episodio continuo (licencia larga)",
+      "descripcion_ui": "Arts. 16/19 — sin reinicio a fin de año calendario.",
+      "orden": 40,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
+  "cfg_causal_larga_duracion": [
+    {
+      "id": "cfg_cld_enfermedad_comun",
+      "codigo_interno": "ENFERMEDAD_COMUN",
+      "titulo_ui": "Enfermedad común — larga duración",
+      "descripcion_ui": "Art. 19 — causal piloto; ampliar catálogo institucional.",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cld_accidente_trabajo",
+      "codigo_interno": "ACCIDENTE_TRABAJO",
+      "titulo_ui": "Accidente de trabajo o enfermedad inculpable",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cld_enfermedad_profesional",
+      "codigo_interno": "ENFERMEDAD_PROFESIONAL",
+      "titulo_ui": "Enfermedad profesional",
+      "orden": 30,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_cld_otra_catalogada",
+      "codigo_interno": "OTRA_CATALOGADA",
+      "titulo_ui": "Otra patología del catálogo Art. 19",
+      "orden": 90,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
     }
   ],
   "cfg_justifica_sueldo": [

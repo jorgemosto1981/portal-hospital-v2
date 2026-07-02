@@ -1,0 +1,30 @@
+{
+  "oleada": "p4_art1619_p44",
+  "fecha_desde": "2026-01-01",
+  "circuito_ingreso_ids": [
+    "CFG_USUARIO",
+    "CFG_RRHH",
+    "CFG_MEDICO",
+    "CFG_VISUALIZADOR"
+  ],
+  "articulos": [
+    {
+      "clave": "art16_larga",
+      "codigo": "16",
+      "codigo_grilla": "LM-L",
+      "codigo_sarh": "16",
+      "nombre": "ENFERMEDAD DE LARGA DURACION",
+      "inciso_normativo": "Arts. 16 y 19 — Decreto 1919/89",
+      "color_ui": "#7C3AED",
+      "modo_licencia_medica_id": "cfg_mlm_larga_episodio",
+      "ambito_consumo_id": "cfg_ac_episodio_continuo",
+      "regla_computo_dias_id": "cfg_rcd_corridos",
+      "cupo_dias_por_ciclo": null,
+      "tope_dias_por_evento": 730,
+      "tope_frecuencia_mensual": null,
+      "requiere_dictamen": true,
+      "requiere_adjunto_obligatorio": true,
+      "ayuda_agente_ui": "Licencia por enfermedad de larga duración. Elegí la causal del catálogo (Art. 19). El episodio es continuo (hasta 2 años) y no se reinicia a fin de año. Medicina debe emitir dictamen favorable antes de avanzar."
+    }
+  ]
+}

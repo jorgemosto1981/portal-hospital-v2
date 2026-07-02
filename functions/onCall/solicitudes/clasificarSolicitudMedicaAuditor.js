@@ -26,6 +26,8 @@ const clasificarSolicitudMedicaAuditorCallable = onCall(async (request) => {
     observacionAuditor:
       typeof d.observacion_auditor === "string" ? d.observacion_auditor.trim() : undefined,
     dictamenFavorable: d.dictamen_favorable === true,
+    causalLargaDuracionId:
+      typeof d.causal_larga_duracion_id === "string" ? d.causal_larga_duracion_id.trim() : undefined,
   });
 
   if (!result.ok) {

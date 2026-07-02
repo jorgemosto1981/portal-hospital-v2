@@ -6,6 +6,10 @@ const { resolverRangoYmdEfectivoAvisoMedico } = require("./avisoMedicoGrillaMdcP
 const { mutarEstadoSolicitudMedicaMdc } = require("./mutarEstadoSolicitudMedicaMdc");
 const { aplicarLicenciaMedicaAprobada } = require("./aplicarLicenciaMedicaAprobadaCore");
 const {
+  leerModoLicenciaMedicaDesdeVersion,
+  CFG_MLM_LARGA_EPISODIO,
+} = require("./licenciaMedicaTramosCore");
+const {
   ESTADO_RECHAZADA,
   ESTADO_APROBADA,
   ESTADO_ESPERANDO_JUNTA,
@@ -121,6 +125,24 @@ async function registrarDictamenJuntaMedica(db, input) {
   }
 
   const titular = String(d.titular_persona_id || "").trim();
+  const articuloId = String(d.articulo_id || clasif.articulo_id || "").trim();
+  const versionId = String(d.version_id_aplicada || clasif.version_id_aplicada || "").trim();
+  let modoLicencia = null;
+  if (/^art_/i.test(articuloId) && /^ver_/i.test(versionId)) {
+    const verSnap = await db
+      .collection("cfg_articulos")
+      .doc(articuloId)
+      .collection("versiones")
+      .doc(versionId)
+      .get();
+    if (verSnap.exists) {
+      modoLicencia = leerModoLicenciaMedicaDesdeVersion(verSnap.data());
+    }
+  }
+  const causalLarga = String(
+    d.causal_larga_duracion_id || clasif.causal_larga_duracion_id || "",
+  ).trim();
+
   const aplicado = await aplicarLicenciaMedicaAprobada(db, {
     titular_persona_id: titular,
     fecha_desde: fechaDesde,
@@ -128,6 +150,8 @@ async function registrarDictamenJuntaMedica(db, input) {
     dias_solicitados: dias,
     requiere_junta_medica: true,
     junta_medica_sede_id: input.juntaMedicaSedeId || dictamenBase.junta_medica_sede_id,
+    modo_licencia_medica_id: modoLicencia || undefined,
+    causal_larga_duracion_id: causalLarga || undefined,
     dictamen: {
       favorable: true,
       registrado_por_persona_id: registradoPorPersonaId,
@@ -157,7 +181,10 @@ async function registrarDictamenJuntaMedica(db, input) {
     dias_solicitados: dias,
     licencia_medica: aplicado.licencia_medica,
     tramos_haberes: aplicado.tramos_haberes,
-    mensaje_ui: "Dictamen favorable. Licencia médica aprobada con tramos de haberes.",
+    mensaje_ui:
+      modoLicencia === CFG_MLM_LARGA_EPISODIO
+        ? "Dictamen favorable. Licencia médica larga aprobada (episodio continuo)."
+        : "Dictamen favorable. Licencia médica aprobada con tramos de haberes.",
     mdc_mutacion: mdc,
   };
 }
