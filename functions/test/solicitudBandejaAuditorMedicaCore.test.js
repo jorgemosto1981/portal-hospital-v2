@@ -16,6 +16,10 @@ const {
   resolverCausalLargaIdDesdeSol,
 } = require("../modules/shared/solicitudBandejaAuditorMedicaLargaMeta");
 
+const {
+  resolverRangoYmdEfectivoAvisoMedico,
+} = require("../modules/shared/avisoMedicoGrillaMdcPayload");
+
 describe("solicitudBandejaAuditorMedicaCore", () => {
   it("esIncompletaMedica lee ingreso_medico", () => {
     assert.equal(esIncompletaMedica({ ingreso_medico: { es_licencia_incompleta: true } }), true);
@@ -38,6 +42,16 @@ describe("solicitudBandejaAuditorMedicaCore", () => {
     });
     assert.equal(r.codigo, "B01");
     assert.equal(r.descripcion, "Varicela");
+  });
+
+  it("resolverRangoYmdEfectivo incluye aviso con solo fechas estimadas (bandeja auditor)", () => {
+    const r = resolverRangoYmdEfectivoAvisoMedico({
+      fecha_inicio_reposo_estimada: "2026-08-02",
+      fecha_fin_reposo_estimada: "2026-08-18",
+    });
+    assert.ok(r);
+    assert.equal(r.fecha_desde, "2026-08-02");
+    assert.equal(r.fecha_hasta, "2026-08-18");
   });
 
   it("resolverCausalLargaIdDesdeSol prioriza sol_", () => {

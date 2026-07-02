@@ -2,6 +2,7 @@
 
 const { ESTADO_SOLICITUD_PENDIENTE_CLASIFICACION_MEDICA } = require("./solicitudesArticuloEstados");
 const { SCHEMA_MED_AVISO } = require("./avisoMedicoCajaNegraCore");
+const { resolverRangoYmdEfectivoAvisoMedico } = require("./avisoMedicoGrillaMdcPayload");
 const { loadArticuloDisplay, loadPersonaBandeja } = require("./solicitudBandejaJefeCore");
 const { enriquecerItemBandejaAuditorLarga } = require("./solicitudBandejaAuditorMedicaLargaMeta");
 const {
@@ -10,6 +11,7 @@ const {
   resolverPersonaIdsPorDni,
 } = require("./solicitudBandejaListUtils");
 
+const { iterarYmdInclusive } = require("./mdcRdaDocumentIds");
 const COL_SOL = "solicitudes_articulo";
 const SCAN_LIMIT = 400;
 
@@ -92,8 +94,10 @@ async function listarSolicitudesBandejaAuditorMedica(db, opts = {}) {
     if (String(sol.schema_version || "").trim() !== SCHEMA_MED_AVISO) continue;
 
     const titularId = String(sol.titular_persona_id || "").trim();
-    const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
-    if (!/^per_/i.test(titularId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) continue;
+    const rango = resolverRangoYmdEfectivoAvisoMedico(sol);
+    if (!rango || !/^per_/i.test(titularId)) continue;
+    const fechaRef = rango.fecha_desde;
+    const fechaHastaRef = rango.fecha_hasta;
     if (titularIdsDni && !titularIdsDni.has(titularId)) continue;
 
     const personaRow = await loadPersonaBandeja(db, titularId, personaCache);
@@ -131,8 +135,9 @@ async function listarSolicitudesBandejaAuditorMedica(db, opts = {}) {
       titular_label: personaRow.label,
       titular_dni: personaRow.dni || null,
       fecha_desde: fechaRef,
-      fecha_hasta: String(sol.fecha_hasta || fechaRef).slice(0, 10),
-      dias_solicitados: Number(sol.dias_solicitados) || 1,
+      fecha_hasta: fechaHastaRef,
+      dias_solicitados:
+        Number(sol.dias_solicitados) || Math.max(1, iterarYmdInclusive(fechaRef, fechaHastaRef).length),
       estado_solicitud_id: sol.estado_solicitud_id,
       creado_en: sol.creado_en || null,
       grupo_trabajo_id_ancla: String(sol.grupo_trabajo_id_ancla || "").trim() || null,
