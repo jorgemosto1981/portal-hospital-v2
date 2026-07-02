@@ -81,12 +81,26 @@ export const EXPAND_FILAS_AUDITOR = [
   { key: "puede_clasificar", label: "Puede clasificar" },
 ];
 
+export const EXPAND_FILAS_JUNTA = [
+  ...EXPAND_FILAS_JEFE.filter((f) => !["jefe_revision_en", "jefe_revision_persona_id", "jefe_motivo", "patron_saldo"].includes(f.key)),
+  { key: "version_aplicada_id", label: "Versión artículo (id)" },
+  { key: "auditor_observacion", label: "Observación auditor" },
+  { key: "auditor_persona_id", label: "Auditor (id)" },
+  { key: "puede_dictaminar", label: "Puede dictaminar" },
+];
+
 /**
- * @param {{ sel: Record<string, unknown>, variant: 'jefe' | 'rrhh' | 'auditor', className?: string }} props
+ * @param {{ sel: Record<string, unknown>, variant: 'jefe' | 'rrhh' | 'auditor' | 'junta', className?: string }} props
  */
 export function filasExpandConValor(sel, variant) {
   const defs =
-    variant === "rrhh" ? EXPAND_FILAS_RRHH : variant === "auditor" ? EXPAND_FILAS_AUDITOR : EXPAND_FILAS_JEFE;
+    variant === "rrhh"
+      ? EXPAND_FILAS_RRHH
+      : variant === "auditor"
+        ? EXPAND_FILAS_AUDITOR
+        : variant === "junta"
+          ? EXPAND_FILAS_JUNTA
+          : EXPAND_FILAS_JEFE;
   return defs
     .map(({ key, label }) => {
       const value = valorExpand(sel, key);

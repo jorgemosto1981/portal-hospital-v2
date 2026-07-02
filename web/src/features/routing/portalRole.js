@@ -104,3 +104,26 @@ export function claimsIncludeAuditorMedico(claims) {
   if (hlc.includes("CFG_MEDICO")) return true;
   return hasAnyPortalRoleLegacy(claims, ["medico"]);
 }
+
+/**
+ * Bandeja dictamen junta médica (alineado con `juntaMedicaLaborAccess.js`).
+ * @param {Record<string, unknown> | null | undefined} claims
+ */
+export function claimsIncludeJuntaMedica(claims) {
+  if (claimsIncludeRrhh(claims)) return true;
+  const hlc = rolesHlcFromClaims(claims);
+  if (
+    hlc.some((r) => {
+      const id = String(r || "").trim().toUpperCase();
+      return (
+        id.includes("JUNTA") ||
+        id === "AUDITOR_MEDICO" ||
+        id === "CFG_AUDITOR_MEDICO" ||
+        id.includes("AUDITOR_MEDICO")
+      );
+    })
+  ) {
+    return true;
+  }
+  return hasAnyPortalRoleLegacy(claims, ["medico"]);
+}

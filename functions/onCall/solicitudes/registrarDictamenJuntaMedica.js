@@ -2,34 +2,8 @@
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db } = require("../../modules/shared/context");
-const { assertAgenteConPersonaId } = require("../../modules/shared/helpers");
-const { tokenHasRrhhLaborAccess } = require("../../modules/shared/laborProfile");
 const { registrarDictamenJuntaMedica } = require("../../modules/shared/registrarDictamenJuntaMedicaCore");
-
-function tokenHasDictamenJuntaAccess(token) {
-  if (tokenHasRrhhLaborAccess(token)) return true;
-  const raw = token && typeof token === "object" ? token.roles_hlc_vigentes : null;
-  if (!Array.isArray(raw)) return false;
-  return raw.some((r) => {
-    const id = String(r || "").trim().toUpperCase();
-    return (
-      id.includes("JUNTA") ||
-      id === "AUDITOR_MEDICO" ||
-      id === "CFG_AUDITOR_MEDICO" ||
-      id.includes("AUDITOR_MEDICO")
-    );
-  });
-}
-
-function assertJuntaMedica(request) {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Se requiere sesión.");
-  }
-  if (tokenHasDictamenJuntaAccess(request.auth.token)) {
-    return assertAgenteConPersonaId(request);
-  }
-  throw new HttpsError("permission-denied", "Solo junta médica o medicina laboral autorizada.");
-}
+const { assertJuntaMedica } = require("../../modules/shared/juntaMedicaLaborAccess");
 
 const registrarDictamenJuntaMedicaCallable = onCall(async (request) => {
   const registradoPorPersonaId = assertJuntaMedica(request);

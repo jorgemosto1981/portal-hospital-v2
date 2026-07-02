@@ -27,6 +27,7 @@ import TicketeraShell from "./features/solicitudes/TicketeraShell.jsx";
 import TicketeraHub from "./pages/TicketeraHub.jsx";
 import BandejaJefeSolicitudes from "./pages/BandejaJefeSolicitudes.jsx";
 import BandejaAuditorSolicitudes from "./pages/BandejaAuditorSolicitudes.jsx";
+import BandejaJuntaSolicitudes from "./pages/BandejaJuntaSolicitudes.jsx";
 import BandejaRrhhSolicitudes from "./pages/BandejaRrhhSolicitudes.jsx";
 import GuardArticuloIngreso from "./features/solicitudes/GuardArticuloIngreso.jsx";
 import RedirectTicketeraAlta from "./features/solicitudes/RedirectTicketeraAlta.jsx";
@@ -136,6 +137,7 @@ export default function App() {
             <Route path="grilla" element={<GrillaPortalRedirect />} />
             <Route path="jefe/solicitudes" element={<BandejaJefeSolicitudes />} />
             <Route path="medico/solicitudes" element={<BandejaAuditorSolicitudes />} />
+            <Route path="medico/junta" element={<BandejaJuntaSolicitudes />} />
             <Route path="jefe/planes-turno" element={<PlanTurnoServicioJefePage />} />
             <Route path="jefe/grilla-operativa" element={<GrillaOperativaJefePage />} />
             <Route path="modulos" element={<EstadoModulos />} />

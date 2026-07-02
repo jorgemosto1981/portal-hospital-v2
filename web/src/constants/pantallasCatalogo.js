@@ -187,6 +187,13 @@ export const PANTALLAS_CATALOGO = [
     fuente: "web/src/pages/BandejaAuditorSolicitudes.jsx",
   },
   {
+    id: "bandeja-junta-medica",
+    titulo: "Junta médica",
+    path: "/portal/medico/junta",
+    estado: "mvp",
+    fuente: "web/src/pages/BandejaJuntaSolicitudes.jsx",
+  },
+  {
     id: "rrhh-notif-datos",
     titulo: "RRHH notificaciones datos personales",
     path: "/portal/rrhh/notificaciones-datos-personales",

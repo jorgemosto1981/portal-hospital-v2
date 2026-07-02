@@ -542,6 +542,11 @@ export function callListarSolicitudesBandejaAuditorMedica(data) {
   return httpsCallable(getFunctionsV2(), "listarSolicitudesBandejaAuditorMedica")(data || {});
 }
 
+/** Listado bandeja junta médica (esperando dictamen). */
+export function callListarSolicitudesBandejaJuntaMedica(data) {
+  return httpsCallable(getFunctionsV2(), "listarSolicitudesBandejaJuntaMedica")(data || {});
+}
+
 /** Clasificación médica auditor — aviso Caja Negra completo. */
 export function callClasificarSolicitudMedicaAuditor(data) {
   return httpsCallable(getFunctionsV2(), "clasificarSolicitudMedicaAuditor")(data);

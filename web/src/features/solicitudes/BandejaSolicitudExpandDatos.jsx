@@ -2,7 +2,7 @@ import { filasExpandConValor } from "./bandejaSolicitudExpandDatos.js";
 
 /**
  * Detalle técnico/operativo del ítem (solo datos ya traídos en el listado).
- * @param {{ sel: Record<string, unknown>, variant: 'jefe' | 'rrhh' | 'auditor' }} props
+ * @param {{ sel: Record<string, unknown>, variant: 'jefe' | 'rrhh' | 'auditor' | 'junta' }} props
  */
 export default function BandejaSolicitudExpandDatos({ sel, variant }) {
   const filas = filasExpandConValor(sel, variant);
