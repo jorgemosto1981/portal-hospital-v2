@@ -180,6 +180,13 @@ export const PANTALLAS_CATALOGO = [
     fuente: "web/src/pages/BandejaJefeSolicitudes.jsx",
   },
   {
+    id: "bandeja-solicitudes-auditor",
+    titulo: "Auditoría médica",
+    path: "/portal/medico/solicitudes",
+    estado: "mvp",
+    fuente: "web/src/pages/BandejaAuditorSolicitudes.jsx",
+  },
+  {
     id: "rrhh-notif-datos",
     titulo: "RRHH notificaciones datos personales",
     path: "/portal/rrhh/notificaciones-datos-personales",

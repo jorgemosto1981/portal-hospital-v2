@@ -537,6 +537,11 @@ export function callValidarPeriodoAvisoMedicoExclusivo(data) {
   return httpsCallable(getFunctionsV2(), "validarPeriodoAvisoMedicoExclusivo")(data);
 }
 
+/** Listado bandeja auditoría médica (pendiente clasificación). */
+export function callListarSolicitudesBandejaAuditorMedica(data) {
+  return httpsCallable(getFunctionsV2(), "listarSolicitudesBandejaAuditorMedica")(data || {});
+}
+
 /** Clasificación médica auditor — aviso Caja Negra completo. */
 export function callClasificarSolicitudMedicaAuditor(data) {
   return httpsCallable(getFunctionsV2(), "clasificarSolicitudMedicaAuditor")(data);

@@ -471,5 +471,6 @@ module.exports = {
   resolverDecisionJefeSolicitud,
   revisorVeSolicitudEnBandejaJefe,
   loadArticuloDisplay,
+  loadPersonaBandeja,
   esHuerfanaEnRevisionJefe,
 };

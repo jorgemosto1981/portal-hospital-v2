@@ -85,3 +85,22 @@ export function hasAnyPortalRole(claims, allowed) {
 
 /** Roles con acceso a pantallas y callables de gestión RRHH (además del agente estándar). */
 export const MANAGEMENT_PORTAL_ROLES = ["rrhh", "admin"];
+
+/**
+ * Bandeja / callables de auditoría médica (alineado con `auditorMedicoLaborAccess.js`).
+ * @param {Record<string, unknown> | null | undefined} claims
+ */
+export function claimsIncludeAuditorMedico(claims) {
+  if (claimsIncludeRrhh(claims)) return true;
+  const hlc = rolesHlcFromClaims(claims);
+  if (
+    hlc.some((r) => {
+      const id = String(r || "").trim().toUpperCase();
+      return id === "AUDITOR_MEDICO" || id === "CFG_AUDITOR_MEDICO" || id.includes("AUDITOR_MEDICO");
+    })
+  ) {
+    return true;
+  }
+  if (hlc.includes("CFG_MEDICO")) return true;
+  return hasAnyPortalRoleLegacy(claims, ["medico"]);
+}

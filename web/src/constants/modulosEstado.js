@@ -226,6 +226,22 @@ export const MODULOS_PORTAL = [
     bandejaJefeMenu: true,
   },
   {
+    id: "bandeja-solicitudes-auditor-medico",
+    label: "Bandeja auditoría",
+    path: "/portal/medico/solicitudes",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "medico",
+    bandejaAuditorMedicoMenu: true,
+  },
+  {
+    id: "bandeja-solicitudes-auditor-rrhh",
+    label: "Auditoría médica",
+    path: "/portal/medico/solicitudes",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    bandejaAuditorMedicoMenu: true,
+  },
+  {
     id: "rrhh",
     label: "RRHH",
     path: "/portal/rrhh/alta",
@@ -340,6 +356,7 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla-jefe";
   if (pathname.startsWith("/portal/jefe/planes-turno")) return "planes-turno-jefe";
   if (pathname.startsWith("/portal/jefe/solicitudes")) return "bandeja-solicitudes-jefe";
+  if (pathname.startsWith("/portal/medico/solicitudes")) return "bandeja-solicitudes-auditor-medico";
   if (pathname.startsWith("/portal/solicitudes")) return "ticketera";
   if (pathname.startsWith("/portal/laboral") || pathname.startsWith("/laboral")) return "laboral";
   if (pathname.startsWith("/portal/mi-perfil")) return "perfil";

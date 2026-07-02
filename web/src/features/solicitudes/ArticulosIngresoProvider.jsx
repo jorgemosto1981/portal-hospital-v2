@@ -105,6 +105,7 @@ export function filtrarModulosPorArticulosIngreso(modulos, puedeSolicitarArticul
     if (m.ticketeraSiempreVisible === true) return true;
     if (m.bandejaJefeMenu === true) return true;
     if (m.bandejaRrhhMenu === true) return true;
+    if (m.bandejaAuditorMedicoMenu === true) return true;
     const ids = m.articulosIngresoIds;
     if (Array.isArray(ids) && ids.length > 0) {
       return ids.some((id) => puedeSolicitarArticulo(id));
