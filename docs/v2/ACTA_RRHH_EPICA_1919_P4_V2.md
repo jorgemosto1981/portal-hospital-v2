@@ -16,7 +16,7 @@
 | **Seed** | `docs/v2/seeds/p4_art14/` + catálogo `cfg_mlm_*` |
 | **Hosting piloto** | https://portal-hospital-v2.web.app (oleada UI bandejas + fixes grilla) |
 
-**Fuera de alcance (backlog P4.4):** Art. **16 / 19** licencia larga (`cfg_mlm_larga_episodio`, episodio/causal).
+**Fuera de alcance (entregado en P4.4):** ver [`ACTA_RRHH_EPICA_1919_P4_4_LARGAS_V2.md`](./ACTA_RRHH_EPICA_1919_P4_4_LARGAS_V2.md) — Art. **16 / 19** licencia larga (`cfg_mlm_larga_episodio`, episodio/causal, grilla LM-L).
 
 ## Caso canónico UAT (piloto)
 
@@ -37,7 +37,7 @@
 - [ ] Junta emite dictamen favorable/desfavorable; desfavorable rechaza y revierte proyección en grilla.
 - [ ] Grilla muestra licencia coherente con estado (LM / consolidación); sin etiqueta “pendiente clasificación” en solicitudes ya aprobadas.
 - [ ] Enlace desde detalle de día no envía trámites médicos a bandeja jefe/RRHH genérica (portal médico o sin enlace si ya cerrado).
-- [ ] RRHH acepta dejar **P4.4 largas** para oleada posterior tras merge a `master`.
+- [ ] RRHH acepta oleada **P4.4 largas** documentada en [`ACTA_RRHH_EPICA_1919_P4_4_LARGAS_V2.md`](./ACTA_RRHH_EPICA_1919_P4_4_LARGAS_V2.md) para merge independiente o conjunto según estrategia de release.
 
 ## Transversal
 
