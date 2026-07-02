@@ -31,3 +31,4 @@ Registro de **tags Git** y hitos documentales/código. Detalle operativo en `[PL
 | 2026-06-26 | (rama `feat/1919-p4-licencias-medicas`) | **P4.3b:** exclusividad período aviso, Zod contacto/clínica/familiar/fin reposo, modal completar incompleta |
 | 2026-06-24 | **PAUSA P4** | Handoff [`HANDOFF_SESION_2026-06-24_P4_AVISO_MEDICO_PAUSA.md`](./HANDOFF_SESION_2026-06-24_P4_AVISO_MEDICO_PAUSA.md) — commit local + push; **sin deploy** del paquete modal/resumen/exclusividad |
 | 2026-06-29 | (rama `feat/1919-p4-licencias-medicas`) | **P4.3c:** `declaracion_contacto` al completar incompleta; callable `clasificarSolicitudMedicaAuditor` (corta anual ≤15 / junta >15) |
+| 2026-07-02 | (rama `feat/1919-p4-licencias-medicas`) | **P4 cierre:** seed Art. 14, bandejas auditor/junta, job §5.7, UI Hosting piloto; acta [`ACTA_RRHH_EPICA_1919_P4_V2.md`](./ACTA_RRHH_EPICA_1919_P4_V2.md) |
