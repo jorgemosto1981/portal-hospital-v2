@@ -3,6 +3,7 @@ import {
   celdaTieneDesalineacionTeoria,
   evaluarDesalineacionTeoriaLicencia,
 } from "../../../../shared/utils/grillaTeoriaDesalineacion.js";
+import { renderChipLicenciaMedica } from "./grillaLicenciaMedicaChip.js";
 
 export { celdaTieneDesalineacionTeoria, evaluarDesalineacionTeoriaLicencia };
 export const COLOR_MDC_APROBADO = "#3B82F6";
@@ -51,13 +52,27 @@ export function etiquetaGrupoAnclaEvento(evento, etiquetasGrupo = {}) {
 export function etiquetaCelda(eventos) {
   const e = eventoPrincipal(eventos);
   if (!e) return "";
+  const chip = renderChipLicenciaMedica(e);
+  if (chip) return chip.label;
   return String(e.codigo_grilla || "").trim() || "·";
 }
 
 export function colorCelda(eventos) {
   const e = eventoPrincipal(eventos);
   if (!e) return null;
-  return String(e.color_ui || "#94a3b8");
+  const chip = renderChipLicenciaMedica(e);
+  const explicit = String(e.color_ui || "").trim();
+  if (chip?.esLarga && chip.colorUi) {
+    const pendiente =
+      String(e.estado_solicitud_id || "").includes("revision") ||
+      String(e.estado_solicitud_id || "").includes("pendiente") ||
+      String(e.estado_solicitud_id || "").includes("clasificacion") ||
+      String(e.estado_solicitud_id || "").includes("junta");
+    if (!pendiente && explicit) return explicit;
+    if (!pendiente) return chip.colorUi;
+    return explicit || COLOR_MDC_PENDIENTE;
+  }
+  return explicit || "#94a3b8";
 }
 
 export function celdaPendiente(eventos) {
@@ -65,6 +80,18 @@ export function celdaPendiente(eventos) {
     Array.isArray(eventos) &&
     eventos.some((e) => String(e.estado_solicitud_id || "").includes("revision"))
   );
+}
+
+/** Trámite médico MDC: revisión, junta o pendiente de clasificación (estilo celda ámbar / borde LM-L). */
+export function celdaEnTramiteMedicoGrilla(eventos) {
+  if (!Array.isArray(eventos)) return false;
+  return eventos.some((e) => {
+    const est = String(e.estado_solicitud_id || "").trim();
+    if (est.includes("revision")) return true;
+    if (est === "cfg_esa_esperando_dictamen_junta") return true;
+    if (est === "cfg_esa_pendiente_clasificacion_medica") return true;
+    return false;
+  });
 }
 
 export function celdaAprobada(eventos) {
@@ -110,11 +137,15 @@ export function lineasTooltipCelda(eventos, ctx = {}) {
   }
   const max = 3;
   eventos.slice(0, max).forEach((ev, idx) => {
-    const cod = String(ev.codigo_grilla || "—");
+    const chipMed = renderChipLicenciaMedica(ev);
+    const cod = chipMed?.label || String(ev.codigo_grilla || "—");
     const est = labelEstadoSolicitud(ev.estado_solicitud_id);
     const sol = solIdCorto(ev.solicitud_id);
     const prefix = eventos.length > 1 ? `${idx + 1}. ` : "";
     lines.push(`${prefix}${cod} · ${est}`);
+    if (chipMed?.tooltip) {
+      lines.push(`${prefix}${chipMed.tooltip}`);
+    }
     if (eventoEsImputadoEnOtroGrupo(ev, ctx.grupoVistaId)) {
       const nombre = etiquetaGrupoAnclaEvento(ev, ctx.etiquetasGrupo);
       lines.push(`${prefix}🔗 Licencia gestionada en otro sector (${nombre})`);
@@ -142,13 +173,23 @@ export function estiloVisualCelda(eventos, opts = {}) {
       className: "",
     };
   }
-  const pendiente = celdaPendiente(eventos);
-  const bg = colorCelda(eventos) || COLOR_MDC_PENDIENTE;
+  const pendiente = celdaEnTramiteMedicoGrilla(eventos);
+  const e = eventoPrincipal(eventos);
+  const chipLarga = renderChipLicenciaMedica(e);
   if (pendiente) {
+    const borderLarga = chipLarga?.esLarga
+      ? "border-2 border-dashed border-violet-800 text-slate-900 shadow-[inset_0_0_0_1px_rgba(91,33,182,0.2)]"
+      : "border-2 border-dashed border-amber-900 text-slate-900 shadow-[inset_0_0_0_1px_rgba(120,53,15,0.25)]";
     return {
       style: { backgroundColor: COLOR_MDC_PENDIENTE },
-      className:
-        "border-2 border-dashed border-amber-900 text-slate-900 shadow-[inset_0_0_0_1px_rgba(120,53,15,0.25)]",
+      className: borderLarga,
+    };
+  }
+  const bg = colorCelda(eventos) || COLOR_MDC_APROBADO;
+  if (chipLarga?.esLarga && chipLarga.colorUi) {
+    return {
+      style: { backgroundColor: chipLarga.colorUi },
+      className: "border border-violet-950/30 text-white shadow-sm",
     };
   }
   return {
