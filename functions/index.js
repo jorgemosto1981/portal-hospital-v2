@@ -71,6 +71,8 @@ const avisoMedicoCajaNegra = require("./onCall/solicitudes/actualizarAvisoMedico
 const validarPeriodoAvisoMedico = require("./onCall/solicitudes/validarPeriodoAvisoMedicoExclusivo");
 const clasificarSolicitudMedicaAuditor = require("./onCall/solicitudes/clasificarSolicitudMedicaAuditor");
 const registrarDictamenJuntaMedica = require("./onCall/solicitudes/registrarDictamenJuntaMedica");
+const procesarVencimientosLicenciaIncompleta = require("./onCall/solicitudes/procesarVencimientosLicenciaIncompleta");
+const { vencimientosLicenciaIncompletaScheduled } = require("./onSchedule/vencimientosLicenciaIncompleta");
 
 module.exports = {
   ...login,
@@ -115,6 +117,7 @@ module.exports = {
   ...cambiosTurno,
   ...rematerializacion,
   materializacionVentanaDia5Scheduled,
+  vencimientosLicenciaIncompletaScheduled,
   ejecutarMaterializacionVentanaDia5,
   ...reconciliarMarcasHuerfanasReloj,
   ...guardarCapaFichadaDia,
@@ -133,4 +136,5 @@ module.exports = {
   ...validarPeriodoAvisoMedico,
   ...clasificarSolicitudMedicaAuditor,
   ...registrarDictamenJuntaMedica,
+  ...procesarVencimientosLicenciaIncompleta,
 };

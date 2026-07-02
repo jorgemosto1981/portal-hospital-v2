@@ -522,7 +522,7 @@ Hoy: `allow create` para aviso completo; **`allow update, delete: if false`** gl
 | 2 | Zod `SOL_MED_AVISO_V1` + Rules create | §8.1 | **Parcial** — solo aviso **completo** |
 | 2a | UI agente completa + Storage + `crearAvisoMedicoCajaNegra` | — | **Hecho** P4.3 |
 | 2b | Incompleta + `vencimiento_plazo_certificado` (param §2.4) + §5.6 | §0.2 | **Hecho** (UI + callable completar) |
-| 2c | Job vencimiento §5.7 | 2b | Pendiente |
+| 2c | Job vencimiento §5.7 | 2b | **Parcial** — core + callable + cron `vencimientosLicenciaIncompletaScheduled`; smoke `scripts/smoke/med-vencimiento-incompleta.mjs` |
 | **2d** | **Grilla MDC aviso** — `asi_*` + `vis_*` en alta y completar (§5.9) | 2b | **Hecho** (trigger create + resync completar; códigos `LM-P` / `LM`) |
 | 3 | Callable clasificar + enganche P4.1 | Motor existente | **Parcial** — callable + tramos preview; MDC post-clasificación en **3a** |
 | **3a** | **MDC post-auditoría** — mutación estado en `asi_*`/`vis_*` (§5.9.1) | 3 + `aplicarLicenciaMedicaAprobada` | **Parcial** — `clasificarSolicitudMedicaAuditor` + `mutarEstadoSolicitudMedicaMdc` + `aplicarLicenciaMedicaAprobadaCore` (≤15 d y post-junta); pendiente job §5.7 |

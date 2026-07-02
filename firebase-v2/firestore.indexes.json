@@ -121,6 +121,14 @@
       ]
     },
     {
+      "collectionGroup": "solicitudes_articulo",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado_solicitud_id", "order": "ASCENDING" },
+        { "fieldPath": "vencimiento_plazo_certificado", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "vistas_grilla_mes_agente",
       "queryScope": "COLLECTION",
       "fields": [
