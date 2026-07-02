@@ -3,7 +3,74 @@
 const { loadArticuloDisplay } = require("./solicitudBandejaJefeCore");
 const { buildPersonaLabel } = require("./eventosV2");
 const { SCHEMA_MED_AVISO } = require("./avisoMedicoProvisoriosVigentesCore");
-const { resolverCodigoGrillaAvisoMedico, resolverRangoYmdAvisoMedico } = require("./avisoMedicoGrillaMdcPayload");
+const {
+  resolverCodigoGrillaAvisoMedico,
+  resolverRangoYmdAvisoMedico,
+} = require("./avisoMedicoGrillaMdcPayload");
+
+const ESTADO_PENDIENTE_CLASIFICACION = "cfg_esa_pendiente_clasificacion_medica";
+const ESTADO_ESPERANDO_JUNTA = "cfg_esa_esperando_dictamen_junta";
+const ESTADO_APROBADA = "cfg_esa_aprobada";
+const ESTADO_RECHAZADA = "cfg_esa_rechazada";
+
+/**
+ * Etiqueta/código grilla para aviso médico según estado sustantivo (no solo schema).
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {Record<string, unknown>} sol
+ * @param {Map<string, { codigo_grilla: string, articulo_label: string }>} artCache
+ */
+async function resolveMedAvisoArtDisplay(db, sol, artCache) {
+  const est = String(sol.estado_solicitud_id || "").trim();
+  const ing = sol.ingreso_medico && typeof sol.ingreso_medico === "object" ? sol.ingreso_medico : {};
+  const artId = String(sol.articulo_id || "").trim();
+  const codigoProyeccion = resolverCodigoGrillaAvisoMedico(sol);
+
+  if (/^art_/i.test(artId)) {
+    const row = await loadArticuloDisplay(db, artId, artCache);
+    if (est === ESTADO_APROBADA) {
+      return { codigo_grilla: row.codigo_grilla || codigoProyeccion, articulo_label: row.articulo_label };
+    }
+    if (est === ESTADO_ESPERANDO_JUNTA) {
+      return {
+        codigo_grilla: row.codigo_grilla || codigoProyeccion,
+        articulo_label: `${row.articulo_label} — en junta médica`,
+      };
+    }
+    if (est === ESTADO_RECHAZADA) {
+      return {
+        codigo_grilla: row.codigo_grilla || codigoProyeccion,
+        articulo_label: `${row.articulo_label} (rechazada)`,
+      };
+    }
+    if (ing.es_licencia_incompleta === true) {
+      return { codigo_grilla: codigoProyeccion, articulo_label: "Aviso médico provisorio" };
+    }
+    if (est === ESTADO_PENDIENTE_CLASIFICACION) {
+      return {
+        codigo_grilla: codigoProyeccion,
+        articulo_label: `${row.articulo_label} — pendiente clasificación`,
+      };
+    }
+    return { codigo_grilla: row.codigo_grilla || codigoProyeccion, articulo_label: row.articulo_label };
+  }
+
+  if (ing.es_licencia_incompleta === true) {
+    return { codigo_grilla: codigoProyeccion, articulo_label: "Aviso médico provisorio" };
+  }
+  if (est === ESTADO_ESPERANDO_JUNTA) {
+    return { codigo_grilla: codigoProyeccion, articulo_label: "Aviso médico — en junta médica" };
+  }
+  if (est === ESTADO_APROBADA) {
+    return { codigo_grilla: codigoProyeccion, articulo_label: "Licencia médica aprobada" };
+  }
+  if (est === ESTADO_RECHAZADA) {
+    return { codigo_grilla: codigoProyeccion, articulo_label: "Aviso médico (rechazado)" };
+  }
+  return {
+    codigo_grilla: codigoProyeccion,
+    articulo_label: "Aviso médico (pendiente clasificación)",
+  };
+}
 
 const COL_SOL = "solicitudes_articulo";
 const COL_PERSONAS = "personas";
@@ -67,13 +134,7 @@ async function obtenerResumenSolicitudArticuloGrilla(db, solId, revisorPersonaId
   const personaCache = new Map();
   const schemaMed = String(sol.schema_version || "") === SCHEMA_MED_AVISO;
   const artDisplay = schemaMed
-    ? {
-        codigo_grilla: resolverCodigoGrillaAvisoMedico(sol),
-        articulo_label:
-          sol.ingreso_medico?.es_licencia_incompleta === true
-            ? "Aviso médico provisorio"
-            : "Aviso médico (pendiente clasificación)",
-      }
+    ? await resolveMedAvisoArtDisplay(db, sol, artCache)
     : await loadArticuloDisplay(db, String(sol.articulo_id || ""), artCache);
 
   const titularId = String(sol.titular_persona_id || "").trim();
@@ -108,10 +169,12 @@ async function obtenerResumenSolicitudArticuloGrilla(db, solId, revisorPersonaId
     rrhh_toma_conocimiento_persona_id: rrhhTcId || null,
     rrhh_toma_conocimiento_label: rrhhTcLabel,
     grupo_trabajo_id_ancla: String(sol.grupo_trabajo_id_ancla || "") || null,
+    es_aviso_medico: schemaMed,
   };
 }
 
 module.exports = {
   obtenerResumenSolicitudArticuloGrilla,
   revisorPuedeVerResumen,
+  resolveMedAvisoArtDisplay,
 };
