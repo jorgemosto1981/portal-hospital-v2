@@ -552,6 +552,16 @@ export function callClasificarSolicitudMedicaAuditor(data) {
   return httpsCallable(getFunctionsV2(), "clasificarSolicitudMedicaAuditor")(data);
 }
 
+/** Preview tramos / consumo Art. 14 (sin persistir) — bandeja auditor. */
+export function callPrevisualizarClasificacionMedicaAuditor(data) {
+  return httpsCallable(getFunctionsV2(), "previsualizarClasificacionMedicaAuditor")(data);
+}
+
+/** Catálogo licencias médicas publicadas (Art. 14 / 16…) para imputación auditor. */
+export function callListarArticulosLicenciaMedicaAuditor() {
+  return httpsCallable(getFunctionsV2(), "listarArticulosLicenciaMedicaAuditor")({});
+}
+
 /** Dictamen de junta médica — transición desde cfg_esa_esperando_dictamen_junta. */
 export function callRegistrarDictamenJuntaMedica(data) {
   return httpsCallable(getFunctionsV2(), "registrarDictamenJuntaMedica")(data);

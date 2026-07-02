@@ -40,6 +40,7 @@ export default function BandejaAuditorSolicitudes() {
   const [selId, setSelId] = useState("");
   const [observacion, setObservacion] = useState("");
   const [procesando, setProcesando] = useState(false);
+  const [imputacionArticulo, setImputacionArticulo] = useState(null);
 
   const [searchParams] = useSearchParams();
 
@@ -50,9 +51,14 @@ export default function BandejaAuditorSolicitudes() {
 
   const sel = lista.find((s) => s.solicitud_id === selId) || null;
 
+  useEffect(() => {
+    setImputacionArticulo(null);
+  }, [sel?.solicitud_id]);
+
   const toggleSel = useCallback((id) => {
     setSelId((prev) => (prev === id ? "" : id));
     setObservacion("");
+    setImputacionArticulo(null);
   }, []);
 
   async function clasificar(dictamenFavorable) {
@@ -62,8 +68,8 @@ export default function BandejaAuditorSolicitudes() {
     try {
       const res = await callClasificarSolicitudMedicaAuditor({
         solicitud_id: sel.solicitud_id,
-        articulo_id: sel.articulo_id,
-        version_id_aplicada: sel.version_aplicada_id,
+        articulo_id: imputacionArticulo?.articulo_id || sel.articulo_id,
+        version_id_aplicada: imputacionArticulo?.version_id_aplicada || sel.version_aplicada_id,
         fecha_desde: sel.fecha_desde,
         fecha_hasta: sel.fecha_hasta,
         grupo_trabajo_id_ancla: sel.grupo_trabajo_id_ancla || undefined,
@@ -213,6 +219,8 @@ export default function BandejaAuditorSolicitudes() {
                   {expanded ? (
                     <BandejaAuditorSolicitudDetalle
                       sel={s}
+                      imputacionArticulo={s.solicitud_id === selId ? imputacionArticulo : null}
+                      onImputacionArticuloChange={setImputacionArticulo}
                       observacion={observacion}
                       setObservacion={setObservacion}
                       procesando={procesando}
