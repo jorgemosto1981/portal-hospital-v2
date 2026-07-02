@@ -87,6 +87,12 @@ export default function BandejaAuditorSolicitudDetalle({
                 : "Dictamen favorable aprueba la licencia corta (Art. 14) y consolida en grilla; desfavorable rechaza."}
             </p>
           )}
+          {!sel.articulo_id && !esLarga ? (
+            <p className="text-xs text-slate-600">
+              Aviso sin artículo en el alta (Caja Negra): al dictaminar favorable se aplicará la versión vigente del
+              Art. 14 — licencia médica corta del catálogo.
+            </p>
+          ) : null}
           <label className="block space-y-1.5">
             <span className="text-sm font-medium text-slate-700">Observación del auditor (opcional)</span>
             <textarea

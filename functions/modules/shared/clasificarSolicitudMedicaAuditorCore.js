@@ -15,6 +15,9 @@ const {
 const { proyectarEpisodioContinuo } = require("./licenciaMedicaEpisodioCore");
 const { aplicarLicenciaMedicaAprobada } = require("./aplicarLicenciaMedicaAprobadaCore");
 const { sumarConsumoEpisodioLargaAprobado } = require("./licenciaMedicaConsumoEpisodio");
+const {
+  resolverArticuloLicenciaMedicaPublicado,
+} = require("./resolverArticuloLicenciaMedicaClasificacionCore");
 
 const ESTADO_RECHAZADA = "cfg_esa_rechazada";
 const ESTADO_APROBADA = "cfg_esa_aprobada";
@@ -91,8 +94,8 @@ async function cargarVersionArticulo(db, articuloId, versionId) {
 async function clasificarSolicitudMedicaAuditor(db, input) {
   const solicitudId = String(input.solicitudId || "").trim();
   const auditorPersonaId = String(input.auditorPersonaId || "").trim();
-  const articuloId = String(input.articuloId || "").trim();
-  const versionIdAplicada = String(input.versionIdAplicada || "").trim();
+  let articuloId = String(input.articuloId || "").trim();
+  let versionIdAplicada = String(input.versionIdAplicada || "").trim();
   const fechaDesde = String(input.fechaDesde || "").slice(0, 10);
   const fechaHasta = String(input.fechaHasta || "").slice(0, 10);
   const dictamenFavorable = input.dictamenFavorable === true;
@@ -132,6 +135,29 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
   const adjuntos = Array.isArray(ing.adjuntos) ? ing.adjuntos : [];
   if (!adjuntos.length) {
     return { ok: false, codigo: "SIN_CERTIFICADO", mensaje: "Falta certificado médico en el aviso." };
+  }
+
+  articuloId = articuloId || String(d.articulo_id || "").trim();
+  versionIdAplicada =
+    versionIdAplicada ||
+    String(d.version_id_aplicada || d.version_aplicada_id || d.version_aplicada || "").trim();
+
+  if (dictamenFavorable && (!/^art_/i.test(articuloId) || !/^ver_/i.test(versionIdAplicada))) {
+    const causalLargaIdProbe = resolverCausalLargaDuracionId(input, d);
+    const cie10Probe = resolverCie10DesdeSolicitud(d);
+    const intentLarga = /^cfg_cld_/i.test(causalLargaIdProbe) && Boolean(cie10Probe);
+    const resuelto = await resolverArticuloLicenciaMedicaPublicado(db, intentLarga ? "larga" : "corta");
+    if (!resuelto?.articuloId || !resuelto?.versionId) {
+      return {
+        ok: false,
+        codigo: "ARTICULO_VERSION_INVALIDO",
+        mensaje: intentLarga
+          ? "No hay artículo 16 (licencia larga) publicado en catálogo."
+          : "No hay artículo 14 (licencia médica corta) publicado. Verifique cfg_articulos o indique artículo en la clasificación.",
+      };
+    }
+    articuloId = resuelto.articuloId;
+    versionIdAplicada = resuelto.versionId;
   }
 
   const clasificacionBase = {
