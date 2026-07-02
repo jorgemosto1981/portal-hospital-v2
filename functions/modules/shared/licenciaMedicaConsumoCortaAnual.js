@@ -20,18 +20,17 @@ async function sumarConsumoCortaAnualAprobado(db, params) {
   const ymdDesde = `${anio}-01-01`;
   const ymdHasta = `${anio}-12-31`;
 
-  // Índice compuesto recomendado: titular_persona_id + estado_solicitud_id + fecha_desde
   const snap = await db
     .collection(COL_SOLICITUDES)
     .where("titular_persona_id", "==", personaId)
     .where("estado_solicitud_id", "==", ESTADO_SOLICITUD_APROBADA)
-    .where("fecha_desde", ">=", ymdDesde)
-    .where("fecha_desde", "<=", ymdHasta)
     .get();
 
   let total = 0;
   for (const doc of snap.docs) {
     const d = doc.data() || {};
+    const fd = String(d.fecha_desde || "").slice(0, 10);
+    if (fd && (fd < ymdDesde || fd > ymdHasta)) continue;
     const lm = d.licencia_medica;
     if (!lm || typeof lm !== "object") continue;
     if (String(lm.modo_licencia_medica_id || "").trim() !== CFG_MLM_CORTA_ANUAL) continue;
