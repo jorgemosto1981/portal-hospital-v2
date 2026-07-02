@@ -109,6 +109,8 @@ async function fanOutVisDesdeAsiGrupo(db, opts) {
       estado_solicitud_id: String(opts.estado_solicitud_id || "").trim(),
       ...(RX_GDT.test(ancla) ? { grupo_trabajo_id_ancla: ancla } : {}),
       ...(teoriaRef ? { teoria_ref: teoriaRef } : {}),
+      ...(opts.fase_motor ? { fase_motor: String(opts.fase_motor).trim() } : {}),
+      ...(opts.cie10_codigo ? { cie10_codigo: String(opts.cie10_codigo).trim() } : {}),
     };
     const eventos = [...rest, evento];
     dias[diaKey] = {

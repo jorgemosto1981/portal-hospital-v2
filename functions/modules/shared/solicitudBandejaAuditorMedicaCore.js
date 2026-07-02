@@ -3,6 +3,7 @@
 const { ESTADO_SOLICITUD_PENDIENTE_CLASIFICACION_MEDICA } = require("./solicitudesArticuloEstados");
 const { SCHEMA_MED_AVISO } = require("./avisoMedicoCajaNegraCore");
 const { loadArticuloDisplay, loadPersonaBandeja } = require("./solicitudBandejaJefeCore");
+const { enriquecerItemBandejaAuditorLarga } = require("./solicitudBandejaAuditorMedicaLargaMeta");
 const {
   parseBandejaListPageOpts,
   paginarBandejaOrdenada,
@@ -83,6 +84,8 @@ async function listarSolicitudesBandejaAuditorMedica(db, opts = {}) {
   const out = [];
   const personaCache = new Map();
   const articuloCache = new Map();
+  const causalCache = new Map();
+  const versionLargaCache = new Map();
 
   for (const doc of snap.docs) {
     const sol = { id: doc.id, ...(doc.data() || {}) };
@@ -110,6 +113,13 @@ async function listarSolicitudesBandejaAuditorMedica(db, opts = {}) {
       sol.version_aplicada_id || sol.version_aplicada || sol.version_id_aplicada || "",
     ).trim();
 
+    const largaMeta = await enriquecerItemBandejaAuditorLarga(
+      db,
+      sol,
+      { articuloId: artId, versionId },
+      { causalCache, versionCache: versionLargaCache },
+    );
+
     const item = {
       solicitud_id: sol.id,
       articulo_id: artId,
@@ -130,6 +140,7 @@ async function listarSolicitudesBandejaAuditorMedica(db, opts = {}) {
       vencimiento_plazo_certificado: sol.vencimiento_plazo_certificado || null,
       puede_clasificar: !incompleta,
       etiqueta_estado: etiquetaBandejaAuditor(sol, incompleta),
+      ...largaMeta,
     };
 
     if (!itemPasaFiltroIncompleta(item, filtroVista)) continue;

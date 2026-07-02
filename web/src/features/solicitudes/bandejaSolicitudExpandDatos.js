@@ -23,6 +23,12 @@ function valorExpand(sel, key) {
   if (key.endsWith("_en")) {
     return formatInstanteBandeja(raw) || "";
   }
+  if (key === "diagnostico_licencia_medica") {
+    const cod = String(sel.cie10_codigo || "").trim();
+    const desc = String(sel.cie10_descripcion || "").trim();
+    if (cod && desc) return `${cod} — ${desc}`;
+    return desc || cod;
+  }
   return textoValor(raw);
 }
 
@@ -76,6 +82,11 @@ export const EXPAND_FILAS_RRHH = [
 export const EXPAND_FILAS_AUDITOR = [
   ...EXPAND_FILAS_JEFE.filter((f) => !["jefe_revision_en", "jefe_revision_persona_id", "jefe_motivo", "patron_saldo"].includes(f.key)),
   { key: "version_aplicada_id", label: "Versión artículo (id)" },
+  { key: "es_licencia_larga", label: "Licencia larga (Art. 16/19)" },
+  { key: "fase_motor", label: "Fase motor" },
+  { key: "causal_larga_nombre", label: "Causal Art. 19" },
+  { key: "causal_larga_duracion_id", label: "ID causal larga" },
+  { key: "diagnostico_licencia_medica", label: "Diagnóstico CIE-10" },
   { key: "es_licencia_incompleta", label: "Licencia incompleta" },
   { key: "vencimiento_plazo_certificado", label: "Vencimiento plazo certificado" },
   { key: "puede_clasificar", label: "Puede clasificar" },

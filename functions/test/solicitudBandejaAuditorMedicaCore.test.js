@@ -11,6 +11,11 @@ const {
   FILTRO_TODAS,
 } = require("../modules/shared/solicitudBandejaAuditorMedicaCore");
 
+const {
+  resolverCie10DesdeSolBandeja,
+  resolverCausalLargaIdDesdeSol,
+} = require("../modules/shared/solicitudBandejaAuditorMedicaLargaMeta");
+
 describe("solicitudBandejaAuditorMedicaCore", () => {
   it("esIncompletaMedica lee ingreso_medico", () => {
     assert.equal(esIncompletaMedica({ ingreso_medico: { es_licencia_incompleta: true } }), true);
@@ -25,5 +30,20 @@ describe("solicitudBandejaAuditorMedicaCore", () => {
     assert.equal(itemPasaFiltroIncompleta(prov, FILTRO_PROVISORIAS), true);
     assert.equal(itemPasaFiltroIncompleta(completa, FILTRO_PROVISORIAS), false);
     assert.equal(itemPasaFiltroIncompleta(prov, FILTRO_TODAS), true);
+  });
+
+  it("resolverCie10DesdeSolBandeja lee mapa inmutable", () => {
+    const r = resolverCie10DesdeSolBandeja({
+      cie10: { codigo: "B01", descripcion: "Varicela" },
+    });
+    assert.equal(r.codigo, "B01");
+    assert.equal(r.descripcion, "Varicela");
+  });
+
+  it("resolverCausalLargaIdDesdeSol prioriza sol_", () => {
+    assert.equal(
+      resolverCausalLargaIdDesdeSol({ causal_larga_duracion_id: "cfg_cld_abc" }),
+      "cfg_cld_abc",
+    );
   });
 });

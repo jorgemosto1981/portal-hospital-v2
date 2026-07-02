@@ -69,6 +69,7 @@ export default function BandejaAuditorSolicitudes() {
         grupo_trabajo_id_ancla: sel.grupo_trabajo_id_ancla || undefined,
         observacion_auditor: observacion.trim() || undefined,
         dictamen_favorable: dictamenFavorable,
+        causal_larga_duracion_id: sel.causal_larga_duracion_id || undefined,
       });
       const data = res?.data || {};
       const estado = String(data.estado_solicitud_id || "");

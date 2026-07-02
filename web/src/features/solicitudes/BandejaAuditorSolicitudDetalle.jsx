@@ -1,5 +1,12 @@
 import BandejaSolicitudExpandDatos from "./BandejaSolicitudExpandDatos.jsx";
 
+function textoDiagnostico(sel) {
+  const cod = String(sel?.cie10_codigo || "").trim();
+  const desc = String(sel?.cie10_descripcion || "").trim();
+  if (cod && desc) return `${cod} — ${desc}`;
+  return desc || cod || "";
+}
+
 export default function BandejaAuditorSolicitudDetalle({
   sel,
   observacion,
@@ -10,7 +17,9 @@ export default function BandejaAuditorSolicitudDetalle({
   if (!sel) return null;
 
   const dias = Number(sel.dias_solicitados) || 1;
+  const esLarga = sel.es_licencia_larga === true;
   const juntaHint = dias > 15;
+  const diagnostico = textoDiagnostico(sel);
 
   return (
     <div className="space-y-4 border-t border-teal-100 bg-teal-50/30 px-4 py-4">
@@ -20,6 +29,41 @@ export default function BandejaAuditorSolicitudDetalle({
           <BandejaSolicitudExpandDatos sel={sel} variant="auditor" />
         </div>
       </div>
+
+      {esLarga ? (
+        <section className="space-y-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Datos médicos — licencia larga (Art. 16/19)
+          </p>
+          {sel.causal_larga_nombre ? (
+            <p className="text-sm text-slate-800">
+              <span className="font-medium text-slate-600">Causal (Art. 19):</span>{" "}
+              {String(sel.causal_larga_nombre)}
+            </p>
+          ) : sel.causal_larga_duracion_id ? (
+            <p className="text-sm text-amber-900">
+              Causal registrada ({String(sel.causal_larga_duracion_id)}); sin etiqueta en catálogo.
+            </p>
+          ) : (
+            <p className="text-sm text-amber-900">
+              Falta causal de larga duración en el aviso. El agente debe completarla antes de clasificar.
+            </p>
+          )}
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-slate-700">Diagnóstico (CIE-10)</span>
+            <input
+              type="text"
+              readOnly
+              value={diagnostico}
+              placeholder="Sin diagnóstico CIE-10 en el aviso"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800"
+            />
+            <span className="text-xs text-slate-500">
+              Solo lectura — proviene del alta del agente (wizard). No se edita en auditoría.
+            </span>
+          </label>
+        </section>
+      ) : null}
 
       {sel.es_licencia_incompleta === true ? (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -34,10 +78,13 @@ export default function BandejaAuditorSolicitudDetalle({
             <p className="text-sm text-slate-700">
               Este tramo supera 15 días corridos. Un dictamen <strong>favorable</strong> derivará a junta médica;
               desfavorable rechaza el aviso.
+              {esLarga ? " Episodio continuo (motor S_MED_LARGA)." : ""}
             </p>
           ) : (
             <p className="text-sm text-slate-600">
-              Dictamen favorable aprueba la licencia corta (Art. 14) y consolida en grilla; desfavorable rechaza.
+              {esLarga
+                ? "Dictamen favorable aprueba la licencia larga y consolida en grilla (S_MED_LARGA); desfavorable rechaza."
+                : "Dictamen favorable aprueba la licencia corta (Art. 14) y consolida en grilla; desfavorable rechaza."}
             </p>
           )}
           <label className="block space-y-1.5">

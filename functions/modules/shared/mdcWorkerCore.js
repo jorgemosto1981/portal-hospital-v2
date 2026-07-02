@@ -30,6 +30,7 @@ const {
   esSolicitudMedAviso,
   mapSolicitudMedAvisoParaMdc,
 } = require("./avisoMedicoGrillaMdcPayload");
+const { fusionarMetadatosLicenciaMedicaEnPayload } = require("./mdcLicenciaMedicaMetadatos");
 
 /**
  * @param {string} solId
@@ -70,6 +71,9 @@ function normalizarPayload(payload) {
     estado_solicitud_id: String(payload.estado_solicitud_id || "").trim() || null,
     autorizacion_rrhh_sustituta: payload.autorizacion_rrhh_sustituta === true,
     nivel_ocupacion_dia_id: String(payload.nivel_ocupacion_dia_id || "").trim() || null,
+    fase_motor: String(payload.fase_motor || "").trim() || null,
+    cie10_codigo: String(payload.cie10_codigo || "").trim() || null,
+    causal_larga_duracion_id: String(payload.causal_larga_duracion_id || "").trim() || null,
   };
 }
 
@@ -128,6 +132,9 @@ async function procesarComandoMdc(db, rawPayload) {
     version_id_aplicada: p.version_id_aplicada,
     grupo_trabajo_id_ancla: p.grupo_trabajo_id_ancla,
     actualizado_en: FieldValue.serverTimestamp(),
+    ...(p.fase_motor ? { fase_motor: p.fase_motor } : {}),
+    ...(p.cie10_codigo ? { cie10_codigo: p.cie10_codigo } : {}),
+    ...(p.causal_larga_duracion_id ? { causal_larga_duracion_id: p.causal_larga_duracion_id } : {}),
   };
 
   if (p.comando === MDC_COMANDO_PROYECTAR_PENDIENTE) {
@@ -200,6 +207,8 @@ async function aplicarProyeccionPendienteDia(db, p, ymd, aporteBase) {
     grupos_trabajo_involucrados_ids: p.grupos_trabajo_involucrados_ids,
     grupo_trabajo_id_ancla: p.grupo_trabajo_id_ancla,
     modo: "pendiente",
+    ...(p.fase_motor ? { fase_motor: p.fase_motor } : {}),
+    ...(p.cie10_codigo ? { cie10_codigo: p.cie10_codigo } : {}),
   });
 }
 
@@ -236,6 +245,8 @@ async function aplicarAutorizacionJefeDia(db, p, ymd, aporteBase) {
     grupos_trabajo_involucrados_ids: p.grupos_trabajo_involucrados_ids,
     grupo_trabajo_id_ancla: p.grupo_trabajo_id_ancla,
     modo: "pendiente",
+    ...(p.fase_motor ? { fase_motor: p.fase_motor } : {}),
+    ...(p.cie10_codigo ? { cie10_codigo: p.cie10_codigo } : {}),
   });
 }
 
@@ -270,6 +281,8 @@ async function aplicarConsolidadoDia(db, p, ymd, aporteBase) {
     grupos_trabajo_involucrados_ids: p.grupos_trabajo_involucrados_ids,
     grupo_trabajo_id_ancla: p.grupo_trabajo_id_ancla,
     modo: "aprobado",
+    ...(p.fase_motor ? { fase_motor: p.fase_motor } : {}),
+    ...(p.cie10_codigo ? { cie10_codigo: p.cie10_codigo } : {}),
   });
 }
 
@@ -307,12 +320,13 @@ async function aplicarReversoDia(db, p, ymd) {
  */
 function buildMdcPayloadDesdeSolicitud(sol, comando) {
   let d = sol || {};
+  const solRaw = sol || {};
   const solId = String(d.id || d.sol_id || "").trim();
   if (esSolicitudMedAviso(d) && solId) {
     const mapped = mapSolicitudMedAvisoParaMdc(d, solId);
     if (mapped) d = mapped;
   }
-  return {
+  const base = {
     comando,
     comando_version: MDC_COMANDO_VERSION,
     sol_id: String(d.id || d.sol_id || "").trim(),
@@ -339,6 +353,7 @@ function buildMdcPayloadDesdeSolicitud(sol, comando) {
     estado_solicitud_id: String(d.estado_solicitud_id || "").trim() || null,
     autorizacion_rrhh_sustituta: d.autorizacion_rrhh_sustituta === true,
   };
+  return fusionarMetadatosLicenciaMedicaEnPayload(solRaw, base);
 }
 
 module.exports = {
