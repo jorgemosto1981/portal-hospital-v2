@@ -525,9 +525,9 @@ Hoy: `allow create` para aviso completo; **`allow update, delete: if false`** gl
 | 2c | Job vencimiento §5.7 | 2b | Pendiente |
 | **2d** | **Grilla MDC aviso** — `asi_*` + `vis_*` en alta y completar (§5.9) | 2b | **Hecho** (trigger create + resync completar; códigos `LM-P` / `LM`) |
 | 3 | Callable clasificar + enganche P4.1 | Motor existente | **Parcial** — callable + tramos preview; MDC post-clasificación en **3a** |
-| **3a** | **MDC post-auditoría** — mutación estado en `asi_*`/`vis_*` (§5.9.1) | 3 + `aplicarLicenciaMedicaAprobada` | **Parcial** — **Hecho** vía `clasificarSolicitudMedicaAuditor` + `mutarEstadoSolicitudMedicaMdc` (rechazo / aprobada / esperando junta); pendiente job §5.7, dictamen junta P4.2 y `aplicarLicenciaMedicaAprobada` |
+| **3a** | **MDC post-auditoría** — mutación estado en `asi_*`/`vis_*` (§5.9.1) | 3 + `aplicarLicenciaMedicaAprobada` | **Parcial** — `clasificarSolicitudMedicaAuditor` + `mutarEstadoSolicitudMedicaMdc` + `aplicarLicenciaMedicaAprobadaCore` (≤15 d y post-junta); pendiente job §5.7 |
 | 4 | Bandeja auditor §5.8 | 3 | Pendiente |
-| 5 | Junta (P4.2) + MDC dictamen | 3a | Pendiente |
+| 5 | Junta (P4.2) + MDC dictamen | 3a | **Parcial** — callable `registrarDictamenJuntaMedica` + MDC CONSOLIDAR/REVERTIR; UI bandeja junta pendiente |
 | 6 | Matriz UAT caja negra | — | Pendiente |
 
 **Orden recomendado al retomar código:** **2b (persist aviso incompleta + completar)** → smoke agente → **2c (job)** → **3 (auditor)**. No invertir: el job sin create/completar no aporta UAT.

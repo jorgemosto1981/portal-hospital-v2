@@ -9,10 +9,8 @@ const {
 const { iterarYmdInclusive } = require("./mdcRdaDocumentIds");
 const {
   esLicenciaMedicaCortaAnual,
-  calcularTramosLicenciaMedicaCorta,
-  CFG_MLM_CORTA_ANUAL,
 } = require("./licenciaMedicaTramosCore");
-const { sumarConsumoCortaAnualAprobado } = require("./licenciaMedicaConsumoCortaAnual");
+const { aplicarLicenciaMedicaAprobada } = require("./aplicarLicenciaMedicaAprobadaCore");
 
 const ESTADO_RECHAZADA = "cfg_esa_rechazada";
 const ESTADO_APROBADA = "cfg_esa_aprobada";
@@ -158,17 +156,7 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
     return { ok: false, codigo: "DIAS_INVALIDOS", mensaje: "El período debe tener al menos un día." };
   }
 
-  const anio = Number(fechaDesde.slice(0, 4));
   const titular = String(d.titular_persona_id || "").trim();
-  const consumido_previo = await sumarConsumoCortaAnualAprobado(db, {
-    titular_persona_id: titular,
-    anio_calendario: anio,
-  });
-  const tramosCalc = calcularTramosLicenciaMedicaCorta({
-    consumido_previo,
-    dias_solicitados: dias,
-  });
-
   const requiereJunta = dias > 15;
   const estadoDestino = requiereJunta ? ESTADO_ESPERANDO_JUNTA : ESTADO_APROBADA;
 
@@ -194,14 +182,18 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
     patch.grupo_trabajo_id_ancla = gdt;
   }
 
+  let tramosCalc = { tramos_haberes: {} };
   if (!requiereJunta) {
-    patch.licencia_medica = {
-      modo_licencia_medica_id: CFG_MLM_CORTA_ANUAL,
-      anio_calendario: anio,
-      consumido_previo_al_aprobar: consumido_previo,
-      tramos_haberes: tramosCalc.tramos_haberes,
-      dias_solicitud_total: dias,
-    };
+    const aplicado = await aplicarLicenciaMedicaAprobada(db, {
+      titular_persona_id: titular,
+      fecha_desde: fechaDesde,
+      fecha_hasta: fechaHasta,
+      dias_solicitados: dias,
+      requiere_junta_medica: false,
+    });
+    if (!aplicado.ok) return aplicado;
+    patch.licencia_medica = aplicado.licencia_medica;
+    tramosCalc = { tramos_haberes: aplicado.tramos_haberes };
   }
 
   await ref.update(patch);

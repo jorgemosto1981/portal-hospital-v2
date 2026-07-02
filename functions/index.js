@@ -70,6 +70,7 @@ const solicitarReconciliacionGrillaGrupoMes = require("./onCall/grilla/solicitar
 const avisoMedicoCajaNegra = require("./onCall/solicitudes/actualizarAvisoMedicoIncompleto");
 const validarPeriodoAvisoMedico = require("./onCall/solicitudes/validarPeriodoAvisoMedicoExclusivo");
 const clasificarSolicitudMedicaAuditor = require("./onCall/solicitudes/clasificarSolicitudMedicaAuditor");
+const registrarDictamenJuntaMedica = require("./onCall/solicitudes/registrarDictamenJuntaMedica");
 
 module.exports = {
   ...login,
@@ -131,4 +132,5 @@ module.exports = {
   ...avisoMedicoCajaNegra,
   ...validarPeriodoAvisoMedico,
   ...clasificarSolicitudMedicaAuditor,
+  ...registrarDictamenJuntaMedica,
 };

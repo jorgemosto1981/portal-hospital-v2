@@ -541,3 +541,8 @@ export function callValidarPeriodoAvisoMedicoExclusivo(data) {
 export function callClasificarSolicitudMedicaAuditor(data) {
   return httpsCallable(getFunctionsV2(), "clasificarSolicitudMedicaAuditor")(data);
 }
+
+/** Dictamen de junta médica — transición desde cfg_esa_esperando_dictamen_junta. */
+export function callRegistrarDictamenJuntaMedica(data) {
+  return httpsCallable(getFunctionsV2(), "registrarDictamenJuntaMedica")(data);
+}
