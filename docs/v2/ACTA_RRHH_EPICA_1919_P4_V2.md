@@ -49,9 +49,17 @@
 
 ## Evidencia técnica (repo)
 
-- Rama: `feat/1919-p4-licencias-medicas`
+- Rama: `feat/1919-p4-licencias-largas` (motor P4 + P4.4; merge objetivo `master`)
 - Smokes: `scripts/smoke/med-*.mjs` (clasificación, junta, vencimiento, rechazo MDC)
 - Seed Art. 14: `applied-ids.json` en `docs/v2/seeds/p4_art14/`
+
+## Backlog post-firma (UI auditoría médica)
+
+Tras OK RRHH del **motor** y bandejas mínimas, la oleada de **herramienta de decisión** del médico auditor (visor certificado, clasificación sustantiva, preview tramos, historial normativo) queda priorizada y acotada en:
+
+- [`BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md`](./BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md)
+
+Soporte operativo piloto hasta esa UI: `scripts/inspect-solicitud.mjs` (back-office, lectura `sol_*`).
 
 ## Firmas
 
