@@ -1,0 +1,28 @@
+{
+  "oleada": "p4_art14_p43",
+  "fecha_desde": "2026-01-01",
+  "circuito_ingreso_ids": [
+    "CFG_USUARIO",
+    "CFG_RRHH",
+    "CFG_MEDICO",
+    "CFG_VISUALIZADOR"
+  ],
+  "articulos": [
+    {
+      "clave": "art14_corta",
+      "codigo": "14",
+      "codigo_grilla": "LM",
+      "codigo_sarh": "14",
+      "nombre": "ENFERMEDAD DE CORTA DURACION",
+      "inciso_normativo": "Art. 14 — Decreto 1919/89",
+      "color_ui": "#3B82F6",
+      "modo_licencia_medica_id": "cfg_mlm_corta_anual",
+      "regla_computo_dias_id": "cfg_rcd_corridos",
+      "cupo_dias_por_ciclo": null,
+      "tope_dias_por_evento": null,
+      "tope_frecuencia_mensual": null,
+      "requiere_adjunto_obligatorio": true,
+      "ayuda_agente_ui": "Comunicá el aviso en el plazo institucional. Adjuntá certificado médico. Los tramos de haberes (100 % / 60 % / sin goce) los define medicina según tu acumulado anual."
+    }
+  ]
+}

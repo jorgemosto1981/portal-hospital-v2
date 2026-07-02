@@ -54,6 +54,8 @@
     "test:firestore:rules": "firebase emulators:exec --only firestore --project demo-hospital-v2 \"node tests/firestore-rules.mjs\"",
     "seed:cfg": "node scripts/seed-v2/seed-cfg.mjs",
     "seed:catalogos-articulos-v2": "node scripts/seed-v2/seed-catalogos-articulos-v2.mjs",
+    "seed:p4-art14:dry-run": "node scripts/seed-v2/apply-p4-art14.mjs --dry-run",
+    "seed:p4-art14": "node scripts/seed-v2/apply-p4-art14.mjs --apply",
     "verify:catalogos-articulos-v2": "node scripts/seed-v2/verify-catalogos-articulos-v2.mjs",
     "db:migrate-caducidad-fk-articulos-v2:dry-run": "node scripts/seed-v2/migrate-caducidad-fk-articulos-v2.mjs",
     "db:migrate-caducidad-fk-articulos-v2": "node scripts/seed-v2/migrate-caducidad-fk-articulos-v2.mjs --apply",

@@ -77,6 +77,33 @@ function addDaysYmd(ymd, days) {
 }
 
 async function resolverArticuloMedicoCorta(db) {
+  const appliedPath = join(repoRoot, "docs/v2/seeds/p4_art14/applied-ids.json");
+  if (existsSync(appliedPath)) {
+    try {
+      const applied = JSON.parse(readFileSync(appliedPath, "utf8"));
+      const art14 = applied?.articulos?.art14_corta;
+      if (art14?.artId && art14?.verId) {
+        return {
+          articuloId: art14.artId,
+          versionId: art14.verId,
+          codigo: art14.codigo || "14",
+        };
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const byCodigo = await db.collection("cfg_articulos").where("codigo", "==", "14").limit(1).get();
+  if (!byCodigo.empty) {
+    const artDoc = byCodigo.docs[0];
+    const core = artDoc.data() || {};
+    const verId = String(core.version_actual_id || "").trim();
+    if (/^ver_/i.test(verId)) {
+      return { articuloId: artDoc.id, versionId: verId, codigo: "14" };
+    }
+  }
+
   const arts = await db.collection("cfg_articulos").limit(80).get();
   for (const artDoc of arts.docs) {
     const verSnap = await artDoc.ref.collection("versiones").orderBy("vigente_desde", "desc").limit(5).get();

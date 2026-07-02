@@ -64,6 +64,10 @@ export const bloqueIdentidadNaturalezaSchema = z
     es_sin_goce: z.boolean().default(false),
     requiere_dictamen: z.boolean().default(false),
     es_licencia_medica: z.boolean().default(false),
+    /** P4 — `cfg_mlm_corta_anual` | `cfg_mlm_larga_episodio` (catálogo seed). */
+    modo_licencia_medica_id: cfgRowIdSchema.nullable().optional(),
+    /** P4 larga — catálogo causal Art. 19 (futuro). */
+    causal_larga_duracion_id: cfgRowIdSchema.nullable().optional(),
     visualizacion: visualizacionSchema.optional(),
     /** Ventana de aplicación de esta versión (motor de resolución §RFC vigencia doble nivel). */
     fecha_desde: firestoreDateLikeSchema,
@@ -365,6 +369,34 @@ function refineOpcionesConsumoVersion(data, ctx) {
   }
 }
 
+const CFG_MLM_CORTA = "cfg_mlm_corta_anual";
+const CFG_MLM_LARGA = "cfg_mlm_larga_episodio";
+
+/**
+ * @param {import("zod").infer<typeof cfgArticuloVersionObjectSchema>} data
+ * @param {import("zod").RefinementCtx} ctx
+ */
+function refineLicenciaMedicaVersion(data, ctx) {
+  const ident = data.bloque_identidad_naturaleza;
+  if (ident.es_licencia_medica !== true) return;
+  const modo = String(ident.modo_licencia_medica_id || "").trim();
+  if (!modo) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["bloque_identidad_naturaleza", "modo_licencia_medica_id"],
+      message: "Con es_licencia_medica, modo_licencia_medica_id es obligatorio.",
+    });
+    return;
+  }
+  if (modo === CFG_MLM_LARGA && !String(ident.causal_larga_duracion_id || "").trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["bloque_identidad_naturaleza", "causal_larga_duracion_id"],
+      message: "Licencia larga requiere causal_larga_duracion_id.",
+    });
+  }
+}
+
 const cfgArticuloVersionObjectSchema = z.object({
   version_semantica: z.string().min(1),
   estado_version_id: cfgRowIdSchema,
@@ -384,7 +416,8 @@ const cfgArticuloVersionObjectSchema = z.object({
 
 export const cfgArticuloVersionSchema = cfgArticuloVersionObjectSchema
   .strict()
-  .superRefine(refineOpcionesConsumoVersion);
+  .superRefine(refineOpcionesConsumoVersion)
+  .superRefine(refineLicenciaMedicaVersion);
 
 // --- Grafo cfg_articulo_relaciones (§2.3) ---
 

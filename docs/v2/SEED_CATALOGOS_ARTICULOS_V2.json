@@ -419,6 +419,28 @@
       "vigente_hasta": null
     }
   ],
+  "cfg_modo_licencia_medica": [
+    {
+      "id": "cfg_mlm_corta_anual",
+      "codigo_interno": "CORTA_ANUAL",
+      "titulo_ui": "Licencia médica corta — Art. 14 (año calendario)",
+      "descripcion_ui": "Acumulador 35+35+resto; motor S_MED y tramos de haberes.",
+      "orden": 10,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
+      "id": "cfg_mlm_larga_episodio",
+      "codigo_interno": "LARGA_EPISODIO",
+      "titulo_ui": "Licencia médica larga — Arts. 16/19 (episodio)",
+      "descripcion_ui": "Episodio continuo; causal y dictamen; sin reinicio anual.",
+      "orden": 20,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    }
+  ],
   "cfg_motivo_rechazo_solicitud": [
     {
       "id": "cfg_mrs_sin_cupo",
