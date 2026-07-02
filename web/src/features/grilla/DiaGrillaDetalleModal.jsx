@@ -34,10 +34,16 @@ import { useAutoSanacionDiaGrillaModal } from "./useAutoSanacionDiaGrillaModal.j
 import { sufijoTituloDiaGrillaDetalleModal } from "./diaGrillaDetalleModalTitulo.js";
 import { buildCellKey, useGrillaMesCeldaSnapshot } from "./useGrillaMesNodos.js";
 import { celdaTieneJornadaVis } from "./grillaMesEquipoDisplay.js";
+import {
+  etiquetaEnlaceBandejaDesdeResumenGrilla,
+  rutaBandejaSolicitudDesdeResumenGrilla,
+} from "./grillaBandejaSolicitudLink.js";
 
 function labelEstado(id) {
   const e = String(id || "");
   if (e === "cfg_esa_aprobada") return "Aprobada";
+  if (e === "cfg_esa_esperando_dictamen_junta") return "En junta médica";
+  if (e === "cfg_esa_pendiente_clasificacion_medica") return "Pendiente clasificación médica";
   if (e === "cfg_esa_en_revision_jefe") return "En revisión por jefe";
   if (e === "cfg_esa_rechazada") return "Rechazada";
   if (e === "cfg_esa_en_revision_rrhh") return "En revisión RRHH (legacy)";
@@ -226,6 +232,12 @@ export default function DiaGrillaDetalleModal({
   const [fichadaAbmVista, setFichadaAbmVista] = useState(/** @type {null | 'menu' | 'agregar' | 'borrar' | 'modificar'} */ (null));
   const fichadaAbmActivo = fichadaAbmVista != null;
   const puedeAbrirFichadaAbm = puedeEditarFichadasReales && !soloLectura && personaId && fechaYmd && grupoTrabajoId;
+
+  const bandejaLinkPath = useMemo(
+    () => rutaBandejaSolicitudDesdeResumenGrilla(resumen, bandejaPath),
+    [resumen, bandejaPath],
+  );
+  const bandejaLinkLabel = useMemo(() => etiquetaEnlaceBandejaDesdeResumenGrilla(resumen), [resumen]);
 
   useEffect(() => {
     if (!open) {
@@ -480,13 +492,13 @@ export default function DiaGrillaDetalleModal({
               mensajeBloqueo={!accionTeoriaHabilitada ? mensajeBloqueoTeoria : null}
             />
             <div className="mt-3 flex flex-col gap-2">
-              {resumen?.solicitud_id && bandejaPath ? (
+              {resumen?.solicitud_id && bandejaLinkPath ? (
                 <Link
-                  to={`${bandejaPath}?sol_id=${encodeURIComponent(resumen.solicitud_id)}`}
+                  to={`${bandejaLinkPath}?sol_id=${encodeURIComponent(resumen.solicitud_id)}`}
                   onClick={onClose}
                   className="flex min-h-11 w-full touch-manipulation items-center justify-center rounded-xl border border-amber-400 bg-white text-sm font-semibold text-amber-950 active:bg-amber-100"
                 >
-                  Ir a solicitud en bandeja
+                  {bandejaLinkLabel}
                 </Link>
               ) : null}
               {personaId && fechaYmd && onAbrirGestionTurno && !soloLectura ? (
@@ -855,13 +867,13 @@ export default function DiaGrillaDetalleModal({
           </button>
         ) : null}
 
-        {resumen?.solicitud_id && bandejaPath && !desalineacionTeoria && !fichadaAbmActivo ? (
+        {resumen?.solicitud_id && bandejaLinkPath && !desalineacionTeoria && !fichadaAbmActivo ? (
           <Link
-            to={`${bandejaPath}?sol_id=${encodeURIComponent(resumen.solicitud_id)}`}
+            to={`${bandejaLinkPath}?sol_id=${encodeURIComponent(resumen.solicitud_id)}`}
             onClick={onClose}
             className="mt-4 flex min-h-11 w-full items-center justify-center rounded-xl bg-violet-700 text-sm font-semibold text-white hover:bg-violet-800"
           >
-            Ver solicitud en bandeja
+            {bandejaLinkLabel}
           </Link>
         ) : null}
 
