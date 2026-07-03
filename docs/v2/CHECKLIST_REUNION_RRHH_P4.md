@@ -2,7 +2,7 @@
 
 > **Uso:** guion de demostración en vivo (~30–45 min). No sustituye el acta formal; la acompaña.  
 > **Piloto:** https://portal-hospital-v2.web.app  
-> **`master`:** `7a719a6` (código P0/P1/P2b + docs smoke + evidencia P2b)  
+> **`master`:** `2704ff2` (P0/P1/P2b + **P4.3b historial inline** + docs smoke)  
 > **Acta:** [`ACTA_RRHH_EPICA_1919_P4_V2.md`](./ACTA_RRHH_EPICA_1919_P4_V2.md)  
 > **Evidencia técnica:** [`HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md`](./HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md)
 
@@ -44,7 +44,8 @@
 | 1.1 | Abrir bandeja auditor → filtro **Completas** → buscar aviso pendiente (o mostrar caso histórico en detalle si no hay pendientes). | Listado ordenado por fecha de inicio. | ☐ |
 | 1.2 | Expandir un aviso → sección **Certificado médico**. | PDF embebido (visor P0). | ☐ |
 | 1.3 | Debajo del PDF: **Ficha del aviso (agente)**. | Badge tipo ingreso (ej. *Enfermedad propia*), **Contacto** (teléfono, email, domicilio), **Declaración clínica** (síntomas). | ☐ |
-| 1.4 | Narrar: *“Estos datos los declaró el agente al dar el aviso; son solo lectura y no reemplazan el certificado.”* | Comprensión RRHH. | ☐ |
+| 1.4 | En la misma ficha: expandir **Historial reciente de licencias médicas**. | Lista de hasta 5 eventos previos (aprobada / rechazada / junta); la solicitud abierta **no** aparece; carga solo al expandir. | ☐ |
+| 1.5 | Narrar: *“Estos datos los declaró el agente al dar el aviso; son solo lectura y no reemplazan el certificado.”* + *“El historial resume trámites anteriores sin abrir el preview normativo.”* | Comprensión RRHH. | ☐ |
 
 **Caso blindado (evidencia P1 + P2b):** `sol_01KWM0R9KMDEJ7ZKS416H5FSGR`  
 — Ficha con contacto `3466004444`, domicilio IRIGOYEN 511; dictamen cerrado 21/07/2026.
@@ -87,7 +88,7 @@
 Orden recomendado si hay un aviso **nuevo pendiente**; si no, usar capturas + casos históricos de la tabla.
 
 1. **Agente** (opcional, 2 min): mostrar mensaje *“Tu aviso fue recibido”* y ref. `sol_…`.
-2. **Auditor — Pilar 1:** abrir aviso → PDF + ficha contacto/clínica.
+2. **Auditor — Pilar 1:** abrir aviso → PDF + ficha contacto/clínica + **historial inline** (expandir acordeón).
 3. **Auditor — Pilar 2:** editar fechas → banner → preview 60%/100% → (opcional) dictaminar.
 4. **Grilla:** abrir día de la licencia → modal con período y estado **Aprobada**.
 5. **Cierre:** mostrar acta checklist firmable.
@@ -110,7 +111,7 @@ Orden recomendado si hay un aviso **nuevo pendiente**; si no, usar capturas + ca
 
 | Ítem | GO / Ajuste / Pendiente | Notas |
 |------|-------------------------|-------|
-| Pilar 1 — Ficha sin consola | | |
+| Pilar 1 — Ficha + historial sin consola | | |
 | Pilar 2 — Fechas + trazabilidad | | |
 | Pilar 3 — Junta y grilla | | |
 | **Acta RRHH P4** — firma | | |
@@ -128,7 +129,7 @@ Orden recomendado si hay un aviso **nuevo pendiente**; si no, usar capturas + ca
 ## Después de la reunión
 
 - [ ] Registrar veredicto en [`ACTA_RRHH_EPICA_1919_P4_V2.md`](./ACTA_RRHH_EPICA_1919_P4_V2.md) (sección Firmas).
-- [ ] Si RRHH pide **más historial normativo en bandeja** sin abrir preview → backlog **P4.3b** (historial inline en ficha).
+- [x] **P4.3b** historial inline en ficha — entregado y UAT flash PASS (`2704ff2`).
 - [ ] Si GO total → tag release / comunicado interno piloto.
 
 ---
@@ -138,6 +139,6 @@ Orden recomendado si hay un aviso **nuevo pendiente**; si no, usar capturas + ca
 | Documento | Contenido |
 |-----------|-----------|
 | [`ACTA_RRHH_EPICA_1919_P4_V2.md`](./ACTA_RRHH_EPICA_1919_P4_V2.md) | Acta institucional P4 |
-| [`HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md`](./HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md) | Smoke 6/6 PASS |
+| [`HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md`](./HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md) | Smoke 7/7 PASS (incl. P4.3b) |
 | [`EVIDENCIA_P2B_DICTAMEN_2026-07-03.md`](./EVIDENCIA_P2B_DICTAMEN_2026-07-03.md) | Flag `fechas_corregidas_por_auditor` |
 | [`BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md`](./BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md) | Brechas cerradas / backlog |
