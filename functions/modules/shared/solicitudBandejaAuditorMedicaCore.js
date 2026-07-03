@@ -11,15 +11,10 @@ const {
 const {
   mapearFichaIngresoAgenteBandejaAuditor,
 } = require("./solicitudBandejaAuditorIngresoMedico");
-const {
-  parseBandejaListPageOpts,
-  paginarBandejaOrdenada,
-  resolverPersonaIdsPorDni,
-} = require("./solicitudBandejaListUtils");
+const { parseBandejaListPageOpts, resolverPersonaIdsPorDni } = require("./solicitudBandejaListUtils");
+const { escanearBandejaAuditorPaginada } = require("./solicitudBandejaAuditorPaginacionCore");
 
 const { iterarYmdInclusive } = require("./mdcRdaDocumentIds");
-const COL_SOL = "solicitudes_articulo";
-const SCAN_LIMIT = 400;
 
 const FILTRO_COMPLETAS = "completas";
 const FILTRO_PROVISORIAS = "provisorias";
@@ -59,6 +54,86 @@ function itemPasaFiltroIncompleta(item, filtroVista) {
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {import("firebase-admin/firestore").QueryDocumentSnapshot} doc
+ * @param {{
+ *   filtroVista: string,
+ *   usuario: string,
+ *   personaCache: Map<string, unknown>,
+ *   articuloCache: Map<string, unknown>,
+ *   causalCache: Map<string, unknown>,
+ *   versionLargaCache: Map<string, unknown>,
+ * }} ctx
+ */
+async function mapDocBandejaAuditorMedica(db, doc, ctx) {
+  const sol = { id: doc.id, ...(doc.data() || {}) };
+  if (String(sol.schema_version || "").trim() !== SCHEMA_MED_AVISO) return null;
+
+  const titularId = String(sol.titular_persona_id || "").trim();
+  const rango = resolverRangoYmdEfectivoAvisoMedico(sol);
+  if (!rango || !/^per_/i.test(titularId)) return null;
+
+  const fechaRef = rango.fecha_desde;
+  const fechaHastaRef = rango.fecha_hasta;
+
+  const personaRow = await loadPersonaBandeja(db, titularId, ctx.personaCache);
+  if (ctx.usuario) {
+    const hayUsuario =
+      String(personaRow.label || "")
+        .toLowerCase()
+        .includes(ctx.usuario) ||
+      String(personaRow.dni || "").includes(ctx.usuario.replace(/\D/g, ""));
+    if (!hayUsuario) return null;
+  }
+
+  const incompleta = esIncompletaMedica(sol);
+  const artId = String(sol.articulo_id || "").trim();
+  const artDisplay = await loadArticuloDisplay(db, artId, ctx.articuloCache);
+  const versionId = String(
+    sol.version_aplicada_id || sol.version_aplicada || sol.version_id_aplicada || "",
+  ).trim();
+
+  const largaMeta = await enriquecerItemBandejaAuditorLarga(
+    db,
+    sol,
+    { articuloId: artId, versionId },
+    { causalCache: ctx.causalCache, versionCache: ctx.versionLargaCache },
+  );
+
+  const certificado_adjuntos = mapearAdjuntosBandejaAuditor(sol);
+  const ficha_ingreso_agente = mapearFichaIngresoAgenteBandejaAuditor(sol);
+  const item = {
+    solicitud_id: sol.id,
+    articulo_id: artId,
+    version_aplicada_id: versionId || null,
+    articulo_label: artDisplay.articulo_label,
+    codigo_grilla: artDisplay.codigo_grilla,
+    articulo_nombre: artDisplay.nombre,
+    titular_persona_id: titularId,
+    titular_label: personaRow.label,
+    titular_dni: personaRow.dni || null,
+    fecha_desde: fechaRef,
+    fecha_hasta: fechaHastaRef,
+    dias_solicitados:
+      Number(sol.dias_solicitados) || Math.max(1, iterarYmdInclusive(fechaRef, fechaHastaRef).length),
+    estado_solicitud_id: sol.estado_solicitud_id,
+    creado_en: sol.creado_en || null,
+    grupo_trabajo_id_ancla: String(sol.grupo_trabajo_id_ancla || "").trim() || null,
+    es_licencia_incompleta: incompleta,
+    vencimiento_plazo_certificado: sol.vencimiento_plazo_certificado || null,
+    puede_clasificar: !incompleta,
+    etiqueta_estado: etiquetaBandejaAuditor(sol, incompleta),
+    certificado_adjuntos,
+    tiene_certificado: certificado_adjuntos.length > 0,
+    ficha_ingreso_agente,
+    ...largaMeta,
+  };
+
+  if (!itemPasaFiltroIncompleta(item, ctx.filtroVista)) return null;
+  return item;
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
  * @param {Record<string, unknown>} opts
  */
 async function listarSolicitudesBandejaAuditorMedica(db, opts = {}) {
@@ -76,104 +151,44 @@ async function listarSolicitudesBandejaAuditorMedica(db, opts = {}) {
           page_size: pageSize,
           has_more: false,
           next_cursor: null,
-          total_filtrado: 0,
+          total_filtrado: null,
         },
         filtros: { filtro_vista: filtroVista, dni, usuario: usuario || null },
       };
     }
   }
 
-  const snap = await db
-    .collection(COL_SOL)
-    .where("estado_solicitud_id", "==", ESTADO_SOLICITUD_PENDIENTE_CLASIFICACION_MEDICA)
-    .limit(SCAN_LIMIT)
-    .get();
-
-  const out = [];
   const personaCache = new Map();
   const articuloCache = new Map();
   const causalCache = new Map();
   const versionLargaCache = new Map();
 
-  for (const doc of snap.docs) {
-    const sol = { id: doc.id, ...(doc.data() || {}) };
-    if (String(sol.schema_version || "").trim() !== SCHEMA_MED_AVISO) continue;
+  const ctx = {
+    filtroVista,
+    usuario,
+    personaCache,
+    articuloCache,
+    causalCache,
+    versionLargaCache,
+  };
 
-    const titularId = String(sol.titular_persona_id || "").trim();
-    const rango = resolverRangoYmdEfectivoAvisoMedico(sol);
-    if (!rango || !/^per_/i.test(titularId)) continue;
-    const fechaRef = rango.fecha_desde;
-    const fechaHastaRef = rango.fecha_hasta;
-    if (titularIdsDni && !titularIdsDni.has(titularId)) continue;
-
-    const personaRow = await loadPersonaBandeja(db, titularId, personaCache);
-    if (usuario) {
-      const hayUsuario =
-        String(personaRow.label || "")
-          .toLowerCase()
-          .includes(usuario) ||
-        String(personaRow.dni || "").includes(usuario.replace(/\D/g, ""));
-      if (!hayUsuario) continue;
-    }
-
-    const incompleta = esIncompletaMedica(sol);
-    const artId = String(sol.articulo_id || "").trim();
-    const artDisplay = await loadArticuloDisplay(db, artId, articuloCache);
-    const versionId = String(
-      sol.version_aplicada_id || sol.version_aplicada || sol.version_id_aplicada || "",
-    ).trim();
-
-    const largaMeta = await enriquecerItemBandejaAuditorLarga(
-      db,
-      sol,
-      { articuloId: artId, versionId },
-      { causalCache, versionCache: versionLargaCache },
-    );
-
-    const certificado_adjuntos = mapearAdjuntosBandejaAuditor(sol);
-    const ficha_ingreso_agente = mapearFichaIngresoAgenteBandejaAuditor(sol);
-    const item = {
-      solicitud_id: sol.id,
-      articulo_id: artId,
-      version_aplicada_id: versionId || null,
-      articulo_label: artDisplay.articulo_label,
-      codigo_grilla: artDisplay.codigo_grilla,
-      articulo_nombre: artDisplay.nombre,
-      titular_persona_id: titularId,
-      titular_label: personaRow.label,
-      titular_dni: personaRow.dni || null,
-      fecha_desde: fechaRef,
-      fecha_hasta: fechaHastaRef,
-      dias_solicitados:
-        Number(sol.dias_solicitados) || Math.max(1, iterarYmdInclusive(fechaRef, fechaHastaRef).length),
-      estado_solicitud_id: sol.estado_solicitud_id,
-      creado_en: sol.creado_en || null,
-      grupo_trabajo_id_ancla: String(sol.grupo_trabajo_id_ancla || "").trim() || null,
-      es_licencia_incompleta: incompleta,
-      vencimiento_plazo_certificado: sol.vencimiento_plazo_certificado || null,
-      puede_clasificar: !incompleta,
-      etiqueta_estado: etiquetaBandejaAuditor(sol, incompleta),
-      certificado_adjuntos,
-      tiene_certificado: certificado_adjuntos.length > 0,
-      ficha_ingreso_agente,
-      ...largaMeta,
-    };
-
-    if (!itemPasaFiltroIncompleta(item, filtroVista)) continue;
-    out.push(item);
-  }
-
-  out.sort((a, b) => String(a.fecha_desde).localeCompare(String(b.fecha_desde)));
-  const page = paginarBandejaOrdenada(out, { cursor, pageSize });
+  const page = await escanearBandejaAuditorPaginada(db, {
+    estadoPendiente: ESTADO_SOLICITUD_PENDIENTE_CLASIFICACION_MEDICA,
+    titularIds: titularIdsDni,
+    cursor,
+    pageSize,
+    mapDoc: (doc) => mapDocBandejaAuditorMedica(db, doc, ctx),
+  });
 
   return {
-    solicitudes: page.solicitudes,
+    solicitudes: page.items,
     page_info: {
       page_size: pageSize,
       has_more: page.has_more,
       next_cursor: page.next_cursor,
       total_filtrado: page.total_filtrado,
-      scan_limit: SCAN_LIMIT,
+      firestore_batches: page.firestore_batches,
+      order_field: page.order_field,
     },
     filtros: {
       filtro_vista: filtroVista,
@@ -189,6 +204,7 @@ module.exports = {
   esIncompletaMedica,
   mapearAdjuntosBandejaAuditor,
   mapearFichaIngresoAgenteBandejaAuditor,
+  mapDocBandejaAuditorMedica,
   FILTRO_COMPLETAS,
   FILTRO_PROVISORIAS,
   FILTRO_TODAS,
