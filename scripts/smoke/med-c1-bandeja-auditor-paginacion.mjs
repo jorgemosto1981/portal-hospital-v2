@@ -50,10 +50,10 @@ function parseDniArg(argv) {
 }
 
 async function main() {
+  const db = initDb();
   const { listarSolicitudesBandejaAuditorMedica } = requireFns(
     "./modules/shared/solicitudBandejaAuditorMedicaCore.js",
   );
-  const db = initDb();
   const dni = parseDniArg(process.argv.slice(2)) || "";
 
   const p1 = await listarSolicitudesBandejaAuditorMedica(db, {
