@@ -1,11 +1,34 @@
 # Acta RRHH — épica 1919, Bloque P4 (licencias médicas — Caja Negra, Art. 14 corta)
 
-> **UAT bandeja auditor P0/P1/P2/P3 + P2b:** **VERDE** (2026-07-03) — [`HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md`](./HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md), [`HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md`](./HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md)  
+> **Estado institucional:** **APROBADO** — validación RRHH y medicina laboral, **2026-07-03**  
+> **UAT bandeja auditor P0/P1/P2/P3/P2b + P4.3b:** **VERDE** — [`HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md`](./HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md), [`HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md`](./HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md)  
 > **Caso UAT cierre:** `sol_01KWKTC9BD5BJQ37TMAGADN1XR` · 32 d · Art. 14 · auditor → junta → aprobada  
-> **Caso P1:** `sol_01KWM0R9KMDEJ7ZKS416H5FSGR` · ficha ingreso agente en bandeja
+> **Caso P1 + P4.3b:** `sol_01KWM0R9KMDEJ7ZKS416H5FSGR` · ficha ingreso agente; historial inline MOSTO (demo 2026-07-03)  
+> **`master` release-ready:** `3fb0f15` (gobernanza) · código P4.3b `2704ff2`
 
-**Plantilla / registro institucional.** Completar firma tras UAT en piloto (`portal-hospital-v2`).  
+**Plantilla / registro institucional.** Firma formal en tabla §Firmas.  
 **Referencia técnica:** [`RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md`](./RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md), [`PLAN_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md`](./PLAN_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md).
+
+## Validación institucional (2026-07-03)
+
+| Campo | Valor |
+|-------|--------|
+| **Fecha** | 2026-07-03 |
+| **Participantes** | Equipo producto/desarrollo, RRHH, medicina laboral / auditoría |
+| **Veredicto** | **APROBADO** — uso regular del módulo en piloto `portal-hospital-v2` |
+
+### Evidencia de validación
+
+- **Smoke test:** **7/7 PASS** — [`HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md`](./HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md)
+- **P4.3b historial inline:** demo exitosa con titular MOSTO (DNI 28914247); lazy-load al expandir acordeón; exclusión de solicitud en curso; casos smoke KWM0 / KWKV / KWKT visibles en historial
+- **Grilla:** integración clasificación médica → MDC → grilla operativa verificada en smoke (aprobación directa, junta favorable y rechazo con REVERTIR)
+- **Piloto:** https://portal-hospital-v2.web.app — callable `obtenerHistorialLmTitularBandejaAuditor` + hosting @ `2704ff2`
+
+### Próximos pasos institucionales
+
+- [ ] Incorporar mejoras de usabilidad si surgen en operación (ver [`BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md`](./BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md) §backlog productividad)
+- [x] Documentación de cierre fase P4 bandeja auditor (handoff + checklist + este acta)
+- [ ] Inicio de ciclo **P4.4 licencias largas** — [`ACTA_RRHH_EPICA_1919_P4_4_LARGAS_V2.md`](./ACTA_RRHH_EPICA_1919_P4_4_LARGAS_V2.md)
 
 ## Alcance validado en esta oleada
 
@@ -55,12 +78,11 @@
 
 ## Evidencia técnica (repo)
 
-- Rama activa oleada bandeja auditor: **`feat/1919-p4-visor-auditor`** @ `92cb14e` (push `origin`; **no mergeado** a `master` al 2026-07-02)
-- Rama histórica motor P4 + P4.4: `feat/1919-p4-licencias-largas` (contenido absorbido en rama visor)
-- `master` @ `7a8997c` — Paquete P5 opciones consumo (UAT VERDE)
-- Smokes: `scripts/smoke/med-*.mjs` (clasificación, junta, vencimiento, rechazo MDC)
+- **`master` @ `3fb0f15`** — gobernanza cierre P4.3b + handoff/checklist actualizados
+- **Código P4.3b @ `2704ff2`** — historial LM lazy-load en `FichaIngresoAgente`
+- Smokes: `scripts/smoke/med-*.mjs` + `med-p43b-historial-flash.mjs`
 - Seed Art. 14: `applied-ids.json` en `docs/v2/seeds/p4_art14/`
-- Deploy piloto bandeja P0/P2/P3: hosting + callables `listarArticulosLicenciaMedicaAuditor`, `previsualizarClasificacionMedicaAuditor` (ver handoff pausa)
+- Deploy piloto: hosting + callables bandeja auditor (listado, clasificar, preview, historial LM)
 
 ## Oleada UI bandeja auditor — **UAT VERDE 2026-07-03**
 
@@ -71,7 +93,8 @@
 | P3 preview tramos/consumo + historial LM | `master` | ✅ |
 | P2b fechas editables + preview en vivo | `master` @ `ac2adba` | ✅ smoke integración |
 | P1 ficha `ingreso_medico` | `master` @ `72e5a87` + callable listado | ✅ `sol_01KWM0R9KMDEJ7ZKS416H5FSGR` |
-| Cierre formal acta | Smoke PASS | **Pendiente firma RRHH** |
+| P4.3b historial LM inline (ficha) | `master` @ `2704ff2` + callable `obtenerHistorialLmTitularBandejaAuditor` | ✅ UAT flash MOSTO 2026-07-03 |
+| Cierre formal acta | Smoke 7/7 PASS + demo RRHH | ✅ **APROBADO 2026-07-03** |
 
 Documentación de continuidad:
 

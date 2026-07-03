@@ -4,7 +4,7 @@
 
 **Audiencia:** RRHH, medicina laboral, equipo de desarrollo.  
 **Estado motor:** validado por smokes `scripts/smoke/med-*.mjs` y UAT de circuito Art. 14 / derivación junta.  
-**Estado UI auditor:** P0 visor + P2 selector artículo + P3 preview — **UAT VERDE 2026-07-03** · caso `sol_01KWKTC9BD5BJQ37TMAGADN1XR`. Handoff: [`HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md`](./HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md).
+**Estado UI auditor:** P0–P3 + P2b + **P4.3b historial inline** — **UAT VERDE 2026-07-03** · smoke **7/7 PASS**. Handoff: [`HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md`](./HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md).
 
 **Referencias normativas:**
 
@@ -25,29 +25,67 @@
 | **Motor P4** | Tramos Art. 14, episodio larga, acumulador solo en `cfg_esa_aprobada` |
 | **Agente** | `/portal/solicitudes/aviso-medico`, incompleta + plazo G3 |
 
-El riesgo actual **no** es integridad de datos ni desborde del motor; es **productividad y sustantividad** del dictamen en pantalla.
+El riesgo actual **no** es integridad de datos ni desborde del motor; es **productividad y escalabilidad** del dictamen en pantalla (ver §backlog productividad).
 
 ---
+
+## 1.1 Estado de brechas UI — actualizado P4.3b (2026-07-03)
+
+| Ítem | Estado | Nota |
+|------|--------|------|
+| **Visor PDF (P0)** | **COMPLETO** | `VisorPDF` en bandeja auditor |
+| **Ficha ingreso agente (P1)** | **COMPLETO** | `ficha_ingreso_agente` en listado + `FichaIngresoAgente` |
+| **Selector artículo (P2)** | **COMPLETO** | `BandejaAuditorArticuloImputacionSelect` |
+| **Fechas editables (P2b)** | **COMPLETO** | Banner + preview en vivo + `fechas_corregidas_por_auditor` |
+| **Preview tramos / consumo (P3)** | **COMPLETO** | `BandejaAuditorPreviewTramos` + callable preview |
+| **Historial LM preview (P3)** | **COMPLETO** | `historial_consumo_corta` en acordeón del preview |
+| **Historial LM inline (P4.3b)** | **COMPLETO** | `HistorialLMCollapse` en ficha; lazy-load; callable `obtenerHistorialLmTitularBandejaAuditor` @ `2704ff2` |
+
+**Backlog productividad (Opción C — post-cierre P4):** paginación/búsqueda bandeja · CIE-10 en clasificación · señales §5.8 · modal historial completo.
 
 ## 2. Matriz brecha — actual vs objetivo RFC
 
 | Función | P4 actual (UI + listado) | Objetivo RFC / producto |
 |---------|--------------------------|-------------------------|
-| **Visor clínico** | **P0 entregado** (`VisorPDF`, DTO `certificado_adjuntos`) | PDF certificado + ficha `ingreso_medico` (tipo ingreso, contacto — **P1**) |
+| **Visor clínico** | **P0 + P1 entregados** (`VisorPDF` + `FichaIngresoAgente`) | PDF + ficha `ingreso_medico` |
 | **Adjuntos** | Listado + visor en bandeja (Storage `getDownloadURL`) | Callable de lectura solo si Rules se endurecen |
-| **Diagnóstico CIE-10** | Solo si el aviso ya trae `cie10` (Patrón B / larga); Caja Negra pura: vacío | Lectura en bandeja; larga: obligatorio antes de clasificar (backend ya valida) |
-| **Clasificación sustantiva** | **P2** — selector `articulo_id`/versión + dictamen; fechas aún desde listado | Ajustar `fecha_desde`/`fecha_hasta` en UI; causal Art. 19 editable si larga |
-| **Preview tramos / consumo** | **P3** — `previsualizarClasificacionMedicaAuditor` + `BandejaAuditorPreviewTramos` | Mismo motor; validar copy RRHH en piloto |
-| **Historial** | **P4 entregado** — `historial_consumo_corta` en preview + acordeón `BandejaAuditorPreviewTramos` | Licencias médicas normativas aprobadas en el año (no EMR) |
-| **Señales §5.8** | Filtros completas/provisorias | Badge provisoria, countdown plazo, panel incumplimientos RRHH (parcial en roadmap) |
+| **Diagnóstico CIE-10** | Solo si el aviso ya trae `cie10` (Patrón B / larga); Caja Negra pura: vacío | **Brecha** — lectura/edición en bandeja; larga: obligatorio antes de clasificar |
+| **Clasificación sustantiva** | **P2 + P2b** — selector artículo + fechas editables + dictamen | Causal Art. 19 editable si larga (P4.4) |
+| **Preview tramos / consumo** | **P3** — `previsualizarClasificacionMedicaAuditor` + `BandejaAuditorPreviewTramos` | Mismo motor; copy validado en piloto |
+| **Historial** | **P3 preview** + **P4.3b inline** en ficha (últimos 5 LM con outcome; lazy-load) | Modal historial completo si >25 eventos (**backlog**) |
+| **Señales §5.8** | Filtros completas/provisorias | **Brecha** — countdown incompleta, badges críticos |
 | **Bandeja junta** | Misma familia: metadatos + dictamen | Mismas brechas de certificado y contexto de consumo |
 
 **Implementación UI relevante hoy:** `web/src/pages/BandejaAuditorSolicitudes.jsx`, `BandejaAuditorSolicitudDetalle.jsx`, `bandejaSolicitudExpandDatos.js`.  
-**Listado backend:** `solicitudBandejaAuditorMedicaCore.js` (no devuelve adjuntos ni `ingreso_medico` completo al cliente).
+**Listado backend:** `solicitudBandejaAuditorMedicaCore.js` — DTO ampliado P1 (`ficha_ingreso_agente`, adjuntos); scan en memoria límite 400 (**brecha escalabilidad**).
 
 ---
 
-## 3. Mitigación operativa hasta completar UI
+## 4. Priorización sugerida — backlog productividad (post-cierre P4)
+
+Orden recomendado tras validación RRHH 2026-07-03:
+
+| Prioridad | Ítem | Justificación |
+|-----------|------|----------------|
+| **C1** | Paginación + búsqueda DNI/nombre en bandeja | Escalabilidad piloto; infraestructura para el resto |
+| **C2** | CIE-10 visible/editable en clasificación | Sustantividad clínica del dictamen |
+| **C3** | Señales §5.8 (countdown incompleta, alertas) | Operación mesa sin sorpresas |
+| **C4** | Modal historial completo (>25 eventos) | Complemento P4.3b sin saturar la ficha |
+
+### Histórico oleadas UI (cerradas)
+
+| Oleada | Ítem | Estado |
+|--------|------|--------|
+| P0 | Visor certificado | ✅ |
+| P1 | Detalle aviso / ficha agente | ✅ @ `72e5a87` |
+| P2 | Selector artículo | ✅ |
+| P2b | Fechas editables + trazabilidad | ✅ @ `ac2adba` |
+| P3 | Preview tramos/consumo | ✅ |
+| P4.3b | Historial LM inline en ficha | ✅ @ `2704ff2` |
+
+---
+
+## 3. Mitigación operativa (soporte piloto)
 
 | Herramienta | Uso |
 |-------------|-----|
@@ -59,24 +97,15 @@ Recomendación de gobernanza: tratar `inspect-solicitud.mjs` como **interfaz de 
 
 ---
 
-## 4. Priorización sugerida (próxima oleada UI — “Fase 4 bandeja”)
+## 4.1 Priorización histórica (oleadas P0–P4.3b — cerradas)
 
-Orden alineado al RFC y al bloqueo real del auditor:
-
-| Prioridad | Ítem | Justificación |
-|-----------|------|----------------|
-| **P0** | Visor de certificado (adjuntos Storage) | **Hecho** — rama `feat/1919-p4-visor-auditor` @ `a3f00b5` |
-| **P1** | Callable o ampliación de listado: **detalle aviso** (`ingreso_medico`, adjuntos metadata, tipo ingreso) | Sustituir ida a Console |
-| **P2** | Selector artículo + versión (Art. 14 / 16) y edición de fechas en clasificación | **Hecho** selector + clasificar/preview @ `92cb14e`; **pendiente** fechas editables |
-| **P3** | Preview consumo anual + tramos 35/70 antes de confirmar | **Hecho** @ `92cb14e` — UAT §6.4 paso 1–2 |
-| **P4** | Panel historial LM aprobadas del titular (año calendario) | **Hecho** @ 2026-07-03 — UAT `sol_01KWKVW4SED7ETGKPDMB61ES8Q` |
-| **P5** | Señales §5.8 ampliadas (countdown incompleta, RRHH) | Operación mesa |
+Las oleadas P0–P4.3b están **cerradas** (ver §1.1). La priorización activa es el **backlog productividad** §4 (C1–C4).
 
 **Fuera de alcance explícito (salvo nueva definición RRHH):** historia clínica ambulatoria, interoperabilidad HC, OCR de certificados.
 
 ---
 
-## 5. Decisiones para comité RRHH (priorización)
+## 5. Decisiones para comité RRHH (cerradas en validación 2026-07-03)
 
 Antes de estimar la oleada, conviene cerrar:
 
@@ -91,12 +120,13 @@ Antes de estimar la oleada, conviene cerrar:
 ## 6. Criterios de “cerrado” para la herramienta del médico (propuesta)
 
 - [x] Auditor abre certificado desde la bandeja sin Console. *(P0 — validar en piloto con checklist §6.1)*
-- [ ] Ve tipo de ingreso, contacto y comentario del agente (lectura).
-- [ ] Clasificación favorable con artículo y fechas visibles y editables según política RRHH.
+- [x] Ve tipo de ingreso, contacto y comentario del agente (lectura). *(P1)*
+- [x] Clasificación favorable con artículo y fechas visibles y editables según política RRHH. *(P2 + P2b)*
 - [x] Preview de tramos/consumo mostrado cuando el artículo es corta anual (P3).
-- [x] Selector de artículo imputado por auditor (P2 — fechas editables pendiente).
-- [ ] Dictamen desfavorable sin regresiones MDC (smoke rechazo vigente).
-- [ ] Junta reutiliza visor + contexto del tramo derivado.
+- [x] Selector de artículo imputado por auditor (P2) + fechas editables (P2b).
+- [x] Historial LM reciente en ficha sin abrir preview (P4.3b).
+- [x] Dictamen desfavorable sin regresiones MDC (smoke rechazo vigente — `sol_01448C1850AA72A73CED4C2C65`).
+- [x] Junta reutiliza visor + contexto del tramo derivado (bandeja junta operativa).
 
 ### 6.1 Checklist UAT — P0 visor certificado (piloto)
 
@@ -181,7 +211,7 @@ En **Caja Negra** el `sol_*` nace sin `articulo_id`. El auditor **elige** la nor
 | Callable preview P3 | `previsualizarClasificacionMedicaAuditor` |
 | Callable catálogo LM auditor | `listarArticulosLicenciaMedicaAuditor` |
 | Storage certificados | `web/src/services/avisosMedicoStorage.js` (patrón de subida agente) |
-| RFC ítem 4 pendiente | `RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md` §9 |
+| Callable historial P4.3b | `obtenerHistorialLmTitularBandejaAuditor` |
 
 ---
 
@@ -189,7 +219,9 @@ En **Caja Negra** el `sol_*` nace sin `articulo_id`. El auditor **elige** la nor
 
 | Fecha | Cambio |
 |-------|--------|
-| 2026-07-03 | **P4 historial LM** — acordeón preview auditor; UAT `sol_01KWKVW4SED7ETGKPDMB61ES8Q` (51 d / 3 filas) |
+| 2026-07-03 | **Cierre P4 bandeja auditor** — §1.1 estado brechas; P4.3b inline COMPLETO; backlog C1–C4; criterios §6 cerrados |
+| 2026-07-03 | **P4.3b historial LM inline** — `HistorialLMCollapse` + callable; UAT flash MOSTO |
+| 2026-07-03 | **P4 historial LM preview** — acordeón preview auditor; UAT `sol_01KWKVW4SED7ETGKPDMB61ES8Q` |
 | 2026-07-03 | **UAT VERDE** — §6.1/§6.4 con `sol_01KWKTC9BD5BJQ37TMAGADN1XR`; fix selector LM (sin 64-A) |
 | 2026-07-02 | **PAUSA** — handoff sesión bandeja auditor; estado UI + matriz P2/P3 hecho |
 | 2026-07-02 | P2 imputación artículo §6.3–6.4; P3 preview checklist |

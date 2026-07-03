@@ -38,3 +38,5 @@ Registro de **tags Git** y hitos documentales/código. Detalle operativo en `[PL
 | 2026-07-03 | **UAT VERDE bandeja P4** | Handoff [`HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md`](./HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md) — caso `sol_01KWKTC9BD5BJQ37TMAGADN1XR`; fix selector LM; purga datos piloto |
 | 2026-07-03 | (local, sin commit) | `esArticuloImputableBandejaAuditorMedico`, `purge-solicitudes-med-piloto.mjs`, deploy 3 callables auditor |
 | 2026-07-03 | **P4 historial LM preview** | `listarHistorialConsumoCortaAnualAprobado`, acordeón `BandejaAuditorPreviewTramos`; deploy `previsualizarClasificacionMedicaAuditor`; UAT `sol_01KWKVW4SED7ETGKPDMB61ES8Q` |
+| 2026-07-03 | **`2704ff2`** | **P4.3b historial LM inline** — `HistorialLMCollapse`, callable `obtenerHistorialLmTitularBandejaAuditor`; UAT flash 7/7 |
+| 2026-07-03 | **`v1.0-epica-1919-p4`** @ `master` | Cierre institucional bandeja auditoría médica — acta APROBADO, brechas actualizadas |
