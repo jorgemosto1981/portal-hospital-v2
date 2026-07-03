@@ -1,12 +1,17 @@
 "use strict";
 
-const { CFG_MLM_CORTA_ANUAL, CFG_MLM_LARGA_EPISODIO } = require("./licenciaMedicaTramosCore");
+const {
+  CFG_MLM_CORTA_ANUAL,
+  CFG_MLM_LARGA_EPISODIO,
+  esArticuloImputableBandejaAuditorMedico,
+} = require("./licenciaMedicaTramosCore");
 
 /**
  * @param {unknown} versionData
  * @param {string} modoEsperado
  */
 function versionCoincideModoLicencia(versionData, modoEsperado) {
+  if (!esArticuloImputableBandejaAuditorMedico(versionData)) return false;
   const ident =
     versionData && typeof versionData === "object" ? versionData.bloque_identidad_naturaleza : null;
   if (!ident || ident.es_licencia_medica !== true) return false;

@@ -1,5 +1,7 @@
 # Handoff de sesión — 2 de julio de 2026 (PAUSA épica 1919 — bandeja auditor médica P0/P2/P3)
 
+> **Supersedido por cierre UAT:** [`HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md`](./HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md) — UAT **VERDE** `sol_01KWKTC9BD5BJQ37TMAGADN1XR`
+
 **Proyecto:** `portal-hospital-v2`  
 **Rama activa:** `feat/1919-p4-visor-auditor`  
 **HEAD remoto:** `92cb14e` — `feat(1919): visor auditor P0, preview tramos P3 y selector artículo P2`  

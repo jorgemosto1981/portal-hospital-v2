@@ -7,6 +7,7 @@ const {
   esLicenciaMedicaLargaEpisodio,
 } = require("./licenciaMedicaTramosCore");
 const { buildLicenciaMedicaPreviewParaPatronB } = require("./licenciaMedicaPreviewPatronB");
+const { listarHistorialConsumoCortaAnualAprobado } = require("./licenciaMedicaConsumoCortaAnual");
 const {
   resolverArticuloLicenciaMedicaPublicado,
 } = require("./resolverArticuloLicenciaMedicaClasificacionCore");
@@ -179,6 +180,15 @@ async function previsualizarClasificacionMedicaAuditor(db, input) {
   const modo_preview = esCorta ? "corta_anual" : "larga_episodio";
   const requiere_junta_medica = dias > 15;
 
+  const historial_consumo_corta =
+    modo_preview === "corta_anual"
+      ? await listarHistorialConsumoCortaAnualAprobado(db, {
+          titular_persona_id: titular,
+          anio_calendario: anio,
+          excluir_solicitud_id: solicitudId,
+        })
+      : [];
+
   return {
     ok: true,
     solicitud_id: solicitudId,
@@ -191,6 +201,7 @@ async function previsualizarClasificacionMedicaAuditor(db, input) {
     modo_preview,
     requiere_junta_medica,
     preview,
+    historial_consumo_corta,
     mensaje_ui: String(preview.mensaje_ui || "").trim(),
     mensaje_ui_corto: String(preview.mensaje_ui_corto || "").trim(),
     solo_informativo: true,

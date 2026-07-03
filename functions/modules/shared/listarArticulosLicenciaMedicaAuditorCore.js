@@ -3,6 +3,7 @@
 const {
   CFG_MLM_CORTA_ANUAL,
   CFG_MLM_LARGA_EPISODIO,
+  esArticuloImputableBandejaAuditorMedico,
   leerModoLicenciaMedicaDesdeVersion,
 } = require("./licenciaMedicaTramosCore");
 const { loadArticuloDisplay } = require("./solicitudBandejaJefeCore");
@@ -24,8 +25,8 @@ async function listarArticulosLicenciaMedicaAuditor(db) {
     const verSnap = await artDoc.ref.collection("versiones").doc(verId).get();
     if (!verSnap.exists) continue;
     const vd = verSnap.data() || {};
+    if (!esArticuloImputableBandejaAuditorMedico(vd)) continue;
     const modo = leerModoLicenciaMedicaDesdeVersion(vd);
-    if (modo !== CFG_MLM_CORTA_ANUAL && modo !== CFG_MLM_LARGA_EPISODIO) continue;
 
     const display = await loadArticuloDisplay(db, artDoc.id, articuloCache);
     const codigo = String(core.codigo || display.codigo_grilla || "").trim();

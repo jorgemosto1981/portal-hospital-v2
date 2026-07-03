@@ -39,6 +39,30 @@ export function esLicenciaMedicaLargaEpisodio(versionData) {
   return leerModoLicenciaMedicaDesdeVersion(versionData) === CFG_MLM_LARGA_EPISODIO;
 }
 
+/** Chips P4 en grilla operativa — excluye Patrón B (64-A, etc.) aunque estén mal marcados. */
+const CODIGOS_GRILLA_LM_AUDITOR = new Set(["LM", "LM-L"]);
+
+/**
+ * @param {unknown} versionData
+ * @returns {string}
+ */
+export function leerCodigoGrillaDesdeVersion(versionData) {
+  const ident =
+    versionData && typeof versionData === "object" ? versionData.bloque_identidad_naturaleza : null;
+  const vis = ident && typeof ident.visualizacion === "object" ? ident.visualizacion : null;
+  return String(vis?.codigo_grilla || "").trim();
+}
+
+/**
+ * Artículo publicado imputable por auditor médico (Caja Negra P4).
+ * @param {unknown} versionData
+ */
+export function esArticuloImputableBandejaAuditorMedico(versionData) {
+  const modo = leerModoLicenciaMedicaDesdeVersion(versionData);
+  if (modo !== CFG_MLM_CORTA_ANUAL && modo !== CFG_MLM_LARGA_EPISODIO) return false;
+  return CODIGOS_GRILLA_LM_AUDITOR.has(leerCodigoGrillaDesdeVersion(versionData));
+}
+
 /**
  * @param {{ consumido_previo?: unknown, dias_solicitados?: unknown }} params
  */

@@ -119,32 +119,9 @@ async function resolverArticuloMedicoCorta(db) {
     }
   }
 
-  /** Piloto sin ficha médica sembrada: marca versión smoke (solo entorno de prueba). */
-  const fallbackArt = arts.docs[0];
-  if (!fallbackArt) return null;
-  const verSnap = await fallbackArt.ref.collection("versiones").limit(1).get();
-  if (verSnap.empty) return null;
-  const verRef = verSnap.docs[0].ref;
-  const vd = verSnap.docs[0].data() || {};
-  const identPrev = vd.bloque_identidad_naturaleza && typeof vd.bloque_identidad_naturaleza === "object"
-    ? vd.bloque_identidad_naturaleza
-    : {};
-  await verRef.set(
-    {
-      bloque_identidad_naturaleza: {
-        ...identPrev,
-        es_licencia_medica: true,
-        modo_licencia_medica_id: "cfg_mlm_corta_anual",
-      },
-    },
-    { merge: true },
-  );
-  console.log(TAG, "WARN: versión piloto marcada es_licencia_medica para smoke UAT", fallbackArt.id, verSnap.docs[0].id);
-  return {
-    articuloId: fallbackArt.id,
-    versionId: verSnap.docs[0].id,
-    codigo: identPrev.codigo_normativo || fallbackArt.id,
-  };
+  /** Piloto sin ficha médica sembrada: no mutar artículos reales (evita contaminar 64-A, etc.). */
+  console.error(TAG, "ERROR: no hay artículo Art. 14 publicado con es_licencia_medica para smoke UAT");
+  return null;
 }
 
 async function resolverGdtAncla(db, personaId) {

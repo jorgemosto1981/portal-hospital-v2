@@ -4,7 +4,7 @@
 
 **Audiencia:** RRHH, medicina laboral, equipo de desarrollo.  
 **Estado motor:** validado por smokes `scripts/smoke/med-*.mjs` y UAT de circuito Art. 14 / derivación junta.  
-**Estado UI auditor:** P0 visor + P2 selector artículo + P3 preview entregados en piloto; **PAUSA implementación** @ `92cb14e` — UAT §6.1/§6.4 pendiente. Handoff: [`HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md`](./HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md).
+**Estado UI auditor:** P0 visor + P2 selector artículo + P3 preview — **UAT VERDE 2026-07-03** · caso `sol_01KWKTC9BD5BJQ37TMAGADN1XR`. Handoff: [`HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md`](./HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md).
 
 **Referencias normativas:**
 
@@ -38,7 +38,7 @@ El riesgo actual **no** es integridad de datos ni desborde del motor; es **produ
 | **Diagnóstico CIE-10** | Solo si el aviso ya trae `cie10` (Patrón B / larga); Caja Negra pura: vacío | Lectura en bandeja; larga: obligatorio antes de clasificar (backend ya valida) |
 | **Clasificación sustantiva** | **P2** — selector `articulo_id`/versión + dictamen; fechas aún desde listado | Ajustar `fecha_desde`/`fecha_hasta` en UI; causal Art. 19 editable si larga |
 | **Preview tramos / consumo** | **P3** — `previsualizarClasificacionMedicaAuditor` + `BandejaAuditorPreviewTramos` | Mismo motor; validar copy RRHH en piloto |
-| **Historial** | No en UI | **Licencias médicas normativas** del agente (aprobadas en el año), no historia clínica EMR |
+| **Historial** | **P4 entregado** — `historial_consumo_corta` en preview + acordeón `BandejaAuditorPreviewTramos` | Licencias médicas normativas aprobadas en el año (no EMR) |
 | **Señales §5.8** | Filtros completas/provisorias | Badge provisoria, countdown plazo, panel incumplimientos RRHH (parcial en roadmap) |
 | **Bandeja junta** | Misma familia: metadatos + dictamen | Mismas brechas de certificado y contexto de consumo |
 
@@ -69,7 +69,7 @@ Orden alineado al RFC y al bloqueo real del auditor:
 | **P1** | Callable o ampliación de listado: **detalle aviso** (`ingreso_medico`, adjuntos metadata, tipo ingreso) | Sustituir ida a Console |
 | **P2** | Selector artículo + versión (Art. 14 / 16) y edición de fechas en clasificación | **Hecho** selector + clasificar/preview @ `92cb14e`; **pendiente** fechas editables |
 | **P3** | Preview consumo anual + tramos 35/70 antes de confirmar | **Hecho** @ `92cb14e` — UAT §6.4 paso 1–2 |
-| **P4** | Panel historial LM aprobadas del titular (año calendario) | Contexto normativo, no clínico |
+| **P4** | Panel historial LM aprobadas del titular (año calendario) | **Hecho** @ 2026-07-03 — UAT `sol_01KWKVW4SED7ETGKPDMB61ES8Q` |
 | **P5** | Señales §5.8 ampliadas (countdown incompleta, RRHH) | Operación mesa |
 
 **Fuera de alcance explícito (salvo nueva definición RRHH):** historia clínica ambulatoria, interoperabilidad HC, OCR de certificados.
@@ -100,15 +100,15 @@ Antes de estimar la oleada, conviene cerrar:
 
 ### 6.1 Checklist UAT — P0 visor certificado (piloto)
 
-Validación rápida para medicina laboral / RRHH (sin acta formal):
+**Evidencia UAT 2026-07-03:** `sol_01KWKTC9BD5BJQ37TMAGADN1XR` — certificado `j.jpg`.
 
 | # | Paso | OK |
 |---|------|-----|
-| 1 | Ingresar como auditor a `/portal/medico/solicitudes` | [ ] |
-| 2 | Abrir un aviso **completo** (filtro Completas) con certificado cargado por el agente | [ ] |
-| 3 | En el detalle, sección **Certificado médico**: carga PDF o imagen sin abrir Firebase Console | [ ] |
-| 4 | **Abrir en pestaña nueva** funciona si el iframe del navegador falla | [ ] |
-| 5 | Aviso **provisorio** (incompleta): mensaje “Sin certificado” coherente, sin error de consola | [ ] |
+| 1 | Ingresar como auditor a `/portal/medico/solicitudes` | [x] |
+| 2 | Abrir un aviso **completo** (filtro Completas) con certificado cargado por el agente | [x] |
+| 3 | En el detalle, sección **Certificado médico**: carga PDF o imagen sin abrir Firebase Console | [x] |
+| 4 | **Abrir en pestaña nueva** funciona si el iframe del navegador falla | [x] |
+| 5 | Aviso **provisorio** (incompleta): mensaje “Sin certificado” coherente, sin error de consola | [ ] *(no revalidado en esta sesión)* |
 
 **Hosting piloto:** https://portal-hospital-v2.web.app · **Functions:** `listarSolicitudesBandejaAuditorMedica` con `certificado_adjuntos[]`.
 
@@ -157,15 +157,17 @@ En **Caja Negra** el `sol_*` nace sin `articulo_id`. El auditor **elige** la nor
 
 ### 6.4 Checklist UAT — P2 cambio de artículo (piloto)
 
-Referencia: `sol_01KWHASRGSX2W154CEGSW57R1Y` (17 días, sin `articulo_id` en alta).
+**Evidencia UAT 2026-07-03:** `sol_01KWKTC9BD5BJQ37TMAGADN1XR` (32 d, Art. 14, auditor → junta → aprobada).
 
 | # | Verificación | OK |
 |---|--------------|-----|
-| 1 | Abrir solicitud: selector muestra Art. 14 por defecto; preview `modo_preview=corta_anual` | [ ] |
-| 2 | Cambiar select a Art. 16 (u otra larga): preview pasa a `larga_episodio`; aviso CIE-10 si falta | [ ] |
-| 3 | Dictamen favorable con Art. 14: Firestore `sol_*` tiene `articulo_id` / `version_id_aplicada` elegidos | [ ] |
-| 4 | Grilla `vis_*`: chip del agente refleja `codigo_grilla` del artículo imputado (no solo `LM`) | [ ] |
-| 5 | Libro `asi_*`: aportes normativos alineados al artículo consolidado (smoke post-clasificación) | [ ] |
+| 1 | Abrir solicitud: selector muestra Art. 14 por defecto; preview `modo_preview=corta_anual` (19 d previos, tramos 16/100+16/60) | [x] |
+| 2 | Cambiar select a Art. 16: preview `larga_episodio`; aviso CIE-10 si falta | [x] |
+| 3 | Dictamen favorable con Art. 14: Firestore `sol_*` tiene `articulo_id` / `version_id_aplicada` elegidos | [x] |
+| 4 | Grilla `vis_*`: chip **14 — ENFERMEDAD DE CORTA DURACION**; GSO multi-sector con banner Oficina PERSONAL | [x] |
+| 5 | Libro `asi_*`: aportes normativos alineados al artículo consolidado (smoke post-clasificación) | [ ] *(smoke no re-ejecutado en sesión)* |
+
+**Histórico:** `sol_01KWHASRGSX2W154CEGSW57R1Y` (17 d) — ya consolidada antes del UAT de cierre.
 
 ---
 
@@ -187,6 +189,8 @@ Referencia: `sol_01KWHASRGSX2W154CEGSW57R1Y` (17 días, sin `articulo_id` en alt
 
 | Fecha | Cambio |
 |-------|--------|
+| 2026-07-03 | **P4 historial LM** — acordeón preview auditor; UAT `sol_01KWKVW4SED7ETGKPDMB61ES8Q` (51 d / 3 filas) |
+| 2026-07-03 | **UAT VERDE** — §6.1/§6.4 con `sol_01KWKTC9BD5BJQ37TMAGADN1XR`; fix selector LM (sin 64-A) |
 | 2026-07-02 | **PAUSA** — handoff sesión bandeja auditor; estado UI + matriz P2/P3 hecho |
 | 2026-07-02 | P2 imputación artículo §6.3–6.4; P3 preview checklist |
 | 2026-07-02 | P0 visor + checklist §6.1; diseño DTO P3 §6.2 |

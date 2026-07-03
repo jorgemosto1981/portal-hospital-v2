@@ -10,6 +10,7 @@ const {
   calcularTramosLicenciaMedicaCorta,
   buildLicenciaMedicaPreviewCorta,
   CFG_MLM_CORTA_ANUAL,
+  esArticuloImputableBandejaAuditorMedico,
 } = require("../modules/shared/licenciaMedicaTramosCore");
 
 function tramosStr(result) {
@@ -59,5 +60,33 @@ describe("buildLicenciaMedicaPreviewCorta", () => {
     assert.match(p.mensaje_ui, /1 día al 100%/);
     assert.match(p.mensaje_ui, /4 días al 60%/);
     assert.equal(p.modo_licencia_medica_id, CFG_MLM_CORTA_ANUAL);
+  });
+});
+
+describe("esArticuloImputableBandejaAuditorMedico", () => {
+  it("acepta Art. 14/16 con chip LM o LM-L", () => {
+    assert.equal(
+      esArticuloImputableBandejaAuditorMedico({
+        bloque_identidad_naturaleza: {
+          es_licencia_medica: true,
+          modo_licencia_medica_id: CFG_MLM_CORTA_ANUAL,
+          visualizacion: { codigo_grilla: "LM" },
+        },
+      }),
+      true,
+    );
+  });
+
+  it("rechaza 64-A aunque tenga es_licencia_medica por error de datos", () => {
+    assert.equal(
+      esArticuloImputableBandejaAuditorMedico({
+        bloque_identidad_naturaleza: {
+          es_licencia_medica: true,
+          modo_licencia_medica_id: CFG_MLM_CORTA_ANUAL,
+          visualizacion: { codigo_grilla: "64-A" },
+        },
+      }),
+      false,
+    );
   });
 });

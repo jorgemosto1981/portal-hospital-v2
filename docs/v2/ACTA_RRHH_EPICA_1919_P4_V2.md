@@ -1,5 +1,8 @@
 # Acta RRHH — épica 1919, Bloque P4 (licencias médicas — Caja Negra, Art. 14 corta)
 
+> **UAT bandeja auditor P0/P2/P3:** **VERDE** (2026-07-03) — [`HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md`](./HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md)  
+> **Caso UAT cierre:** `sol_01KWKTC9BD5BJQ37TMAGADN1XR` · 32 d · Art. 14 · auditor → junta → aprobada
+
 **Plantilla / registro institucional.** Completar firma tras UAT en piloto (`portal-hospital-v2`).  
 **Referencia técnica:** [`RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md`](./RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md), [`PLAN_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md`](./PLAN_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md).
 
@@ -23,20 +26,22 @@
 | Campo | Valor de referencia |
 |-------|---------------------|
 | Titular prueba | MOSTO, JORGE ANTONIO — DNI 28914247 |
-| Solicitud LM | `sol_013EE8A16E710808627AC4DBA2` |
+| **Solicitud LM (cierre UAT 2026-07-03)** | **`sol_01KWKTC9BD5BJQ37TMAGADN1XR`** |
 | Artículo Firestore | `art_01KWH4NM0BW4HKGGWV1NFD599K` (código **14**) |
-| Flujo | Aviso completo → clasificación favorable **18 d** → junta favorable → `cfg_esa_aprobada` + `licencia_medica` + MDC `CONSOLIDAR_APROBADO` |
-| Bandejas | Sale de auditoría y junta tras cierre; resumen grilla muestra **14 — ENFERMEDAD DE CORTA DURACION** |
+| Flujo | Aviso completo → preview 32 d (19 d previos) → clasificación favorable auditor → junta favorable → `cfg_esa_aprobada` + `licencia_medica` + MDC |
+| Bandejas | Sale de auditoría y junta tras cierre; grilla **14 — ENFERMEDAD DE CORTA DURACION** |
 
-**Nota datos piloto:** pueden existir avisos `SOL_MED_AVISO_V1` de prueba con `articulo_id` distinto del 14 (p. ej. chip «64-A» en grilla). No invalidan el caso canónico; saneamiento opcional en backlog.
+**Caso histórico motor (jun-2026):** `sol_013EE8A16E710808627AC4DBA2` (18 d) — válido para regresión motor; no sustituye evidencia bandeja P0/P2/P3.
+
+**Nota datos piloto:** solicitudes 64-A espurias purgadas 2026-07-03; selector auditor filtra solo `codigo_grilla` LM/LM-L.
 
 ## Criterios de aceptación RRHH (checklist)
 
-- [ ] Agente puede dar aviso médico y completar incompleta dentro del plazo configurado.
-- [ ] Auditor clasifica aviso completo; ≤15 días aprueba sin junta; >15 días deriva a junta.
-- [ ] Junta emite dictamen favorable/desfavorable; desfavorable rechaza y revierte proyección en grilla.
-- [ ] Grilla muestra licencia coherente con estado (LM / consolidación); sin etiqueta “pendiente clasificación” en solicitudes ya aprobadas.
-- [ ] Enlace desde detalle de día no envía trámites médicos a bandeja jefe/RRHH genérica (portal médico o sin enlace si ya cerrado).
+- [x] Agente puede dar aviso médico y completar incompleta dentro del plazo configurado. *(UAT 2026-07-03)*
+- [x] Auditor clasifica aviso completo; ≤15 días aprueba sin junta; >15 días deriva a junta. *(32 d → junta)*
+- [x] Junta emite dictamen favorable/desfavorable; desfavorable rechaza y revierte proyección en grilla. *(favorable verificado; rechazo: smoke vigente)*
+- [x] Grilla muestra licencia coherente con estado (LM / consolidación); sin etiqueta “pendiente clasificación” en solicitudes ya aprobadas.
+- [x] Enlace desde detalle de día no envía trámites médicos a bandeja jefe/RRHH genérica (portal médico o sin enlace si ya cerrado).
 - [ ] RRHH acepta oleada **P4.4 largas** documentada en [`ACTA_RRHH_EPICA_1919_P4_4_LARGAS_V2.md`](./ACTA_RRHH_EPICA_1919_P4_4_LARGAS_V2.md) para merge independiente o conjunto según estrategia de release.
 
 ## Transversal
@@ -56,20 +61,21 @@
 - Seed Art. 14: `applied-ids.json` en `docs/v2/seeds/p4_art14/`
 - Deploy piloto bandeja P0/P2/P3: hosting + callables `listarArticulosLicenciaMedicaAuditor`, `previsualizarClasificacionMedicaAuditor` (ver handoff pausa)
 
-## Oleada UI bandeja auditor (2026-07-02) — pausada pendiente UAT
+## Oleada UI bandeja auditor — **UAT VERDE 2026-07-03**
 
 | Entregable | Estado código | UAT |
 |------------|---------------|-----|
-| P0 visor certificado | Desplegado | Checklist brechas §6.1 |
-| P2 selector artículo imputado | Desplegado | Checklist brechas §6.4 |
-| P3 preview tramos/consumo | Desplegado | Incluido en §6.4 pasos 1–2 |
+| P0 visor certificado | Desplegado | ✅ §6.1 — `sol_01KWKTC9BD5BJQ37TMAGADN1XR` |
+| P2 selector artículo imputado | Desplegado + fix LM 03-jul | ✅ §6.4 |
+| P3 preview tramos/consumo | Desplegado | ✅ §6.3/§6.4 |
 | P1 ficha `ingreso_medico` | Pendiente | — |
-| Cierre formal acta | Pendiente firma | Tras UAT verde |
+| Cierre formal acta | UAT verde | **Pendiente firma RRHH** |
 
 Documentación de continuidad:
 
+- [`HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md`](./HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md) — **SSoT cierre**
 - [`BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md`](./BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md)
-- [`HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md`](./HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md)
+- [`HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md`](./HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md) — histórico pausa
 
 Soporte operativo piloto: `scripts/inspect-solicitud.mjs` (local, no versionado por defecto).
 
