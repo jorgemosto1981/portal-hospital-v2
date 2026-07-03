@@ -1,6 +1,7 @@
 import BandejaSolicitudExpandDatos from "./BandejaSolicitudExpandDatos.jsx";
 import BandejaAuditorPreviewTramos from "./BandejaAuditorPreviewTramos.jsx";
 import BandejaAuditorArticuloImputacionSelect from "./BandejaAuditorArticuloImputacionSelect.jsx";
+import FichaIngresoAgente from "./FichaIngresoAgente.jsx";
 import VisorPDF from "../../components/medico/VisorPDF.jsx";
 import {
   diasCorridosBandejaAuditor,
@@ -72,6 +73,8 @@ export default function BandejaAuditorSolicitudDetalle({
           <p className="text-sm text-slate-500">Sin certificado adjunto en este aviso.</p>
         )}
       </section>
+
+      <FichaIngresoAgente ficha={sel.ficha_ingreso_agente} />
 
       <BandejaAuditorArticuloImputacionSelect
         sel={sel}

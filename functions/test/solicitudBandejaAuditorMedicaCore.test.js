@@ -7,6 +7,7 @@ const {
   itemPasaFiltroIncompleta,
   esIncompletaMedica,
   mapearAdjuntosBandejaAuditor,
+  mapearFichaIngresoAgenteBandejaAuditor,
   FILTRO_COMPLETAS,
   FILTRO_PROVISORIAS,
   FILTRO_TODAS,
@@ -86,5 +87,69 @@ describe("solicitudBandejaAuditorMedicaCore", () => {
       }),
       [],
     );
+  });
+
+  it("mapearFichaIngresoAgenteBandejaAuditor expone DTO plano de ingreso_medico", () => {
+    const ficha = mapearFichaIngresoAgenteBandejaAuditor({
+      fecha_inicio_reposo_estimada: "2026-08-02",
+      fecha_fin_reposo_estimada: "2026-08-18",
+      ingreso_medico: {
+        modo: "caja_negra",
+        tipo_ingreso_id: "cfg_tig_enfermedad_propia",
+        comentario_agente: "Dolor abdominal desde ayer",
+        declaracion_contacto: {
+          telefono_celular: "1122334455",
+          telefono_fijo: "1144556677",
+          email: "agente@ejemplo.com",
+          domicilio_declarado: "Calle Falsa 123",
+          permanece_en_domicilio: true,
+          usar_datos_perfil: false,
+        },
+        declaracion_clinica: {
+          sintomas: "Fiebre y malestar",
+          enfermedad: "Gastroenteritis",
+          codigo_cie: "A09",
+          detalle: "Sin antecedentes relevantes",
+        },
+      },
+    });
+
+    assert.equal(ficha.tipo_ingreso_id, "cfg_tig_enfermedad_propia");
+    assert.equal(ficha.comentario_agente, "Dolor abdominal desde ayer");
+    assert.equal(ficha.telefono_celular, "1122334455");
+    assert.equal(ficha.telefono_fijo, "1144556677");
+    assert.equal(ficha.email, "agente@ejemplo.com");
+    assert.equal(ficha.domicilio_declarado, "Calle Falsa 123");
+    assert.equal(ficha.permanece_en_domicilio, true);
+    assert.equal(ficha.sintomas, "Fiebre y malestar");
+    assert.equal(ficha.enfermedad, "Gastroenteritis");
+    assert.equal(ficha.codigo_cie_clinica, "A09");
+    assert.equal(ficha.detalle_clinico, "Sin antecedentes relevantes");
+    assert.equal(ficha.fecha_estimada_desde, "2026-08-02");
+    assert.equal(ficha.fecha_estimada_hasta, "2026-08-18");
+    assert.equal(ficha.familiar_nombre, null);
+  });
+
+  it("mapearFichaIngresoAgenteBandejaAuditor incluye familiar atendido", () => {
+    const ficha = mapearFichaIngresoAgenteBandejaAuditor({
+      fecha_inicio_reposo_estimada: "2026-09-01",
+      fecha_fin_reposo_estimada: "2026-09-03",
+      ingreso_medico: {
+        tipo_ingreso_id: "cfg_tig_atencion_familiar",
+        declaracion_contacto: { telefono_celular: "1199887766", email: "a@b.com", domicilio_declarado: "X" },
+        familiar_atendido: {
+          nombre: "Ana",
+          apellido: "García",
+          dni: "30123456",
+          parentesco_id: "cfg_par_hijo",
+        },
+      },
+    });
+
+    assert.equal(ficha.tipo_ingreso_id, "cfg_tig_atencion_familiar");
+    assert.equal(ficha.familiar_nombre, "Ana");
+    assert.equal(ficha.familiar_apellido, "García");
+    assert.equal(ficha.familiar_dni, "30123456");
+    assert.equal(ficha.familiar_parentesco_id, "cfg_par_hijo");
   });
 });

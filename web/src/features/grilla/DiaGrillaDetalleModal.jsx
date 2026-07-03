@@ -31,6 +31,7 @@ import DiaGrillaValidacionFichadaAlertas from "./DiaGrillaValidacionFichadaAlert
 import DiaGrillaResultadoCumplimientoJefe from "./DiaGrillaResultadoCumplimientoJefe.jsx";
 import GrillaPresentacionCompuestoFilas from "./GrillaPresentacionCompuestoFilas.jsx";
 import { useAutoSanacionDiaGrillaModal } from "./useAutoSanacionDiaGrillaModal.js";
+import { sufijoTituloDiaGrillaDetalleModal } from "./diaGrillaDetalleModalTitulo.js";
 import {
   textoPeriodoOriginalAgenteResumenGrilla,
   textoPeriodoResumenGrilla,

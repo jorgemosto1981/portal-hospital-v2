@@ -9,6 +9,9 @@ const {
   mapearAdjuntosBandejaAuditor,
 } = require("./solicitudBandejaAuditorCertificados");
 const {
+  mapearFichaIngresoAgenteBandejaAuditor,
+} = require("./solicitudBandejaAuditorIngresoMedico");
+const {
   parseBandejaListPageOpts,
   paginarBandejaOrdenada,
   resolverPersonaIdsPorDni,
@@ -128,6 +131,7 @@ async function listarSolicitudesBandejaAuditorMedica(db, opts = {}) {
     );
 
     const certificado_adjuntos = mapearAdjuntosBandejaAuditor(sol);
+    const ficha_ingreso_agente = mapearFichaIngresoAgenteBandejaAuditor(sol);
     const item = {
       solicitud_id: sol.id,
       articulo_id: artId,
@@ -151,6 +155,7 @@ async function listarSolicitudesBandejaAuditorMedica(db, opts = {}) {
       etiqueta_estado: etiquetaBandejaAuditor(sol, incompleta),
       certificado_adjuntos,
       tiene_certificado: certificado_adjuntos.length > 0,
+      ficha_ingreso_agente,
       ...largaMeta,
     };
 
@@ -183,6 +188,7 @@ module.exports = {
   itemPasaFiltroIncompleta,
   esIncompletaMedica,
   mapearAdjuntosBandejaAuditor,
+  mapearFichaIngresoAgenteBandejaAuditor,
   FILTRO_COMPLETAS,
   FILTRO_PROVISORIAS,
   FILTRO_TODAS,
