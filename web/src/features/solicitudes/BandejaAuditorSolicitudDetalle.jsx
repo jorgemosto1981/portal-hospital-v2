@@ -2,6 +2,11 @@ import BandejaSolicitudExpandDatos from "./BandejaSolicitudExpandDatos.jsx";
 import BandejaAuditorPreviewTramos from "./BandejaAuditorPreviewTramos.jsx";
 import BandejaAuditorArticuloImputacionSelect from "./BandejaAuditorArticuloImputacionSelect.jsx";
 import VisorPDF from "../../components/medico/VisorPDF.jsx";
+import {
+  diasCorridosBandejaAuditor,
+  fechasModificadasPorAuditor,
+  fechasSolicitudCompletas,
+} from "./bandejaAuditorFechasUi.js";
 
 function textoDiagnostico(sel) {
   const cod = String(sel?.cie10_codigo || "").trim();
@@ -12,6 +17,13 @@ function textoDiagnostico(sel) {
 
 export default function BandejaAuditorSolicitudDetalle({
   sel,
+  selPreview,
+  fechaDesdeEdit,
+  fechaHastaEdit,
+  fechaDesdeOriginal,
+  fechaHastaOriginal,
+  onFechaDesdeChange,
+  onFechaHastaChange,
   imputacionArticulo,
   onImputacionArticuloChange,
   observacion,
@@ -21,12 +33,20 @@ export default function BandejaAuditorSolicitudDetalle({
 }) {
   if (!sel) return null;
 
-  const dias = Number(sel.dias_solicitados) || 1;
+  const fechasValidas = fechasSolicitudCompletas(fechaDesdeEdit, fechaHastaEdit);
+  const fechasModificadas = fechasModificadasPorAuditor(
+    fechaDesdeOriginal,
+    fechaHastaOriginal,
+    fechaDesdeEdit,
+    fechaHastaEdit,
+  );
+  const dias = diasCorridosBandejaAuditor(fechaDesdeEdit, fechaHastaEdit) || Number(sel.dias_solicitados) || 1;
   const esLarga = sel.es_licencia_larga === true;
   const juntaHint = dias > 15;
   const diagnostico = textoDiagnostico(sel);
   const adjuntos = Array.isArray(sel.certificado_adjuntos) ? sel.certificado_adjuntos : [];
   const tieneCertificado = sel.tiene_certificado === true || adjuntos.length > 0;
+  const previewSel = selPreview || sel;
 
   return (
     <div className="space-y-4 border-t border-teal-100 bg-teal-50/30 px-4 py-4">
@@ -59,7 +79,52 @@ export default function BandejaAuditorSolicitudDetalle({
         onImputacionChange={onImputacionArticuloChange}
       />
 
-      <BandejaAuditorPreviewTramos sel={sel} imputacionArticulo={imputacionArticulo} />
+      {sel.puede_clasificar === true ? (
+        <section className="space-y-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Rango de licencia (dictamen)
+          </p>
+          <p className="text-xs text-slate-500">
+            Podés ajustar las fechas respecto al aviso del agente. El preview y el dictamen usan este rango.
+          </p>
+          {fechasModificadas ? (
+            <p
+              role="alert"
+              className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            >
+              Atención: Estás modificando el rango de fechas original solicitado por el agente.
+            </p>
+          ) : null}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-slate-700">Desde</span>
+              <input
+                type="date"
+                value={fechaDesdeEdit}
+                onChange={(e) => onFechaDesdeChange(e.target.value)}
+                className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100"
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-slate-700">Hasta</span>
+              <input
+                type="date"
+                value={fechaHastaEdit}
+                min={fechaDesdeEdit || undefined}
+                onChange={(e) => onFechaHastaChange(e.target.value)}
+                className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100"
+              />
+            </label>
+          </div>
+          {!fechasValidas ? (
+            <p className="text-sm text-red-800">Indicá un rango válido (desde ≤ hasta).</p>
+          ) : (
+            <p className="text-xs text-slate-600">{dias} día{dias === 1 ? "" : "s"} corridos en el rango editado.</p>
+          )}
+        </section>
+      ) : null}
+
+      <BandejaAuditorPreviewTramos sel={previewSel} imputacionArticulo={imputacionArticulo} />
 
       {esLarga ? (
         <section className="space-y-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
@@ -131,7 +196,7 @@ export default function BandejaAuditorSolicitudDetalle({
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
-              disabled={procesando}
+              disabled={procesando || !fechasValidas}
               onClick={() => onClasificar(true)}
               className="min-h-11 flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
             >
@@ -139,7 +204,7 @@ export default function BandejaAuditorSolicitudDetalle({
             </button>
             <button
               type="button"
-              disabled={procesando}
+              disabled={procesando || !fechasValidas}
               onClick={() => onClasificar(false)}
               className="min-h-11 flex-1 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-800 hover:bg-red-100 disabled:opacity-50"
             >

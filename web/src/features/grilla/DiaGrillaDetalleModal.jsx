@@ -31,7 +31,10 @@ import DiaGrillaValidacionFichadaAlertas from "./DiaGrillaValidacionFichadaAlert
 import DiaGrillaResultadoCumplimientoJefe from "./DiaGrillaResultadoCumplimientoJefe.jsx";
 import GrillaPresentacionCompuestoFilas from "./GrillaPresentacionCompuestoFilas.jsx";
 import { useAutoSanacionDiaGrillaModal } from "./useAutoSanacionDiaGrillaModal.js";
-import { sufijoTituloDiaGrillaDetalleModal } from "./diaGrillaDetalleModalTitulo.js";
+import {
+  textoPeriodoOriginalAgenteResumenGrilla,
+  textoPeriodoResumenGrilla,
+} from "./diaGrillaResumenPeriodoUi.js";
 import { buildCellKey, useGrillaMesCeldaSnapshot } from "./useGrillaMesNodos.js";
 import { celdaTieneJornadaVis } from "./grillaMesEquipoDisplay.js";
 import {
@@ -774,14 +777,19 @@ export default function DiaGrillaDetalleModal({
             </div>
             <div>
               <dt className="text-xs font-medium text-slate-500">Período</dt>
-              <dd>
-                {resumen.fecha_desde || "—"}
-                {resumen.fecha_hasta && resumen.fecha_hasta !== resumen.fecha_desde
-                  ? ` → ${resumen.fecha_hasta}`
-                  : ""}
-                {resumen.dias_solicitados != null ? ` · ${resumen.dias_solicitados} día(s)` : ""}
-              </dd>
+              <dd>{textoPeriodoResumenGrilla(resumen)}</dd>
             </div>
+            {resumen.fechas_corregidas_por_auditor === true ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                <p className="text-xs font-semibold text-amber-950">Fechas ajustadas por auditoría médica</p>
+                {textoPeriodoOriginalAgenteResumenGrilla(resumen) ? (
+                  <p className="mt-1 text-xs text-amber-900">
+                    Rango original del agente:{" "}
+                    <span className="font-medium">{textoPeriodoOriginalAgenteResumenGrilla(resumen)}</span>
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             {resumen.jefe_revision_persona_id ? (
               <div>
                 <dt className="text-xs font-medium text-slate-500">Cierre jefatura</dt>

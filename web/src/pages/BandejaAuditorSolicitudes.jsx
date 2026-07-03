@@ -12,6 +12,11 @@ import {
   FILTROS_VISTA_AUDITOR,
   useBandejaAuditorSolicitudes,
 } from "../features/solicitudes/useBandejaAuditorSolicitudes.js";
+import {
+  diasCorridosBandejaAuditor,
+  fechasOriginalesDesdeSel,
+  fechasSolicitudCompletas,
+} from "../features/solicitudes/bandejaAuditorFechasUi.js";
 import { callClasificarSolicitudMedicaAuditor } from "../services/callables.js";
 
 export default function BandejaAuditorSolicitudes() {
@@ -41,6 +46,10 @@ export default function BandejaAuditorSolicitudes() {
   const [observacion, setObservacion] = useState("");
   const [procesando, setProcesando] = useState(false);
   const [imputacionArticulo, setImputacionArticulo] = useState(null);
+  const [fechaDesdeEdit, setFechaDesdeEdit] = useState("");
+  const [fechaHastaEdit, setFechaHastaEdit] = useState("");
+  const [fechaDesdeOriginal, setFechaDesdeOriginal] = useState("");
+  const [fechaHastaOriginal, setFechaHastaOriginal] = useState("");
 
   const [searchParams] = useSearchParams();
 
@@ -53,16 +62,36 @@ export default function BandejaAuditorSolicitudes() {
 
   useEffect(() => {
     setImputacionArticulo(null);
+    if (!sel) {
+      setFechaDesdeEdit("");
+      setFechaHastaEdit("");
+      setFechaDesdeOriginal("");
+      setFechaHastaOriginal("");
+      return;
+    }
+    const { desde, hasta } = fechasOriginalesDesdeSel(sel);
+    setFechaDesdeOriginal(desde);
+    setFechaHastaOriginal(hasta);
+    setFechaDesdeEdit(desde);
+    setFechaHastaEdit(hasta);
   }, [sel?.solicitud_id]);
 
   const toggleSel = useCallback((id) => {
     setSelId((prev) => (prev === id ? "" : id));
     setObservacion("");
     setImputacionArticulo(null);
+    setFechaDesdeEdit("");
+    setFechaHastaEdit("");
+    setFechaDesdeOriginal("");
+    setFechaHastaOriginal("");
   }, []);
 
   async function clasificar(dictamenFavorable) {
     if (!sel || procesando || sel.puede_clasificar !== true) return;
+    if (!fechasSolicitudCompletas(fechaDesdeEdit, fechaHastaEdit)) {
+      toast.error("Revisá el rango de fechas antes de dictaminar.");
+      return;
+    }
     setProcesando(true);
     const t = toast.loading(dictamenFavorable ? "Registrando dictamen favorable…" : "Registrando rechazo…");
     try {
@@ -70,8 +99,8 @@ export default function BandejaAuditorSolicitudes() {
         solicitud_id: sel.solicitud_id,
         articulo_id: imputacionArticulo?.articulo_id || sel.articulo_id,
         version_id_aplicada: imputacionArticulo?.version_id_aplicada || sel.version_aplicada_id,
-        fecha_desde: sel.fecha_desde,
-        fecha_hasta: sel.fecha_hasta,
+        fecha_desde: fechaDesdeEdit,
+        fecha_hasta: fechaHastaEdit,
         grupo_trabajo_id_ancla: sel.grupo_trabajo_id_ancla || undefined,
         observacion_auditor: observacion.trim() || undefined,
         dictamen_favorable: dictamenFavorable,
@@ -93,6 +122,16 @@ export default function BandejaAuditorSolicitudes() {
       setProcesando(false);
     }
   }
+
+  const selPreview =
+    sel && fechasSolicitudCompletas(fechaDesdeEdit, fechaHastaEdit)
+      ? {
+          ...sel,
+          fecha_desde: fechaDesdeEdit,
+          fecha_hasta: fechaHastaEdit,
+          dias_solicitados: diasCorridosBandejaAuditor(fechaDesdeEdit, fechaHastaEdit),
+        }
+      : sel;
 
   if (!puedeAuditar) {
     return (
@@ -219,6 +258,13 @@ export default function BandejaAuditorSolicitudes() {
                   {expanded ? (
                     <BandejaAuditorSolicitudDetalle
                       sel={s}
+                      selPreview={s.solicitud_id === selId ? selPreview : s}
+                      fechaDesdeEdit={s.solicitud_id === selId ? fechaDesdeEdit : s.fecha_desde}
+                      fechaHastaEdit={s.solicitud_id === selId ? fechaHastaEdit : s.fecha_hasta}
+                      fechaDesdeOriginal={s.solicitud_id === selId ? fechaDesdeOriginal : s.fecha_desde}
+                      fechaHastaOriginal={s.solicitud_id === selId ? fechaHastaOriginal : s.fecha_hasta}
+                      onFechaDesdeChange={setFechaDesdeEdit}
+                      onFechaHastaChange={setFechaHastaEdit}
                       imputacionArticulo={s.solicitud_id === selId ? imputacionArticulo : null}
                       onImputacionArticuloChange={setImputacionArticulo}
                       observacion={observacion}

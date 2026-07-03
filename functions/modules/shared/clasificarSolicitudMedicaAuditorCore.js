@@ -57,6 +57,17 @@ function resolverCie10DesdeSolicitud(d) {
 }
 
 /**
+ * @param {string} fechaDesde YYYY-MM-DD dictaminado
+ * @param {string} fechaHasta YYYY-MM-DD dictaminado
+ * @param {Record<string, unknown>} d solicitud original (aviso agente)
+ */
+function evaluarFechasCorregidasPorAuditor(fechaDesde, fechaHasta, d) {
+  const origDesde = String(d.fecha_inicio_reposo_estimada || "").slice(0, 10);
+  const origHasta = String(d.fecha_fin_reposo_estimada || "").slice(0, 10);
+  return fechaDesde !== origDesde || fechaHasta !== origHasta;
+}
+
+/**
  * @param {import("firebase-admin/firestore").Firestore} db
  * @param {string} articuloId
  * @param {string} versionId
@@ -167,6 +178,7 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
     version_id_aplicada: versionIdAplicada,
     fecha_desde: fechaDesde,
     fecha_hasta: fechaHasta,
+    fechas_corregidas_por_auditor: evaluarFechasCorregidasPorAuditor(fechaDesde, fechaHasta, d),
     ...(input.observacionAuditor
       ? { observacion_auditor: String(input.observacionAuditor).slice(0, 2000) }
       : {}),
@@ -193,6 +205,12 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
       solicitud_id: solicitudId,
       estado_solicitud_id: ESTADO_RECHAZADA,
       mensaje_ui: "Solicitud rechazada por medicina laboral.",
+      auditor_medico_clasificacion: {
+        fecha_desde: fechaDesde,
+        fecha_hasta: fechaHasta,
+        fechas_corregidas_por_auditor: clasificacionBase.fechas_corregidas_por_auditor,
+        dictamen_favorable: false,
+      },
       mdc_mutacion: mdc,
     };
   }
@@ -329,6 +347,14 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
     dias_solicitados: dias,
     requiere_junta_medica: requiereJunta,
     preview_tramos: tramosCalc.tramos_haberes,
+    auditor_medico_clasificacion: {
+      fecha_desde: fechaDesde,
+      fecha_hasta: fechaHasta,
+      fechas_corregidas_por_auditor: clasificacionBase.fechas_corregidas_por_auditor,
+      dictamen_favorable: true,
+      dias_solicitados: dias,
+      requiere_junta_medica: requiereJunta,
+    },
     ...(esLarga && causalLargaId ? { causal_larga_duracion_id: causalLargaId } : {}),
     ...(episodioPreview ? { preview_episodio: episodioPreview } : {}),
     mensaje_ui: requiereJunta ? mensajeJunta : mensajeAprobada,
@@ -342,4 +368,5 @@ module.exports = {
   ESTADO_ESPERANDO_JUNTA,
   clasificarSolicitudMedicaAuditor,
   diasCorridosInclusive,
+  evaluarFechasCorregidasPorAuditor,
 };

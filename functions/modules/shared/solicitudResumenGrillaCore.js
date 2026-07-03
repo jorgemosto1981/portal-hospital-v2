@@ -6,6 +6,7 @@ const { SCHEMA_MED_AVISO } = require("./avisoMedicoProvisoriosVigentesCore");
 const {
   resolverCodigoGrillaAvisoMedico,
   resolverRangoYmdAvisoMedico,
+  resolverRangoYmdEfectivoAvisoMedico,
 } = require("./avisoMedicoGrillaMdcPayload");
 
 const ESTADO_PENDIENTE_CLASIFICACION = "cfg_esa_pendiente_clasificacion_medica";
@@ -147,7 +148,13 @@ async function obtenerResumenSolicitudArticuloGrilla(db, solId, revisorPersonaId
     resolvePersonaLabel(db, rrhhTcId, personaCache),
   ]);
 
-  const rangoMed = schemaMed ? resolverRangoYmdAvisoMedico(sol) : null;
+  const rangoMedEfectivo = schemaMed ? resolverRangoYmdEfectivoAvisoMedico(sol) : null;
+  const rangoMedEstimado = schemaMed ? resolverRangoYmdAvisoMedico(sol) : null;
+  const clasifAuditor =
+    sol.auditor_medico_clasificacion && typeof sol.auditor_medico_clasificacion === "object"
+      ? sol.auditor_medico_clasificacion
+      : null;
+  const fechasCorregidasPorAuditor = clasifAuditor?.fechas_corregidas_por_auditor === true;
 
   return {
     ok: true,
@@ -156,9 +163,14 @@ async function obtenerResumenSolicitudArticuloGrilla(db, solId, revisorPersonaId
     titular_label: titularLabel,
     estado_solicitud_id: String(sol.estado_solicitud_id || "") || null,
     fecha_desde:
-      (schemaMed && rangoMed?.fecha_desde) || String(sol.fecha_desde || "").slice(0, 10) || null,
+      (schemaMed && rangoMedEfectivo?.fecha_desde) || String(sol.fecha_desde || "").slice(0, 10) || null,
     fecha_hasta:
-      (schemaMed && rangoMed?.fecha_hasta) || String(sol.fecha_hasta || "").slice(0, 10) || null,
+      (schemaMed && rangoMedEfectivo?.fecha_hasta) || String(sol.fecha_hasta || "").slice(0, 10) || null,
+    fecha_desde_original:
+      (schemaMed && rangoMedEstimado?.fecha_desde) || null,
+    fecha_hasta_original:
+      (schemaMed && rangoMedEstimado?.fecha_hasta) || null,
+    fechas_corregidas_por_auditor: schemaMed ? fechasCorregidasPorAuditor : false,
     articulo_id: String(sol.articulo_id || "") || null,
     codigo_grilla: artDisplay.codigo_grilla || null,
     articulo_label: artDisplay.articulo_label || null,
