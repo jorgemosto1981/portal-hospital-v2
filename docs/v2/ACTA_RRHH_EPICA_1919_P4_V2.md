@@ -1,7 +1,8 @@
 # Acta RRHH — épica 1919, Bloque P4 (licencias médicas — Caja Negra, Art. 14 corta)
 
-> **UAT bandeja auditor P0/P2/P3:** **VERDE** (2026-07-03) — [`HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md`](./HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md)  
-> **Caso UAT cierre:** `sol_01KWKTC9BD5BJQ37TMAGADN1XR` · 32 d · Art. 14 · auditor → junta → aprobada
+> **UAT bandeja auditor P0/P1/P2/P3 + P2b:** **VERDE** (2026-07-03) — [`HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md`](./HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md), [`HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md`](./HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md)  
+> **Caso UAT cierre:** `sol_01KWKTC9BD5BJQ37TMAGADN1XR` · 32 d · Art. 14 · auditor → junta → aprobada  
+> **Caso P1:** `sol_01KWM0R9KMDEJ7ZKS416H5FSGR` · ficha ingreso agente en bandeja
 
 **Plantilla / registro institucional.** Completar firma tras UAT en piloto (`portal-hospital-v2`).  
 **Referencia técnica:** [`RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md`](./RFC_TICKETERA_SLICE_MEDICO_CAJA_NEGRA_V2.md), [`PLAN_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md`](./PLAN_P4_LICENCIAS_MEDICAS_ART_11_14_V2.md).
@@ -38,7 +39,7 @@
 ## Criterios de aceptación RRHH (checklist)
 
 - [x] Agente puede dar aviso médico y completar incompleta dentro del plazo configurado. *(UAT 2026-07-03)*
-- [x] Auditor clasifica aviso completo; ≤15 días aprueba sin junta; >15 días deriva a junta. *(32 d → junta)*
+- [x] Auditor clasifica aviso completo; ≤15 días aprueba sin junta; >15 días deriva a junta. *(32 d → junta; P2b fechas editables UAT 2026-07-03)*
 - [x] Junta emite dictamen favorable/desfavorable; desfavorable rechaza y revierte proyección en grilla. *(favorable verificado; rechazo: smoke vigente)*
 - [x] Grilla muestra licencia coherente con estado (LM / consolidación); sin etiqueta “pendiente clasificación” en solicitudes ya aprobadas.
 - [x] Enlace desde detalle de día no envía trámites médicos a bandeja jefe/RRHH genérica (portal médico o sin enlace si ya cerrado).
@@ -65,16 +66,18 @@
 
 | Entregable | Estado código | UAT |
 |------------|---------------|-----|
-| P0 visor certificado | Desplegado | ✅ §6.1 — `sol_01KWKTC9BD5BJQ37TMAGADN1XR` |
-| P2 selector artículo imputado | Desplegado + fix LM 03-jul | ✅ §6.4 |
-| P3 preview tramos/consumo | Desplegado | ✅ §6.3/§6.4 |
-| P1 ficha `ingreso_medico` | Pendiente | — |
-| Cierre formal acta | UAT verde | **Pendiente firma RRHH** |
+| P0 visor certificado | `master` + hosting | ✅ |
+| P2 selector artículo imputado | `master` | ✅ |
+| P3 preview tramos/consumo + historial LM | `master` | ✅ |
+| P2b fechas editables + preview en vivo | `master` @ `ac2adba` | ✅ smoke integración |
+| P1 ficha `ingreso_medico` | `master` @ `72e5a87` + callable listado | ✅ `sol_01KWM0R9KMDEJ7ZKS416H5FSGR` |
+| Cierre formal acta | Smoke PASS | **Pendiente firma RRHH** |
 
 Documentación de continuidad:
 
 - [`HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md`](./HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md) — **SSoT cierre**
 - [`BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md`](./BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md)
+- [`HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md`](./HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md) — **smoke integración P0/P1/P2b**
 - [`HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md`](./HANDOFF_SESION_2026-07-02_PAUSA_BANDEJA_AUDITOR_P4_V2.md) — histórico pausa
 
 Soporte operativo piloto: `scripts/inspect-solicitud.mjs` (local, no versionado por defecto).
