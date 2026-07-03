@@ -566,3 +566,8 @@ export function callListarArticulosLicenciaMedicaAuditor() {
 export function callRegistrarDictamenJuntaMedica(data) {
   return httpsCallable(getFunctionsV2(), "registrarDictamenJuntaMedica")(data);
 }
+
+/** Historial reciente LM del titular — lazy-load bandeja auditoría médica (P4.3b). */
+export function callObtenerHistorialLmTitularBandejaAuditor(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerHistorialLmTitularBandejaAuditor")(data || {});
+}

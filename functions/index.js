@@ -76,6 +76,7 @@ const listarArticulosLicenciaMedicaAuditor = require("./onCall/solicitudes/lista
 const listarSolicitudesBandejaJuntaMedica = require("./onCall/solicitudes/listarSolicitudesBandejaJuntaMedica");
 const registrarDictamenJuntaMedica = require("./onCall/solicitudes/registrarDictamenJuntaMedica");
 const procesarVencimientosLicenciaIncompleta = require("./onCall/solicitudes/procesarVencimientosLicenciaIncompleta");
+const obtenerHistorialLmTitularBandejaAuditor = require("./onCall/solicitudes/obtenerHistorialLmTitularBandejaAuditor");
 const { vencimientosLicenciaIncompletaScheduled } = require("./onSchedule/vencimientosLicenciaIncompleta");
 
 module.exports = {
@@ -145,4 +146,5 @@ module.exports = {
   ...registrarDictamenJuntaMedica,
   ...listarSolicitudesBandejaJuntaMedica,
   ...procesarVencimientosLicenciaIncompleta,
+  ...obtenerHistorialLmTitularBandejaAuditor,
 };

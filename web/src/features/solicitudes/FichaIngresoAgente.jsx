@@ -1,3 +1,4 @@
+import HistorialLMCollapse from "./HistorialLMCollapse.jsx";
 import { etiquetaTipoAvisoMedico } from "./avisoMedicoProvisorioUi.js";
 import {
   esFichaAtencionFamiliar,
@@ -33,9 +34,17 @@ function BloqueFicha({ label, filas }) {
 
 /**
  * Ficha de ingreso declarada por el agente (solo lectura) — bandeja auditoría médica.
- * @param {{ ficha?: Record<string, unknown> | null }} props
+ * @param {{
+ *   ficha?: Record<string, unknown> | null,
+ *   titularPersonaId?: string | null,
+ *   solicitudIdExcluir?: string | null,
+ * }} props
  */
-export default function FichaIngresoAgente({ ficha = null }) {
+export default function FichaIngresoAgente({
+  ficha = null,
+  titularPersonaId = null,
+  solicitudIdExcluir = null,
+}) {
   if (!fichaIngresoAgenteTieneDatos(ficha)) {
     return (
       <section className="space-y-2 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
@@ -83,6 +92,11 @@ export default function FichaIngresoAgente({ ficha = null }) {
       <BloqueFicha label="Contexto" filas={contexto} />
       <BloqueFicha label="Contacto" filas={contacto} />
       <BloqueFicha label="Declaración clínica" filas={clinica} />
+
+      <HistorialLMCollapse
+        titularPersonaId={titularPersonaId}
+        solicitudIdExcluir={solicitudIdExcluir}
+      />
     </section>
   );
 }

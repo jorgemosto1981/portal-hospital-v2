@@ -74,7 +74,11 @@ export default function BandejaAuditorSolicitudDetalle({
         )}
       </section>
 
-      <FichaIngresoAgente ficha={sel.ficha_ingreso_agente} />
+      <FichaIngresoAgente
+        ficha={sel.ficha_ingreso_agente}
+        titularPersonaId={sel.titular_persona_id}
+        solicitudIdExcluir={sel.solicitud_id}
+      />
 
       <BandejaAuditorArticuloImputacionSelect
         sel={sel}
