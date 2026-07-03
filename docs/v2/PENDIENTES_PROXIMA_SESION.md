@@ -1,11 +1,23 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ — épica 1919 P4 bandeja auditor (CIERRE UAT 2026-07-03):**  
+> **RETOMAR AQUÍ — épica 1919 C2 CIE-10 (pausa 2026-07-03):**  
+> **Handoff:** [`HANDOFF_SESION_2026-07-03_PAUSA_C2_CIE10_CLASIFICACION.md`](./HANDOFF_SESION_2026-07-03_PAUSA_C2_CIE10_CLASIFICACION.md)  
+> **Rama:** `feat/1919-c2-cie10-clasificacion` (pusheada; **no mergeada** a `master`)  
+> **Hecho:** backend 9/9 tests · deploy `listarCie10BandejaAuditor` + `clasificarSolicitudMedicaAuditor` · smoke C2 PASS  
+> **Siguiente:** UAT visual local (escenarios A/B §7 handoff) → hosting deploy UI → merge `master`  
+> **Backlog post-C2:** C3 señales §5.8 · C4 modal historial · P4.4 causal larga editable
+
+---
+
+> **Histórico — C1 paginación (cerrado 2026-07-03):** merge `feat/1919-c1-bandeja-auditor-paginacion` → `master` · tag `v1919-C1-bandeja-optimizada`
+
+---
+
+> **Histórico — épica 1919 P4 bandeja auditor (CIERRE UAT 2026-07-03):**  
 > **UAT:** **VERDE** — [`HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md`](./HANDOFF_SESION_2026-07-03_CIERRE_UAT_P4_V2.md)  
 > **Caso UAT:** `sol_01KWKTC9BD5BJQ37TMAGADN1XR` (32 d, Art. 14, auditor → junta → aprobada)  
-> **Rama:** `feat/1919-p4-visor-auditor` — **merge a `master` pendiente** (+ commit fixes 03-jul locales)  
-> **Siguiente:** commit fixes → PR/merge → firma [`ACTA_RRHH_EPICA_1919_P4_V2.md`](./ACTA_RRHH_EPICA_1919_P4_V2.md)  
-> **Backlog bandeja (no bloqueante):** P1 ficha ingreso · ~~P4 historial LM en preview~~ ✅ · P2b fechas editables  
+> **Estado:** P4 cerrado en `master` @ tag `v1.0-epica-1919-p4`  
+> **Backlog bandeja (no bloqueante):** ~~P1 ficha ingreso~~ ✅ · ~~P4 historial LM~~ ✅ · ~~P2b fechas editables~~ ✅ · ~~C1 paginación~~ ✅
 
 ---
 

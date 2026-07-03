@@ -8,6 +8,7 @@ import { TICKETERA } from "./ticketeraUi.js";
  *   valueCodigo: string,
  *   onChange: (payload: { codigo: string, descripcion: string }) => void,
  *   disabled?: boolean,
+ *   required?: boolean,
  * }} props
  */
 export default function Cie10Select({
@@ -15,6 +16,7 @@ export default function Cie10Select({
   valueCodigo = "",
   onChange,
   disabled = false,
+  required = true,
 }) {
   const lista = Array.isArray(opciones) ? opciones : [];
   const [filtro, setFiltro] = useState("");
@@ -59,8 +61,8 @@ export default function Cie10Select({
           className={TICKETERA.select}
           value={valueCodigo}
           disabled={disabled || filtradas.length === 0}
-          required
-          aria-required="true"
+          required={required}
+          aria-required={required ? "true" : "false"}
           onChange={(e) => {
             const cod = String(e.target.value || "").trim();
             const row = lista.find((r) => String(r?.codigo_interno || "").trim() === cod);

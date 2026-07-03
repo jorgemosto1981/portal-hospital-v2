@@ -45,15 +45,35 @@ function resolverCausalLargaDuracionId(input, d) {
 }
 
 /**
+ * @param {unknown} cie10
+ */
+function normalizarCie10Input(cie10) {
+  if (!cie10 || typeof cie10 !== "object") return null;
+  const codigo = String(cie10.codigo || "").trim();
+  const descripcion = String(cie10.descripcion || "").trim();
+  if (!codigo || !descripcion) return null;
+  return { codigo, descripcion, fecha_imputacion: cie10.fecha_imputacion ?? null };
+}
+
+/**
  * @param {Record<string, unknown>} d
  */
 function resolverCie10DesdeSolicitud(d) {
-  const c = d.cie10;
-  if (!c || typeof c !== "object") return null;
-  const codigo = String(c.codigo || "").trim();
-  const descripcion = String(c.descripcion || "").trim();
-  if (!codigo || !descripcion) return null;
-  return { codigo, descripcion, fecha_imputacion: c.fecha_imputacion ?? null };
+  return normalizarCie10Input(d.cie10);
+}
+
+/**
+ * CIE-10 del auditor (input) tiene prioridad sobre el aviso del agente.
+ *
+ * @param {{ cie10?: { codigo?: string, descripcion?: string } }} input
+ * @param {Record<string, unknown>} d
+ */
+function resolverCie10ParaClasificacion(input, d) {
+  const desdeInput = normalizarCie10Input(input.cie10);
+  if (desdeInput) {
+    return { ...desdeInput, fecha_imputacion: FieldValue.serverTimestamp() };
+  }
+  return resolverCie10DesdeSolicitud(d);
 }
 
 /**
@@ -100,6 +120,7 @@ async function cargarVersionArticulo(db, articuloId, versionId) {
  *   observacionAuditor?: string,
  *   dictamenFavorable: boolean,
  *   causalLargaDuracionId?: string,
+ *   cie10?: { codigo: string, descripcion: string },
  * }} input
  */
 async function clasificarSolicitudMedicaAuditor(db, input) {
@@ -155,7 +176,7 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
 
   if (dictamenFavorable && (!/^art_/i.test(articuloId) || !/^ver_/i.test(versionIdAplicada))) {
     const causalLargaIdProbe = resolverCausalLargaDuracionId(input, d);
-    const cie10Probe = resolverCie10DesdeSolicitud(d);
+    const cie10Probe = resolverCie10ParaClasificacion(input, d);
     const intentLarga = /^cfg_cld_/i.test(causalLargaIdProbe) && Boolean(cie10Probe);
     const resuelto = await resolverArticuloLicenciaMedicaPublicado(db, intentLarga ? "larga" : "corta");
     if (!resuelto?.articuloId || !resuelto?.versionId) {
@@ -249,15 +270,17 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
           "Licencia larga: indicá causal_larga_duracion_id (Art. 19) en el aviso o en la clasificación.",
       };
     }
-    const cie10 = resolverCie10DesdeSolicitud(d);
+    const cie10 = resolverCie10ParaClasificacion(input, d);
     if (!cie10) {
       return {
         ok: false,
         codigo: "CIE10_REQUERIDO",
-        mensaje: "Licencia larga: falta diagnóstico CIE-10 en la solicitud.",
+        mensaje: "Licencia larga: indicá diagnóstico CIE-10 antes de clasificar.",
       };
     }
   }
+
+  const cie10Clasificacion = resolverCie10ParaClasificacion(input, d);
 
   /** @type {Record<string, unknown>} */
   const patch = {
@@ -273,15 +296,16 @@ async function clasificarSolicitudMedicaAuditor(db, input) {
       dias_solicitados: dias,
       requiere_junta_medica: requiereJunta,
       ...(esLarga ? { causal_larga_duracion_id: causalLargaId } : {}),
-      ...(esLarga ? { cie10: resolverCie10DesdeSolicitud(d) } : {}),
+      ...(cie10Clasificacion ? { cie10: cie10Clasificacion } : {}),
     },
     actualizado_en: FieldValue.serverTimestamp(),
   };
 
   if (esLarga) {
     patch.causal_larga_duracion_id = causalLargaId;
-    const cie10 = resolverCie10DesdeSolicitud(d);
-    if (cie10) patch.cie10 = cie10;
+  }
+  if (cie10Clasificacion) {
+    patch.cie10 = cie10Clasificacion;
   }
 
   const gdt = String(input.grupoTrabajoIdAncla || d.grupo_trabajo_id_ancla || "").trim();

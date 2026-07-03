@@ -46,6 +46,7 @@ export default function BandejaAuditorSolicitudes() {
   const [observacion, setObservacion] = useState("");
   const [procesando, setProcesando] = useState(false);
   const [imputacionArticulo, setImputacionArticulo] = useState(null);
+  const [cie10Edit, setCie10Edit] = useState(null);
   const [fechaDesdeEdit, setFechaDesdeEdit] = useState("");
   const [fechaHastaEdit, setFechaHastaEdit] = useState("");
   const [fechaDesdeOriginal, setFechaDesdeOriginal] = useState("");
@@ -63,12 +64,16 @@ export default function BandejaAuditorSolicitudes() {
   useEffect(() => {
     setImputacionArticulo(null);
     if (!sel) {
+      setCie10Edit(null);
       setFechaDesdeEdit("");
       setFechaHastaEdit("");
       setFechaDesdeOriginal("");
       setFechaHastaOriginal("");
       return;
     }
+    const cod = String(sel.cie10_codigo || "").trim();
+    const desc = String(sel.cie10_descripcion || "").trim();
+    setCie10Edit(cod && desc ? { codigo: cod, descripcion: desc } : { codigo: "", descripcion: "" });
     const { desde, hasta } = fechasOriginalesDesdeSel(sel);
     setFechaDesdeOriginal(desde);
     setFechaHastaOriginal(hasta);
@@ -80,6 +85,7 @@ export default function BandejaAuditorSolicitudes() {
     setSelId((prev) => (prev === id ? "" : id));
     setObservacion("");
     setImputacionArticulo(null);
+    setCie10Edit(null);
     setFechaDesdeEdit("");
     setFechaHastaEdit("");
     setFechaDesdeOriginal("");
@@ -90,6 +96,13 @@ export default function BandejaAuditorSolicitudes() {
     if (!sel || procesando || sel.puede_clasificar !== true) return;
     if (!fechasSolicitudCompletas(fechaDesdeEdit, fechaHastaEdit)) {
       toast.error("Revisá el rango de fechas antes de dictaminar.");
+      return;
+    }
+    const esLarga = imputacionArticulo?.es_larga_episodio === true;
+    const cie10Codigo = String(cie10Edit?.codigo || "").trim();
+    const cie10Descripcion = String(cie10Edit?.descripcion || "").trim();
+    if (dictamenFavorable && esLarga && (!cie10Codigo || !cie10Descripcion)) {
+      toast.error("Licencia larga: indicá diagnóstico CIE-10 antes del dictamen favorable.");
       return;
     }
     setProcesando(true);
@@ -105,6 +118,9 @@ export default function BandejaAuditorSolicitudes() {
         observacion_auditor: observacion.trim() || undefined,
         dictamen_favorable: dictamenFavorable,
         causal_larga_duracion_id: sel.causal_larga_duracion_id || undefined,
+        ...(cie10Codigo && cie10Descripcion
+          ? { cie10: { codigo: cie10Codigo, descripcion: cie10Descripcion } }
+          : {}),
       });
       const data = res?.data || {};
       const estado = String(data.estado_solicitud_id || "");
@@ -267,6 +283,8 @@ export default function BandejaAuditorSolicitudes() {
                       onFechaHastaChange={setFechaHastaEdit}
                       imputacionArticulo={s.solicitud_id === selId ? imputacionArticulo : null}
                       onImputacionArticuloChange={setImputacionArticulo}
+                      cie10Edit={s.solicitud_id === selId ? cie10Edit : null}
+                      onCie10EditChange={(v) => setCie10Edit(v ?? { codigo: "", descripcion: "" })}
                       observacion={observacion}
                       setObservacion={setObservacion}
                       procesando={procesando}

@@ -7,9 +7,15 @@ import { useArticulosLicenciaMedicaAuditor } from "./useArticulosLicenciaMedicaA
  *   sel: Record<string, unknown> | null,
  *   imputacion: { articulo_id: string, version_id_aplicada: string, label?: string } | null,
  *   onImputacionChange: (v: { articulo_id: string, version_id_aplicada: string, label: string, es_larga_episodio?: boolean }) => void,
+ *   cie10Completo?: boolean,
  * }} props
  */
-export default function BandejaAuditorArticuloImputacionSelect({ sel, imputacion, onImputacionChange }) {
+export default function BandejaAuditorArticuloImputacionSelect({
+  sel,
+  imputacion,
+  onImputacionChange,
+  cie10Completo = false,
+}) {
   const { opciones, cargando, error, valorDefault } = useArticulosLicenciaMedicaAuditor({
     articuloId: sel?.articulo_id,
     versionId: sel?.version_aplicada_id,
@@ -22,7 +28,6 @@ export default function BandejaAuditorArticuloImputacionSelect({ sel, imputacion
 
   const seleccionado = opciones.find((o) => o.key === valorKey) || valorDefault;
   const esLargaSel = seleccionado?.es_larga_episodio === true;
-  const tieneCie10 = Boolean(String(sel?.cie10_codigo || "").trim() && String(sel?.cie10_descripcion || "").trim());
 
   useEffect(() => {
     if (!valorDefault || !/^sol_/i.test(String(sel?.solicitud_id || ""))) return;
@@ -84,10 +89,9 @@ export default function BandejaAuditorArticuloImputacionSelect({ sel, imputacion
         </label>
       ) : null}
 
-      {esLargaSel && !tieneCie10 ? (
+      {esLargaSel && !cie10Completo ? (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          Licencia larga: el aviso no trae CIE-10. El dictamen favorable fallará hasta que el agente complete
-          diagnóstico y causal (Patrón B) o el auditor no impute Art. 16.
+          Licencia larga: indicá diagnóstico CIE-10 en la sección inferior antes del dictamen favorable.
         </p>
       ) : null}
     </section>

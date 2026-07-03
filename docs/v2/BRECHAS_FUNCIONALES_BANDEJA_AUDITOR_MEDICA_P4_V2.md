@@ -4,7 +4,8 @@
 
 **Audiencia:** RRHH, medicina laboral, equipo de desarrollo.  
 **Estado motor:** validado por smokes `scripts/smoke/med-*.mjs` y UAT de circuito Art. 14 / derivación junta.  
-**Estado UI auditor:** P0–P3 + P2b + **P4.3b historial inline** — **UAT VERDE 2026-07-03** · smoke **7/7 PASS**. Handoff: [`HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md`](./HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md).
+**Estado UI auditor:** P0–P3 + P2b + **P4.3b historial inline** — **UAT VERDE 2026-07-03** · smoke **7/7 PASS**. Handoff: [`HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md`](./HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md).  
+**Backlog productividad:** **C1** ✅ `master` · **C2** 🟡 dev (pausa UAT visual) — [`HANDOFF_SESION_2026-07-03_PAUSA_C2_CIE10_CLASIFICACION.md`](./HANDOFF_SESION_2026-07-03_PAUSA_C2_CIE10_CLASIFICACION.md).
 
 **Referencias normativas:**
 
@@ -40,8 +41,10 @@ El riesgo actual **no** es integridad de datos ni desborde del motor; es **produ
 | **Preview tramos / consumo (P3)** | **COMPLETO** | `BandejaAuditorPreviewTramos` + callable preview |
 | **Historial LM preview (P3)** | **COMPLETO** | `historial_consumo_corta` en acordeón del preview |
 | **Historial LM inline (P4.3b)** | **COMPLETO** | `HistorialLMCollapse` en ficha; lazy-load; callable `obtenerHistorialLmTitularBandejaAuditor` @ `2704ff2` |
+| **Paginación / búsqueda bandeja (C1)** | **COMPLETO** | `solicitudBandejaAuditorPaginacionCore` @ `master` tag `v1919-C1-bandeja-optimizada` |
+| **CIE-10 en clasificación (C2)** | **EN CURSO** | UI + callables en rama `feat/1919-c2-cie10-clasificacion`; UAT visual pendiente |
 
-**Backlog productividad (Opción C — post-cierre P4):** paginación/búsqueda bandeja · CIE-10 en clasificación · señales §5.8 · modal historial completo.
+**Backlog productividad (Opción C — post-cierre P4):** ~~paginación/búsqueda bandeja~~ · CIE-10 en clasificación (C2 en curso) · señales §5.8 · modal historial completo.
 
 ## 2. Matriz brecha — actual vs objetivo RFC
 
@@ -49,7 +52,7 @@ El riesgo actual **no** es integridad de datos ni desborde del motor; es **produ
 |---------|--------------------------|-------------------------|
 | **Visor clínico** | **P0 + P1 entregados** (`VisorPDF` + `FichaIngresoAgente`) | PDF + ficha `ingreso_medico` |
 | **Adjuntos** | Listado + visor en bandeja (Storage `getDownloadURL`) | Callable de lectura solo si Rules se endurecen |
-| **Diagnóstico CIE-10** | Solo si el aviso ya trae `cie10` (Patrón B / larga); Caja Negra pura: vacío | **Brecha** — lectura/edición en bandeja; larga: obligatorio antes de clasificar |
+| **Diagnóstico CIE-10** | **C2 en curso** — editable en bandeja (`BandejaAuditorCie10Imputacion`); larga obligatorio; callable `listarCie10BandejaAuditor` | Lectura/edición en bandeja; larga: obligatorio antes de clasificar |
 | **Clasificación sustantiva** | **P2 + P2b** — selector artículo + fechas editables + dictamen | Causal Art. 19 editable si larga (P4.4) |
 | **Preview tramos / consumo** | **P3** — `previsualizarClasificacionMedicaAuditor` + `BandejaAuditorPreviewTramos` | Mismo motor; copy validado en piloto |
 | **Historial** | **P3 preview** + **P4.3b inline** en ficha (últimos 5 LM con outcome; lazy-load) | Modal historial completo si >25 eventos (**backlog**) |
@@ -67,8 +70,8 @@ Orden recomendado tras validación RRHH 2026-07-03:
 
 | Prioridad | Ítem | Justificación |
 |-----------|------|----------------|
-| **C1** | Paginación + búsqueda DNI/nombre en bandeja | Escalabilidad piloto; infraestructura para el resto |
-| **C2** | CIE-10 visible/editable en clasificación | Sustantividad clínica del dictamen |
+| **C1** | Paginación + búsqueda DNI/nombre en bandeja | ✅ `master` |
+| **C2** | CIE-10 visible/editable en clasificación | 🟡 dev — UAT visual pendiente |
 | **C3** | Señales §5.8 (countdown incompleta, alertas) | Operación mesa sin sorpresas |
 | **C4** | Modal historial completo (>25 eventos) | Complemento P4.3b sin saturar la ficha |
 
@@ -210,6 +213,7 @@ En **Caja Negra** el `sol_*` nace sin `articulo_id`. El auditor **elige** la nor
 | Callable listado | `listarSolicitudesBandejaAuditorMedica` |
 | Callable preview P3 | `previsualizarClasificacionMedicaAuditor` |
 | Callable catálogo LM auditor | `listarArticulosLicenciaMedicaAuditor` |
+| Callable catálogo CIE-10 auditor (C2) | `listarCie10BandejaAuditor` |
 | Storage certificados | `web/src/services/avisosMedicoStorage.js` (patrón de subida agente) |
 | Callable historial P4.3b | `obtenerHistorialLmTitularBandejaAuditor` |
 
@@ -219,6 +223,8 @@ En **Caja Negra** el `sol_*` nace sin `articulo_id`. El auditor **elige** la nor
 
 | Fecha | Cambio |
 |-------|--------|
+| 2026-07-03 | **C2 CIE-10 pausa** — dev + deploy callables; UAT visual pendiente; handoff dedicado |
+| 2026-07-03 | **C1 en master** — paginación bandeja; tag `v1919-C1-bandeja-optimizada` |
 | 2026-07-03 | **Cierre P4 bandeja auditor** — §1.1 estado brechas; P4.3b inline COMPLETO; backlog C1–C4; criterios §6 cerrados |
 | 2026-07-03 | **P4.3b historial LM inline** — `HistorialLMCollapse` + callable; UAT flash MOSTO |
 | 2026-07-03 | **P4 historial LM preview** — acordeón preview auditor; UAT `sol_01KWKVW4SED7ETGKPDMB61ES8Q` |

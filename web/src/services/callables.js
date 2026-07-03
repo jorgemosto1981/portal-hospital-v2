@@ -562,6 +562,11 @@ export function callListarArticulosLicenciaMedicaAuditor() {
   return httpsCallable(getFunctionsV2(), "listarArticulosLicenciaMedicaAuditor")({});
 }
 
+/** Catálogo CIE-10 para clasificación en bandeja auditor (C2). */
+export function callListarCie10BandejaAuditor() {
+  return httpsCallable(getFunctionsV2(), "listarCie10BandejaAuditor")({});
+}
+
 /** Dictamen de junta médica — transición desde cfg_esa_esperando_dictamen_junta. */
 export function callRegistrarDictamenJuntaMedica(data) {
   return httpsCallable(getFunctionsV2(), "registrarDictamenJuntaMedica")(data);

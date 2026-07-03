@@ -8,6 +8,7 @@ const assert = require("node:assert/strict");
 
 const {
   CFG_MLM_CORTA_ANUAL,
+  CFG_MLM_LARGA_EPISODIO,
 } = require("../modules/shared/licenciaMedicaTramosCore");
 const {
   planificarComandosMutacionMedicaAviso,
@@ -23,6 +24,9 @@ const PER = "per_01KQN9WXFXF69Z9DCT5YNJ3TFZ";
 const AUDITOR = "per_01AUDITOR_MEDICO_TEST";
 const ART14 = "art_01KWH4NM0BW4HKGGWV1NFD599K";
 const VER14 = "ver_01KWH4NM0CZWTQQMHKKPGBNRDP";
+const ART16 = "art_01TEST_LARGA_EPISODIO";
+const VER16 = "ver_01TEST_LARGA_EPISODIO";
+const CAUSAL_LARGA = "cfg_cld_enfermedad";
 const SOL_ID = "sol_01TEST_FECHAS_EDITABLES";
 
 const versionCorta = {
@@ -30,6 +34,14 @@ const versionCorta = {
     es_licencia_medica: true,
     modo_licencia_medica_id: CFG_MLM_CORTA_ANUAL,
     visualizacion: { codigo_grilla: "LM" },
+  },
+};
+
+const versionLarga = {
+  bloque_identidad_naturaleza: {
+    es_licencia_medica: true,
+    modo_licencia_medica_id: CFG_MLM_LARGA_EPISODIO,
+    visualizacion: { codigo_grilla: "LM-L" },
   },
 };
 
@@ -58,10 +70,29 @@ mdcMod.mutarEstadoSolicitudMedicaMdc = async (_db, input) => {
   };
 };
 
+const aplicarMod = require("../modules/shared/aplicarLicenciaMedicaAprobadaCore");
+const aplicarOriginal = aplicarMod.aplicarLicenciaMedicaAprobada;
+
+aplicarMod.aplicarLicenciaMedicaAprobada = async (db, params) => {
+  if (params?.modo_licencia_medica_id === CFG_MLM_LARGA_EPISODIO) {
+    return {
+      ok: true,
+      licencia_medica: {
+        modo_licencia_medica_id: CFG_MLM_LARGA_EPISODIO,
+        dias_solicitud_total: params.dias_solicitados,
+      },
+      tramos_haberes: {},
+      episodio_preview: { tope_episodio_dias: 365 },
+    };
+  }
+  return aplicarOriginal(db, params);
+};
+
 const { clasificarSolicitudMedicaAuditor, diasCorridosInclusive } = require("../modules/shared/clasificarSolicitudMedicaAuditorCore");
 
 after(() => {
   mdcMod.mutarEstadoSolicitudMedicaMdc = mutarEstadoOriginal;
+  aplicarMod.aplicarLicenciaMedicaAprobada = aplicarOriginal;
 });
 
 function mergeSolPatch(sol, patch) {
@@ -93,7 +124,8 @@ function buildAvisoBase() {
   };
 }
 
-function buildMockDb() {
+function buildMockDb(opts = {}) {
+  const versionByArt = opts.versionByArt || { [ART14]: versionCorta, [ART16]: versionLarga };
   return {
     collection(name) {
       if (name === "solicitudes_articulo") {
@@ -134,10 +166,15 @@ function buildMockDb() {
           doc(id) {
             return {
               async get() {
-                if (id !== ART14) return { exists: false, data: () => ({}) };
+                const is14 = id === ART14;
+                const is16 = id === ART16;
+                if (!is14 && !is16) return { exists: false, data: () => ({}) };
                 return {
                   exists: true,
-                  data: () => ({ codigo: "14", nombre: "ENFERMEDAD DE CORTA DURACION" }),
+                  data: () => ({
+                    codigo: is16 ? "16" : "14",
+                    nombre: is16 ? "LICENCIA LARGA" : "ENFERMEDAD DE CORTA DURACION",
+                  }),
                 };
               },
               collection(sub) {
@@ -146,8 +183,14 @@ function buildMockDb() {
                   doc(verId) {
                     return {
                       async get() {
-                        if (verId !== VER14) return { exists: false, data: () => ({}) };
-                        return { exists: true, data: () => versionCorta };
+                        const verData =
+                          verId === VER14
+                            ? versionByArt[ART14]
+                            : verId === VER16
+                              ? versionByArt[ART16]
+                              : null;
+                        if (!verData) return { exists: false, data: () => ({}) };
+                        return { exists: true, data: () => verData };
                       },
                     };
                   },
@@ -168,7 +211,7 @@ function buildMockDb() {
   };
 }
 
-function inputClasificar(fechaDesde, fechaHasta) {
+function inputClasificar(fechaDesde, fechaHasta, extra = {}) {
   return {
     solicitudId: SOL_ID,
     auditorPersonaId: AUDITOR,
@@ -177,6 +220,21 @@ function inputClasificar(fechaDesde, fechaHasta) {
     fechaDesde,
     fechaHasta,
     dictamenFavorable: true,
+    ...extra,
+  };
+}
+
+function inputClasificarLarga(fechaDesde, fechaHasta, extra = {}) {
+  return {
+    solicitudId: SOL_ID,
+    auditorPersonaId: AUDITOR,
+    articuloId: ART16,
+    versionIdAplicada: VER16,
+    fechaDesde,
+    fechaHasta,
+    causalLargaDuracionId: CAUSAL_LARGA,
+    dictamenFavorable: true,
+    ...extra,
   };
 }
 
@@ -288,5 +346,40 @@ describe("clasificarSolicitudMedicaAuditor", () => {
     assert.equal(r.ok, true, r.codigo || r.mensaje || JSON.stringify(r));
     assert.strictEqual(r.auditor_medico_clasificacion?.fechas_corregidas_por_auditor, false);
     assert.strictEqual(solStore[SOL_ID].auditor_medico_clasificacion?.fechas_corregidas_por_auditor, false);
+  });
+
+  it("C2: larga sin CIE-10 falla CIE10_REQUERIDO", async () => {
+    const r = await clasificarSolicitudMedicaAuditor(
+      buildMockDb(),
+      inputClasificarLarga("2026-07-01", "2026-07-05"),
+    );
+    assert.equal(r.ok, false);
+    assert.equal(r.codigo, "CIE10_REQUERIDO");
+  });
+
+  it("C2: auditor imputa CIE-10 en clasificación larga", async () => {
+    const r = await clasificarSolicitudMedicaAuditor(
+      buildMockDb(),
+      inputClasificarLarga("2026-07-01", "2026-07-05", {
+        cie10: { codigo: "J06.9", descripcion: "Infección aguda de vías respiratorias superiores" },
+      }),
+    );
+    assert.equal(r.ok, true, r.codigo || r.mensaje || JSON.stringify(r));
+    assert.equal(solStore[SOL_ID].cie10?.codigo, "J06.9");
+    assert.equal(
+      solStore[SOL_ID].auditor_medico_clasificacion?.cie10?.codigo,
+      "J06.9",
+    );
+  });
+
+  it("C2: corta con CIE-10 opcional del auditor persiste en sol_*", async () => {
+    const r = await clasificarSolicitudMedicaAuditor(
+      buildMockDb(),
+      inputClasificar("2026-07-01", "2026-07-05", {
+        cie10: { codigo: "J00", descripcion: "Rinofaringitis aguda" },
+      }),
+    );
+    assert.equal(r.ok, true, r.codigo || r.mensaje || JSON.stringify(r));
+    assert.equal(solStore[SOL_ID].cie10?.codigo, "J00");
   });
 });

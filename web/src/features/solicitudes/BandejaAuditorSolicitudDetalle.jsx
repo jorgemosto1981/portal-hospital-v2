@@ -1,6 +1,7 @@
 import BandejaSolicitudExpandDatos from "./BandejaSolicitudExpandDatos.jsx";
 import BandejaAuditorPreviewTramos from "./BandejaAuditorPreviewTramos.jsx";
 import BandejaAuditorArticuloImputacionSelect from "./BandejaAuditorArticuloImputacionSelect.jsx";
+import BandejaAuditorCie10Imputacion from "./BandejaAuditorCie10Imputacion.jsx";
 import FichaIngresoAgente from "./FichaIngresoAgente.jsx";
 import VisorPDF from "../../components/medico/VisorPDF.jsx";
 import {
@@ -27,6 +28,8 @@ export default function BandejaAuditorSolicitudDetalle({
   onFechaHastaChange,
   imputacionArticulo,
   onImputacionArticuloChange,
+  cie10Edit,
+  onCie10EditChange,
   observacion,
   setObservacion,
   procesando,
@@ -42,9 +45,13 @@ export default function BandejaAuditorSolicitudDetalle({
     fechaHastaEdit,
   );
   const dias = diasCorridosBandejaAuditor(fechaDesdeEdit, fechaHastaEdit) || Number(sel.dias_solicitados) || 1;
-  const esLarga = sel.es_licencia_larga === true;
+  const esLargaSel = imputacionArticulo?.es_larga_episodio === true;
   const juntaHint = dias > 15;
   const diagnostico = textoDiagnostico(sel);
+  const cie10Completo = Boolean(
+    String(cie10Edit?.codigo || "").trim() && String(cie10Edit?.descripcion || "").trim(),
+  );
+  const bloqueaFavorable = esLargaSel && !cie10Completo;
   const adjuntos = Array.isArray(sel.certificado_adjuntos) ? sel.certificado_adjuntos : [];
   const tieneCertificado = sel.tiene_certificado === true || adjuntos.length > 0;
   const previewSel = selPreview || sel;
@@ -84,6 +91,7 @@ export default function BandejaAuditorSolicitudDetalle({
         sel={sel}
         imputacion={imputacionArticulo}
         onImputacionChange={onImputacionArticuloChange}
+        cie10Completo={cie10Completo}
       />
 
       {sel.puede_clasificar === true ? (
@@ -133,7 +141,20 @@ export default function BandejaAuditorSolicitudDetalle({
 
       <BandejaAuditorPreviewTramos sel={previewSel} imputacionArticulo={imputacionArticulo} />
 
-      {esLarga ? (
+      {sel.puede_clasificar === true ? (
+        <BandejaAuditorCie10Imputacion
+          value={cie10Edit}
+          onChange={onCie10EditChange}
+          obligatorio={esLargaSel}
+          disabled={procesando}
+          origenAviso={
+            Boolean(sel?.cie10_codigo && sel?.cie10_descripcion) &&
+            cie10Edit?.codigo === String(sel.cie10_codigo || "").trim()
+          }
+        />
+      ) : null}
+
+      {!sel.puede_clasificar && (sel.es_licencia_larga === true || diagnostico) ? (
         <section className="space-y-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Datos médicos — licencia larga (Art. 16/19)
@@ -147,24 +168,11 @@ export default function BandejaAuditorSolicitudDetalle({
             <p className="text-sm text-amber-900">
               Causal registrada ({String(sel.causal_larga_duracion_id)}); sin etiqueta en catálogo.
             </p>
-          ) : (
-            <p className="text-sm text-amber-900">
-              Falta causal de larga duración en el aviso. El agente debe completarla antes de clasificar.
-            </p>
-          )}
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700">Diagnóstico (CIE-10)</span>
-            <input
-              type="text"
-              readOnly
-              value={diagnostico}
-              placeholder="Sin diagnóstico CIE-10 en el aviso"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800"
-            />
-            <span className="text-xs text-slate-500">
-              Solo lectura — proviene del alta del agente (wizard). No se edita en auditoría.
-            </span>
-          </label>
+          ) : null}
+          <p className="text-sm text-slate-800">
+            <span className="font-medium text-slate-600">CIE-10:</span>{" "}
+            {diagnostico || "Sin diagnóstico en el aviso."}
+          </p>
         </section>
       ) : null}
 
@@ -181,11 +189,11 @@ export default function BandejaAuditorSolicitudDetalle({
             <p className="text-sm text-slate-700">
               Este tramo supera 15 días corridos. Un dictamen <strong>favorable</strong> derivará a junta médica;
               desfavorable rechaza el aviso.
-              {esLarga ? " Episodio continuo (motor S_MED_LARGA)." : ""}
+              {esLargaSel ? " Episodio continuo (motor S_MED_LARGA)." : ""}
             </p>
           ) : (
             <p className="text-sm text-slate-600">
-              {esLarga
+              {esLargaSel
                 ? "Dictamen favorable aprueba la licencia larga y consolida en grilla (S_MED_LARGA); desfavorable rechaza."
                 : "Dictamen favorable aprueba la licencia corta (Art. 14) y consolida en grilla; desfavorable rechaza."}
             </p>
@@ -203,9 +211,10 @@ export default function BandejaAuditorSolicitudDetalle({
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
-              disabled={procesando || !fechasValidas}
+              disabled={procesando || !fechasValidas || bloqueaFavorable}
               onClick={() => onClasificar(true)}
               className="min-h-11 flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+              title={bloqueaFavorable ? "Indicá CIE-10 para licencia larga" : undefined}
             >
               Dictamen favorable
             </button>
