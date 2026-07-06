@@ -1,5 +1,8 @@
 # Punto de Continuación — Próxima Sesión
 
+> **PAUSA — retomar otra PC (2026-07-07+):** [`HANDOFF_SESION_2026-07-06_PAUSA_EPICA_PRODUCTIVIDAD_BANDEJA_CERRADA.md`](./HANDOFF_SESION_2026-07-06_PAUSA_EPICA_PRODUCTIVIDAD_BANDEJA_CERRADA.md)  
+> **master** @ `daf8b6b` · tags C1–C4 · callables piloto OK · **sin deploy hosting UI bandeja**
+
 > **RETOMAR AQUÍ — épica productividad bandeja auditor C1–C4 CERRADA (2026-07-06):**  
 > **Tags:** `v1919-C1-bandeja-optimizada` · `v1919-C2-cie10` · `v1919-C3-senales-58` · `v1919-C4-modal-historial-lm`  
 > **Handoff cierre C4:** [`HANDOFF_SESION_2026-07-06_CIERRE_C4_MODAL_HISTORIAL_LM.md`](./HANDOFF_SESION_2026-07-06_CIERRE_C4_MODAL_HISTORIAL_LM.md)  

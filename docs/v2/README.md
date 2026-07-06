@@ -131,6 +131,8 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`RFC_CONFIGURADOR_ARTICULOS_1919_EXTENSIONES_P0_V2.md`](./RFC_CONFIGURADOR_ARTICULOS_1919_EXTENSIONES_P0_V2.md) | Extensiones ABM sin hardcode (duelo, vigencias) |
 | [`ANALISIS_IMPACTO_GRILLA_ARTICULOS_1919_V2.md`](./ANALISIS_IMPACTO_GRILLA_ARTICULOS_1919_V2.md) | Impacto artículos en grilla operativa |
 | [`CHANGELOG_1919.md`](./CHANGELOG_1919.md) | Tags y hitos épica 1919 |
+| **[`HANDOFF_SESION_2026-07-06_PAUSA_EPICA_PRODUCTIVIDAD_BANDEJA_CERRADA.md`](./HANDOFF_SESION_2026-07-06_PAUSA_EPICA_PRODUCTIVIDAD_BANDEJA_CERRADA.md)** | **PAUSA / RETOMAR** — C1–C4 bandeja auditor cerrados · master @ `daf8b6b` |
+| [`BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md`](./BRECHAS_FUNCIONALES_BANDEJA_AUDITOR_MEDICA_P4_V2.md) | Matriz brechas bandeja auditor (productividad C1–C4 ✅) |
 | [`ACTA_RRHH_EPICA_1919_BLOQUE_E_V2.md`](./ACTA_RRHH_EPICA_1919_BLOQUE_E_V2.md) | Acta oleada Art. 63.c–k |
 | [`DICCIONARIO_CFG_ARTICULOS_V2.md`](./DICCIONARIO_CFG_ARTICULOS_V2.md) | Inventario `cfg_*` y prefijos del dominio artículos (`art_`, `sol_`, `cfg_tcp_*`, `cfg_cfi_*`, `cfg_tev_art_*`, …) |
 | [`ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md`](./ANEXO_NORMATIVO_ARTICULOS_1919_SARH_8525_V2.md) | Jerarquía Decreto 1919 / SARH / Ley 8525 y trazabilidad |

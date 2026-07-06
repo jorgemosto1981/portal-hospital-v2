@@ -1,6 +1,7 @@
 # Continuidad de trabajo — Portal Hospital V2
 
 **Fecha de pausa:** 25 de abril de 2026.  
+**Última pausa operativa (2026-07-06):** [`HANDOFF_SESION_2026-07-06_PAUSA_EPICA_PRODUCTIVIDAD_BANDEJA_CERRADA.md`](./HANDOFF_SESION_2026-07-06_PAUSA_EPICA_PRODUCTIVIDAD_BANDEJA_CERRADA.md) — `master` @ `daf8b6b` · épica productividad bandeja auditor C1–C4 cerrada.  
 **Remoto publicado:** [jorgemosto1981/portal-hospital-v2](https://github.com/jorgemosto1981/portal-hospital-v2) — URL `https://github.com/jorgemosto1981/portal-hospital-v2.git`, rama **master** = `origin/master`. En otra PC: `git clone` + sección 1 (dependencias, `.env`).
 
 ---

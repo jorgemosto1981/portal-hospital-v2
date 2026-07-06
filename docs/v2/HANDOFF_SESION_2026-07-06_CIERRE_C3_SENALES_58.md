@@ -37,9 +37,11 @@
 
 ## 3. Backlog activo post-C3
 
-| Ítem | Prioridad sugerida |
-|------|-------------------|
-| **C4** Modal historial completo (>25 eventos) | Único ítem pendiente backlog productividad Opción C |
+> **Supersedido 2026-07-06:** C4 cerrado mismo día · ver [`HANDOFF_SESION_2026-07-06_CIERRE_C4_MODAL_HISTORIAL_LM.md`](./HANDOFF_SESION_2026-07-06_CIERRE_C4_MODAL_HISTORIAL_LM.md) y pausa [`HANDOFF_SESION_2026-07-06_PAUSA_EPICA_PRODUCTIVIDAD_BANDEJA_CERRADA.md`](./HANDOFF_SESION_2026-07-06_PAUSA_EPICA_PRODUCTIVIDAD_BANDEJA_CERRADA.md).
+
+| Ítem | Estado |
+|------|--------|
+| **C4** Modal historial completo | ✅ Cerrado @ `v1919-C4-modal-historial-lm` |
 
 ---
 

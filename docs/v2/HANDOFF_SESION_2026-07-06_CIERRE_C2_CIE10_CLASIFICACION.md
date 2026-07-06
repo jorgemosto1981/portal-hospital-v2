@@ -35,10 +35,12 @@
 
 ## 3. Backlog activo post-C2
 
-| Ítem | Prioridad sugerida |
-|------|-------------------|
-| **C3** Señales §5.8 | Operación mesa (countdown incompleta, badges) |
-| **C4** Modal historial completo | Complemento P4.3b |
+> **Supersedido 2026-07-06:** C3 + C4 cerrados · épica productividad completa · [`HANDOFF_SESION_2026-07-06_PAUSA_EPICA_PRODUCTIVIDAD_BANDEJA_CERRADA.md`](./HANDOFF_SESION_2026-07-06_PAUSA_EPICA_PRODUCTIVIDAD_BANDEJA_CERRADA.md)
+
+| Ítem | Estado |
+|------|--------|
+| **C3** Señales §5.8 | ✅ |
+| **C4** Modal historial completo | ✅ |
 | **P4.4** Causal larga en otros flujos | Ya cubierto en C2 para bandeja Caja Negra |
 
 ---
