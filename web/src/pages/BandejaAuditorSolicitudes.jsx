@@ -47,6 +47,7 @@ export default function BandejaAuditorSolicitudes() {
   const [procesando, setProcesando] = useState(false);
   const [imputacionArticulo, setImputacionArticulo] = useState(null);
   const [cie10Edit, setCie10Edit] = useState(null);
+  const [causalLargaEdit, setCausalLargaEdit] = useState("");
   const [fechaDesdeEdit, setFechaDesdeEdit] = useState("");
   const [fechaHastaEdit, setFechaHastaEdit] = useState("");
   const [fechaDesdeOriginal, setFechaDesdeOriginal] = useState("");
@@ -65,6 +66,7 @@ export default function BandejaAuditorSolicitudes() {
     setImputacionArticulo(null);
     if (!sel) {
       setCie10Edit(null);
+      setCausalLargaEdit("");
       setFechaDesdeEdit("");
       setFechaHastaEdit("");
       setFechaDesdeOriginal("");
@@ -74,6 +76,7 @@ export default function BandejaAuditorSolicitudes() {
     const cod = String(sel.cie10_codigo || "").trim();
     const desc = String(sel.cie10_descripcion || "").trim();
     setCie10Edit(cod && desc ? { codigo: cod, descripcion: desc } : { codigo: "", descripcion: "" });
+    setCausalLargaEdit(String(sel.causal_larga_duracion_id || "").trim());
     const { desde, hasta } = fechasOriginalesDesdeSel(sel);
     setFechaDesdeOriginal(desde);
     setFechaHastaOriginal(hasta);
@@ -86,6 +89,7 @@ export default function BandejaAuditorSolicitudes() {
     setObservacion("");
     setImputacionArticulo(null);
     setCie10Edit(null);
+    setCausalLargaEdit("");
     setFechaDesdeEdit("");
     setFechaHastaEdit("");
     setFechaDesdeOriginal("");
@@ -101,6 +105,11 @@ export default function BandejaAuditorSolicitudes() {
     const esLarga = imputacionArticulo?.es_larga_episodio === true;
     const cie10Codigo = String(cie10Edit?.codigo || "").trim();
     const cie10Descripcion = String(cie10Edit?.descripcion || "").trim();
+    const causalId = String(causalLargaEdit || sel.causal_larga_duracion_id || "").trim();
+    if (dictamenFavorable && esLarga && !/^cfg_cld_/i.test(causalId)) {
+      toast.error("Licencia larga: elegí causal Art. 19 antes del dictamen favorable.");
+      return;
+    }
     if (dictamenFavorable && esLarga && (!cie10Codigo || !cie10Descripcion)) {
       toast.error("Licencia larga: indicá diagnóstico CIE-10 antes del dictamen favorable.");
       return;
@@ -117,7 +126,7 @@ export default function BandejaAuditorSolicitudes() {
         grupo_trabajo_id_ancla: sel.grupo_trabajo_id_ancla || undefined,
         observacion_auditor: observacion.trim() || undefined,
         dictamen_favorable: dictamenFavorable,
-        causal_larga_duracion_id: sel.causal_larga_duracion_id || undefined,
+        causal_larga_duracion_id: /^cfg_cld_/i.test(causalId) ? causalId : undefined,
         ...(cie10Codigo && cie10Descripcion
           ? { cie10: { codigo: cie10Codigo, descripcion: cie10Descripcion } }
           : {}),
@@ -285,6 +294,8 @@ export default function BandejaAuditorSolicitudes() {
                       onImputacionArticuloChange={setImputacionArticulo}
                       cie10Edit={s.solicitud_id === selId ? cie10Edit : null}
                       onCie10EditChange={(v) => setCie10Edit(v ?? { codigo: "", descripcion: "" })}
+                      causalLargaEdit={s.solicitud_id === selId ? causalLargaEdit : ""}
+                      onCausalLargaEditChange={setCausalLargaEdit}
                       observacion={observacion}
                       setObservacion={setObservacion}
                       procesando={procesando}

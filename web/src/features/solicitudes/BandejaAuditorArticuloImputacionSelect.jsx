@@ -91,7 +91,7 @@ export default function BandejaAuditorArticuloImputacionSelect({
 
       {esLargaSel && !cie10Completo ? (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          Licencia larga: indicá diagnóstico CIE-10 en la sección inferior antes del dictamen favorable.
+          Licencia larga: indicá CIE-10 y causal Art. 19 en las secciones inferiores.
         </p>
       ) : null}
     </section>

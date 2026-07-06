@@ -567,6 +567,11 @@ export function callListarCie10BandejaAuditor() {
   return httpsCallable(getFunctionsV2(), "listarCie10BandejaAuditor")({});
 }
 
+/** Catálogo causal Art. 19 para licencia larga en bandeja auditor (C2). */
+export function callListarCausalLargaBandejaAuditor() {
+  return httpsCallable(getFunctionsV2(), "listarCausalLargaBandejaAuditor")({});
+}
+
 /** Dictamen de junta médica — transición desde cfg_esa_esperando_dictamen_junta. */
 export function callRegistrarDictamenJuntaMedica(data) {
   return httpsCallable(getFunctionsV2(), "registrarDictamenJuntaMedica")(data);

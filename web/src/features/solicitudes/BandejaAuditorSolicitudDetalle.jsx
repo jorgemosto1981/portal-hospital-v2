@@ -2,6 +2,7 @@ import BandejaSolicitudExpandDatos from "./BandejaSolicitudExpandDatos.jsx";
 import BandejaAuditorPreviewTramos from "./BandejaAuditorPreviewTramos.jsx";
 import BandejaAuditorArticuloImputacionSelect from "./BandejaAuditorArticuloImputacionSelect.jsx";
 import BandejaAuditorCie10Imputacion from "./BandejaAuditorCie10Imputacion.jsx";
+import BandejaAuditorCausalLargaImputacion from "./BandejaAuditorCausalLargaImputacion.jsx";
 import FichaIngresoAgente from "./FichaIngresoAgente.jsx";
 import VisorPDF from "../../components/medico/VisorPDF.jsx";
 import {
@@ -30,6 +31,8 @@ export default function BandejaAuditorSolicitudDetalle({
   onImputacionArticuloChange,
   cie10Edit,
   onCie10EditChange,
+  causalLargaEdit,
+  onCausalLargaEditChange,
   observacion,
   setObservacion,
   procesando,
@@ -51,7 +54,8 @@ export default function BandejaAuditorSolicitudDetalle({
   const cie10Completo = Boolean(
     String(cie10Edit?.codigo || "").trim() && String(cie10Edit?.descripcion || "").trim(),
   );
-  const bloqueaFavorable = esLargaSel && !cie10Completo;
+  const causalCompleto = /^cfg_cld_/i.test(String(causalLargaEdit || sel?.causal_larga_duracion_id || ""));
+  const bloqueaFavorable = esLargaSel && (!cie10Completo || !causalCompleto);
   const adjuntos = Array.isArray(sel.certificado_adjuntos) ? sel.certificado_adjuntos : [];
   const tieneCertificado = sel.tiene_certificado === true || adjuntos.length > 0;
   const previewSel = selPreview || sel;
@@ -139,7 +143,18 @@ export default function BandejaAuditorSolicitudDetalle({
         </section>
       ) : null}
 
-      <BandejaAuditorPreviewTramos sel={previewSel} imputacionArticulo={imputacionArticulo} />
+      {sel.puede_clasificar === true && esLargaSel ? (
+        <BandejaAuditorCausalLargaImputacion
+          value={causalLargaEdit}
+          onChange={onCausalLargaEditChange}
+          obligatorio
+          disabled={procesando}
+          origenAviso={
+            Boolean(sel?.causal_larga_duracion_id) &&
+            causalLargaEdit === String(sel.causal_larga_duracion_id || "").trim()
+          }
+        />
+      ) : null}
 
       {sel.puede_clasificar === true ? (
         <BandejaAuditorCie10Imputacion
@@ -153,6 +168,12 @@ export default function BandejaAuditorSolicitudDetalle({
           }
         />
       ) : null}
+
+      <BandejaAuditorPreviewTramos
+        sel={previewSel}
+        imputacionArticulo={imputacionArticulo}
+        causalLargaDuracionId={causalLargaEdit || sel?.causal_larga_duracion_id || ""}
+      />
 
       {!sel.puede_clasificar && (sel.es_licencia_larga === true || diagnostico) ? (
         <section className="space-y-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">

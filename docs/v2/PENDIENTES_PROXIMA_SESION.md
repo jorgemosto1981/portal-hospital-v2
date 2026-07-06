@@ -1,11 +1,10 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ — épica 1919 C2 CIE-10 (pausa 2026-07-03):**  
-> **Handoff:** [`HANDOFF_SESION_2026-07-03_PAUSA_C2_CIE10_CLASIFICACION.md`](./HANDOFF_SESION_2026-07-03_PAUSA_C2_CIE10_CLASIFICACION.md)  
-> **Rama:** `feat/1919-c2-cie10-clasificacion` (pusheada; **no mergeada** a `master`)  
-> **Hecho:** backend 9/9 tests · deploy `listarCie10BandejaAuditor` + `clasificarSolicitudMedicaAuditor` · smoke C2 PASS  
-> **Siguiente:** UAT visual local (escenarios A/B §7 handoff) → hosting deploy UI → merge `master`  
-> **Backlog post-C2:** C3 señales §5.8 · C4 modal historial · P4.4 causal larga editable
+> **RETOMAR AQUÍ — backlog productividad bandeja auditor (post-C2 2026-07-06):**  
+> **C1 + C2:** ✅ en `master` · tags `v1919-C1-bandeja-optimizada`, `v1919-C2-cie10`  
+> **Handoff cierre C2:** [`HANDOFF_SESION_2026-07-06_CIERRE_C2_CIE10_CLASIFICACION.md`](./HANDOFF_SESION_2026-07-06_CIERRE_C2_CIE10_CLASIFICACION.md)  
+> **Siguiente sugerido:** **C3** señales §5.8 (countdown incompleta, badges) · alternativa **C4** modal historial  
+> **Nota:** UI C2 sin deploy hosting — solo callables en piloto; dev local para bandeja auditor
 
 ---
 

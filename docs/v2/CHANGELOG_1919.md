@@ -41,4 +41,5 @@ Registro de **tags Git** y hitos documentales/código. Detalle operativo en `[PL
 | 2026-07-03 | **`2704ff2`** | **P4.3b historial LM inline** — `HistorialLMCollapse`, callable `obtenerHistorialLmTitularBandejaAuditor`; UAT flash 7/7 |
 | 2026-07-03 | **`v1.0-epica-1919-p4`** @ `master` | Cierre institucional bandeja auditoría médica — acta APROBADO, brechas actualizadas |
 | 2026-07-03 | **`v1919-C1-bandeja-optimizada`** @ `master` | C1 paginación + índices Firestore + smoke bandeja |
-| 2026-07-03 | **PAUSA C2 CIE-10** | Rama `feat/1919-c2-cie10-clasificacion` — UI + `listarCie10BandejaAuditor` + payload `cie10`; deploy callables OK; UAT visual pendiente — [`HANDOFF_SESION_2026-07-03_PAUSA_C2_CIE10_CLASIFICACION.md`](./HANDOFF_SESION_2026-07-03_PAUSA_C2_CIE10_CLASIFICACION.md) |
+| 2026-07-06 | **`v1919-C2-cie10`** @ `master` | C2 CIE-10 + causal Art. 19 bandeja auditor; UAT VERDE |
+| 2026-07-03 | **PAUSA C2 CIE-10** | Rama `feat/1919-c2-cie10-clasificacion` — supersedido por cierre 2026-07-06 |

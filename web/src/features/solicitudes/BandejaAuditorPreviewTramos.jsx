@@ -75,9 +75,9 @@ function HistorialConsumoCorta({ historial, anio }) {
 }
 
 /**
- * @param {{ sel: Record<string, unknown> | null, imputacionArticulo?: { articulo_id?: string, version_id_aplicada?: string } | null }} props
+ * @param {{ sel: Record<string, unknown> | null, imputacionArticulo?: { articulo_id?: string, version_id_aplicada?: string } | null, causalLargaDuracionId?: string }} props
  */
-export default function BandejaAuditorPreviewTramos({ sel, imputacionArticulo }) {
+export default function BandejaAuditorPreviewTramos({ sel, imputacionArticulo, causalLargaDuracionId = "" }) {
   const solicitudId = String(sel?.solicitud_id || "").trim();
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
@@ -105,7 +105,10 @@ export default function BandejaAuditorPreviewTramos({ sel, imputacionArticulo })
           articulo_id: imputacionArticulo?.articulo_id || sel?.articulo_id || undefined,
           version_id_aplicada:
             imputacionArticulo?.version_id_aplicada || sel?.version_aplicada_id || undefined,
-          causal_larga_duracion_id: sel?.causal_larga_duracion_id || undefined,
+          causal_larga_duracion_id:
+            /^cfg_cld_/i.test(String(causalLargaDuracionId || ""))
+              ? String(causalLargaDuracionId).trim()
+              : sel?.causal_larga_duracion_id || undefined,
         });
         if (!cancelled) setData(res?.data || null);
       } catch (e) {
@@ -127,6 +130,7 @@ export default function BandejaAuditorPreviewTramos({ sel, imputacionArticulo })
     sel?.articulo_id,
     sel?.version_aplicada_id,
     sel?.causal_larga_duracion_id,
+    causalLargaDuracionId,
     sel?.es_licencia_incompleta,
   ]);
 

@@ -6,6 +6,7 @@ import { TICKETERA } from "./ticketeraUi.js";
  *   value: string,
  *   onChange: (id: string) => void,
  *   disabled?: boolean,
+ *   required?: boolean,
  * }} props
  */
 export default function CausalLargaSelect({
@@ -13,6 +14,7 @@ export default function CausalLargaSelect({
   value = "",
   onChange,
   disabled = false,
+  required = true,
 }) {
   const lista = Array.isArray(opciones) ? opciones : [];
 
@@ -24,8 +26,8 @@ export default function CausalLargaSelect({
         className={TICKETERA.select}
         value={value}
         disabled={disabled || lista.length === 0}
-        required
-        aria-required="true"
+        required={required}
+        aria-required={required ? "true" : "false"}
         onChange={(e) => onChange(String(e.target.value || "").trim())}
       >
         <option value="">Elegí la causal de larga duración</option>
