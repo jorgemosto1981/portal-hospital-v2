@@ -12,13 +12,43 @@ const {
   mapearFichaIngresoAgenteBandejaAuditor,
 } = require("./solicitudBandejaAuditorIngresoMedico");
 const { parseBandejaListPageOpts, resolverPersonaIdsPorDni } = require("./solicitudBandejaListUtils");
-const { escanearBandejaAuditorPaginada } = require("./solicitudBandejaAuditorPaginacionCore");
+const {
+  escanearBandejaAuditorPaginada,
+  escanearBandejaAuditorProvisoriasPorUrgencia,
+} = require("./solicitudBandejaAuditorPaginacionCore");
 
 const { iterarYmdInclusive } = require("./mdcRdaDocumentIds");
+const { parseInstanteFirestoreMs, resolverSenalPlazoBandejaAuditor } = require("./bandejaAuditorSenalesCore");
 
 const FILTRO_COMPLETAS = "completas";
 const FILTRO_PROVISORIAS = "provisorias";
 const FILTRO_TODAS = "todas";
+const TZ_BA = "America/Argentina/Buenos_Aires";
+
+/**
+ * @param {unknown} raw
+ * @returns {string | null}
+ */
+function vencimientoPlazoCertificadoIso(raw) {
+  const ms = parseInstanteFirestoreMs(raw);
+  if (!Number.isFinite(ms)) return null;
+  return new Date(ms).toISOString();
+}
+
+/**
+ * @param {unknown} raw
+ * @returns {string}
+ */
+function formatVencPlazoCertificadoBa(raw) {
+  const ms = parseInstanteFirestoreMs(raw);
+  if (!Number.isFinite(ms)) return "";
+  return new Date(ms).toLocaleDateString("es-AR", {
+    timeZone: TZ_BA,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
 
 /**
  * @param {Record<string, unknown>} sol
@@ -35,8 +65,8 @@ function esIncompletaMedica(sol) {
  */
 function etiquetaBandejaAuditor(sol, incompleta) {
   if (incompleta) {
-    const venc = String(sol.vencimiento_plazo_certificado || "").trim();
-    return venc ? `Provisoria — plazo certificado ${venc.slice(0, 10)}` : "Provisoria (sin certificado)";
+    const vencLabel = formatVencPlazoCertificadoBa(sol.vencimiento_plazo_certificado);
+    return vencLabel ? `Provisoria — plazo certificado ${vencLabel}` : "Provisoria (sin certificado)";
   }
   return "Pendiente clasificación médica";
 }
@@ -120,12 +150,18 @@ async function mapDocBandejaAuditorMedica(db, doc, ctx) {
     grupo_trabajo_id_ancla: String(sol.grupo_trabajo_id_ancla || "").trim() || null,
     es_licencia_incompleta: incompleta,
     vencimiento_plazo_certificado: sol.vencimiento_plazo_certificado || null,
+    vencimiento_plazo_certificado_iso: vencimientoPlazoCertificadoIso(sol.vencimiento_plazo_certificado),
     puede_clasificar: !incompleta,
     etiqueta_estado: etiquetaBandejaAuditor(sol, incompleta),
     certificado_adjuntos,
     tiene_certificado: certificado_adjuntos.length > 0,
     ficha_ingreso_agente,
     ...largaMeta,
+    ...resolverSenalPlazoBandejaAuditor({
+      es_licencia_incompleta: incompleta,
+      vencimiento_plazo_certificado: sol.vencimiento_plazo_certificado,
+      vencimiento_plazo_certificado_iso: vencimientoPlazoCertificadoIso(sol.vencimiento_plazo_certificado),
+    }),
   };
 
   if (!itemPasaFiltroIncompleta(item, ctx.filtroVista)) return null;
@@ -172,13 +208,18 @@ async function listarSolicitudesBandejaAuditorMedica(db, opts = {}) {
     versionLargaCache,
   };
 
-  const page = await escanearBandejaAuditorPaginada(db, {
+  const scanParams = {
     estadoPendiente: ESTADO_SOLICITUD_PENDIENTE_CLASIFICACION_MEDICA,
     titularIds: titularIdsDni,
     cursor,
     pageSize,
     mapDoc: (doc) => mapDocBandejaAuditorMedica(db, doc, ctx),
-  });
+  };
+
+  const page =
+    filtroVista === FILTRO_PROVISORIAS
+      ? await escanearBandejaAuditorProvisoriasPorUrgencia(db, scanParams)
+      : await escanearBandejaAuditorPaginada(db, scanParams);
 
   return {
     solicitudes: page.items,
@@ -202,6 +243,9 @@ module.exports = {
   listarSolicitudesBandejaAuditorMedica,
   itemPasaFiltroIncompleta,
   esIncompletaMedica,
+  etiquetaBandejaAuditor,
+  formatVencPlazoCertificadoBa,
+  vencimientoPlazoCertificadoIso,
   mapearAdjuntosBandejaAuditor,
   mapearFichaIngresoAgenteBandejaAuditor,
   mapDocBandejaAuditorMedica,

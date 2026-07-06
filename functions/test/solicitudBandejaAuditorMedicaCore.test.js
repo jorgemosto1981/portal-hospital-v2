@@ -6,6 +6,8 @@ const assert = require("node:assert/strict");
 const {
   itemPasaFiltroIncompleta,
   esIncompletaMedica,
+  etiquetaBandejaAuditor,
+  formatVencPlazoCertificadoBa,
   mapearAdjuntosBandejaAuditor,
   mapearFichaIngresoAgenteBandejaAuditor,
   FILTRO_COMPLETAS,
@@ -36,6 +38,16 @@ describe("solicitudBandejaAuditorMedicaCore", () => {
     assert.equal(itemPasaFiltroIncompleta(prov, FILTRO_PROVISORIAS), true);
     assert.equal(itemPasaFiltroIncompleta(completa, FILTRO_PROVISORIAS), false);
     assert.equal(itemPasaFiltroIncompleta(prov, FILTRO_TODAS), true);
+  });
+
+  it("etiquetaBandejaAuditor formatea vencimiento Timestamp sin [object Object]", () => {
+    const vencMs = Date.parse("2026-09-01T02:59:59.999Z");
+    const ts = { _seconds: Math.floor(vencMs / 1000), _nanoseconds: 999000000 };
+    assert.equal(formatVencPlazoCertificadoBa(ts), "31/08/2026");
+    assert.equal(
+      etiquetaBandejaAuditor({ vencimiento_plazo_certificado: ts }, true),
+      "Provisoria — plazo certificado 31/08/2026",
+    );
   });
 
   it("resolverCie10DesdeSolBandeja lee mapa inmutable", () => {

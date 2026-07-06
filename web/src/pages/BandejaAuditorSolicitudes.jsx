@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import Card from "../components/ui/Card.jsx";
+import BandejaAuditorItemSenales from "../features/solicitudes/BandejaAuditorItemSenales.jsx";
 import BandejaAuditorSolicitudDetalle from "../features/solicitudes/BandejaAuditorSolicitudDetalle.jsx";
 import BandejaSolicitudResumenFilas from "../features/solicitudes/BandejaSolicitudResumenFilas.jsx";
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
@@ -178,20 +179,35 @@ export default function BandejaAuditorSolicitudes() {
 
       <Card className="mt-4 space-y-3 p-4">
         <p className="text-sm font-semibold text-slate-800">Filtros</p>
-        <label className="block space-y-1">
+        <div className="space-y-1">
           <span className="text-xs font-medium text-slate-600">Vista</span>
-          <select
-            value={filtroVista}
-            onChange={(e) => setFiltroVista(e.target.value)}
-            className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+          <div
+            className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-1"
+            role="tablist"
+            aria-label="Vista de bandeja"
           >
-            {FILTROS_VISTA_AUDITOR.map((f) => (
-              <option key={f.value} value={f.value}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            {FILTROS_VISTA_AUDITOR.map((f) => {
+              const activo = filtroVista === f.value;
+              return (
+                <button
+                  key={f.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={activo}
+                  onClick={() => setFiltroVista(f.value)}
+                  className={[
+                    "min-h-11 flex-1 rounded-lg px-2 py-2 text-xs font-semibold touch-manipulation sm:text-sm",
+                    activo
+                      ? "bg-white text-teal-900 shadow-sm ring-1 ring-teal-200"
+                      : "text-slate-600 active:bg-white/80",
+                  ].join(" ")}
+                >
+                  {f.label.replace(" (listas para clasificar)", "").replace(" (sin certificado)", "")}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1">
             <span className="text-xs font-medium text-slate-600">DNI titular</span>
@@ -272,13 +288,8 @@ export default function BandejaAuditorSolicitudes() {
                     ].join(" ")}
                     aria-expanded={expanded}
                   >
-                    <BandejaSolicitudResumenFilas
-                      s={s}
-                      etiquetaClassName={[
-                        "mt-1 text-xs font-medium",
-                        s.es_licencia_incompleta ? "text-amber-800" : "text-teal-900",
-                      ].join(" ")}
-                    />
+                    <BandejaSolicitudResumenFilas s={s} ocultarEtiquetaEstado />
+                    <BandejaAuditorItemSenales item={s} />
                   </button>
                   {expanded ? (
                     <BandejaAuditorSolicitudDetalle

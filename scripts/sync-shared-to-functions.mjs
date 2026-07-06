@@ -56,6 +56,7 @@ const FILES_TO_SYNC = [
   "licenciaMedicaEpisodioCore.js",
   "licenciaMedicaParametrosCore.js",
   "avisoMedicoExclusividadPeriodoCore.js",
+  "bandejaAuditorSenalesCore.js",
 ];
 
 function esmToCjs(source, filename) {

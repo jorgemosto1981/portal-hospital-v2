@@ -1,4 +1,5 @@
 import BandejaSolicitudExpandDatos from "./BandejaSolicitudExpandDatos.jsx";
+import BandejaAuditorItemSenales from "./BandejaAuditorItemSenales.jsx";
 import BandejaAuditorPreviewTramos from "./BandejaAuditorPreviewTramos.jsx";
 import BandejaAuditorArticuloImputacionSelect from "./BandejaAuditorArticuloImputacionSelect.jsx";
 import BandejaAuditorCie10Imputacion from "./BandejaAuditorCie10Imputacion.jsx";
@@ -62,6 +63,8 @@ export default function BandejaAuditorSolicitudDetalle({
 
   return (
     <div className="space-y-4 border-t border-teal-100 bg-teal-50/30 px-4 py-4">
+      <BandejaAuditorItemSenales item={sel} variant="detalle" />
+
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Detalle del aviso médico</p>
         <div className="mt-2">

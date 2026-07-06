@@ -1,10 +1,14 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ — backlog productividad bandeja auditor (post-C2 2026-07-06):**  
-> **C1 + C2:** ✅ en `master` · tags `v1919-C1-bandeja-optimizada`, `v1919-C2-cie10`  
-> **Handoff cierre C2:** [`HANDOFF_SESION_2026-07-06_CIERRE_C2_CIE10_CLASIFICACION.md`](./HANDOFF_SESION_2026-07-06_CIERRE_C2_CIE10_CLASIFICACION.md)  
-> **Siguiente sugerido:** **C3** señales §5.8 (countdown incompleta, badges) · alternativa **C4** modal historial  
-> **Nota:** UI C2 sin deploy hosting — solo callables en piloto; dev local para bandeja auditor
+> **RETOMAR AQUÍ — backlog productividad bandeja auditor (post-C3 2026-07-06):**  
+> **C1 + C2 + C3:** ✅ en `master` · tags `v1919-C1-bandeja-optimizada`, `v1919-C2-cie10`, `v1919-C3-senales-58`  
+> **Handoff cierre C3:** [`HANDOFF_SESION_2026-07-06_CIERRE_C3_SENALES_58.md`](./HANDOFF_SESION_2026-07-06_CIERRE_C3_SENALES_58.md)  
+> **Siguiente sugerido:** **C4** modal historial completo (>25 eventos)  
+> **Nota:** UI C2/C3 sin deploy hosting — callables en piloto; dev local para bandeja auditor
+
+---
+
+> **Histórico — post-C2 (2026-07-06):** C3 señales §5.8 cerrado mismo día · handoff C2 [`HANDOFF_SESION_2026-07-06_CIERRE_C2_CIE10_CLASIFICACION.md`](./HANDOFF_SESION_2026-07-06_CIERRE_C2_CIE10_CLASIFICACION.md)
 
 ---
 

@@ -1,9 +1,11 @@
 "use strict";
 
 const { FieldPath } = require("firebase-admin/firestore");
+const { compararBandejaAuditorProvisoriasPorUrgencia } = require("./bandejaAuditorSenalesCore");
 
 const COL_SOL = "solicitudes_articulo";
 const ORDER_FIELD = "fecha_inicio_reposo_estimada";
+const URG_CURSOR_PREFIX = "urg|";
 
 /** Docs leídos por batch Firestore en un request de listado. */
 const FIRESTORE_BATCH_SIZE = 30;
@@ -158,13 +160,110 @@ async function escanearBandejaAuditorPaginada(db, params) {
   };
 }
 
+/**
+ * @param {string} cursor
+ * @returns {number}
+ */
+function parseUrgenciaOffsetCursor(cursor) {
+  const raw = String(cursor || "").trim();
+  if (raw.startsWith(URG_CURSOR_PREFIX)) {
+    const n = Number.parseInt(raw.slice(URG_CURSOR_PREFIX.length), 10);
+    if (Number.isFinite(n) && n >= 0) return n;
+  }
+  return 0;
+}
+
+/**
+ * @param {number} offset
+ * @returns {string}
+ */
+function encodeUrgenciaOffsetCursor(offset) {
+  return `${URG_CURSOR_PREFIX}${Math.max(0, Math.floor(Number(offset) || 0))}`;
+}
+
+/**
+ * Vista provisorias: escanea cola pendiente, ordena por urgencia SLA y pagina por offset.
+ *
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {{
+ *   estadoPendiente: string,
+ *   titularIds?: Set<string> | null,
+ *   cursor: string,
+ *   pageSize: number,
+ *   mapDoc: (doc: import("firebase-admin/firestore").QueryDocumentSnapshot) => Promise<Record<string, unknown> | null>,
+ * }} params
+ */
+async function escanearBandejaAuditorProvisoriasPorUrgencia(db, params) {
+  const pageSize = Math.max(1, Math.floor(Number(params.pageSize) || 10));
+  const offset = parseUrgenciaOffsetCursor(params.cursor);
+  const q = buildAuditorBandejaBaseQuery(db, {
+    estadoPendiente: params.estadoPendiente,
+    titularIds: params.titularIds,
+  });
+
+  const all = [];
+  let batches = 0;
+  let startAfterFecha = null;
+  let startAfterId = null;
+  let firestoreExhausted = false;
+
+  while (batches < MAX_FIRESTORE_BATCHES) {
+    let pageQuery = q;
+    if (startAfterFecha && startAfterId) {
+      pageQuery = pageQuery.startAfter(startAfterFecha, startAfterId);
+    }
+
+    const snap = await pageQuery.limit(FIRESTORE_BATCH_SIZE).get();
+    batches += 1;
+    if (snap.docs.length === 0) {
+      firestoreExhausted = true;
+      break;
+    }
+
+    for (const doc of snap.docs) {
+      const mapped = await params.mapDoc(doc);
+      if (mapped) all.push(mapped);
+    }
+
+    const lastDoc = snap.docs[snap.docs.length - 1];
+    const lastData = lastDoc.data() || {};
+    startAfterFecha = String(lastData[ORDER_FIELD] || "").slice(0, 10);
+    startAfterId = lastDoc.id;
+
+    if (snap.docs.length < FIRESTORE_BATCH_SIZE) {
+      firestoreExhausted = true;
+      break;
+    }
+  }
+
+  const ahoraMs = Date.now();
+  all.sort((a, b) => compararBandejaAuditorProvisoriasPorUrgencia(a, b, ahoraMs));
+
+  const items = all.slice(offset, offset + pageSize);
+  const nextOffset = offset + pageSize;
+  const hasMore = nextOffset < all.length;
+
+  return {
+    items,
+    has_more: hasMore,
+    next_cursor: hasMore ? encodeUrgenciaOffsetCursor(nextOffset) : null,
+    total_filtrado: all.length,
+    firestore_batches: batches,
+    order_field: "senal_plazo_urgencia_rank",
+  };
+}
+
 module.exports = {
   COL_SOL,
   ORDER_FIELD,
+  URG_CURSOR_PREFIX,
   FIRESTORE_BATCH_SIZE,
   MAX_FIRESTORE_BATCHES,
   parseAuditorBandejaCursor,
   encodeAuditorBandejaCursor,
+  parseUrgenciaOffsetCursor,
+  encodeUrgenciaOffsetCursor,
   buildAuditorBandejaBaseQuery,
   escanearBandejaAuditorPaginada,
+  escanearBandejaAuditorProvisoriasPorUrgencia,
 };
