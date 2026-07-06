@@ -5,7 +5,7 @@
 **Audiencia:** RRHH, medicina laboral, equipo de desarrollo.  
 **Estado motor:** validado por smokes `scripts/smoke/med-*.mjs` y UAT de circuito Art. 14 / derivación junta.  
 **Estado UI auditor:** P0–P3 + P2b + **P4.3b historial inline** — **UAT VERDE 2026-07-03** · smoke **7/7 PASS**. Handoff: [`HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md`](./HANDOFF_SESION_2026-07-03_SMOKE_INTEGRACION_AUDITOR_MEDICO.md).  
-**Backlog productividad:** **C1** ✅ · **C2** ✅ · **C3** ✅ `master` tag `v1919-C3-senales-58` — [`HANDOFF_SESION_2026-07-06_CIERRE_C3_SENALES_58.md`](./HANDOFF_SESION_2026-07-06_CIERRE_C3_SENALES_58.md).
+**Backlog productividad:** **C1–C4** ✅ `master` · tags `v1919-C1-bandeja-optimizada` … `v1919-C4-modal-historial-lm` — [`HANDOFF_SESION_2026-07-06_CIERRE_C4_MODAL_HISTORIAL_LM.md`](./HANDOFF_SESION_2026-07-06_CIERRE_C4_MODAL_HISTORIAL_LM.md).
 
 **Referencias normativas:**
 
@@ -44,8 +44,9 @@ El riesgo actual **no** es integridad de datos ni desborde del motor; es **produ
 | **Paginación / búsqueda bandeja (C1)** | **COMPLETO** | `solicitudBandejaAuditorPaginacionCore` @ `master` tag `v1919-C1-bandeja-optimizada` |
 | **CIE-10 + causal Art. 19 en clasificación (C2)** | **COMPLETO** | `BandejaAuditorCie10Imputacion` + `BandejaAuditorCausalLargaImputacion`; UAT `sol_01KWWKBEAJQ866ATXZGAB275P1` @ tag `v1919-C2-cie10` |
 | **Señales §5.8 (C3)** | **COMPLETO** | Chips + countdown + sort urgencia provisorias; UAT MOSTO 2026-07-06 @ tag `v1919-C3-senales-58` |
+| **Modal historial LM (C4)** | **COMPLETO** | `HistorialLMModal` paginado; callable `page_size`/`cursor`; UAT local 2026-07-06 @ tag `v1919-C4-modal-historial-lm` |
 
-**Backlog productividad (Opción C — post-cierre P4):** ~~paginación~~ · ~~CIE-10/causal~~ · ~~señales §5.8~~ · modal historial completo.
+**Backlog productividad (Opción C — post-cierre P4):** ~~paginación~~ · ~~CIE-10/causal~~ · ~~señales §5.8~~ · ~~modal historial completo~~ — **ÉPICA CERRADA**.
 
 ## 2. Matriz brecha — actual vs objetivo RFC
 
@@ -56,7 +57,7 @@ El riesgo actual **no** es integridad de datos ni desborde del motor; es **produ
 | **Diagnóstico CIE-10** | **C2 COMPLETO** — editable en bandeja; larga obligatorio; `listarCie10BandejaAuditor` | Lectura/edición en bandeja; larga: obligatorio antes de clasificar |
 | **Clasificación sustantiva** | **P2 + P2b + C2** — artículo, fechas, CIE-10, causal Art. 19 (larga) | Causal Art. 19 editable si larga |
 | **Preview tramos / consumo** | **P3** — `previsualizarClasificacionMedicaAuditor` + `BandejaAuditorPreviewTramos` | Mismo motor; copy validado en piloto |
-| **Historial** | **P3 preview** + **P4.3b inline** en ficha (últimos 5 LM con outcome; lazy-load) | Modal historial completo si >25 eventos (**backlog**) |
+| **Historial** | **P3 preview** + **P4.3b inline** + **C4 modal paginado** | Modal historial completo con cursor `off\|N` |
 | **Señales §5.8** | **C3 COMPLETO** — badges, countdown provisoria, tabs completas/provisorias, sort urgencia | RFC §5.8 cumplido en bandeja auditor |
 | **Bandeja junta** | Misma familia: metadatos + dictamen | Mismas brechas de certificado y contexto de consumo |
 
@@ -74,7 +75,7 @@ Orden recomendado tras validación RRHH 2026-07-03:
 | **C1** | Paginación + búsqueda DNI/nombre en bandeja | ✅ `master` |
 | **C2** | CIE-10 + causal Art. 19 en clasificación | ✅ UAT 2026-07-06 |
 | **C3** | Señales §5.8 (countdown incompleta, alertas) | ✅ UAT 2026-07-06 |
-| **C4** | Modal historial completo (>25 eventos) | Complemento P4.3b sin saturar la ficha |
+| **C4** | Modal historial completo (>25 eventos) | ✅ UAT 2026-07-06 |
 
 ### Histórico oleadas UI (cerradas)
 
@@ -103,7 +104,7 @@ Recomendación de gobernanza: tratar `inspect-solicitud.mjs` como **interfaz de 
 
 ## 4.1 Priorización histórica (oleadas P0–P4.3b — cerradas)
 
-Las oleadas P0–P4.3b están **cerradas** (ver §1.1). La priorización activa es el **backlog productividad** §4 (C1–C4).
+Las oleadas P0–P4.3b y **backlog productividad C1–C4** están **cerradas** (ver §1.1).
 
 **Fuera de alcance explícito (salvo nueva definición RRHH):** historia clínica ambulatoria, interoperabilidad HC, OCR de certificados.
 
@@ -225,6 +226,7 @@ En **Caja Negra** el `sol_*` nace sin `articulo_id`. El auditor **elige** la nor
 
 | Fecha | Cambio |
 |-------|--------|
+| 2026-07-06 | **C4 COMPLETO** — modal historial LM paginado; tag `v1919-C4-modal-historial-lm` · épica C1–C4 cerrada |
 | 2026-07-06 | **C3 COMPLETO** — UAT VERDE señales §5.8; tag `v1919-C3-senales-58` |
 | 2026-07-06 | **C2 COMPLETO** — UAT VERDE `sol_01KWWKBEAJQ866ATXZGAB275P1`; tag `v1919-C2-cie10` |
 | 2026-07-03 | **C1 en master** — paginación bandeja; tag `v1919-C1-bandeja-optimizada` |

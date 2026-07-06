@@ -21,6 +21,8 @@ const obtenerHistorialLmTitularBandejaAuditorCallable = onCall(async (request) =
           ? d.solicitud_id.trim()
           : "",
     ampliado: d.ampliado === true,
+    page_size: d.page_size,
+    cursor: typeof d.cursor === "string" ? d.cursor.trim() : "",
   });
 
   if (!result.ok) {
@@ -31,6 +33,9 @@ const obtenerHistorialLmTitularBandejaAuditorCallable = onCall(async (request) =
     items: result.items,
     has_more: result.has_more === true,
     limite_visible: result.limite_visible,
+    page_size: result.page_size,
+    total_filtrado: result.total_filtrado,
+    next_cursor: result.next_cursor || null,
   };
 });
 

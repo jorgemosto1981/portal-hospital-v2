@@ -92,6 +92,7 @@ export default function BandejaAuditorSolicitudDetalle({
         ficha={sel.ficha_ingreso_agente}
         titularPersonaId={sel.titular_persona_id}
         solicitudIdExcluir={sel.solicitud_id}
+        titularLabel={sel.titular_label}
       />
 
       <BandejaAuditorArticuloImputacionSelect

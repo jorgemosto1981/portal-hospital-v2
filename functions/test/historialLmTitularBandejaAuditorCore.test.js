@@ -184,6 +184,44 @@ describe("historialLmTitularBandejaAuditorCore", () => {
     assert.equal(r.ok, true);
     assert.equal(r.items.length, 5);
     assert.equal(r.has_more, true);
+    assert.equal(r.total_filtrado, 7);
+    assert.equal(r.next_cursor, "off|5");
+  });
+
+  it("pagina con cursor off|N", async () => {
+    const extra = Array.from({ length: 4 }, (_, i) => ({
+      id: `sol_EXTRA_${i}`,
+      data: {
+        schema_version: SCHEMA_MED_AVISO,
+        titular_persona_id: PER,
+        estado_solicitud_id: "cfg_esa_aprobada",
+        fecha_desde: `2026-03-0${i + 1}`,
+        fecha_hasta: `2026-03-0${i + 2}`,
+        articulo_id: ART14,
+        creado_en: `2026-03-0${i + 1}T08:00:00.000Z`,
+        auditor_medico_clasificacion: {
+          clasificado_en: `2026-03-0${i + 1}T10:00:00.000Z`,
+        },
+      },
+    }));
+    const db = mockDb([...filas, ...extra], {
+      [ART14]: { codigo_grilla: "14", nombre: "Licencia médica" },
+    });
+    const p1 = await obtenerHistorialLmTitularBandejaAuditor(db, {
+      titular_persona_id: PER,
+      excluir_solicitud_id: SOL_ACTUAL,
+      page_size: 3,
+    });
+    assert.equal(p1.items.length, 3);
+    assert.equal(p1.has_more, true);
+    const p2 = await obtenerHistorialLmTitularBandejaAuditor(db, {
+      titular_persona_id: PER,
+      excluir_solicitud_id: SOL_ACTUAL,
+      page_size: 3,
+      cursor: p1.next_cursor,
+    });
+    assert.equal(p2.items.length, 3);
+    assert.equal(p2.has_more, true);
   });
 
   it("rechaza titular inválido", async () => {

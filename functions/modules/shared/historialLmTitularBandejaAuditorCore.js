@@ -7,8 +7,9 @@ const { loadArticuloDisplay } = require("./solicitudBandejaJefeCore");
 const COL_SOL = "solicitudes_articulo";
 
 const LIMITE_VISIBLE_DEFAULT = 5;
-const LIMITE_PROBE_DEFAULT = 6;
-const LIMITE_AMPLIADO_MAX = 25;
+const LIMITE_AMPLIADO_LEGACY = 25;
+const PAGE_SIZE_MAX = 50;
+const CURSOR_OFFSET_PREFIX = "off|";
 
 /** Estados con trazabilidad útil para el auditor (post-ingreso o en junta). */
 const ESTADOS_HISTORIAL_LM = new Set([
@@ -91,24 +92,65 @@ function esSolicitudLmHistorial(sol) {
 }
 
 /**
+ * @param {string} cursor
+ * @returns {number}
+ */
+function parseHistorialLmOffsetCursor(cursor) {
+  const raw = String(cursor || "").trim();
+  if (!raw.startsWith(CURSOR_OFFSET_PREFIX)) return 0;
+  const n = Number.parseInt(raw.slice(CURSOR_OFFSET_PREFIX.length), 10);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+/**
+ * @param {number} offset
+ * @returns {string | null}
+ */
+function encodeHistorialLmOffsetCursor(offset) {
+  const n = Math.max(0, Math.floor(Number(offset) || 0));
+  return `${CURSOR_OFFSET_PREFIX}${n}`;
+}
+
+/**
+ * @param {{ ampliado?: boolean, page_size?: unknown, cursor?: unknown }} params
+ * @returns {{ pageSize: number, offset: number, legacyAmpliadoSinPaginar: boolean }}
+ */
+function parseHistorialLmPageOpts(params = {}) {
+  const cursor = parseHistorialLmOffsetCursor(params.cursor);
+  const legacyAmpliado =
+    params.ampliado === true && params.page_size == null && !String(params.cursor || "").trim();
+
+  if (legacyAmpliado) {
+    return { pageSize: LIMITE_AMPLIADO_LEGACY, offset: 0, legacyAmpliadoSinPaginar: true };
+  }
+
+  const rawSize = Number(params.page_size);
+  const pageSize =
+    Number.isFinite(rawSize) && rawSize >= 1
+      ? Math.min(Math.floor(rawSize), PAGE_SIZE_MAX)
+      : LIMITE_VISIBLE_DEFAULT;
+
+  return { pageSize, offset: cursor, legacyAmpliadoSinPaginar: false };
+}
+
+/**
  * @param {import("firebase-admin/firestore").Firestore} db
  * @param {{
  *   titular_persona_id: string,
  *   excluir_solicitud_id?: string,
  *   ampliado?: boolean,
+ *   page_size?: number,
+ *   cursor?: string,
  * }} params
  */
 async function obtenerHistorialLmTitularBandejaAuditor(db, params) {
   const personaId = String(params.titular_persona_id || "").trim();
   const excluirSolId = String(params.excluir_solicitud_id || "").trim();
-  const ampliado = params.ampliado === true;
+  const { pageSize, offset, legacyAmpliadoSinPaginar } = parseHistorialLmPageOpts(params);
 
   if (!/^per_/i.test(personaId)) {
     return { ok: false, codigo: "TITULAR_INVALIDO", mensaje: "titular_persona_id inválido." };
   }
-
-  const limiteVisible = ampliado ? LIMITE_AMPLIADO_MAX : LIMITE_VISIBLE_DEFAULT;
-  const limiteCandidatos = ampliado ? LIMITE_AMPLIADO_MAX + 1 : LIMITE_PROBE_DEFAULT;
 
   const snap = await db.collection(COL_SOL).where("titular_persona_id", "==", personaId).get();
 
@@ -155,15 +197,35 @@ async function obtenerHistorialLmTitularBandejaAuditor(db, params) {
     return String(b.solicitud_id).localeCompare(String(a.solicitud_id));
   });
 
-  const slice = candidatos.slice(0, limiteCandidatos);
-  const items = slice.slice(0, limiteVisible).map(({ _orden_ms, ...row }) => row);
-  const has_more = !ampliado && slice.length > limiteVisible;
+  const totalFiltrado = candidatos.length;
+
+  if (legacyAmpliadoSinPaginar) {
+    const probe = candidatos.slice(0, LIMITE_AMPLIADO_LEGACY);
+    const items = probe.map(({ _orden_ms, ...row }) => row);
+    return {
+      ok: true,
+      items,
+      has_more: false,
+      limite_visible: LIMITE_AMPLIADO_LEGACY,
+      page_size: LIMITE_AMPLIADO_LEGACY,
+      total_filtrado: totalFiltrado,
+      next_cursor: null,
+    };
+  }
+
+  const pageSlice = candidatos.slice(offset, offset + pageSize);
+  const items = pageSlice.map(({ _orden_ms, ...row }) => row);
+  const nextOffset = offset + pageSize;
+  const hasMore = nextOffset < totalFiltrado;
 
   return {
     ok: true,
     items,
-    has_more,
-    limite_visible: limiteVisible,
+    has_more: hasMore,
+    limite_visible: pageSize,
+    page_size: pageSize,
+    total_filtrado: totalFiltrado,
+    next_cursor: hasMore ? encodeHistorialLmOffsetCursor(nextOffset) : null,
   };
 }
 
@@ -172,6 +234,10 @@ module.exports = {
   categoriaEstadoHistorialLm,
   etiquetaEstadoHistorialLm,
   esSolicitudLmHistorial,
+  parseHistorialLmPageOpts,
+  parseHistorialLmOffsetCursor,
+  encodeHistorialLmOffsetCursor,
   LIMITE_VISIBLE_DEFAULT,
-  LIMITE_AMPLIADO_MAX,
+  LIMITE_AMPLIADO_LEGACY,
+  PAGE_SIZE_MAX,
 };

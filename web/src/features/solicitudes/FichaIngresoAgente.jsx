@@ -38,12 +38,14 @@ function BloqueFicha({ label, filas }) {
  *   ficha?: Record<string, unknown> | null,
  *   titularPersonaId?: string | null,
  *   solicitudIdExcluir?: string | null,
+ *   titularLabel?: string | null,
  * }} props
  */
 export default function FichaIngresoAgente({
   ficha = null,
   titularPersonaId = null,
   solicitudIdExcluir = null,
+  titularLabel = null,
 }) {
   if (!fichaIngresoAgenteTieneDatos(ficha)) {
     return (
@@ -96,6 +98,7 @@ export default function FichaIngresoAgente({
       <HistorialLMCollapse
         titularPersonaId={titularPersonaId}
         solicitudIdExcluir={solicitudIdExcluir}
+        titularLabel={titularLabel}
       />
     </section>
   );

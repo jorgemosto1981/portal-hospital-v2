@@ -1,14 +1,13 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ — backlog productividad bandeja auditor (post-C3 2026-07-06):**  
-> **C1 + C2 + C3:** ✅ en `master` · tags `v1919-C1-bandeja-optimizada`, `v1919-C2-cie10`, `v1919-C3-senales-58`  
-> **Handoff cierre C3:** [`HANDOFF_SESION_2026-07-06_CIERRE_C3_SENALES_58.md`](./HANDOFF_SESION_2026-07-06_CIERRE_C3_SENALES_58.md)  
-> **Siguiente sugerido:** **C4** modal historial completo (>25 eventos)  
-> **Nota:** UI C2/C3 sin deploy hosting — callables en piloto; dev local para bandeja auditor
+> **RETOMAR AQUÍ — épica productividad bandeja auditor C1–C4 CERRADA (2026-07-06):**  
+> **Tags:** `v1919-C1-bandeja-optimizada` · `v1919-C2-cie10` · `v1919-C3-senales-58` · `v1919-C4-modal-historial-lm`  
+> **Handoff cierre C4:** [`HANDOFF_SESION_2026-07-06_CIERRE_C4_MODAL_HISTORIAL_LM.md`](./HANDOFF_SESION_2026-07-06_CIERRE_C4_MODAL_HISTORIAL_LM.md)  
+> **Nota:** UI C2–C4 sin deploy hosting — callables en piloto; dev local para bandeja auditor
 
 ---
 
-> **Histórico — post-C2 (2026-07-06):** C3 señales §5.8 cerrado mismo día · handoff C2 [`HANDOFF_SESION_2026-07-06_CIERRE_C2_CIE10_CLASIFICACION.md`](./HANDOFF_SESION_2026-07-06_CIERRE_C2_CIE10_CLASIFICACION.md)
+> **Histórico — C3 señales §5.8 (cerrado 2026-07-06):** [`HANDOFF_SESION_2026-07-06_CIERRE_C3_SENALES_58.md`](./HANDOFF_SESION_2026-07-06_CIERRE_C3_SENALES_58.md)
 
 ---
 
