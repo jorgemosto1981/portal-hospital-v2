@@ -14,6 +14,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | **[`ETAPA1_GO_LIVE_V2.md`](./ETAPA1_GO_LIVE_V2.md)** | Runbook técnico Día D: allowlist, catálogo, feature off |
 | **[`ETAPA1_GIT_Y_ENTORNOS_V2.md`](./ETAPA1_GIT_Y_ENTORNOS_V2.md)** | Tag `v0.9.0-base`, ramas `master`/`develop`, Firebase-dev, feature flags |
 | [`ETAPA1_FIREBASE_DEV_SETUP_V2.md`](./ETAPA1_FIREBASE_DEV_SETUP_V2.md) | Checklist creación proyecto `portal-hospital-v2-dev` |
+| **[`CONTRATO_CONFIG_ARTICULO_CAMBIO_DIA_V2.md`](./CONTRATO_CONFIG_ARTICULO_CAMBIO_DIA_V2.md)** | Contrato ABM/seed CAMBIO-DIA (sin hardcode UI) |
 
 ### Módulo operativo y de asistencia (biblia de referencia)
 
