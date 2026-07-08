@@ -34,6 +34,10 @@ export const LABELS = Object.freeze({
   opciones_consumo_solicitud_help:
     "Causales que el agente elige en la ticketera (ej. vínculo en duelo 63.j). Cada fila define días por evento y regla de cómputo. Requiere al menos una opción activa si configurás la tabla.",
 
+  cambio_dia_solicitud: "Cambio de día (traslado propio)",
+  cambio_dia_solicitud_help:
+    "Si está presente, la ticketera usa el wizard CAMBIO-DIA (origen/destino/motivo) sin saldos. Editable: anticipación en plazo_preaviso_interno_dias del bloque workflow.",
+
   // --- Impacto económico (Bloque 2) ---
   justifica_sueldo_id: "Justificación de haberes",
   suma_para_sac: "Impacta en cálculo de SAC",

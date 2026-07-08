@@ -8,6 +8,8 @@ export const ESTADO_SOLICITUD_ARTICULO_PENDIENTE_CLASIFICACION_MEDICA =
 export const ESTADO_SOLICITUD_ARTICULO_ESPERANDO_DICTAMEN_JUNTA =
   "cfg_esa_esperando_dictamen_junta";
 export const ESTADO_SOLICITUD_ARTICULO_APROBADA = "cfg_esa_aprobada";
+export const ESTADO_SOLICITUD_ARTICULO_APROBADA_PENDIENTE_APLICACION =
+  "cfg_esa_aprobada_pendiente_aplicacion";
 
 export const TIPO_INGRESO_MEDICO_ENFERMEDAD_PROPIA = "cfg_tig_enfermedad_propia";
 export const TIPO_INGRESO_MEDICO_ATENCION_FAMILIAR = "cfg_tig_atencion_familiar";

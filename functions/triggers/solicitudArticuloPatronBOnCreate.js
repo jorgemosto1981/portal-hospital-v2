@@ -35,6 +35,10 @@ const {
   registrarEventoTicket,
   scheduleEventoTicketGlobal,
 } = require("../modules/shared/registrarEventoTicket");
+const {
+  versionEsCambioDia,
+  validarFechasMotivoCambioDia,
+} = require("../modules/shared/cambioDiaSolicitudCore");
 
 const COL_SALDOS = "saldos_articulo_agente";
 
@@ -71,6 +75,40 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
       return;
     }
     const versionData = versionSnap.data() || {};
+
+    if (versionEsCambioDia(versionData)) {
+      const wf = versionData.bloque_workflow_sla_cobertura || {};
+      const ext = versionData.cambio_dia_solicitud || {};
+      const check = validarFechasMotivoCambioDia({
+        fechaOrigen: String(d.fecha_origen || "").trim(),
+        fechaDestino: String(d.fecha_destino || "").trim(),
+        motivo: String(d.motivo || "").trim(),
+        permiteRetroactividad: wf.permite_retroactividad === true,
+        plazoPreavisoInternoDias:
+          wf.plazo_preaviso_interno_dias == null ? 0 : Number(wf.plazo_preaviso_interno_dias),
+        motivoMaxLen: Number(ext.motivo_max_len) || 500,
+      });
+      if (!check.ok) {
+        await solRef.update({
+          estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+          motor_codigos: ["CAMBIO_DIA_VALIDACION"],
+          motor_mensajes: check.errores,
+          motor_validado_en: FieldValue.serverTimestamp(),
+          actualizado_en: FieldValue.serverTimestamp(),
+        });
+        return;
+      }
+      if (d.es_cambio_dia !== true || String(d.cambio_dia_schema || "") !== "CAMBIO_DIA_V1") {
+        await solRef.update({
+          estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+          motor_codigos: ["CAMBIO_DIA_SCHEMA"],
+          motor_mensajes: ["La solicitud CAMBIO-DIA debe incluir es_cambio_dia y schema CAMBIO_DIA_V1."],
+          motor_validado_en: FieldValue.serverTimestamp(),
+          actualizado_en: FieldValue.serverTimestamp(),
+        });
+        return;
+      }
+    }
 
     let motor;
     try {

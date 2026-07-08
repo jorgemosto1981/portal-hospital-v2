@@ -269,6 +269,37 @@ async function listarArticulosIngresoPatronB(params) {
           incluye_feriados_institucionales: m.incluyeFeriadosInstitucionales,
         };
       })(),
+      ...(() => {
+        const ext = versionData?.cambio_dia_solicitud;
+        if (!ext || typeof ext !== "object") return {};
+        if (String(ext.schema || "") !== "CAMBIO_DIA_V1") return {};
+        const wf = versionData?.bloque_workflow_sla_cobertura || {};
+        const preavisoRaw = wf.plazo_preaviso_interno_dias;
+        const preaviso =
+          preavisoRaw == null || preavisoRaw === ""
+            ? null
+            : Number.isFinite(Number(preavisoRaw))
+              ? Math.max(0, Math.floor(Number(preavisoRaw)))
+              : null;
+        return {
+          es_cambio_dia: true,
+          cambio_dia_solicitud: {
+            schema: "CAMBIO_DIA_V1",
+            campos_requeridos: Array.isArray(ext.campos_requeridos)
+              ? ext.campos_requeridos
+              : ["fecha_origen", "fecha_destino", "motivo"],
+            origen_celdas_ok: Array.isArray(ext.origen_celdas_ok) ? ext.origen_celdas_ok : [],
+            destino_celdas_ok: Array.isArray(ext.destino_celdas_ok) ? ext.destino_celdas_ok : [],
+            aplica_batch: String(ext.aplica_batch || "traslado_propio_b_batch"),
+            motivo_max_len:
+              Number.isFinite(Number(ext.motivo_max_len)) && Number(ext.motivo_max_len) > 0
+                ? Math.floor(Number(ext.motivo_max_len))
+                : 500,
+          },
+          permite_retroactividad: wf.permite_retroactividad === true,
+          plazo_preaviso_interno_dias: preaviso,
+        };
+      })(),
     };
 
     if (!articuloFilaPermitidaEtapa1(etapa1Cfg, row)) continue;

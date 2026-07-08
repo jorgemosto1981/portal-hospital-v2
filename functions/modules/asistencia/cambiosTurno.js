@@ -1167,15 +1167,17 @@ function leerBypassTopeDesdeBatch(data, opsRaw) {
 }
 
 /**
- * Aplica un lote de cambios de asistencia en forma atómica.
- * Tipos: cobertura_parcial, reemplazo, adicional.
+ * Núcleo B-BATCH (callable + servidor CAMBIO-DIA).
+ * @param {{
+ *   data?: Record<string, unknown>,
+ *   auth?: { uid?: string, token?: Record<string, unknown> } | null,
+ *   skipAuthAssert?: boolean,
+ * }} params
  */
-const aplicarBatchAsistencia = onCall({
-  invoker: "public",
-  memory: "512MiB",
-  timeoutSeconds: 120,
-}, async (request) => {
-  const data = request.data || {};
+async function aplicarBatchAsistenciaCore(params = {}) {
+  const data = params.data && typeof params.data === "object" ? params.data : {};
+  const request = { data, auth: params.auth || null };
+  const skipAuthAssert = params.skipAuthAssert === true;
   const opsRaw = Array.isArray(data.ops) ? data.ops : [];
   if (opsRaw.length < 1) err("invalid-argument", "[BATCH-001] ops[] requerido.");
   if (opsRaw.length > 50) err("invalid-argument", "[BATCH-005] Máximo 50 operaciones por batch.");
@@ -1192,7 +1194,7 @@ const aplicarBatchAsistencia = onCall({
 
   const periodoNorm = [...uniquePeriodo][0];
 
-  if (runtimeFlags.OPEN_ACCESS_TEMP !== true) {
+  if (!skipAuthAssert && runtimeFlags.OPEN_ACCESS_TEMP !== true) {
     clearHlgVigenteCacheMutacion();
     /** @type {Record<string, string>} */
     const cachePlanes = Object.create(null);
@@ -1497,7 +1499,21 @@ const aplicarBatchAsistencia = onCall({
     periodo: [...uniquePeriodo][0],
     dias_actualizados,
   };
-});
+}
+
+/**
+ * Aplica un lote de cambios de asistencia en forma atómica.
+ * Tipos: cobertura_parcial, reemplazo, adicional.
+ */
+const aplicarBatchAsistencia = onCall({
+  invoker: "public",
+  memory: "512MiB",
+  timeoutSeconds: 120,
+}, async (request) => aplicarBatchAsistenciaCore({
+  data: request.data || {},
+  auth: request.auth || null,
+  skipAuthAssert: false,
+}));
 
 const MAX_CONSULTAS_GESTION_TURNO = 20;
 
@@ -1767,6 +1783,7 @@ module.exports = {
   listarOverridesTurno,
   registrarConsultaGestionTurnoGrilla,
   aplicarBatchAsistencia,
+  aplicarBatchAsistenciaCore,
   obtenerCapaTeoricaDia,
   materializarTurnoTeoricoDia,
   sanearMaterializacionDiaSiNecesario,

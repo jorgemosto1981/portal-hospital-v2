@@ -1,0 +1,26 @@
+{
+  "articulo": "cambio_dia",
+  "fecha_desde": "2026-07-01",
+  "circuito_ingreso_ids": [
+    "CFG_USUARIO",
+    "CFG_RRHH",
+    "CFG_MEDICO",
+    "CFG_VISUALIZADOR"
+  ],
+  "codigo": "CAMBIO-DIA",
+  "codigo_grilla": "C-DIA",
+  "nombre": "Cambio de día (traslado propio)",
+  "inciso_normativo": "Operativo GSO — traslado propio (Etapa 1)",
+  "origen_normativo_id": "cfg_ona_resolucion_institucional",
+  "color_ui": "#0F766E",
+  "plazo_preaviso_interno_dias": 2,
+  "permite_retroactividad": false,
+  "cambio_dia_solicitud": {
+    "schema": "CAMBIO_DIA_V1",
+    "campos_requeridos": ["fecha_origen", "fecha_destino", "motivo"],
+    "origen_celdas_ok": ["laborable_con_turno"],
+    "destino_celdas_ok": ["franco", "apto_sin_turno_exclusivo"],
+    "aplica_batch": "traslado_propio_b_batch",
+    "motivo_max_len": 500
+  }
+}

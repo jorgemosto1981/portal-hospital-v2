@@ -16,7 +16,7 @@ Relacionados: [`ETAPA1_GO_LIVE_V2.md`](../ETAPA1_GO_LIVE_V2.md) · [`ACTA_RRHH_E
 | Descuenta saldo / cupo | **No** (`cupo_dias_por_ciclo: null`, sin Fase S de bolsa) |
 | Límite de uso anual/mensual | **Ninguno** (`tope_frecuencia_mensual: null`) |
 | Retroactivo | **No** (`permite_retroactividad: false`) |
-| Anticipación mínima | **Pendiente confirmar** (ver §4) — campo `plazo_preaviso_interno_dias` |
+| Anticipación mínima | **2 días** — `plazo_preaviso_interno_dias: 2` (editable en ABM / workflow) |
 | Wizard UI | `fecha_origen`, `fecha_destino`, `motivo` |
 | Aplicación al aprobar | Server reutiliza **B-BATCH** traslado propio; fallo → estado remediación RRHH |
 | Filtros elegibilidad grilla | Origen laborable/con turno; destino franco/apto; mismos régimen/cargo GDT ancla; tope movimientos vigente |
@@ -87,7 +87,7 @@ Mapeo:
   },
   "bloque_topes_plazos_computo": {
     "regla_computo_dias_id": "cfg_rcd_corridos",
-    "reinicio_ciclo_id": "cfg_rcc_nunca",
+    "reinicio_ciclo_id": "cfg_rcc_anual",
     "origen_saldo_id": "cfg_os_interno",
     "accion_saldo_id": "cfg_as_neutro",
     "cupo_dias_por_ciclo": null,
@@ -101,7 +101,7 @@ Mapeo:
   "bloque_workflow_sla_cobertura": {
     "circuito_ingreso_ids": ["CFG_USUARIO", "CFG_RRHH", "CFG_MEDICO", "CFG_VISUALIZADOR"],
     "permite_retroactividad": false,
-    "plazo_preaviso_interno_dias": null,
+    "plazo_preaviso_interno_dias": 2,
     "plazo_preaviso_normativa_dias": null,
     "toma_conocimiento_limitada": false,
     "requiere_toma_conocimiento_superior": false
@@ -126,6 +126,7 @@ Mapeo:
 **Notas motor:**
 
 - Sin cupo → no descuenta saldo Patrón B (misma familia operativa que 63.j sin bolsa de ciclo).
+- **`reinicio_ciclo_id: cfg_rcc_anual`** aunque no haya cupo: necesario para que `resolvePatronSaldo` clasifique **B** y entre al listado de ticketera. La extensión `cambio_dia_solicitud` distingue el wizard.
 - `depende_rda: true` → la verdad de origen/destino se valida contra grilla/RDA al preview y al aprobar.
 - Extensión `cambio_dia_solicitud` se edita en pestaña Avanzado del configurador (como opciones 63.j); Zod se amplía en la misma oleada.
 
@@ -149,17 +150,13 @@ Estados:
 
 ---
 
-## 4. Pendiente de producto (1 pregunta)
+## 4. Anticipación mínima (cerrada)
 
-**Anticipación mínima** (`plazo_preaviso_interno_dias`):
+**Opción C — `plazo_preaviso_interno_dias: 2`.**
 
-| Opción | Efecto |
-|--------|--------|
-| **A — Solo no retroactivo** | `null`: origen y destino ≥ hoy (zona institucional). |
-| **B — Mín. 1 día** | `1`: no se puede pedir “hoy”. |
-| **C — Mín. 2 días** | `2`: como el ejemplo JSON inicial. |
-
-Hasta confirmación, el seed usa **A (`null`)**.
+- `fecha_origen` y `fecha_destino` deben ser ≥ hoy + 2 días (calendario institucional).
+- Editable desde menú configuración de artículos (bloque workflow) sin redeploy.
+- Justificación: margen para que el jefe gestione bandeja antes de la fecha origen y no se rompa cobertura.
 
 ---
 

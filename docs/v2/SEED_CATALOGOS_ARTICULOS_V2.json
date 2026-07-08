@@ -254,6 +254,16 @@
       "vigente_hasta": null
     },
     {
+      "id": "cfg_esa_aprobada_pendiente_aplicacion",
+      "codigo_interno": "APROBADA_PENDIENTE_APLICACION",
+      "titulo_ui": "Aprobada — pendiente aplicación (remediación)",
+      "descripcion_ui": "Jefe aprobó; falló materializar en grilla (B-BATCH). RRHH remedia en GSO.",
+      "orden": 45,
+      "activo": true,
+      "vigente_desde": null,
+      "vigente_hasta": null
+    },
+    {
       "id": "cfg_esa_rechazada",
       "codigo_interno": "RECHAZADA",
       "titulo_ui": "Rechazada",

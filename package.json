@@ -57,6 +57,9 @@
     "seed:catalogos-articulos-v2": "node scripts/seed-v2/seed-catalogos-articulos-v2.mjs",
     "seed:p4-art14:dry-run": "node scripts/seed-v2/apply-p4-art14.mjs --dry-run",
     "seed:p4-art14": "node scripts/seed-v2/apply-p4-art14.mjs --apply",
+    "seed:cambio-dia:dry-run": "node scripts/seed-v2/apply-cambio-dia.mjs --dry-run",
+    "seed:cambio-dia": "node scripts/seed-v2/apply-cambio-dia.mjs --apply",
+
     "verify:catalogos-articulos-v2": "node scripts/seed-v2/verify-catalogos-articulos-v2.mjs",
     "db:migrate-caducidad-fk-articulos-v2:dry-run": "node scripts/seed-v2/migrate-caducidad-fk-articulos-v2.mjs",
     "db:migrate-caducidad-fk-articulos-v2": "node scripts/seed-v2/migrate-caducidad-fk-articulos-v2.mjs --apply",

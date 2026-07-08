@@ -50,4 +50,17 @@ describe("ticketeraRouteUtils", () => {
     expect(row?.dias_solicitados).toBeNull();
     expect(row?.opciones_consumo_solicitud).toHaveLength(1);
   });
+
+  it("filaArticuloIngresoDesdeCallable propaga CAMBIO-DIA", () => {
+    const row = filaArticuloIngresoDesdeCallable({
+      articulo_id: "art_x",
+      es_cambio_dia: true,
+      cambio_dia_solicitud: { schema: "CAMBIO_DIA_V1" },
+      plazo_preaviso_interno_dias: 2,
+      permite_retroactividad: false,
+    });
+    expect(row?.es_cambio_dia).toBe(true);
+    expect(row?.plazo_preaviso_interno_dias).toBe(2);
+    expect(row?.cambio_dia_solicitud?.schema).toBe("CAMBIO_DIA_V1");
+  });
 });

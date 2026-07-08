@@ -325,6 +325,21 @@ export const opcionConsumoSolicitudRowSchema = z
   })
   .strict();
 
+/** Extensión Etapa 1 — traslado propio (ABM / seed). */
+export const cambioDiaSolicitudSchema = z
+  .object({
+    schema: z.literal("CAMBIO_DIA_V1"),
+    campos_requeridos: z
+      .array(z.enum(["fecha_origen", "fecha_destino", "motivo"]))
+      .min(1)
+      .default(["fecha_origen", "fecha_destino", "motivo"]),
+    origen_celdas_ok: z.array(z.string().min(1)).min(1),
+    destino_celdas_ok: z.array(z.string().min(1)).min(1),
+    aplica_batch: z.literal("traslado_propio_b_batch"),
+    motivo_max_len: z.number().int().min(50).max(2000).default(500),
+  })
+  .strict();
+
 /**
  * @param {import("zod").infer<typeof cfgArticuloVersionObjectSchema>} data
  * @param {import("zod").RefinementCtx} ctx
@@ -403,6 +418,7 @@ const cfgArticuloVersionObjectSchema = z.object({
   bloque_workflow_sla_cobertura: bloqueWorkflowSlaCoberturaSchema,
   bloque_documentacion_convivencia: bloqueDocumentacionConvivenciaSchema,
   opciones_consumo_solicitud: z.array(opcionConsumoSolicitudRowSchema).optional(),
+  cambio_dia_solicitud: cambioDiaSolicitudSchema.optional(),
 });
 
 // --- Documento de versión (§2.2 + §4 vía bloques) ---

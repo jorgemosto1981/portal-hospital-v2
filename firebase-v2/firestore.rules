@@ -345,6 +345,22 @@ service cloud.firestore {
         && d.schema_version == 1;
     }
 
+    function solicitudArticuloCambioDiaExtrasValid(d) {
+      return d.es_cambio_dia == true
+        && d.cambio_dia_schema == 'CAMBIO_DIA_V1'
+        && d.fecha_origen is string
+        && d.fecha_origen.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && d.fecha_destino is string
+        && d.fecha_destino.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && d.fecha_origen != d.fecha_destino
+        && d.fecha_desde == d.fecha_origen
+        && d.fecha_hasta == d.fecha_origen
+        && d.dias_solicitados == 1
+        && d.motivo is string
+        && d.motivo.size() >= 3
+        && d.motivo.size() <= 500;
+    }
+
     function solicitudArticuloCreateShapePatronB() {
       let d = request.resource.data;
       let keysBase = [
@@ -365,10 +381,20 @@ service cloud.firestore {
           'actualizado_en',
         ];
       let keysLarga = keysBase.concat(['causal_larga_duracion_id', 'cie10']);
+      let keysCambioDia = keysBase.concat([
+          'fecha_origen',
+          'fecha_destino',
+          'motivo',
+          'es_cambio_dia',
+          'cambio_dia_schema',
+        ]);
       return (solicitudArticuloPatronBFieldsValid(d) && d.keys().hasOnly(keysBase))
         || (solicitudArticuloPatronBFieldsValid(d)
           && solicitudPatronBLargaExtrasValid(d)
-          && d.keys().hasOnly(keysLarga));
+          && d.keys().hasOnly(keysLarga))
+        || (solicitudArticuloPatronBFieldsValid(d)
+          && solicitudArticuloCambioDiaExtrasValid(d)
+          && d.keys().hasOnly(keysCambioDia));
     }
 
     function solicitudArticuloPatronCFieldsValid(d) {

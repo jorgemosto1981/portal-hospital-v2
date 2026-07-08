@@ -1,8 +1,9 @@
 ﻿import { Navigate, useSearchParams } from "react-router-dom";
 
 import { useArticulosIngresoMenu } from "../features/solicitudes/ArticulosIngresoProvider.jsx";
+import { articuloEsCambioDia } from "../features/solicitudes/cambioDiaUi.js";
 import { articuloIdDesdeSearchParams } from "../features/solicitudes/ticketeraRouteUtils.js";
-import { WIZARD_BY_PATRON } from "../features/solicitudes/ticketeraWizardRegistry.js";
+import { WIZARD_BY_PATRON, WIZARD_CAMBIO_DIA } from "../features/solicitudes/ticketeraWizardRegistry.js";
 
 export default function TicketeraAltaPage() {
   const [searchParams] = useSearchParams();
@@ -13,6 +14,11 @@ export default function TicketeraAltaPage() {
 
   if (!articuloInfo) {
     return <Navigate to="/portal/solicitudes" replace />;
+  }
+
+  if (articuloEsCambioDia(articuloInfo)) {
+    const CambioDiaWizard = WIZARD_CAMBIO_DIA;
+    return <CambioDiaWizard />;
   }
 
   const ComponenteWizard = WIZARD_BY_PATRON[articuloInfo.patron_saldo];

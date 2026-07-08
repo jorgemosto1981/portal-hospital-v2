@@ -11,7 +11,10 @@ const {
   ESTADO_SOLICITUD_EN_REVISION_JEFE,
   ESTADO_SOLICITUD_RECHAZADA,
   ESTADO_SOLICITUD_APROBADA,
+  ESTADO_SOLICITUD_APROBADA_PENDIENTE_APLICACION,
 } = require("./solicitudesArticuloEstados");
+const { solicitudEsCambioDia } = require("./cambioDiaSolicitudCore");
+const { aplicarCambioDiaTrasAprobacionJefe } = require("./cambioDiaAplicarTrasAprobacion");
 const { TIPO_EVENTO_TICKET, ORIGEN_EVENTO } = require("./solicitudEventosTicketConstants");
 const { registrarEventoTicket } = require("./registrarEventoTicket");
 const {
@@ -386,12 +389,49 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
       },
       MDC_COMANDO_CONSOLIDAR_APROBADO,
     );
+    let estadoFinal = ESTADO_SOLICITUD_APROBADA;
+    let cambioDiaMeta = null;
+    if (solicitudEsCambioDia(postSol) || solicitudEsCambioDia(sol)) {
+      try {
+        const applyRes = await aplicarCambioDiaTrasAprobacionJefe(db, {
+          solId,
+          sol: { ...sol, ...postSol },
+          revisorPersonaId,
+        });
+        if (applyRes?.estado_solicitud_id) {
+          estadoFinal = applyRes.estado_solicitud_id;
+        }
+        cambioDiaMeta = {
+          applied: applyRes?.applied === true,
+          skipped: applyRes?.skipped === true,
+          codigo: applyRes?.codigo || null,
+          mensaje: applyRes?.mensaje || null,
+        };
+      } catch (e) {
+        estadoFinal = ESTADO_SOLICITUD_APROBADA_PENDIENTE_APLICACION;
+        cambioDiaMeta = {
+          applied: false,
+          codigo: "CAMBIO_DIA_HOOK_ERROR",
+          mensaje: e instanceof Error ? e.message : String(e),
+        };
+        await solRef.update({
+          estado_solicitud_id: ESTADO_SOLICITUD_APROBADA_PENDIENTE_APLICACION,
+          cambio_dia_aplicacion_error: {
+            codigo: "CAMBIO_DIA_HOOK_ERROR",
+            mensaje: cambioDiaMeta.mensaje,
+            en: FieldValue.serverTimestamp(),
+          },
+          actualizado_en: FieldValue.serverTimestamp(),
+        });
+      }
+    }
+
     void registrarEventoTicket(db, solId, {
       tipo_evento: TIPO_EVENTO_TICKET.ESTADO_CAMBIADO,
       actor_persona_id: revisorPersonaId,
       titular_persona_id: titularId,
       estado_anterior_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
-      estado_nuevo_id: ESTADO_SOLICITUD_APROBADA,
+      estado_nuevo_id: estadoFinal,
       origen: ORIGEN_EVENTO.CALLABLE,
       accion: accionAprobar,
       metadata: {
@@ -403,12 +443,14 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
         motivo: motivo || null,
         autorizacion_rrhh_sustituta: rrhhSustituto,
         cierre_rrhh_sustituta: rrhhSustituto,
+        ...(cambioDiaMeta ? { cambio_dia: cambioDiaMeta } : {}),
       },
     });
     return {
       ok: true,
       solicitud_id: solId,
-      estado_solicitud_id: ESTADO_SOLICITUD_APROBADA,
+      estado_solicitud_id: estadoFinal,
+      ...(cambioDiaMeta ? { cambio_dia: cambioDiaMeta } : {}),
     };
   }
 

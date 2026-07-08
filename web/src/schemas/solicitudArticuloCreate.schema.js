@@ -43,9 +43,39 @@ export const solicitudPatronBAltaInputSchema = z
       })
       .strict()
       .optional(),
+    /** CAMBIO-DIA — traslado propio (Etapa 1). */
+    esCambioDia: z.boolean().optional(),
+    fechaOrigen: ymdSchema.optional(),
+    fechaDestino: ymdSchema.optional(),
+    motivo: z.string().min(3).max(500).optional(),
   })
   .strict()
   .superRefine((data, ctx) => {
+    if (data.esCambioDia === true) {
+      if (!data.fechaOrigen || !data.fechaDestino || !data.motivo) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["fechaOrigen"],
+          message: "CAMBIO-DIA requiere fechaOrigen, fechaDestino y motivo.",
+        });
+        return;
+      }
+      if (data.fechaOrigen === data.fechaDestino) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["fechaDestino"],
+          message: "El día destino debe ser distinto del día origen.",
+        });
+      }
+      if (data.diasSolicitados !== 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["diasSolicitados"],
+          message: "CAMBIO-DIA: diasSolicitados debe ser 1.",
+        });
+      }
+      return;
+    }
     const esLarga = Boolean(data.causalLargaDuracionId && data.cie10);
     if (esLarga) {
       if (data.diasSolicitados > TOPE_DIAS_LICENCIA_MEDICA_LARGA) {
@@ -90,6 +120,11 @@ const solicitudPatronBShapeBaseSchema = z
     opcion_consumo_id: opcionConsumoIdSchema.optional(),
     causal_larga_duracion_id: cfgCldIdSchema.optional(),
     cie10: cie10SolicitudMapSchema.optional(),
+    fecha_origen: ymdSchema.optional(),
+    fecha_destino: ymdSchema.optional(),
+    motivo: z.string().min(3).max(500).optional(),
+    es_cambio_dia: z.literal(true).optional(),
+    cambio_dia_schema: z.literal("CAMBIO_DIA_V1").optional(),
     creado_en: z.unknown(),
     actualizado_en: z.unknown(),
   })
@@ -120,6 +155,43 @@ export const solicitudArticuloCreateShapePatronBSchema = solicitudPatronBShapeBa
     path: ["anio_ciclo_consumo"],
   })
   .superRefine((d, ctx) => {
+    if (d.es_cambio_dia === true) {
+      if (
+        !d.fecha_origen ||
+        !d.fecha_destino ||
+        !d.motivo ||
+        d.cambio_dia_schema !== "CAMBIO_DIA_V1"
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["es_cambio_dia"],
+          message: "CAMBIO-DIA incompleto en el documento borrador.",
+        });
+        return;
+      }
+      if (d.fecha_origen === d.fecha_destino) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["fecha_destino"],
+          message: "Origen y destino deben diferir.",
+        });
+      }
+      if (d.fecha_desde !== d.fecha_origen || d.fecha_hasta !== d.fecha_origen) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["fecha_desde"],
+          message: "En CAMBIO-DIA, fecha_desde/hasta anclan al día origen.",
+        });
+      }
+      if (d.dias_solicitados !== 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["dias_solicitados"],
+          message: "CAMBIO-DIA usa dias_solicitados = 1.",
+        });
+      }
+      return;
+    }
     const esLarga = Boolean(d.causal_larga_duracion_id && d.cie10);
     if (esLarga) {
       if (d.dias_solicitados > TOPE_DIAS_LICENCIA_MEDICA_LARGA) {
@@ -153,9 +225,13 @@ export const solicitudArticuloCreateShapePatronBSchema = solicitudPatronBShapeBa
  */
 export function buildSolicitudPatronBBorradorDocument(input, timestamps) {
   const parsed = solicitudPatronBAltaInputSchema.parse(input);
-  const fechaDesde = parsed.fechaDesde;
-  const fechaHasta =
-    parsed.fechaHasta && parsed.fechaHasta >= fechaDesde ? parsed.fechaHasta : fechaDesde;
+  const esCambioDia = parsed.esCambioDia === true;
+  const fechaDesde = esCambioDia ? parsed.fechaOrigen : parsed.fechaDesde;
+  const fechaHasta = esCambioDia
+    ? parsed.fechaOrigen
+    : parsed.fechaHasta && parsed.fechaHasta >= fechaDesde
+      ? parsed.fechaHasta
+      : fechaDesde;
   const doc = {
     articulo_id: parsed.articuloId,
     titular_persona_id: parsed.personaId,
@@ -164,7 +240,7 @@ export function buildSolicitudPatronBBorradorDocument(input, timestamps) {
     fecha_desde: fechaDesde,
     fecha_hasta: fechaHasta,
     anio_ciclo_consumo: Number(fechaDesde.slice(0, 4)),
-    dias_solicitados: parsed.diasSolicitados,
+    dias_solicitados: esCambioDia ? 1 : parsed.diasSolicitados,
     patron_saldo: "B",
     estado_solicitud_id: ESTADO_SOLICITUD_ARTICULO_BORRADOR,
     schema_version: SCHEMA_SOLICITUD_PATRON_B,
@@ -172,6 +248,13 @@ export function buildSolicitudPatronBBorradorDocument(input, timestamps) {
     creado_en: timestamps.creado_en,
     actualizado_en: timestamps.actualizado_en,
   };
+  if (esCambioDia) {
+    doc.fecha_origen = parsed.fechaOrigen;
+    doc.fecha_destino = parsed.fechaDestino;
+    doc.motivo = parsed.motivo;
+    doc.es_cambio_dia = true;
+    doc.cambio_dia_schema = "CAMBIO_DIA_V1";
+  }
   if (parsed.opcionConsumoId) {
     doc.opcion_consumo_id = parsed.opcionConsumoId;
   }

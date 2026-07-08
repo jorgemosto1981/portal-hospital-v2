@@ -12,6 +12,10 @@ const {
 } = require("../../modules/shared/patronBFechasSolicitud");
 const { resolvePatronBConsumoDesdeSolicitud } = require("../../modules/shared/opcionesConsumoSolicitud");
 const { buildLicenciaMedicaPreviewParaPatronB } = require("../../modules/shared/licenciaMedicaPreviewPatronB");
+const {
+  versionEsCambioDia,
+  validarFechasMotivoCambioDia,
+} = require("../../modules/shared/cambioDiaSolicitudCore");
 
 const previsualizarSolicitudPatronB = onCall(async (request) => {
   if (!request.auth) {
@@ -55,6 +59,47 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
     .doc(versionId)
     .get();
   const versionData = versionSnap.exists ? versionSnap.data() || {} : {};
+
+  if (versionEsCambioDia(versionData)) {
+    const wf = versionData.bloque_workflow_sla_cobertura || {};
+    const ext = versionData.cambio_dia_solicitud || {};
+    const fo =
+      typeof d.fecha_origen === "string" && d.fecha_origen.trim()
+        ? d.fecha_origen.trim().slice(0, 10)
+        : fechaDesde;
+    const fd =
+      typeof d.fecha_destino === "string" && d.fecha_destino.trim()
+        ? d.fecha_destino.trim().slice(0, 10)
+        : "";
+    const motivo = typeof d.motivo === "string" ? d.motivo.trim() : "";
+    const check = validarFechasMotivoCambioDia({
+      fechaOrigen: fo,
+      fechaDestino: fd,
+      motivo: motivo.length >= 3 ? motivo : "previsualizacion-cambio-dia",
+      permiteRetroactividad: wf.permite_retroactividad === true,
+      plazoPreavisoInternoDias:
+        wf.plazo_preaviso_interno_dias == null ? 0 : Number(wf.plazo_preaviso_interno_dias),
+      motivoMaxLen: Number(ext.motivo_max_len) || 500,
+    });
+    // Preview: validamos fechas/preaviso; el motivo real lo exige el wizard al enviar.
+    const erroresFechas = (check.errores || []).filter((m) => !/motivo/i.test(String(m)));
+    if (erroresFechas.length) {
+      return {
+        ok: false,
+        eligible: false,
+        codigos: ["CAMBIO_DIA_VALIDACION"],
+        mensajes: erroresFechas,
+        fecha_desde: fo,
+        fecha_origen: fo,
+        fecha_destino: fd,
+        es_cambio_dia: true,
+        persona_id: personaId,
+        articulo_id: articuloId,
+        version_id: versionId,
+      };
+    }
+  }
+
   const grupoTrabajoId =
     typeof d.grupo_trabajo_id_ancla === "string"
       ? d.grupo_trabajo_id_ancla.trim()

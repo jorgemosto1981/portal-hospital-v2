@@ -36,6 +36,18 @@ export function filaArticuloIngresoDesdeCallable(art) {
     requiere_causal_larga: art?.requiere_causal_larga === true,
     requiere_cie10: art?.requiere_cie10 === true,
     tope_dias_solicitud: art?.tope_dias_solicitud ?? null,
+    es_cambio_dia: art?.es_cambio_dia === true,
+    cambio_dia_solicitud:
+      art?.cambio_dia_solicitud && typeof art.cambio_dia_solicitud === "object"
+        ? art.cambio_dia_solicitud
+        : null,
+    permite_retroactividad: art?.permite_retroactividad === true,
+    plazo_preaviso_interno_dias:
+      art?.plazo_preaviso_interno_dias == null
+        ? null
+        : Number.isFinite(Number(art.plazo_preaviso_interno_dias))
+          ? Math.max(0, Math.floor(Number(art.plazo_preaviso_interno_dias)))
+          : null,
   };
 }
 
