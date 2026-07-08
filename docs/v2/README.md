@@ -15,6 +15,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | **[`ETAPA1_GIT_Y_ENTORNOS_V2.md`](./ETAPA1_GIT_Y_ENTORNOS_V2.md)** | Tag `v0.9.0-base`, ramas `master`/`develop`, Firebase-dev, feature flags |
 | [`ETAPA1_FIREBASE_DEV_SETUP_V2.md`](./ETAPA1_FIREBASE_DEV_SETUP_V2.md) | Checklist creación proyecto `portal-hospital-v2-dev` |
 | **[`CONTRATO_CONFIG_ARTICULO_CAMBIO_DIA_V2.md`](./CONTRATO_CONFIG_ARTICULO_CAMBIO_DIA_V2.md)** | Contrato ABM/seed CAMBIO-DIA (sin hardcode UI) |
+| **[`HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md`](./HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md)** | **RETOMAR AQUÍ** — Soft Launch pausado: IDs prod, allowlist, backlog UAT, cómo clonar en otra PC |
 
 ### Módulo operativo y de asistencia (biblia de referencia)
 

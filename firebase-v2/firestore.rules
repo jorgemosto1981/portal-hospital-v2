@@ -358,7 +358,10 @@ service cloud.firestore {
         && d.dias_solicitados == 1
         && d.motivo is string
         && d.motivo.size() >= 3
-        && d.motivo.size() <= 500;
+        && d.motivo.size() <= 500
+        && d.toma_conocimiento_agente == true
+        && d.toma_conocimiento_texto is string
+        && d.toma_conocimiento_texto.size() >= 20;
     }
 
     function solicitudArticuloCreateShapePatronB() {
@@ -387,6 +390,8 @@ service cloud.firestore {
           'motivo',
           'es_cambio_dia',
           'cambio_dia_schema',
+          'toma_conocimiento_agente',
+          'toma_conocimiento_texto',
         ]);
       return (solicitudArticuloPatronBFieldsValid(d) && d.keys().hasOnly(keysBase))
         || (solicitudArticuloPatronBFieldsValid(d)

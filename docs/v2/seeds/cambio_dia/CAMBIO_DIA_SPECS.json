@@ -9,7 +9,7 @@
   ],
   "codigo": "CAMBIO-DIA",
   "codigo_grilla": "C-DIA",
-  "nombre": "Cambio de día (traslado propio)",
+  "nombre": "Cambio de Día de Asistencia",
   "inciso_normativo": "Operativo GSO — traslado propio (Etapa 1)",
   "origen_normativo_id": "cfg_ona_resolucion_institucional",
   "color_ui": "#0F766E",

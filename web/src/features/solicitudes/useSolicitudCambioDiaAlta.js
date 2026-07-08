@@ -14,7 +14,14 @@ import {
   esperarValidacionMotorPatronB,
 } from "../../services/solicitudesArticuloV2Service.js";
 import { enriquecerArticuloIngresoListado } from "./enriquecerArticuloIngresoListado.js";
-import { articuloEsCambioDia, ymdMinimoPreaviso } from "./cambioDiaUi.js";
+import {
+  articuloEsCambioDia,
+  CAMBIO_DIA_TOMA_CONOCIMIENTO_TEXTO,
+  CAMBIO_DIA_VENTANA_MAX_DIAS_CORRIDOS,
+  mensajesValidacionFechasCambioDia,
+  rangoFechaDestinoCambioDia,
+  ymdMinimoPreaviso,
+} from "./cambioDiaUi.js";
 import { formatearMensajesEntorno } from "./formatearMensajeEntorno.js";
 import { ymdHoyBa } from "./ticketeraUtils.js";
 
@@ -25,6 +32,7 @@ export function useSolicitudCambioDiaAlta({ personaId, articuloIdInicial = "" })
   const [fechaOrigen, setFechaOrigen] = useState("");
   const [fechaDestino, setFechaDestino] = useState("");
   const [motivo, setMotivo] = useState("");
+  const [tomaConocimiento, setTomaConocimiento] = useState(false);
   const [articuloSel, setArticuloSel] = useState(null);
   const [articulos, setArticulos] = useState([]);
   const [cargando, setCargando] = useState(false);
@@ -117,20 +125,42 @@ export function useSolicitudCambioDiaAlta({ personaId, articuloIdInicial = "" })
     [reiniciarValidacionYPreview],
   );
 
+  const rangoDestino = useMemo(
+    () => rangoFechaDestinoCambioDia(fechaOrigen, ymdMin, CAMBIO_DIA_VENTANA_MAX_DIAS_CORRIDOS),
+    [fechaOrigen, ymdMin],
+  );
+
+  const warningsFechas = useMemo(
+    () =>
+      mensajesValidacionFechasCambioDia(fechaOrigen, fechaDestino, ymdMin, {
+        permiteRetroactividad: permiteRetro,
+        ventana: CAMBIO_DIA_VENTANA_MAX_DIAS_CORRIDOS,
+        hoyYmd: ymdHoyBa(),
+      }),
+    [fechaDestino, fechaOrigen, permiteRetro, ymdMin],
+  );
+
   const fechasOk = useMemo(() => {
     const fo = String(fechaOrigen || "").trim();
     const fd = String(fechaDestino || "").trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fo) || !/^\d{4}-\d{2}-\d{2}$/.test(fd)) return false;
-    if (fo === fd) return false;
-    if (!permiteRetro) {
-      const hoy = ymdHoyBa();
-      if (fo < hoy || fd < hoy) return false;
-    }
-    if (preaviso > 0 && (fo < ymdMin || fd < ymdMin)) return false;
-    return true;
-  }, [fechaDestino, fechaOrigen, permiteRetro, preaviso, ymdMin]);
+    return warningsFechas.length === 0;
+  }, [fechaDestino, fechaOrigen, warningsFechas]);
 
   const motivoOk = motivo.trim().length >= 3 && motivo.trim().length <= motivoMax;
+  const tomaConocimientoOk = tomaConocimiento === true;
+
+  useEffect(() => {
+    const fd = String(fechaDestino || "").trim();
+    if (!fd || !rangoDestino.ok) return;
+    if (
+      (/^\d{4}-\d{2}-\d{2}$/.test(rangoDestino.min) && fd < rangoDestino.min) ||
+      (/^\d{4}-\d{2}-\d{2}$/.test(rangoDestino.max) && fd > rangoDestino.max)
+    ) {
+      setFechaDestino("");
+      reiniciarValidacionYPreview();
+    }
+  }, [fechaDestino, rangoDestino, reiniciarValidacionYPreview]);
 
   const recargarGrupos = useCallback(async () => {
     if (!/^per_/i.test(personaId) || !fechasOk) {
@@ -244,7 +274,9 @@ export function useSolicitudCambioDiaAlta({ personaId, articuloIdInicial = "" })
     Boolean(preview) && (preview?.ok === true || preview?.eligible === true) && !previewError;
 
   const enviar = useCallback(async () => {
-    if (!articuloSel || enviando || !puedeEnviarTrasPreview || !entornoOk) return null;
+    if (!articuloSel || enviando || !puedeEnviarTrasPreview || !entornoOk || !tomaConocimientoOk) {
+      return null;
+    }
     setEnviando(true);
     setError("");
     try {
@@ -260,6 +292,8 @@ export function useSolicitudCambioDiaAlta({ personaId, articuloIdInicial = "" })
         fechaOrigen,
         fechaDestino,
         motivo: motivo.trim(),
+        tomaConocimientoAgente: true,
+        tomaConocimientoTexto: CAMBIO_DIA_TOMA_CONOCIMIENTO_TEXTO,
       });
       const motor = await esperarValidacionMotorPatronB(solicitud_id);
       setPreview(null);
@@ -269,9 +303,11 @@ export function useSolicitudCambioDiaAlta({ personaId, articuloIdInicial = "" })
       setFechaOrigen("");
       setFechaDestino("");
       setMotivo("");
+      setTomaConocimiento(false);
       return {
         solicitud_id,
         autorizacion_rrhh_sustituta: motor.solicitud?.autorizacion_rrhh_sustituta === true,
+        estado_solicitud_id: motor.estado_solicitud_id,
       };
     } catch (e) {
       setError(e?.message || "No se pudo enviar la solicitud.");
@@ -289,6 +325,7 @@ export function useSolicitudCambioDiaAlta({ personaId, articuloIdInicial = "" })
     motivo,
     personaId,
     puedeEnviarTrasPreview,
+    tomaConocimientoOk,
   ]);
 
   return {
@@ -307,7 +344,14 @@ export function useSolicitudCambioDiaAlta({ personaId, articuloIdInicial = "" })
     ymdMin,
     preaviso,
     fechasOk,
+    warningsFechas,
+    rangoDestino,
+    ventanaMaxDias: CAMBIO_DIA_VENTANA_MAX_DIAS_CORRIDOS,
     motivoOk,
+    tomaConocimiento,
+    setTomaConocimiento,
+    tomaConocimientoOk,
+    tomaConocimientoTexto: CAMBIO_DIA_TOMA_CONOCIMIENTO_TEXTO,
     gruposVigentes,
     grupoAnclaId,
     setGrupoAnclaId,

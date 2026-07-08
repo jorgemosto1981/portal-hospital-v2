@@ -1,5 +1,6 @@
 import oleada63Specs from "../../../../docs/v2/seeds/oleada_63_p2/OLEADA_63_P2_SPECS.json";
 
+import { articuloEsCambioDia } from "./cambioDiaUi.js";
 import { filaArticuloIngresoDesdeCallable } from "./ticketeraRouteUtils.js";
 
 /** @type {Map<string, Array<Record<string, unknown>>>} */
@@ -39,13 +40,26 @@ export function enriquecerArticuloIngresoListado(raw) {
   const norm = filaArticuloIngresoDesdeCallable(raw);
   if (!norm) return null;
 
+  const base = { ...raw, ...norm };
+  if (articuloEsCambioDia(base)) {
+    return {
+      ...base,
+      es_cambio_dia: true,
+      cambio_dia_solicitud:
+        base.cambio_dia_solicitud && typeof base.cambio_dia_solicitud === "object"
+          ? base.cambio_dia_solicitud
+          : { schema: "CAMBIO_DIA_V1" },
+      requiere_opcion_consumo: false,
+      opciones_consumo_solicitud: [],
+    };
+  }
+
   const tieneOpciones = norm.opciones_consumo_solicitud.length > 0;
   const requiere = norm.requiere_opcion_consumo || tieneOpciones;
 
   if (requiere) {
     return {
-      ...raw,
-      ...norm,
+      ...base,
       requiere_opcion_consumo: true,
       opciones_consumo_solicitud: norm.opciones_consumo_solicitud,
       dias_solicitados: norm.dias_solicitados ?? null,
@@ -56,12 +70,11 @@ export function enriquecerArticuloIngresoListado(raw) {
   const cod = String(norm.codigo_grilla || "").trim().toUpperCase();
   const fallback = OPCIONES_FALLBACK_POR_CODIGO.get(cod);
   if (!fallback?.length) {
-    return { ...raw, ...norm };
+    return base;
   }
 
   return {
-    ...raw,
-    ...norm,
+    ...base,
     requiere_opcion_consumo: true,
     opciones_consumo_solicitud: fallback,
     dias_solicitados: null,

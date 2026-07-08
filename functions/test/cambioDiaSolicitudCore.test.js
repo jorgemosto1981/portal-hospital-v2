@@ -44,4 +44,29 @@ describe("cambioDiaSolicitudCore", () => {
     assert.equal(fail.ok, false);
     assert.ok(fail.errores.some((e) => /motivo/i.test(e) || /preaviso|después/i.test(e)));
   });
+
+  it("rechaza ventana mayor a 10 días corridos", () => {
+    const fail = validarFechasMotivoCambioDia({
+      fechaOrigen: "2026-07-15",
+      fechaDestino: "2026-07-26",
+      motivo: "Trámite de servicio",
+      permiteRetroactividad: false,
+      plazoPreavisoInternoDias: 2,
+      hoyYmd: "2026-07-08",
+    });
+    assert.equal(fail.ok, false);
+    assert.ok(fail.errores.some((e) => /10 días corridos/i.test(e)));
+  });
+
+  it("acepta exactamente 10 días corridos", () => {
+    const ok = validarFechasMotivoCambioDia({
+      fechaOrigen: "2026-07-15",
+      fechaDestino: "2026-07-25",
+      motivo: "Trámite de servicio",
+      permiteRetroactividad: false,
+      plazoPreavisoInternoDias: 2,
+      hoyYmd: "2026-07-08",
+    });
+    assert.equal(ok.ok, true);
+  });
 });

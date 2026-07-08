@@ -108,6 +108,18 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
         });
         return;
       }
+      if (d.toma_conocimiento_agente !== true) {
+        await solRef.update({
+          estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+          motor_codigos: ["CAMBIO_DIA_TOMA_CONOCIMIENTO"],
+          motor_mensajes: [
+            "Debés aceptar la toma de conocimiento antes de enviar un Cambio de Día de Asistencia.",
+          ],
+          motor_validado_en: FieldValue.serverTimestamp(),
+          actualizado_en: FieldValue.serverTimestamp(),
+        });
+        return;
+      }
     }
 
     let motor;

@@ -1,9 +1,11 @@
 # Contrato de configuración — Art. CAMBIO-DIA (Etapa 1)
 
-**Estado:** contrato de producto · rama `feat/etapa1-cambio-dia` · 2026-07-08  
-**Principio:** *configurável* en ABM artículos (`cfg_articulos` + versión publicada). **Prohibido** hardcodear reglas de negocio en el wizard React.
+**Estado:** contrato de producto · **código en `master`/`develop`** · Soft Launch pausado 2026-07-08 · ver [`HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md`](./HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md)  
+**Principio:** *configurável* en ABM artículos (`cfg_articulos` + versión publicada). **Prohibido** hardcodear reglas de negocio en el wizard React (salvo textos UX de Soft Launch alineados al contrato).
 
-Relacionados: [`ETAPA1_GO_LIVE_V2.md`](../ETAPA1_GO_LIVE_V2.md) · [`ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md`](../ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md) · schema [`web/src/schemas/articulo.schema.js`](../../web/src/schemas/articulo.schema.js)
+Relacionados: [`ETAPA1_GO_LIVE_V2.md`](./ETAPA1_GO_LIVE_V2.md) · [`ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md`](./ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md) · schema [`web/src/schemas/articulo.schema.js`](../../web/src/schemas/articulo.schema.js)
+
+**IDs prod seed (2026-07-08):** `art_01KX0Z07N5PFY7ZG0ZZP93EJ8H` / `ver_01KX0Z07N70GZKBKF1P27C78SY` — [`seeds/cambio_dia/applied-ids.json`](./seeds/cambio_dia/applied-ids.json)
 
 ---
 
@@ -11,15 +13,16 @@ Relacionados: [`ETAPA1_GO_LIVE_V2.md`](../ETAPA1_GO_LIVE_V2.md) · [`ACTA_RRHH_E
 
 | Regla | Valor |
 |-------|--------|
-| Nombre / código | **Cambio de día (traslado propio)** / `CAMBIO-DIA` |
+| Nombre UI / código | **Cambio de Día de Asistencia** / `CAMBIO-DIA` (grilla `C-DIA`) |
 | Autorización jefe | **Sí** → alta en `cfg_esa_en_revision_jefe` (bandeja jefe) |
 | Descuenta saldo / cupo | **No** (`cupo_dias_por_ciclo: null`, sin Fase S de bolsa) |
 | Límite de uso anual/mensual | **Ninguno** (`tope_frecuencia_mensual: null`) |
 | Retroactivo | **No** (`permite_retroactividad: false`) |
 | Anticipación mínima | **2 días** — `plazo_preaviso_interno_dias: 2` (editable en ABM / workflow) |
-| Wizard UI | `fecha_origen`, `fecha_destino`, `motivo` |
-| Aplicación al aprobar | Server reutiliza **B-BATCH** traslado propio; fallo → estado remediación RRHH |
-| Filtros elegibilidad grilla | Origen laborable/con turno; destino franco/apto; mismos régimen/cargo GDT ancla; tope movimientos vigente |
+| Ventana origen↔destino | **Máx. 10 días corridos** (`CAMBIO_DIA_VENTANA_MAX_DIAS_CORRIDOS`) |
+| Wizard UI | Ausencia inicial, prestación destino, justificativo, grupo, toma de conocimiento |
+| Aplicación al aprobar | Server reutiliza **B-BATCH** traslado propio (GDT ancla); fallo → `cfg_esa_aprobada_pendiente_aplicacion` |
+| Filtros elegibilidad grilla | Origen laborable/con turno; destino franco/apto; mismos régimen/cargo GDT ancla; tope movimientos vigente *(capa RDA: reforzar en UAT)* |
 
 ---
 

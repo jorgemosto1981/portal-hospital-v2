@@ -48,6 +48,8 @@ export const solicitudPatronBAltaInputSchema = z
     fechaOrigen: ymdSchema.optional(),
     fechaDestino: ymdSchema.optional(),
     motivo: z.string().min(3).max(500).optional(),
+    tomaConocimientoAgente: z.boolean().optional(),
+    tomaConocimientoTexto: z.string().min(20).max(2000).optional(),
   })
   .strict()
   .superRefine((data, ctx) => {
@@ -57,6 +59,14 @@ export const solicitudPatronBAltaInputSchema = z
           code: z.ZodIssueCode.custom,
           path: ["fechaOrigen"],
           message: "CAMBIO-DIA requiere fechaOrigen, fechaDestino y motivo.",
+        });
+        return;
+      }
+      if (data.tomaConocimientoAgente !== true || !data.tomaConocimientoTexto) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["tomaConocimientoAgente"],
+          message: "Debés aceptar la toma de conocimiento antes de enviar.",
         });
         return;
       }
@@ -125,6 +135,8 @@ const solicitudPatronBShapeBaseSchema = z
     motivo: z.string().min(3).max(500).optional(),
     es_cambio_dia: z.literal(true).optional(),
     cambio_dia_schema: z.literal("CAMBIO_DIA_V1").optional(),
+    toma_conocimiento_agente: z.literal(true).optional(),
+    toma_conocimiento_texto: z.string().min(20).max(2000).optional(),
     creado_en: z.unknown(),
     actualizado_en: z.unknown(),
   })
@@ -160,12 +172,14 @@ export const solicitudArticuloCreateShapePatronBSchema = solicitudPatronBShapeBa
         !d.fecha_origen ||
         !d.fecha_destino ||
         !d.motivo ||
-        d.cambio_dia_schema !== "CAMBIO_DIA_V1"
+        d.cambio_dia_schema !== "CAMBIO_DIA_V1" ||
+        d.toma_conocimiento_agente !== true ||
+        !d.toma_conocimiento_texto
       ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["es_cambio_dia"],
-          message: "CAMBIO-DIA incompleto en el documento borrador.",
+          message: "CAMBIO-DIA incompleto en el documento borrador (incluye toma de conocimiento).",
         });
         return;
       }
@@ -254,6 +268,8 @@ export function buildSolicitudPatronBBorradorDocument(input, timestamps) {
     doc.motivo = parsed.motivo;
     doc.es_cambio_dia = true;
     doc.cambio_dia_schema = "CAMBIO_DIA_V1";
+    doc.toma_conocimiento_agente = true;
+    doc.toma_conocimiento_texto = parsed.tomaConocimientoTexto;
   }
   if (parsed.opcionConsumoId) {
     doc.opcion_consumo_id = parsed.opcionConsumoId;

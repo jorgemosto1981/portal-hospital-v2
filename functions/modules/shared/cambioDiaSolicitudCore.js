@@ -5,6 +5,9 @@
  * @see docs/v2/CONTRATO_CONFIG_ARTICULO_CAMBIO_DIA_V2.md
  */
 
+/** Máximo de días corridos entre ausencia inicial y prestación destino. */
+const CAMBIO_DIA_VENTANA_MAX_DIAS_CORRIDOS = 10;
+
 /**
  * @param {Record<string, unknown> | null | undefined} versionData
  */
@@ -21,6 +24,35 @@ function solicitudEsCambioDia(sol) {
 }
 
 /**
+ * @param {string} ymd
+ * @param {number} deltaDias
+ */
+function ymdAddDays(ymd, deltaDias) {
+  const s = String(ymd || "").trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return "";
+  const [y, m, d] = s.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + Math.floor(Number(deltaDias) || 0));
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Días corridos absolutos entre dos YMD (0 si iguales).
+ * @param {string} a
+ * @param {string} b
+ */
+function diasCorridosEntre(a, b) {
+  const sa = String(a || "").trim().slice(0, 10);
+  const sb = String(b || "").trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(sa) || !/^\d{4}-\d{2}-\d{2}$/.test(sb)) return null;
+  const [ya, ma, da] = sa.split("-").map(Number);
+  const [yb, mb, db] = sb.split("-").map(Number);
+  const ta = Date.UTC(ya, ma - 1, da);
+  const tb = Date.UTC(yb, mb - 1, db);
+  return Math.abs(Math.round((tb - ta) / 86400000));
+}
+
+/**
  * YMD mínimo para fecha_origen / fecha_destino: hoy + N días (calendario, zona BA).
  * @param {number} plazoPreavisoDias
  * @param {string} [hoyYmd]
@@ -31,13 +63,7 @@ function ymdMinimoPreaviso(plazoPreavisoDias, hoyYmd) {
     hoyYmd && /^\d{4}-\d{2}-\d{2}$/.test(hoyYmd)
       ? hoyYmd
       : new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
-  const [y, m, d] = hoy.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  dt.setUTCDate(dt.getUTCDate() + n);
-  const yy = dt.getUTCFullYear();
-  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(dt.getUTCDate()).padStart(2, "0");
-  return `${yy}-${mm}-${dd}`;
+  return ymdAddDays(hoy, n);
 }
 
 /**
@@ -49,6 +75,7 @@ function ymdMinimoPreaviso(plazoPreavisoDias, hoyYmd) {
  *   plazoPreavisoInternoDias: number | null,
  *   motivoMaxLen?: number,
  *   hoyYmd?: string,
+ *   ventanaMaxDiasCorridos?: number,
  * }} p
  */
 function validarFechasMotivoCambioDia(p) {
@@ -56,6 +83,10 @@ function validarFechasMotivoCambioDia(p) {
   const fd = String(p.fechaDestino || "").trim().slice(0, 10);
   const motivo = String(p.motivo || "").trim();
   const maxLen = Math.max(50, Math.floor(Number(p.motivoMaxLen) || 500));
+  const ventana =
+    p.ventanaMaxDiasCorridos == null
+      ? CAMBIO_DIA_VENTANA_MAX_DIAS_CORRIDOS
+      : Math.max(1, Math.floor(Number(p.ventanaMaxDiasCorridos)));
   const errores = [];
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fo) || !/^\d{4}-\d{2}-\d{2}$/.test(fd)) {
@@ -93,12 +124,24 @@ function validarFechasMotivoCambioDia(p) {
     }
   }
 
+  if (fo && fd && /^\d{4}-\d{2}-\d{2}$/.test(fo) && /^\d{4}-\d{2}-\d{2}$/.test(fd) && fo !== fd) {
+    const gap = diasCorridosEntre(fo, fd);
+    if (gap != null && gap > ventana) {
+      errores.push(
+        `La Fecha de Prestación Destino no puede distar más de ${ventana} días corridos de la Fecha de Ausencia Inicial (hoy hay ${gap} días entre ambas).`,
+      );
+    }
+  }
+
   return { ok: errores.length === 0, errores, fecha_origen: fo, fecha_destino: fd, motivo };
 }
 
 module.exports = {
+  CAMBIO_DIA_VENTANA_MAX_DIAS_CORRIDOS,
   versionEsCambioDia,
   solicitudEsCambioDia,
+  ymdAddDays,
+  diasCorridosEntre,
   ymdMinimoPreaviso,
   validarFechasMotivoCambioDia,
 };

@@ -114,6 +114,7 @@ export function solIdCorto(solId) {
 export function labelEstadoSolicitud(id) {
   const e = String(id || "");
   if (e === "cfg_esa_aprobada") return "Aprobada";
+  if (e === "cfg_esa_aprobada_pendiente_aplicacion") return "Aprobada · pendiente aplicación";
   if (e === "cfg_esa_en_revision_jefe") return "En revisión (jefe)";
   if (e === "cfg_esa_rechazada") return "Rechazada";
   if (e === "cfg_esa_en_revision_rrhh") return "En revisión RRHH";

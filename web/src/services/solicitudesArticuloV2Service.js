@@ -149,6 +149,8 @@ export async function crearSolicitudArticuloPatronBBorrador(params) {
       fechaOrigen: params.fechaOrigen,
       fechaDestino: params.fechaDestino,
       motivo: params.motivo,
+      tomaConocimientoAgente: params.tomaConocimientoAgente === true,
+      tomaConocimientoTexto: params.tomaConocimientoTexto,
     },
     { creado_en: serverTimestamp(), actualizado_en: serverTimestamp() },
   );

@@ -4,9 +4,13 @@
  *   ALLOW_FIRESTORE_SEED_V2=true node scripts/seed-v2/seed-cfg-etapa1-runtime.mjs
  *   ALLOW_FIRESTORE_SEED_V2=true node scripts/seed-v2/seed-cfg-etapa1-runtime.mjs --dry-run
  */
-import { initializeApp, getApps } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import "../load-env-v2.mjs";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { assertFirestoreSeedAllowed } from "./guard-no-seed.mjs";
+import { getAdminDb } from "../lib/firestoreAdminBootstrap.mjs";
 import {
   CFG_ETAPA1_COLLECTION,
   CFG_ETAPA1_RUNTIME_DOC,
@@ -17,17 +21,29 @@ import {
 assertFirestoreSeedAllowed("seed-cfg-etapa1-runtime");
 
 const dryRun = process.argv.includes("--dry-run");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const repoRoot = join(__dirname, "..", "..");
+const appliedCambioDiaPath = join(repoRoot, "docs/v2/seeds/cambio_dia/applied-ids.json");
 
-if (!getApps().length) {
-  initializeApp({
-    projectId: process.env.FIREBASE_V2_PROJECT_ID || process.env.GCLOUD_PROJECT || "portal-hospital-v2",
-  });
+/** @type {string[]} */
+const articuloIds = [...ETAPA1_RUNTIME_DEFAULTS.articulo_ids_etapa1];
+if (existsSync(appliedCambioDiaPath)) {
+  try {
+    const applied = JSON.parse(readFileSync(appliedCambioDiaPath, "utf8"));
+    const artId = String(applied?.artId || "").trim();
+    if (/^art_/i.test(artId) && !articuloIds.includes(artId)) {
+      articuloIds.push(artId);
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
-const db = getFirestore();
+const db = getAdminDb();
 const payload = {
   ...normalizeEtapa1Runtime({
     ...ETAPA1_RUNTIME_DEFAULTS,
+    articulo_ids_etapa1: articuloIds,
     // Soft Launch: set etapa1_habilitada true + gdt_ids_etapa1 con GDT nuevos
     etapa1_habilitada: false,
     forzar_catalogo_etapa1: false,

@@ -4,12 +4,18 @@ import { useNavigate } from "react-router-dom";
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
 import { LAO_ARTICULO_ID } from "../constants/laoArticulo.js";
+import { articuloEsCambioDia, CAMBIO_DIA_TITULO_UI } from "../features/solicitudes/cambioDiaUi.js";
+import { enriquecerArticuloIngresoListado } from "../features/solicitudes/enriquecerArticuloIngresoListado.js";
+import MisSolicitudesPanel from "../features/solicitudes/MisSolicitudesPanel.jsx";
 import { TICKETERA } from "../features/solicitudes/ticketeraUi.js";
 import { callListarArticulosIngresoAgente } from "../services/callables.js";
 import { ymdHoyBa } from "../features/solicitudes/ticketeraUtils.js";
 
 /** @param {Record<string, unknown>} a */
 function etiquetaCortaArticulo(a) {
+  if (articuloEsCambioDia(a)) {
+    return { cod: CAMBIO_DIA_TITULO_UI, nom: "" };
+  }
   const cod = String(a?.codigo_grilla || "").trim() || "Artículo";
   const nom = String(a?.nombre || "").trim();
   return { cod, nom };
@@ -40,8 +46,11 @@ export default function TicketeraHub() {
     try {
       const res = await callListarArticulosIngresoAgente({ fecha_desde: fechaRef });
       const list = res?.data?.articulos || [];
-      setArticulos(Array.isArray(list) ? list : []);
-      if (list.length === 0) {
+      const enriched = (Array.isArray(list) ? list : [])
+        .map((row) => enriquecerArticuloIngresoListado(row))
+        .filter(Boolean);
+      setArticulos(enriched);
+      if (enriched.length === 0) {
         const ev = res?.data?.elegibilidad_vacia;
         const msg = Array.isArray(ev?.mensajes) ? String(ev.mensajes[0] || "").trim() : "";
         setMotivoVacio(msg);
@@ -139,6 +148,8 @@ export default function TicketeraHub() {
           Licencia anual ordinaria · bolsa y trámite guiado
         </span>
       </button>
+
+      <MisSolicitudesPanel />
     </div>
   );
 }
