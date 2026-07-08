@@ -4,6 +4,16 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 
 **Regla de arquitectura:** la V2 no comparte proyecto Firebase / datos ni código de despliegue con la V1; ver [`PLAN_MODULOS_V2.md`](./PLAN_MODULOS_V2.md). Config de deploy en la raíz: [`firebase.json`](../../firebase.json) (reglas/índices en [`firebase-v2/`](../../firebase-v2/), código en [`functions/`](../../functions)). V1: [`../portal-hospital-v1/portal-hospital/firebase.json`](../../../portal-hospital-v1/portal-hospital/firebase.json).
 
+### Etapa 1 vida real (go-live acotado) — aceptado 2026-07-08
+
+| Documento | Rol |
+|-----------|-----|
+| **[`CHECKLIST_UAT_ETAPA1_V2.md`](./CHECKLIST_UAT_ETAPA1_V2.md)** | Contrato de aceptación por rol (Agente / Jefe solo bandeja / RRHH) |
+| **[`ETAPA1_POLITICA_DEPLOY_V2.md`](./ETAPA1_POLITICA_DEPLOY_V2.md)** | Freeze prod piloto, proyecto-dev, gate UAT, rollback |
+| **[`ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md`](./ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md)** | Contrato ops RRHH: alcance, población GDT/usuarios **nuevos**, umbrales Soft Launch |
+| **[`ETAPA1_GO_LIVE_V2.md`](./ETAPA1_GO_LIVE_V2.md)** | Runbook técnico Día D: allowlist, catálogo, feature off |
+| **[`ETAPA1_GIT_Y_ENTORNOS_V2.md`](./ETAPA1_GIT_Y_ENTORNOS_V2.md)** | Tag `v0.9.0-base`, ramas `master`/`develop`, Firebase-dev, feature flags |
+
 ### Módulo operativo y de asistencia (biblia de referencia)
 
 | Documento | Rol |
