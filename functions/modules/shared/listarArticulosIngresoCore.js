@@ -24,6 +24,12 @@ const {
   mapOpcionesParaListadoCliente,
   versionTieneOpcionesConsumoActivas,
 } = require("./opcionesConsumoSolicitud");
+const {
+  loadEtapa1Runtime,
+  personaPermitidaCircuitoEtapa1,
+  articuloFilaPermitidaEtapa1,
+} = require("./etapa1RuntimeLoader");
+const { rolesHlcFromAuthToken } = require("./solicitudElegibilidadLaboral");
 
 const CFG_EST_VER_PUBLICADA = "cfg_est_ver_publicada";
 
@@ -165,6 +171,36 @@ async function listarArticulosIngresoPatronB(params) {
   const diasExt = Number(persona.antiguedad_reconocida_dias);
   const externos = Number.isFinite(diasExt) && diasExt >= 0 ? Math.floor(diasExt) : 0;
 
+  const etapa1Cfg = await loadEtapa1Runtime(db);
+  const rolesTok = rolesHlcFromAuthToken(authToken);
+  const esRrhh =
+    rolesTok.includes("CFG_RRHH") ||
+    String(authToken?.portal_role || "")
+      .trim()
+      .toLowerCase() === "rrhh" ||
+    String(authToken?.portal_role || "")
+      .trim()
+      .toLowerCase() === "admin";
+
+  if (!personaPermitidaCircuitoEtapa1(etapa1Cfg, personaId, hlcVigentes, { esRrhh })) {
+    return {
+      articulos: [],
+      fecha_desde: fechaDesde,
+      persona_id: personaId,
+      meta: {
+        listado_modo: modoListadoArticulosIngreso(),
+        candidatos_evaluados: 0,
+        etapa1_bloqueado: true,
+      },
+      elegibilidad_vacia: {
+        codigos: ["ETAPA1_ALLOWLIST"],
+        mensajes: [
+          "Tu grupo de trabajo no está habilitado en Etapa 1 del portal. Si deberías estar en el piloto, pedí a RRHH que te asigne al GDT correspondiente.",
+        ],
+      },
+    };
+  }
+
   const candidatos = await cargarCandidatosPatronB(db);
   /** @type {Array<object>} */
   const articulos = [];
@@ -201,7 +237,7 @@ async function listarArticulosIngresoPatronB(params) {
       fechaHasta = await fechaHastaDesdeVersionPatronBAsync(db, fechaDesde, diasSolicitados, versionData);
     }
 
-    articulos.push({
+    const row = {
       articulo_id: articuloId,
       version_id: versionId,
       codigo_grilla: String(core.codigo || core.nombre_corto || "").trim() || "ART",
@@ -233,7 +269,10 @@ async function listarArticulosIngresoPatronB(params) {
           incluye_feriados_institucionales: m.incluyeFeriadosInstitucionales,
         };
       })(),
-    });
+    };
+
+    if (!articuloFilaPermitidaEtapa1(etapa1Cfg, row)) continue;
+    articulos.push(row);
   }
 
   return {
@@ -243,6 +282,7 @@ async function listarArticulosIngresoPatronB(params) {
     meta: {
       listado_modo: modoListadoArticulosIngreso(),
       candidatos_evaluados: candidatos.length,
+      etapa1_catalogo_filtrado: true,
     },
     ...(elegibilidadVacia && articulos.length === 0 ? { elegibilidad_vacia: elegibilidadVacia } : {}),
   };

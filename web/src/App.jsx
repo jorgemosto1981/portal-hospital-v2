@@ -33,6 +33,7 @@ import GuardArticuloIngreso from "./features/solicitudes/GuardArticuloIngreso.js
 import RedirectTicketeraAlta from "./features/solicitudes/RedirectTicketeraAlta.jsx";
 import TicketeraAltaPage from "./pages/TicketeraAltaPage.jsx";
 import AvisoMedicoPage from "./pages/AvisoMedicoPage.jsx";
+import Etapa1SurfaceGuard from "./features/etapa1/Etapa1SurfaceGuard.jsx";
 import CheckinSaldosAgente from "./pages/CheckinSaldosAgente.jsx";
 import AltaAgenteOnboardingRRHH from "./pages/AltaAgenteOnboardingRRHH.jsx";
 import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
@@ -127,19 +128,68 @@ export default function App() {
               />
               <Route path="patron-b" element={<RedirectTicketeraAlta />} />
               <Route path="patron-c" element={<RedirectTicketeraAlta />} />
-              <Route path="lao" element={<LaoWizardTicketera />} />
-              <Route path="lao-formulario" element={<SolicitudLaoAlta />} />
-              <Route path="aviso-medico" element={<AvisoMedicoPage />} />
+              <Route
+                path="lao"
+                element={
+                  <Etapa1SurfaceGuard flag="lao">
+                    <LaoWizardTicketera />
+                  </Etapa1SurfaceGuard>
+                }
+              />
+              <Route
+                path="lao-formulario"
+                element={
+                  <Etapa1SurfaceGuard flag="lao">
+                    <SolicitudLaoAlta />
+                  </Etapa1SurfaceGuard>
+                }
+              />
+              <Route
+                path="aviso-medico"
+                element={
+                  <Etapa1SurfaceGuard flag="medico">
+                    <AvisoMedicoPage />
+                  </Etapa1SurfaceGuard>
+                }
+              />
             </Route>
             <Route path="solicitudes/asuntos-particulares" element={<Solicitud64AAlta />} />
             <Route path="perfil" element={<DatosPersonales />} />
             <Route path="perfil/:personaId" element={<Perfil />} />
             <Route path="grilla" element={<GrillaPortalRedirect />} />
             <Route path="jefe/solicitudes" element={<BandejaJefeSolicitudes />} />
-            <Route path="medico/solicitudes" element={<BandejaAuditorSolicitudes />} />
-            <Route path="medico/junta" element={<BandejaJuntaSolicitudes />} />
-            <Route path="jefe/planes-turno" element={<PlanTurnoServicioJefePage />} />
-            <Route path="jefe/grilla-operativa" element={<GrillaOperativaJefePage />} />
+            <Route
+              path="medico/solicitudes"
+              element={
+                <Etapa1SurfaceGuard flag="medico">
+                  <BandejaAuditorSolicitudes />
+                </Etapa1SurfaceGuard>
+              }
+            />
+            <Route
+              path="medico/junta"
+              element={
+                <Etapa1SurfaceGuard flag="medico">
+                  <BandejaJuntaSolicitudes />
+                </Etapa1SurfaceGuard>
+              }
+            />
+            <Route
+              path="jefe/planes-turno"
+              element={
+                <Etapa1SurfaceGuard flag="gso_jefe">
+                  <PlanTurnoServicioJefePage />
+                </Etapa1SurfaceGuard>
+              }
+            />
+            <Route
+              path="jefe/grilla-operativa"
+              element={
+                <Etapa1SurfaceGuard flag="gso_jefe">
+                  <GrillaOperativaJefePage />
+                </Etapa1SurfaceGuard>
+              }
+            />
             <Route path="modulos" element={<EstadoModulos />} />
             <Route path="pantallas" element={<PantallasCatalogo />} />
             <Route path="configuracion" element={<Configuracion />} />

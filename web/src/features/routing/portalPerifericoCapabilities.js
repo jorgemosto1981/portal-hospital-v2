@@ -69,13 +69,18 @@ export function puedeAccederShellGso(shell, claims, hasPortalRoles) {
  * @param {(roles: readonly string[]) => boolean} hasPortalRoles
  * @param {import("./portalGsoShellStorage.js").GsoShellId | null} [lastVisited]
  */
-export function resolveGrillaPortalRedirectPath(claims, hasPortalRoles, lastVisited = readLastVisitedGsoShell()) {
+export function resolveGrillaPortalRedirectPath(claims, hasPortalRoles, lastVisited = readLastVisitedGsoShell(), opts = {}) {
+  const jefeGsoOk = opts.jefeGsoHabilitado !== false;
   if (lastVisited && puedeAccederShellGso(lastVisited, claims, hasPortalRoles)) {
-    return lastVisited === "rrhh"
-      ? "/portal/rrhh/grilla-operativa"
-      : "/portal/jefe/grilla-operativa";
+    if (lastVisited === "jefe" && !jefeGsoOk) {
+      /* skip jefe shell */
+    } else {
+      return lastVisited === "rrhh"
+        ? "/portal/rrhh/grilla-operativa"
+        : "/portal/jefe/grilla-operativa";
+    }
   }
-  if (puedeAccederShellGsoJefe(claims, hasPortalRoles)) {
+  if (jefeGsoOk && puedeAccederShellGsoJefe(claims, hasPortalRoles)) {
     return "/portal/jefe/grilla-operativa";
   }
   if (puedeAccederShellGsoRrhh(claims, hasPortalRoles)) {

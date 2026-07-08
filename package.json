@@ -53,6 +53,7 @@
     "test:firestore:v2": "node scripts/seed-v2/test-firestore-v2-connection.mjs",
     "test:firestore:rules": "firebase emulators:exec --only firestore --project demo-hospital-v2 \"node tests/firestore-rules.mjs\"",
     "seed:cfg": "node scripts/seed-v2/seed-cfg.mjs",
+    "seed:cfg-etapa1": "node scripts/seed-v2/seed-cfg-etapa1-runtime.mjs",
     "seed:catalogos-articulos-v2": "node scripts/seed-v2/seed-catalogos-articulos-v2.mjs",
     "seed:p4-art14:dry-run": "node scripts/seed-v2/apply-p4-art14.mjs --dry-run",
     "seed:p4-art14": "node scripts/seed-v2/apply-p4-art14.mjs --apply",

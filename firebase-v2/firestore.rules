@@ -42,6 +42,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Etapa 1 — feature flags / allowlist (escritura solo Admin SDK)
+    match /cfg_etapa1/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // Catálogos usados en onboarding (listarCatalogoOnboarding) — mismo criterio: solo lectura autenticada.
     match /cfg_provincia/{docId} {
       allow read: if signedIn();

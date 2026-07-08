@@ -13,6 +13,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | **[`ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md`](./ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md)** | Contrato ops RRHH: alcance, población GDT/usuarios **nuevos**, umbrales Soft Launch |
 | **[`ETAPA1_GO_LIVE_V2.md`](./ETAPA1_GO_LIVE_V2.md)** | Runbook técnico Día D: allowlist, catálogo, feature off |
 | **[`ETAPA1_GIT_Y_ENTORNOS_V2.md`](./ETAPA1_GIT_Y_ENTORNOS_V2.md)** | Tag `v0.9.0-base`, ramas `master`/`develop`, Firebase-dev, feature flags |
+| [`ETAPA1_FIREBASE_DEV_SETUP_V2.md`](./ETAPA1_FIREBASE_DEV_SETUP_V2.md) | Checklist creación proyecto `portal-hospital-v2-dev` |
 
 ### Módulo operativo y de asistencia (biblia de referencia)
 

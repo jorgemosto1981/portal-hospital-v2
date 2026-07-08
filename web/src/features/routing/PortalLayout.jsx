@@ -12,6 +12,7 @@ import {
 import { useAuthSession } from "../auth/useAuthSession.js";
 import { useAuthClaims } from "../auth/useAuthClaims.js";
 import { ArticulosIngresoProvider } from "../solicitudes/ArticulosIngresoProvider.jsx";
+import { Etapa1RuntimeProvider } from "../etapa1/Etapa1RuntimeProvider.jsx";
 import {
   shellGsoDesdePathname,
   writeLastVisitedGsoShell,
@@ -48,29 +49,31 @@ export default function PortalLayout() {
   }, []);
 
   return (
-    <ArticulosIngresoProvider personaId={personaId}>
-      <MobileLayout
-        activeTab={activeTab}
-        onTabChange={(nextTab) => {
-          const m = MODULOS_PORTAL.find((x) => x.id === nextTab);
-          if (!m) return;
-          if (intentarBloquearNavegacionPortal(m.path)) {
-            const { mensaje } = consultarBloqueoColaPendiente();
-            toast.error(mensaje, { duration: 5000 });
-            return;
-          }
-          navigate(m.path);
-        }}
-        devBypassAuth={BYPASS_AUTH && !user}
-      >
-        <Outlet />
-      </MobileLayout>
-      <HelpFab onClick={() => setHelpAbierto(true)} />
-      <HelpDrawer
-        abierto={helpAbierto}
-        onCerrar={() => setHelpAbierto(false)}
-        focoTermino={helpFocoTermino}
-      />
-    </ArticulosIngresoProvider>
+    <Etapa1RuntimeProvider>
+      <ArticulosIngresoProvider personaId={personaId}>
+        <MobileLayout
+          activeTab={activeTab}
+          onTabChange={(nextTab) => {
+            const m = MODULOS_PORTAL.find((x) => x.id === nextTab);
+            if (!m) return;
+            if (intentarBloquearNavegacionPortal(m.path)) {
+              const { mensaje } = consultarBloqueoColaPendiente();
+              toast.error(mensaje, { duration: 5000 });
+              return;
+            }
+            navigate(m.path);
+          }}
+          devBypassAuth={BYPASS_AUTH && !user}
+        >
+          <Outlet />
+        </MobileLayout>
+        <HelpFab onClick={() => setHelpAbierto(true)} />
+        <HelpDrawer
+          abierto={helpAbierto}
+          onCerrar={() => setHelpAbierto(false)}
+          focoTermino={helpFocoTermino}
+        />
+      </ArticulosIngresoProvider>
+    </Etapa1RuntimeProvider>
   );
 }
