@@ -1,13 +1,15 @@
 # Punto de Continuación — Próxima Sesión
 
-> **RETOMAR AQUÍ — Guía Etapa 1 estado y ruta (2026-07-14):**  
-> [`GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md`](./GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md)  
-> Veredicto: candados OK · Soft Launch UAT pendiente · `v2-dev` creado pero vacío · working tree sin commit
+> **PAUSA FORMAL — Cierre deploy Soft Launch Etapa 1 (2026-07-14):**  
+> [`HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md`](./HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md)  
+> Commit `6dee722` · hosting + functions acuse en prod · `master`=`develop`=`origin` · pelota RRHH (UAT + altas)  
+> **Próxima sesión técnica:** setup `portal-hospital-v2-dev` (Vía B)
 
-> **Sesión 2026-07-14:** [`HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO.md`](./HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO.md)  
-> Rules Firestore **desplegadas** · hosting UI **pendiente**
+> **Guía estado/ruta:** [`GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md`](./GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md)
 
-> **Baseline Soft Launch pausa (2026-07-08):** [`HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md`](./HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md) · master @ `f5c8b5e`
+> **Detalle oleada UX:** [`HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO.md`](./HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO.md)
+
+> **Baseline Soft Launch previa:** [`HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md`](./HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md)
 
 ---
 

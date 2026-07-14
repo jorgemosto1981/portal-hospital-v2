@@ -1,7 +1,8 @@
 # Handoff — sesión 2026-07-14 Soft Launch UX + rules CAMBIO-DIA + calendario consulta
 
-**Estado:** sesión **cerrada / documentada** · trabajo en working tree **sin commit** (salvo deploy de rules ya en prod)  
+**Estado:** oleada documentada · **supersedido como “punto de retoma” por** [`HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md`](./HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md) (deploy hosting + functions + git sync ya hechos)  
 **Baseline previa:** Soft Launch pausa `f5c8b5e` ([handoff 2026-07-08](./HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md))  
+**Commit oleada:** `6dee722`  
 **Prod Firebase:** `portal-hospital-v2` · Hosting https://portal-hospital-v2.web.app  
 **Chat:** continuación Soft Launch Etapa 1 (Mis solicitudes, CAMBIO-DIA, calendario usuario)
 
@@ -28,9 +29,8 @@ Relacionados: [`CHECKLIST_UAT_ETAPA1_V2.md`](./CHECKLIST_UAT_ETAPA1_V2.md) · [`
 | Pieza | Estado |
 |-------|--------|
 | `firebase deploy --only firestore:rules` (`portal-hospital-v2`) | **Hecho** (2026-07-14) — create CAMBIO-DIA deja de fallar por límite 1000 exprs |
-| Callables acuse (`registrarAcuseRechazoAgente`, `obtenerContextoAcuseRechazoAgente`) | Cableados en `functions/index.js`; **verificar** si ya se desplegaron en functions (si el modal falla en prod → redeploy) |
-| Callables preview / entorno Patrón B | Redeploy parcial mencionado en sesión previa de este hilo; confirmar en consola si hace falta |
-| Hosting (`npm run build:web` + `firebase deploy --only hosting`) | **Pendiente** — UX Mis solicitudes / CAMBIO-DIA / calendario consulta **solo en local Vite** hasta deploy |
+| Callables acuse (`registrarAcuseRechazoAgente`, `obtenerContextoAcuseRechazoAgente`) | **Desplegados** prod (2026-07-14) |
+| Hosting (`npm run build:web` + `firebase deploy --only hosting`) | **Desplegado** → https://portal-hospital-v2.web.app |
 
 ---
 

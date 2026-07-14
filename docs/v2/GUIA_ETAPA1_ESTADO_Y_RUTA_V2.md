@@ -1,42 +1,42 @@
 # Guía Etapa 1 — dónde estamos y por dónde seguimos
 
-**Fecha foto:** 2026-07-14  
+**Fecha foto:** 2026-07-14 (actualizada post-deploy `6dee722`)  
 **Objetivo del plan:** habilitar la web piloto para un cupo controlado (~5–10 Soft Launch → ~70–80 oleada) **y** seguir desarrollando el resto de V2 en paralelo, encendiendo novedades con flags.
 
 **Documentos de contrato (no sustituye; resume):**  
 [`ETAPA1_GIT_Y_ENTORNOS_V2`](./ETAPA1_GIT_Y_ENTORNOS_V2.md) · [`ETAPA1_POLITICA_DEPLOY_V2`](./ETAPA1_POLITICA_DEPLOY_V2.md) · [`ETAPA1_GO_LIVE_V2`](./ETAPA1_GO_LIVE_V2.md) · [`ACTA_RRHH_ETAPA1_VIDA_REAL_V2`](./ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md) · [`CHECKLIST_UAT_ETAPA1_V2`](./CHECKLIST_UAT_ETAPA1_V2.md) · [`ETAPA1_FIREBASE_DEV_SETUP_V2`](./ETAPA1_FIREBASE_DEV_SETUP_V2.md)
 
-**Sesión reciente:** [`HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO`](./HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO.md)
+**Pausa / retoma:** [`HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md`](./HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md) · detalle oleada [`HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO.md`](./HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO.md)
 
 ---
 
 ## 1. Veredicto: ¿vamos cumpliendo el plan?
 
-**Sí en arquitectura y candados; Soft Launch operativo aún no cerrado.**
+**Sí en arquitectura, candados y deploy Soft Launch UX; Soft Launch de negocio (UAT + altas) pendiente.**
 
 | Eje del plan | Estado | Notas |
 |--------------|--------|--------|
 | Docs UAT / Deploy / Acta / Go-Live / Git | ✅ | Persistidos y aceptados 2026-07-08 |
 | Tag inmutable `v0.9.0-base` | ✅ | `d58b73a` ← commit `f6ac0cc` (antes de commits Etapa 1) |
-| Rama `master` = prod estable Etapa 1 | ✅ | `f5c8b5e` (Soft Launch CAMBIO-DIA documentado) |
-| Rama `develop` arenero | ⚠️ | Existe en **remoto** y **igual** a `master` (`0/0`). Localmente a veces no está checkouteada |
-| Candados `cfg_etapa1/runtime` + filtro catálogo | ✅ | Prod con `etapa1_habilitada`, arts 64A/B/63j/CAMBIO-DIA, LAO/LM/GSO jefe **off** |
-| CAMBIO-DIA + B-BATCH | ✅ código/seed | IDs prod en seed; UAT vivo pendiente |
-| Soft Launch 5–10 (Día D) | ⏳ | GDT piloto + tooling listos; faltan UAT firmado + altas restantes + release hosting de UX |
-| Oleada ~70–80 | ⏳ | Solo tras Go Soft Launch (§ umbrales Acta) |
-| Firebase `portal-hospital-v2-dev` | ⚠️ creado | Proyecto **sí** (sesión previa). **Firestore/Auth/app Web aún no operativos** |
-| Desarrollo paralelo features grandes en-dev | ⏳ | Bloqueado hasta completar setup-dev |
+| Rama `master` = prod estable Etapa 1 | ✅ | `6dee722` (Soft Launch UX + acuse + calendario) |
+| Rama `develop` arenero | ✅ | Igual a `master` / `origin/*` @ `6dee722` |
+| Candados `cfg_etapa1/runtime` + filtro catálogo | ✅ | Prod; LAO/LM/GSO jefe **off** |
+| CAMBIO-DIA + B-BATCH + UX + rules | ✅ en prod | UAT vivo pendiente |
+| Soft Launch 5–10 (Día D) | ⏳ | Hosting listo; faltan UAT firmado + altas RRHH |
+| Oleada ~70–80 | ⏳ | Solo tras Go Soft Launch |
+| Firebase `portal-hospital-v2-dev` | ⚠️ creado | Sin Firestore/Auth/app Web operativos |
+| Desarrollo paralelo features grandes en-dev | ⏳ | Próxima prioridad técnica (Vía B) |
 
 ### Orden ejecutivo (`ETAPA1_GIT_Y_ENTORNOS` §4)
 
 | Paso | Qué | Estado |
 |------|-----|--------|
-| 0 | Docs + tag `v0.9.0-base` + rama `develop` | ✅ docs/tag · `develop` remoto = `master` |
-| 1 | Crear `portal-hospital-v2-dev` | ✅ proyecto creado · ❌ sin APIs/app |
-| 2 | `cfg_etapa1` / feature flags | ✅ en **prod** |
+| 0 | Docs + tag `v0.9.0-base` + rama `develop` | ✅ |
+| 1 | Crear `portal-hospital-v2-dev` | ✅ proyecto · ❌ setup APIs/app |
+| 2 | `cfg_etapa1` / feature flags | ✅ prod |
 | 3 | Candados allowlist / catálogo / hide superficies | ✅ |
-| 4 | CAMBIO-DIA + B-BATCH | ✅ implementado · ⏳ UAT |
-| 5 | GDT nuevos + Soft Launch 5–10 | ⏳ en curso (1 GDT piloto; altas RRHH incompletas) |
+| 4 | CAMBIO-DIA + B-BATCH | ✅ prod · ⏳ UAT |
+| 5 | GDT nuevos + Soft Launch 5–10 | ⏳ negocio (altas + UAT) |
 
 ---
 
@@ -44,14 +44,14 @@
 
 | Recurso | Valor |
 |---------|--------|
-| `origin/master` | `f5c8b5e` Soft Launch CAMBIO-DIA |
-| `origin/develop` | **mismo** `f5c8b5e` |
+| `origin/master` | `6dee722` Soft Launch UX + deploy |
+| `origin/develop` | **mismo** `6dee722` |
 | Tag `v0.9.0-base` | `d58b73a` → `f6ac0cc` (baseline pre-Etapa1) |
-| Working tree local | Cambios **sin commit** (Mis solicitudes/acuse, CAMBIO-DIA UX, calendario consulta, rules tests, handoffs) |
+| Working tree | Solo `scripts/_tmp-*` untracked |
 | Prod Firebase | `portal-hospital-v2` · https://portal-hospital-v2.web.app |
-| Dev Firebase | `portal-hospital-v2-dev` · alias `.firebaserc` `dev` · **sin app Web · Firestore API no habilitada** |
-| Rules CAMBIO-DIA (fix 1000 exprs) | **Desplegadas en prod** (2026-07-14) |
-| Hosting UI sesión 14-jul | **Pendiente** (solo Vite local) |
+| Dev Firebase | `portal-hospital-v2-dev` · alias `dev` · **sin app Web · Firestore API no habilitada** |
+| Rules CAMBIO-DIA | **En prod** |
+| Hosting Soft Launch UX | **En prod** (`6dee722`) |
 
 ### Convención de trabajo (reafirmar)
 
@@ -99,30 +99,27 @@ Hasta que-dev esté usable: en prod **solo** entregas Etapa 1 (moratoria).
 
 ## 4. Ruta inmediata (ordenado)
 
-### Ahora — cerrar el paquete local → prod Etapa 1
+### Hecho — paquete local cerrado (2026-07-14)
 
-1. **Commit** oleada 2026-07-14 (sin `scripts/_tmp-*`).  
-2. Smoke local: login Soft Launch · CAMBIO-DIA envío · Mis solicitudes/acuse · calendario consulta.  
-3. Deploy:  
-   - Functions acuse (si faltan en prod)  
-   - `build:web` + `hosting`  
-4. Smoke en `.web.app`.  
-5. Merge/`push` a `master` (y alinear `develop` si hace falta).
+1. ~~Commit oleada~~ → `6dee722`  
+2. ~~Smoke~~ (acordado verde)  
+3. ~~Deploy functions acuse + hosting~~ → https://portal-hospital-v2.web.app  
+4. ~~`master` / `develop` alineados en `origin`~~  
 
-### Luego — Soft Launch (cupo real)
+### Ahora — Soft Launch (cupo real / negocio)
 
-6. Completar **UAT** [`CHECKLIST_UAT_ETAPA1_V2`](./CHECKLIST_UAT_ETAPA1_V2.md) o smoke firmado (64 + jefe + TC + CAMBIO-DIA happy path).  
-7. RRHH: altas restantes (5–10 agentes, 1–2 jefes), HLg/HLc, check-in 64, jerarquías.  
-8. Día D Soft Launch → revisión 48–72 h → **Go/No-Go oleada**.  
-9. Oleada por tandas hasta ~70–80 (siempre vía GDT en `gdt_ids_etapa1`, no “abrir el hospital”).
+5. Completar **UAT** [`CHECKLIST_UAT_ETAPA1_V2`](./CHECKLIST_UAT_ETAPA1_V2.md) en vivo (o smoke firmado).  
+6. RRHH: altas restantes (5–10 agentes, 1–2 jefes), HLg/HLc, check-in 64, jerarquías.  
+7. Día D Soft Launch → revisión 48–72 h → **Go/No-Go oleada**.  
+8. Oleada por tandas hasta ~70–80 (siempre vía GDT en `gdt_ids_etapa1`).
 
-### En paralelo (tan pronto se pueda) — habilitar-dev
+### En paralelo (próxima sesión técnica) — habilitar-dev
 
-10. Consola `portal-hospital-v2-dev`: Firestore + Auth + Storage + Blaze + app Web.  
-11. `.env.v2.dev.local` + script Vite `dev:web` apuntando a-dev (hoy solo lee `.env.v2.local`).  
-12. `firebase use dev` → deploy rules/indexes (+ functions).  
-13. Seed mínimo `cfg_etapa1` + datos de prueba.  
-14. Features grandes solo contra-dev; a `master` con flags **false**.
+9. Consola `portal-hospital-v2-dev`: Firestore + Auth + Storage + Blaze + app Web.  
+10. `.env.v2.dev.local` + script Vite `dev:web` apuntando a-dev.  
+11. `firebase use dev` → deploy rules/indexes (+ functions).  
+12. Seed mínimo `cfg_etapa1` + datos de prueba.  
+13. Features grandes solo contra-dev; a `master` con flags **false**.
 
 Checklist detallada-dev: [`ETAPA1_FIREBASE_DEV_SETUP_V2`](./ETAPA1_FIREBASE_DEV_SETUP_V2.md).
 
