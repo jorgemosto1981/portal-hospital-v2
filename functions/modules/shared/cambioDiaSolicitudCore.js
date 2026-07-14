@@ -109,7 +109,7 @@ function validarFechasMotivoCambioDia(p) {
 
   if (p.permiteRetroactividad !== true) {
     if (fo && fo < hoy) errores.push("No se permite fecha origen retroactiva.");
-    if (fd && fd < hoy) errores.push("No se permite fecha destino retroactiva.");
+    // Destino: únicamente ventana ±N respecto del origen (sin piso “hoy”).
   }
 
   const preaviso =
@@ -119,9 +119,7 @@ function validarFechasMotivoCambioDia(p) {
     if (fo && fo < min) {
       errores.push(`La fecha origen debe ser al menos ${preaviso} día(s) después de hoy (${min}).`);
     }
-    if (fd && fd < min) {
-      errores.push(`La fecha destino debe ser al menos ${preaviso} día(s) después de hoy (${min}).`);
-    }
+    // Destino: no aplica el mismo piso de anticipación; lo limita la ventana ±N y no-retroactividad.
   }
 
   if (fo && fd && /^\d{4}-\d{2}-\d{2}$/.test(fo) && /^\d{4}-\d{2}-\d{2}$/.test(fd) && fo !== fd) {

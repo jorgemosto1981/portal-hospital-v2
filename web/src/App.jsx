@@ -39,6 +39,7 @@ import AltaAgenteOnboardingRRHH from "./pages/AltaAgenteOnboardingRRHH.jsx";
 import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
 import SeguimientoEnrolamientoUsuariosRRHH from "./pages/SeguimientoEnrolamientoUsuariosRRHH.jsx";
 import CalendarioConfig from "./pages/rrhh/CalendarioConfig.jsx";
+import CalendarioInstitucionalConsulta from "./pages/CalendarioInstitucionalConsulta.jsx";
 import RegimenesHorariosPage from "./pages/rrhh/RegimenesHorariosPage.jsx";
 import PlanTurnoServicioJefePage from "./pages/jefe/PlanTurnoServicioJefePage.jsx";
 import PlanTurnoServicioRrhhPage from "./pages/rrhh/PlanTurnoServicioRrhhPage.jsx";
@@ -115,6 +116,7 @@ export default function App() {
             <Route index element={<Navigate to="home" replace />} />
             <Route path="home" element={<Inicio />} />
             <Route path="mi-perfil" element={<PerfilUsuario />} />
+            <Route path="calendario-institucional" element={<CalendarioInstitucionalConsulta />} />
             <Route path="laboral" element={<DatosLaborales />} />
             <Route path="solicitudes" element={<TicketeraShell />}>
               <Route index element={<TicketeraHub />} />

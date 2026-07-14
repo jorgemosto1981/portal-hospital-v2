@@ -1,5 +1,7 @@
 # Handoff — Soft Launch Etapa 1 / CAMBIO-DIA (pausa 2026-07-08)
 
+> **Continúa en:** [`HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO.md`](./HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO.md) (UX Mis solicitudes/acuse, CAMBIO-DIA, rules fix, calendario consulta).
+
 **Estado:** implementación Soft Launch **pausada** en este punto · continuar en próxima sesión desde otra PC  
 **Commit de pausa:** Soft Launch UI (TC, Mis solicitudes, ventana ±10 días) + docs/handoff + IDs prod  
 **Repo alineado post-push:** `master` = `develop` = `origin/*`  

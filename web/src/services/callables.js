@@ -261,6 +261,16 @@ export function callRegistrarTomaConocimientoRrhhSolicitud(data) {
   return httpsCallable(getFunctionsV2(), "registrarTomaConocimientoRrhhSolicitud")(data);
 }
 
+/** Titular: acuse obligatorio de rechazo (escribe agente_acuse_rechazo_*). */
+export function callRegistrarAcuseRechazoAgente(data) {
+  return httpsCallable(getFunctionsV2(), "registrarAcuseRechazoAgente")(data);
+}
+
+/** Titular: detalle enriquecido para modal de acuse de rechazo. */
+export function callObtenerContextoAcuseRechazoAgente(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerContextoAcuseRechazoAgente")(data);
+}
+
 /** Oleada C — vista mensual `vistas_grilla_mes_agente` (bounded context gdt). */
 export function callObtenerVistaGrillaMesAgente(data) {
   const payload = data && typeof data === "object" ? data : {};

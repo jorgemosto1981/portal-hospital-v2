@@ -1,3 +1,5 @@
+import { ymdToDdMmYyyy } from "./cambioDiaUi.js";
+
 /**
  * Resumen de `previsualizarSolicitudPatronB` (motor Patrón B, sin persistir).
  * @param {{ preview: Record<string, unknown> | null, error: string, cargando?: boolean }} props
@@ -20,8 +22,9 @@ export default function PatronBPreviewInfo({ preview, error, cargando }) {
   if (!preview) return null;
 
   const eligible = preview.eligible === true || preview.ok === true;
-  const sinBolsaCiclo = preview.sin_descuento_bolsa_ciclo === true;
   const saldo = preview.saldo_ciclo && typeof preview.saldo_ciclo === "object" ? preview.saldo_ciclo : null;
+  const desdeUi = ymdToDdMmYyyy(preview.fecha_desde);
+  const hastaUi = ymdToDdMmYyyy(preview.fecha_hasta);
 
   if (!eligible) return null;
 
@@ -29,40 +32,16 @@ export default function PatronBPreviewInfo({ preview, error, cargando }) {
     <section className="space-y-2 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 text-sm text-slate-800">
       <div className="space-y-2 text-slate-700">
         <p>
-          Fechas: <span className="font-mono">{String(preview.fecha_desde || "")}</span>
-          {preview.fecha_hasta && preview.fecha_hasta !== preview.fecha_desde ? (
+          Fechas: <span className="font-medium tabular-nums">{desdeUi || "—"}</span>
+          {hastaUi && hastaUi !== desdeUi ? (
             <>
               {" "}
-              → <span className="font-mono">{String(preview.fecha_hasta)}</span>
+              → <span className="font-medium tabular-nums">{hastaUi}</span>
             </>
           ) : null}
           {" · "}
           {Number(preview.dias_solicitados) || 1} día(s)
         </p>
-        {preview.calendario_resumen ? (
-          <p className="text-slate-600">
-            {preview.modo_computo === "CORRIDOS" ? (
-              <>
-                Modo <strong>días corridos</strong>: en el rango hay{" "}
-                <strong>{preview.calendario_resumen.dias_corridos}</strong> día(s) de calendario.
-              </>
-            ) : (
-              <>
-                Días corridos: <strong>{preview.calendario_resumen.dias_corridos}</strong>
-                {" · "}
-                Días hábiles
-                {preview.incluye_feriados_institucionales ? " (con calendario RRHH)" : " (lun–vie)"}:{" "}
-                <strong>{preview.calendario_resumen.dias_habiles}</strong>
-              </>
-            )}
-          </p>
-        ) : null}
-        {sinBolsaCiclo ? (
-          <p className="text-violet-900">
-            Sin cupo anual en configurador: el límite se controla por evento al validar la solicitud (no descuenta
-            bolsa de check-in).
-          </p>
-        ) : null}
         {saldo && saldo.saldo_disponible != null ? (
           <p>
             Saldo ciclo {saldo.anio_ciclo_consumo}: disponible{" "}
@@ -74,9 +53,7 @@ export default function PatronBPreviewInfo({ preview, error, cargando }) {
         typeof preview.licencia_medica_preview === "object" ? (
           <div className="rounded-lg border border-violet-200 bg-violet-50/80 px-3 py-2 text-violet-950">
             <p className="font-medium">Licencia médica — proyección</p>
-            <p className="mt-1 text-sm">
-              {String(preview.licencia_medica_preview.mensaje_ui || "")}
-            </p>
+            <p className="mt-1 text-sm">{String(preview.licencia_medica_preview.mensaje_ui || "")}</p>
             {preview.licencia_medica_preview.mensaje_ui_corto ? (
               <p className="mt-1 font-mono text-xs">
                 {String(preview.licencia_medica_preview.mensaje_ui_corto)}

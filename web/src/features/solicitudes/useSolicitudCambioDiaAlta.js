@@ -163,7 +163,8 @@ export function useSolicitudCambioDiaAlta({ personaId, articuloIdInicial = "" })
   }, [fechaDestino, rangoDestino, reiniciarValidacionYPreview]);
 
   const recargarGrupos = useCallback(async () => {
-    if (!/^per_/i.test(personaId) || !fechasOk) {
+    const fo = String(fechaOrigen || "").trim().slice(0, 10);
+    if (!/^per_/i.test(personaId) || !/^\d{4}-\d{2}-\d{2}$/.test(fo)) {
       setGruposVigentes([]);
       setGrupoAnclaId("");
       return;
@@ -172,20 +173,35 @@ export function useSolicitudCambioDiaAlta({ personaId, articuloIdInicial = "" })
     try {
       const res = await callResolverContextoLaboralSolicitud({
         persona_id: personaId,
-        fecha_desde: fechaOrigen,
-        fecha_hasta: fechaOrigen,
+        fecha_desde: fo,
+        fecha_hasta: fo,
       });
-      const grupos = Array.isArray(res?.data?.grupos_vigentes) ? res.data.grupos_vigentes : [];
+      const grupos = Array.isArray(res?.data?.grupos_trabajo_vigentes)
+        ? res.data.grupos_trabajo_vigentes
+        : Array.isArray(res?.data?.grupos_vigentes)
+          ? res.data.grupos_vigentes
+          : [];
       setGruposVigentes(grupos);
       if (grupos.length === 1) {
-        setGrupoAnclaId(String(grupos[0]?.grupo_trabajo_id || grupos[0]?.id || "").trim());
+        setGrupoAnclaId(
+          String(grupos[0]?.grupo_de_trabajo_id || grupos[0]?.grupo_trabajo_id || grupos[0]?.id || "").trim(),
+        );
+      } else {
+        setGrupoAnclaId((prev) => {
+          const still = grupos.some(
+            (g) =>
+              String(g?.grupo_de_trabajo_id || g?.grupo_trabajo_id || g?.id || "").trim() === prev,
+          );
+          return still ? prev : "";
+        });
       }
     } catch {
       setGruposVigentes([]);
+      setGrupoAnclaId("");
     } finally {
       setGruposCargando(false);
     }
-  }, [fechaOrigen, fechasOk, personaId]);
+  }, [fechaOrigen, personaId]);
 
   useEffect(() => {
     void recargarGrupos();
@@ -270,15 +286,32 @@ export function useSolicitudCambioDiaAlta({ personaId, articuloIdInicial = "" })
     motivoOk,
   ]);
 
-  const puedeEnviarTrasPreview =
-    Boolean(preview) && (preview?.ok === true || preview?.eligible === true) && !previewError;
-
   const enviar = useCallback(async () => {
-    if (!articuloSel || enviando || !puedeEnviarTrasPreview || !entornoOk || !tomaConocimientoOk) {
+    if (
+      !articuloSel ||
+      enviando ||
+      validandoEntorno ||
+      previewCargando ||
+      !fechasOk ||
+      !motivoOk ||
+      !grupoAnclaOk ||
+      !tomaConocimientoOk
+    ) {
       return null;
     }
-    setEnviando(true);
     setError("");
+    setPreviewError("");
+    setEntornoMensajes([]);
+
+    const okEntorno = await validarEntornoPaso2();
+    if (!okEntorno) return null;
+
+    const data = await previsualizar();
+    if (!data || (data.ok !== true && data.eligible !== true)) {
+      return null;
+    }
+
+    setEnviando(true);
     try {
       const { solicitud_id } = await crearSolicitudArticuloPatronBBorrador({
         personaId,
@@ -318,15 +351,31 @@ export function useSolicitudCambioDiaAlta({ personaId, articuloIdInicial = "" })
   }, [
     articuloSel,
     enviando,
-    entornoOk,
     fechaDestino,
     fechaOrigen,
+    fechasOk,
     grupoAnclaId,
+    grupoAnclaOk,
     motivo,
+    motivoOk,
     personaId,
-    puedeEnviarTrasPreview,
+    previsualizar,
+    previewCargando,
     tomaConocimientoOk,
+    validandoEntorno,
+    validarEntornoPaso2,
   ]);
+
+  const puedeEnviar =
+    Boolean(articuloSel) &&
+    fechasOk &&
+    motivoOk &&
+    grupoAnclaOk &&
+    tomaConocimientoOk &&
+    !enviando &&
+    !validandoEntorno &&
+    !previewCargando &&
+    !cargando;
 
   return {
     articulos,
@@ -367,7 +416,7 @@ export function useSolicitudCambioDiaAlta({ personaId, articuloIdInicial = "" })
     preview,
     previewCargando,
     previewError,
-    puedeEnviarTrasPreview,
+    puedeEnviar,
     enviar,
     enviando,
     recargar,

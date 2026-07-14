@@ -8,6 +8,7 @@ const {
   ESTADO_SOLICITUD_EN_REVISION_JEFE,
   ESTADO_SOLICITUD_EN_REVISION_RRHH,
   ESTADO_SOLICITUD_APROBADA,
+  ESTADO_SOLICITUD_APROBADA_PENDIENTE_APLICACION,
   ESTADO_SOLICITUD_RECHAZADA,
 } = require("./solicitudesArticuloEstados");
 
@@ -18,6 +19,7 @@ const ESTADOS_SOLICITUD_OCUPAN_FECHA = new Set([
   ESTADO_SOLICITUD_EN_REVISION_JEFE,
   ESTADO_SOLICITUD_EN_REVISION_RRHH,
   ESTADO_SOLICITUD_APROBADA,
+  ESTADO_SOLICITUD_APROBADA_PENDIENTE_APLICACION,
 ]);
 
 /**
@@ -33,6 +35,107 @@ function rangosYmdSeSolapan(d1, h1, d2, h2) {
   const d = String(h2 || d2 || "").slice(0, 10);
   if (!a || !c) return false;
   return a <= d && c <= b;
+}
+
+/**
+ * @param {string} ymd
+ */
+function ymdToDdMmYyyy(ymd) {
+  const s = String(ymd || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return "";
+  const [y, m, d] = s.split("-");
+  return `${d}-${m}-${y}`;
+}
+
+/**
+ * @param {string | null | undefined} estadoId
+ */
+function labelEstadoConflicto(estadoId) {
+  const e = String(estadoId || "").trim();
+  if (e === ESTADO_SOLICITUD_BORRADOR) return "Borrador";
+  if (e === ESTADO_SOLICITUD_EN_REVISION_JEFE) return "Pendiente de autorización (jefe)";
+  if (e === ESTADO_SOLICITUD_EN_REVISION_RRHH) return "Pendiente de autorización (RRHH)";
+  if (e === ESTADO_SOLICITUD_APROBADA) return "Autorizada";
+  if (e === ESTADO_SOLICITUD_APROBADA_PENDIENTE_APLICACION) {
+    return "Autorizada · pendiente de aplicar en grilla";
+  }
+  if (e.includes("clasificacion_medica")) return "Pendiente de clasificación médica";
+  if (e.includes("junta")) return "Esperando junta médica";
+  return e || "En trámite";
+}
+
+/**
+ * @param {Record<string, unknown>} sol
+ * @param {string} [codigoGrilla]
+ */
+function etiquetaTramiteConflicto(sol, codigoGrilla) {
+  if (sol?.es_cambio_dia === true) return "Cambio de Día de Asistencia";
+  if (String(sol?.schema_version || "") === "SOL_MED_AVISO_V1") return "Aviso de licencia médica";
+  const cod = String(codigoGrilla || sol?.codigo_grilla || "").trim();
+  if (cod) return cod.length <= 12 ? `Art. ${cod}` : cod;
+  return "Solicitud";
+}
+
+/**
+ * @param {string} desde
+ * @param {string} hasta
+ */
+function textoRangoConflicto(desde, hasta) {
+  const d = ymdToDdMmYyyy(desde);
+  const h = ymdToDdMmYyyy(hasta);
+  if (d && h && d !== h) return `${d} → ${h}`;
+  return d || h || "";
+}
+
+/**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {string} solId
+ * @param {Record<string, unknown> | null} [solPre]
+ * @param {{ fuente?: string }} [opts]
+ */
+async function buildMensajeConflictoSuperposicion(db, solId, solPre, opts = {}) {
+  const base = mensajeParaCodigo(CODIGO_SUPERPOSICION);
+  const id = String(solId || "").trim();
+  let sol = solPre && typeof solPre === "object" ? solPre : null;
+
+  if (!sol && /^sol_/i.test(id)) {
+    try {
+      const snap = await db.collection("solicitudes_articulo").doc(id).get();
+      if (snap.exists) sol = snap.data() || {};
+    } catch {
+      sol = null;
+    }
+  }
+
+  if (!sol) {
+    if (opts.fuente === "asistencia_diaria") {
+      return `${base} Hay una ausencia/licencia ya aplicada en la grilla ese día.`;
+    }
+    return base;
+  }
+
+  let codigoGrilla = String(sol.codigo_grilla || "").trim();
+  const artId = String(sol.articulo_id || "").trim();
+  if (!codigoGrilla && /^art_/i.test(artId)) {
+    try {
+      const aSnap = await db.collection("cfg_articulos").doc(artId).get();
+      if (aSnap.exists) {
+        const a = aSnap.data() || {};
+        codigoGrilla = String(a.codigo_grilla || a.codigo || "").trim();
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const tramite = etiquetaTramiteConflicto(sol, codigoGrilla);
+  const fd = String(sol.fecha_desde || sol.fecha_origen || "").slice(0, 10);
+  const fh = String(sol.fecha_hasta || sol.fecha_destino || sol.fecha_desde || "").slice(0, 10);
+  const rango = textoRangoConflicto(fd, fh);
+  const estado = labelEstadoConflicto(sol.estado_solicitud_id);
+  const detalle = [tramite, rango ? `(${rango})` : "", `· ${estado}`].filter(Boolean).join(" ");
+
+  return `Ya hay un trámite que ocupa esa fecha: ${detalle}. Esperá la resolución o contactá a RRHH.`;
 }
 
 /**
@@ -86,10 +189,11 @@ async function validarSuperposicionFechasPatronB(db, input) {
     const fd = String(s.fecha_desde || "").slice(0, 10);
     const fh = String(s.fecha_hasta || s.fecha_desde || "").slice(0, 10);
     if (rangosYmdSeSolapan(desde, hasta, fd, fh)) {
+      const mensaje = await buildMensajeConflictoSuperposicion(db, doc.id, s);
       return {
         ok: false,
         codigo: CODIGO_SUPERPOSICION,
-        mensaje: mensajeParaCodigo(CODIGO_SUPERPOSICION),
+        mensaje,
         conflicto_solicitud_id: doc.id,
         conflicto_estado_solicitud_id: estado,
       };
@@ -105,10 +209,13 @@ async function validarSuperposicionFechasPatronB(db, input) {
     if (!aportes || typeof aportes !== "object") continue;
     for (const solKey of Object.keys(aportes)) {
       if (excludeSolId && solKey === excludeSolId) continue;
+      const mensaje = await buildMensajeConflictoSuperposicion(db, solKey, null, {
+        fuente: "asistencia_diaria",
+      });
       return {
         ok: false,
         codigo: CODIGO_SUPERPOSICION,
-        mensaje: mensajeParaCodigo(CODIGO_SUPERPOSICION),
+        mensaje,
         conflicto_solicitud_id: solKey,
         conflicto_fuente: "asistencia_diaria",
       };
@@ -120,6 +227,7 @@ async function validarSuperposicionFechasPatronB(db, input) {
 
 module.exports = {
   validarSuperposicionFechasPatronB,
+  buildMensajeConflictoSuperposicion,
   CFG_POLITICA_SUPERPOSICION_BLOQUEANTE,
   ESTADOS_SOLICITUD_OCUPAN_FECHA,
   rangosYmdSeSolapan,

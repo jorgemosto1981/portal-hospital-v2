@@ -12,6 +12,7 @@ import {
 import { useAuthSession } from "../auth/useAuthSession.js";
 import { useAuthClaims } from "../auth/useAuthClaims.js";
 import { ArticulosIngresoProvider } from "../solicitudes/ArticulosIngresoProvider.jsx";
+import RechazoAcuseGate from "../solicitudes/RechazoAcuseGate.jsx";
 import { Etapa1RuntimeProvider } from "../etapa1/Etapa1RuntimeProvider.jsx";
 import {
   shellGsoDesdePathname,
@@ -73,6 +74,7 @@ export default function PortalLayout() {
           onCerrar={() => setHelpAbierto(false)}
           focoTermino={helpFocoTermino}
         />
+        {/^per_/i.test(personaId) ? <RechazoAcuseGate personaId={personaId} /> : null}
       </ArticulosIngresoProvider>
     </Etapa1RuntimeProvider>
   );

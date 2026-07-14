@@ -93,11 +93,19 @@ await it("otro uid: no lee fila ajenas en usuarios_cuenta", async () => {
   await assertFails(odb.doc("usuarios_cuenta/usr_foo").get());
 });
 
-await it("mismo agente: no escribe en personas (solo servidor/Admin)", async () => {
-  await assertFails(
+await it("mismo agente: puede actualizar su personas (ownsPersona)", async () => {
+  await assertSucceeds(
     wdb
       .doc("personas/per_mine")
-      .set({ dni: "30123456", nombre: "A", apellido: "B", piso: "nope" }, { merge: true }),
+      .set({ dni: "30123456", nombre: "A", apellido: "B", piso: "ok" }, { merge: true }),
+  );
+});
+
+await it("mismo agente: no escribe persona ajena", async () => {
+  await assertFails(
+    wdb
+      .doc("personas/per_stranger")
+      .set({ dni: "30999888", nombre: "X", piso: "nope" }, { merge: true }),
   );
 });
 
@@ -230,6 +238,74 @@ await it("SOL_MED_AVISO_V1: rechaza update cliente (G1)", async () => {
   await assertSucceeds(pdb.doc(`solicitudes_articulo/${id}`).set(medAvisoIncompletoPayload()));
   await assertFails(
     pdb.doc(`solicitudes_articulo/${id}`).update({ "ingreso_medico.es_licencia_incompleta": false }),
+  );
+});
+
+const TOMA_CONOCIMIENTO_CAMBIO_DIA =
+  "Tomo conocimiento de que el Cambio de Día de Asistencia es excepcional y se evalúa " +
+  "en el marco de necesidades sanitarias y de los servicios (no por motivos particulares). " +
+  "Debo detallar las razones con claridad. Esta solicitud requiere autorización de jefatura; " +
+  "puedo seguir el estado (pendiente, aprobada o rechazada) en este mismo Portal Digital. " +
+  "Si es rechazada, el día de asistencia permanece sin cambios.";
+
+function cambioDiaPayload() {
+  return {
+    articulo_id: "art_01KX0Z07N5PFY7ZG0ZZP93EJ8H",
+    titular_persona_id: PER_PILOTO,
+    actor_alta_persona_id: PER_PILOTO,
+    version_id_aplicada: "ver_01KX0Z07N70GZKBKF1P27C78SY",
+    grupo_trabajo_id_ancla: GDT_PILOTO,
+    fecha_desde: "2026-07-20",
+    fecha_hasta: "2026-07-20",
+    anio_ciclo_consumo: 2026,
+    dias_solicitados: 1,
+    patron_saldo: "B",
+    estado_solicitud_id: "cfg_esa_borrador",
+    schema_version: 2,
+    fecha_origen: "2026-07-20",
+    fecha_destino: "2026-07-22",
+    motivo: "uuu",
+    es_cambio_dia: true,
+    cambio_dia_schema: "CAMBIO_DIA_V1",
+    toma_conocimiento_agente: true,
+    toma_conocimiento_texto: TOMA_CONOCIMIENTO_CAMBIO_DIA,
+    creado_en: new Date(),
+    actualizado_en: new Date(),
+  };
+}
+
+await it("CAMBIO-DIA: agente crea borrador con extras y toma de conocimiento", async () => {
+  await assertSucceeds(
+    pdb.doc("solicitudes_articulo/sol_01KQN9WXFXF69Z9DCT5YNJ3TCD").set(cambioDiaPayload()),
+  );
+});
+
+await it("CAMBIO-DIA: rechaza create sin toma_conocimiento_texto", async () => {
+  const bad = { ...cambioDiaPayload() };
+  delete bad.toma_conocimiento_texto;
+  await assertFails(
+    pdb.doc("solicitudes_articulo/sol_01KQN9WXFXF69Z9DCT5YNJ3TCE").set(bad),
+  );
+});
+
+await it("Patrón B simple: agente crea borrador 1 día", async () => {
+  await assertSucceeds(
+    pdb.doc("solicitudes_articulo/sol_01KQN9WXFXF69Z9DCT5YNJ3TB1").set({
+      articulo_id: ART_PILOTO,
+      titular_persona_id: PER_PILOTO,
+      actor_alta_persona_id: PER_PILOTO,
+      version_id_aplicada: "ver_01KX0Z07N70GZKBKF1P27C78SY",
+      grupo_trabajo_id_ancla: GDT_PILOTO,
+      fecha_desde: "2026-07-20",
+      fecha_hasta: "2026-07-20",
+      anio_ciclo_consumo: 2026,
+      dias_solicitados: 1,
+      patron_saldo: "B",
+      estado_solicitud_id: "cfg_esa_borrador",
+      schema_version: 2,
+      creado_en: new Date(),
+      actualizado_en: new Date(),
+    }),
   );
 });
 

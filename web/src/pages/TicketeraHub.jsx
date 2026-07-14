@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
 import { LAO_ARTICULO_ID } from "../constants/laoArticulo.js";
+import { useEtapa1RuntimeOptional } from "../features/etapa1/Etapa1RuntimeProvider.jsx";
 import { articuloEsCambioDia, CAMBIO_DIA_TITULO_UI } from "../features/solicitudes/cambioDiaUi.js";
 import { enriquecerArticuloIngresoListado } from "../features/solicitudes/enriquecerArticuloIngresoListado.js";
 import MisSolicitudesPanel from "../features/solicitudes/MisSolicitudesPanel.jsx";
@@ -26,6 +27,10 @@ export default function TicketeraHub() {
   const { user } = useAuthSession();
   const { claims, claimsLoading } = useAuthClaims(user);
   const personaId = String(claims?.persona_id || "").trim();
+  const etapa1 = useEtapa1RuntimeOptional();
+  /** Soft Launch fail-closed: sin flag explícito, no mostrar tiles LAO / médico. */
+  const mostrarAvisoMedico = etapa1?.licenciasMedicasHabilitadas === true;
+  const mostrarLao = etapa1?.laoHabilitada === true;
 
   const [cargando, setCargando] = useState(false);
   const [articulos, setArticulos] = useState(/** @type {Array<Record<string, unknown>>} */ ([]));
@@ -69,6 +74,7 @@ export default function TicketeraHub() {
   }, [recargar]);
 
   function irLaoWizard(articuloId = LAO_ARTICULO_ID) {
+    if (!mostrarLao) return;
     const id = String(articuloId || LAO_ARTICULO_ID).trim();
     if (!/^art_/i.test(id)) return;
     const fechaRef = ymdHoyBa();
@@ -127,27 +133,31 @@ export default function TicketeraHub() {
           })
         : null}
 
-      <button
-        type="button"
-        onClick={() => nav("/portal/solicitudes/aviso-medico")}
-        className={`${TICKETERA.btnTileBase} border-rose-200 bg-rose-50/50 hover:border-rose-400 hover:bg-rose-50`}
-      >
-        <span className="text-lg font-bold tracking-tight text-rose-950">Aviso médico</span>
-        <span className={`${TICKETERA.nombreTile} text-rose-900/80`}>
-          Enfermedad propia o familiar · certificado adjunto
-        </span>
-      </button>
+      {mostrarAvisoMedico ? (
+        <button
+          type="button"
+          onClick={() => nav("/portal/solicitudes/aviso-medico")}
+          className={`${TICKETERA.btnTileBase} border-rose-200 bg-rose-50/50 hover:border-rose-400 hover:bg-rose-50`}
+        >
+          <span className="text-lg font-bold tracking-tight text-rose-950">Aviso médico</span>
+          <span className={`${TICKETERA.nombreTile} text-rose-900/80`}>
+            Enfermedad propia o familiar · certificado adjunto
+          </span>
+        </button>
+      ) : null}
 
-      <button
-        type="button"
-        onClick={() => irLaoWizard(LAO_ARTICULO_ID)}
-        className={`${TICKETERA.btnTileBase} ${TICKETERA.btnTileLao}`}
-      >
-        <span className={TICKETERA.codigoLao}>LAO</span>
-        <span className={`${TICKETERA.nombreTile} text-emerald-900/80`}>
-          Licencia anual ordinaria · bolsa y trámite guiado
-        </span>
-      </button>
+      {mostrarLao ? (
+        <button
+          type="button"
+          onClick={() => irLaoWizard(LAO_ARTICULO_ID)}
+          className={`${TICKETERA.btnTileBase} ${TICKETERA.btnTileLao}`}
+        >
+          <span className={TICKETERA.codigoLao}>LAO</span>
+          <span className={`${TICKETERA.nombreTile} text-emerald-900/80`}>
+            Licencia anual ordinaria · bolsa y trámite guiado
+          </span>
+        </button>
+      ) : null}
 
       <MisSolicitudesPanel />
     </div>

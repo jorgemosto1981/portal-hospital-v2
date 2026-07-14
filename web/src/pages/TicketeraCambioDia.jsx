@@ -6,7 +6,6 @@ import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
 import {
   CAMBIO_DIA_TITULO_UI,
-  ymdToDdMmYyyy,
 } from "../features/solicitudes/cambioDiaUi.js";
 import { TICKETERA } from "../features/solicitudes/ticketeraUi.js";
 import { useSolicitudCambioDiaAlta } from "../features/solicitudes/useSolicitudCambioDiaAlta.js";
@@ -16,14 +15,14 @@ function articuloIdQuery(searchParams) {
   return /^art_/i.test(id) ? id : "";
 }
 
-/** @param {{ label: string, value: string, min?: string, max?: string, onChange: (v: string) => void, hint?: string, disabled?: boolean }} p */
-function FechaCampo({ label, value, min, max, onChange, hint, disabled }) {
-  const visible = ymdToDdMmYyyy(value);
+/** @param {{ label: string, value: string, min?: string, max?: string, onChange: (v: string) => void, disabled?: boolean }} p */
+function FechaCampo({ label, value, min, max, onChange, disabled }) {
   return (
     <label className="block space-y-1.5">
       <span className={TICKETERA.label}>{label}</span>
       <input
         type="date"
+        lang="es-AR"
         className={TICKETERA.input}
         value={value}
         min={min || undefined}
@@ -31,15 +30,18 @@ function FechaCampo({ label, value, min, max, onChange, hint, disabled }) {
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
       />
-      <span className={TICKETERA.muted}>
-        {hint
-          ? hint
-          : visible
-            ? `Fecha seleccionada: ${visible}`
-            : "Formato visual: DD-MM-YYYY"}
-      </span>
     </label>
   );
+}
+
+/** @param {Record<string, unknown>} g */
+function idGrupoVigente(g) {
+  return String(g?.grupo_de_trabajo_id || g?.grupo_trabajo_id || g?.id || "").trim();
+}
+
+/** @param {Record<string, unknown>} g */
+function labelGrupoVigente(g) {
+  return String(g?.etiqueta_ui || g?.nombre || g?.label || idGrupoVigente(g) || "Grupo").trim();
 }
 
 export default function TicketeraCambioDia() {
@@ -54,6 +56,7 @@ export default function TicketeraCambioDia() {
   const personaId = String(claims?.persona_id || "").trim();
 
   const form = useSolicitudCambioDiaAlta({ personaId, articuloIdInicial });
+  const tieneOrigen = /^\d{4}-\d{2}-\d{2}$/.test(String(form.fechaOrigen || ""));
 
   if (!articuloIdInicial) {
     return <Navigate to="/portal/solicitudes" replace />;
@@ -103,9 +106,8 @@ export default function TicketeraCambioDia() {
             <span className="text-xs font-medium uppercase tracking-wide text-sky-800">Solicitud</span>
             <p className={`mt-0.5 ${TICKETERA.codigoPatron}`}>{CAMBIO_DIA_TITULO_UI}</p>
             <p className={`mt-2 ${TICKETERA.muted}`}>
-              Un día de ausencia y un día de prestación. Anticipación mínima: {form.preaviso} día(s).
-              Día mínimo: {ymdToDdMmYyyy(form.ymdMin) || form.ymdMin}. La prestación destino debe estar
-              dentro de {form.ventanaMaxDias} días corridos de la ausencia inicial.
+              Anticipación mínima: {form.preaviso} días. La prestación destino debe estar dentro de{" "}
+              {form.ventanaMaxDias} días corridos de la ausencia inicial.
             </p>
           </div>
 
@@ -125,13 +127,8 @@ export default function TicketeraCambioDia() {
             value={form.fechaDestino}
             min={form.rangoDestino?.min || form.ymdMin}
             max={form.rangoDestino?.max || undefined}
-            disabled={!/^\d{4}-\d{2}-\d{2}$/.test(String(form.fechaOrigen || ""))}
+            disabled={!tieneOrigen}
             onChange={form.setFechaDestino}
-            hint={
-              /^\d{4}-\d{2}-\d{2}$/.test(String(form.fechaOrigen || "")) && form.rangoDestino?.ok
-                ? `Ventana permitida: ${ymdToDdMmYyyy(form.rangoDestino.min)} a ${ymdToDdMmYyyy(form.rangoDestino.max)} (±${form.ventanaMaxDias} días corridos desde la ausencia inicial). Seleccionada: ${ymdToDdMmYyyy(form.fechaDestino) || "—"}.`
-                : "Primero indicá la Fecha de Ausencia Inicial; el calendario del destino se limita a ±10 días corridos."
-            }
           />
 
           {form.warningsFechas?.length > 0 ? (
@@ -174,15 +171,23 @@ export default function TicketeraCambioDia() {
                 form.setGrupoAnclaId(e.target.value);
                 form.reiniciarValidacionYPreview();
               }}
-              disabled={form.gruposCargando || form.gruposVigentes.length === 0}
+              disabled={form.gruposCargando || !tieneOrigen || form.gruposVigentes.length === 0}
             >
-              <option value="">Elegí el grupo de trabajo</option>
+              <option value="">
+                {!tieneOrigen
+                  ? "Primero indicá la fecha de ausencia"
+                  : form.gruposCargando
+                    ? "Cargando grupos…"
+                    : form.gruposVigentes.length === 0
+                      ? "No hay grupo vigente para esa fecha"
+                      : "Elegí el grupo de trabajo"}
+              </option>
               {form.gruposVigentes.map((g) => {
-                const id = String(g.grupo_trabajo_id || g.id || "").trim();
-                const label = String(g.nombre || g.label || id);
+                const id = idGrupoVigente(g);
+                if (!id) return null;
                 return (
                   <option key={id} value={id}>
-                    {label}
+                    {labelGrupoVigente(g)}
                   </option>
                 );
               })}
@@ -211,46 +216,21 @@ export default function TicketeraCambioDia() {
 
           {form.previewError ? <div className={TICKETERA.alertError}>{form.previewError}</div> : null}
 
-          {form.preview && (form.preview.ok === true || form.preview.eligible === true) ? (
-            <div className={TICKETERA.alertOk}>
-              Validación OK. Al enviar, la solicitud irá a la bandeja del jefe; si aprueba, se aplica el
-              traslado en la grilla del grupo seleccionado. Podés seguir el estado en «Mis solicitudes».
-            </div>
+          <button
+            type="button"
+            className={TICKETERA.btnPrimary}
+            disabled={!form.puedeEnviar}
+            onClick={() => void onEnviar()}
+          >
+            {form.validandoEntorno || form.previewCargando
+              ? "Validando…"
+              : form.enviando
+                ? "Enviando…"
+                : "Enviar solicitud"}
+          </button>
+          {!form.tomaConocimientoOk && form.fechasOk && form.motivoOk && form.grupoAnclaOk ? (
+            <p className={TICKETERA.muted}>Marcá «Tomo conocimiento» para poder enviar.</p>
           ) : null}
-
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              className={TICKETERA.btnSecondary}
-              disabled={
-                !form.fechasOk ||
-                !form.motivoOk ||
-                !form.grupoAnclaOk ||
-                form.validandoEntorno ||
-                form.previewCargando
-              }
-              onClick={async () => {
-                const okEntorno = form.entornoOk || (await form.validarEntornoPaso2());
-                if (!okEntorno) return;
-                await form.previsualizar();
-              }}
-            >
-              {form.validandoEntorno || form.previewCargando ? "Validando…" : "Validar solicitud"}
-            </button>
-            <button
-              type="button"
-              className={TICKETERA.btnPrimary}
-              disabled={
-                !form.puedeEnviarTrasPreview ||
-                !form.entornoOk ||
-                !form.tomaConocimientoOk ||
-                form.enviando
-              }
-              onClick={() => void onEnviar()}
-            >
-              {form.enviando ? "Enviando…" : "Enviar solicitud"}
-            </button>
-          </div>
         </div>
       </div>
     </div>

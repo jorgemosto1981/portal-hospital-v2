@@ -69,6 +69,13 @@ export const MODULOS_PORTAL = [
     ticketeraSiempreVisible: true,
   },
   {
+    id: "calendario-institucional-consulta",
+    label: "Calendario institucional",
+    path: "/portal/calendario-institucional",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "usuario",
+  },
+  {
     id: "antiguedad",
     label: "Antigüedad",
     path: "/portal/rrhh/antiguedad",
@@ -355,6 +362,7 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh/antiguedad")) return "antiguedad";
   if (pathname.startsWith("/portal/rrhh/configuracion-articulos")) return "articulos-cfg";
   if (pathname.startsWith("/portal/rrhh/calendario-institucional")) return "calendario-institucional";
+  if (pathname.startsWith("/portal/calendario-institucional")) return "calendario-institucional-consulta";
   if (pathname.startsWith("/portal/rrhh/regimenes-horarios")) return "regimenes-horarios";
   if (pathname.startsWith("/portal/rrhh/explorador-turnos")) return "bandeja-turnos-explorador-rrhh";
   if (pathname.startsWith("/portal/rrhh/bandeja-turnos")) return "bandeja-turnos-evaluador-rrhh";

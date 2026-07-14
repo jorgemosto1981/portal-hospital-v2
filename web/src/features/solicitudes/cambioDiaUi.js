@@ -46,25 +46,26 @@ export function diasCorridosEntre(a, b) {
 }
 
 /**
- * Rango permitido del destino respecto de la ausencia inicial (y el mínimo de preaviso).
+ * Rango permitido del destino: exactamente ±ventana días corridos desde la ausencia.
+ * Sin piso de preaviso ni de “hoy”: solo fo ± N.
  * @param {string} fechaOrigenYmd
- * @param {string} ymdMinPreaviso
+ * @param {string} [_ymdMinPreaviso] — compat; no se usa
  * @param {number} [ventana]
+ * @param {unknown} [_opts] — compat; no se usa
  */
 export function rangoFechaDestinoCambioDia(
   fechaOrigenYmd,
-  ymdMinPreaviso,
+  _ymdMinPreaviso,
   ventana = CAMBIO_DIA_VENTANA_MAX_DIAS_CORRIDOS,
+  _opts,
 ) {
   const fo = String(fechaOrigenYmd || "").trim().slice(0, 10);
-  const minFloor = String(ymdMinPreaviso || "").trim().slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fo)) {
-    return { min: minFloor || "", max: "", ok: false };
+    return { min: "", max: "", ok: false };
   }
   const win = Math.max(1, Math.floor(Number(ventana) || CAMBIO_DIA_VENTANA_MAX_DIAS_CORRIDOS));
-  let min = ymdAddDays(fo, -win);
+  const min = ymdAddDays(fo, -win);
   const max = ymdAddDays(fo, win);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(minFloor) && min < minFloor) min = minFloor;
   return { min, max, ok: Boolean(min && max && min <= max) };
 }
 
@@ -93,7 +94,7 @@ export function mensajesValidacionFechasCambioDia(fechaOrigen, fechaDestino, ymd
   }
   if (opts.permiteRetroactividad !== true && hoy) {
     if (fo && fo < hoy) msgs.push("No se permite una Fecha de Ausencia Inicial retroactiva.");
-    if (fd && fd < hoy) msgs.push("No se permite una Fecha de Prestación Destino retroactiva.");
+    // Destino: solo ventana ±N respecto de la ausencia (puede quedar antes de hoy).
   }
   if (ymdMin && /^\d{4}-\d{2}-\d{2}$/.test(ymdMin)) {
     if (fo && fo < ymdMin) {
@@ -101,11 +102,7 @@ export function mensajesValidacionFechasCambioDia(fechaOrigen, fechaDestino, ymd
         `La Fecha de Ausencia Inicial debe respetar la anticipación mínima (día mínimo: ${ymdToDdMmYyyy(ymdMin) || ymdMin}).`,
       );
     }
-    if (fd && fd < ymdMin) {
-      msgs.push(
-        `La Fecha de Prestación Destino debe respetar la anticipación mínima (día mínimo: ${ymdToDdMmYyyy(ymdMin) || ymdMin}).`,
-      );
-    }
+    // Destino: solo ventana ±N y no retroactivo; el preaviso no aplana el calendario destino.
   }
   if (fo && fd && /^\d{4}-\d{2}-\d{2}$/.test(fo) && /^\d{4}-\d{2}-\d{2}$/.test(fd) && fo !== fd) {
     const gap = diasCorridosEntre(fo, fd);

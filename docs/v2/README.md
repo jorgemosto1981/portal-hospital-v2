@@ -8,14 +8,16 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 
 | Documento | Rol |
 |-----------|-----|
+| **[`GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md`](./GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md)** | **RETOMAR AQUÍ** — foto 2026-07-14: cumplimiento del plan, git/tags/dev, dos vías (cupo + paralelo), próximos pasos |
 | **[`CHECKLIST_UAT_ETAPA1_V2.md`](./CHECKLIST_UAT_ETAPA1_V2.md)** | Contrato de aceptación por rol (Agente / Jefe solo bandeja / RRHH) |
 | **[`ETAPA1_POLITICA_DEPLOY_V2.md`](./ETAPA1_POLITICA_DEPLOY_V2.md)** | Freeze prod piloto, proyecto-dev, gate UAT, rollback |
 | **[`ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md`](./ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md)** | Contrato ops RRHH: alcance, población GDT/usuarios **nuevos**, umbrales Soft Launch |
 | **[`ETAPA1_GO_LIVE_V2.md`](./ETAPA1_GO_LIVE_V2.md)** | Runbook técnico Día D: allowlist, catálogo, feature off |
 | **[`ETAPA1_GIT_Y_ENTORNOS_V2.md`](./ETAPA1_GIT_Y_ENTORNOS_V2.md)** | Tag `v0.9.0-base`, ramas `master`/`develop`, Firebase-dev, feature flags |
-| [`ETAPA1_FIREBASE_DEV_SETUP_V2.md`](./ETAPA1_FIREBASE_DEV_SETUP_V2.md) | Checklist creación proyecto `portal-hospital-v2-dev` |
+| [`ETAPA1_FIREBASE_DEV_SETUP_V2.md`](./ETAPA1_FIREBASE_DEV_SETUP_V2.md) | Checklist creación / alta operativa proyecto `portal-hospital-v2-dev` |
 | **[`CONTRATO_CONFIG_ARTICULO_CAMBIO_DIA_V2.md`](./CONTRATO_CONFIG_ARTICULO_CAMBIO_DIA_V2.md)** | Contrato ABM/seed CAMBIO-DIA (sin hardcode UI) |
-| **[`HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md`](./HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md)** | **RETOMAR AQUÍ** — Soft Launch pausado: IDs prod, allowlist, backlog UAT, cómo clonar en otra PC |
+| [`HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO.md`](./HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO.md) | Sesión 2026-07-14: UX Mis solicitudes/acuse, CAMBIO-DIA/rules, calendario |
+| [`HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md`](./HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md) | Soft Launch baseline (`f5c8b5e`): IDs prod, allowlist, backlog UAT |
 
 ### Módulo operativo y de asistencia (biblia de referencia)
 

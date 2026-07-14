@@ -131,6 +131,13 @@ export const PANTALLAS_CATALOGO = [
     fuente: "web/src/pages/rrhh/CalendarioConfig.jsx",
   },
   {
+    id: "calendario-institucional-consulta",
+    titulo: "Calendario institucional (consulta)",
+    path: "/portal/calendario-institucional",
+    estado: "mvp",
+    fuente: "web/src/pages/CalendarioInstitucionalConsulta.jsx",
+  },
+  {
     id: "regimenes-horarios",
     titulo: "RRHH regímenes horarios",
     path: "/portal/rrhh/regimenes-horarios",

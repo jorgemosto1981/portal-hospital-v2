@@ -393,13 +393,20 @@ service cloud.firestore {
           'toma_conocimiento_agente',
           'toma_conocimiento_texto',
         ]);
-      return (solicitudArticuloPatronBFieldsValid(d) && d.keys().hasOnly(keysBase))
-        || (solicitudArticuloPatronBFieldsValid(d)
-          && solicitudPatronBLargaExtrasValid(d)
-          && d.keys().hasOnly(keysLarga))
-        || (solicitudArticuloPatronBFieldsValid(d)
-          && solicitudArticuloCambioDiaExtrasValid(d)
-          && d.keys().hasOnly(keysCambioDia));
+      // Una sola pasada de fieldsValid + discriminadores baratos (evita límite 1000 exprs).
+      return solicitudArticuloPatronBFieldsValid(d)
+        && (
+          (d.es_cambio_dia == true
+            && solicitudArticuloCambioDiaExtrasValid(d)
+            && d.keys().hasOnly(keysCambioDia))
+          || (('causal_larga_duracion_id' in d)
+            && !('es_cambio_dia' in d)
+            && solicitudPatronBLargaExtrasValid(d)
+            && d.keys().hasOnly(keysLarga))
+          || (!('es_cambio_dia' in d)
+            && !('causal_larga_duracion_id' in d)
+            && d.keys().hasOnly(keysBase))
+        );
     }
 
     function solicitudArticuloPatronCFieldsValid(d) {
@@ -566,11 +573,13 @@ service cloud.firestore {
         ]);
     }
 
+    /** Discriminadores primero: no evaluar Lao/C/Med si ya es Patrón B (límite 1000 exprs Firebase). */
     function solicitudArticuloCreateShape() {
-      return solicitudArticuloCreateShapeLao()
-        || solicitudArticuloCreateShapePatronB()
-        || solicitudArticuloCreateShapePatronC()
-        || solicitudArticuloCreateShapeMedAviso();
+      let d = request.resource.data;
+      return (d.patron_saldo == 'B' && solicitudArticuloCreateShapePatronB())
+        || (d.patron_saldo == 'C' && solicitudArticuloCreateShapePatronC())
+        || (d.schema_version == 'SOL_MED_AVISO_V1' && solicitudArticuloCreateShapeMedAviso())
+        || (d.schema_version == 1 && solicitudArticuloCreateShapeLao());
     }
 
     /** Alta operativa: el agente crea solo su solicitud en BORRADOR; transiciones las aplica el backend.

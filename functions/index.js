@@ -41,6 +41,8 @@ const resolverDecisionJefeSolicitud = require("./onCall/solicitudes/resolverDeci
 const listarSolicitudesBandejaRrhh = require("./onCall/solicitudes/listarSolicitudesBandejaRrhh");
 const resolverDecisionRrhhSolicitud = require("./onCall/solicitudes/resolverDecisionRrhhSolicitud");
 const registrarTomaConocimientoRrhhSolicitud = require("./onCall/solicitudes/registrarTomaConocimientoRrhhSolicitud");
+const registrarAcuseRechazoAgente = require("./onCall/solicitudes/registrarAcuseRechazoAgente");
+const obtenerContextoAcuseRechazoAgente = require("./onCall/solicitudes/obtenerContextoAcuseRechazoAgente");
 const reprocesarMdcSolicitudPatronB = require("./onCall/solicitudes/reprocesarMdcSolicitudPatronB");
 const obtenerVistaGrillaMesAgente = require("./onCall/grilla/obtenerVistaGrillaMesAgente");
 const obtenerResumenSolicitudArticuloGrilla = require("./onCall/grilla/obtenerResumenSolicitudArticuloGrilla");
@@ -112,6 +114,8 @@ module.exports = {
   ...listarSolicitudesBandejaRrhh,
   ...resolverDecisionRrhhSolicitud,
   ...registrarTomaConocimientoRrhhSolicitud,
+  ...registrarAcuseRechazoAgente,
+  ...obtenerContextoAcuseRechazoAgente,
   ...reprocesarMdcSolicitudPatronB,
   ...obtenerVistaGrillaMesAgente,
   ...obtenerResumenSolicitudArticuloGrilla,

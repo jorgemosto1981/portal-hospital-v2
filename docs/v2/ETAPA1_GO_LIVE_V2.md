@@ -57,7 +57,7 @@ Claims Auth opcionales (`piloto_etapa1`) solo como cache/UX; **la autorización 
 | **64-A** | `art_01KRNK10V10CH7W5M2W6V558GS` | `ver_01KRNKNBXNBFC9HZN7CZJGPRDH` |
 | **64-B** | `art_01KRYEX0JZY4Y8J1GY3Q9F8BJQ` | `ver_01KRYEX13QN7VBPMFQFES1QHB4` |
 | **63-J** | `art_01KVWVW9Z50VR6T1BC6J0R3YQ8` | `ver_01KVWVW9Z51122AXS78E82NHFP` |
-| **CAMBIO-DIA** | *crear* `art_*` + `ver_*` en implementación | TBD — anotar aquí al seed |
+| **CAMBIO-DIA** | `art_01KX0Z07N5PFY7ZG0ZZP93EJ8H` | `ver_01KX0Z07N70GZKBKF1P27C78SY` — seed Soft Launch 2026-07-08 |
 
 ### 3.2 Excluidos explícitos (aunque existan en Firestore)
 

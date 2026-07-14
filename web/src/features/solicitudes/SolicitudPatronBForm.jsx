@@ -189,8 +189,16 @@ export default function SolicitudPatronBForm({
   const tieneFechaDesde = /^\d{4}-\d{2}-\d{2}$/.test(fechaDesde);
   const opcionConsumoOk = !requiereOpcionConsumo || Boolean(opcionConsumoId);
   const largaDatosOk = !requiereLicenciaMedicaLarga || largaMedicaOk;
+  /** 64-A/B (1 día): una sola fecha visible — “Fecha de ausencia”. */
+  const esAusenciaUnDia = diasPreestablecidos && Number(diasSolicitados) === 1;
+  /** 63-J (opción consumo): fecha fin solo tras validar (paso Enviar / preview). */
+  const esDueloConOpcion = requiereOpcionConsumo === true;
   const mostrarFechaHasta =
-    tieneFechaDesde && opcionConsumoOk && largaDatosOk;
+    tieneFechaDesde &&
+    opcionConsumoOk &&
+    largaDatosOk &&
+    !esAusenciaUnDia &&
+    !esDueloConOpcion;
   const mostrarGrupo = fechasListasParaEntorno || fechasCompletas;
   const puedeValidarPaso2 =
     puedeContinuarPaso1 &&
@@ -345,9 +353,16 @@ export default function SolicitudPatronBForm({
             ) : null}
 
             <label className="block space-y-1">
-              <span className={TICKETERA.label}>Fecha de inicio</span>
+              <span className={TICKETERA.label}>
+                {esAusenciaUnDia
+                  ? "Fecha de ausencia"
+                  : esDueloConOpcion
+                    ? "Fecha de fallecimiento"
+                    : "Fecha de inicio"}
+              </span>
               <input
                 type="date"
+                lang="es-AR"
                 inputMode="numeric"
                 value={fechaDesde}
                 onChange={(e) => {
@@ -365,6 +380,7 @@ export default function SolicitudPatronBForm({
                 </span>
                 <input
                   type="date"
+                  lang="es-AR"
                   inputMode="numeric"
                   readOnly={diasPreestablecidos}
                   value={fechaHasta}
@@ -373,13 +389,6 @@ export default function SolicitudPatronBForm({
                   className={diasPreestablecidos ? TICKETERA.inputReadonly : TICKETERA.input}
                   aria-readonly={diasPreestablecidos ? "true" : undefined}
                 />
-                <span className="text-xs text-slate-500">
-                  {requiereOpcionConsumo && !entornoOk
-                    ? "Se calculará con el calendario institucional al validar la solicitud."
-                    : diasPreestablecidos
-                      ? `Definida por el artículo · ${diasSolicitados} ${diasSolicitados === 1 ? "día laborable" : "días laborables"}`
-                      : `Seleccioná el último día del permiso (${diasSolicitados} ${diasSolicitados === 1 ? "día" : "días"})`}
-                </span>
               </label>
             ) : null}
 

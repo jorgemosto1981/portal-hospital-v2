@@ -44,13 +44,20 @@ function eventoDocRef(ymd) {
 
 /**
  * @param {(docs: Array<{ id: string, data: Record<string, unknown> }>) => void} onData
+ * @param {(err: Error) => void} [onError]
  * @returns {import("firebase/firestore").Unsubscribe}
  */
-export function subscribeEventosCalendarioInstitucional(onData) {
-  return onSnapshot(eventosCollectionRef(), (snap) => {
-    const docs = snap.docs.map((d) => ({ id: d.id, data: d.data() || {} }));
-    onData(docs);
-  });
+export function subscribeEventosCalendarioInstitucional(onData, onError) {
+  return onSnapshot(
+    eventosCollectionRef(),
+    (snap) => {
+      const docs = snap.docs.map((d) => ({ id: d.id, data: d.data() || {} }));
+      onData(docs);
+    },
+    (err) => {
+      if (typeof onError === "function") onError(err);
+    },
+  );
 }
 
 export async function listarEventosCalendarioInstitucional() {

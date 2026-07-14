@@ -1,9 +1,19 @@
 # Firebase project `portal-hospital-v2-dev` — setup ops
 
-**Estado:** checklist · 2026-07-08  
-**Prod piloto:** `portal-hospital-v2` (no tocar desde develop por defecto).
+**Estado:** proyecto **creado** (sesión previa) · APIs/app **pendientes** · checklist actualizada 2026-07-14  
+**Prod piloto:** `portal-hospital-v2` (no tocar desde develop por defecto).  
+**Foto operativa:** [`GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md`](./GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md)
 
-Crear el proyecto requiere cuenta GCP / Owner. Pasos:
+### Corroborado CLI (2026-07-14)
+
+| Check | Resultado |
+|-------|-----------|
+| Proyecto en `firebase projects:list` | ✅ `portal-hospital-v2-dev` |
+| Alias `.firebaserc` → `dev` | ✅ |
+| App Web | ❌ ninguna |
+| Firestore API | ❌ no habilitada (403) |
+
+Crear / completar el proyecto requiere cuenta GCP / Owner. Pasos:
 
 1. Consola Firebase → **Add project** → ID sugerido: `portal-hospital-v2-dev` (región Functions: `southamerica-east1`).
 2. Habilitar **Auth** (Email/Password o el mismo proveedor que prod), **Firestore**, **Storage**, plan Blaze si se usan Functions.
