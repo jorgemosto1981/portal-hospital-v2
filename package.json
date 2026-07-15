@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev:web": "npm run dev --prefix web",
+    "dev:web:dev": "npm run dev --prefix web -- --mode v2-dev",
     "build:web": "npm run build --prefix web",
+    "build:web:dev": "npm run build --prefix web -- --mode v2-dev",
     "preview:web": "npm run preview --prefix web",
     "firebase": "firebase",
     "firebase:deploy:firestore": "firebase deploy --project portal-hospital-v2 --only firestore:rules,firestore:indexes",

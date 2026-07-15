@@ -1,49 +1,90 @@
 # Firebase project `portal-hospital-v2-dev` — setup ops
 
-**Estado:** proyecto **creado** (sesión previa) · APIs/app **pendientes** · checklist actualizada 2026-07-14  
+**Estado:** **operativo** (2026-07-14 tarde) · Blaze + Firestore + Auth + Functions + seed demo · falta smoke Vite + commit wire local  
 **Prod piloto:** `portal-hospital-v2` (no tocar desde develop por defecto).  
+**Handoff pausa:** [`HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md`](./HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md)  
 **Foto operativa:** [`GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md`](./GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md)
 
-### Corroborado CLI (2026-07-14)
+### Foto checklist
 
 | Check | Resultado |
 |-------|-----------|
 | Proyecto en `firebase projects:list` | ✅ `portal-hospital-v2-dev` |
 | Alias `.firebaserc` → `dev` | ✅ |
-| App Web | ❌ ninguna |
-| Firestore API | ❌ no habilitada (403) |
+| App Web + `.env.v2.dev.local` | ✅ (local, gitignored) |
+| Auth Email/Password | ✅ |
+| Firestore `(default)` | ✅ |
+| Rules + indexes | ✅ desplegados |
+| Blaze / billing | ✅ |
+| Cloud Functions | ✅ (recreada `onColaRematerializacionAsistencia` tras conflicto de trigger) |
+| Seed cfg + agente demo | ✅ ver § Bootstrap |
+| Smoke `npm run dev:web:dev` login | ⏳ validar en navegador |
+| Commit wire Vite/bootstrap en git | ⏳ |
 
-Crear / completar el proyecto requiere cuenta GCP / Owner. Pasos:
+---
 
-1. Consola Firebase → **Add project** → ID sugerido: `portal-hospital-v2-dev` (región Functions: `southamerica-east1`).
-2. Habilitar **Auth** (Email/Password o el mismo proveedor que prod), **Firestore**, **Storage**, plan Blaze si se usan Functions.
-3. Crear app Web y copiar config a `.env.v2.dev.local` (gitignored) con `VITE_V2_FIREBASE_PROJECT_ID=portal-hospital-v2-dev`.
-4. En este repo, actualizar [`.firebaserc`](../../.firebaserc):
+## Fase 1 — Consola Firebase — ✅
 
-```json
-{
-  "projects": {
-    "default": "portal-hospital-v2",
-    "prod": "portal-hospital-v2",
-    "dev": "portal-hospital-v2-dev"
-  }
-}
+Hecho: Auth, Firestore, app Web, Blaze. Storage API vía Functions; si la UI pide “Get started”, completar bucket de la app.
+
+---
+
+## Fase 2 — Local (Vite) — ✅ (código local; commit pendiente)
+
+Variables = prefijo **`VITE_V2_FIREBASE_*`**. Plantilla: [`.env.v2.dev.example`](../../.env.v2.dev.example).
+
+```powershell
+copy .env.v2.dev.example .env.v2.dev.local
+# completar claves desde firebaseConfig
+npm run dev:web:dev
 ```
 
-5. Deploy inicial a-dev (solo cuando el proyecto exista):
+| Script | Env file | Proyecto |
+|--------|----------|----------|
+| `npm run dev:web` | `.env.v2.local` | **prod** piloto |
+| `npm run dev:web:dev` | `.env.v2.dev.local` | **dev** |
 
-```bash
+---
+
+## Fase 3 — CLI deploy base — ✅
+
+```powershell
+$env:PATH = "C:\Program Files\nodejs;" + $env:PATH
 firebase use dev
-firebase deploy --only firestore:rules,firestore:indexes
-# Functions cuando el equipo lo necesite
+firebase deploy --only "firestore:rules,firestore:indexes" --project portal-hospital-v2-dev
+firebase deploy --only functions --project portal-hospital-v2-dev
+firebase use prod
 ```
 
-6. Seed flags Etapa 1 en **dev** (y prod cuando toque):
+**Nota:** si una function Gen2 cambia de HTTPS ↔ trigger background, hay que `firebase functions:delete NOMBRE --region southamerica-east1 --force` y redeploy.
 
-```bash
-ALLOW_FIRESTORE_SEED_V2=true FIREBASE_V2_PROJECT_ID=portal-hospital-v2-dev node scripts/seed-v2/seed-cfg-etapa1-runtime.mjs
+Opcional cleanup images: `firebase functions:artifacts:setpolicy` o deploy con `--force`.
+
+---
+
+## Fase 4 — Seed mínimo — ✅
+
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS="C:\DATOS\portal-hospital-v2-dev-firebase-adminsdk-fbsvc-cabdc46f65.json"
+$env:FIREBASE_V2_PROJECT_ID="portal-hospital-v2-dev"
+$env:ALLOW_FIRESTORE_SEED_V2="true"
+# seed cfg / runtime según scripts del repo
+node scripts/seed-v2/bootstrap-dev-agente.mjs
 ```
 
-7. Desarrolladores: `firebase use dev` + `.env.v2.dev.local` → `npm run dev:web`.
+### Bootstrap demo (valores actuales)
 
-Hasta que el proyecto-dev exista, **moratoria** de features no-Etapa1 sobre `portal-hospital-v2` (Política deploy).
+| Campo | Valor |
+|-------|--------|
+| GDT | `gdt_01KXGK9GXHHVE0FCKPJRPDDHXA` |
+| Persona | `per_01KXGK9GXJ2HS55ZZC5QB65RG4` |
+| DNI / PIN | `28914247` / `123456` |
+| Email Auth | `portal-dev-28914247@example.com` |
+
+Guard: el script aborta si `FIREBASE_V2_PROJECT_ID` ≠ `portal-hospital-v2-dev`.
+
+---
+
+## Retoma desarrollo
+
+Features pesadas **solo** contra-dev. A `master`/prod con flags **false** hasta acta UAT.

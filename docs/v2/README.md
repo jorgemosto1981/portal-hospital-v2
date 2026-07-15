@@ -9,7 +9,8 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | Documento | Rol |
 |-----------|-----|
 | **[`GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md`](./GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md)** | Foto estado + dos vías (cupo / paralelo) |
-| **[`HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md`](./HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md)** | **RETOMAR AQUÍ** — pausa post-deploy `6dee722`; UAT RRHH; próxima Vía B = setup-dev |
+| **[`HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md`](./HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md)** | **RETOMAR AQUÍ** — Vía B-dev operativa; commit wire + smoke login; UAT Soft Launch en paralelo |
+| [`HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md`](./HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md) | Vía A: Soft Launch UX en prod `6dee722`; pelota RRHH |
 | **[`CHECKLIST_UAT_ETAPA1_V2.md`](./CHECKLIST_UAT_ETAPA1_V2.md)** | Contrato de aceptación por rol (Agente / Jefe solo bandeja / RRHH) |
 | **[`ETAPA1_POLITICA_DEPLOY_V2.md`](./ETAPA1_POLITICA_DEPLOY_V2.md)** | Freeze prod piloto, proyecto-dev, gate UAT, rollback |
 | **[`ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md`](./ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md)** | Contrato ops RRHH: alcance, población GDT/usuarios **nuevos**, umbrales Soft Launch |

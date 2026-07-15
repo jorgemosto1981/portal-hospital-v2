@@ -13,7 +13,7 @@ const firebaseRoot = path.resolve(__dirname, "node_modules", "firebase");
 
 /**
  * Vite solo carga por defecto `.env`, `.env.local`, `.env.[mode]`, `.env.[mode].local`.
- * El repo usa `.env.v2.local` en la raíz — lo parseamos e inyectamos en `import.meta.env`.
+ * El repo usa `.env.v2.local` (prod piloto) o `.env.v2.dev.local` (mode `v2-dev`) en la raíz.
  */
 function parseEnvFile(filePath) {
   const out = {};
@@ -38,9 +38,12 @@ function parseEnvFile(filePath) {
 }
 
 function buildViteEnvDefine(mode) {
-  const v2Path = path.join(repoRoot, ".env.v2.local");
+  /** mode `v2-dev` → `.env.v2.dev.local`; resto (incl. development) → `.env.v2.local` (prod piloto). */
+  const v2FileName = mode === "v2-dev" ? ".env.v2.dev.local" : ".env.v2.local";
+  const v2Path = path.join(repoRoot, v2FileName);
   const fromV2File = parseEnvFile(v2Path);
   const fromVite = loadEnv(mode, repoRoot, "VITE_");
+  /** Archivo V2 explícito gana sobre `.env*` genéricos del mode. */
   const merged = { ...fromVite, ...fromV2File };
   /** @type {Record<string, string>} */
   const define = {};

@@ -35,16 +35,10 @@ GDT piloto: `gdt_01KX107ZZTPKF12A1ED2XVKNMM`.
 
 ---
 
-## 3. Retoma técnica próxima sesión — Vía B (paralelo)
+## 3. Retoma técnica — Vía B
 
-**Objetivo:** setup operativo de `portal-hospital-v2-dev` (proyecto ya creado; APIs/app pendientes).
-
-1. Habilitar Firestore + Auth + Storage (+ Blaze / Hosting si aplica).  
-2. App Web + `.env.v2.dev.local` + wire Vite (`dev:web` → env-dev).  
-3. `firebase use dev` → rules/indexes (+ functions).  
-4. Seed mínimo `cfg_etapa1` + datos de prueba.  
-
-Seguir: [`ETAPA1_FIREBASE_DEV_SETUP_V2.md`](./ETAPA1_FIREBASE_DEV_SETUP_V2.md).
+**Actualizado:** setup-dev **hecho** en la misma fecha (tarde). Detalle y pendientes (commit wire + smoke Vite):  
+[`HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md`](./HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md).
 
 ---
 
@@ -54,4 +48,4 @@ Hard refresh en https://portal-hospital-v2.web.app → login Soft Launch → acu
 
 ---
 
-**Pausa formal · 2026-07-14** — Vía A en prod; retomar Vía B (dev) o acompañar UAT RRHH.
+**Pausa formal · 2026-07-14 (mañana)** — Vía A en prod. Continuación misma fecha: ver handoff Vía B.
