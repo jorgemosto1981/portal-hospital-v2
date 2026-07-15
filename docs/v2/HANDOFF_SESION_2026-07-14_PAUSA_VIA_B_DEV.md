@@ -1,8 +1,7 @@
 # Handoff — 2026-07-14 Pausa Vía B (`portal-hospital-v2-dev`)
 
-**Estado:** **PAUSA formal** · Vía B setup **operativo** (Firestore/Auth/Functions/seed/login demo) · smoke login en Vite **pendiente de validar en navegador**  
-**Git HEAD (pausa):** `e9a39ad` (docs Soft Launch) · **cambios locales sin commit** (wire Vite + bootstrap + docs setup)  
-**CLI Firebase:** alias activo **`prod`** (`portal-hospital-v2`) tras deploys-dev  
+**Estado:** Vía B **lista** · wire en git `05dbeea` · smoke callable+Auth **OK** (2026-07-15) · smoke UI navegador opcional  
+**Git:** `05dbeea` feat wire Vite-dev (ahead of origin si no pusheado) · alias CLI **`prod`**  
 **Guía viva:** [`GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md`](./GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md)  
 **Setup checklist:** [`ETAPA1_FIREBASE_DEV_SETUP_V2.md`](./ETAPA1_FIREBASE_DEV_SETUP_V2.md)
 
@@ -33,7 +32,7 @@ Relacionados: [`HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md`](./HANDOFF_SE
 | Blaze / cuenta facturación | ✅ vinculado (USD; no documentar ID en repo) |
 | Storage API | ✅ habilitada vía deploy Functions (Get started UI si falta bucket app) |
 
-### Local / repo (aún **sin commit** al pausar)
+### Local / repo — ✅ commit `05dbeea`
 
 | Pieza | Archivo / nota |
 |-------|----------------|
@@ -41,7 +40,7 @@ Relacionados: [`HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md`](./HANDOFF_SE
 | Carga env Vite | `web/vite.config.js` → mode `v2-dev` lee `.env.v2.dev.local` |
 | Plantilla env | `.env.v2.dev.example` (+ mención en `.env.v2.example`) |
 | Bootstrap agente | `scripts/seed-v2/bootstrap-dev-agente.mjs` |
-| Docs setup (borrador previo) | `docs/v2/ETAPA1_FIREBASE_DEV_SETUP_V2.md` |
+| Docs | handoff Vía B + guía + setup |
 
 `npm run dev:web` **sigue** apuntando a **prod** (`.env.v2.local`). Para-dev: **`npm run dev:web:dev`**.
 
@@ -91,13 +90,11 @@ $env:ALLOW_FIRESTORE_SEED_V2="true"
 
 ---
 
-## 3. Pendiente inmediato (retoma)
+## 3. Pendiente inmediato (retoma 2026-07-15)
 
-1. **Commit** del wire local (sin `_tmp-*`, sin `.env.*.local`, sin SA):  
-   `package.json`, `web/vite.config.js`, `.env.v2.dev.example`, `.env.v2.example` (si aplica), `scripts/seed-v2/bootstrap-dev-agente.mjs`, docs Etapa 1/handoff.  
-   Ignorar diffs espurios en `functions/modules/shared/*` si solo vinieron del predeploy sync (revisar antes de stage).
-2. **Smoke UI:** `npm run dev:web:dev` → login `28914247` / `123456` → callable login OK.
-3. Desarrollo features grandes **solo** contra-dev; a `master` solo con flags **off**.
+1. ~~Commit wire~~ → `05dbeea` (push a `origin` si corresponde).  
+2. ~~Smoke callable+Auth~~ → `resolverEmailLoginDni` + `signInWithEmailAndPassword` OK en `portal-hospital-v2-dev` (DNI `28914247` / PIN `123456`). Vite en `http://localhost:5173/` mode `v2-dev`.  
+3. Desarrollo features grandes **solo** contra-dev; a `master` solo con flags **off**.  
 4. Negocio Vía A (paralelo humano): UAT Soft Launch + altas 5–10 en **prod**.
 
 ---
@@ -121,4 +118,4 @@ $env:ALLOW_FIRESTORE_SEED_V2="true"
 
 ---
 
-**Pausa formal · 2026-07-14 (tarde)** — Vía B operativa en cloud; retomar: commit wire + smoke login Vite-dev.
+**Actualizado · 2026-07-15** — Vía B lista (commit + smoke). Siguiente: feature en-dev o push `05dbeea`.

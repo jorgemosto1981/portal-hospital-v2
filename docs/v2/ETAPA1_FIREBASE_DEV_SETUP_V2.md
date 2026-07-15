@@ -1,6 +1,6 @@
 # Firebase project `portal-hospital-v2-dev` — setup ops
 
-**Estado:** **operativo** (2026-07-14 tarde) · Blaze + Firestore + Auth + Functions + seed demo · falta smoke Vite + commit wire local  
+**Estado:** **operativo** (2026-07-15) · Blaze + Firestore + Auth + Functions + seed demo · wire `05dbeea` · smoke callable+Auth OK  
 **Prod piloto:** `portal-hospital-v2` (no tocar desde develop por defecto).  
 **Handoff pausa:** [`HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md`](./HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md)  
 **Foto operativa:** [`GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md`](./GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md)
@@ -18,8 +18,9 @@
 | Blaze / billing | ✅ |
 | Cloud Functions | ✅ (recreada `onColaRematerializacionAsistencia` tras conflicto de trigger) |
 | Seed cfg + agente demo | ✅ ver § Bootstrap |
-| Smoke `npm run dev:web:dev` login | ⏳ validar en navegador |
-| Commit wire Vite/bootstrap en git | ⏳ |
+| Smoke callable+Auth login demo | ✅ 2026-07-15 |
+| Commit wire Vite/bootstrap en git | ✅ `05dbeea` |
+| Smoke UI navegador (opcional) | ⏳ hard refresh `localhost:5173` |
 
 ---
 

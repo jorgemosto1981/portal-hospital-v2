@@ -26,7 +26,7 @@
 | Soft Launch 5–10 (Día D) | ⏳ | Hosting listo; faltan UAT firmado + altas RRHH |
 | Oleada ~70–80 | ⏳ | Solo tras Go Soft Launch |
 | Firebase `portal-hospital-v2-dev` | ✅ operativo | Firestore, Auth, Blaze, Functions, seed demo |
-| Desarrollo paralelo features grandes en-dev | 🟡 listo para codear | Commit wire + smoke login pendientes |
+| Desarrollo paralelo features grandes en-dev | ✅ listo | Wire `05dbeea` · smoke callable+Auth OK |
 
 ### Orden ejecutivo (`ETAPA1_GIT_Y_ENTORNOS` §4)
 
@@ -48,7 +48,7 @@
 | `origin/master` | `e9a39ad` (docs pausa Soft Launch; feature en `6dee722`) |
 | `origin/develop` | **mismo** remoto que master al pausar Vía A |
 | Tag `v0.9.0-base` | `d58b73a` → `f6ac0cc` (baseline pre-Etapa1) |
-| Working tree | Wire Vite-dev + bootstrap + docs Vía B **sin commit**; `scripts/_tmp-*` untracked |
+| Working tree | Wire en `05dbeea` (ahead 1); docs smoke locales posibles; `scripts/_tmp-*` untracked |
 | Prod Firebase | `portal-hospital-v2` · https://portal-hospital-v2.web.app |
 | Dev Firebase | `portal-hospital-v2-dev` · alias `dev` · **operativo** |
 | Rules / Functions-dev | ✅ desplegados |
@@ -119,9 +119,9 @@ flowchart LR
 
 ### Retoma técnica — Vía B
 
-11. Commit wire Vite + bootstrap + docs (sin `_tmp-*`).  
-12. Smoke: `npm run dev:web:dev` → DNI `28914247` / PIN `123456`.  
-13. Features grandes solo contra-dev; a `master` con flags **false**.
+11. ~~Commit wire~~ → `05dbeea`.  
+12. ~~Smoke callable+Auth~~ → DNI `28914247` / PIN `123456` OK.  
+13. Features grandes solo contra-dev; a `master` con flags **false**. Push `05dbeea` si hace falta.
 
 Checklist-dev: [`ETAPA1_FIREBASE_DEV_SETUP_V2`](./ETAPA1_FIREBASE_DEV_SETUP_V2.md).
 
@@ -162,8 +162,8 @@ Está **cumplido el objetivo del plan** cuando:
 2. `portal-hospital-v2-dev` sirve para desarrollar el resto sin tocar datos piloto.  
 3. Cada novedad llega a la web piloto **apagada** y se habilita por cfg/acta, no por “deploy de todo”.
 
-Hoy: **(1) código Soft Launch en prod, pendiente UAT+altas · (2) casi ✅ — falta smoke Vite + commit · (3) modelo de flags ya en uso.**
+Hoy: **(1) Soft Launch en prod, pendiente UAT+altas · (2) ✅-dev usable · (3) flags en uso.**
 
 ---
 
-**Puntero único de estado · 2026-07-14 tarde** — retomar: commit wire-dev + smoke login · en paralelo UAT Soft Launch RRHH.
+**Puntero · 2026-07-15** — retomar: feature en-dev (o push `05dbeea`) · en paralelo UAT Soft Launch RRHH.
