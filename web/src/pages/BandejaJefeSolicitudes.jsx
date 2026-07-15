@@ -64,18 +64,36 @@ export default function BandejaJefeSolicitudes() {
     setMotivo("");
   }, []);
 
-  async function decidir(decision) {
+  async function decidir(decision, extras = {}) {
     if (!selId || procesando) return;
+    const esTc = decision === "conforme" || decision === "observado";
     setProcesando(true);
-    const t = toast.loading(decision === "aprobar" ? "Aprobando…" : "Rechazando…");
+    const t = toast.loading(
+      decision === "aprobar" || decision === "conforme"
+        ? esTc
+          ? "Registrando conformidad…"
+          : "Aprobando…"
+        : esTc
+          ? "Registrando observación…"
+          : "Rechazando…",
+    );
     try {
       await callResolverDecisionJefeSolicitud({
         solicitud_id: selId,
         decision,
         motivo: motivo.trim() || undefined,
+        ...(extras.modalidad_goce_jefe
+          ? { modalidad_goce_jefe: extras.modalidad_goce_jefe }
+          : {}),
       });
       toast.success(
-        decision === "aprobar" ? "Solicitud aprobada (cierre jerárquico)." : "Solicitud rechazada.",
+        decision === "aprobar" || decision === "conforme"
+          ? esTc
+            ? "Toma de conocimiento registrada."
+            : "Solicitud aprobada (cierre jerárquico)."
+          : esTc
+            ? "Observación registrada (trámite rechazado)."
+            : "Solicitud rechazada.",
         { id: t },
       );
       setSelId("");

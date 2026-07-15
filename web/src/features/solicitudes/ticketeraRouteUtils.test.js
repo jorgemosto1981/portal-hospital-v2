@@ -63,4 +63,14 @@ describe("ticketeraRouteUtils", () => {
     expect(row?.plazo_preaviso_interno_dias).toBe(2);
     expect(row?.cambio_dia_solicitud?.schema).toBe("CAMBIO_DIA_V1");
   });
+
+  it("filaArticuloIngresoDesdeCallable propaga modo_resolucion_jefe", () => {
+    const row = filaArticuloIngresoDesdeCallable({
+      articulo_id: "art_x",
+      modo_resolucion_jefe: "toma_conocimiento",
+    });
+    expect(row?.modo_resolucion_jefe).toBe("toma_conocimiento");
+    const fallback = filaArticuloIngresoDesdeCallable({ articulo_id: "art_y" });
+    expect(fallback?.modo_resolucion_jefe).toBe("autorizacion");
+  });
 });

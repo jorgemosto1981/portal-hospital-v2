@@ -118,6 +118,7 @@ export function createEmptyArticuloVersionForm() {
       toma_conocimiento_limitada: false,
       permite_retroactividad: false,
       requiere_toma_conocimiento_superior: false,
+      modo_resolucion_jefe: "autorizacion",
       niveles_burbujeo: "",
     },
     bloque_documentacion_convivencia: {
@@ -386,6 +387,11 @@ export function buildVersionPayloadForZod(raw) {
     ...out.bloque_workflow_sla_cobertura,
     plazo_preaviso_normativa_dias: numOrUndef(out.bloque_workflow_sla_cobertura.plazo_preaviso_normativa_dias),
     plazo_preaviso_interno_dias: numOrUndef(out.bloque_workflow_sla_cobertura.plazo_preaviso_interno_dias),
+    modo_resolucion_jefe: ["autorizacion", "toma_conocimiento", "ninguno"].includes(
+      String(out.bloque_workflow_sla_cobertura.modo_resolucion_jefe || "").trim(),
+    )
+      ? String(out.bloque_workflow_sla_cobertura.modo_resolucion_jefe).trim()
+      : "autorizacion",
   };
   delete out.bloque_workflow_sla_cobertura.niveles_burbujeo;
 
@@ -1080,11 +1086,23 @@ export default function ArticuloConfigTabs() {
               <FieldNumber label={LABELS.plazo_preaviso_normativa_dias} value={form.bloque_workflow_sla_cobertura.plazo_preaviso_normativa_dias} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "plazo_preaviso_normativa_dias", v)} min={0} helpText="Días mínimos que la norma exige de anticipación antes de tomar la licencia." required={false} />
               <FieldNumber label={LABELS.plazo_preaviso_interno_dias} value={form.bloque_workflow_sla_cobertura.plazo_preaviso_interno_dias} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "plazo_preaviso_interno_dias", v)} min={0} helpText="Anticipación operativa que el hospital define internamente para organizar la cobertura." required={false} />
             </div>
+            <FieldSelect
+              label={LABELS.modo_resolucion_jefe}
+              value={form.bloque_workflow_sla_cobertura.modo_resolucion_jefe || "autorizacion"}
+              onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "modo_resolucion_jefe", v)}
+              options={[
+                { value: "autorizacion", label: "Autorización (aprobar / rechazar) — p. ej. Art. 64" },
+                { value: "toma_conocimiento", label: "Toma de conocimiento (conforme / observado) — p. ej. Art. 63" },
+                { value: "ninguno", label: "Sin paso de jefe inmediato" },
+              ]}
+              helpText="Define la naturaleza del acto del jefe inmediato en la cadena HLg. No confundir con el burbujeo de acuse post-cierre (checks de abajo)."
+              required
+            />
             <div className="grid gap-3 sm:grid-cols-2">
               <FieldCheck label={LABELS.logistica_aviso_habilitada} checked={form.bloque_workflow_sla_cobertura.logistica_aviso_habilitada} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "logistica_aviso_habilitada", v)} helpText="Identifica artículos que generan necesidad de cobertura. Activa la señal para que el sistema gestione avisos de reemplazo o contratación de personal (ej. Art. 16-0 o Tareas Diferentes)." />
               <FieldCheck label={LABELS.toma_conocimiento_limitada} checked={form.bloque_workflow_sla_cobertura.toma_conocimiento_limitada} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "toma_conocimiento_limitada", v)} helpText="Evita que la notificación de acuse escale por toda la cadena jerárquica, limitándola a los niveles inmediatos." />
               <FieldCheck label={LABELS.permite_retroactividad} checked={form.bloque_workflow_sla_cobertura.permite_retroactividad} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "permite_retroactividad", v)} helpText="Permite al usuario crear una solicitud con fecha de inicio anterior a hoy. Si se activa, el sistema ignorará los días de preaviso configurados arriba, siempre que el usuario firme una Declaración Jurada (DDJJ)." />
-              <FieldCheck label={LABELS.requiere_toma_conocimiento_superior} checked={form.bloque_workflow_sla_cobertura.requiere_toma_conocimiento_superior} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "requiere_toma_conocimiento_superior", v)} helpText="Si está activo, la solicitud debe pasar por el superior jerárquico del servicio antes de llegar a RRHH. Si está desactivado, la solicitud va directo del jefe inmediato a RRHH." />
+              <FieldCheck label={LABELS.requiere_toma_conocimiento_superior} checked={form.bloque_workflow_sla_cobertura.requiere_toma_conocimiento_superior} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "requiere_toma_conocimiento_superior", v)} helpText="Legacy / burbujeo hacia superior de servicio. Preferí modo_resolucion_jefe para la naturaleza del acto del jefe inmediato." />
             </div>
             {form.bloque_workflow_sla_cobertura.toma_conocimiento_limitada && (
               <FieldNumber label={LABELS.niveles_burbujeo} value={form.bloque_workflow_sla_cobertura.niveles_burbujeo} onChange={(v) => setBlock("bloque_workflow_sla_cobertura", "niveles_burbujeo", v)} min={1} helpText="Define cuántos grupos hacia arriba reciben el aviso de toma de conocimiento de una solicitud." required={false} />

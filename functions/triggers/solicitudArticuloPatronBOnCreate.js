@@ -39,6 +39,7 @@ const {
   versionEsCambioDia,
   validarFechasMotivoCambioDia,
 } = require("../modules/shared/cambioDiaSolicitudCore");
+const { modoResolucionJefeDesdeVersion } = require("../modules/shared/modoResolucionJefe");
 
 const COL_SALDOS = "saldos_articulo_agente";
 
@@ -212,6 +213,7 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
     const grupoTrabajoIdAncla = String(
       motor.grupo_trabajo_id_ancla || d.grupo_trabajo_id_ancla || "",
     ).trim();
+    const modoResolucionJefe = modoResolucionJefeDesdeVersion(versionData);
 
     const diasConsumo = motor.dias_consumo;
     const sinDescuentoBolsaCiclo =
@@ -219,6 +221,7 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
     const motorOkPayload = {
       estado_solicitud_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
       hlc_id_elegibilidad: motor.hlc_id || null,
+      modo_resolucion_jefe: modoResolucionJefe,
       motor_validado_en: FieldValue.serverTimestamp(),
       actualizado_en: FieldValue.serverTimestamp(),
       motor_descuento_aplicado: false,

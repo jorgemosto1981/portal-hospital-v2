@@ -268,6 +268,15 @@ export const bloqueWorkflowSlaCoberturaSchema = z
     toma_conocimiento_limitada: z.boolean().default(false),
     permite_retroactividad: z.boolean().default(false),
     requiere_toma_conocimiento_superior: z.boolean().default(false),
+    /**
+     * Naturaleza del paso del jefe inmediato (cadena HLg).
+     * - autorizacion: aprueba/rechaza (Art. 64)
+     * - toma_conocimiento: conforme/observado (Art. 63)
+     * - ninguno: sin paso jefe (raro)
+     */
+    modo_resolucion_jefe: z
+      .enum(["autorizacion", "toma_conocimiento", "ninguno"])
+      .default("autorizacion"),
   })
   .strict();
 

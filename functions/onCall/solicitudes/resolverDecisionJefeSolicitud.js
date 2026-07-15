@@ -18,14 +18,34 @@ const resolverDecisionJefeSolicitudCallable = onCall(async (request) => {
 
   const d = request.data && typeof request.data === "object" ? request.data : {};
   const solicitudId = typeof d.solicitud_id === "string" ? d.solicitud_id.trim() : "";
-  const decision = typeof d.decision === "string" ? d.decision.trim().toLowerCase() : "";
+  const decisionRaw = typeof d.decision === "string" ? d.decision.trim().toLowerCase() : "";
   const motivo = typeof d.motivo === "string" ? d.motivo.trim().slice(0, 500) : "";
+  const modalidadGoce =
+    typeof d.modalidad_goce_jefe === "string" ? d.modalidad_goce_jefe.trim().toLowerCase() : "";
+
+  /** Aliases UI toma_conocimiento → motor autorización AS-IS (mismos estados). */
+  const decision =
+    decisionRaw === "conforme"
+      ? "aprobar"
+      : decisionRaw === "observado"
+        ? "rechazar"
+        : decisionRaw;
 
   if (!/^sol_/i.test(solicitudId)) {
     throw new HttpsError("invalid-argument", "solicitud_id inválido.");
   }
   if (decision !== "aprobar" && decision !== "rechazar") {
-    throw new HttpsError("invalid-argument", "decision debe ser aprobar o rechazar.");
+    throw new HttpsError(
+      "invalid-argument",
+      "decision debe ser aprobar|rechazar|conforme|observado.",
+    );
+  }
+  if (
+    modalidadGoce &&
+    modalidadGoce !== "con_goce" &&
+    modalidadGoce !== "sin_goce"
+  ) {
+    throw new HttpsError("invalid-argument", "modalidad_goce_jefe inválida.");
   }
 
   const revisorPersonaId = assertAgenteConPersonaId(request);
@@ -38,6 +58,10 @@ const resolverDecisionJefeSolicitudCallable = onCall(async (request) => {
     decision,
     motivo,
     rrhhBypass,
+    {
+      modalidad_goce_jefe: modalidadGoce || null,
+      decision_ui: decisionRaw || decision,
+    },
   );
 
   if (!result.ok) {

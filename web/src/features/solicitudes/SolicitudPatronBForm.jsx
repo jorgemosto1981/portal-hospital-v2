@@ -181,7 +181,19 @@ export default function SolicitudPatronBForm({
     if (!articuloSel && paso > 1) setPaso(omitirPasoArticulo ? 2 : 1);
   }, [articuloSel, paso, omitirPasoArticulo]);
 
-  const pasoMeta = pasosVisibles.find((p) => p.n === paso) || pasosVisibles[0];
+  const esTomaConocimiento =
+    String(articuloSel?.modo_resolucion_jefe || "").trim() === "toma_conocimiento";
+
+  const pasosConCopy = pasosVisibles.map((p) =>
+    p.n === 3
+      ? {
+          ...p,
+          titulo: esTomaConocimiento ? "Comunicar" : "Enviar",
+          etiquetaPaso: esTomaConocimiento ? "Comunicar" : "Enviar",
+        }
+      : p,
+  );
+  const pasoMeta = pasosConCopy.find((p) => p.n === paso) || pasosConCopy[0];
   const hintPaso = String(pasoMeta.hint || "").trim();
 
   const puedeContinuarPaso1 = Boolean(articuloSel) && !cargando && /^per_/i.test(personaId);
@@ -267,7 +279,7 @@ export default function SolicitudPatronBForm({
       <div className="mt-2">
         <WizardStepper
           paso={paso}
-          pasosVisibles={pasosVisibles}
+          pasosVisibles={pasosConCopy}
           confirmarFallido={confirmarFallido}
           confirmarExitoso={confirmarExitoso}
         />
@@ -465,7 +477,9 @@ export default function SolicitudPatronBForm({
           <>
             {articuloSel ? (
               <div className={TICKETERA.chipArticulo}>
-                <span className="text-xs font-medium uppercase tracking-wide text-sky-800">Solicitud</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-sky-800">
+                  {esTomaConocimiento ? "Comunicación" : "Solicitud"}
+                </span>
                 <p className={`mt-0.5 ${TICKETERA.codigoPatron}`}>
                   {String(articuloSel.codigo_grilla || "").trim() || "Artículo"}
                 </p>
@@ -478,11 +492,19 @@ export default function SolicitudPatronBForm({
             ) : null}
 
             {previewCargando ? (
-              <p className={TICKETERA.muted}>Validando y previsualizando la solicitud…</p>
+              <p className={TICKETERA.muted}>
+                {esTomaConocimiento
+                  ? "Validando y previsualizando la comunicación…"
+                  : "Validando y previsualizando la solicitud…"}
+              </p>
             ) : null}
 
             {entornoOk && !previewError && puedeEnviarTrasPreview ? (
-              <p className={TICKETERA.alertOk}>Validación correcta. Podés solicitar la licencia.</p>
+              <p className={TICKETERA.alertOk}>
+                {esTomaConocimiento
+                  ? "Validación correcta. Podés informar al superior (toma de conocimiento)."
+                  : "Validación correcta. Podés solicitar la licencia."}
+              </p>
             ) : null}
 
             {mensajePreviewNegativo ? (
@@ -510,7 +532,13 @@ export default function SolicitudPatronBForm({
                 onClick={onEnviar}
                 className={`flex-1 ${TICKETERA.btnSuccess}`}
               >
-                {enviando ? "Enviando…" : "Solicitar licencia"}
+                {enviando
+                  ? esTomaConocimiento
+                    ? "Comunicando…"
+                    : "Enviando…"
+                  : esTomaConocimiento
+                    ? "Informar / comunicar"
+                    : "Solicitar licencia"}
               </button>
             </div>
           </>

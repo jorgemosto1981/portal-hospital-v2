@@ -30,6 +30,7 @@ const {
   articuloFilaPermitidaEtapa1,
 } = require("./etapa1RuntimeLoader");
 const { rolesHlcFromAuthToken } = require("./solicitudElegibilidadLaboral");
+const { modoResolucionJefeDesdeVersion } = require("./modoResolucionJefe");
 
 const CFG_EST_VER_PUBLICADA = "cfg_est_ver_publicada";
 
@@ -242,6 +243,7 @@ async function listarArticulosIngresoPatronB(params) {
       version_id: versionId,
       codigo_grilla: String(core.codigo || core.nombre_corto || "").trim() || "ART",
       nombre: String(core.nombre || core.codigo || "").trim(),
+      modo_resolucion_jefe: modoResolucionJefeDesdeVersion(versionData),
       patron_saldo: patron || PATRON_SALDO_B,
       requiere_opcion_consumo: requiereOpcion,
       ...(requiereOpcion ? { opciones_consumo_solicitud: opcionesCliente } : {}),

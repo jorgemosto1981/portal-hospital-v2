@@ -131,6 +131,7 @@ export function buildCambioDiaDocuments(spec, ids) {
       toma_conocimiento_limitada: false,
       permite_retroactividad: spec.permite_retroactividad === true,
       requiere_toma_conocimiento_superior: false,
+      modo_resolucion_jefe: "autorizacion",
     },
     bloque_documentacion_convivencia: {
       requiere_adjunto_obligatorio: false,

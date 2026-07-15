@@ -102,6 +102,7 @@ export const LABELS = Object.freeze({
   toma_conocimiento_limitada: "Toma de conocimiento limitada (burbujeo)",
   permite_retroactividad: "Permite carga retroactiva (DDJJ)",
   requiere_toma_conocimiento_superior: "Requiere toma de conocimiento del superior",
+  modo_resolucion_jefe: "Modo de resolución del jefe inmediato",
   niveles_burbujeo: "Niveles de burbujeo",
 
   // --- Documentación (Bloque 7) ---

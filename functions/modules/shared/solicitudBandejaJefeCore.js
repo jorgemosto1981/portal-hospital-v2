@@ -27,6 +27,7 @@ const {
   revisorPuedeAutorizarJerarquico,
   revalidarRevisorEnAutorizadores,
 } = require("./solicitudAutorizacionJerarquicaCore");
+const { modoResolucionJefeDesdeSolicitud } = require("./modoResolucionJefe");
 
 /**
  * @param {Record<string, unknown>} sol
@@ -166,6 +167,8 @@ async function itemListaBandejaJefe(db, sol, personaCache, articuloCache, meta) 
     jefe_motivo: sol.jefe_motivo != null ? String(sol.jefe_motivo) : null,
     puede_decidir: meta.puede_decidir === true,
     etiqueta_estado: meta.etiqueta_estado,
+    modo_resolucion_jefe: modoResolucionJefeDesdeSolicitud(sol, artDisplay.codigo_grilla),
+    modalidad_goce_jefe: sol.modalidad_goce_jefe != null ? String(sol.modalidad_goce_jefe) : null,
   };
 }
 
@@ -363,6 +366,14 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
       if (rrhhSustituto) {
         patch.cierre_rrhh_sustituta = true;
       }
+      const modalidad = String(opts.modalidad_goce_jefe || "").trim().toLowerCase();
+      if (modalidad === "con_goce" || modalidad === "sin_goce") {
+        patch.modalidad_goce_jefe = modalidad;
+      }
+      const decisionUi = String(opts.decision_ui || "").trim().toLowerCase();
+      if (decisionUi === "conforme" || decisionUi === "observado" || decisionUi === "aprobar" || decisionUi === "rechazar") {
+        patch.decision_jefe_ui = decisionUi;
+      }
       tx.update(solRef, patch);
     });
 
@@ -470,6 +481,10 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
         jefe_motivo: motivo || null,
         motor_reverso_jefe_aplicado: cur.motor_descuento_aplicado === true,
         actualizado_en: FieldValue.serverTimestamp(),
+        ...(String(opts.decision_ui || "").trim().toLowerCase() === "observado" ||
+        String(opts.decision_ui || "").trim().toLowerCase() === "rechazar"
+          ? { decision_jefe_ui: String(opts.decision_ui).trim().toLowerCase() }
+          : {}),
       });
     });
     const artCache = new Map();
