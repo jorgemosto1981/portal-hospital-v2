@@ -1,6 +1,6 @@
 # Cheat sheet — Prod vs −dev (Portal Hospital V2)
 
-**Actualizado:** 2026-07-17 · ancla de sesión: [`HANDOFF_SESION_2026-07-15_PAUSA_MODO_JEFE_Y_77_0.md`](./HANDOFF_SESION_2026-07-15_PAUSA_MODO_JEFE_Y_77_0.md)
+**Actualizado:** 2026-07-17 · ancla de pausa: [`HANDOFF_SESION_2026-07-17_PAUSA_MODO_JEFE_SYNC_CFG.md`](./HANDOFF_SESION_2026-07-17_PAUSA_MODO_JEFE_SYNC_CFG.md)
 
 Antes de tocar código, Firebase o seeds, respondé en voz alta:
 
@@ -45,6 +45,7 @@ Programar ≠ publicar. Publicar ≠ encender (flags/allowlist).
 3. 64 no listado: HLc sin `escalafon_id` aunque el art esté en allowlist.
 4. Versión de artículo = **subcolección** `cfg_articulos/{artId}/versiones/{verId}` (no solo el doc raíz).
 5. Predeploy `sync-shared-to-functions` ensucia working tree con CRLF → no commitear ruido de sync.
+6. Tras `sync:cfg-prod-to-dev:apply`, **re-aplicar** parches −dev (`patch-64a-retroactividad-dev`, `patch-modo-resolucion-jefe-dev`). Hay **dos** docs `codigo=64-A`; el piloto Etapa 1 es `art_01KRNK10V10CH7W5M2W6V558GS`.
 
 ---
 
