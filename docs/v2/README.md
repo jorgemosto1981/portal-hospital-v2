@@ -9,7 +9,8 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | Documento | Rol |
 |-----------|-----|
 | **[`GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md`](./GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md)** | Foto estado + dos vías (cupo / paralelo) |
-| **[`HANDOFF_SESION_2026-07-15_PAUSA_MODO_JEFE_Y_77_0.md`](./HANDOFF_SESION_2026-07-15_PAUSA_MODO_JEFE_Y_77_0.md)** | **RETOMAR AQUÍ** — smoke 63/64/77-0 + pulido flujos + mapa prod vs_dev |
+| **[`CHEATSHEET_PROD_VS_DEV_V2.md`](./CHEATSHEET_PROD_VS_DEV_V2.md)** | **Cheat sheet** prod vs −dev (Vite / CLI / SA / deploy) |
+| **[`HANDOFF_SESION_2026-07-15_PAUSA_MODO_JEFE_Y_77_0.md`](./HANDOFF_SESION_2026-07-15_PAUSA_MODO_JEFE_Y_77_0.md)** | Cierre átomo 77-0/64 (`d32d471`) — smoke −dev OK; próximo push/PR |
 | [`HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md`](./HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md) | Vía B-dev operativa (contexto setup) |
 | [`HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md`](./HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md) | Vía A: Soft Launch UX en prod `6dee722`; pelota RRHH |
 | **[`CHECKLIST_UAT_ETAPA1_V2.md`](./CHECKLIST_UAT_ETAPA1_V2.md)** | Contrato de aceptación por rol (Agente / Jefe solo bandeja / RRHH) |
