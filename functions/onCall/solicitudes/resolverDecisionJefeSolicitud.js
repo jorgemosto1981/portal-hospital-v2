@@ -22,6 +22,8 @@ const resolverDecisionJefeSolicitudCallable = onCall(async (request) => {
   const motivo = typeof d.motivo === "string" ? d.motivo.trim().slice(0, 500) : "";
   const modalidadGoce =
     typeof d.modalidad_goce_jefe === "string" ? d.modalidad_goce_jefe.trim().toLowerCase() : "";
+  const confirmaInjustificada = d.confirma_injustificada === true;
+  const confirmaSinGoce = d.confirma_sin_goce === true;
 
   /** Aliases UI toma_conocimiento → motor autorización AS-IS (mismos estados). */
   const decision =
@@ -40,12 +42,32 @@ const resolverDecisionJefeSolicitudCallable = onCall(async (request) => {
       "decision debe ser aprobar|rechazar|conforme|observado.",
     );
   }
+  if (decisionRaw === "observado" && motivo.length < 3) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Para marcar Observado el motivo es obligatorio (mín. 3 caracteres).",
+    );
+  }
   if (
     modalidadGoce &&
     modalidadGoce !== "con_goce" &&
     modalidadGoce !== "sin_goce"
   ) {
     throw new HttpsError("invalid-argument", "modalidad_goce_jefe inválida.");
+  }
+  if (decision === "aprobar" && modalidadGoce === "sin_goce") {
+    if (motivo.length < 3) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Para autorizar sin goce (64-B) el justificativo es obligatorio (mín. 3 caracteres).",
+      );
+    }
+    if (!confirmaSinGoce) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Para autorizar sin goce (64-B) debés confirmar la modalidad.",
+      );
+    }
   }
 
   const revisorPersonaId = assertAgenteConPersonaId(request);
@@ -61,6 +83,8 @@ const resolverDecisionJefeSolicitudCallable = onCall(async (request) => {
     {
       modalidad_goce_jefe: modalidadGoce || null,
       decision_ui: decisionRaw || decision,
+      confirma_injustificada: confirmaInjustificada,
+      confirma_sin_goce: confirmaSinGoce,
     },
   );
 
@@ -69,7 +93,17 @@ const resolverDecisionJefeSolicitudCallable = onCall(async (request) => {
     const code =
       codigo === "PERMISSION_DENIED" || codigo === "PERMISOS_JERARQUICOS_CAMBIADOS"
         ? "permission-denied"
-        : "failed-precondition";
+        : codigo === "MOTIVO_OBSERVADO_REQUERIDO" ||
+            codigo === "CONFIRMA_INJUSTIFICADA_REQUERIDA" ||
+            codigo === "MOTIVO_SIN_GOCE_REQUERIDO" ||
+            codigo === "CONFIRMA_SIN_GOCE_REQUERIDA" ||
+            codigo === "SALDO_64B" ||
+            codigo === "SALDO_64B_INSUFICIENTE" ||
+            codigo === "VERSION_64B_NO_ENCONTRADA" ||
+            codigo === "MODALIDAD_FIJA_SIN_GOCE" ||
+            codigo === "SALDO_MES"
+          ? "invalid-argument"
+          : "failed-precondition";
     throw new HttpsError(code, result.mensaje || "No se pudo resolver la decisión.");
   }
 

@@ -12,13 +12,15 @@ import { chipToneClass, chipToneEstado } from "./misSolicitudesUi.js";
  *     _motivoRechazo?: string;
  *     _actorRechazoRol?: string;
  *     _bucket?: string;
+ *     _relatoInasistenciaInjustificada?: string;
  *   };
  * }} props
  */
 export default function MisSolicitudCard({ sol }) {
-  const tone = chipToneEstado(sol.estado_solicitud_id);
+  const tone = chipToneEstado(sol.estado_solicitud_id, sol);
   const estado = String(sol._estadoLabel || "—");
-  const isRechazoBucket = sol._bucket === "rechazada";
+  const isCierreNegativo = sol._bucket === "rechazada" || sol._bucket === "observada";
+  const relato770 = String(sol._relatoInasistenciaInjustificada || "").trim();
 
   return (
     <li className={`${TICKETERA.card} ${TICKETERA.cardPad}`}>
@@ -36,7 +38,7 @@ export default function MisSolicitudCard({ sol }) {
 
       <p className={`${TICKETERA.muted} mt-2`}>Grupo: {String(sol._gdtLabel || "—")}</p>
 
-      {isRechazoBucket ? (
+      {isCierreNegativo ? (
         <div className="mt-3 space-y-1 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5">
           <p className="text-sm text-slate-800">
             <span className="font-medium">Responsable:</span> {String(sol._actorRechazoRol || "—")}
@@ -45,6 +47,9 @@ export default function MisSolicitudCard({ sol }) {
             <p className="text-sm text-slate-700">
               <span className="font-medium">Motivo:</span> {String(sol._motivoRechazo)}
             </p>
+          ) : null}
+          {relato770 ? (
+            <p className="text-sm font-medium text-rose-900">{relato770}</p>
           ) : null}
           {sol._requiereAcuse ? (
             <p className="text-sm font-medium text-rose-800">

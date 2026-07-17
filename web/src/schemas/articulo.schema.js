@@ -277,6 +277,13 @@ export const bloqueWorkflowSlaCoberturaSchema = z
     modo_resolucion_jefe: z
       .enum(["autorizacion", "toma_conocimiento", "ninguno"])
       .default("autorizacion"),
+    /**
+     * Umbral EGAP art. 53.a — Art. 77-0 (RFC_ART_77_0_…).
+     * Si notificar_rrhh_al_umbral y el acumulado de días injustificados en la ventana supera el umbral → evento ALERTA_77_0_UMBRAL_EXCEDIDO.
+     */
+    umbral_inasistencias_injustificadas_dias: z.number().int().positive().nullable().optional(),
+    ventana_acumulado_meses: z.number().int().positive().nullable().optional(),
+    notificar_rrhh_al_umbral: z.boolean().optional(),
   })
   .strict();
 

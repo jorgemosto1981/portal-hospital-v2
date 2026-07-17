@@ -57,6 +57,7 @@ const FILES_TO_SYNC = [
   "licenciaMedicaParametrosCore.js",
   "etapa1RuntimeConfig.js",
   "modoResolucionJefe.js",
+  "acumuladoInasistenciasInjustificadas.js",
   "avisoMedicoExclusividadPeriodoCore.js",
   "bandejaAuditorSenalesCore.js",
 ];

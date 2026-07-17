@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   callListarArticulosIngresoAgente,
   callListarColeccionPublicaTemporal,
+  callObtenerResumenSaldoFamilia64Agente,
   callPrevisualizarSolicitudPatronB,
   callResolverContextoLaboralSolicitud,
   callValidarEntornoOperativoSolicitud,
@@ -12,6 +13,7 @@ import {
   esperarValidacionMotorPatronB,
 } from "../../services/solicitudesArticuloV2Service.js";
 import { enriquecerArticuloIngresoListado } from "./enriquecerArticuloIngresoListado.js";
+import { ARTICULO_64A_ID, ARTICULO_64B_ID } from "../../constants/solicitudesArticuloV2.js";
 import {
   articuloRequiereOpcionConsumo,
   articuloTieneDiasPreestablecidos,
@@ -66,7 +68,14 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
   const [catalogoCausalLarga, setCatalogoCausalLarga] = useState(/** @type {Array<Record<string, unknown>>} */ ([]));
   const [catalogoCie10, setCatalogoCie10] = useState(/** @type {Array<Record<string, unknown>>} */ ([]));
   const [catalogosLargaCargando, setCatalogosLargaCargando] = useState(false);
+  const [familia64Resumen, setFamilia64Resumen] = useState(/** @type {Record<string, unknown> | null} */ (null));
+  const [familia64Cargando, setFamilia64Cargando] = useState(false);
+  const [familia64Error, setFamilia64Error] = useState("");
 
+  const esFamilia64 =
+    articuloSel?.articulo_familia_64 === true ||
+    String(articuloSel?.articulo_id || "").trim() === ARTICULO_64A_ID ||
+    String(articuloSel?.articulo_id || "").trim() === ARTICULO_64B_ID;
   const requiereLicenciaMedicaLarga = articuloEsLicenciaMedicaLarga(articuloSel);
   const requiereOpcionConsumo = articuloRequiereOpcionConsumo(articuloSel) && !requiereLicenciaMedicaLarga;
 
@@ -75,21 +84,46 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     return articuloTieneDiasPreestablecidos(articuloSel);
   }, [articuloSel, opcionConsumoId, requiereOpcionConsumo]);
 
+  const diasDesdeOpcion = useMemo(() => {
+    if (!requiereOpcionConsumo || !opcionConsumoId) return null;
+    const ops = articuloSel?.opciones_consumo_solicitud;
+    if (!Array.isArray(ops)) return null;
+    const row = ops.find((o) => String(o?.id || "") === opcionConsumoId);
+    const d = Number(row?.dias_por_evento);
+    return Number.isFinite(d) && d > 0 ? Math.floor(d) : null;
+  }, [articuloSel?.opciones_consumo_solicitud, opcionConsumoId, requiereOpcionConsumo]);
+
+  const diasDesdeArticulo =
+    diasDesdeOpcion ??
+    (Number.isFinite(Number(articuloSel?.dias_solicitados)) && Number(articuloSel.dias_solicitados) > 0
+      ? Math.floor(Number(articuloSel.dias_solicitados))
+      : 1);
+
+  /** 1 día fijo: fecha_hasta = fecha_desde (ignorar fecha_hasta stale del listado). */
+  const esAusenciaUnDiaFijo = diasPreestablecidos && diasDesdeArticulo <= 1;
+
   const fechaHastaPreest =
     (fechaHastaCalc && RX_YMD.test(fechaHastaCalc) ? fechaHastaCalc : null) ||
     (preview?.fecha_hasta && RX_YMD.test(String(preview.fecha_hasta))
       ? String(preview.fecha_hasta).slice(0, 10)
       : null) ||
-    (articuloSel?.fecha_hasta && RX_YMD.test(String(articuloSel.fecha_hasta))
-      ? String(articuloSel.fecha_hasta)
+    (esAusenciaUnDiaFijo && RX_YMD.test(fechaDesde) ? fechaDesde : null) ||
+    (articuloSel?.fecha_hasta &&
+    RX_YMD.test(String(articuloSel.fecha_hasta)) &&
+    (!RX_YMD.test(fechaDesde) || String(articuloSel.fecha_hasta).slice(0, 10) >= fechaDesde)
+      ? String(articuloSel.fecha_hasta).slice(0, 10)
       : null) ||
     fechaDesde;
 
-  const fechaHasta = diasPreestablecidos
-    ? fechaHastaPreest
-    : fechaHastaManual && RX_YMD.test(fechaHastaManual)
-      ? fechaHastaManual
-      : fechaHastaPreest;
+  const fechaHasta = esAusenciaUnDiaFijo
+    ? RX_YMD.test(fechaDesde)
+      ? fechaDesde
+      : ""
+    : diasPreestablecidos
+      ? fechaHastaPreest
+      : fechaHastaManual && RX_YMD.test(fechaHastaManual)
+        ? fechaHastaManual
+        : fechaHastaPreest;
 
   const fechasListasParaEntorno = useMemo(() => {
     if (!RX_YMD.test(fechaDesde)) return false;
@@ -115,21 +149,6 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     fechasListasParaEntorno,
     requiereOpcionConsumo,
   ]);
-
-  const diasDesdeOpcion = useMemo(() => {
-    if (!requiereOpcionConsumo || !opcionConsumoId) return null;
-    const ops = articuloSel?.opciones_consumo_solicitud;
-    if (!Array.isArray(ops)) return null;
-    const row = ops.find((o) => String(o?.id || "") === opcionConsumoId);
-    const d = Number(row?.dias_por_evento);
-    return Number.isFinite(d) && d > 0 ? Math.floor(d) : null;
-  }, [articuloSel?.opciones_consumo_solicitud, opcionConsumoId, requiereOpcionConsumo]);
-
-  const diasDesdeArticulo =
-    diasDesdeOpcion ??
-    (Number.isFinite(Number(articuloSel?.dias_solicitados)) && Number(articuloSel.dias_solicitados) > 0
-      ? Math.floor(Number(articuloSel.dias_solicitados))
-      : 1);
 
   const diasSolicitados = resolverDiasSolicitadosPatronB(
     fechaDesde,
@@ -171,6 +190,45 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
   useEffect(() => {
     recargarGrupos();
   }, [recargarGrupos]);
+
+  /** Autocura: grupo visible (1 vigente) sin ancla → Validar quedaba deshabilitado. */
+  useEffect(() => {
+    if (gruposVigentes.length !== 1 || /^gdt_/i.test(grupoAnclaId)) return;
+    const id = String(gruposVigentes[0]?.grupo_de_trabajo_id || "").trim();
+    if (/^gdt_/i.test(id)) setGrupoAnclaId(id);
+  }, [grupoAnclaId, gruposVigentes]);
+
+  useEffect(() => {
+    if (!esFamilia64 || !/^per_/i.test(personaId)) {
+      setFamilia64Resumen(null);
+      setFamilia64Error("");
+      setFamilia64Cargando(false);
+      return undefined;
+    }
+    let cancelled = false;
+    const anio = Number(String(fechaDesde || ymdHoyBa()).slice(0, 4));
+    setFamilia64Cargando(true);
+    setFamilia64Error("");
+    (async () => {
+      try {
+        const res = await callObtenerResumenSaldoFamilia64Agente({
+          anio_ciclo: Number.isFinite(anio) ? anio : undefined,
+        });
+        if (cancelled) return;
+        const data = res?.data && typeof res.data === "object" ? res.data : null;
+        setFamilia64Resumen(data);
+      } catch (e) {
+        if (cancelled) return;
+        setFamilia64Resumen(null);
+        setFamilia64Error(e?.message || "No se pudo consultar el saldo Art. 64.");
+      } finally {
+        if (!cancelled) setFamilia64Cargando(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [esFamilia64, personaId, fechaDesde, articuloSel?.articulo_id]);
 
   useEffect(() => {
     if (!requiereLicenciaMedicaLarga) {
@@ -225,7 +283,9 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
       const res = await callListarArticulosIngresoAgente({ fecha_desde: fechaDesde });
       const list = (res?.data?.articulos || [])
         .map((row) => enriquecerArticuloIngresoListado(row))
-        .filter(Boolean);
+        .filter(Boolean)
+        // Defensa: 64 unificado — ocultar 64-B del wizard (el jefe define la modalidad).
+        .filter((row) => String(row.articulo_id || "").trim() !== ARTICULO_64B_ID);
       setArticulos(list);
       const fijado = String(articuloIdInicial || "").trim();
       const match = fijado ? list.find((x) => String(x.articulo_id || "") === fijado) : null;
@@ -256,8 +316,10 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     setEntornoMensajes([]);
     setFechaHastaCalc("");
     setFechaHastaManual("");
-    setGrupoAnclaId("");
     setOpcionConsumoId("");
+    // No limpiar grupoAnclaId aquí: si gruposVigentes queda poblado y el ancla
+    // queda "", el UI muestra el grupo pero Validar queda deshabilitado (race).
+    // recargarGrupos() es dueño de ancla al cambiar fecha / catálogo.
   }, [fechaDesde, articuloSel?.articulo_id, articuloSel?.version_id]);
 
   useEffect(() => {
@@ -430,7 +492,8 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     entornoOk &&
     preview &&
     articuloSel &&
-    String(preview.articulo_id) === String(articuloSel.articulo_id) &&
+    (String(preview.articulo_id) === String(articuloSel.articulo_id) ||
+      String(preview.articulo_id_solicitado || "") === String(articuloSel.articulo_id)) &&
     String(preview.fecha_desde) === fechaDesde &&
     Number(preview.dias_solicitados) === diasSolicitados &&
     (!requiereOpcionConsumo || String(preview.opcion_consumo_id || "") === opcionConsumoId) &&
@@ -507,10 +570,13 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
         throw new Error("Elegí el grupo de trabajo sobre el que pedís la licencia.");
       }
       const fh = String(preview?.fecha_hasta || fechaHasta).slice(0, 10);
+      // Chip 64 unificado: el preview puede redirigir a 64-B si el cupo A del mes ya está usado.
+      const articuloIdEfectivo = String(preview?.articulo_id || articuloSel.articulo_id || "").trim();
+      const versionIdEfectiva = String(preview?.version_id || articuloSel.version_id || "").trim();
       const { solicitud_id } = await crearSolicitudArticuloPatronBBorrador({
         personaId,
-        articuloId: articuloSel.articulo_id,
-        versionIdAplicada: articuloSel.version_id,
+        articuloId: articuloIdEfectivo,
+        versionIdAplicada: versionIdEfectiva,
         fechaDesde,
         fechaHasta: /^\d{4}-\d{2}-\d{2}$/.test(fh) ? fh : undefined,
         diasSolicitados,
@@ -606,5 +672,9 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
     catalogoCausalLarga,
     catalogoCie10,
     catalogosLargaCargando,
+    esFamilia64,
+    familia64Resumen,
+    familia64Cargando,
+    familia64Error,
   };
 }

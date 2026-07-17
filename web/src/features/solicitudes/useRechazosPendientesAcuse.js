@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { collection, limit, onSnapshot, query, where } from "firebase/firestore";
 
 import { dbV2 } from "../../services/firebase.js";
-import { requiereAcuseRechazo } from "./misSolicitudesUi.js";
+import { tipoAcusePendiente } from "./misSolicitudesUi.js";
 
 /**
- * Cola reactiva de rechazos del titular sin acuse (ventana 3 meses).
+ * Cola reactiva de novedades del titular sin acuse (rechazo / 64 sin goce).
+ * Ventana 3 meses.
  * @param {string} personaId
  */
 export function useRechazosPendientesAcuse(personaId) {
@@ -37,7 +38,12 @@ export function useRechazosPendientesAcuse(personaId) {
           const tb = b.creado_en?.toMillis?.() ?? (Date.parse(String(b.creado_en || "")) || 0);
           return tb - ta;
         });
-        const pendientes = list.filter((s) => requiereAcuseRechazo(s));
+        const pendientes = list
+          .map((s) => {
+            const tipo = tipoAcusePendiente(s);
+            return tipo ? { ...s, _acuseTipo: tipo } : null;
+          })
+          .filter(Boolean);
         setRows(pendientes);
         // Limpiar exclusiones ya reflejadas en Firestore.
         setExcluidos((prev) => {

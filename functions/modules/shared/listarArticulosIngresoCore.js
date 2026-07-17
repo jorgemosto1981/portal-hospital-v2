@@ -31,6 +31,10 @@ const {
 } = require("./etapa1RuntimeLoader");
 const { rolesHlcFromAuthToken } = require("./solicitudElegibilidadLaboral");
 const { modoResolucionJefeDesdeVersion } = require("./modoResolucionJefe");
+const {
+  ARTICULO_64A_ETAPA1_ID,
+  ARTICULO_64B_ETAPA1_ID,
+} = require("./etapa1RuntimeConfig");
 
 const CFG_EST_VER_PUBLICADA = "cfg_est_ver_publicada";
 
@@ -210,6 +214,11 @@ async function listarArticulosIngresoPatronB(params) {
 
   for (const cand of candidatos) {
     const { articuloId, core, versionData, versionId, patron } = cand;
+    // Simulación unificada Art. 64: el agente ve un solo chip (64-A);
+    // el jefe define 64-A con goce vs 64-B sin goce. 64-B no es ingresable.
+    if (String(articuloId || "").trim() === ARTICULO_64B_ETAPA1_ID) {
+      continue;
+    }
     const eleg = resolverElegibilidadSolicitud({
       versionData,
       hlcVigentes,
@@ -238,17 +247,32 @@ async function listarArticulosIngresoPatronB(params) {
       fechaHasta = await fechaHastaDesdeVersionPatronBAsync(db, fechaDesde, diasSolicitados, versionData);
     }
 
+    const es64Unificado = String(articuloId || "").trim() === ARTICULO_64A_ETAPA1_ID;
+    const codigoGrillaRaw = String(core.codigo || core.nombre_corto || "").trim() || "ART";
+    const nombreRaw = String(core.nombre || core.codigo || "").trim();
+
     const row = {
       articulo_id: articuloId,
       version_id: versionId,
-      codigo_grilla: String(core.codigo || core.nombre_corto || "").trim() || "ART",
-      nombre: String(core.nombre || core.codigo || "").trim(),
+      codigo_grilla: es64Unificado ? "64" : codigoGrillaRaw,
+      nombre: es64Unificado ? "ASUNTOS PARTICULARES" : nombreRaw,
       modo_resolucion_jefe: modoResolucionJefeDesdeVersion(versionData),
       patron_saldo: patron || PATRON_SALDO_B,
+      ...(es64Unificado
+        ? {
+            articulo_familia_64: true,
+            articulo_id_con_goce: ARTICULO_64A_ETAPA1_ID,
+            articulo_id_sin_goce: ARTICULO_64B_ETAPA1_ID,
+          }
+        : {}),
       requiere_opcion_consumo: requiereOpcion,
       ...(requiereOpcion ? { opciones_consumo_solicitud: opcionesCliente } : {}),
       dias_solicitados: diasSolicitados,
       fecha_hasta: fechaHasta,
+      tope_dias_por_evento: (() => {
+        const t = Number(versionData?.bloque_topes_plazos_computo?.tope_dias_por_evento);
+        return Number.isFinite(t) && t > 0 ? Math.floor(t) : null;
+      })(),
       regla_computo_dias_id: String(versionData?.bloque_topes_plazos_computo?.regla_computo_dias_id || "").trim() || null,
       ...(() => {
         const ident = versionData?.bloque_identidad_naturaleza;
@@ -269,6 +293,21 @@ async function listarArticulosIngresoPatronB(params) {
           modo_computo: m.modo,
           usa_calendario_institucional: m.usaCalendario,
           incluye_feriados_institucionales: m.incluyeFeriadosInstitucionales,
+        };
+      })(),
+      ...(() => {
+        // Retroactividad/preaviso para que el widget de fecha limite la selección.
+        const wf = versionData?.bloque_workflow_sla_cobertura || {};
+        const preavisoRaw = wf.plazo_preaviso_interno_dias;
+        const preaviso =
+          preavisoRaw == null || preavisoRaw === ""
+            ? null
+            : Number.isFinite(Number(preavisoRaw))
+              ? Math.max(0, Math.floor(Number(preavisoRaw)))
+              : null;
+        return {
+          permite_retroactividad: wf.permite_retroactividad === true,
+          plazo_preaviso_interno_dias: preaviso,
         };
       })(),
       ...(() => {

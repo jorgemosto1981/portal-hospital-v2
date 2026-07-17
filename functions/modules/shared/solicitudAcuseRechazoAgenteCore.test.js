@@ -5,6 +5,7 @@ const { describe, it } = require("node:test");
 
 const {
   registrarAcuseRechazoAgente,
+  registrarAcuseSinGoceAgente,
 } = require("./solicitudAcuseRechazoAgenteCore");
 
 function makeDb({ sol }) {
@@ -66,6 +67,33 @@ describe("registrarAcuseRechazoAgente", () => {
     assert.equal(r.ok, true);
     assert.equal(sol.agente_acuse_rechazo_persona_id, "per_A");
     assert.ok(sol.agente_acuse_rechazo_en);
+    await new Promise((r) => setTimeout(r, 50));
+  });
+});
+
+describe("registrarAcuseSinGoceAgente", () => {
+  it("rechaza si no es autorización sin goce", async () => {
+    const sol = {
+      titular_persona_id: "per_A",
+      estado_solicitud_id: "cfg_esa_aprobada",
+      modalidad_goce_jefe: "con_goce",
+    };
+    const r = await registrarAcuseSinGoceAgente(makeDb({ sol }), "sol_1", "per_A");
+    assert.equal(r.ok, false);
+    assert.equal(r.codigo, "ESTADO_INVALIDO");
+  });
+
+  it("escribe campos de acuse sin goce", async () => {
+    const sol = {
+      titular_persona_id: "per_A",
+      estado_solicitud_id: "cfg_esa_aprobada",
+      modalidad_goce_jefe: "sin_goce",
+      articulo_id: "art_64b",
+    };
+    const r = await registrarAcuseSinGoceAgente(makeDb({ sol }), "sol_sg", "per_A");
+    assert.equal(r.ok, true);
+    assert.equal(sol.agente_acuse_sin_goce_persona_id, "per_A");
+    assert.ok(sol.agente_acuse_sin_goce_en);
     await new Promise((r) => setTimeout(r, 50));
   });
 });

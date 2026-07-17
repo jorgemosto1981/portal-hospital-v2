@@ -9,6 +9,8 @@ const TIPO_EVENTO_TICKET = Object.freeze({
   SOLICITUD_CREADA_REVISION_JEFE: "SOLICITUD_CREADA_REVISION_JEFE",
   ESTADO_CAMBIADO: "ESTADO_CAMBIADO",
   TOMA_CONOCIMIENTO_RRHH: "TOMA_CONOCIMIENTO_RRHH",
+  /** Umbral EGAP art. 53.a — Art. 77-0 (bandeja alertas RRHH). */
+  ALERTA_77_0_UMBRAL_EXCEDIDO: "ALERTA_77_0_UMBRAL_EXCEDIDO",
 });
 
 /** @type {Record<string, { codigo_interno: string, tipo_evento_id: string, accion_default: string }>} */
@@ -27,6 +29,11 @@ const TIPO_EVENTO_TICKET_CFG = Object.freeze({
     codigo_interno: "ART_TOMA_CONOCIMIENTO_REGISTRADA",
     tipo_evento_id: "cfg_tev_art_01ARZ3NDEKTSV4RRFFQ69G5FB8",
     accion_default: "rrhh_toma_conocimiento",
+  },
+  [TIPO_EVENTO_TICKET.ALERTA_77_0_UMBRAL_EXCEDIDO]: {
+    codigo_interno: "ART_ALERTA_77_0_UMBRAL_EXCEDIDO",
+    tipo_evento_id: "cfg_tev_art_alerta_77_0_umbral",
+    accion_default: "alerta_77_0_umbral",
   },
 });
 

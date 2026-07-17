@@ -4,7 +4,8 @@ import RechazoAcuseModal from "./RechazoAcuseModal.jsx";
 import { useRechazosPendientesAcuse } from "./useRechazosPendientesAcuse.js";
 
 /**
- * Gate bloqueante post-login: cola de rechazos sin acuse del titular.
+ * Gate bloqueante post-login: cola de novedades sin acuse del titular
+ * (rechazo / observación / autorización Art. 64 sin goce).
  * @param {{ personaId: string }} props
  */
 export default function RechazoAcuseGate({ personaId }) {

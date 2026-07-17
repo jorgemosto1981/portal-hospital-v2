@@ -16,6 +16,11 @@ const {
   versionEsCambioDia,
   validarFechasMotivoCambioDia,
 } = require("../../modules/shared/cambioDiaSolicitudCore");
+const {
+  ARTICULO_64A_ETAPA1_ID,
+  ARTICULO_64B_ETAPA1_ID,
+} = require("../../modules/shared/etapa1RuntimeConfig");
+const { saldoAnualDocId, pickBolsaParaConsumo } = require("../../modules/shared/laoSaldosBolsa");
 
 const previsualizarSolicitudPatronB = onCall(async (request) => {
   if (!request.auth) {
@@ -181,9 +186,34 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
   const causal_larga_duracion_id =
     typeof d.causal_larga_duracion_id === "string" ? d.causal_larga_duracion_id.trim() : null;
 
+  // Carril 64 unificado: el jefe define con/sin goce al autorizar, así que
+  // el preview informa ambas bolsas (son distintas) sin proyectar consumo.
+  let saldo_familia_64 = null;
+  if (articuloId === ARTICULO_64A_ETAPA1_ID && !sinBolsaCiclo) {
+    const anioCiclo = Number(motor.anio_ciclo_consumo) || pDesde.y;
+    const salId = saldoAnualDocId(personaId, anioCiclo);
+    if (salId) {
+      const salSnap = await db.collection("saldos_articulo_agente").doc(salId).get();
+      const salData = salSnap.exists ? salSnap.data() || {} : {};
+      const bA = pickBolsaParaConsumo(salData, ARTICULO_64A_ETAPA1_ID, anioCiclo);
+      const bB = pickBolsaParaConsumo(salData, ARTICULO_64B_ETAPA1_ID, anioCiclo);
+      saldo_familia_64 = {
+        anio_ciclo_consumo: anioCiclo,
+        dias_consumo: motor.dias_consumo ?? diasSolicitados,
+        con_goce_disponible: bA ? Number(bA.bolsa.disponible) : null,
+        sin_goce_disponible: bB ? Number(bB.bolsa.disponible) : null,
+      };
+    }
+  }
+
   return {
     ...base,
+    articulo_id: motor.articulo_id || articuloId,
+    articulo_id_solicitado: motor.articulo_id_solicitado || articuloId,
+    version_id: motor.version_id || versionId,
+    ...(motor.familia_64_ruta ? { familia_64_ruta: motor.familia_64_ruta } : {}),
     sin_descuento_bolsa_ciclo: sinBolsaCiclo,
+    ...(saldo_familia_64 ? { saldo_familia_64 } : {}),
     ...(causal_larga_duracion_id ? { causal_larga_duracion_id } : {}),
     ...(licencia_medica_preview ? { licencia_medica_preview } : {}),
     ...(sinBolsaCiclo

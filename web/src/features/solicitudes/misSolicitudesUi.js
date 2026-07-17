@@ -5,6 +5,7 @@
 import {
   ARTICULO_64A_ID,
   ARTICULO_64B_ID,
+  ARTICULO_77_0_ID,
   SCHEMA_SOLICITUD_MED_AVISO,
 } from "../../constants/solicitudesArticuloV2.js";
 import {
@@ -21,7 +22,10 @@ export const ARTICULO_63J_ID = "art_01KVWVW9Z50VR6T1BC6J0R3YQ8";
 
 export const MIS_SOL_PAGE_SIZE = 10;
 
-/** @typedef {"pendiente" | "autorizada" | "rechazada"} BucketEstadoSolicitud */
+/** Label agente (sin código normativo 77-0). */
+export const LABEL_INASISTENCIA_INJUSTIFICADA = "Inasistencia injustificada";
+
+/** @typedef {"pendiente" | "autorizada" | "rechazada" | "observada"} BucketEstadoSolicitud */
 /** @typedef {"rose" | "slate" | "emerald" | "amber"} ChipTone */
 
 const TZ_AR = "America/Argentina/Buenos_Aires";
@@ -32,12 +36,46 @@ export const FALLBACK_TITULO_ARTICULO = Object.freeze({
   [ARTICULO_64B_ID]: "Art. 64-B",
   [ARTICULO_63J_ID]: "Art. 63-J",
   [ARTICULO_CAMBIO_DIA_ID]: CAMBIO_DIA_TITULO_UI,
+  [ARTICULO_77_0_ID]: LABEL_INASISTENCIA_INJUSTIFICADA,
 });
 
 /**
- * @param {string | null | undefined} estadoId
+ * Asiento 77-0 derivado de un rechazo (no es un pedido del agente).
+ * @param {Record<string, unknown>} sol
  */
-export function labelEstadoSolicitudAgente(estadoId) {
+export function esSolicitudInasistenciaInjustificadaDerivada(sol) {
+  if (/^sol_/i.test(String(sol?.origen_rechazo_sol_id || "").trim())) return true;
+  const artId = String(sol?.articulo_id || "").trim();
+  if (artId === ARTICULO_77_0_ID) return true;
+  const cod = String(sol?.codigo_grilla || "").trim().toUpperCase();
+  return cod === "77-0" || cod === "77.0";
+}
+
+/**
+ * Relato para el agente tras rechazo con derivación 77-0.
+ * @param {Record<string, unknown>} sol
+ * @param {string} [tituloPedido]
+ */
+export function relatoRechazoConInasistenciaInjustificada(sol, tituloPedido = "") {
+  if (!/^sol_/i.test(String(sol?.art_77_0_derivada_id || "").trim())) return "";
+  const pedido = String(tituloPedido || "").trim() || "tu solicitud";
+  return `Pediste ${pedido}. Fue rechazada. Quedó registrada como ${LABEL_INASISTENCIA_INJUSTIFICADA.toLowerCase()}.`;
+}
+
+/**
+ * Observado (Art. 63 / toma de conocimiento) persiste AS-IS como `cfg_esa_rechazada`
+ * pero no es un rechazo de autorización ni genera 77-0.
+ * @param {Record<string, unknown> | null | undefined} sol
+ */
+export function esDecisionJefeObservado(sol) {
+  return String(sol?.decision_jefe_ui || "").trim() === "observado";
+}
+
+/**
+ * @param {string | null | undefined} estadoId
+ * @param {Record<string, unknown> | null | undefined} [sol]
+ */
+export function labelEstadoSolicitudAgente(estadoId, sol = null) {
   const e = String(estadoId || "").trim();
   if (e === "cfg_esa_pendiente_clasificacion_medica") {
     return "Pendiente de clasificación médica";
@@ -46,6 +84,7 @@ export function labelEstadoSolicitudAgente(estadoId) {
     return "Esperando dictamen de junta médica";
   }
   if (e === "cfg_esa_en_revision_rrhh") return "Pendiente de autorización (RRHH)";
+  if (e === "cfg_esa_rechazada" && esDecisionJefeObservado(sol)) return "Observada";
   const base = labelEstadoBase(e);
   if (base && base !== e) return base;
   if (e.includes("junta")) return "En junta médica";
@@ -55,22 +94,26 @@ export function labelEstadoSolicitudAgente(estadoId) {
 
 /**
  * @param {string | null | undefined} estadoId
+ * @param {Record<string, unknown> | null | undefined} [sol]
  * @returns {BucketEstadoSolicitud}
  */
-export function bucketEstadoSolicitud(estadoId) {
+export function bucketEstadoSolicitud(estadoId, sol = null) {
   const e = String(estadoId || "").trim();
   if (e === "cfg_esa_aprobada") return "autorizada";
+  if (e === "cfg_esa_rechazada" && esDecisionJefeObservado(sol)) return "observada";
   if (e === "cfg_esa_rechazada" || e === "cfg_esa_cancelada") return "rechazada";
   return "pendiente";
 }
 
 /**
  * @param {string | null | undefined} estadoId
+ * @param {Record<string, unknown> | null | undefined} [sol]
  * @returns {ChipTone}
  */
-export function chipToneEstado(estadoId) {
+export function chipToneEstado(estadoId, sol = null) {
   const e = String(estadoId || "").trim();
   if (e === "cfg_esa_cancelada") return "slate";
+  if (e === "cfg_esa_rechazada" && esDecisionJefeObservado(sol)) return "amber";
   if (e === "cfg_esa_rechazada") return "rose";
   if (e === "cfg_esa_aprobada") return "emerald";
   if (e === "cfg_esa_aprobada_pendiente_aplicacion") return "amber";
@@ -146,6 +189,24 @@ export function ymdDesdeCreadoEn(creadoEn) {
 }
 
 /**
+ * Detalle de modalidad Art. 64 para el agente (chip unificado).
+ * @param {Record<string, unknown>} sol
+ * @returns {"" | "con goce de haberes" | "sin goce de haberes"}
+ */
+export function modalidad64LabelAgente(sol) {
+  const modalidad = String(sol?.modalidad_goce_jefe || "").trim().toLowerCase();
+  if (modalidad === "sin_goce") return "sin goce de haberes";
+  if (modalidad === "con_goce") return "con goce de haberes";
+  const artId = String(sol?.articulo_id || "").trim();
+  if (artId === ARTICULO_64B_ID) return "sin goce de haberes";
+  if (artId === ARTICULO_64A_ID) return "con goce de haberes";
+  const cod = String(sol?.codigo_grilla || "").trim().toUpperCase();
+  if (cod === "64-B") return "sin goce de haberes";
+  if (cod === "64-A" || cod === "64") return "con goce de haberes";
+  return "";
+}
+
+/**
  * @param {Record<string, unknown>} sol
  * @param {{ nombre?: string, codigo_grilla?: string, codigo?: string } | null} [artElegible]
  */
@@ -156,6 +217,32 @@ export function tituloSolicitudAgente(sol, artElegible = null) {
   if (String(sol?.schema_version || "") === SCHEMA_SOLICITUD_MED_AVISO) {
     return "Aviso de licencia médica";
   }
+  if (esSolicitudInasistenciaInjustificadaDerivada(sol)) {
+    return LABEL_INASISTENCIA_INJUSTIFICADA;
+  }
+
+  const mod64 = modalidad64LabelAgente(sol);
+  const artId = String(sol?.articulo_id || "").trim();
+  const esFamilia64 =
+    Boolean(mod64) ||
+    artId === ARTICULO_64A_ID ||
+    artId === ARTICULO_64B_ID ||
+    String(sol?.codigo_grilla || "")
+      .trim()
+      .toUpperCase()
+      .startsWith("64");
+
+  if (esFamilia64) {
+    const base = "64 — ASUNTOS PARTICULARES";
+    if (mod64 === "sin goce de haberes") {
+      return `${base} (sin goce de haberes)`;
+    }
+    if (mod64 === "con goce de haberes") {
+      return `${base} (con goce de haberes)`;
+    }
+    return base;
+  }
+
   if (artElegible) {
     const cod = String(artElegible.codigo_grilla || artElegible.codigo || "").trim();
     const nom = String(artElegible.nombre || "").trim();
@@ -163,7 +250,6 @@ export function tituloSolicitudAgente(sol, artElegible = null) {
     if (nom) return nom;
     if (cod) return `Art. ${cod}`;
   }
-  const artId = String(sol?.articulo_id || "").trim();
   if (FALLBACK_TITULO_ARTICULO[artId]) return FALLBACK_TITULO_ARTICULO[artId];
   const codSol = String(sol?.codigo_grilla || "").trim();
   if (codSol) return `Art. ${codSol}`;
@@ -248,4 +334,26 @@ export function requiereAcuseRechazo(sol) {
   if (String(sol?.estado_solicitud_id || "").trim() !== "cfg_esa_rechazada") return false;
   if (sol?.agente_acuse_rechazo_en) return false;
   return estaDentroHistorico3Meses(sol?.creado_en);
+}
+
+/**
+ * Autorización Art. 64 sin goce: mismo gate bloqueante que el rechazo,
+ * pero el trámite está aprobado (no es rechazo / 77-0).
+ * @param {Record<string, unknown>} sol
+ */
+export function requiereAcuseSinGoce(sol) {
+  if (String(sol?.estado_solicitud_id || "").trim() !== "cfg_esa_aprobada") return false;
+  if (String(sol?.modalidad_goce_jefe || "").trim() !== "sin_goce") return false;
+  if (sol?.agente_acuse_sin_goce_en) return false;
+  return estaDentroHistorico3Meses(sol?.creado_en);
+}
+
+/**
+ * @param {Record<string, unknown>} sol
+ * @returns {"rechazo" | "sin_goce" | null}
+ */
+export function tipoAcusePendiente(sol) {
+  if (requiereAcuseRechazo(sol)) return "rechazo";
+  if (requiereAcuseSinGoce(sol)) return "sin_goce";
+  return null;
 }

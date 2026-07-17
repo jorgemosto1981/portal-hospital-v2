@@ -1,7 +1,10 @@
 "use strict";
 
 const { FieldValue } = require("./context");
-const { ESTADO_SOLICITUD_RECHAZADA } = require("./solicitudesArticuloEstados");
+const {
+  ESTADO_SOLICITUD_APROBADA,
+  ESTADO_SOLICITUD_RECHAZADA,
+} = require("./solicitudesArticuloEstados");
 const { TIPO_EVENTO_TICKET, ORIGEN_EVENTO } = require("./solicitudEventosTicketConstants");
 const { registrarEventoTicket } = require("./registrarEventoTicket");
 
@@ -152,6 +155,12 @@ async function obtenerContextoAcuseRechazoAgente(db, solId, titularPersonaId) {
     ? await labelPersona(db, actorId, rolLabel)
     : rolLabel;
 
+  const sol770Id = String(sol.art_77_0_derivada_id || "").trim();
+  const generaInasistenciaInjustificada =
+    /^sol_/i.test(sol770Id) || sol.art_77_0_derivacion_pendiente === true;
+  const decisionJefeUi = String(sol.decision_jefe_ui || "").trim();
+  const esObservacionJefe = decisionJefeUi === "observado";
+
   return {
     ok: true,
     solicitud_id: solId,
@@ -163,7 +172,14 @@ async function obtenerContextoAcuseRechazoAgente(db, solId, titularPersonaId) {
     revisor_persona_id: actorId || null,
     revisor_rol: rol || null,
     revisor_label: revisorLabel || rolLabel,
+    decision_jefe_ui: decisionJefeUi || null,
+    es_observacion_jefe: esObservacionJefe,
     ya_acusado: Boolean(sol.agente_acuse_rechazo_en),
+    genera_inasistencia_injustificada: generaInasistenciaInjustificada,
+    art_77_0_derivada_id: /^sol_/i.test(sol770Id) ? sol770Id : null,
+    inasistencia_injustificada_mensaje: generaInasistenciaInjustificada
+      ? "Este rechazo generó el registro de una inasistencia injustificada para las mismas fechas."
+      : null,
   };
 }
 
@@ -229,7 +245,180 @@ async function registrarAcuseRechazoAgente(db, solId, titularPersonaId) {
   };
 }
 
+/**
+ * Autorización jerárquica en modalidad sin goce (Art. 64-B): mismo circuito de
+ * acuse bloqueante que el rechazo, con copy y campos distintos.
+ * @param {Record<string, unknown>} sol
+ */
+function esAutorizacionSinGocePendienteAcuse(sol) {
+  if (String(sol?.estado_solicitud_id || "").trim() !== ESTADO_SOLICITUD_APROBADA) {
+    return false;
+  }
+  if (String(sol?.modalidad_goce_jefe || "").trim() !== "sin_goce") return false;
+  if (sol?.agente_acuse_sin_goce_en) return false;
+  return true;
+}
+
+/**
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {string} artId
+ */
+async function labelArticulo(db, artId) {
+  const id = String(artId || "").trim();
+  if (!/^art_/i.test(id)) return "";
+  const aSnap = await db.collection(COL_ART).doc(id).get();
+  if (!aSnap.exists) return "";
+  const a = aSnap.data() || {};
+  const cod = String(a.codigo_grilla || a.codigo || "").trim();
+  const nom = String(a.nombre || a.nombre_corto || "").trim();
+  return cod && nom ? `${cod} — ${nom}` : nom || cod || id;
+}
+
+/**
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {string} solId
+ * @param {string} titularPersonaId
+ */
+async function obtenerContextoAcuseSinGoceAgente(db, solId, titularPersonaId) {
+  const solRef = db.collection(COL_SOL).doc(solId);
+  const solSnap = await solRef.get();
+  if (!solSnap.exists) {
+    return { ok: false, codigo: "NOT_FOUND", mensaje: "La solicitud no existe." };
+  }
+  const sol = solSnap.data() || {};
+  if (String(sol.titular_persona_id || "").trim() !== String(titularPersonaId || "").trim()) {
+    return { ok: false, codigo: "FORBIDDEN", mensaje: "No podés ver esta solicitud." };
+  }
+  if (String(sol.estado_solicitud_id) !== ESTADO_SOLICITUD_APROBADA) {
+    return {
+      ok: false,
+      codigo: "ESTADO_INVALIDO",
+      mensaje: "Solo aplica a solicitudes autorizadas.",
+    };
+  }
+  if (String(sol.modalidad_goce_jefe || "").trim() !== "sin_goce") {
+    return {
+      ok: false,
+      codigo: "ESTADO_INVALIDO",
+      mensaje: "Solo aplica a autorizaciones sin goce de haberes.",
+    };
+  }
+
+  let articuloLabel = await labelArticulo(db, sol.articulo_id);
+  const etiqueta = String(sol.etiqueta_articulo || sol.nombre_articulo || "").trim();
+  if (!articuloLabel && etiqueta) articuloLabel = etiqueta;
+  articuloLabel =
+    articuloLabel || "64-B — ASUNTOS PARTICULARES SIN GOCE DE HABERES";
+
+  const gdtId = String(sol.grupo_trabajo_id_ancla || "").trim();
+  let gdtNombre = "";
+  if (/^gdt_/i.test(gdtId)) {
+    const gSnap = await db.collection(COL_GDT).doc(gdtId).get();
+    if (gSnap.exists) {
+      const g = gSnap.data() || {};
+      gdtNombre = String(g.nombre || g.nombre_corto || "").trim();
+    }
+  }
+
+  const actorId = String(sol.jefe_revision_persona_id || "").trim();
+  const revisorLabel = /^per_/i.test(actorId)
+    ? await labelPersona(db, actorId, "Jefatura")
+    : "Jefatura";
+  const motivo = String(sol.jefe_motivo || "").trim();
+
+  return {
+    ok: true,
+    tipo_acuse: "sin_goce",
+    solicitud_id: solId,
+    articulo_label: articuloLabel,
+    grupo_label: gdtNombre || gdtId || "—",
+    fecha_desde: String(sol.fecha_desde || "").slice(0, 10) || null,
+    fecha_hasta: String(sol.fecha_hasta || "").slice(0, 10) || null,
+    motivo: motivo || null,
+    revisor_persona_id: /^per_/i.test(actorId) ? actorId : null,
+    revisor_rol: "jefe",
+    revisor_label: revisorLabel,
+    ya_acusado: Boolean(sol.agente_acuse_sin_goce_en),
+    modalidad_goce: "sin_goce",
+    sin_goce_mensaje:
+      "Tu jefatura autorizó la ausencia sin goce de haberes (Art. 64-B). No es un rechazo: el día queda justificado, pero sin sueldo.",
+  };
+}
+
+/**
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {string} solId
+ * @param {string} titularPersonaId
+ */
+async function registrarAcuseSinGoceAgente(db, solId, titularPersonaId) {
+  const solRef = db.collection(COL_SOL).doc(solId);
+  const solSnap = await solRef.get();
+  if (!solSnap.exists) {
+    return { ok: false, codigo: "NOT_FOUND", mensaje: "La solicitud no existe." };
+  }
+  const sol = solSnap.data() || {};
+  if (String(sol.titular_persona_id || "").trim() !== String(titularPersonaId || "").trim()) {
+    return { ok: false, codigo: "FORBIDDEN", mensaje: "Solo el titular puede tomar conocimiento." };
+  }
+  if (String(sol.estado_solicitud_id) !== ESTADO_SOLICITUD_APROBADA) {
+    return {
+      ok: false,
+      codigo: "ESTADO_INVALIDO",
+      mensaje: "Solo se registra acuse en solicitudes autorizadas.",
+    };
+  }
+  if (String(sol.modalidad_goce_jefe || "").trim() !== "sin_goce") {
+    return {
+      ok: false,
+      codigo: "ESTADO_INVALIDO",
+      mensaje: "Solo aplica a autorizaciones sin goce de haberes.",
+    };
+  }
+  if (sol.agente_acuse_sin_goce_en) {
+    return {
+      ok: true,
+      codigo: "TC_YA_REGISTRADA",
+      mensaje: "La toma de conocimiento ya fue registrada.",
+      idempotente: true,
+    };
+  }
+
+  await solRef.update({
+    agente_acuse_sin_goce_persona_id: titularPersonaId,
+    agente_acuse_sin_goce_en: FieldValue.serverTimestamp(),
+    actualizado_en: FieldValue.serverTimestamp(),
+  });
+
+  void Promise.resolve(
+    registrarEventoTicket(db, solId, {
+      tipo_evento: TIPO_EVENTO_TICKET.ESTADO_CAMBIADO,
+      actor_persona_id: titularPersonaId,
+      titular_persona_id: titularPersonaId,
+      estado_anterior_id: ESTADO_SOLICITUD_APROBADA,
+      estado_nuevo_id: ESTADO_SOLICITUD_APROBADA,
+      origen: ORIGEN_EVENTO.CALLABLE,
+      accion: "agente_acuse_sin_goce",
+      metadata: {
+        articulo_id: String(sol.articulo_id || "") || null,
+        modalidad_goce_jefe: "sin_goce",
+        fecha_desde: String(sol.fecha_desde || "").slice(0, 10) || null,
+      },
+    }),
+  ).catch(() => {
+    // Acuse ya persistido; el evento es best-effort.
+  });
+
+  return {
+    ok: true,
+    solicitud_id: solId,
+    mensaje: "Toma de conocimiento registrada.",
+  };
+}
+
 module.exports = {
   registrarAcuseRechazoAgente,
   obtenerContextoAcuseRechazoAgente,
+  registrarAcuseSinGoceAgente,
+  obtenerContextoAcuseSinGoceAgente,
+  esAutorizacionSinGocePendienteAcuse,
 };

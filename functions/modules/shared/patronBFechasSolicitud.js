@@ -19,6 +19,10 @@ const {
 } = require("./opcionesConsumoSolicitud");
 
 /**
+ * Días del pedido por defecto al listar / alta.
+ * - `dias_minimos_por_evento === tope_dias_por_evento` (>0) → duración fija.
+ * - `tope_dias_por_evento` solo (sin mínimo igual) → máximo; default de pedido = 1.
+ *
  * @param {Record<string, unknown> | null | undefined} versionData
  * @returns {number}
  */
@@ -30,8 +34,21 @@ function diasSolicitadosDesdeVersion(versionData) {
     versionData && typeof versionData === "object"
       ? versionData.bloque_topes_plazos_computo || {}
       : {};
-  const topeEvento = Number(topes.tope_dias_por_evento);
-  if (Number.isFinite(topeEvento) && topeEvento > 0) return Math.floor(topeEvento);
+  const fijos = Number(topes.dias_solicitados_fijos ?? topes.dias_fijos_por_evento);
+  if (Number.isFinite(fijos) && fijos > 0) return Math.floor(fijos);
+
+  const minD = Number(topes.dias_minimos_por_evento);
+  const maxD = Number(topes.tope_dias_por_evento);
+  if (
+    Number.isFinite(minD) &&
+    minD > 0 &&
+    Number.isFinite(maxD) &&
+    maxD > 0 &&
+    Math.floor(minD) === Math.floor(maxD)
+  ) {
+    return Math.floor(minD);
+  }
+
   return 1;
 }
 
