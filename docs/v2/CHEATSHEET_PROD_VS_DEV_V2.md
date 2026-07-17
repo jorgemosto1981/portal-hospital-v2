@@ -32,6 +32,7 @@ Programar ≠ publicar. Publicar ≠ encender (flags/allowlist).
 | Deploy Functions **−dev** | `npx firebase deploy --project portal-hospital-v2-dev --only functions:…` |
 | Deploy Functions **prod** | Solo con política Etapa 1 + UAT · alias `prod` / `portal-hospital-v2` |
 | Admin SDK **−dev** | `$env:GOOGLE_APPLICATION_CREDENTIALS="C:\DATOS\portal-hospital-v2-dev-firebase-adminsdk-fbsvc-cabdc46f65.json"` + `$env:FIREBASE_V2_PROJECT_ID="portal-hospital-v2-dev"` + `$env:ALLOW_FIRESTORE_SEED_V2="true"` solo si el script lo exige |
+| Sync **cfg** prod → −dev | `npm run sync:cfg-prod-to-dev` (dry-run) · `npm run sync:cfg-prod-to-dev:apply` con `ALLOW_FIRESTORE_SEED_V2=true` · requiere `GOOGLE_APPLICATION_CREDENTIALS_PROD` + `_DEV` |
 | Admin SDK **prod** | SA `C:\DATOS\portal-hospital-v2-4885ffb02c61.json` · **nunca seed agresivo** sin decisión explícita |
 | Alias Firebase CLI | `.firebaserc`: `dev` → `portal-hospital-v2-dev` · `prod` / `default` → `portal-hospital-v2` |
 
