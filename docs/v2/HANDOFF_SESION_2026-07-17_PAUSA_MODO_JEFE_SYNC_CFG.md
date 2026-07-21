@@ -62,7 +62,7 @@ Prod SA (solo lectura/sync): `C:\DATOS\portal-hospital-v2-4885ffb02c61.json`
 |-----|-----------|
 | Art. 77-0 | `art_01KXK3HN7Z52Q0TKPM5EE6Y0M7` / `ver_01KXK3HN80GFD52WM4WWGGY1C5` · **sigue vivo** (solo −dev) |
 | 64-A **piloto** | `art_01KRNK10V10CH7W5M2W6V558GS` / `ver_01KRNKNBXNBFC9HZN7CZJGPRDH` · sin retro · `autorizacion` |
-| 64-A **duplicado** (prod legacy) | `art_01KRDTBZRDSK7K9JAPXCYWYFRC` · también `autorizacion` post-parche |
+| 64-A **legacy** | `art_01KRDTBZRDSK7K9JAPXCYWYFRC` · archivado 2026-07-21 (`64-A-LEGACY-ARCHIVED`, `activo=false`) |
 | 64-B | `art_01KRYEX0JZY4Y8J1GY3Q9F8BJQ` · `autorizacion` |
 | Allowlist | `cfg_etapa1/runtime` **no tocado** por el sync |
 | Lokito | `per_01KXK214PYGN9W38CZR4SMV3XW` · DNI `1234567` / PIN `123456` |
@@ -133,8 +133,8 @@ node scripts/seed-v2/patch-modo-resolucion-jefe-dev.mjs --apply
 
 ### Próxima sesión
 
-- [ ] Push rama / PR → `develop`
-- [ ] (Opcional) desambiguar / archivar 64-A legacy `art_01KRDTBZ…` en −dev
+- [x] Push rama / merge → `develop` (`9570464`)
+- [x] Archivar 64-A legacy `art_01KRDTBZ…` en −dev (`codigo=64-A-LEGACY-ARCHIVED`, `activo=false`)
 - [ ] Promoción a prod solo con flags / allowlist + UAT
 - [ ] Átomo: alta directa RRHH 77-0
 
@@ -151,4 +151,4 @@ node scripts/seed-v2/patch-modo-resolucion-jefe-dev.mjs --apply
 
 ## 7. Frase de continuación (copiar al reabrir chat)
 
-> Retomar desde `docs/v2/HANDOFF_SESION_2026-07-17_PAUSA_MODO_JEFE_SYNC_CFG.md`: PAUSA tras smoke 77-0/64 + sync cfg (`a7ce943`). Rama `feature/modo-resolucion-jefe-v2`, árbol limpio, push pendiente. UI siempre `:5174` (−dev). Próximo: push/PR a `develop`, o átomo alta RRHH 77-0. Tras cualquier `sync:cfg-prod-to-dev:apply`, re-aplicar parches −dev (retro 64-A + modo jefe; cuidar duplicado 64-A).
+> Retomar desde `docs/v2/HANDOFF_SESION_2026-07-17_PAUSA_MODO_JEFE_SYNC_CFG.md`: feature mergeada en `develop` (`9570464`). Push OK. 64-A legacy archivado en −dev. UI `:5174` o `:5173` con `npm run dev:web:dev`. **Próximo átomo:** alta directa RRHH 77-0.
