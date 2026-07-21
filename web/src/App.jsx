@@ -34,7 +34,6 @@ import RedirectTicketeraAlta from "./features/solicitudes/RedirectTicketeraAlta.
 import TicketeraAltaPage from "./pages/TicketeraAltaPage.jsx";
 import AvisoMedicoPage from "./pages/AvisoMedicoPage.jsx";
 import NuevaSolicitudPorRolPage from "./pages/NuevaSolicitudPorRolPage.jsx";
-import Etapa1SurfaceGuard from "./features/etapa1/Etapa1SurfaceGuard.jsx";
 import { ROL_CFG_MEDICO, ROL_CFG_RRHH, ROL_CFG_VISUALIZADOR } from "./features/solicitudes/nuevaSolicitudPorRol.js";
 import CheckinSaldosAgente from "./pages/CheckinSaldosAgente.jsx";
 import AltaAgenteOnboardingRRHH from "./pages/AltaAgenteOnboardingRRHH.jsx";
@@ -43,7 +42,6 @@ import SeguimientoEnrolamientoUsuariosRRHH from "./pages/SeguimientoEnrolamiento
 import CalendarioConfig from "./pages/rrhh/CalendarioConfig.jsx";
 import CalendarioInstitucionalConsulta from "./pages/CalendarioInstitucionalConsulta.jsx";
 import RegimenesHorariosPage from "./pages/rrhh/RegimenesHorariosPage.jsx";
-import PlanTurnoServicioJefePage from "./pages/jefe/PlanTurnoServicioJefePage.jsx";
 import PlanTurnoServicioRrhhPage from "./pages/rrhh/PlanTurnoServicioRrhhPage.jsx";
 import BandejaTurnosRrhhPage from "./pages/rrhh/BandejaTurnosRrhhPage.jsx";
 import ExploradorTurnosRrhhPage from "./pages/rrhh/ExploradorTurnosRrhhPage.jsx";
@@ -54,7 +52,6 @@ import FichadasEnrolamientoRrhhPage from "./pages/rrhh/FichadasEnrolamientoRrhhP
 import FichadasConsultaEnrolamientoRrhhPage from "./pages/rrhh/FichadasConsultaEnrolamientoRrhhPage.jsx";
 import FichadasCargaManualRrhhPage from "./pages/rrhh/FichadasCargaManualRrhhPage.jsx";
 import FichadasRelojesRrhhPage from "./pages/rrhh/FichadasRelojesRrhhPage.jsx";
-import GrillaOperativaJefePage from "./pages/jefe/GrillaOperativaJefePage.jsx";
 import GrillaPortalRedirect from "./features/routing/GrillaPortalRedirect.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import SistemasWeb from "./pages/SistemasWeb.jsx";
@@ -132,30 +129,9 @@ export default function App() {
               />
               <Route path="patron-b" element={<RedirectTicketeraAlta />} />
               <Route path="patron-c" element={<RedirectTicketeraAlta />} />
-              <Route
-                path="lao"
-                element={
-                  <Etapa1SurfaceGuard flag="lao">
-                    <LaoWizardTicketera />
-                  </Etapa1SurfaceGuard>
-                }
-              />
-              <Route
-                path="lao-formulario"
-                element={
-                  <Etapa1SurfaceGuard flag="lao">
-                    <SolicitudLaoAlta />
-                  </Etapa1SurfaceGuard>
-                }
-              />
-              <Route
-                path="aviso-medico"
-                element={
-                  <Etapa1SurfaceGuard flag="medico">
-                    <AvisoMedicoPage />
-                  </Etapa1SurfaceGuard>
-                }
-              />
+              <Route path="lao" element={<LaoWizardTicketera />} />
+              <Route path="lao-formulario" element={<SolicitudLaoAlta />} />
+              <Route path="aviso-medico" element={<AvisoMedicoPage />} />
             </Route>
             <Route path="solicitudes/asuntos-particulares" element={<Solicitud64AAlta />} />
             <Route path="perfil" element={<DatosPersonales />} />
@@ -170,22 +146,8 @@ export default function App() {
                 </RoleGuard>
               }
             />
-            <Route
-              path="medico/solicitudes"
-              element={
-                <Etapa1SurfaceGuard flag="medico">
-                  <BandejaAuditorSolicitudes />
-                </Etapa1SurfaceGuard>
-              }
-            />
-            <Route
-              path="medico/junta"
-              element={
-                <Etapa1SurfaceGuard flag="medico">
-                  <BandejaJuntaSolicitudes />
-                </Etapa1SurfaceGuard>
-              }
-            />
+            <Route path="medico/solicitudes" element={<BandejaAuditorSolicitudes />} />
+            <Route path="medico/junta" element={<BandejaJuntaSolicitudes />} />
             <Route
               path="visualizador/nueva-solicitud"
               element={
@@ -194,22 +156,8 @@ export default function App() {
                 </RoleGuard>
               }
             />
-            <Route
-              path="jefe/planes-turno"
-              element={
-                <Etapa1SurfaceGuard flag="gso_jefe">
-                  <PlanTurnoServicioJefePage />
-                </Etapa1SurfaceGuard>
-              }
-            />
-            <Route
-              path="jefe/grilla-operativa"
-              element={
-                <Etapa1SurfaceGuard flag="gso_jefe">
-                  <GrillaOperativaJefePage />
-                </Etapa1SurfaceGuard>
-              }
-            />
+            <Route path="jefe/planes-turno" element={<Navigate to="/portal/home" replace />} />
+            <Route path="jefe/grilla-operativa" element={<Navigate to="/portal/home" replace />} />
             <Route path="modulos" element={<EstadoModulos />} />
             <Route path="pantallas" element={<PantallasCatalogo />} />
             <Route path="configuracion" element={<Configuracion />} />

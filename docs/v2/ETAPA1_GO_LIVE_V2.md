@@ -4,7 +4,21 @@
 **No sustituye** UAT, Política deploy ni Acta RRHH — las indexa.  
 **Prod piloto:** proyecto `portal-hospital-v2` · https://portal-hospital-v2.web.app
 
-## 0. Punteros
+## 0. Estado 2026-07-21 — candados Etapa 1 retirados del runtime
+
+El catálogo agente y las superficies UI **ya no** leen `articulo_ids_etapa1` / `lao_habilitada` / `licencias_medicas_habilitadas` / `jefe_gso_habilitado` como puertas de visibilidad.
+
+**Gobierno vigente:**
+
+1. `circuito_ingreso_ids` en la versión publicada del artículo (quién puede crear).
+2. Elegibilidad laboral del titular.
+3. Menús por rol (`menuTemporalmenteOculto` p. ej. Grilla/Turnos jefe).
+
+El documento `cfg_etapa1/runtime` puede permanecer inerte por compatibilidad; no es SSoT operativa.
+
+---
+
+## 0b. Punteros
 
 | Doc | Ruta (al persistir) |
 |-----|---------------------|
@@ -17,36 +31,35 @@
 
 ## 1. Decisión de aislamiento (población)
 
-| Cohort | Tratamiento Día D |
-|--------|-------------------|
-| **GDT nuevos + personas nuevas** | Allowlist Etapa 1 (conejillos) |
-| **GDT/personas ya existentes** | Siguen en Firestore/Auth; **fuera** de `gdt_ids_etapa1` → sin circuito Etapa 1 (menú vacío / rechazo callable) |
-| **Cuentas RRHH / técnicas** | Bypass allowlist vía flag `roles` o lista `persona_ids_ops_etapa1` |
+| Cohort | Tratamiento |
+|--------|-------------|
+| **Agente** | Arts con `CFG_USUARIO` en `circuito_ingreso_ids` + elegibilidad |
+| **RRHH** | Arts con `CFG_RRHH` (arenero: LM, LAO, 77-0, etc.) vía Nueva solicitud |
+| **Jefe** | Bandeja autorización; Grilla/Turnos temporalmente fuera del menú |
+| **GDT** | Sin allowlist; basta HLc vigente en GDT activo (si aplica al alta laboral) |
 
-## 2. Allowlist — dónde y cómo
+## 2. Runtime cfg — histórico Soft Launch
 
-**Elegido:** documento de configuración en Firestore (editable sin redeploy de lógica dura), leído por Functions en toda alta/listado/preview.
+> **Deprecated.** Ver §0. El texto siguiente queda como archivo histórico del soft launch.
 
-Propuesta de forma (nombre final al implementar):
+Documento legacy: `cfg_etapa1/runtime`
 
 ```text
-cfg_parametros_sistema /  (o doc dedicado cfg_etapa1_v2)
-  etapa1_habilitada: true
-  gdt_ids_etapa1: ["gdt_…", "gdt_…"]          // GDT NUEVOS únicamente
-  persona_ids_ops_bypass: ["per_…"]            // RRHH/tech
-  articulo_ids_etapa1: ["art_…", ...]          // ver §3
-  jefe_gso_habilitado: false                   // hard off Etapa 1
+cfg_etapa1 / runtime
+  etapa1_habilitada: true          // legacy
+  gdt_ids_etapa1: []               // DEPRECATED
+  articulo_ids_etapa1: [...]       // DEPRECATED — no filtra listado agente
+  persona_ids_ops_bypass: ["per_…"]
+  jefe_gso_habilitado: false       // DEPRECATED — menú jefe usa menuTemporalmenteOculto
 ```
 
-**Regla de pertenencia (server):**
+**Regla de pertenencia vigente (server listado agente):**
 
-1. Si `persona_id ∈ persona_ids_ops_bypass` → OK ops.  
-2. Else: HLg/HLc **vigente** de la persona tiene `grupo_trabajo_id ∈ gdt_ids_etapa1`.  
-3. Else → denegar operación Etapa 1 (login puede existir; ticketera/bandeja circuito vacía o error claro).
+1. Versión publicada Patrón B/C.  
+2. `hlc.rol_id ∈ circuito_ingreso_ids` (vía elegibilidad).  
+3. Filtros laborales (escalafón, etc.).
 
-**No** usar array hardcodeado de 80 `persona_id` en el repo como fuente de verdad (Anexo A del acta es nómina humana; la verdad runtime es GDT + cargos).
-
-Claims Auth opcionales (`piloto_etapa1`) solo como cache/UX; **la autorización real es server + cfg**.
+Claims Auth opcionales solo como cache/UX; **la autorización real es server + cfg del artículo**.
 
 ## 3. Filtro de catálogo (artículos habilitados)
 
@@ -78,16 +91,16 @@ Claims Auth opcionales (`piloto_etapa1`) solo como cache/UX; **la autorización 
 
 ## 5. Checklist ops Día D (dev + RRHH)
 
-1. `etapa1_habilitada: true` + `gdt_ids_etapa1` cargados con GDT **nuevos**.  
+1. `etapa1_habilitada: true`. GDT activos con HLc vigente operan sin lista manual.  
 2. Soft Launch: 5–10 personas nuevas con cuenta, HLg, jefe, check-in 64.  
 3. `articulo_ids_etapa1` incluye 64-A/B, 63-J, CAMBIO-DIA (si ya existe).  
 4. Smoke gate según Política deploy / UAT.  
 5. Canal soporte del Acta activo.  
-6. Confirmar que personas de GDT **viejos** no pasan filtro Etapa 1.
+6. Confirmar que personas **sin** GDT activo / sin HLc no pasan el filtro Etapa 1.
 
 ## 6. Después del Día D
 
-- Ampliación allowlist = agregar personas a GDT nuevos (o GDT nuevos a `gdt_ids_etapa1`), no “abrir todo el hospital”.  
+- Apertura de población = GDT `activo: true` + HLc (sin tocar `gdt_ids_etapa1`).  
 - Desarrollo no-Etapa1 → `portal-hospital-v2-dev` (Política deploy).  
 - Abrir GSO a jefes = **nueva acta**, no un flag casual en prod.
 

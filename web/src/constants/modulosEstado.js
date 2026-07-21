@@ -240,6 +240,8 @@ export const MODULOS_PORTAL = [
     path: "/portal/jefe/grilla-operativa",
     estado: ESTADOS_MODULO.MVP,
     grupo: "jefe",
+    /** Temporal: madura en shell RRHH; no exponer a jefe hasta acta. */
+    menuTemporalmenteOculto: true,
   },
   {
     id: "planes-turno-jefe",
@@ -247,6 +249,7 @@ export const MODULOS_PORTAL = [
     path: "/portal/jefe/planes-turno",
     estado: ESTADOS_MODULO.MVP,
     grupo: "jefe",
+    menuTemporalmenteOculto: true,
   },
   {
     id: "bandeja-solicitudes-jefe",

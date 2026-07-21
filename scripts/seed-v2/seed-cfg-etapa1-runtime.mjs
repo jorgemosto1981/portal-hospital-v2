@@ -44,7 +44,7 @@ const payload = {
   ...normalizeEtapa1Runtime({
     ...ETAPA1_RUNTIME_DEFAULTS,
     articulo_ids_etapa1: articuloIds,
-    // Soft Launch: set etapa1_habilitada true + gdt_ids_etapa1 con GDT nuevos
+    // Soft Launch: etapa1_habilitada true. gdt_ids_etapa1 es obsoleto (circuito = GDT activo).
     etapa1_habilitada: false,
     forzar_catalogo_etapa1: false,
     jefe_gso_habilitado: false,

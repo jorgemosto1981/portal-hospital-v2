@@ -7,6 +7,7 @@ import {
   articuloFilaPermitidaEtapa1,
   articuloPermitidoEtapa1,
   debeFiltrarCatalogoEtapa1,
+  gdtIdsDesdeHlcVigentes,
   normalizeEtapa1Runtime,
   personaPermitidaCircuitoEtapa1,
   ARTICULO_64A_ETAPA1_ID,
@@ -24,10 +25,10 @@ describe("etapa1RuntimeConfig", () => {
     assert.equal(articuloPermitidoEtapa1(cfg, "art_cualquiera"), true);
   });
 
-  it("con etapa1_habilitada filtra GDT y catálogo", () => {
+  it("con etapa1_habilitada filtra catálogo; circuito por GDT activo (no allowlist)", () => {
     const cfg = normalizeEtapa1Runtime({
       etapa1_habilitada: true,
-      gdt_ids_etapa1: ["gdt_nuevo"],
+      gdt_ids_etapa1: ["gdt_legacy_ignorado"],
       articulo_ids_etapa1: [ARTICULO_64A_ETAPA1_ID],
     });
     assert.equal(debeFiltrarCatalogoEtapa1(cfg), true);
@@ -35,19 +36,55 @@ describe("etapa1RuntimeConfig", () => {
     assert.equal(articuloPermitidoEtapa1(cfg, "art_otro"), false);
     assert.equal(articuloPermitidoEtapa1(cfg, ARTICULO_LAO_ID), false);
     assert.equal(
-      personaPermitidaCircuitoEtapa1(cfg, "per_a", [{ grupo_de_trabajo_id: "gdt_viejo" }]),
+      personaPermitidaCircuitoEtapa1(cfg, "per_a", [{ grupo_de_trabajo_id: "gdt_nuevo" }], {
+        gdtIdsActivos: new Set(["gdt_otro"]),
+      }),
       false,
     );
     assert.equal(
-      personaPermitidaCircuitoEtapa1(cfg, "per_a", [{ grupo_de_trabajo_id: "gdt_nuevo" }]),
+      personaPermitidaCircuitoEtapa1(cfg, "per_a", [{ grupo_de_trabajo_id: "gdt_nuevo" }], {
+        gdtIdsActivos: ["gdt_nuevo"],
+      }),
       true,
+    );
+    // Allowlist legacy no habilita por sí sola
+    assert.equal(
+      personaPermitidaCircuitoEtapa1(cfg, "per_a", [{ grupo_de_trabajo_id: "gdt_legacy_ignorado" }], {
+        gdtIdsActivos: new Set(["gdt_nuevo"]),
+      }),
+      false,
     );
   });
 
-  it("bypass ops y RRHH saltan allowlist GDT", () => {
+  it("sin gdtIdsActivos (o vacío) deniega con piloto on", () => {
+    const cfg = normalizeEtapa1Runtime({ etapa1_habilitada: true });
+    assert.equal(
+      personaPermitidaCircuitoEtapa1(cfg, "per_a", [{ grupo_de_trabajo_id: "gdt_x" }]),
+      false,
+    );
+    assert.equal(
+      personaPermitidaCircuitoEtapa1(cfg, "per_a", [{ grupo_de_trabajo_id: "gdt_x" }], {
+        gdtIdsActivos: [],
+      }),
+      false,
+    );
+  });
+
+  it("gdtIdsDesdeHlcVigentes dedupe y filtra ids inválidos", () => {
+    assert.deepEqual(
+      gdtIdsDesdeHlcVigentes([
+        { grupo_de_trabajo_id: "gdt_a" },
+        { grupo_de_trabajo_id: "gdt_a" },
+        { grupo_de_trabajo_id: "nope" },
+        {},
+      ]),
+      ["gdt_a"],
+    );
+  });
+
+  it("bypass ops y RRHH saltan chequeo de GDT activo", () => {
     const cfg = normalizeEtapa1Runtime({
       etapa1_habilitada: true,
-      gdt_ids_etapa1: ["gdt_nuevo"],
       persona_ids_ops_bypass: ["per_rrhh"],
     });
     assert.equal(personaPermitidaCircuitoEtapa1(cfg, "per_rrhh", []), true);

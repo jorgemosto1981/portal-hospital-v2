@@ -18,6 +18,7 @@ export const ETAPA1_RUNTIME_DEFAULTS = Object.freeze({
   etapa1_habilitada: false,
   /** true = filtrar catálogo aunque piloto off (uso puntual Soft Launch prep). Soft Launch real: activar etapa1_habilitada. */
   forzar_catalogo_etapa1: false,
+  /** @deprecated Obsoleto: el circuito ya no filtra por este array (usa GDT activo + HLc). */
   gdt_ids_etapa1: /** @type {string[]} */ ([]),
   articulo_ids_etapa1: [
     ARTICULO_64A_ETAPA1_ID,
@@ -70,20 +71,45 @@ export function personaEnBypassOpsEtapa1(cfg, personaId, opts = {}) {
 }
 
 /**
- * GDT allowlist solo con piloto activo y lista no vacía.
+ * IDs de GDT presentes en HLc/HLg vigentes.
+ * @param {Array<{ grupo_de_trabajo_id?: string }>} hlcVigentes
+ * @returns {string[]}
+ */
+export function gdtIdsDesdeHlcVigentes(hlcVigentes) {
+  const rows = Array.isArray(hlcVigentes) ? hlcVigentes : [];
+  return [
+    ...new Set(
+      rows
+        .map((h) => String(h?.grupo_de_trabajo_id || "").trim())
+        .filter((id) => /^gdt_/i.test(id)),
+    ),
+  ];
+}
+
+/**
+ * Circuito Etapa 1 con piloto on: HLc/HLg vigente en algún GDT activo.
+ * `gdt_ids_etapa1` ya no se consulta (allowlist deprecada).
  * @param {ReturnType<typeof normalizeEtapa1Runtime>} cfg
  * @param {string} personaId
  * @param {Array<{ grupo_de_trabajo_id?: string }>} hlcVigentes
- * @param {{ esRrhh?: boolean }} [opts]
+ * @param {{ esRrhh?: boolean, gdtIdsActivos?: Set<string> | string[] }} [opts]
  */
 export function personaPermitidaCircuitoEtapa1(cfg, personaId, hlcVigentes, opts = {}) {
   if (personaEnBypassOpsEtapa1(cfg, personaId, opts)) return true;
   if (!cfg.etapa1_habilitada) return true;
-  const allow = cfg.gdt_ids_etapa1 || [];
-  if (!allow.length) return false;
-  const set = new Set(allow);
-  const rows = Array.isArray(hlcVigentes) ? hlcVigentes : [];
-  return rows.some((h) => set.has(String(h?.grupo_de_trabajo_id || "").trim()));
+  const gdtEnHlc = gdtIdsDesdeHlcVigentes(hlcVigentes);
+  if (!gdtEnHlc.length) return false;
+  const raw = opts.gdtIdsActivos;
+  /** @type {Set<string>} */
+  const activos =
+    raw instanceof Set
+      ? raw
+      : new Set(
+          (Array.isArray(raw) ? raw : [])
+            .map((x) => String(x || "").trim())
+            .filter((id) => /^gdt_/i.test(id)),
+        );
+  return gdtEnHlc.some((id) => activos.has(id));
 }
 
 /**

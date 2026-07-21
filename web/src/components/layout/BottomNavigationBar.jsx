@@ -4,12 +4,15 @@ import { useLocation } from "react-router-dom";
 import { GRUPOS_MENU_RAIZ, MODULOS_PORTAL } from "../../constants/modulosEstado.js";
 import { useAuthClaims } from "../../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../../features/auth/useAuthSession.js";
-import { claimsIncludeAuditorMedico, claimsIncludeJuntaMedica, MANAGEMENT_PORTAL_ROLES } from "../../features/routing/portalRole.js";
+import {
+  claimsIncludeAuditorMedico,
+  claimsIncludeJuntaMedica,
+  MANAGEMENT_PORTAL_ROLES,
+} from "../../features/routing/portalRole.js";
 import {
   filtrarModulosPorArticulosIngreso,
   useArticulosIngresoMenu,
 } from "../../features/solicitudes/ArticulosIngresoProvider.jsx";
-import { useEtapa1RuntimeOptional } from "../../features/etapa1/Etapa1RuntimeProvider.jsx";
 import { grupoAccesiblePorClaims } from "./menuGrupoAcceso.js";
 
 const ICONS_BY_ID = {
@@ -448,10 +451,6 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
   const { user } = useAuthSession();
   const { hasPortalRoles, claims } = useAuthClaims(user);
   const { puedeSolicitarArticulo } = useArticulosIngresoMenu();
-  const etapa1 = useEtapa1RuntimeOptional();
-  const jefeGsoOff = etapa1 ? etapa1.jefeGsoHabilitado !== true : true;
-  const laoOff = etapa1 ? etapa1.laoHabilitada !== true : true;
-  const lmOff = etapa1 ? etapa1.licenciasMedicasHabilitadas !== true : true;
   const canManagement = hasPortalRoles(MANAGEMENT_PORTAL_ROLES);
   const requiresManagementTab = (id) =>
     id === "rrhh" ||
@@ -468,21 +467,8 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
     const visibleIds = new Set(modulosVisibles.map((m) => m.id));
     return tabs.filter((tab) => {
       if (!visibleIds.has(tab.id)) return false;
-      if (jefeGsoOff && (tab.id === "grilla-jefe" || tab.id === "planes-turno-jefe")) {
-        return false;
-      }
-      if (laoOff && (tab.id === "solicitud-lao" || tab.id === "lao-checkin-rrhh")) {
-        return false;
-      }
-      if (
-        lmOff &&
-        (tab.id === "bandeja-solicitudes-auditor-medico" ||
-          tab.id === "bandeja-solicitudes-auditor-rrhh" ||
-          tab.id === "bandeja-junta-medico" ||
-          tab.id === "bandeja-junta-rrhh")
-      ) {
-        return false;
-      }
+      const mod = MODULOS_PORTAL.find((m) => m.id === tab.id);
+      if (mod?.menuTemporalmenteOculto === true) return false;
       if (
         (tab.id === "bandeja-solicitudes-auditor-medico" ||
           tab.id === "bandeja-solicitudes-auditor-rrhh") &&
@@ -498,7 +484,7 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
       }
       return requiresManagementTab(tab.id) ? canManagement : true;
     });
-  }, [puedeSolicitarArticulo, canManagement, claims, jefeGsoOff, laoOff, lmOff]);
+  }, [puedeSolicitarArticulo, canManagement, claims]);
 
   const bloquesConItems = useMemo(
     () =>
