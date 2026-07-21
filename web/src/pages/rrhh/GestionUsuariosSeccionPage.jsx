@@ -1,0 +1,102 @@
+import { Link } from "react-router-dom";
+
+import {
+  BajaLaboralForm,
+  EstadoCuentaForm,
+  ReinicioVinculacionForm,
+} from "../../features/rrhh/sections/RrhhForms.jsx";
+import { etiquetaCatalogo, etiquetaPersona } from "../../features/rrhh/utils.js";
+import { useGestionUsuariosRrhh } from "../../features/rrhh/useGestionUsuariosRrhh.js";
+
+const TITULOS = {
+  acceso: "Gestión de acceso de cuenta",
+  baja: "Baja laboral transaccional",
+  reinicio: "Reinicio de vinculación e invalidación de sesión",
+};
+
+/**
+ * Una sección de gestión por pantalla (menú desplegable RRHH).
+ * @param {{ seccion: "acceso" | "baja" | "reinicio" }} props
+ */
+export default function GestionUsuariosSeccionPage({ seccion }) {
+  const g = useGestionUsuariosRrhh();
+
+  if (!g.user && !g.openAccessTemp) {
+    return <p className="p-6 text-sm text-slate-500">Iniciá sesión con rol RRHH para gestionar usuarios.</p>;
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-md px-3 py-6 text-slate-900 md:max-w-lg">
+      <h1 className="text-xl font-semibold">{TITULOS[seccion] || "Gestión de usuarios"}</h1>
+      <p className="mt-2 text-sm text-slate-600">
+        <Link to="/portal/rrhh/gestion-usuarios" className="font-medium text-blue-700 underline">
+          ← Volver a Gestión de usuarios
+        </Link>
+      </p>
+
+      {g.load ? (
+        <p className="mt-6 text-sm text-slate-500">Cargando catálogos…</p>
+      ) : (
+        <div className="mt-2">
+          {seccion === "acceso" ? (
+            <EstadoCuentaForm
+              handleActualizarEstadoCuenta={g.handleActualizarEstadoCuenta}
+              personaEstadoId={g.personaEstadoId}
+              setPersonaEstadoId={g.setPersonaEstadoId}
+              personasConCuenta={g.personasConCuenta}
+              etiquetaPersona={etiquetaPersona}
+              estadoAccesoId={g.estadoAccesoId}
+              setEstadoAccesoId={g.setEstadoAccesoId}
+              estadosCuentaAcceso={g.estadosCuentaAcceso}
+              etiquetaCatalogo={etiquetaCatalogo}
+              motivoEstado={g.motivoEstado}
+              setMotivoEstado={g.setMotivoEstado}
+              busyEstado={g.busyEstado}
+            />
+          ) : null}
+          {seccion === "baja" ? (
+            <BajaLaboralForm
+              handleAplicarBajaLaboral={g.handleAplicarBajaLaboral}
+              personaBajaId={g.personaBajaId}
+              setPersonaBajaId={g.setPersonaBajaId}
+              personasConCuenta={g.personasConCuenta}
+              etiquetaPersona={etiquetaPersona}
+              fechaBaja={g.fechaBaja}
+              setFechaBaja={g.setFechaBaja}
+              causalFinAsignacionId={g.causalFinAsignacionId}
+              setCausalFinAsignacionId={g.setCausalFinAsignacionId}
+              causalesFinAsignacion={g.causalesFinAsignacion}
+              motivoBajaId={g.motivoBajaId}
+              setMotivoBajaId={g.setMotivoBajaId}
+              motivosBajaPersona={g.motivosBajaPersona}
+              etiquetaCatalogo={etiquetaCatalogo}
+              bloquearAccesoEnBaja={g.bloquearAccesoEnBaja}
+              setBloquearAccesoEnBaja={g.setBloquearAccesoEnBaja}
+              motivoBajaTexto={g.motivoBajaTexto}
+              setMotivoBajaTexto={g.setMotivoBajaTexto}
+              busyBaja={g.busyBaja}
+            />
+          ) : null}
+          {seccion === "reinicio" ? (
+            <ReinicioVinculacionForm
+              handleReiniciarVinculacion={g.handleReiniciarVinculacion}
+              personaReinicioId={g.personaReinicioId}
+              setPersonaReinicioId={g.setPersonaReinicioId}
+              personas={g.personas}
+              etiquetaPersona={etiquetaPersona}
+              resetEstadoOnboarding={g.resetEstadoOnboarding}
+              setResetEstadoOnboarding={g.setResetEstadoOnboarding}
+              estadoAccesoReinicioId={g.estadoAccesoReinicioId}
+              setEstadoAccesoReinicioId={g.setEstadoAccesoReinicioId}
+              estadosCuentaAcceso={g.estadosCuentaAcceso}
+              etiquetaCatalogo={etiquetaCatalogo}
+              motivoReinicio={g.motivoReinicio}
+              setMotivoReinicio={g.setMotivoReinicio}
+              busyReinicio={g.busyReinicio}
+            />
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}

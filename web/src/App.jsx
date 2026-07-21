@@ -55,6 +55,7 @@ import FichadasConsultaEnrolamientoRrhhPage from "./pages/rrhh/FichadasConsultaE
 import FichadasCargaManualRrhhPage from "./pages/rrhh/FichadasCargaManualRrhhPage.jsx";
 import FichadasRelojesRrhhPage from "./pages/rrhh/FichadasRelojesRrhhPage.jsx";
 import GestionUsuariosRrhhPage from "./pages/rrhh/GestionUsuariosRrhhPage.jsx";
+import GestionUsuariosSeccionPage from "./pages/rrhh/GestionUsuariosSeccionPage.jsx";
 import GrillaPortalRedirect from "./features/routing/GrillaPortalRedirect.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import SistemasWeb from "./pages/SistemasWeb.jsx";
@@ -184,6 +185,9 @@ export default function App() {
               <Route path="rrhh/alta" element={<AltaAgenteRRHH />} />
               <Route path="rrhh/alta-agente" element={<AltaAgenteOnboardingRRHH />} />
               <Route path="rrhh/gestion-usuarios" element={<GestionUsuariosRrhhPage />} />
+              <Route path="rrhh/gestion-usuarios/acceso" element={<GestionUsuariosSeccionPage seccion="acceso" />} />
+              <Route path="rrhh/gestion-usuarios/baja" element={<GestionUsuariosSeccionPage seccion="baja" />} />
+              <Route path="rrhh/gestion-usuarios/reinicio" element={<GestionUsuariosSeccionPage seccion="reinicio" />} />
               <Route path="rrhh/antiguedad" element={<Antiguedad />} />
               <Route
                 path="rrhh/nueva-solicitud"

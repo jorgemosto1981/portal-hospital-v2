@@ -53,11 +53,19 @@ export const MODULOS_PORTAL = [
     grupo: "usuario",
   },
   {
+    id: "datos-laborales-raiz",
+    label: "Datos laborales",
+    path: "/portal/laboral",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
     id: "laboral",
     label: "Laboral",
     path: "/portal/laboral",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
+    parentMenuId: "datos-laborales-raiz",
   },
   {
     id: "ticketera",
@@ -69,12 +77,20 @@ export const MODULOS_PORTAL = [
     ticketeraSiempreVisible: true,
   },
   {
+    id: "funciones-rrhh-raiz",
+    label: "Funciones RRHH",
+    path: "/portal/rrhh/nueva-solicitud",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
     id: "nueva-solicitud-rrhh",
     label: "Nueva solicitud",
     path: "/portal/rrhh/nueva-solicitud",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
     nuevaSolicitudPorRolMenu: true,
+    parentMenuId: "funciones-rrhh-raiz",
   },
   {
     id: "nueva-solicitud-medico",
@@ -105,6 +121,7 @@ export const MODULOS_PORTAL = [
     path: "/portal/rrhh/antiguedad",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
+    parentMenuId: "datos-laborales-raiz",
   },
   {
     id: "articulos-cfg",
@@ -126,6 +143,7 @@ export const MODULOS_PORTAL = [
     path: "/portal/rrhh/regimenes-horarios",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
+    parentMenuId: "datos-laborales-raiz",
   },
   {
     id: "checkin-saldos",
@@ -133,6 +151,7 @@ export const MODULOS_PORTAL = [
     path: "/portal/rrhh/checkin-saldos",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
+    parentMenuId: "datos-laborales-raiz",
   },
   {
     id: "bandeja-solicitudes-rrhh",
@@ -141,6 +160,7 @@ export const MODULOS_PORTAL = [
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
     bandejaRrhhMenu: true,
+    parentMenuId: "funciones-rrhh-raiz",
   },
   {
     id: "bandeja-turnos-raiz-rrhh",
@@ -148,22 +168,24 @@ export const MODULOS_PORTAL = [
     path: "/portal/rrhh/bandeja-turnos",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
+    /** Absorbido por «Funciones RRHH»; Evaluador/Explorador quedan ahí. */
+    menuTemporalmenteOculto: true,
   },
   {
     id: "bandeja-turnos-evaluador-rrhh",
-    label: "Evaluador",
+    label: "Bandeja turnos",
     path: "/portal/rrhh/bandeja-turnos",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
-    parentMenuId: "bandeja-turnos-raiz-rrhh",
+    parentMenuId: "funciones-rrhh-raiz",
   },
   {
     id: "bandeja-turnos-explorador-rrhh",
-    label: "Explorador",
+    label: "Explorador turnos",
     path: "/portal/rrhh/explorador-turnos",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
-    parentMenuId: "bandeja-turnos-raiz-rrhh",
+    parentMenuId: "funciones-rrhh-raiz",
   },
   {
     id: "planes-turno-rrhh",
@@ -171,6 +193,7 @@ export const MODULOS_PORTAL = [
     path: "/portal/rrhh/planes-turno",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
+    parentMenuId: "funciones-rrhh-raiz",
   },
   {
     id: "grilla",
@@ -178,6 +201,7 @@ export const MODULOS_PORTAL = [
     path: "/portal/rrhh/grilla-operativa",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
+    parentMenuId: "funciones-rrhh-raiz",
   },
   {
     id: "cosas-del-jefe-raiz",
@@ -204,7 +228,7 @@ export const MODULOS_PORTAL = [
   },
   {
     id: "fichadas-reloj-raiz",
-    label: "Fichadas reloj",
+    label: "Opciones de reloj",
     path: "/portal/rrhh/fichadas-relojes",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
@@ -291,12 +315,20 @@ export const MODULOS_PORTAL = [
     bandejaAuditorMedicoMenu: true,
   },
   {
+    id: "cosas-del-medico-raiz",
+    label: "Cosas del médico",
+    path: "/portal/medico/solicitudes",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
     id: "bandeja-solicitudes-auditor-rrhh",
     label: "Auditoría médica",
     path: "/portal/medico/solicitudes",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
     bandejaAuditorMedicoMenu: true,
+    parentMenuId: "cosas-del-medico-raiz",
   },
   {
     id: "bandeja-junta-medico",
@@ -313,13 +345,7 @@ export const MODULOS_PORTAL = [
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
     bandejaJuntaMedicoMenu: true,
-  },
-  {
-    id: "alta-agente-guia",
-    label: "Alta nuevo usuario",
-    path: "/portal/rrhh/alta-agente",
-    estado: ESTADOS_MODULO.ACTIVO,
-    grupo: "rrhh",
+    parentMenuId: "cosas-del-medico-raiz",
   },
   {
     id: "gestion-usuarios-rrhh",
@@ -329,16 +355,49 @@ export const MODULOS_PORTAL = [
     grupo: "rrhh",
   },
   {
-    id: "rrhh-notif-datos",
-    label: "Notif. datos pers.",
-    path: "/portal/rrhh/notificaciones-datos-personales",
+    id: "alta-agente-guia",
+    label: "Alta nuevo usuario",
+    path: "/portal/rrhh/alta-agente",
     estado: ESTADOS_MODULO.ACTIVO,
     grupo: "rrhh",
+    parentMenuId: "gestion-usuarios-rrhh",
+  },
+  {
+    id: "gestion-acceso-rrhh",
+    label: "Acceso de cuenta",
+    path: "/portal/rrhh/gestion-usuarios/acceso",
+    estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "rrhh",
+    parentMenuId: "gestion-usuarios-rrhh",
+  },
+  {
+    id: "gestion-baja-rrhh",
+    label: "Baja laboral",
+    path: "/portal/rrhh/gestion-usuarios/baja",
+    estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "rrhh",
+    parentMenuId: "gestion-usuarios-rrhh",
+  },
+  {
+    id: "gestion-reinicio-rrhh",
+    label: "Reinicio vínculo",
+    path: "/portal/rrhh/gestion-usuarios/reinicio",
+    estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "rrhh",
+    parentMenuId: "gestion-usuarios-rrhh",
   },
   {
     id: "rrhh-seg-enrol-portal",
     label: "Enrol. portal",
     path: "/portal/rrhh/seguimiento-enrolamiento",
+    estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "rrhh",
+    parentMenuId: "gestion-usuarios-rrhh",
+  },
+  {
+    id: "rrhh-notif-datos",
+    label: "Notif. datos pers.",
+    path: "/portal/rrhh/notificaciones-datos-personales",
     estado: ESTADOS_MODULO.ACTIVO,
     grupo: "rrhh",
   },
@@ -409,6 +468,9 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh/notificaciones-datos-personales")) return "rrhh-notif-datos";
   if (pathname.startsWith("/portal/rrhh/seguimiento-enrolamiento")) return "rrhh-seg-enrol-portal";
   if (pathname.startsWith("/portal/rrhh/alta-agente")) return "alta-agente-guia";
+  if (pathname.startsWith("/portal/rrhh/gestion-usuarios/acceso")) return "gestion-acceso-rrhh";
+  if (pathname.startsWith("/portal/rrhh/gestion-usuarios/baja")) return "gestion-baja-rrhh";
+  if (pathname.startsWith("/portal/rrhh/gestion-usuarios/reinicio")) return "gestion-reinicio-rrhh";
   if (pathname.startsWith("/portal/rrhh/gestion-usuarios")) return "gestion-usuarios-rrhh";
   if (pathname.startsWith("/portal/rrhh/alta")) return "alta-agente-guia";
   if (pathname.startsWith("/portal/rrhh/antiguedad")) return "antiguedad";

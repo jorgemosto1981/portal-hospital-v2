@@ -156,6 +156,16 @@ const ICONS_BY_ID = {
       strokeWidth={1.5}
     />
   ),
+  "funciones-rrhh-raiz": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
   "bandeja-turnos-raiz-rrhh": () => (
     <path
       strokeLinecap="round"
@@ -327,6 +337,26 @@ const ICONS_BY_ID = {
       strokeWidth={1.5}
     />
   ),
+  "datos-laborales-raiz": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
+  "cosas-del-medico-raiz": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12ZM8.25 10.5h2.25L12 8.25l1.5 4.5 1.5-2.25h1.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
   "cosas-del-jefe-raiz": () => (
     <path
       strokeLinecap="round"
@@ -372,6 +402,36 @@ const ICONS_BY_ID = {
       strokeLinecap="round"
       strokeLinejoin="round"
       d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
+  "gestion-acceso-rrhh": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
+  "gestion-baja-rrhh": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
+  "gestion-reinicio-rrhh": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M21.015 4.356v4.992m0 0h-4.992m4.993 0-3.181-3.183a8.25 8.25 0 0 0-13.803 3.7"
       fill="none"
       stroke="currentColor"
       strokeWidth={1.5}
@@ -472,11 +532,17 @@ const ICONS_BY_ID = {
 const tabs = MODULOS_PORTAL.map((m) => ({
   id: m.id,
   label: m.label,
+  path: m.path,
   grupo: m.grupo,
   parentMenuId: m.parentMenuId || null,
   articuloIngresoId: m.articuloIngresoId,
   icon: ICONS_BY_ID[m.id],
 }));
+
+/** Raíces referenciadas como `parentMenuId` (para ocultarlas si no queda ningún hijo visible). */
+const RAICES_CON_HIJOS_DECLARADOS = new Set(
+  MODULOS_PORTAL.filter((m) => m.parentMenuId).map((m) => m.parentMenuId),
+);
 
 function ChevronIcon({ open }) {
   return (
@@ -515,7 +581,7 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
   const visibleTabs = useMemo(() => {
     const modulosVisibles = filtrarModulosPorArticulosIngreso(MODULOS_PORTAL, puedeSolicitarArticulo);
     const visibleIds = new Set(modulosVisibles.map((m) => m.id));
-    return tabs.filter((tab) => {
+    const base = tabs.filter((tab) => {
       if (!visibleIds.has(tab.id)) return false;
       const mod = MODULOS_PORTAL.find((m) => m.id === tab.id);
       if (mod?.menuTemporalmenteOculto === true) return false;
@@ -534,6 +600,11 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
       }
       return requiresManagementTab(tab.id) ? canManagement : true;
     });
+    // Raíz sin ningún hijo visible (p. ej. "Cosas del médico" sin claims de auditoría): se oculta.
+    return base.filter((tab) => {
+      if (tab.parentMenuId || !RAICES_CON_HIJOS_DECLARADOS.has(tab.id)) return true;
+      return base.some((c) => c.parentMenuId === tab.id);
+    });
   }, [puedeSolicitarArticulo, canManagement, claims]);
 
   const bloquesConItems = useMemo(
@@ -549,13 +620,26 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
     [visibleTabs, claims, hasPortalRoles, pathname],
   );
 
-  const grupoActivo = visibleTabs.find((t) => t.id === activeTab)?.grupo ?? bloquesConItems[0]?.bloque.id ?? null;
+  // La misma ruta puede vivir en dos grupos (ej. /portal/medico/* bajo "Cosas del médico"
+  // de RRHH): un tab también está activo si comparte path con el módulo activo.
+  const activePath = MODULOS_PORTAL.find((m) => m.id === activeTab)?.path ?? null;
+  const esTabActiva = useCallback(
+    (tab) => tab.id === activeTab || (Boolean(activePath) && tab.path === activePath),
+    [activeTab, activePath],
+  );
 
-  const isTabActive = useCallback((tab, allTabs, currentActiveTab) => {
-    if (currentActiveTab === tab.id) return true;
-    const children = allTabs.filter((t) => t.parentMenuId === tab.id);
-    return children.some((child) => child.id === currentActiveTab);
-  }, []);
+  const grupoActivo =
+    bloquesConItems.find(({ items }) => items.some(esTabActiva))?.bloque.id ??
+    bloquesConItems[0]?.bloque.id ??
+    null;
+
+  const isTabActive = useCallback(
+    (tab, allTabs) => {
+      if (esTabActiva(tab)) return true;
+      return allTabs.some((t) => t.parentMenuId === tab.id && esTabActiva(t));
+    },
+    [esTabActiva],
+  );
 
   const [expandedMobile, setExpandedMobile] = useState(() => grupoActivo);
 
@@ -565,6 +649,25 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
 
   const toggleGrupo = useCallback((id) => {
     setExpandedMobile((prev) => (prev === id ? null : id));
+  }, []);
+
+  // Submenús desplegables: abiertos solo los padres del ítem activo o los abiertos a mano.
+  const [expandedParents, setExpandedParents] = useState({});
+
+  useEffect(() => {
+    const padresActivos = visibleTabs
+      .filter((t) => t.parentMenuId && esTabActiva(t))
+      .map((t) => t.parentMenuId);
+    if (!padresActivos.length) return;
+    setExpandedParents((prev) => {
+      const next = { ...prev };
+      for (const id of padresActivos) next[id] = true;
+      return next;
+    });
+  }, [visibleTabs, esTabActiva]);
+
+  const toggleParent = useCallback((id) => {
+    setExpandedParents((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
   return (
@@ -643,41 +746,55 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
                 ].join(" ")}
                 aria-labelledby={`menu-grupo-${bloque.id}`}
               >
-                {items.map((tab) => {
-                  const active = isTabActive(tab, items, activeTab);
-                  const esHijo = Boolean(tab.parentMenuId);
-                  return (
-                    <li key={tab.id} className="min-w-0">
-                      <button
-                        type="button"
-                        onClick={() => onTabChange?.(tab.id)}
-                        className={[
-                          "flex w-full min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-md py-1 touch-manipulation",
-                          "transition-transform active:scale-95",
-                          "md:min-h-10 md:flex-row md:justify-start md:gap-2.5 md:rounded-lg md:px-2.5 md:py-2",
-                          esHijo ? "md:ml-5 md:w-[calc(100%-1.25rem)]" : "",
-                          active
-                            ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-100 md:bg-blue-50 md:shadow-none md:ring-0"
-                            : "text-slate-500 md:hover:bg-slate-100",
-                        ].join(" ")}
-                        aria-current={active ? "page" : undefined}
-                      >
-                        <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden>
-                          {typeof tab.icon === "function" ? tab.icon() : null}
-                        </svg>
-                        <span
+                {items
+                  .filter((t) => !t.parentMenuId || !items.some((p) => p.id === t.parentMenuId))
+                  .flatMap((padre) => {
+                    const hijos = items.filter((t) => t.parentMenuId === padre.id);
+                    const abierto = Boolean(expandedParents[padre.id]);
+                    return [
+                      { tab: padre, esHijo: false, tieneHijos: hijos.length > 0, abierto },
+                      ...(abierto ? hijos.map((h) => ({ tab: h, esHijo: true })) : []),
+                    ];
+                  })
+                  .map(({ tab, esHijo, tieneHijos, abierto }) => {
+                    const active = isTabActive(tab, items);
+                    return (
+                      <li key={tab.id} className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (tieneHijos) toggleParent(tab.id);
+                            onTabChange?.(tab.id);
+                          }}
                           className={[
-                            "max-w-full truncate text-center text-[10px] font-medium leading-none",
-                            "md:text-left md:text-sm",
-                            active ? "text-blue-600 md:font-semibold" : "",
+                            "flex w-full min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-md py-1 touch-manipulation",
+                            "transition-transform active:scale-95",
+                            "md:min-h-10 md:flex-row md:justify-start md:gap-2.5 md:rounded-lg md:px-2.5 md:py-2",
+                            esHijo ? "md:ml-5 md:w-[calc(100%-1.25rem)]" : "",
+                            active
+                              ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-100 md:bg-blue-50 md:shadow-none md:ring-0"
+                              : "text-slate-500 md:hover:bg-slate-100",
                           ].join(" ")}
+                          aria-current={active ? "page" : undefined}
+                          aria-expanded={tieneHijos ? abierto : undefined}
                         >
-                          {esHijo ? `↳ ${tab.label}` : tab.label}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
+                          <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden>
+                            {typeof tab.icon === "function" ? tab.icon() : null}
+                          </svg>
+                          <span
+                            className={[
+                              "max-w-full truncate text-center text-[10px] font-medium leading-none",
+                              "md:flex-1 md:text-left md:text-sm",
+                              active ? "text-blue-600 md:font-semibold" : "",
+                            ].join(" ")}
+                          >
+                            {esHijo ? `↳ ${tab.label}` : tab.label}
+                          </span>
+                          {tieneHijos ? <ChevronIcon open={abierto} /> : null}
+                        </button>
+                      </li>
+                    );
+                  })}
               </ul>
             </section>
           );
