@@ -98,9 +98,9 @@ Firestore **`portalRrhhOrAdmin()`:** `roles_hlc_vigentes.hasAny(['CFG_RRHH'])` +
 | Fuente de verdad | Versión publicada: `bloque_workflow_sla_cobertura.circuito_ingreso_ids` incluye el `rol_id` actor (`CFG_*`). |
 | Actor vs titular | El **actor** debe tener el rol pedido en JWT. El **titular** se evalúa solo con filtros laborales (escalafón, etc.), **sin** exigir que el titular tenga el rol del circuito. |
 | Titular ajeno | `CFG_USUARIO` solo propia persona. `CFG_RRHH` / `CFG_MEDICO` / `CFG_VISUALIZADOR` pueden consultar otra `persona_id` (lectura). |
-| Escritura | **Fuera de este átomo** (`alta_disponible: false`). Próximo: alta directa RRHH 77-0. |
-| Callables | `listarArticulosIngresoPorRol`, `buscarPersonasNuevaSolicitudPorRol` |
-| Core | `functions/modules/shared/listarArticulosIngresoRolCore.js` (aislado de Etapa 1 / solo B-C). |
+| Escritura | Átomo 2026-07-21: alta directa **solo Art. 77-0** vía `crearSolicitud770AltaRrhh` (`origen_acto: alta_rrhh`, estado `cfg_esa_aprobada`). Resto: `alta_disponible: false`. |
+| Callables | `listarArticulosIngresoPorRol`, `buscarPersonasNuevaSolicitudPorRol`, `crearSolicitud770AltaRrhh` |
+| Core | `listarArticulosIngresoRolCore.js` · `solicitudArt770DerivacionCore.js` (`materializarSol770` / `materializarSol770AltaRrhh`) |
 
 **Pendiente (oleada C):** metadata por ítem en `MODULOS_PORTAL` (`roles_hlc`, `requiere_subordinados`), filtro con regla RRHH “ve todo”, Vitest de menú.
 
@@ -150,6 +150,6 @@ Matriz: [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md`](./TICKETERA_SLICE_64A_MATRIZ_P
 
 | Fecha | Cambio |
 |-------|--------|
-| 2026-07-21 | §6.1 Nueva solicitud por rol (catálogo actor/titular + callables); sin escritura delegada. |
+| 2026-07-21 | §6.1 + alta directa 77-0 RRHH (`crearSolicitud770AltaRrhh`, `origen_acto: alta_rrhh`). |
 | 2026-05-19 | RFC creado; implementación claims `roles_hlc_vigentes`; deprecación escritura `portal_role`; refresh post-guardado laboral; deploy Functions OK. |
 | 2026-05-19 | Deploy rules + Hosting; menú 64-A por elegibilidad; configurador RRHH validado tras rules (28914247). |

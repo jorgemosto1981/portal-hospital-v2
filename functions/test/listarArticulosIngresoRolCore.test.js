@@ -244,7 +244,7 @@ describe("listarArticulosIngresoPorRol (orquestación)", () => {
     assert.equal(r.meta?.sin_allowlist_etapa1, true);
     assert.equal(r.articulos.length, 1);
     assert.equal(r.articulos[0].codigo_grilla, "77-0");
-    assert.equal(r.articulos[0].alta_disponible, false);
+    assert.equal(r.articulos[0].alta_disponible, true);
     assert.deepEqual(r.articulos[0].circuito_ingreso_ids, ["CFG_RRHH"]);
   });
 

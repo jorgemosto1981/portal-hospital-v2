@@ -35,6 +35,7 @@ const resolverContextoLaboralSolicitud = require("./onCall/solicitudes/resolverC
 const listarArticulosIngresoAgente = require("./onCall/solicitudes/listarArticulosIngresoAgente");
 const listarArticulosIngresoPorRol = require("./onCall/solicitudes/listarArticulosIngresoPorRol");
 const buscarPersonasNuevaSolicitudPorRol = require("./onCall/solicitudes/buscarPersonasNuevaSolicitudPorRol");
+const crearSolicitud770AltaRrhh = require("./onCall/solicitudes/crearSolicitud770AltaRrhh");
 const previsualizarSolicitudPatronB = require("./onCall/solicitudes/previsualizarSolicitudPatronB");
 const obtenerResumenSaldoFamilia64Agente = require("./onCall/solicitudes/obtenerResumenSaldoFamilia64Agente");
 const previsualizarSolicitudPatronC = require("./onCall/solicitudes/previsualizarSolicitudPatronC");
@@ -113,6 +114,7 @@ module.exports = {
   ...listarArticulosIngresoAgente,
   ...listarArticulosIngresoPorRol,
   ...buscarPersonasNuevaSolicitudPorRol,
+  ...crearSolicitud770AltaRrhh,
   ...previsualizarSolicitudPatronB,
   ...obtenerResumenSaldoFamilia64Agente,
   ...previsualizarSolicitudPatronC,

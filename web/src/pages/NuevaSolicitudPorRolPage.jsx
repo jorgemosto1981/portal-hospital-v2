@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 
 import { useAuthClaims } from "../features/auth/useAuthClaims.js";
 import { useAuthSession } from "../features/auth/useAuthSession.js";
+import FormAlta770Rrhh from "../features/solicitudes/FormAlta770Rrhh.jsx";
 import {
   ETIQUETA_ROL_NUEVA_SOLICITUD,
   rolPermiteTitularAjeno,
@@ -29,18 +30,28 @@ export default function NuevaSolicitudPorRolPage({ rolId }) {
   const [resultados, setResultados] = useState(/** @type {Array<Record<string, unknown>>} */ ([]));
   const [buscando, setBuscando] = useState(false);
   const [errorBusqueda, setErrorBusqueda] = useState("");
+  const [form770Abierto, setForm770Abierto] = useState(false);
 
   const titularPersonaId = useMemo(() => {
     if (modoTitular === "ajena" && titularAjeno?.id) return String(titularAjeno.id).trim();
     return actorPersonaId;
   }, [modoTitular, titularAjeno, actorPersonaId]);
 
+  const titularLabel = useMemo(() => {
+    if (modoTitular === "ajena" && titularAjeno) {
+      const nom = `${String(titularAjeno.apellido || "").trim()} ${String(titularAjeno.nombre || "").trim()}`.trim();
+      const dni = String(titularAjeno.dni || "").trim();
+      return [nom || titularAjeno.id, dni ? `DNI ${dni}` : ""].filter(Boolean).join(" · ");
+    }
+    return "vos (sesión actual)";
+  }, [modoTitular, titularAjeno]);
+
   const listadoListo =
     !claimsLoading &&
     /^per_/i.test(titularPersonaId) &&
     (modoTitular === "propia" || Boolean(titularAjeno?.id));
 
-  const { cargando, articulos, error } = useNuevaSolicitudPorRol({
+  const { cargando, articulos, error, recargar } = useNuevaSolicitudPorRol({
     rolId,
     titularPersonaId,
     enabled: listadoListo,
@@ -99,6 +110,7 @@ export default function NuevaSolicitudPorRolPage({ rolId }) {
                 setModoTitular("propia");
                 setTitularAjeno(null);
                 setResultados([]);
+                setForm770Abierto(false);
               }}
             >
               Para mí
@@ -111,7 +123,10 @@ export default function NuevaSolicitudPorRolPage({ rolId }) {
                   ? "border-sky-300 bg-sky-50 text-sky-900"
                   : "border-slate-200 bg-white text-slate-700",
               ].join(" ")}
-              onClick={() => setModoTitular("ajena")}
+              onClick={() => {
+                setModoTitular("ajena");
+                setForm770Abierto(false);
+              }}
             >
               Otro agente
             </button>
@@ -131,6 +146,7 @@ export default function NuevaSolicitudPorRolPage({ rolId }) {
                     onClick={() => {
                       setTitularAjeno(null);
                       setResultados([]);
+                      setForm770Abierto(false);
                     }}
                   >
                     Cambiar agente
@@ -194,6 +210,18 @@ export default function NuevaSolicitudPorRolPage({ rolId }) {
         <p className={TICKETERA.muted}>Elegí un agente para ver los artículos aplicables.</p>
       ) : null}
 
+      {form770Abierto && listadoListo ? (
+        <FormAlta770Rrhh
+          titularPersonaId={titularPersonaId}
+          titularLabel={titularLabel}
+          onCancel={() => setForm770Abierto(false)}
+          onOk={() => {
+            setForm770Abierto(false);
+            recargar();
+          }}
+        />
+      ) : null}
+
       {cargando ? <p className={TICKETERA.muted}>Cargando artículos del rol…</p> : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
 
@@ -205,14 +233,26 @@ export default function NuevaSolicitudPorRolPage({ rolId }) {
         </div>
       ) : null}
 
-      {!cargando
+      {!cargando && !form770Abierto
         ? articulos.map((a) => {
             const pendiente = a.alta_disponible !== true;
             const noElegible = a.elegible_titular !== true;
+            const clickable = a.alta_disponible === true;
+            const Tag = clickable ? "button" : "div";
             return (
-              <div
+              <Tag
                 key={String(a.articulo_id)}
-                className={`${TICKETERA.btnTileBase} ${TICKETERA.btnTilePatron} cursor-default`}
+                type={clickable ? "button" : undefined}
+                className={`${TICKETERA.btnTileBase} ${TICKETERA.btnTilePatron} ${
+                  clickable ? "cursor-pointer text-left" : "cursor-default"
+                }`}
+                onClick={
+                  clickable
+                    ? () => {
+                        setForm770Abierto(true);
+                      }
+                    : undefined
+                }
               >
                 <span className={TICKETERA.codigoPatron}>{String(a.codigo_grilla)}</span>
                 {a.nombre ? (
@@ -225,7 +265,11 @@ export default function NuevaSolicitudPorRolPage({ rolId }) {
                     <span className="rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-900 ring-1 ring-amber-200">
                       Alta pendiente
                     </span>
-                  ) : null}
+                  ) : (
+                    <span className="rounded-md bg-sky-50 px-2 py-1 text-[11px] font-medium text-sky-900 ring-1 ring-sky-200">
+                      Alta disponible
+                    </span>
+                  )}
                   {noElegible ? (
                     <span className="rounded-md bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200">
                       Titular no elegible
@@ -239,7 +283,7 @@ export default function NuevaSolicitudPorRolPage({ rolId }) {
                 {noElegible && Array.isArray(a.elegibilidad_mensajes) && a.elegibilidad_mensajes[0] ? (
                   <p className="mt-1 text-xs text-slate-500">{String(a.elegibilidad_mensajes[0])}</p>
                 ) : null}
-              </div>
+              </Tag>
             );
           })
         : null}

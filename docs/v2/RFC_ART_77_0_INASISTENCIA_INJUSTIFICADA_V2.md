@@ -64,6 +64,7 @@ En `bloque_workflow_sla_cobertura` (defaults de ley):
 | `origen_rechazo_sol_id` | `sol_*` de autorización rechazada (null si alta RRHH) |
 | `origen_acto` | `rechazo_autorizacion_jefe` \| `alta_rrhh` (luego: `auditor_medico`) |
 | `codigo_grilla` | `77-0` (snapshot display) |
+| `observacion_alta` | **Obligatorio en alta directa RRHH**; detalle o referencia interna (máx. 2000 caracteres). |
 
 ---
 

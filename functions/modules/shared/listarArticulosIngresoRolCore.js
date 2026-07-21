@@ -258,8 +258,9 @@ async function listarArticulosIngresoPorRol(params) {
       elegible_titular: eleg.ok === true,
       elegibilidad_codigos: Array.isArray(eleg.codigos) ? eleg.codigos : [],
       elegibilidad_mensajes: Array.isArray(eleg.mensajes) ? eleg.mensajes : [],
-      /** Átomo catálogo: aún no hay escritura delegada por rol. */
-      alta_disponible: false,
+      /** Átomo escritura: alta directa RRHH solo Art. 77-0. */
+      alta_disponible:
+        rol === "CFG_RRHH" && String(core.codigo || "").trim().toUpperCase() === "77-0",
     });
   }
 

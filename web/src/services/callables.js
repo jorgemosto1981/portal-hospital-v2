@@ -226,6 +226,11 @@ export function callListarArticulosIngresoPorRol(data) {
   return httpsCallable(getFunctionsV2(), "listarArticulosIngresoPorRol")(data);
 }
 
+/** Alta directa Art. 77-0 por RRHH. */
+export function callCrearSolicitud770AltaRrhh(data) {
+  return httpsCallable(getFunctionsV2(), "crearSolicitud770AltaRrhh")(data);
+}
+
 /** Búsqueda de personas para Nueva solicitud (RRHH / Médico / Visualizador). */
 export function callBuscarPersonasNuevaSolicitudPorRol(data) {
   return httpsCallable(getFunctionsV2(), "buscarPersonasNuevaSolicitudPorRol")(data);
