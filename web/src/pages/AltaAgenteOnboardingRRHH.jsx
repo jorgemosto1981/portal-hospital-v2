@@ -2,28 +2,49 @@ import { Link } from "react-router-dom";
 
 import Card from "../components/ui/Card.jsx";
 import { PersonaAgenteCombobox } from "../components/persona/PersonaAgenteCombobox.jsx";
+import AvisoPrimerAccesoRrhh from "../features/altaOnboarding/AvisoPrimerAccesoRrhh.jsx";
+import CascaraAltaSection from "../features/altaOnboarding/CascaraAltaSection.jsx";
 import { AltaOnboardingTracker } from "../features/altaOnboarding/AltaOnboardingTracker.jsx";
+import { AYUDA_TRACKER } from "../features/altaOnboarding/altaNuevoUsuarioAyuda.js";
 import { useAltaOnboardingPage } from "../features/altaOnboarding/useAltaOnboardingPage.js";
 
+/** Hub RRHH: identidad → laboral → check-in → aviso al agente. */
 export default function AltaAgenteOnboardingRRHH() {
   const p = useAltaOnboardingPage();
   const t = p.tracker;
+  const dniSeleccionado = String(t.personaDoc?.dni || "").trim();
 
   return (
     <div className="mx-auto w-full max-w-lg px-4 py-6 md:max-w-2xl">
-      <h1 className="text-xl font-semibold text-slate-900">Alta de agente (guía RRHH)</h1>
+      <h1 className="text-xl font-semibold text-slate-900">Alta nuevo usuario</h1>
       <p className="mt-2 text-sm leading-relaxed text-slate-600">
-        Unifica pre-alta (cáscara), datos laborales (HLc, HLg, HLd) y check-in de saldos. Cada paso abre la
-        pantalla correspondiente con el <code className="text-xs">persona_id</code> precargado.
+        Flujo unificado: crear identidad, completar datos laborales, cerrar check-in de saldos y recién entonces
+        avisar al agente para su primer acceso.
       </p>
-
-      <p className="mt-3 text-sm">
-        <Link to="/portal/rrhh/alta" className="font-medium text-blue-600 hover:underline">
-          Pre-alta y gestión de cuenta →
+      <p className="mt-2 text-sm text-slate-600">
+        Acciones de bloqueo, baja o reinicio:{" "}
+        <Link to="/portal/rrhh/gestion-usuarios" className="font-medium text-blue-700 underline">
+          Gestión de usuarios
         </Link>
+        .
       </p>
 
-      <Card className="mt-6 space-y-5 p-4 md:p-5">
+      <Card className="mt-6 space-y-4 p-4 md:p-5">
+        <h2 className="text-base font-semibold text-slate-900">1. Crear identidad</h2>
+        <CascaraAltaSection onCreado={p.setPersonaId} />
+      </Card>
+
+      <Card className="mt-4 space-y-5 p-4 md:p-5">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+          <p className="font-semibold text-slate-900">{AYUDA_TRACKER.titulo}</p>
+          {AYUDA_TRACKER.parrafos.map((txt) => (
+            <p key={txt} className="mt-1 leading-relaxed">
+              {txt}
+            </p>
+          ))}
+        </div>
+
+        <h2 className="text-base font-semibold text-slate-900">2. Seguir o retomar un alta</h2>
         <PersonaAgenteCombobox
           personaWrapRef={p.personaWrapRef}
           loadPersonas={p.loadPersonas}
@@ -50,6 +71,11 @@ export default function AltaAgenteOnboardingRRHH() {
           onRefresh={t.refetch}
         />
       </Card>
+
+      <div className="mt-4">
+        <h2 className="mb-3 text-base font-semibold text-slate-900">3. Aviso al agente</h2>
+        <AvisoPrimerAccesoRrhh habilitado={Boolean(t.pasosCompletos)} dni={dniSeleccionado} />
+      </div>
     </div>
   );
 }

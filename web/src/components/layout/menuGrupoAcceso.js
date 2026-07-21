@@ -14,7 +14,8 @@ export function grupoAccesiblePorClaims(grupoId, claims, hasPortalRoles, opts = 
   const hlc = rolesHlcFromClaims(claims);
   const shellActiva = shellMenuPortalDesdePathname(opts.pathname);
 
-  if (shellActiva === "jefe" && grupoId === "rrhh") return false;
+  // Temporal ("Cosas del jefe"): las superficies /portal/jefe/* se operan desde el
+  // menú RRHH, por eso el grupo RRHH sigue visible en shell jefe para quien tenga rol.
   if (shellActiva === "rrhh" && grupoId === "jefe") return false;
 
   switch (grupoId) {

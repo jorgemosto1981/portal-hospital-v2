@@ -180,6 +180,29 @@ export const MODULOS_PORTAL = [
     grupo: "rrhh",
   },
   {
+    id: "cosas-del-jefe-raiz",
+    label: "Cosas del jefe",
+    path: "/portal/jefe/grilla-operativa",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+  },
+  {
+    id: "grilla-jefe-rrhh",
+    label: "Grilla operativa",
+    path: "/portal/jefe/grilla-operativa",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "cosas-del-jefe-raiz",
+  },
+  {
+    id: "planes-turno-jefe-rrhh",
+    label: "Turnos Mensuales",
+    path: "/portal/jefe/planes-turno",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "cosas-del-jefe-raiz",
+  },
+  {
     id: "fichadas-reloj-raiz",
     label: "Fichadas reloj",
     path: "/portal/rrhh/fichadas-relojes",
@@ -292,9 +315,16 @@ export const MODULOS_PORTAL = [
     bandejaJuntaMedicoMenu: true,
   },
   {
-    id: "rrhh",
-    label: "RRHH",
-    path: "/portal/rrhh/alta",
+    id: "alta-agente-guia",
+    label: "Alta nuevo usuario",
+    path: "/portal/rrhh/alta-agente",
+    estado: ESTADOS_MODULO.ACTIVO,
+    grupo: "rrhh",
+  },
+  {
+    id: "gestion-usuarios-rrhh",
+    label: "Gestión de usuarios",
+    path: "/portal/rrhh/gestion-usuarios",
     estado: ESTADOS_MODULO.ACTIVO,
     grupo: "rrhh",
   },
@@ -304,7 +334,6 @@ export const MODULOS_PORTAL = [
     path: "/portal/rrhh/notificaciones-datos-personales",
     estado: ESTADOS_MODULO.ACTIVO,
     grupo: "rrhh",
-    parentMenuId: "rrhh",
   },
   {
     id: "rrhh-seg-enrol-portal",
@@ -312,15 +341,6 @@ export const MODULOS_PORTAL = [
     path: "/portal/rrhh/seguimiento-enrolamiento",
     estado: ESTADOS_MODULO.ACTIVO,
     grupo: "rrhh",
-    parentMenuId: "rrhh",
-  },
-  {
-    id: "alta-agente-guia",
-    label: "Alta agente (guía)",
-    path: "/portal/rrhh/alta-agente",
-    estado: ESTADOS_MODULO.MVP,
-    grupo: "rrhh",
-    parentMenuId: "rrhh",
   },
   {
     id: "lao-checkin-rrhh",
@@ -329,6 +349,8 @@ export const MODULOS_PORTAL = [
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
     parentMenuId: "checkin-saldos",
+    /** Deprecado: el check-in vigente es /portal/rrhh/checkin-saldos. */
+    menuTemporalmenteOculto: true,
   },
   {
     id: "configuracion",
@@ -387,6 +409,8 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh/notificaciones-datos-personales")) return "rrhh-notif-datos";
   if (pathname.startsWith("/portal/rrhh/seguimiento-enrolamiento")) return "rrhh-seg-enrol-portal";
   if (pathname.startsWith("/portal/rrhh/alta-agente")) return "alta-agente-guia";
+  if (pathname.startsWith("/portal/rrhh/gestion-usuarios")) return "gestion-usuarios-rrhh";
+  if (pathname.startsWith("/portal/rrhh/alta")) return "alta-agente-guia";
   if (pathname.startsWith("/portal/rrhh/antiguedad")) return "antiguedad";
   if (pathname.startsWith("/portal/rrhh/configuracion-articulos")) return "articulos-cfg";
   if (pathname.startsWith("/portal/rrhh/calendario-institucional")) return "calendario-institucional";
@@ -402,11 +426,12 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh/fichadas-huerfanas")) return "fichadas-huerfanas";
   if (pathname.startsWith("/portal/rrhh/grilla-operativa")) return "grilla";
   if (pathname.startsWith("/portal/rrhh/planes-turno")) return "planes-turno-rrhh";
-  if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "rrhh";
+  if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "alta-agente-guia";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
-  if (pathname.startsWith("/portal/jefe/grilla-operativa")) return "grilla-jefe";
-  if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla-jefe";
-  if (pathname.startsWith("/portal/jefe/planes-turno")) return "planes-turno-jefe";
+  // Temporal: superficies jefe operadas desde menú RRHH ("Cosas del jefe").
+  if (pathname.startsWith("/portal/jefe/grilla-operativa")) return "grilla-jefe-rrhh";
+  if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla-jefe-rrhh";
+  if (pathname.startsWith("/portal/jefe/planes-turno")) return "planes-turno-jefe-rrhh";
   if (pathname.startsWith("/portal/jefe/solicitudes")) return "bandeja-solicitudes-jefe";
   if (pathname.startsWith("/portal/medico/nueva-solicitud")) return "nueva-solicitud-medico";
   if (pathname.startsWith("/portal/medico/solicitudes")) return "bandeja-solicitudes-auditor-medico";

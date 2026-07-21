@@ -2,7 +2,7 @@
  * Desde el catálogo `/portal/pantallas`, el rol RRHH entra por la **rama inicial** de cada bloque
  * (sin saltar a subpantallas). Las rutas “reales” siguen en `path` para referencia.
  */
-export const RRHH_RAMA_INICIAL_PORTAL = "/portal/rrhh/alta";
+export const RRHH_RAMA_INICIAL_PORTAL = "/portal/rrhh/alta-agente";
 
 /**
  * @param {{ path: string, id?: string }} p — ítem de {@link PANTALLAS_CATALOGO}
@@ -87,13 +87,26 @@ export const PANTALLAS_CATALOGO = [
     fuente: "web/src/pages/jefe/GrillaOperativaJefePage.jsx",
   },
   { id: "onboarding", titulo: "Onboarding wizard", path: "/onboarding", estado: "activo", fuente: "web/src/features/onboarding/OnboardingWizard.jsx" },
-  { id: "rrhh-alta", titulo: "RRHH alta agente", path: "/portal/rrhh/alta", estado: "activo", fuente: "web/src/features/rrhh/AltaAgenteRRHH.jsx" },
+  {
+    id: "rrhh-alta",
+    titulo: "RRHH alta (redirect a Alta nuevo usuario)",
+    path: "/portal/rrhh/alta",
+    estado: "activo",
+    fuente: "web/src/features/rrhh/AltaAgenteRRHH.jsx",
+  },
   {
     id: "rrhh-alta-agente-guia",
-    titulo: "RRHH alta agente (guía onboarding)",
+    titulo: "Alta nuevo usuario",
     path: "/portal/rrhh/alta-agente",
-    estado: "mvp",
+    estado: "activo",
     fuente: "web/src/pages/AltaAgenteOnboardingRRHH.jsx",
+  },
+  {
+    id: "rrhh-gestion-usuarios",
+    titulo: "Gestión de usuarios RRHH",
+    path: "/portal/rrhh/gestion-usuarios",
+    estado: "activo",
+    fuente: "web/src/pages/rrhh/GestionUsuariosRrhhPage.jsx",
   },
   {
     id: "rrhh-antiguedad",

@@ -46,12 +46,15 @@ import PlanTurnoServicioRrhhPage from "./pages/rrhh/PlanTurnoServicioRrhhPage.js
 import BandejaTurnosRrhhPage from "./pages/rrhh/BandejaTurnosRrhhPage.jsx";
 import ExploradorTurnosRrhhPage from "./pages/rrhh/ExploradorTurnosRrhhPage.jsx";
 import GrillaOperativaRrhhPage from "./pages/rrhh/GrillaOperativaRrhhPage.jsx";
+import GrillaOperativaJefePage from "./pages/jefe/GrillaOperativaJefePage.jsx";
+import PlanTurnoServicioJefePage from "./pages/jefe/PlanTurnoServicioJefePage.jsx";
 import FichadasImportRrhhPage from "./pages/rrhh/FichadasImportRrhhPage.jsx";
 import FichadasHuerfanasRrhhPage from "./pages/rrhh/FichadasHuerfanasRrhhPage.jsx";
 import FichadasEnrolamientoRrhhPage from "./pages/rrhh/FichadasEnrolamientoRrhhPage.jsx";
 import FichadasConsultaEnrolamientoRrhhPage from "./pages/rrhh/FichadasConsultaEnrolamientoRrhhPage.jsx";
 import FichadasCargaManualRrhhPage from "./pages/rrhh/FichadasCargaManualRrhhPage.jsx";
 import FichadasRelojesRrhhPage from "./pages/rrhh/FichadasRelojesRrhhPage.jsx";
+import GestionUsuariosRrhhPage from "./pages/rrhh/GestionUsuariosRrhhPage.jsx";
 import GrillaPortalRedirect from "./features/routing/GrillaPortalRedirect.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import SistemasWeb from "./pages/SistemasWeb.jsx";
@@ -156,8 +159,23 @@ export default function App() {
                 </RoleGuard>
               }
             />
-            <Route path="jefe/planes-turno" element={<Navigate to="/portal/home" replace />} />
-            <Route path="jefe/grilla-operativa" element={<Navigate to="/portal/home" replace />} />
+            {/* Temporal ("Cosas del jefe"): superficies jefe operadas por RRHH hasta acta de aprobación. */}
+            <Route
+              path="jefe/planes-turno"
+              element={
+                <RoleGuard>
+                  <PlanTurnoServicioJefePage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="jefe/grilla-operativa"
+              element={
+                <RoleGuard>
+                  <GrillaOperativaJefePage />
+                </RoleGuard>
+              }
+            />
             <Route path="modulos" element={<EstadoModulos />} />
             <Route path="pantallas" element={<PantallasCatalogo />} />
             <Route path="configuracion" element={<Configuracion />} />
@@ -165,6 +183,7 @@ export default function App() {
               <Route path="sistemas-web" element={<SistemasWeb />} />
               <Route path="rrhh/alta" element={<AltaAgenteRRHH />} />
               <Route path="rrhh/alta-agente" element={<AltaAgenteOnboardingRRHH />} />
+              <Route path="rrhh/gestion-usuarios" element={<GestionUsuariosRrhhPage />} />
               <Route path="rrhh/antiguedad" element={<Antiguedad />} />
               <Route
                 path="rrhh/nueva-solicitud"

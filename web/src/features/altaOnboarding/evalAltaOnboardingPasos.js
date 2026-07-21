@@ -43,10 +43,10 @@ export const ALTA_ONBOARDING_STEPS = [
   {
     id: "cascara",
     numero: 1,
-    titulo: "Cáscara (persona + cuenta)",
-    descripcion: "Alta en RRHH: persona y cuenta en estado pendiente de registro.",
-    path: "/portal/rrhh/alta",
-    accionLabel: "Ir a pre-alta",
+    titulo: "Identidad (persona + cuenta)",
+    descripcion: "Cáscara RRHH: persona y cuenta en estado pendiente de registro.",
+    path: "/portal/rrhh/alta-agente",
+    accionLabel: "Ver identidad",
   },
   {
     id: "laboral",

@@ -43,7 +43,7 @@ export function AltaAgenteForm({
           />
         </div>
         <PrimaryButton type="submit" disabled={busy} className="!mt-4 w-full">
-          {busy ? "Enviando…" : "Crear cáscara (personas + cuenta pend.)"}
+          {busy ? "Enviando…" : "Crear identidad (persona + cuenta pend.)"}
         </PrimaryButton>
       </form>
     </Card>
