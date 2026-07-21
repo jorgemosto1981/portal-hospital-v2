@@ -130,7 +130,75 @@ function listaPermite(ids, value) {
   return v && list.includes(v);
 }
 
+/** @param {unknown} ids */
+function tieneListaActiva(ids) {
+  return Array.isArray(ids) && ids.some((x) => String(x || "").trim());
+}
+
 /**
+ * Categoría «datos laborales»: activa si hay al menos un filtro de catálogo cargado.
+ * @param {Record<string, unknown>} f
+ */
+function categoriaLaboralElegibilidadActiva(f) {
+  return (
+    tieneListaActiva(f.escalafon_ids) ||
+    tieneListaActiva(f.agrupamiento_ids) ||
+    tieneListaActiva(f.cargo_funcional_ids) ||
+    tieneListaActiva(f.tipo_vinculo_ids) ||
+    tieneListaActiva(f.grupo_trabajo_ids) ||
+    tieneListaActiva(f.genero_ids)
+  );
+}
+
+/**
+ * Categoría «agente y antigüedad»: activa si hay agentes específicos o umbral > 0.
+ * @param {Record<string, unknown>} f
+ */
+function categoriaAgenteElegibilidadActiva(f) {
+  if (tieneListaActiva(f.persona_ids)) return true;
+  const minMeses = Number(f.antiguedad_minima_meses);
+  return Number.isFinite(minMeses) && minMeses > 0;
+}
+
+/**
+ * @param {Record<string, unknown>} f
+ * @param {Record<string, unknown>} hlc
+ * @returns {string | null}
+ */
+function evaluarCategoriaLaboral(f, hlc) {
+  if (!listaPermite(f.escalafon_ids, hlc.escalafon_id)) return CODIGO_ELEG_ESCALAFON;
+  if (!listaPermite(f.agrupamiento_ids, hlc.agrupamiento_id)) return CODIGO_ELEG_AGRUPAMIENTO;
+  if (!listaPermite(f.cargo_funcional_ids, hlc.cargo_funcional_id)) return CODIGO_ELEG_CARGO;
+  if (!listaPermite(f.tipo_vinculo_ids, hlc.tipo_vinculo_id)) return CODIGO_ELEG_VINCULO;
+  if (!listaPermite(f.grupo_trabajo_ids, hlc.grupo_de_trabajo_id)) return "ELEG_GRUPO";
+  return null;
+}
+
+/**
+ * @param {Record<string, unknown>} f
+ * @param {string} personaId
+ * @param {number} antiguedadMeses
+ * @returns {string | null}
+ */
+function evaluarCategoriaAgente(f, personaId, antiguedadMeses) {
+  if (tieneListaActiva(f.persona_ids)) {
+    const pid = String(personaId || "").trim();
+    const allow = f.persona_ids.map((x) => String(x || "").trim()).filter(Boolean);
+    if (!pid || !allow.includes(pid)) return CODIGO_ELEG_PERSONA;
+  }
+  const minMeses = Number(f.antiguedad_minima_meses);
+  if (Number.isFinite(minMeses) && minMeses > 0 && antiguedadMeses < minMeses) {
+    return CODIGO_ELEG_ANTIGUEDAD;
+  }
+  return null;
+}
+
+/**
+ * Evalúa filtros de elegibilidad.
+ * Entre «datos laborales» y «agente/antigüedad» el criterio es **OR** si ambas categorías están activas:
+ * basta cumplir una. Dentro de cada categoría, los campos siguen siendo AND.
+ * Si ninguna está activa, no restringe.
+ *
  * @param {Record<string, unknown>} filtros
  * @param {Record<string, unknown>} hlc
  * @param {string} personaId
@@ -139,24 +207,19 @@ function listaPermite(ids, value) {
  */
 function evaluarFiltrosElegibilidadHlc(filtros, hlc, personaId, antiguedadMeses) {
   const f = filtros && typeof filtros === "object" ? filtros : {};
-  if (!listaPermite(f.escalafon_ids, hlc.escalafon_id)) return CODIGO_ELEG_ESCALAFON;
-  if (!listaPermite(f.agrupamiento_ids, hlc.agrupamiento_id)) return CODIGO_ELEG_AGRUPAMIENTO;
-  if (!listaPermite(f.cargo_funcional_ids, hlc.cargo_funcional_id)) return CODIGO_ELEG_CARGO;
-  if (!listaPermite(f.tipo_vinculo_ids, hlc.tipo_vinculo_id)) return CODIGO_ELEG_VINCULO;
-  if (!listaPermite(f.grupo_trabajo_ids, hlc.grupo_de_trabajo_id)) return "ELEG_GRUPO";
+  const laboralActiva = categoriaLaboralElegibilidadActiva(f);
+  const agenteActiva = categoriaAgenteElegibilidadActiva(f);
 
-  const personaIds = f.persona_ids;
-  if (Array.isArray(personaIds) && personaIds.length > 0) {
-    const pid = String(personaId || "").trim();
-    if (!personaIds.map((x) => String(x || "").trim()).includes(pid)) return CODIGO_ELEG_PERSONA;
+  if (!laboralActiva && !agenteActiva) return null;
+
+  if (laboralActiva && agenteActiva) {
+    const codLaboral = evaluarCategoriaLaboral(f, hlc);
+    const codAgente = evaluarCategoriaAgente(f, personaId, antiguedadMeses);
+    if (codLaboral === null || codAgente === null) return null;
+    return codLaboral;
   }
-
-  const minMeses = Number(f.antiguedad_minima_meses);
-  if (Number.isFinite(minMeses) && minMeses > 0 && antiguedadMeses < minMeses) {
-    return CODIGO_ELEG_ANTIGUEDAD;
-  }
-
-  return null;
+  if (laboralActiva) return evaluarCategoriaLaboral(f, hlc);
+  return evaluarCategoriaAgente(f, personaId, antiguedadMeses);
 }
 
 /**
@@ -268,4 +331,4 @@ function mensajeParaCodigo(codigo) {
   return MENSAJES[codigo] || "No cumple requisitos del artículo.";
 }
 
-module.exports = { CFG_USUARIO, rolesHlcFromAuthToken, isPortalRoleUsuario, CODIGO_CIRCUITO_ROL, CODIGO_ELEG_SIN_HLC, CODIGO_ELEG_ESCALAFON, CODIGO_ELEG_AGRUPAMIENTO, CODIGO_ELEG_CARGO, CODIGO_ELEG_VINCULO, CODIGO_ELEG_ANTIGUEDAD, CODIGO_ELEG_PERSONA, CODIGO_SALDO_CICLO, CODIGO_SALDO_MES, CODIGO_SALDO_EVENTO, CODIGO_FECHA_RANGO, CODIGO_SUPERPOSICION, CODIGO_GRUPO_ANCLA_REQUERIDO, CODIGO_GRUPO_ANCLA_INVALIDO, CODIGO_SIN_GRUPO_VIGENTE, mapHlcRow, filterHlcVigentesEnFecha, evaluarFiltrosElegibilidadHlc, evaluarCircuitoIngreso, computeAntiguedadMeses, resolverElegibilidadSolicitud, mensajeParaCodigo };
+module.exports = { CFG_USUARIO, rolesHlcFromAuthToken, isPortalRoleUsuario, CODIGO_CIRCUITO_ROL, CODIGO_ELEG_SIN_HLC, CODIGO_ELEG_ESCALAFON, CODIGO_ELEG_AGRUPAMIENTO, CODIGO_ELEG_CARGO, CODIGO_ELEG_VINCULO, CODIGO_ELEG_ANTIGUEDAD, CODIGO_ELEG_PERSONA, CODIGO_SALDO_CICLO, CODIGO_SALDO_MES, CODIGO_SALDO_EVENTO, CODIGO_FECHA_RANGO, CODIGO_SUPERPOSICION, CODIGO_GRUPO_ANCLA_REQUERIDO, CODIGO_GRUPO_ANCLA_INVALIDO, CODIGO_SIN_GRUPO_VIGENTE, mapHlcRow, filterHlcVigentesEnFecha, categoriaLaboralElegibilidadActiva, categoriaAgenteElegibilidadActiva, evaluarFiltrosElegibilidadHlc, evaluarCircuitoIngreso, computeAntiguedadMeses, resolverElegibilidadSolicitud, mensajeParaCodigo };

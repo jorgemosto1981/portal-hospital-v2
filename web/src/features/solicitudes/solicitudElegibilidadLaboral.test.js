@@ -76,6 +76,64 @@ describe("solicitudElegibilidadLaboral", () => {
     expect(r.codigos).toContain(CODIGO_ELEG_ESCALAFON);
   });
 
+  it("OR — agente específico habilita aunque falle escalafón", () => {
+    const version = {
+      ...VERSION_64A,
+      bloque_elegibilidad_filtros: {
+        escalafon_ids: ["CFG_ESC_02_ADMINISTRACION"],
+        persona_ids: ["per_ricardo"],
+        antiguedad_minima_meses: 0,
+      },
+    };
+    const r = resolverElegibilidadSolicitud({
+      versionData: version,
+      hlcVigentes: [HLC_9282],
+      personaId: "per_ricardo",
+      fechaDesde: "2026-05-20",
+      authToken: { portal_role: "usuario" },
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it("OR — escalafón habilita aunque no esté en agentes específicos", () => {
+    const version = {
+      ...VERSION_64A,
+      bloque_elegibilidad_filtros: {
+        escalafon_ids: ["CFG_ESC_02_ADMINISTRACION"],
+        persona_ids: ["per_ricardo"],
+        antiguedad_minima_meses: 0,
+      },
+    };
+    const r = resolverElegibilidadSolicitud({
+      versionData: version,
+      hlcVigentes: [HLC_2695],
+      personaId: "per_otro",
+      fechaDesde: "2026-05-20",
+      authToken: { portal_role: "usuario" },
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it("OR — deniega si no cumple laboral ni está en agentes", () => {
+    const version = {
+      ...VERSION_64A,
+      bloque_elegibilidad_filtros: {
+        escalafon_ids: ["CFG_ESC_02_ADMINISTRACION"],
+        persona_ids: ["per_ricardo"],
+        antiguedad_minima_meses: 0,
+      },
+    };
+    const r = resolverElegibilidadSolicitud({
+      versionData: version,
+      hlcVigentes: [HLC_9282],
+      personaId: "per_otro",
+      fechaDesde: "2026-05-20",
+      authToken: { portal_role: "usuario" },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.codigos).toContain(CODIGO_ELEG_ESCALAFON);
+  });
+
   it("T3 — RRHH con rol HLC en circuito (hereda flujo agente)", () => {
     const c = evaluarCircuitoIngreso(VERSION_64A, { portal_role: "rrhh" }, HLC_2695);
     expect(c).toBeNull();

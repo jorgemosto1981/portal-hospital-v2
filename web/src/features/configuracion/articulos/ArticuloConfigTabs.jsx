@@ -921,13 +921,32 @@ export default function ArticuloConfigTabs() {
           {/* --- Sección: Elegibilidad --- */}
           <Card className="space-y-4 p-4 shadow-sm md:p-6">
             <h3 className="text-sm font-semibold text-slate-700">Elegibilidad y filtros</h3>
-            <p className="text-xs italic text-slate-500 mt-1 mb-4">Restringí a qué agentes aplica este artículo. Dejar vacío para que aplique a todos.</p>
+            <p className="mt-1 mb-3 text-xs italic text-slate-500">
+              Restringí a qué agentes aplica este artículo. Dejar vacío para que aplique a todos.
+            </p>
+            <div
+              className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-3 py-3 text-xs leading-relaxed text-sky-950"
+              role="note"
+            >
+              <p className="font-semibold text-sky-900">Criterio entre categorías: O (OR)</p>
+              <p className="mt-1">
+                «Filtros por datos laborales» y «Filtros por agente y antigüedad» se evalúan de forma
+                alternativa. Si configurás ambas, el agente accede si cumple{" "}
+                <strong className="font-semibold">cualquiera</strong> de las dos (por ejemplo: está en
+                el escalafón habilitado <em>o</em> figura en agentes específicos). Dentro de cada
+                categoría, los campos siguen combinándose con Y.
+              </p>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <FieldCheck label={LABELS.requiere_declaracion_familiar} checked={form.bloque_elegibilidad_filtros.requiere_declaracion_familiar} onChange={(v) => setBlock("bloque_elegibilidad_filtros", "requiere_declaracion_familiar", v)} helpText="El agente debe declarar un familiar directo para acceder a este artículo." />
               <FieldNumber label={LABELS.edad_limite_familiar} value={form.bloque_elegibilidad_filtros.edad_limite_familiar} onChange={(v) => setBlock("bloque_elegibilidad_filtros", "edad_limite_familiar", v)} min={0} helpText="Edad tope en años; dejar vacío si no aplica." required={false} />
             </div>
             <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-              <p className="mb-3 text-xs font-semibold text-slate-500">Filtros por datos laborales</p>
+              <p className="mb-1 text-xs font-semibold text-slate-500">Filtros por datos laborales</p>
+              <p className="mb-3 text-[11px] leading-snug text-slate-500">
+                Escalafón, agrupamiento, vínculo, cargo, grupo y género. Vacío = sin restricción en ese
+                campo.
+              </p>
               <div className="grid gap-4 md:grid-cols-2">
                 <FieldMultiSelect
                   label={LABELS.escalafon_ids}
@@ -986,7 +1005,14 @@ export default function ArticuloConfigTabs() {
               </div>
             </div>
             <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-              <p className="mb-3 text-xs font-semibold text-slate-500">Filtros por agente y antigüedad</p>
+              <p className="mb-1 text-xs font-semibold text-slate-500">
+                Filtros por agente y antigüedad{" "}
+                <span className="font-normal text-slate-400">(alternativa O a datos laborales)</span>
+              </p>
+              <p className="mb-3 text-[11px] leading-snug text-slate-500">
+                Si listás agentes específicos, esos legajos acceden aunque no cumplan los filtros
+                laborales de arriba.
+              </p>
               <div className="grid gap-4 md:grid-cols-2">
                 <FieldPersonaSearch
                   label={LABELS.persona_ids}
