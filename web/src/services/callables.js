@@ -226,6 +226,11 @@ export function callPrevisualizarSolicitudPatronB(data) {
   return httpsCallable(getFunctionsV2(), "previsualizarSolicitudPatronB")(data);
 }
 
+/** Art. 64 unificado: saldos con/sin goce + pendientes (informativo, sin validar). */
+export function callObtenerResumenSaldoFamilia64Agente(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerResumenSaldoFamilia64Agente")(data || {});
+}
+
 /** Preview Patrón C (elegibilidad + saldo global, horas) sin crear solicitud. */
 export function callPrevisualizarSolicitudPatronC(data) {
   return httpsCallable(getFunctionsV2(), "previsualizarSolicitudPatronC")(data);
@@ -269,6 +274,16 @@ export function callRegistrarAcuseRechazoAgente(data) {
 /** Titular: detalle enriquecido para modal de acuse de rechazo. */
 export function callObtenerContextoAcuseRechazoAgente(data) {
   return httpsCallable(getFunctionsV2(), "obtenerContextoAcuseRechazoAgente")(data);
+}
+
+/** Titular: acuse de autorización Art. 64 sin goce (agente_acuse_sin_goce_*). */
+export function callRegistrarAcuseSinGoceAgente(data) {
+  return httpsCallable(getFunctionsV2(), "registrarAcuseSinGoceAgente")(data);
+}
+
+/** Titular: detalle enriquecido para modal de acuse sin goce. */
+export function callObtenerContextoAcuseSinGoceAgente(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerContextoAcuseSinGoceAgente")(data);
 }
 
 /** Oleada C — vista mensual `vistas_grilla_mes_agente` (bounded context gdt). */

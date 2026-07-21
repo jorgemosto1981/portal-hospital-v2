@@ -8,7 +8,7 @@ import { MIS_SOL_PAGE_SIZE } from "./misSolicitudesUi.js";
 import { TICKETERA } from "./ticketeraUi.js";
 import { useMisSolicitudesTitular } from "./useMisSolicitudesTitular.js";
 
-/** @typedef {"pendiente" | "autorizada" | "rechazada" | "todas"} FiltroBucket */
+/** @typedef {"pendiente" | "autorizada" | "rechazada" | "observada" | "todas"} FiltroBucket */
 
 /**
  * Listado de solicitudes del titular (últimos 3 meses) con filtro y paginación.
@@ -42,6 +42,17 @@ export default function MisSolicitudesPanel() {
     return <p className={TICKETERA.muted}>Cargando…</p>;
   }
 
+  const emptyMsg =
+    filtro === "pendiente"
+      ? "No tenés pendientes en los últimos 3 meses."
+      : filtro === "autorizada"
+        ? "No tenés solicitudes autorizadas en los últimos 3 meses."
+        : filtro === "observada"
+          ? "No tenés solicitudes observadas en los últimos 3 meses."
+          : filtro === "rechazada"
+            ? "No tenés rechazos ni cancelaciones en los últimos 3 meses."
+            : "Todavía no tenés solicitudes en los últimos 3 meses.";
+
   return (
     <section className="mt-8 space-y-3" aria-labelledby="mis-solicitudes-titulo">
       <header>
@@ -49,7 +60,7 @@ export default function MisSolicitudesPanel() {
           Mis solicitudes
         </h2>
         <p className={TICKETERA.muted}>
-          Seguimiento de los últimos 3 meses (pendiente, autorizada o rechazada).
+          Seguimiento de los últimos 3 meses (pendiente, autorizada, observada o rechazada).
         </p>
       </header>
 
@@ -63,6 +74,7 @@ export default function MisSolicitudesPanel() {
         >
           <option value="pendiente">Pendientes</option>
           <option value="autorizada">Autorizadas</option>
+          <option value="observada">Observadas</option>
           <option value="rechazada">Rechazadas</option>
           <option value="todas">Todas</option>
         </select>
@@ -73,15 +85,7 @@ export default function MisSolicitudesPanel() {
 
       {!cargando && !error && filtradas.length === 0 ? (
         <div className={`${TICKETERA.card} ${TICKETERA.cardPad}`}>
-          <p className="text-base text-slate-600">
-            {filtro === "pendiente"
-              ? "No tenés pendientes en los últimos 3 meses."
-              : filtro === "autorizada"
-                ? "No tenés solicitudes autorizadas en los últimos 3 meses."
-                : filtro === "rechazada"
-                  ? "No tenés rechazos ni cancelaciones en los últimos 3 meses."
-                  : "Todavía no tenés solicitudes en los últimos 3 meses."}
-          </p>
+          <p className="text-base text-slate-600">{emptyMsg}</p>
         </div>
       ) : null}
 

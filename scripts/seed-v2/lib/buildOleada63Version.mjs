@@ -127,6 +127,7 @@ export function buildOleada63Documents(spec, ids) {
       toma_conocimiento_limitada: false,
       permite_retroactividad: true,
       requiere_toma_conocimiento_superior: false,
+      modo_resolucion_jefe: "toma_conocimiento",
     },
     bloque_documentacion_convivencia: {
       requiere_adjunto_obligatorio: false,

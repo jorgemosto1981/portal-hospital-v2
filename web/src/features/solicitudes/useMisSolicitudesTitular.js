@@ -6,10 +6,12 @@ import { listarGruposTrabajoCatalogo } from "../catalogo/listarGruposTrabajoCata
 import { useArticulosIngresoMenu } from "./ArticulosIngresoProvider.jsx";
 import {
   bucketEstadoSolicitud,
+  esSolicitudInasistenciaInjustificadaDerivada,
   estaDentroHistorico3Meses,
   labelEstadoSolicitudAgente,
   labelRolActorRechazo,
   motivoRechazoTexto,
+  relatoRechazoConInasistenciaInjustificada,
   requiereAcuseRechazo,
   textoFechasSolicitud,
   tituloSolicitudAgente,
@@ -48,7 +50,13 @@ export function useMisSolicitudesTitular(personaId) {
           const tb = b.creado_en?.toMillis?.() ?? (Date.parse(String(b.creado_en || "")) || 0);
           return tb - ta;
         });
-        setRows(list.filter((s) => estaDentroHistorico3Meses(s.creado_en)));
+        setRows(
+          list.filter(
+            (s) =>
+              estaDentroHistorico3Meses(s.creado_en) &&
+              !esSolicitudInasistenciaInjustificadaDerivada(s),
+          ),
+        );
         setCargando(false);
       },
       (err) => {
@@ -88,17 +96,19 @@ export function useMisSolicitudesTitular(personaId) {
       const art = artId ? obtenerDatosArticuloElegible?.(artId) : null;
       const gdtId = String(sol.grupo_trabajo_id_ancla || "").trim();
       const gdtNombre = gdtId ? gdtNombres.get(gdtId) || "" : "";
+      const titulo = tituloSolicitudAgente(sol, art);
       return {
         ...sol,
-        _titulo: tituloSolicitudAgente(sol, art),
+        _titulo: titulo,
         _fechasTexto: textoFechasSolicitud(sol),
-        _estadoLabel: labelEstadoSolicitudAgente(sol.estado_solicitud_id),
-        _bucket: bucketEstadoSolicitud(sol.estado_solicitud_id),
+        _estadoLabel: labelEstadoSolicitudAgente(sol.estado_solicitud_id, sol),
+        _bucket: bucketEstadoSolicitud(sol.estado_solicitud_id, sol),
         _gdtLabel: gdtNombre || (gdtId ? "Grupo de trabajo" : "—"),
         _gdtId: gdtId,
         _requiereAcuse: requiereAcuseRechazo(sol),
         _motivoRechazo: motivoRechazoTexto(sol),
         _actorRechazoRol: labelRolActorRechazo(sol),
+        _relatoInasistenciaInjustificada: relatoRechazoConInasistenciaInjustificada(sol, titulo),
       };
     });
   }, [rows, gdtNombres, obtenerDatosArticuloElegible]);

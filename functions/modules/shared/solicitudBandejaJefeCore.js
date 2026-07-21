@@ -27,6 +27,20 @@ const {
   revisorPuedeAutorizarJerarquico,
   revalidarRevisorEnAutorizadores,
 } = require("./solicitudAutorizacionJerarquicaCore");
+const { modoResolucionJefeDesdeSolicitud } = require("./modoResolucionJefe");
+const {
+  debeMaterializar770AlRechazar,
+  materializarSol770DesdeRechazo,
+} = require("./solicitudArt770DerivacionCore");
+const {
+  ARTICULO_64B_ETAPA1_ID,
+  resolveVersionPublicadaId,
+  esSolicitudCarril64Unificado,
+  aplicarModalidad64EnTx,
+  countSolicitudesMesArticulo64,
+  ARTICULO_64A_ETAPA1_ID,
+} = require("./solicitudPatronBCruceModalidad64");
+const { logger } = require("firebase-functions");
 
 /**
  * @param {Record<string, unknown>} sol
@@ -166,6 +180,8 @@ async function itemListaBandejaJefe(db, sol, personaCache, articuloCache, meta) 
     jefe_motivo: sol.jefe_motivo != null ? String(sol.jefe_motivo) : null,
     puede_decidir: meta.puede_decidir === true,
     etiqueta_estado: meta.etiqueta_estado,
+    modo_resolucion_jefe: modoResolucionJefeDesdeSolicitud(sol, artDisplay.codigo_grilla),
+    modalidad_goce_jefe: sol.modalidad_goce_jefe != null ? String(sol.modalidad_goce_jefe) : null,
   };
 }
 
@@ -347,6 +363,92 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
   const accionRechazar = rrhhSustituto ? "rrhh_sustituta_rechazar" : "jefe_rechazar";
 
   if (decision === "aprobar") {
+    const modalidadRaw = String(opts.modalidad_goce_jefe || "").trim().toLowerCase();
+    const artSol = String(sol.articulo_id || "").trim();
+    const modalidad =
+      modalidadRaw === "sin_goce" || modalidadRaw === "con_goce"
+        ? modalidadRaw
+        : artSol === ARTICULO_64B_ETAPA1_ID
+          ? "sin_goce"
+          : esSolicitudCarril64Unificado(sol)
+            ? "con_goce"
+            : "";
+    const motivoTrim = String(motivo || "").trim();
+
+    // Pedido ya anclado a 64-B: no permitir cambiar a con goce.
+    if (artSol === ARTICULO_64B_ETAPA1_ID && modalidad === "con_goce") {
+      return {
+        ok: false,
+        codigo: "MODALIDAD_FIJA_SIN_GOCE",
+        mensaje:
+          "Este trámite ya está anclado a sin goce (64-B). No se puede autorizar como 64-A con goce.",
+      };
+    }
+    if (modalidad === "sin_goce") {
+      if (motivoTrim.length < 3) {
+        return {
+          ok: false,
+          codigo: "MOTIVO_SIN_GOCE_REQUERIDO",
+          mensaje:
+            "Para autorizar sin goce de haberes (64-B) el justificativo es obligatorio (mín. 3 caracteres).",
+        };
+      }
+      if (opts.confirma_sin_goce !== true) {
+        return {
+          ok: false,
+          codigo: "CONFIRMA_SIN_GOCE_REQUERIDA",
+          mensaje:
+            "Para autorizar sin goce de haberes (64-B) debés confirmar explícitamente la modalidad.",
+        };
+      }
+    }
+
+    // Cupo 1/mes por modalidad: al cruzar A→B o al fijar modalidad, validar el destino.
+    if (esSolicitudCarril64Unificado(sol) && (modalidad === "sin_goce" || modalidad === "con_goce")) {
+      const fd = String(sol.fecha_desde || "").slice(0, 10);
+      const ym = /^(\d{4})-(\d{2})-/.exec(fd);
+      if (ym) {
+        const anio = Number(ym[1]);
+        const mes = Number(ym[2]);
+        const destinoArt =
+          modalidad === "sin_goce" ? ARTICULO_64B_ETAPA1_ID : ARTICULO_64A_ETAPA1_ID;
+        // Si ya está en el art destino, no cuenta doble (exclude this sol).
+        const enDestino = await countSolicitudesMesArticulo64(
+          db,
+          titularId,
+          destinoArt,
+          anio,
+          mes,
+          solId,
+        );
+        if (enDestino >= 1) {
+          return {
+            ok: false,
+            codigo: "SALDO_MES",
+            mensaje:
+              modalidad === "sin_goce"
+                ? "Este mes ya hay un trámite 64-B (sin goce). No podés autorizar otro sin goce."
+                : "Este mes ya hay un trámite 64-A (con goce). No podés autorizar otro con goce.",
+          };
+        }
+      }
+    }
+
+    let version64bId = null;
+    if (modalidad === "sin_goce" && esSolicitudCarril64Unificado(sol)) {
+      version64bId = await resolveVersionPublicadaId(db, ARTICULO_64B_ETAPA1_ID);
+      if (!version64bId) {
+        return {
+          ok: false,
+          codigo: "VERSION_64B_NO_ENCONTRADA",
+          mensaje: "No hay versión publicada de 64-B para autorizar sin goce.",
+        };
+      }
+    }
+
+    /** @type {{ ok: false, codigo: string, mensaje: string } | null} */
+    let cruceFail = null;
+
     await db.runTransaction(async (tx) => {
       const sSnap = await tx.get(solRef);
       if (!sSnap.exists) return;
@@ -357,14 +459,35 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
         estado_solicitud_id: ESTADO_SOLICITUD_APROBADA,
         jefe_revision_persona_id: revisorPersonaId,
         jefe_revision_en: FieldValue.serverTimestamp(),
-        jefe_motivo: motivo || null,
+        jefe_motivo: modalidad === "sin_goce" ? motivoTrim : motivo || null,
         actualizado_en: FieldValue.serverTimestamp(),
       };
       if (rrhhSustituto) {
         patch.cierre_rrhh_sustituta = true;
       }
+      const decisionUi = String(opts.decision_ui || "").trim().toLowerCase();
+      if (decisionUi === "conforme" || decisionUi === "observado" || decisionUi === "aprobar" || decisionUi === "rechazar") {
+        patch.decision_jefe_ui = decisionUi;
+      }
+
+      if (modalidad === "con_goce" || modalidad === "sin_goce") {
+        const cruce = await aplicarModalidad64EnTx(tx, db, cur, titularId, {
+          modalidad,
+          version_64b_id: version64bId,
+        });
+        if (!cruce.ok) {
+          cruceFail = { ok: false, codigo: cruce.codigo, mensaje: cruce.mensaje };
+          return;
+        }
+        Object.assign(patch, cruce.patch);
+      }
+
       tx.update(solRef, patch);
     });
+
+    if (cruceFail) {
+      return cruceFail;
+    }
 
     const postSnap = await solRef.get();
     const postSol = postSnap.exists ? postSnap.data() || {} : sol;
@@ -377,14 +500,18 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
     }
 
     const artCache = new Map();
-    const artDisplay = await loadArticuloDisplay(db, String(sol.articulo_id || ""), artCache);
+    const artIdMdc = String(postSol.articulo_id || sol.articulo_id || "").trim();
+    const artDisplay = await loadArticuloDisplay(db, artIdMdc, artCache);
+    const codigoMdc =
+      String(postSol.codigo_grilla || "").trim() || artDisplay.codigo_grilla || "";
     dispararMdcDesdeSolicitudAsync(
       db,
       solId,
       {
         ...postSol,
         estado_solicitud_id: ESTADO_SOLICITUD_APROBADA,
-        codigo_grilla: artDisplay.codigo_grilla,
+        articulo_id: artIdMdc,
+        codigo_grilla: codigoMdc,
         grupo_autorizacion_id: postSol.grupo_autorizacion_id || null,
       },
       MDC_COMANDO_CONSOLIDAR_APROBADO,
@@ -455,6 +582,31 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
   }
 
   if (decision === "rechazar") {
+    const artCachePre = new Map();
+    const artDisplayPre = await loadArticuloDisplay(db, String(sol.articulo_id || ""), artCachePre);
+    const decisionUi = String(opts.decision_ui || "").trim().toLowerCase();
+    const motivoTrim = String(motivo || "").trim();
+    if (decisionUi === "observado" && motivoTrim.length < 3) {
+      return {
+        ok: false,
+        codigo: "MOTIVO_OBSERVADO_REQUERIDO",
+        mensaje:
+          "Para marcar Observado debés indicar el motivo (mín. 3 caracteres). Queda en registro para auditoría.",
+      };
+    }
+    const materializa770 = debeMaterializar770AlRechazar(sol, {
+      decision_ui: decisionUi,
+      codigo_grilla: artDisplayPre.codigo_grilla,
+    });
+    if (materializa770 && opts.confirma_injustificada !== true) {
+      return {
+        ok: false,
+        codigo: "CONFIRMA_INJUSTIFICADA_REQUERIDA",
+        mensaje:
+          "Para rechazar una autorización debés confirmar que la inasistencia quedará injustificada (Art. 77-0).",
+      };
+    }
+
     await db.runTransaction(async (tx) => {
       const sSnap = await tx.get(solRef);
       if (!sSnap.exists) return;
@@ -467,9 +619,12 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
         estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
         jefe_revision_persona_id: revisorPersonaId,
         jefe_revision_en: FieldValue.serverTimestamp(),
-        jefe_motivo: motivo || null,
+        jefe_motivo: decisionUi === "observado" ? motivoTrim : motivo || null,
         motor_reverso_jefe_aplicado: cur.motor_descuento_aplicado === true,
         actualizado_en: FieldValue.serverTimestamp(),
+        ...(decisionUi === "observado" || decisionUi === "rechazar"
+          ? { decision_jefe_ui: decisionUi }
+          : {}),
       });
     });
     const artCache = new Map();
@@ -495,13 +650,66 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
         motivo: motivo || null,
         autorizacion_rrhh_sustituta: rrhhSustituto,
         cierre_rrhh_sustituta: rrhhSustituto,
+        deriva_77_0: materializa770 === true,
       },
     });
+
+    /** @type {Record<string, unknown>|null} */
+    let derivacion770 = null;
+    if (materializa770) {
+      try {
+        const r770 = await materializarSol770DesdeRechazo(db, {
+          solOrigen: { ...sol, codigo_grilla: artDisplay.codigo_grilla },
+          solOrigenId: solId,
+          revisorPersonaId,
+          origenActo: rrhhSustituto ? "rechazo_autorizacion_rrhh_sustituta" : "rechazo_autorizacion_jefe",
+        });
+        if (!r770.ok) {
+          logger.error("art_77_0_derivacion_fallo", { solId, codigo: r770.codigo, mensaje: r770.mensaje });
+          await solRef.set(
+            {
+              art_77_0_derivacion_pendiente: true,
+              art_77_0_derivacion_error: r770.codigo || "ERROR",
+              actualizado_en: FieldValue.serverTimestamp(),
+            },
+            { merge: true },
+          );
+        } else {
+          derivacion770 = {
+            solicitud_77_0_id: r770.solicitud_77_0_id,
+            dias_acumulados: r770.dias_acumulados,
+            alerta_umbral_emitida: r770.alerta_umbral_emitida === true,
+          };
+          await solRef.set(
+            {
+              art_77_0_derivada_id: r770.solicitud_77_0_id,
+              art_77_0_derivacion_pendiente: false,
+              actualizado_en: FieldValue.serverTimestamp(),
+            },
+            { merge: true },
+          );
+        }
+      } catch (err) {
+        logger.error("art_77_0_derivacion_exception", {
+          solId,
+          message: err instanceof Error ? err.message : String(err),
+        });
+        await solRef.set(
+          {
+            art_77_0_derivacion_pendiente: true,
+            art_77_0_derivacion_error: "EXCEPTION",
+            actualizado_en: FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+      }
+    }
 
     return {
       ok: true,
       solicitud_id: solId,
       estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
+      ...(derivacion770 ? { art_77_0: derivacion770 } : {}),
     };
   }
 

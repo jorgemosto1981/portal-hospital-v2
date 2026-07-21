@@ -131,6 +131,10 @@ export default function TicketeraPatronB() {
         catalogoCie10={form.catalogoCie10}
         catalogosLargaCargando={form.catalogosLargaCargando}
         fechasListasParaEntorno={form.fechasListasParaEntorno}
+        esFamilia64={form.esFamilia64}
+        familia64Resumen={form.familia64Resumen}
+        familia64Cargando={form.familia64Cargando}
+        familia64Error={form.familia64Error}
         titulo=""
         descripcion=""
       />

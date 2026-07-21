@@ -48,6 +48,11 @@ export function filaArticuloIngresoDesdeCallable(art) {
         : Number.isFinite(Number(art.plazo_preaviso_interno_dias))
           ? Math.max(0, Math.floor(Number(art.plazo_preaviso_interno_dias)))
           : null,
+    modo_resolucion_jefe: (() => {
+      const m = String(art?.modo_resolucion_jefe || "").trim();
+      if (m === "toma_conocimiento" || m === "ninguno" || m === "autorizacion") return m;
+      return "autorizacion";
+    })(),
   };
 }
 

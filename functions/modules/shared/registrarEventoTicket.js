@@ -74,6 +74,20 @@ function buildPayloadUi(tipoEvento, solId, evento) {
       actor_label: evento._actor_label || "RRHH",
     };
   }
+  if (tipoEvento === TIPO_EVENTO_TICKET.ALERTA_77_0_UMBRAL_EXCEDIDO) {
+    const dias = meta.dias_acumulados != null ? Number(meta.dias_acumulados) : null;
+    const umbral = meta.umbral_dias != null ? Number(meta.umbral_dias) : 10;
+    return {
+      titulo: "Alerta umbral Art. 77-0",
+      resumen:
+        dias != null && Number.isFinite(dias)
+          ? `Inasistencias injustificadas: ${dias} día(s) acumulados (umbral ${umbral}). Revisar EGAP art. 53.a.`
+          : `Umbral de inasistencias injustificadas excedido (${solId}).`,
+      entidad: "solicitudes_articulo",
+      persona_afectada_label: evento._persona_label || "Titular",
+      actor_label: evento._actor_label || "Sistema",
+    };
+  }
   const decision = meta.decision ? String(meta.decision) : "cambio";
   return {
     titulo: "Cambio de estado de solicitud",

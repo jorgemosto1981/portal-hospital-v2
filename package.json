@@ -71,6 +71,8 @@
     "seed:demo-login-usuario": "node scripts/seed-v2/seed-demo-login-usuario.mjs",
     "seed:fichadas-reloj": "node scripts/dev/seedFichadasReloj.mjs",
     "seed:configuracion": "node src/scripts/seedConfiguracion.mjs",
+    "sync:cfg-prod-to-dev": "node scripts/seed-v2/sync-cfg-prod-to-dev.mjs",
+    "sync:cfg-prod-to-dev:apply": "node scripts/seed-v2/sync-cfg-prod-to-dev.mjs --apply",
     "db:delete-catalog-demo-docs": "node scripts/seed-v2/delete-catalog-demo-docs.mjs",
     "db:audit-refs-catalogos-eliminados": "node scripts/audit-referencias-catalogos-eliminados-v2.mjs",
     "db:purge-efectores-legacy": "node scripts/purge-efectores-legacy.mjs",

@@ -44,6 +44,10 @@ const {
   diasSolicitadosDesdeVersion,
   fechaHastaDesdeVersionPatronBAsync,
 } = require("./patronBFechasSolicitud");
+const {
+  ARTICULO_64A_ETAPA1_ID,
+  resolverRutaFamilia64Alta,
+} = require("./solicitudPatronBCruceModalidad64");
 
 const MOTOR_VERSION_B = "patron-b-v2";
 
@@ -66,6 +70,7 @@ const ESTADOS_CUENTAN_FRECUENCIA_MES = new Set([
   "cfg_esa_en_revision_jefe",
   "cfg_esa_en_revision_rrhh",
   "cfg_esa_aprobada",
+  "cfg_esa_aprobada_pendiente_aplicacion",
 ]);
 
 function resolveExternosDesdePersona(persona) {
@@ -353,10 +358,13 @@ function faseG(db, personaId, fechaDesde, cfg, grupoTrabajoId) {
  * }} params
  */
 async function runPatronBAltaMotorV2(params) {
-  const { db, solicitud, excludeSolId, authToken, versionData, versionId } = params;
+  const { db, solicitud, excludeSolId, authToken } = params;
+  let versionData = params.versionData;
+  let versionId = params.versionId;
 
   const personaId = String(solicitud.titular_persona_id || "").trim();
-  const articuloId = String(solicitud.articulo_id || "").trim();
+  let articuloId = String(solicitud.articulo_id || "").trim();
+  const articuloIdSolicitado = articuloId;
   const fechaDesde = String(solicitud.fecha_desde || "").slice(0, 10);
   const fechaHastaIn = String(solicitud.fecha_hasta || "").slice(0, 10);
   const anioCiclo = Number(solicitud.anio_ciclo_consumo);
@@ -367,6 +375,61 @@ async function runPatronBAltaMotorV2(params) {
   }
   if (anioCiclo !== pDesde.y) {
     return buildRejection([CODIGO_FECHA_RANGO], ["anio_ciclo_consumo no coincide con fecha_desde."], versionData, versionId);
+  }
+
+  /** @type {Record<string, unknown> | null} */
+  let familia64Ruta = null;
+  if (articuloId === ARTICULO_64A_ETAPA1_ID) {
+    let topeMesFamilia = Number(versionData?.bloque_topes_plazos_computo?.tope_frecuencia_mensual);
+    if (!Number.isFinite(topeMesFamilia) || topeMesFamilia <= 0) {
+      try {
+        topeMesFamilia = Number(resolvePatronBMotorConfig(versionData).tope_frecuencia_mensual);
+      } catch {
+        topeMesFamilia = 1;
+      }
+    }
+    const ruta = await resolverRutaFamilia64Alta(db, {
+      persona_id: personaId,
+      articulo_id: articuloId,
+      fecha_desde: fechaDesde,
+      tope_mes: topeMesFamilia,
+      exclude_sol_id: excludeSolId || "",
+    });
+    familia64Ruta = {
+      modalidad: ruta.modalidad,
+      mensaje: ruta.mensaje || null,
+      en_mes_a: ruta.en_mes_a,
+      en_mes_b: ruta.en_mes_b,
+      redirigido: ruta.redirigido === true,
+      articulo_id_efectivo: ruta.articulo_id,
+    };
+    if (!ruta.ok) {
+      return buildRejection(
+        [ruta.codigo || CODIGO_SALDO_MES],
+        [ruta.mensaje || mensajeParaCodigo(CODIGO_SALDO_MES)],
+        versionData,
+        versionId,
+      );
+    }
+    if (ruta.redirigido && ruta.articulo_id && ruta.version_id) {
+      articuloId = String(ruta.articulo_id);
+      versionId = String(ruta.version_id);
+      const verSnap = await db
+        .collection("cfg_articulos")
+        .doc(articuloId)
+        .collection("versiones")
+        .doc(versionId)
+        .get();
+      if (!verSnap.exists) {
+        return buildRejection(
+          ["VERSION_64B_NO_ENCONTRADA"],
+          ["No se pudo cargar la versión de 64-B para el pedido sin goce."],
+          versionData,
+          versionId,
+        );
+      }
+      versionData = verSnap.data() || {};
+    }
   }
 
   const consumo = resolvePatronBConsumoDesdeSolicitud(versionData, solicitud);
@@ -408,6 +471,7 @@ async function runPatronBAltaMotorV2(params) {
     faseC(db, versionEff, fechaDesde, fechaHasta, diasPedidos, authToken),
     faseE(db, versionEff, personaId, fechaDesde, hlcArray, diasExternos, authToken, excludeSolId),
     faseW(versionEff, fechaDesde),
+    // Si ya resolvimos familia 64, fase F sobre el art efectivo (A o B).
     faseF(db, personaId, articuloId, fechaDesde, topeMes, excludeSolId),
     faseT(diasPedidos, cfg),
     faseS(db, personaId, articuloId, anioCiclo, diasPedidos, versionEff),
@@ -467,6 +531,9 @@ async function runPatronBAltaMotorV2(params) {
     usa_calendario_institucional: pipeline.ctx.fechasVal?.usa_calendario_institucional === true,
     incluye_feriados_institucionales: pipeline.ctx.fechasVal?.incluye_feriados_institucionales === true,
     articulo_id: articuloId,
+    articulo_id_solicitado: articuloIdSolicitado,
+    version_id: versionId,
+    familia_64_ruta: familia64Ruta,
     fase_corte: pipeline.fase_corte,
   };
 }

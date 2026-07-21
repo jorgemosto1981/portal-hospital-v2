@@ -39,6 +39,7 @@ const {
   versionEsCambioDia,
   validarFechasMotivoCambioDia,
 } = require("../modules/shared/cambioDiaSolicitudCore");
+const { modoResolucionJefeDesdeVersion } = require("../modules/shared/modoResolucionJefe");
 
 const COL_SALDOS = "saldos_articulo_agente";
 
@@ -212,6 +213,7 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
     const grupoTrabajoIdAncla = String(
       motor.grupo_trabajo_id_ancla || d.grupo_trabajo_id_ancla || "",
     ).trim();
+    const modoResolucionJefe = modoResolucionJefeDesdeVersion(versionData);
 
     const diasConsumo = motor.dias_consumo;
     const sinDescuentoBolsaCiclo =
@@ -219,6 +221,7 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
     const motorOkPayload = {
       estado_solicitud_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
       hlc_id_elegibilidad: motor.hlc_id || null,
+      modo_resolucion_jefe: modoResolucionJefe,
       motor_validado_en: FieldValue.serverTimestamp(),
       actualizado_en: FieldValue.serverTimestamp(),
       motor_descuento_aplicado: false,
@@ -235,10 +238,16 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
 
     try {
       await db.runTransaction(async (tx) => {
+        // Firestore exige todas las lecturas antes de cualquier escritura.
         const sSnap = await tx.get(solRef);
         if (!sSnap.exists) return;
         const cur = sSnap.data() || {};
         if (cur.estado_solicitud_id !== ESTADO_SOLICITUD_BORRADOR) return;
+
+        const salRef = sinDescuentoBolsaCiclo
+          ? null
+          : db.collection(COL_SALDOS).doc(motor.saldo_doc_id);
+        const salSnap = salRef ? await tx.get(salRef) : null;
 
         const titularId = String(cur.titular_persona_id || d.titular_persona_id || "").trim();
         evtIdPostTx = `evt_${ulid()}`;
@@ -258,12 +267,12 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
             fecha_desde: String(cur.fecha_desde || d.fecha_desde || "").slice(0, 10),
           },
         };
-        await registrarEventoTicket(db, solId, ticketEventPostTx, {
-          writer: tx,
-          evento_id: evtIdPostTx,
-        });
 
         if (sinDescuentoBolsaCiclo) {
+          await registrarEventoTicket(db, solId, ticketEventPostTx, {
+            writer: tx,
+            evento_id: evtIdPostTx,
+          });
           tx.update(solRef, {
             ...motorOkPayload,
             ...snapshotAutorizacion,
@@ -279,9 +288,10 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
           return;
         }
 
-        const salRef = db.collection(COL_SALDOS).doc(motor.saldo_doc_id);
-        const salSnap = await tx.get(salRef);
-        if (!salSnap.exists) {
+        if (!salSnap?.exists) {
+          // Sin evento de "revisión jefe": la solicitud queda rechazada por saldo.
+          evtIdPostTx = null;
+          ticketEventPostTx = null;
           tx.update(solRef, {
             ...motorOkPayload,
             estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
@@ -293,6 +303,8 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
 
         const match = pickBolsaParaConsumo(salSnap.data() || {}, motor.articulo_id, motor.anio_ciclo_consumo);
         if (!match) {
+          evtIdPostTx = null;
+          ticketEventPostTx = null;
           tx.update(solRef, {
             ...motorOkPayload,
             estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
@@ -305,6 +317,8 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
         const disp = Number(match.bolsa.disponible);
         const cons = Number(match.bolsa.consumido) || 0;
         if (!Number.isFinite(disp) || disp < diasConsumo) {
+          evtIdPostTx = null;
+          ticketEventPostTx = null;
           tx.update(solRef, {
             estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
             motor_codigos: ["SALDO_CICLO"],
@@ -320,6 +334,11 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
           anio_origen: motor.anio_ciclo_consumo,
           dias: diasConsumo,
         };
+
+        await registrarEventoTicket(db, solId, ticketEventPostTx, {
+          writer: tx,
+          evento_id: evtIdPostTx,
+        });
 
         tx.update(salRef, {
           [`bolsas.${match.bolsaId}.consumido`]: cons + diasConsumo,
@@ -342,7 +361,10 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
         });
       });
     } catch (err) {
-      logger.error("solicitud_patron_b_tx_error", { solId, message: err instanceof Error ? err.message : String(err) });
+      logger.error("solicitud_patron_b_tx_error", {
+        solId,
+        err_message: err instanceof Error ? err.message : String(err),
+      });
       await solRef.update({
         estado_solicitud_id: ESTADO_SOLICITUD_RECHAZADA,
         motor_codigos: ["MOTOR_TX"],

@@ -64,18 +64,62 @@ export default function BandejaJefeSolicitudes() {
     setMotivo("");
   }, []);
 
-  async function decidir(decision) {
+  async function decidir(decision, extras = {}) {
     if (!selId || procesando) return;
+    const esTc = decision === "conforme" || decision === "observado";
+    if (decision === "observado" && motivo.trim().length < 3) {
+      toast.error("Para Observado el motivo es obligatorio (mín. 3 caracteres).");
+      return;
+    }
+    if (
+      decision === "aprobar" &&
+      extras.modalidad_goce_jefe === "sin_goce" &&
+      motivo.trim().length < 3
+    ) {
+      toast.error("Para 64-B sin goce el justificativo es obligatorio (mín. 3 caracteres).");
+      return;
+    }
+    if (decision === "aprobar" && extras.modalidad_goce_jefe === "sin_goce" && extras.confirma_sin_goce !== true) {
+      toast.error("Confirmá la autorización sin goce (64-B).");
+      return;
+    }
     setProcesando(true);
-    const t = toast.loading(decision === "aprobar" ? "Aprobando…" : "Rechazando…");
+    const t = toast.loading(
+      decision === "aprobar" || decision === "conforme"
+        ? esTc
+          ? "Registrando conformidad…"
+          : extras.modalidad_goce_jefe === "sin_goce"
+            ? "Autorizando sin goce (64-B)…"
+            : "Aprobando…"
+        : esTc
+          ? "Registrando observación…"
+          : "Rechazando…",
+    );
     try {
-      await callResolverDecisionJefeSolicitud({
+      const res = await callResolverDecisionJefeSolicitud({
         solicitud_id: selId,
         decision,
         motivo: motivo.trim() || undefined,
+        ...(extras.modalidad_goce_jefe
+          ? { modalidad_goce_jefe: extras.modalidad_goce_jefe }
+          : {}),
+        ...(extras.confirma_injustificada === true ? { confirma_injustificada: true } : {}),
+        ...(extras.confirma_sin_goce === true ? { confirma_sin_goce: true } : {}),
       });
+      const payload = res?.data ?? res;
+      const sol770 = payload?.art_77_0?.solicitud_77_0_id;
       toast.success(
-        decision === "aprobar" ? "Solicitud aprobada (cierre jerárquico)." : "Solicitud rechazada.",
+        decision === "aprobar" || decision === "conforme"
+          ? esTc
+            ? "Toma de conocimiento registrada."
+            : extras.modalidad_goce_jefe === "sin_goce"
+              ? "Autorizada sin goce de haberes (64-B)."
+              : "Solicitud aprobada (cierre jerárquico)."
+          : esTc
+            ? "Observación registrada."
+            : sol770
+              ? `Solicitud rechazada. Se generó Art. 77-0 (${sol770}).`
+              : "Solicitud rechazada.",
         { id: t },
       );
       setSelId("");

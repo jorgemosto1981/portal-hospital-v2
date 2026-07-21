@@ -73,7 +73,8 @@ Cuando hay **marcas** pero la carga del tramo **no** se cumple:
 ## 7. Sin justificación y sanciones
 
 - Si persiste inasistencia o delta sin licencia aprobada que cubra según motor, la grilla muestra el **gap**.
-- **Sanciones disciplinarias:** fuera del portal (RRHH / SARH / procedimiento EGAP). El portal no impone sanciones en esta épica.
+- **Sanciones disciplinarias / sumario EGAP** (cesantía, apercibimiento vía sumario): fuera del alcance operativo del portal como procedimiento jurídico completo (RRHH / SARH / Ley 8525).
+- **Excepción acotada — Art. 77-0:** el portal **asienta** inasistencia injustificada como efecto del **rechazo de una autorización** (o alta directa RRHH) y puede **alertar** a RRHH si se supera el umbral de acumulado (Ley 8525 art. 53.a). No inicia el sumario ni decide la cesantía. Contrato: [`RFC_ART_77_0_INASISTENCIA_INJUSTIFICADA_V2.md`](./RFC_ART_77_0_INASISTENCIA_INJUSTIFICADA_V2.md).
 
 ---
 
@@ -93,4 +94,5 @@ Los artículos **63.c–63.k** de justificación se parametrizan **solo por día
 
 | Fecha | Cambio |
 |-------|--------|
+| 2026-07-15 | §7 — excepción Art. 77-0 (asiento + alerta umbral; sin sumario EGAP en portal). |
 | 2026-06-24 | Creación P0 épica 1919 — tramos M+T+N, absorción tramo, delta, cruce RRHH, grilla pasiva. |

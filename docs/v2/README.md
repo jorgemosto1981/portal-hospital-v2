@@ -9,7 +9,10 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | Documento | Rol |
 |-----------|-----|
 | **[`GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md`](./GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md)** | Foto estado + dos vías (cupo / paralelo) |
-| **[`HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md`](./HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md)** | **RETOMAR AQUÍ** — Vía B-dev operativa; commit wire + smoke login; UAT Soft Launch en paralelo |
+| **[`CHEATSHEET_PROD_VS_DEV_V2.md`](./CHEATSHEET_PROD_VS_DEV_V2.md)** | **Cheat sheet** prod vs −dev (Vite / CLI / SA / deploy / sync cfg) |
+| **[`HANDOFF_SESION_2026-07-17_PAUSA_MODO_JEFE_SYNC_CFG.md`](./HANDOFF_SESION_2026-07-17_PAUSA_MODO_JEFE_SYNC_CFG.md)** | **RETOMAR AQUÍ** — PAUSA 77-0/64 sellados + sync cfg (`a7ce943`) |
+| [`HANDOFF_SESION_2026-07-15_PAUSA_MODO_JEFE_Y_77_0.md`](./HANDOFF_SESION_2026-07-15_PAUSA_MODO_JEFE_Y_77_0.md) | Contexto previo cierre átomo 77-0 (`d32d471`) |
+| [`HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md`](./HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md) | Vía B-dev operativa (contexto setup) |
 | [`HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md`](./HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md) | Vía A: Soft Launch UX en prod `6dee722`; pelota RRHH |
 | **[`CHECKLIST_UAT_ETAPA1_V2.md`](./CHECKLIST_UAT_ETAPA1_V2.md)** | Contrato de aceptación por rol (Agente / Jefe solo bandeja / RRHH) |
 | **[`ETAPA1_POLITICA_DEPLOY_V2.md`](./ETAPA1_POLITICA_DEPLOY_V2.md)** | Freeze prod piloto, proyecto-dev, gate UAT, rollback |
@@ -122,6 +125,8 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md) | Oleada A/B + puntero **Oleada C cerrada** |
 | [`HANDOFF_SESION_2026-05-21_GRILLA_OLEADA_C_CIERRE.md`](./HANDOFF_SESION_2026-05-21_GRILLA_OLEADA_C_CIERRE.md) | **RETOMAR AQUÍ** — épica grilla licencias MDC cerrada · git `f782ce2` · smoke |
 | [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) | RFC contrato — autorización, TC RRHH, MDC, oleadas A/B/C |
+| [`RFC_MODO_RESOLUCION_JEFE_CFG_ARTICULOS_V2.md`](./RFC_MODO_RESOLUCION_JEFE_CFG_ARTICULOS_V2.md) | Enum `modo_resolucion_jefe` (autorización vs TC del jefe inmediato; wizard + bandeja) |
+| [`RFC_ART_77_0_INASISTENCIA_INJUSTIFICADA_V2.md`](./RFC_ART_77_0_INASISTENCIA_INJUSTIFICADA_V2.md) | Art. 77-0: rechazo autorización → asiento injustificada + umbral EGAP art. 53 → alerta RRHH |
 | [`RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md`](./RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md) | Snapshot `grupos_trabajo_involucrados_ids[]` en alta `sol_*` (implementado) |
 | [`TICKETERA_EVIDENCIA_2026-05-23_GRUPOS_INVOLUCRADOS_SNAPSHOT.md`](./TICKETERA_EVIDENCIA_2026-05-23_GRUPOS_INVOLUCRADOS_SNAPSHOT.md) | Piloto manual multigrupo + query `array-contains` |
 | [`SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md`](./SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md) | Campos `sol_*` Oleada A + estados TO-BE |

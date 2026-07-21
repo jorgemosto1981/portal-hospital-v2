@@ -23,6 +23,10 @@ export default function PatronBPreviewInfo({ preview, error, cargando }) {
 
   const eligible = preview.eligible === true || preview.ok === true;
   const saldo = preview.saldo_ciclo && typeof preview.saldo_ciclo === "object" ? preview.saldo_ciclo : null;
+  const saldo64 =
+    preview.saldo_familia_64 && typeof preview.saldo_familia_64 === "object"
+      ? preview.saldo_familia_64
+      : null;
   const desdeUi = ymdToDdMmYyyy(preview.fecha_desde);
   const hastaUi = ymdToDdMmYyyy(preview.fecha_hasta);
 
@@ -42,11 +46,31 @@ export default function PatronBPreviewInfo({ preview, error, cargando }) {
           {" · "}
           {Number(preview.dias_solicitados) || 1} día(s)
         </p>
-        {saldo && saldo.saldo_disponible != null ? (
+        {saldo64 ? (
+          <div className="space-y-1">
+            <p>
+              Saldo disponible ciclo {saldo64.anio_ciclo_consumo}:{" "}
+              <strong>con sueldo {saldo64.con_goce_disponible ?? "—"}</strong>
+              {" · "}
+              <strong>sin sueldo {saldo64.sin_goce_disponible ?? "—"}</strong>
+            </p>
+            <p className="text-sm text-slate-600">
+              La modalidad (con o sin goce de haberes) la define tu jefe al autorizar; ahí impacta
+              el saldo correspondiente.
+            </p>
+          </div>
+        ) : saldo && saldo.saldo_disponible != null ? (
           <p>
             Saldo ciclo {saldo.anio_ciclo_consumo}: disponible{" "}
             <strong>{saldo.saldo_disponible}</strong> → tras envío{" "}
             <strong>{saldo.saldo_restante_preview}</strong> (consumo {saldo.dias_consumo}).
+          </p>
+        ) : null}
+        {preview.familia_64_ruta &&
+        typeof preview.familia_64_ruta === "object" &&
+        String(preview.familia_64_ruta.mensaje || "").trim() ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2 text-amber-950">
+            {String(preview.familia_64_ruta.mensaje)}
           </p>
         ) : null}
         {preview.licencia_medica_preview &&

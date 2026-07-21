@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import OpcionConsumoSelect from "./OpcionConsumoSelect.jsx";
 import CausalLargaSelect from "./CausalLargaSelect.jsx";
 import Cie10Select from "./Cie10Select.jsx";
+import Familia64SaldoInfo from "./Familia64SaldoInfo.jsx";
 import PatronBPreviewInfo from "./PatronBPreviewInfo.jsx";
+import { ymdMinimoPreaviso, ymdToDdMmYyyy } from "./cambioDiaUi.js";
 import { TICKETERA } from "./ticketeraUi.js";
 import { etiquetaArticulo, mensajeBloqueoPreview } from "./ticketeraUtils.js";
 
@@ -162,6 +164,10 @@ export default function SolicitudPatronBForm({
   wizardSeed = 0,
   omitirPasoArticulo = false,
   reiniciarValidacionYPreview,
+  esFamilia64 = false,
+  familia64Resumen = null,
+  familia64Cargando = false,
+  familia64Error = "",
 }) {
   const pasosVisibles = omitirPasoArticulo
     ? [
@@ -181,12 +187,31 @@ export default function SolicitudPatronBForm({
     if (!articuloSel && paso > 1) setPaso(omitirPasoArticulo ? 2 : 1);
   }, [articuloSel, paso, omitirPasoArticulo]);
 
-  const pasoMeta = pasosVisibles.find((p) => p.n === paso) || pasosVisibles[0];
+  const esTomaConocimiento =
+    String(articuloSel?.modo_resolucion_jefe || "").trim() === "toma_conocimiento";
+
+  // Retroactividad por configuración del artículo: si no la permite,
+  // el calendario arranca en hoy + preaviso interno.
+  const permiteRetroactividad = articuloSel?.permite_retroactividad === true;
+  const preavisoDias = Number(articuloSel?.plazo_preaviso_interno_dias) || 0;
+  const fechaDesdeMin = permiteRetroactividad ? undefined : ymdMinimoPreaviso(preavisoDias);
+
+  const pasosConCopy = pasosVisibles.map((p) =>
+    p.n === 3
+      ? {
+          ...p,
+          titulo: esTomaConocimiento ? "Comunicar" : "Enviar",
+          etiquetaPaso: esTomaConocimiento ? "Comunicar" : "Enviar",
+        }
+      : p,
+  );
+  const pasoMeta = pasosConCopy.find((p) => p.n === paso) || pasosConCopy[0];
   const hintPaso = String(pasoMeta.hint || "").trim();
 
   const puedeContinuarPaso1 = Boolean(articuloSel) && !cargando && /^per_/i.test(personaId);
 
   const tieneFechaDesde = /^\d{4}-\d{2}-\d{2}$/.test(fechaDesde);
+  const fechaDesdeRetroOk = !fechaDesdeMin || !tieneFechaDesde || fechaDesde >= fechaDesdeMin;
   const opcionConsumoOk = !requiereOpcionConsumo || Boolean(opcionConsumoId);
   const largaDatosOk = !requiereLicenciaMedicaLarga || largaMedicaOk;
   /** 64-A/B (1 día): una sola fecha visible — “Fecha de ausencia”. */
@@ -204,6 +229,7 @@ export default function SolicitudPatronBForm({
     puedeContinuarPaso1 &&
     opcionConsumoOk &&
     largaDatosOk &&
+    fechaDesdeRetroOk &&
     (fechasListasParaEntorno || fechasCompletas) &&
     !gruposCargando &&
     !validandoEntorno &&
@@ -267,7 +293,7 @@ export default function SolicitudPatronBForm({
       <div className="mt-2">
         <WizardStepper
           paso={paso}
-          pasosVisibles={pasosVisibles}
+          pasosVisibles={pasosConCopy}
           confirmarFallido={confirmarFallido}
           confirmarExitoso={confirmarExitoso}
         />
@@ -323,6 +349,14 @@ export default function SolicitudPatronBForm({
               </div>
             ) : null}
 
+            {esFamilia64 ? (
+              <Familia64SaldoInfo
+                resumen={familia64Resumen}
+                cargando={familia64Cargando}
+                error={familia64Error}
+              />
+            ) : null}
+
             {requiereLicenciaMedicaLarga ? (
               <>
                 {catalogosLargaCargando ? (
@@ -365,12 +399,23 @@ export default function SolicitudPatronBForm({
                 lang="es-AR"
                 inputMode="numeric"
                 value={fechaDesde}
+                min={fechaDesdeMin}
                 onChange={(e) => {
                   reiniciarValidacionYPreview?.();
                   setFechaDesde(e.target.value);
                 }}
                 className={TICKETERA.input}
               />
+              {ymdToDdMmYyyy(fechaDesde) ? (
+                <p className={`${TICKETERA.muted} text-sm`}>Fecha: {ymdToDdMmYyyy(fechaDesde)}</p>
+              ) : null}
+              {fechaDesdeMin && fechaDesde && fechaDesde < fechaDesdeMin ? (
+                <p className="text-sm text-amber-800">
+                  Este artículo no permite fechas retroactivas
+                  {preavisoDias > 0 ? ` (preaviso ${preavisoDias} día/s)` : ""}. Fecha mínima:{" "}
+                  {ymdToDdMmYyyy(fechaDesdeMin)}.
+                </p>
+              ) : null}
             </label>
 
             {mostrarFechaHasta ? (
@@ -389,6 +434,9 @@ export default function SolicitudPatronBForm({
                   className={diasPreestablecidos ? TICKETERA.inputReadonly : TICKETERA.input}
                   aria-readonly={diasPreestablecidos ? "true" : undefined}
                 />
+                {ymdToDdMmYyyy(fechaHasta) ? (
+                  <p className={`${TICKETERA.muted} text-sm`}>Fecha: {ymdToDdMmYyyy(fechaHasta)}</p>
+                ) : null}
               </label>
             ) : null}
 
@@ -465,7 +513,9 @@ export default function SolicitudPatronBForm({
           <>
             {articuloSel ? (
               <div className={TICKETERA.chipArticulo}>
-                <span className="text-xs font-medium uppercase tracking-wide text-sky-800">Solicitud</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-sky-800">
+                  {esTomaConocimiento ? "Comunicación" : "Solicitud"}
+                </span>
                 <p className={`mt-0.5 ${TICKETERA.codigoPatron}`}>
                   {String(articuloSel.codigo_grilla || "").trim() || "Artículo"}
                 </p>
@@ -478,11 +528,19 @@ export default function SolicitudPatronBForm({
             ) : null}
 
             {previewCargando ? (
-              <p className={TICKETERA.muted}>Validando y previsualizando la solicitud…</p>
+              <p className={TICKETERA.muted}>
+                {esTomaConocimiento
+                  ? "Validando y previsualizando la comunicación…"
+                  : "Validando y previsualizando la solicitud…"}
+              </p>
             ) : null}
 
             {entornoOk && !previewError && puedeEnviarTrasPreview ? (
-              <p className={TICKETERA.alertOk}>Validación correcta. Podés solicitar la licencia.</p>
+              <p className={TICKETERA.alertOk}>
+                {esTomaConocimiento
+                  ? "Validación correcta. Podés informar al superior (toma de conocimiento)."
+                  : "Validación correcta. Podés solicitar la licencia."}
+              </p>
             ) : null}
 
             {mensajePreviewNegativo ? (
@@ -510,7 +568,13 @@ export default function SolicitudPatronBForm({
                 onClick={onEnviar}
                 className={`flex-1 ${TICKETERA.btnSuccess}`}
               >
-                {enviando ? "Enviando…" : "Solicitar licencia"}
+                {enviando
+                  ? esTomaConocimiento
+                    ? "Comunicando…"
+                    : "Enviando…"
+                  : esTomaConocimiento
+                    ? "Informar / comunicar"
+                    : "Solicitar licencia"}
               </button>
             </div>
           </>

@@ -59,6 +59,48 @@ describe("patronBFechasSolicitud — 63.j días laborables (calendario instituci
     assert.equal(diasSolicitadosDesdeVersion(versionData), 1);
   });
 
+  it("tope_dias_por_evento > 1 no fuerza duración del pedido (63-C)", () => {
+    assert.equal(
+      diasSolicitadosDesdeVersion({
+        bloque_topes_plazos_computo: { tope_dias_por_evento: 3, cupo_dias_por_ciclo: 6 },
+      }),
+      1,
+    );
+  });
+
+  it("min === max fija la duración del pedido", () => {
+    assert.equal(
+      diasSolicitadosDesdeVersion({
+        bloque_topes_plazos_computo: {
+          dias_minimos_por_evento: 1,
+          tope_dias_por_evento: 1,
+        },
+      }),
+      1,
+    );
+    assert.equal(
+      diasSolicitadosDesdeVersion({
+        bloque_topes_plazos_computo: {
+          dias_minimos_por_evento: 2,
+          tope_dias_por_evento: 2,
+        },
+      }),
+      2,
+    );
+  });
+
+  it("dias_solicitados_fijos gana sobre tope", () => {
+    assert.equal(
+      diasSolicitadosDesdeVersion({
+        bloque_topes_plazos_computo: {
+          tope_dias_por_evento: 5,
+          dias_solicitados_fijos: 2,
+        },
+      }),
+      2,
+    );
+  });
+
   it("hermanos (3 laborables): salta feriado 2026-06-03 — no es suma aritmética de corridos", () => {
     const consumo = resolvePatronBConsumoDesdeSolicitud(versionData, {
       opcion_consumo_id: "oc_63j_hermanos",

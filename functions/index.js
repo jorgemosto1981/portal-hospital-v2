@@ -34,6 +34,7 @@ const solicitudMedAvisoTriggers = require("./triggers/solicitudArticuloMedAvisoO
 const resolverContextoLaboralSolicitud = require("./onCall/solicitudes/resolverContextoLaboralSolicitud");
 const listarArticulosIngresoAgente = require("./onCall/solicitudes/listarArticulosIngresoAgente");
 const previsualizarSolicitudPatronB = require("./onCall/solicitudes/previsualizarSolicitudPatronB");
+const obtenerResumenSaldoFamilia64Agente = require("./onCall/solicitudes/obtenerResumenSaldoFamilia64Agente");
 const previsualizarSolicitudPatronC = require("./onCall/solicitudes/previsualizarSolicitudPatronC");
 const validarEntornoOperativoSolicitud = require("./onCall/solicitudes/validarEntornoOperativoSolicitud");
 const listarSolicitudesBandejaJefe = require("./onCall/solicitudes/listarSolicitudesBandejaJefe");
@@ -43,6 +44,8 @@ const resolverDecisionRrhhSolicitud = require("./onCall/solicitudes/resolverDeci
 const registrarTomaConocimientoRrhhSolicitud = require("./onCall/solicitudes/registrarTomaConocimientoRrhhSolicitud");
 const registrarAcuseRechazoAgente = require("./onCall/solicitudes/registrarAcuseRechazoAgente");
 const obtenerContextoAcuseRechazoAgente = require("./onCall/solicitudes/obtenerContextoAcuseRechazoAgente");
+const registrarAcuseSinGoceAgente = require("./onCall/solicitudes/registrarAcuseSinGoceAgente");
+const obtenerContextoAcuseSinGoceAgente = require("./onCall/solicitudes/obtenerContextoAcuseSinGoceAgente");
 const reprocesarMdcSolicitudPatronB = require("./onCall/solicitudes/reprocesarMdcSolicitudPatronB");
 const obtenerVistaGrillaMesAgente = require("./onCall/grilla/obtenerVistaGrillaMesAgente");
 const obtenerResumenSolicitudArticuloGrilla = require("./onCall/grilla/obtenerResumenSolicitudArticuloGrilla");
@@ -107,6 +110,7 @@ module.exports = {
   ...resolverContextoLaboralSolicitud,
   ...listarArticulosIngresoAgente,
   ...previsualizarSolicitudPatronB,
+  ...obtenerResumenSaldoFamilia64Agente,
   ...previsualizarSolicitudPatronC,
   ...validarEntornoOperativoSolicitud,
   ...listarSolicitudesBandejaJefe,
@@ -116,6 +120,8 @@ module.exports = {
   ...registrarTomaConocimientoRrhhSolicitud,
   ...registrarAcuseRechazoAgente,
   ...obtenerContextoAcuseRechazoAgente,
+  ...registrarAcuseSinGoceAgente,
+  ...obtenerContextoAcuseSinGoceAgente,
   ...reprocesarMdcSolicitudPatronB,
   ...obtenerVistaGrillaMesAgente,
   ...obtenerResumenSolicitudArticuloGrilla,

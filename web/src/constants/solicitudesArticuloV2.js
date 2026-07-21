@@ -34,6 +34,8 @@ export const VERSION_64A_PILOTO_ID = "ver_01KRNKNBXNBFC9HZN7CZJGPRDH";
 export const ARTICULO_64B_ID = "art_01KRYEX0JZY4Y8J1GY3Q9F8BJQ";
 export const VERSION_64B_PILOTO_ID = "ver_01KRYEX13QN7VBPMFQFES1QHB4";
 
+/** Art. 77-0 — inasistencia injustificada (derivación al rechazar autorización). -dev seed. */
+export const ARTICULO_77_0_ID = "art_01KXK3HN7Z52Q0TKPM5EE6Y0M7";
 
 /** Piloto ticketera Patrón C — 68-B Compensatorio */
 export const ARTICULO_68B_ID = "art_01KRYEF39ZM0KB0F0Y4GPBH38F";
