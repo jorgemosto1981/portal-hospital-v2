@@ -63,6 +63,36 @@ const ICONS_BY_ID = {
       strokeWidth={1.5}
     />
   ),
+  "nueva-solicitud-rrhh": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 4.5v15m7.5-7.5h-15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
+  "nueva-solicitud-medico": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 4.5v15m7.5-7.5h-15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
+  "nueva-solicitud-visualizador": () => (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 4.5v15m7.5-7.5h-15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+  ),
   "bandeja-solicitudes-jefe": () => (
     <path
       strokeLinecap="round"
@@ -425,6 +455,7 @@ export default function BottomNavigationBar({ activeTab, onTabChange, className 
   const canManagement = hasPortalRoles(MANAGEMENT_PORTAL_ROLES);
   const requiresManagementTab = (id) =>
     id === "rrhh" ||
+    id === "nueva-solicitud-rrhh" ||
     id === "articulos-cfg" ||
     id === "checkin-saldos" ||
     id === "lao-checkin-rrhh" ||

@@ -221,6 +221,16 @@ export function callListarArticulosIngresoAgente(data) {
   return httpsCallable(getFunctionsV2(), "listarArticulosIngresoAgente")(data);
 }
 
+/** Catálogo de artículos por rol actor (`circuito_ingreso_ids`) y titular. */
+export function callListarArticulosIngresoPorRol(data) {
+  return httpsCallable(getFunctionsV2(), "listarArticulosIngresoPorRol")(data);
+}
+
+/** Búsqueda de personas para Nueva solicitud (RRHH / Médico / Visualizador). */
+export function callBuscarPersonasNuevaSolicitudPorRol(data) {
+  return httpsCallable(getFunctionsV2(), "buscarPersonasNuevaSolicitudPorRol")(data);
+}
+
 /** Preview Patrón B (elegibilidad + saldos) sin crear solicitud. */
 export function callPrevisualizarSolicitudPatronB(data) {
   return httpsCallable(getFunctionsV2(), "previsualizarSolicitudPatronB")(data);

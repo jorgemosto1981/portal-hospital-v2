@@ -88,6 +88,20 @@ Firestore **`portalRrhhOrAdmin()`:** `roles_hlc_vigentes.hasAny(['CFG_RRHH'])` +
 
 **Implementado hoy:** bloque RRHH en sidebar sigue usando **`MANAGEMENT_PORTAL_ROLES`** leyendo claims vía **`portalRole.js`** (actualizado para **`roles_hlc_vigentes`**).
 
+### 6.1 Nueva solicitud por rol (átomo catálogo · 2026-07-21)
+
+| Tema | Contrato |
+|------|----------|
+| Menú Usuario | Sin cambio: `/portal/solicitudes` (ticketera agente). |
+| Menús nuevos | `Nueva solicitud` en paquetes **RRHH**, **Médico** y **Visualizador**. |
+| Rutas | `/portal/rrhh/nueva-solicitud` · `/portal/medico/nueva-solicitud` · `/portal/visualizador/nueva-solicitud` |
+| Fuente de verdad | Versión publicada: `bloque_workflow_sla_cobertura.circuito_ingreso_ids` incluye el `rol_id` actor (`CFG_*`). |
+| Actor vs titular | El **actor** debe tener el rol pedido en JWT. El **titular** se evalúa solo con filtros laborales (escalafón, etc.), **sin** exigir que el titular tenga el rol del circuito. |
+| Titular ajeno | `CFG_USUARIO` solo propia persona. `CFG_RRHH` / `CFG_MEDICO` / `CFG_VISUALIZADOR` pueden consultar otra `persona_id` (lectura). |
+| Escritura | **Fuera de este átomo** (`alta_disponible: false`). Próximo: alta directa RRHH 77-0. |
+| Callables | `listarArticulosIngresoPorRol`, `buscarPersonasNuevaSolicitudPorRol` |
+| Core | `functions/modules/shared/listarArticulosIngresoRolCore.js` (aislado de Etapa 1 / solo B-C). |
+
 **Pendiente (oleada C):** metadata por ítem en `MODULOS_PORTAL` (`roles_hlc`, `requiere_subordinados`), filtro con regla RRHH “ve todo”, Vitest de menú.
 
 Ver §2 de [`CUESTIONES_ROLES_MENUS_ARQUITECTURA_V2.md`](./CUESTIONES_ROLES_MENUS_ARQUITECTURA_V2.md) — este RFC **supersede** la idea de `usuarios_cuenta.role_ids` como driver principal.
@@ -136,5 +150,6 @@ Matriz: [`TICKETERA_SLICE_64A_MATRIZ_PRUEBAS.md`](./TICKETERA_SLICE_64A_MATRIZ_P
 
 | Fecha | Cambio |
 |-------|--------|
+| 2026-07-21 | §6.1 Nueva solicitud por rol (catálogo actor/titular + callables); sin escritura delegada. |
 | 2026-05-19 | RFC creado; implementación claims `roles_hlc_vigentes`; deprecación escritura `portal_role`; refresh post-guardado laboral; deploy Functions OK. |
 | 2026-05-19 | Deploy rules + Hosting; menú 64-A por elegibilidad; configurador RRHH validado tras rules (28914247). |

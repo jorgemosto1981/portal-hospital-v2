@@ -33,7 +33,9 @@ import GuardArticuloIngreso from "./features/solicitudes/GuardArticuloIngreso.js
 import RedirectTicketeraAlta from "./features/solicitudes/RedirectTicketeraAlta.jsx";
 import TicketeraAltaPage from "./pages/TicketeraAltaPage.jsx";
 import AvisoMedicoPage from "./pages/AvisoMedicoPage.jsx";
+import NuevaSolicitudPorRolPage from "./pages/NuevaSolicitudPorRolPage.jsx";
 import Etapa1SurfaceGuard from "./features/etapa1/Etapa1SurfaceGuard.jsx";
+import { ROL_CFG_MEDICO, ROL_CFG_RRHH, ROL_CFG_VISUALIZADOR } from "./features/solicitudes/nuevaSolicitudPorRol.js";
 import CheckinSaldosAgente from "./pages/CheckinSaldosAgente.jsx";
 import AltaAgenteOnboardingRRHH from "./pages/AltaAgenteOnboardingRRHH.jsx";
 import LaoCheckinRRHH from "./pages/LaoCheckinRRHH.jsx";
@@ -161,6 +163,14 @@ export default function App() {
             <Route path="grilla" element={<GrillaPortalRedirect />} />
             <Route path="jefe/solicitudes" element={<BandejaJefeSolicitudes />} />
             <Route
+              path="medico/nueva-solicitud"
+              element={
+                <RoleGuard roles={["medico"]}>
+                  <NuevaSolicitudPorRolPage rolId={ROL_CFG_MEDICO} />
+                </RoleGuard>
+              }
+            />
+            <Route
               path="medico/solicitudes"
               element={
                 <Etapa1SurfaceGuard flag="medico">
@@ -174,6 +184,14 @@ export default function App() {
                 <Etapa1SurfaceGuard flag="medico">
                   <BandejaJuntaSolicitudes />
                 </Etapa1SurfaceGuard>
+              }
+            />
+            <Route
+              path="visualizador/nueva-solicitud"
+              element={
+                <RoleGuard roles={["visualizador"]}>
+                  <NuevaSolicitudPorRolPage rolId={ROL_CFG_VISUALIZADOR} />
+                </RoleGuard>
               }
             />
             <Route
@@ -200,6 +218,10 @@ export default function App() {
               <Route path="rrhh/alta" element={<AltaAgenteRRHH />} />
               <Route path="rrhh/alta-agente" element={<AltaAgenteOnboardingRRHH />} />
               <Route path="rrhh/antiguedad" element={<Antiguedad />} />
+              <Route
+                path="rrhh/nueva-solicitud"
+                element={<NuevaSolicitudPorRolPage rolId={ROL_CFG_RRHH} />}
+              />
               <Route path="rrhh/solicitudes-articulo" element={<BandejaRrhhSolicitudes />} />
               <Route path="rrhh/checkin-saldos" element={<CheckinSaldosAgente />} />
               <Route path="rrhh/calendario-institucional" element={<CalendarioConfig />} />

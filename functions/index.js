@@ -33,6 +33,8 @@ const solicitudPatronCTriggers = require("./triggers/solicitudArticuloPatronCOnC
 const solicitudMedAvisoTriggers = require("./triggers/solicitudArticuloMedAvisoOnCreate");
 const resolverContextoLaboralSolicitud = require("./onCall/solicitudes/resolverContextoLaboralSolicitud");
 const listarArticulosIngresoAgente = require("./onCall/solicitudes/listarArticulosIngresoAgente");
+const listarArticulosIngresoPorRol = require("./onCall/solicitudes/listarArticulosIngresoPorRol");
+const buscarPersonasNuevaSolicitudPorRol = require("./onCall/solicitudes/buscarPersonasNuevaSolicitudPorRol");
 const previsualizarSolicitudPatronB = require("./onCall/solicitudes/previsualizarSolicitudPatronB");
 const obtenerResumenSaldoFamilia64Agente = require("./onCall/solicitudes/obtenerResumenSaldoFamilia64Agente");
 const previsualizarSolicitudPatronC = require("./onCall/solicitudes/previsualizarSolicitudPatronC");
@@ -109,6 +111,8 @@ module.exports = {
   ...solicitudMedAvisoTriggers,
   ...resolverContextoLaboralSolicitud,
   ...listarArticulosIngresoAgente,
+  ...listarArticulosIngresoPorRol,
+  ...buscarPersonasNuevaSolicitudPorRol,
   ...previsualizarSolicitudPatronB,
   ...obtenerResumenSaldoFamilia64Agente,
   ...previsualizarSolicitudPatronC,

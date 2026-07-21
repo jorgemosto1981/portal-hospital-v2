@@ -69,6 +69,30 @@ export const MODULOS_PORTAL = [
     ticketeraSiempreVisible: true,
   },
   {
+    id: "nueva-solicitud-rrhh",
+    label: "Nueva solicitud",
+    path: "/portal/rrhh/nueva-solicitud",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    nuevaSolicitudPorRolMenu: true,
+  },
+  {
+    id: "nueva-solicitud-medico",
+    label: "Nueva solicitud",
+    path: "/portal/medico/nueva-solicitud",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "medico",
+    nuevaSolicitudPorRolMenu: true,
+  },
+  {
+    id: "nueva-solicitud-visualizador",
+    label: "Nueva solicitud",
+    path: "/portal/visualizador/nueva-solicitud",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "visualizador",
+    nuevaSolicitudPorRolMenu: true,
+  },
+  {
     id: "calendario-institucional-consulta",
     label: "Calendario institucional",
     path: "/portal/calendario-institucional",
@@ -353,6 +377,7 @@ export const MODULOS_V2_ESTADO = [
  * @param {string} pathname
  */
 export function resolverTabPorPath(pathname) {
+  if (pathname.startsWith("/portal/rrhh/nueva-solicitud")) return "nueva-solicitud-rrhh";
   if (pathname.startsWith("/portal/rrhh/solicitudes-articulo")) return "bandeja-solicitudes-rrhh";
   if (pathname.startsWith("/portal/rrhh/lao-checkin")) return "lao-checkin-rrhh";
   if (pathname.startsWith("/portal/rrhh/checkin-saldos")) return "checkin-saldos";
@@ -380,8 +405,10 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla-jefe";
   if (pathname.startsWith("/portal/jefe/planes-turno")) return "planes-turno-jefe";
   if (pathname.startsWith("/portal/jefe/solicitudes")) return "bandeja-solicitudes-jefe";
+  if (pathname.startsWith("/portal/medico/nueva-solicitud")) return "nueva-solicitud-medico";
   if (pathname.startsWith("/portal/medico/solicitudes")) return "bandeja-solicitudes-auditor-medico";
   if (pathname.startsWith("/portal/medico/junta")) return "bandeja-junta-medico";
+  if (pathname.startsWith("/portal/visualizador/nueva-solicitud")) return "nueva-solicitud-visualizador";
   if (pathname.startsWith("/portal/solicitudes")) return "ticketera";
   if (pathname.startsWith("/portal/laboral") || pathname.startsWith("/laboral")) return "laboral";
   if (pathname.startsWith("/portal/mi-perfil")) return "perfil";

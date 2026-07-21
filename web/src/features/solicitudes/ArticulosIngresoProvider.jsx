@@ -103,6 +103,7 @@ export function useArticulosIngresoMenu() {
 export function filtrarModulosPorArticulosIngreso(modulos, puedeSolicitarArticulo) {
   return modulos.filter((m) => {
     if (m.ticketeraSiempreVisible === true) return true;
+    if (m.nuevaSolicitudPorRolMenu === true) return true;
     if (m.bandejaJefeMenu === true) return true;
     if (m.bandejaRrhhMenu === true) return true;
     if (m.bandejaAuditorMedicoMenu === true) return true;

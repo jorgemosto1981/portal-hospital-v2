@@ -78,6 +78,10 @@ export function hasAnyPortalRole(claims, allowed) {
     if (claimsIncludeRrhh(claims)) return true;
   }
   if (set.has("jefe") && claimsIncludeJefe(claims)) return true;
+  const hlc = rolesHlcFromClaims(claims);
+  if (set.has("medico") && hlc.includes("CFG_MEDICO")) return true;
+  if (set.has("visualizador") && hlc.includes("CFG_VISUALIZADOR")) return true;
+  if (set.has("usuario") && hlc.includes("CFG_USUARIO")) return true;
   const n = normalizePortalRole(claims);
   if (!n) return false;
   return set.has(n);
