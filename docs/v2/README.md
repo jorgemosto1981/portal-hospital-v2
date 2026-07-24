@@ -8,21 +8,14 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 
 | Documento | Rol |
 |-----------|-----|
-| **[`GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md`](./GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md)** | Foto estado + dos vías (cupo / paralelo) |
-| **[`CHEATSHEET_PROD_VS_DEV_V2.md`](./CHEATSHEET_PROD_VS_DEV_V2.md)** | **Cheat sheet** prod vs −dev (Vite / CLI / SA / deploy / sync cfg) |
-| **[`HANDOFF_SESION_2026-07-17_PAUSA_MODO_JEFE_SYNC_CFG.md`](./HANDOFF_SESION_2026-07-17_PAUSA_MODO_JEFE_SYNC_CFG.md)** | **RETOMAR AQUÍ** — PAUSA 77-0/64 sellados + sync cfg (`a7ce943`) |
-| [`HANDOFF_SESION_2026-07-15_PAUSA_MODO_JEFE_Y_77_0.md`](./HANDOFF_SESION_2026-07-15_PAUSA_MODO_JEFE_Y_77_0.md) | Contexto previo cierre átomo 77-0 (`d32d471`) |
-| [`HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md`](./HANDOFF_SESION_2026-07-14_PAUSA_VIA_B_DEV.md) | Vía B-dev operativa (contexto setup) |
-| [`HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md`](./HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md) | Vía A: Soft Launch UX en prod `6dee722`; pelota RRHH |
 | **[`CHECKLIST_UAT_ETAPA1_V2.md`](./CHECKLIST_UAT_ETAPA1_V2.md)** | Contrato de aceptación por rol (Agente / Jefe solo bandeja / RRHH) |
 | **[`ETAPA1_POLITICA_DEPLOY_V2.md`](./ETAPA1_POLITICA_DEPLOY_V2.md)** | Freeze prod piloto, proyecto-dev, gate UAT, rollback |
 | **[`ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md`](./ACTA_RRHH_ETAPA1_VIDA_REAL_V2.md)** | Contrato ops RRHH: alcance, población GDT/usuarios **nuevos**, umbrales Soft Launch |
 | **[`ETAPA1_GO_LIVE_V2.md`](./ETAPA1_GO_LIVE_V2.md)** | Runbook técnico Día D: allowlist, catálogo, feature off |
 | **[`ETAPA1_GIT_Y_ENTORNOS_V2.md`](./ETAPA1_GIT_Y_ENTORNOS_V2.md)** | Tag `v0.9.0-base`, ramas `master`/`develop`, Firebase-dev, feature flags |
-| [`ETAPA1_FIREBASE_DEV_SETUP_V2.md`](./ETAPA1_FIREBASE_DEV_SETUP_V2.md) | Checklist creación / alta operativa proyecto `portal-hospital-v2-dev` |
+| [`ETAPA1_FIREBASE_DEV_SETUP_V2.md`](./ETAPA1_FIREBASE_DEV_SETUP_V2.md) | Checklist creación proyecto `portal-hospital-v2-dev` |
 | **[`CONTRATO_CONFIG_ARTICULO_CAMBIO_DIA_V2.md`](./CONTRATO_CONFIG_ARTICULO_CAMBIO_DIA_V2.md)** | Contrato ABM/seed CAMBIO-DIA (sin hardcode UI) |
-| [`HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO.md`](./HANDOFF_SESION_2026-07-14_SOFT_LAUNCH_UX_RULES_CALENDARIO.md) | Sesión 2026-07-14: UX Mis solicitudes/acuse, CAMBIO-DIA/rules, calendario |
-| [`HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md`](./HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md) | Soft Launch baseline (`f5c8b5e`): IDs prod, allowlist, backlog UAT |
+| **[`HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md`](./HANDOFF_SESION_2026-07-08_SOFT_LAUNCH_ETAPA1.md)** | **RETOMAR AQUÍ** — Soft Launch pausado: IDs prod, allowlist, backlog UAT, cómo clonar en otra PC |
 
 ### Módulo operativo y de asistencia (biblia de referencia)
 
@@ -125,8 +118,6 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md`](./HANDOFF_SESION_2026-05-21_BLOQUE_A_Y_CONTINUIDAD.md) | Oleada A/B + puntero **Oleada C cerrada** |
 | [`HANDOFF_SESION_2026-05-21_GRILLA_OLEADA_C_CIERRE.md`](./HANDOFF_SESION_2026-05-21_GRILLA_OLEADA_C_CIERRE.md) | **RETOMAR AQUÍ** — épica grilla licencias MDC cerrada · git `f782ce2` · smoke |
 | [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) | RFC contrato — autorización, TC RRHH, MDC, oleadas A/B/C |
-| [`RFC_MODO_RESOLUCION_JEFE_CFG_ARTICULOS_V2.md`](./RFC_MODO_RESOLUCION_JEFE_CFG_ARTICULOS_V2.md) | Enum `modo_resolucion_jefe` (autorización vs TC del jefe inmediato; wizard + bandeja) |
-| [`RFC_ART_77_0_INASISTENCIA_INJUSTIFICADA_V2.md`](./RFC_ART_77_0_INASISTENCIA_INJUSTIFICADA_V2.md) | Art. 77-0: rechazo autorización → asiento injustificada + umbral EGAP art. 53 → alerta RRHH |
 | [`RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md`](./RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md) | Snapshot `grupos_trabajo_involucrados_ids[]` en alta `sol_*` (implementado) |
 | [`TICKETERA_EVIDENCIA_2026-05-23_GRUPOS_INVOLUCRADOS_SNAPSHOT.md`](./TICKETERA_EVIDENCIA_2026-05-23_GRUPOS_INVOLUCRADOS_SNAPSHOT.md) | Piloto manual multigrupo + query `array-contains` |
 | [`SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md`](./SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md) | Campos `sol_*` Oleada A + estados TO-BE |
@@ -141,6 +132,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`CURSOR_RULES_BORRADOR_V2.md`](./CURSOR_RULES_BORRADOR_V2.md) | **Borrador** reglas Cursor/convenciones de código V2 (referencia; basado en buenas prácticas de la V1 + `docs/v2`) |
 | [`RULEBOOK_V2.md`](./RULEBOOK_V2.md) | Convenciones transversales (IDs, estados, seguridad) — v0 |
 | [`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md) | Datos laborales — **borrador** (`grupos_de_trabajo` / `gdt_*`, `cfg_efectores`, `hlc_*`, `hld_*` / `hlg_*`; carga en horas + §4.5). Clarificación UX: Nivel 1 = Cargo (`HLc`), Nivel 2 = Grupo (`HLg`), con `HLd` como detalle técnico opcional. |
+| **[`RFC_PLANTEL_Y_PASES_GDT_V2.md`](./RFC_PLANTEL_Y_PASES_GDT_V2.md)** | **Aceptado 2026-07-24:** plantel por GDT (lectura) + pases HLg cierre/alta (interno/externo + TC); fuera de ticketera |
 | [`MODULO_LOGIN_V2.md`](./MODULO_LOGIN_V2.md) | Login, estados de acceso, **DNI + PIN 6 + correo** |
 | [`MODULO_DATOS_PERSONALES_PLAN_DESARROLLO_UNIFICADO_V2.md`](./MODULO_DATOS_PERSONALES_PLAN_DESARROLLO_UNIFICADO_V2.md) | **Plan único** Datos personales: decisiones + flujo A–E + gating (V2) |
 | [`MODULO_DATOS_PERSONALES_V2.md`](./MODULO_DATOS_PERSONALES_V2.md) | Anexo: contrato `personas`, formación, DDJJ, campos (ítem a ítem) |
