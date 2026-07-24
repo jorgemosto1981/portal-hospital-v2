@@ -46,7 +46,9 @@ import PlanTurnoServicioRrhhPage from "./pages/rrhh/PlanTurnoServicioRrhhPage.js
 import BandejaTurnosRrhhPage from "./pages/rrhh/BandejaTurnosRrhhPage.jsx";
 import ExploradorTurnosRrhhPage from "./pages/rrhh/ExploradorTurnosRrhhPage.jsx";
 import GrillaOperativaRrhhPage from "./pages/rrhh/GrillaOperativaRrhhPage.jsx";
+import PlantelRrhhPage from "./pages/rrhh/PlantelRrhhPage.jsx";
 import GrillaOperativaJefePage from "./pages/jefe/GrillaOperativaJefePage.jsx";
+import PlantelJefePage from "./pages/jefe/PlantelJefePage.jsx";
 import PlanTurnoServicioJefePage from "./pages/jefe/PlanTurnoServicioJefePage.jsx";
 import FichadasImportRrhhPage from "./pages/rrhh/FichadasImportRrhhPage.jsx";
 import FichadasHuerfanasRrhhPage from "./pages/rrhh/FichadasHuerfanasRrhhPage.jsx";
@@ -176,6 +178,14 @@ export default function App() {
                 </RoleGuard>
               }
             />
+            <Route
+              path="jefe/plantel"
+              element={
+                <RoleGuard>
+                  <PlantelJefePage />
+                </RoleGuard>
+              }
+            />
             <Route path="modulos" element={<EstadoModulos />} />
             <Route path="pantallas" element={<PantallasCatalogo />} />
             <Route path="configuracion" element={<Configuracion />} />
@@ -199,6 +209,7 @@ export default function App() {
               <Route path="rrhh/bandeja-turnos" element={<BandejaTurnosRrhhPage />} />
               <Route path="rrhh/explorador-turnos" element={<ExploradorTurnosRrhhPage />} />
               <Route path="rrhh/grilla-operativa" element={<GrillaOperativaRrhhPage />} />
+              <Route path="rrhh/plantel" element={<PlantelRrhhPage />} />
               <Route path="rrhh/planes-turno" element={<PlanTurnoServicioRrhhPage />} />
               <Route path="rrhh/lao-checkin" element={<LaoCheckinRRHH />} />
               <Route path="rrhh/configuracion-articulos" element={<ArticuloListadoGrilla />} />

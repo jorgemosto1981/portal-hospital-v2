@@ -204,6 +204,14 @@ export const MODULOS_PORTAL = [
     parentMenuId: "funciones-rrhh-raiz",
   },
   {
+    id: "plantel-rrhh",
+    label: "Plantel por GDT",
+    path: "/portal/rrhh/plantel",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "funciones-rrhh-raiz",
+  },
+  {
     id: "cosas-del-jefe-raiz",
     label: "Cosas del jefe",
     path: "/portal/jefe/grilla-operativa",
@@ -222,6 +230,14 @@ export const MODULOS_PORTAL = [
     id: "planes-turno-jefe-rrhh",
     label: "Turnos Mensuales",
     path: "/portal/jefe/planes-turno",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "cosas-del-jefe-raiz",
+  },
+  {
+    id: "plantel-jefe-rrhh",
+    label: "Plantel por GDT",
+    path: "/portal/jefe/plantel",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
     parentMenuId: "cosas-del-jefe-raiz",
@@ -487,11 +503,13 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh/fichadas-import")) return "fichadas-import";
   if (pathname.startsWith("/portal/rrhh/fichadas-huerfanas")) return "fichadas-huerfanas";
   if (pathname.startsWith("/portal/rrhh/grilla-operativa")) return "grilla";
+  if (pathname.startsWith("/portal/rrhh/plantel")) return "plantel-rrhh";
   if (pathname.startsWith("/portal/rrhh/planes-turno")) return "planes-turno-rrhh";
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "alta-agente-guia";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
   // Temporal: superficies jefe operadas desde menú RRHH ("Cosas del jefe").
   if (pathname.startsWith("/portal/jefe/grilla-operativa")) return "grilla-jefe-rrhh";
+  if (pathname.startsWith("/portal/jefe/plantel")) return "plantel-jefe-rrhh";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla-jefe-rrhh";
   if (pathname.startsWith("/portal/jefe/planes-turno")) return "planes-turno-jefe-rrhh";
   if (pathname.startsWith("/portal/jefe/solicitudes")) return "bandeja-solicitudes-jefe";
