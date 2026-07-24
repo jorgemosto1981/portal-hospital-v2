@@ -6,19 +6,20 @@
  *
  * Auth:
  * - RRHH: cualquier GDT activo.
- * - Jefe/miembro: `assertPlanAuth(..., "leer")` — debe tener HLg vigente en ese GDT
- *   (MVP; expansión a subárbol → listarArbolGdtPlantel Fase 1b).
+ * - Jefe: GDT en jurisdicción = HLg vigente + subárbol por parent_group_id (Fase 1b).
  */
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db } = require("../../modules/shared/context");
-const { assertPlanAuth } = require("../../modules/shared/helpers");
 const { tokenHasRrhhLaborAccess } = require("../../modules/shared/laborProfile");
 const { obtenerYmdHoyInstitucional } = require("../../modules/shared/fechaLaboralYmd");
 const {
   normalizeYmd,
   obtenerPlantelPorGdtCore,
 } = require("../../modules/organizacion/obtenerPlantelPorGdtCore");
+const {
+  assertLecturaPlantelJurisdiccion,
+} = require("../../modules/organizacion/listarArbolGdtPlantelCore");
 
 const obtenerPlantelPorGdtCallable = onCall(async (request) => {
   if (!request.auth) {
@@ -42,8 +43,19 @@ const obtenerPlantelPorGdtCallable = onCall(async (request) => {
 
   const token = request.auth.token || {};
   const esRrhh = tokenHasRrhhLaborAccess(token);
-  if (!esRrhh) {
-    await assertPlanAuth(request, gdtId, "leer");
+  const personaId = typeof token.persona_id === "string" ? token.persona_id.trim() : "";
+
+  const auth = await assertLecturaPlantelJurisdiccion(db, {
+    gdtId,
+    personaId,
+    aFechaYmd,
+    esRrhh,
+  });
+  if (!auth.ok) {
+    throw new HttpsError(
+      /** @type {import("firebase-functions/v2/https").FunctionsErrorCode} */ (auth.code || "permission-denied"),
+      auth.message || "Sin permiso para leer plantel de este GDT.",
+    );
   }
 
   try {

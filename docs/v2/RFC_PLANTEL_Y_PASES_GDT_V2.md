@@ -104,7 +104,7 @@ Menú: RRHH bajo funciones/estructura; Jefe bajo “Cosas del jefe” (o equival
 
 1. Auth obligatoria.
 2. Si actor es RRHH (`CFG_RRHH` / roles HLc vigentes equivalentes) → OK.
-3. Si actor es jefe → el `gdt_id` debe estar en su **jurisdicción** (GDT donde tiene HLg vigente con nivel superior relativo, o subárbol bajo sus GDT “de mando”; detalle de algoritmo en implementación, alineado a `laborProfile` / burbujeo existente).
+3. Si actor es jefe → el `gdt_id` debe estar en su **jurisdicción**: GDT con HLg vigente propio **o** sub-GDT descendiente vía `parent_group_id` (misma regla que `listarArbolGdtPlantel`).
 4. Otro → `permission-denied`.
 
 **Lógica server:**
@@ -130,7 +130,7 @@ Menú: RRHH bajo funciones/estructura; Jefe bajo “Cosas del jefe” (o equival
 }
 ```
 
-**Callable auxiliar sugerido (Fase 1b):** `listarArbolGdtPlantel` — devuelve nodos GDT visibles según rol (evita filtrar árbol solo en cliente).
+**Callable auxiliar (Fase 1b):** `listarArbolGdtPlantel` — `{ alcance: "rrhh"|"jefe", a_fecha? }` → `nodos` + `arbol` visibles según rol. Jefe: HLg vigentes + descendientes `parent_group_id`. `obtenerPlantelPorGdt` autoriza lectura en esa misma jurisdicción (no exige HLg propio en el sub-GDT).
 
 ---
 
@@ -218,7 +218,7 @@ Patrón alineado a TC ya usado en Etapa 1 (autorizaciones / acuses), sin bloquea
 | Callable | Módulo | Fase |
 |----------|--------|------|
 | `obtenerPlantelPorGdt` | A | 1 |
-| `listarArbolGdtPlantel` | A | 1b (recomendado) |
+| `listarArbolGdtPlantel` | A | 1b ✅ |
 | `ejecutarPaseInternoGdt` | B | 2 |
 | `solicitarPaseExternoGdt` | B | 2 |
 | `aprobarPaseGdt` | B | 2 |

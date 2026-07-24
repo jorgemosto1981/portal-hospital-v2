@@ -622,7 +622,12 @@ export function callObtenerHistorialLmTitularBandejaAuditor(data) {
   return httpsCallable(getFunctionsV2(), "obtenerHistorialLmTitularBandejaAuditor")(data || {});
 }
 
-/** Plantel vigente por GDT (RFC plantel/pases) — lectura RRHH o miembro del grupo. */
+/** Plantel vigente por GDT (RFC plantel/pases) — lectura RRHH o jurisdicción jefe (subárbol). */
 export function callObtenerPlantelPorGdt(data) {
   return httpsCallable(getFunctionsV2(), "obtenerPlantelPorGdt")(data || {});
+}
+
+/** Árbol GDT visible para plantel — RRHH completo o rama jefe (HLg + sub-GDT). */
+export function callListarArbolGdtPlantel(data) {
+  return httpsCallable(getFunctionsV2(), "listarArbolGdtPlantel")(data || {});
 }

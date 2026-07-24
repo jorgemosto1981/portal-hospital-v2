@@ -46,6 +46,7 @@ const obtenerVistaGrillaMesAgente = require("./onCall/grilla/obtenerVistaGrillaM
 const obtenerResumenSolicitudArticuloGrilla = require("./onCall/grilla/obtenerResumenSolicitudArticuloGrilla");
 const listarVistaGrillaMesPorGrupo = require("./onCall/grilla/listarVistaGrillaMesPorGrupo");
 const obtenerPlantelPorGdt = require("./onCall/organizacion/obtenerPlantelPorGdt");
+const listarArbolGdtPlantel = require("./onCall/organizacion/listarArbolGdtPlantel");
 const cerrarPeriodoLiquidacion = require("./onCall/grilla/cerrarPeriodoLiquidacion");
 const reabrirPeriodoLiquidacion = require("./onCall/grilla/reabrirPeriodoLiquidacion");
 const consultarEstadosPeriodoLiquidacionGrupo = require("./onCall/grilla/consultarEstadosPeriodoLiquidacionGrupo");
@@ -118,6 +119,7 @@ module.exports = {
   ...obtenerResumenSolicitudArticuloGrilla,
   ...listarVistaGrillaMesPorGrupo,
   ...obtenerPlantelPorGdt,
+  ...listarArbolGdtPlantel,
   ...solicitarReconciliacionGrillaGrupoMes,
   ...cerrarPeriodoLiquidacion,
   ...reabrirPeriodoLiquidacion,

@@ -1,24 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 
-import {
-  listarGruposTrabajoCatalogo,
-  peekGruposTrabajoCatalogo,
-} from "../catalogo/listarGruposTrabajoCatalogo.js";
-import { useAuthClaims } from "../auth/useAuthClaims.js";
-import { useAuthSession } from "../auth/useAuthSession.js";
-import { callResolverContextoLaboralSolicitud } from "../../services/callables.js";
+import { callListarArbolGdtPlantel } from "../../services/callables.js";
 import { ymdHoyBa } from "../solicitudes/ticketeraUtils.js";
 import ArbolGdtSelector from "./ArbolGdtSelector.jsx";
 import TablaPlantelGdt from "./TablaPlantelGdt.jsx";
-import {
-  construirArbolGdt,
-  expandirSubarbolIds,
-  idsGdtDesdeGruposVigentes,
-  listarGdtActivos,
-} from "./buildArbolGdt.js";
+import { construirArbolGdt } from "./buildArbolGdt.js";
 
 /**
  * Split view compartido: árbol GDT + tabla plantel.
+ * El árbol viene de `listarArbolGdtPlantel` (servidor); la tabla de `obtenerPlantelPorGdt`.
  *
  * @param {{
  *   modo: "rrhh" | "jefe";
@@ -27,95 +17,67 @@ import {
  * }} props
  */
 export default function PlantelPorGdtPanel({ modo, titulo, subtitulo }) {
-  const { user } = useAuthSession();
-  const { claims } = useAuthClaims(user);
-  const personaId = typeof claims?.persona_id === "string" ? claims.persona_id.trim() : "";
-
-  const [nodos, setNodos] = useState(() => listarGdtActivos(peekGruposTrabajoCatalogo(400) || []));
-  const [catalogoCargando, setCatalogoCargando] = useState(nodos.length === 0);
-  const [catalogoError, setCatalogoError] = useState("");
-
-  const [raizJefeIds, setRaizJefeIds] = useState(/** @type {string[]} */ ([]));
-  const [raicesCargando, setRaicesCargando] = useState(modo === "jefe");
-  const [raicesError, setRaicesError] = useState("");
-
-  const [gdtId, setGdtId] = useState("");
+  const [arbol, setArbol] = useState(/** @type {Array<{ id: string, nombre: string, children: unknown[] }>} */ ([]));
   const [nombresPorId, setNombresPorId] = useState(() => new Map());
+  const [cargandoArbol, setCargandoArbol] = useState(true);
+  const [arbolError, setArbolError] = useState("");
+  const [gdtId, setGdtId] = useState("");
 
   useEffect(() => {
     let cancel = false;
     (async () => {
-      setCatalogoCargando(true);
-      setCatalogoError("");
+      setCargandoArbol(true);
+      setArbolError("");
       try {
-        const rows = await listarGruposTrabajoCatalogo({ limit: 400 });
-        if (cancel) return;
-        const activos = listarGdtActivos(rows);
-        setNodos(activos);
-        setNombresPorId(new Map(activos.map((n) => [n.id, n.nombre])));
-      } catch (e) {
-        if (cancel) return;
-        setNodos([]);
-        setCatalogoError(e?.message || "No se pudo cargar el catálogo de GDT.");
-      } finally {
-        if (!cancel) setCatalogoCargando(false);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (modo !== "jefe") {
-      setRaizJefeIds([]);
-      setRaicesCargando(false);
-      setRaicesError("");
-      return undefined;
-    }
-    if (!/^per_/i.test(personaId)) {
-      setRaizJefeIds([]);
-      setRaicesCargando(false);
-      setRaicesError("Sin persona_id en sesión; no se puede acotar la rama.");
-      return undefined;
-    }
-
-    let cancel = false;
-    (async () => {
-      setRaicesCargando(true);
-      setRaicesError("");
-      try {
-        const res = await callResolverContextoLaboralSolicitud({
-          persona_id: personaId,
-          fecha_desde: ymdHoyBa(),
+        const res = await callListarArbolGdtPlantel({
+          alcance: modo === "jefe" ? "jefe" : "rrhh",
+          a_fecha: ymdHoyBa(),
         });
         if (cancel) return;
-        const ids = idsGdtDesdeGruposVigentes(res?.data?.grupos_trabajo_vigentes || []);
-        setRaizJefeIds(ids);
-        if (ids.length === 0) {
-          setRaicesError("Sin HLg vigente: no hay rama de jefatura para mostrar.");
+        const data = res?.data || {};
+        const nodos = Array.isArray(data.nodos) ? data.nodos : [];
+        const arbolSrv = Array.isArray(data.arbol) ? data.arbol : null;
+        const nextArbol =
+          arbolSrv != null
+            ? arbolSrv
+            : construirArbolGdt(
+                nodos.map((n) => ({
+                  id: String(n.id || "").trim(),
+                  nombre: String(n.nombre || n.id || "").trim(),
+                  parent_group_id: n.parent_group_id ? String(n.parent_group_id).trim() : null,
+                })),
+              );
+        setArbol(nextArbol);
+        setNombresPorId(
+          new Map(
+            nodos
+              .map((n) => [String(n.id || "").trim(), String(n.nombre || n.id || "").trim()])
+              .filter(([id]) => /^gdt_/i.test(id)),
+          ),
+        );
+        if (data.aviso) setArbolError(String(data.aviso));
+        else if (nextArbol.length === 0) {
+          setArbolError(
+            modo === "jefe"
+              ? "No hay grupos en tu rama de jefatura."
+              : "No hay grupos de trabajo activos.",
+          );
         }
       } catch (e) {
         if (cancel) return;
-        setRaizJefeIds([]);
-        setRaicesError(e?.message || "No se pudieron resolver los GDT vigentes.");
+        setArbol([]);
+        setNombresPorId(new Map());
+        setArbolError(e?.message || "No se pudo cargar el árbol de GDT.");
       } finally {
-        if (!cancel) setRaicesCargando(false);
+        if (!cancel) setCargandoArbol(false);
       }
     })();
     return () => {
       cancel = true;
     };
-  }, [modo, personaId]);
+  }, [modo]);
 
-  const arbol = useMemo(() => {
-    if (modo === "rrhh") return construirArbolGdt(nodos);
-    const visible = expandirSubarbolIds(nodos, raizJefeIds);
-    return construirArbolGdt(nodos, visible);
-  }, [modo, nodos, raizJefeIds]);
-
-  useEffect(() => {
-    if (!gdtId) return;
+  const idsVisibles = useMemo(() => {
     const ids = new Set();
     const walk = (nodes) => {
       for (const n of nodes || []) {
@@ -124,13 +86,15 @@ export default function PlantelPorGdtPanel({ modo, titulo, subtitulo }) {
       }
     };
     walk(arbol);
-    if (!ids.has(gdtId)) setGdtId("");
-  }, [arbol, gdtId]);
+    return ids;
+  }, [arbol]);
 
-  const cargandoArbol = catalogoCargando || (modo === "jefe" && raicesCargando);
+  useEffect(() => {
+    if (gdtId && !idsVisibles.has(gdtId)) setGdtId("");
+  }, [idsVisibles, gdtId]);
+
   const vacioMensaje =
-    catalogoError ||
-    raicesError ||
+    arbolError ||
     (modo === "jefe"
       ? "No hay grupos en tu rama de jefatura."
       : "No hay grupos de trabajo activos.");
