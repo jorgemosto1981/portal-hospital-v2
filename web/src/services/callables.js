@@ -631,3 +631,8 @@ export function callObtenerPlantelPorGdt(data) {
 export function callListarArbolGdtPlantel(data) {
   return httpsCallable(getFunctionsV2(), "listarArbolGdtPlantel")(data || {});
 }
+
+/** Pase interno de GDT — cierra HLg origen y abre destino (último día = fecha_efectiva). */
+export function callEjecutarPaseInternoGdt(data) {
+  return httpsCallable(getFunctionsV2(), "ejecutarPaseInternoGdt")(data || {});
+}

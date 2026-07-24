@@ -48,14 +48,14 @@ Colecciones relevantes:
 
 ### 2.1 Campos HLg que participan del pase
 
-Al **cerrar** HLg vigente: solo setear `fecha_fin` (efectiva del traslado; convenio de día a definir en implementación: fin del día anterior vs instante).
+Al **cerrar** HLg vigente: setear `fecha_fin = fecha_efectiva`, donde `fecha_efectiva` es el **último día de trabajo en el grupo origen** (inclusive). Al **abrir** HLg destino: `fecha_inicio = fecha_efectiva + 1 día` (calendario institucional). Detalle UX y contratos: [`SPIKE_PASES_GDT_FASE2_V2.md`](./SPIKE_PASES_GDT_FASE2_V2.md).
 
 Al **abrir** HLg nuevo (clon + overrides):
 
 | Campo | Herencia por defecto |
 |-------|----------------------|
 | `grupo_de_trabajo_id` | **Nuevo** (destino) |
-| `fecha_inicio` | Fecha efectiva del pase |
+| `fecha_inicio` | **`fecha_efectiva + 1 día`** (día siguiente al último en origen) |
 | `fecha_fin` | `null` |
 | `dato_laboral_id` | **Mismo** `hld_*` (mantiene función real y resto HLd) |
 | `cargo_id` / vínculo HLc | Mismo que el HLg cerrado (salvo regla distinta futura) |
@@ -169,7 +169,7 @@ Documento id sugerido: `spg_<ULID>` (o prefijo acordado en constants).
 
 ### 4.2 Flujo interno (jurisdicción del jefe)
 
-1. UI: subordinado + GDT destino **solo** de su rama + fecha + motivo.
+1. UI: subordinado + GDT destino **solo** de su rama + fecha (**\* Indicar último día de trabajo en este grupo**) + motivo.
 2. Callable `ejecutarPaseInternoGdt`.
 3. Server (transacción / batch atómico):
    - Valida subordinación y destino en jurisdicción.
@@ -219,7 +219,7 @@ Patrón alineado a TC ya usado en Etapa 1 (autorizaciones / acuses), sin bloquea
 |----------|--------|------|
 | `obtenerPlantelPorGdt` | A | 1 |
 | `listarArbolGdtPlantel` | A | 1b ✅ |
-| `ejecutarPaseInternoGdt` | B | 2 |
+| `ejecutarPaseInternoGdt` | B | 2 (átomo 1 — en curso) |
 | `solicitarPaseExternoGdt` | B | 2 |
 | `aprobarPaseGdt` | B | 2 |
 | `rechazarPaseGdt` | B | 2 |
@@ -253,10 +253,10 @@ No mezclar con Soft Launch UAT de solicitudes 64/CAMBIO-DIA salvo que RRHH pida 
 
 ### Módulo A
 
-- [ ] RRHH ve árbol completo de GDT activos y plantel con apellido, nombre, DNI, nivel, vigencia.
-- [ ] Jefe no ve GDT fuera de su rama.
-- [ ] Callable deniega GDT fuera de jurisdicción.
-- [ ] Cliente no descarga dump de `personas`.
+- [x] RRHH ve árbol completo de GDT activos y plantel con apellido, nombre, DNI, nivel, vigencia.
+- [x] Jefe no ve GDT fuera de su rama.
+- [x] Callable deniega GDT fuera de jurisdicción.
+- [x] Cliente no descarga dump de `personas`.
 
 ### Módulo B
 
@@ -270,4 +270,4 @@ No mezclar con Soft Launch UAT de solicitudes 64/CAMBIO-DIA salvo que RRHH pida 
 
 ## 9. Frase de continuación
 
-> Retomar desde `docs/v2/RFC_PLANTEL_Y_PASES_GDT_V2.md`: Fase 1 — implementar `obtenerPlantelPorGdt` (+ `listarArbolGdtPlantel`) en `functions/` y UI `/portal/rrhh/plantel` · `/portal/jefe/plantel` sobre `portal-hospital-v2-dev`.
+> Spike Fase 2: [`SPIKE_PASES_GDT_FASE2_V2.md`](./SPIKE_PASES_GDT_FASE2_V2.md). Confirmar D1–D5 e implementar `ejecutarPaseInternoGdt` (+ modal con *último día de trabajo en este grupo*) sobre `portal-hospital-v2-dev`. Módulo A ✅.

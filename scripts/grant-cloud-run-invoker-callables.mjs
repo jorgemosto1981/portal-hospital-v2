@@ -62,6 +62,7 @@ const CALLABLE_EXPORT_IDS = [
   "listarVistaGrillaMesPorGrupo",
   "obtenerPlantelPorGdt",
   "listarArbolGdtPlantel",
+  "ejecutarPaseInternoGdt",
   "cerrarPeriodoLiquidacion",
   "reabrirPeriodoLiquidacion",
   "consultarEstadosPeriodoLiquidacionGrupo",

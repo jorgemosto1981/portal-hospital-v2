@@ -133,6 +133,7 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`RULEBOOK_V2.md`](./RULEBOOK_V2.md) | Convenciones transversales (IDs, estados, seguridad) — v0 |
 | [`MODULO_DATOS_LABORALES_V2.md`](./MODULO_DATOS_LABORALES_V2.md) | Datos laborales — **borrador** (`grupos_de_trabajo` / `gdt_*`, `cfg_efectores`, `hlc_*`, `hld_*` / `hlg_*`; carga en horas + §4.5). Clarificación UX: Nivel 1 = Cargo (`HLc`), Nivel 2 = Grupo (`HLg`), con `HLd` como detalle técnico opcional. |
 | **[`RFC_PLANTEL_Y_PASES_GDT_V2.md`](./RFC_PLANTEL_Y_PASES_GDT_V2.md)** | **Aceptado 2026-07-24:** plantel por GDT (lectura) + pases HLg cierre/alta (interno/externo + TC); fuera de ticketera |
+| [`SPIKE_PASES_GDT_FASE2_V2.md`](./SPIKE_PASES_GDT_FASE2_V2.md) | **Spike Fase 2:** shape `sol_pases_gdt`, fechas (último día en el grupo), tx HLg, callables y TC |
 | [`MODULO_LOGIN_V2.md`](./MODULO_LOGIN_V2.md) | Login, estados de acceso, **DNI + PIN 6 + correo** |
 | [`MODULO_DATOS_PERSONALES_PLAN_DESARROLLO_UNIFICADO_V2.md`](./MODULO_DATOS_PERSONALES_PLAN_DESARROLLO_UNIFICADO_V2.md) | **Plan único** Datos personales: decisiones + flujo A–E + gating (V2) |
 | [`MODULO_DATOS_PERSONALES_V2.md`](./MODULO_DATOS_PERSONALES_V2.md) | Anexo: contrato `personas`, formación, DDJJ, campos (ítem a ítem) |
