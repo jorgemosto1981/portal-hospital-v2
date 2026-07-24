@@ -264,12 +264,28 @@ export default function AccesoPortal() {
   }
 
   const busy = busyLogin || busyReg;
+  /** Carteles de “ya logueado” solo si entró a /login con sesión quieta; no durante el submit. */
+  const showSesionQuietCard = Boolean(user && !busy);
 
   return (
     <div className="flex min-h-dvh w-full flex-col bg-gradient-to-b from-slate-100 via-white to-slate-100">
       <PublicAuthMenu />
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-10 sm:px-5">
-        {user && personaIdClaim ? (
+        {busy && user ? (
+          <Card className="mb-4 border-slate-200/80 p-4 text-center text-sm shadow-md">
+            <div className="mx-auto mb-3 flex items-center justify-center gap-2 text-slate-600">
+              <span
+                className="inline-block size-4 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600"
+                aria-hidden
+              />
+              <span className="font-semibold text-slate-800">
+                {busyLogin ? "Completando acceso…" : "Completando registro…"}
+              </span>
+            </div>
+            <p className="text-slate-600">Un momento, estamos sincronizando tu sesión.</p>
+          </Card>
+        ) : null}
+        {showSesionQuietCard && personaIdClaim ? (
           <Card className="mb-4 border-slate-200/80 p-4 text-sm shadow-md">
             <p className="font-semibold text-slate-800">Tu cuenta ya está vinculada.</p>
             <p className="mt-1 text-slate-600">Podés ir al inicio del portal.</p>
@@ -280,7 +296,7 @@ export default function AccesoPortal() {
             </div>
           </Card>
         ) : null}
-        {user && !personaIdClaim ? (
+        {showSesionQuietCard && !personaIdClaim ? (
           <Card className="mb-4 border-slate-200/80 p-4 text-sm shadow-md">
             <p className="font-semibold text-slate-800">Sesión sin ficha vinculada</p>
             <p className="mt-1 text-slate-600">Usá vinculación por DNI (soporte) para enlazar tu legajo.</p>
