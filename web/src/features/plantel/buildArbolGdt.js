@@ -131,3 +131,29 @@ export function idsGdtDesdeGruposVigentes(gruposVigentes) {
   }
   return [...new Set(ids)];
 }
+
+/**
+ * Opciones de destino para pase interno: árbol visible aplanado, sin el GDT origen.
+ * @param {Array<{ id: string, nombre: string, children?: unknown[] }>} arbol
+ * @param {string} gdtOrigenId
+ * @returns {Array<{ id: string, nombre: string, label: string, depth: number }>}
+ */
+export function aplanarOpcionesGdtDestino(arbol, gdtOrigenId) {
+  const origen = String(gdtOrigenId || "").trim();
+  /** @type {Array<{ id: string, nombre: string, label: string, depth: number }>} */
+  const out = [];
+  const walk = (nodes, depth) => {
+    for (const n of nodes || []) {
+      if (!n || typeof n !== "object") continue;
+      const id = String(n.id || "").trim();
+      const nombre = String(n.nombre || id).trim() || id;
+      if (RX_GDT.test(id) && id !== origen) {
+        const prefix = depth > 0 ? `${"· ".repeat(depth)}` : "";
+        out.push({ id, nombre, label: `${prefix}${nombre}`, depth });
+      }
+      walk(/** @type {{ children?: unknown[] }} */ (n).children, depth + 1);
+    }
+  };
+  walk(arbol, 0);
+  return out;
+}

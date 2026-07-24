@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  aplanarOpcionesGdtDestino,
   construirArbolGdt,
   expandirSubarbolIds,
   idsGdtDesdeGruposVigentes,
@@ -42,5 +43,19 @@ describe("buildArbolGdt", () => {
         { id: "gdt_1" },
       ]),
     ).toEqual(["gdt_1", "gdt_2"]);
+  });
+
+  it("aplanarOpcionesGdtDestino excluye origen y respeta profundidad", () => {
+    const arbol = [
+      {
+        id: "gdt_mid",
+        nombre: "Mid",
+        children: [{ id: "gdt_leaf", nombre: "Leaf", children: [] }],
+      },
+      { id: "gdt_other", nombre: "Other", children: [] },
+    ];
+    const opts = aplanarOpcionesGdtDestino(arbol, "gdt_mid");
+    expect(opts.map((o) => o.id)).toEqual(["gdt_leaf", "gdt_other"]);
+    expect(opts[0].depth).toBe(1);
   });
 });

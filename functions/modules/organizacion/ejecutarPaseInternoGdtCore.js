@@ -110,8 +110,13 @@ async function ejecutarPaseInternoGdtCore(db, input) {
   if (!esRrhh && !RX_PER.test(solicitantePersonaId)) {
     return { ok: false, code: "permission-denied", message: "Sin persona vinculada." };
   }
-  if (RX_PER.test(solicitantePersonaId) && solicitantePersonaId === agentePersonaId && !esRrhh) {
-    return { ok: false, code: "failed-precondition", message: "No podés ejecutarte un pase a vos mismo." };
+  // Nadie (ni RRHH) puede ejecutarse un pase a sí mismo.
+  if (RX_PER.test(solicitantePersonaId) && solicitantePersonaId === agentePersonaId) {
+    return {
+      ok: false,
+      code: "failed-precondition",
+      message: "No podés ejecutarte un pase a vos mismo.",
+    };
   }
 
   const fechas = resolverFechasPaseGdt(input.fechaEfectivaYmd);

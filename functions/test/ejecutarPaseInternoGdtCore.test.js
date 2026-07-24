@@ -23,6 +23,22 @@ describe("paseGdtFechas", () => {
 });
 
 describe("ejecutarPaseInternoGdtCore helpers", () => {
+  it("bloquea auto-pase aunque el actor sea RRHH", async () => {
+    const { ejecutarPaseInternoGdtCore } = require("../modules/organizacion/ejecutarPaseInternoGdtCore");
+    const r = await ejecutarPaseInternoGdtCore(/** @type {any} */ (null), {
+      agentePersonaId: "per_01TESTAGENTE0000000000000",
+      hlgOrigenId: "hlg_01TESTORIGEN00000000000000",
+      gdtDestinoId: "gdt_01TESTDESTINO000000000000",
+      fechaEfectivaYmd: "2026-07-24",
+      motivo: "intento auto pase",
+      solicitantePersonaId: "per_01TESTAGENTE0000000000000",
+      esRrhh: true,
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.code, "failed-precondition");
+    assert.match(String(r.message || ""), /vos mismo/i);
+  });
+
   it("hlg vigente inclusivo: último día en origen cuenta; día siguiente no", () => {
     const hlg = {
       id: "hlg_1",

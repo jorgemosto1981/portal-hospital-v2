@@ -2,18 +2,34 @@ import { useEffect, useState } from "react";
 
 import { callObtenerPlantelPorGdt } from "../../services/callables.js";
 import { ymdHoyBa } from "../solicitudes/ticketeraUtils.js";
+import PaseInternoModal from "./PaseInternoModal.jsx";
 
 /**
  * @param {{
  *   gdtId: string;
  *   gdtNombre?: string;
  *   aFecha?: string;
+ *   arbol?: Array<{ id: string, nombre: string, children?: unknown[] }>;
+ *   permitirPaseInterno?: boolean;
+ *   personaSesionId?: string;
+ *   reloadToken?: number;
+ *   onPaseExito?: () => void;
  * }} props
  */
-export default function TablaPlantelGdt({ gdtId, gdtNombre = "", aFecha }) {
+export default function TablaPlantelGdt({
+  gdtId,
+  gdtNombre = "",
+  aFecha,
+  arbol = [],
+  permitirPaseInterno = false,
+  personaSesionId = "",
+  reloadToken = 0,
+  onPaseExito,
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [payload, setPayload] = useState(null);
+  const [agentePase, setAgentePase] = useState(null);
 
   useEffect(() => {
     const id = String(gdtId || "").trim();
@@ -42,9 +58,7 @@ export default function TablaPlantelGdt({ gdtId, gdtNombre = "", aFecha }) {
         const code = e?.code ? String(e.code) : "";
         const msg = e?.message || "No se pudo cargar el plantel.";
         if (code.includes("permission-denied") || /permission/i.test(msg)) {
-          setError(
-            "Sin jurisdicción de lectura en este GDT (MVP: requiere HLg vigente en el grupo).",
-          );
+          setError("Sin jurisdicción de lectura en este GDT.");
         } else {
           setError(msg);
         }
@@ -56,7 +70,7 @@ export default function TablaPlantelGdt({ gdtId, gdtNombre = "", aFecha }) {
     return () => {
       cancel = true;
     };
-  }, [gdtId, aFecha]);
+  }, [gdtId, aFecha, reloadToken]);
 
   if (!gdtId) {
     return (
@@ -70,6 +84,10 @@ export default function TablaPlantelGdt({ gdtId, gdtNombre = "", aFecha }) {
   const integrantes = Array.isArray(payload?.integrantes) ? payload.integrantes : [];
   const total = typeof payload?.total === "number" ? payload.total : integrantes.length;
   const fechaRef = payload?.a_fecha || aFecha || ymdHoyBa();
+  const colSpan = permitirPaseInterno ? 6 : 5;
+  const sesionId = String(personaSesionId || "").trim();
+  const esFilaPropia = (personaId) =>
+    /^per_/i.test(sesionId) && String(personaId || "").trim() === sesionId;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -81,9 +99,7 @@ export default function TablaPlantelGdt({ gdtId, gdtNombre = "", aFecha }) {
         </p>
       </div>
 
-      {loading ? (
-        <p className="text-sm text-slate-500">Cargando plantel…</p>
-      ) : null}
+      {loading ? <p className="text-sm text-slate-500">Cargando plantel…</p> : null}
 
       {error ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -101,19 +117,26 @@ export default function TablaPlantelGdt({ gdtId, gdtNombre = "", aFecha }) {
                 <th className="px-3 py-2">DNI</th>
                 <th className="px-3 py-2">Nivel</th>
                 <th className="px-3 py-2">Vigencia</th>
+                {permitirPaseInterno ? <th className="px-3 py-2 text-right">Acciones</th> : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
               {integrantes.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-slate-500">
+                  <td colSpan={colSpan} className="px-3 py-6 text-center text-slate-500">
                     Sin integrantes vigentes en este grupo.
                   </td>
                 </tr>
               ) : (
                 integrantes.map((row) => (
-                  <tr key={row.hlg_id || `${row.persona_id}-${row.fecha_inicio}`} className="hover:bg-slate-50">
-                    <td className="px-3 py-2 font-medium text-slate-900" title={row.hlg_id || undefined}>
+                  <tr
+                    key={row.hlg_id || `${row.persona_id}-${row.fecha_inicio}`}
+                    className="hover:bg-slate-50"
+                  >
+                    <td
+                      className="px-3 py-2 font-medium text-slate-900"
+                      title={row.hlg_id || undefined}
+                    >
                       {row.apellido || "—"}
                     </td>
                     <td className="px-3 py-2 text-slate-800">{row.nombre || "—"}</td>
@@ -124,12 +147,54 @@ export default function TablaPlantelGdt({ gdtId, gdtNombre = "", aFecha }) {
                     <td className="px-3 py-2 tabular-nums text-slate-700">
                       {row.fecha_inicio || "—"}
                     </td>
+                    {permitirPaseInterno ? (
+                      <td className="px-3 py-2 text-right">
+                        {esFilaPropia(row.persona_id) ? (
+                          <span className="text-xs text-slate-400" title="No podés ejecutarte un pase a vos mismo.">
+                            —
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-40"
+                            disabled={!row.hlg_id || !row.persona_id}
+                            onClick={() =>
+                              setAgentePase({
+                                persona_id: row.persona_id,
+                                apellido: row.apellido,
+                                nombre: row.nombre,
+                                dni: row.dni,
+                                hlg_id: row.hlg_id,
+                                nivel_jerarquico: row.nivel_jerarquico,
+                              })
+                            }
+                          >
+                            Pase interno
+                          </button>
+                        )}
+                      </td>
+                    ) : null}
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
+      ) : null}
+
+      {permitirPaseInterno ? (
+        <PaseInternoModal
+          abierto={Boolean(agentePase)}
+          agente={agentePase}
+          gdtOrigenId={gdtId}
+          gdtOrigenNombre={titulo}
+          arbol={arbol}
+          personaSesionId={sesionId}
+          onCerrar={() => setAgentePase(null)}
+          onExito={() => {
+            onPaseExito?.();
+          }}
+        />
       ) : null}
     </div>
   );

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { callListarArbolGdtPlantel } from "../../services/callables.js";
+import { useAuthClaims } from "../auth/useAuthClaims.js";
+import { useAuthSession } from "../auth/useAuthSession.js";
 import { ymdHoyBa } from "../solicitudes/ticketeraUtils.js";
 import ArbolGdtSelector from "./ArbolGdtSelector.jsx";
 import TablaPlantelGdt from "./TablaPlantelGdt.jsx";
@@ -17,11 +19,20 @@ import { construirArbolGdt } from "./buildArbolGdt.js";
  * }} props
  */
 export default function PlantelPorGdtPanel({ modo, titulo, subtitulo }) {
+  const { user } = useAuthSession();
+  const { claims } = useAuthClaims(user);
+  const personaSesionId = useMemo(() => {
+    const raw = claims?.persona_id;
+    return typeof raw === "string" ? raw.trim() : "";
+  }, [claims?.persona_id]);
+
   const [arbol, setArbol] = useState(/** @type {Array<{ id: string, nombre: string, children: unknown[] }>} */ ([]));
   const [nombresPorId, setNombresPorId] = useState(() => new Map());
   const [cargandoArbol, setCargandoArbol] = useState(true);
   const [arbolError, setArbolError] = useState("");
   const [gdtId, setGdtId] = useState("");
+  const [tablaReloadToken, setTablaReloadToken] = useState(0);
+  const [arbolReloadToken, setArbolReloadToken] = useState(0);
 
   useEffect(() => {
     let cancel = false;
@@ -75,7 +86,7 @@ export default function PlantelPorGdtPanel({ modo, titulo, subtitulo }) {
     return () => {
       cancel = true;
     };
-  }, [modo]);
+  }, [modo, arbolReloadToken]);
 
   const idsVisibles = useMemo(() => {
     const ids = new Set();
@@ -124,6 +135,14 @@ export default function PlantelPorGdtPanel({ modo, titulo, subtitulo }) {
           <TablaPlantelGdt
             gdtId={gdtId}
             gdtNombre={nombresPorId.get(gdtId) || ""}
+            arbol={arbol}
+            permitirPaseInterno={Boolean(gdtId) && arbol.length > 0}
+            personaSesionId={personaSesionId}
+            reloadToken={tablaReloadToken}
+            onPaseExito={() => {
+              setTablaReloadToken((n) => n + 1);
+              setArbolReloadToken((n) => n + 1);
+            }}
           />
         </div>
       </div>
