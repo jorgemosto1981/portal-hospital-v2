@@ -69,9 +69,8 @@ export function useConcurrentSessionWarning({ user, personaId }) {
         });
         const data = res?.data || {};
         setShowWarning(data.warning_concurrente === true);
-        if (Number.isFinite(data.last_login_at_ms) && Number(data.last_login_at_ms) > 0) {
-          setLastLoginMs(Number(data.last_login_at_ms));
-        }
+        // No pisar con last_login_at_ms: tras registrarSesionActiva ese valor es el login
+        // de la sesión actual. El rótulo del header debe mostrar el acceso *previo*.
       } catch {
         // En warning-only degradamos silenciosamente.
       } finally {

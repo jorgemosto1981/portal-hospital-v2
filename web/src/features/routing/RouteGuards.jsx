@@ -46,7 +46,9 @@ export function GateSpinner({ label = "Cargando…" }) {
 }
 
 /**
- * Rutas públicas (login): si ya hay sesión, no mostrar el formulario.
+ * Rutas públicas: si ya hay sesión, no mostrar el formulario.
+ * Nota: `/login` NO usa este guard — `AccesoPortal` navega solo tras `syncSessionClaims`
+ * (si se envolviera login aquí, habría doble ciclo: redirect temprano + nav post-sync).
  * @param {{ children: import("react").ReactNode }} p
  */
 export function PublicRoute({ children }) {

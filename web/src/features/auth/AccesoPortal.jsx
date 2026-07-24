@@ -18,25 +18,13 @@ import DataOperationFeedback from "../../components/ui/DataOperationFeedback.jsx
 import PrimaryButton from "../../components/ui/PrimaryButton.jsx";
 import { useAuthClaims } from "./useAuthClaims.js";
 import { useAuthSession } from "./useAuthSession.js";
+import { markPostLoginLoaderStart } from "./postLoginLoader.js";
 
 const INPUT =
   "min-h-12 w-full rounded-xl border border-slate-200/90 bg-white px-3.5 text-base text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200/80";
 
 const MSG_CUENTA_YA_CREADA =
   "Tu cuenta ya fue creada. Por favor, ve a la pantalla de Iniciar Sesión.";
-const POST_LOGIN_LOADER_FLAG = "portal_post_login_loading_v1";
-
-function markPostLoginLoaderStart() {
-  if (typeof window === "undefined") return;
-  try {
-    window.sessionStorage.setItem(
-      POST_LOGIN_LOADER_FLAG,
-      JSON.stringify({ enabled: true, startedAt: Date.now() }),
-    );
-  } catch {
-    // El loader post-login es opcional; nunca debe bloquear el acceso.
-  }
-}
 
 /** @param {unknown} err */
 function mapFirebaseLoginError(err) {

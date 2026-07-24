@@ -6,7 +6,7 @@ import { useAuthSession } from "./features/auth/useAuthSession.js";
 import VinculacionDni from "./features/auth/VinculacionDni.jsx";
 import OnboardingWizard from "./features/onboarding/OnboardingWizard.jsx";
 import PortalLayout from "./features/routing/PortalLayout.jsx";
-import { GateSpinner, ProtectedRoute, PublicRoute, RoleGuard } from "./features/routing/RouteGuards.jsx";
+import { GateSpinner, ProtectedRoute, RoleGuard } from "./features/routing/RouteGuards.jsx";
 import MvpAccessGate from "./features/shell/MvpAccessGate.jsx";
 import AltaAgenteRRHH from "./features/rrhh/AltaAgenteRRHH.jsx";
 import DatosLaborales from "./pages/DatosLaborales.jsx";
@@ -104,9 +104,8 @@ export default function App() {
           path="/login"
           element={
             <MvpAccessGate>
-              <PublicRoute>
-                <LoginRoute />
-              </PublicRoute>
+              {/* Sin PublicRoute: evita carrera (redirect temprano vs AccesoPortal post-sync). */}
+              <LoginRoute />
             </MvpAccessGate>
           }
         />
