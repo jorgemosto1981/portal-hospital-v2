@@ -212,6 +212,14 @@ export const MODULOS_PORTAL = [
     parentMenuId: "funciones-rrhh-raiz",
   },
   {
+    id: "pases-gdt-rrhh",
+    label: "Pases GDT pendientes",
+    path: "/portal/rrhh/pases-gdt",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "funciones-rrhh-raiz",
+  },
+  {
     id: "cosas-del-jefe-raiz",
     label: "Cosas del jefe",
     path: "/portal/jefe/grilla-operativa",
@@ -504,6 +512,7 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/rrhh/fichadas-huerfanas")) return "fichadas-huerfanas";
   if (pathname.startsWith("/portal/rrhh/grilla-operativa")) return "grilla";
   if (pathname.startsWith("/portal/rrhh/plantel")) return "plantel-rrhh";
+  if (pathname.startsWith("/portal/rrhh/pases-gdt")) return "pases-gdt-rrhh";
   if (pathname.startsWith("/portal/rrhh/planes-turno")) return "planes-turno-rrhh";
   if (pathname.startsWith("/portal/rrhh") || pathname.startsWith("/rrhh")) return "alta-agente-guia";
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";

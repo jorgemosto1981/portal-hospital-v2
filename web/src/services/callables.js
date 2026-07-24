@@ -641,3 +641,18 @@ export function callEjecutarPaseInternoGdt(data) {
 export function callSolicitarPaseExternoGdt(data) {
   return httpsCallable(getFunctionsV2(), "solicitarPaseExternoGdt")(data || {});
 }
+
+/** Bandeja RRHH — pases externos pendientes de resolución. */
+export function callListarPasesGdtPendientesRrhh(data) {
+  return httpsCallable(getFunctionsV2(), "listarPasesGdtPendientesRrhh")(data || {});
+}
+
+/** RRHH aprueba pase externo — tx HLg + estado APROBADO. */
+export function callAprobarPaseGdt(data) {
+  return httpsCallable(getFunctionsV2(), "aprobarPaseGdt")(data || {});
+}
+
+/** RRHH rechaza pase externo — estado RECHAZADO sin mutar HLg. */
+export function callRechazarPaseGdt(data) {
+  return httpsCallable(getFunctionsV2(), "rechazarPaseGdt")(data || {});
+}
