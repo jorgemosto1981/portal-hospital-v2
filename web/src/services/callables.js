@@ -621,3 +621,8 @@ export function callRegistrarDictamenJuntaMedica(data) {
 export function callObtenerHistorialLmTitularBandejaAuditor(data) {
   return httpsCallable(getFunctionsV2(), "obtenerHistorialLmTitularBandejaAuditor")(data || {});
 }
+
+/** Plantel vigente por GDT (RFC plantel/pases) — lectura RRHH o miembro del grupo. */
+export function callObtenerPlantelPorGdt(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerPlantelPorGdt")(data || {});
+}
