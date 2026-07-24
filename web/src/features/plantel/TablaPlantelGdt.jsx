@@ -169,7 +169,7 @@ export default function TablaPlantelGdt({
                               })
                             }
                           >
-                            Pase interno
+                            Pase
                           </button>
                         )}
                       </td>

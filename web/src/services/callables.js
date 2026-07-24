@@ -636,3 +636,8 @@ export function callListarArbolGdtPlantel(data) {
 export function callEjecutarPaseInternoGdt(data) {
   return httpsCallable(getFunctionsV2(), "ejecutarPaseInternoGdt")(data || {});
 }
+
+/** Solicitud de pase externo — crea sol_pases_gdt PENDIENTE_RRHH sin mutar HLg. */
+export function callSolicitarPaseExternoGdt(data) {
+  return httpsCallable(getFunctionsV2(), "solicitarPaseExternoGdt")(data || {});
+}

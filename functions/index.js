@@ -48,6 +48,7 @@ const listarVistaGrillaMesPorGrupo = require("./onCall/grilla/listarVistaGrillaM
 const obtenerPlantelPorGdt = require("./onCall/organizacion/obtenerPlantelPorGdt");
 const listarArbolGdtPlantel = require("./onCall/organizacion/listarArbolGdtPlantel");
 const ejecutarPaseInternoGdt = require("./onCall/organizacion/ejecutarPaseInternoGdt");
+const solicitarPaseExternoGdt = require("./onCall/organizacion/solicitarPaseExternoGdt");
 const cerrarPeriodoLiquidacion = require("./onCall/grilla/cerrarPeriodoLiquidacion");
 const reabrirPeriodoLiquidacion = require("./onCall/grilla/reabrirPeriodoLiquidacion");
 const consultarEstadosPeriodoLiquidacionGrupo = require("./onCall/grilla/consultarEstadosPeriodoLiquidacionGrupo");
@@ -122,6 +123,7 @@ module.exports = {
   ...obtenerPlantelPorGdt,
   ...listarArbolGdtPlantel,
   ...ejecutarPaseInternoGdt,
+  ...solicitarPaseExternoGdt,
   ...solicitarReconciliacionGrillaGrupoMes,
   ...cerrarPeriodoLiquidacion,
   ...reabrirPeriodoLiquidacion,
