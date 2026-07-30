@@ -50,6 +50,7 @@ import PlantelRrhhPage from "./pages/rrhh/PlantelRrhhPage.jsx";
 import BandejaPasesGdtRrhhPage from "./pages/rrhh/BandejaPasesGdtRrhhPage.jsx";
 import GrillaOperativaJefePage from "./pages/jefe/GrillaOperativaJefePage.jsx";
 import PlantelJefePage from "./pages/jefe/PlantelJefePage.jsx";
+import BandejaPasesGdtTcJefePage from "./pages/jefe/BandejaPasesGdtTcJefePage.jsx";
 import PlanTurnoServicioJefePage from "./pages/jefe/PlanTurnoServicioJefePage.jsx";
 import FichadasImportRrhhPage from "./pages/rrhh/FichadasImportRrhhPage.jsx";
 import FichadasHuerfanasRrhhPage from "./pages/rrhh/FichadasHuerfanasRrhhPage.jsx";
@@ -184,6 +185,14 @@ export default function App() {
               element={
                 <RoleGuard>
                   <PlantelJefePage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="jefe/pases-gdt-tc"
+              element={
+                <RoleGuard>
+                  <BandejaPasesGdtTcJefePage />
                 </RoleGuard>
               }
             />

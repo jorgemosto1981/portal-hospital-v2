@@ -20,6 +20,9 @@ const {
   COL_SOL_PASES_GDT,
   encontrarSolapeHlgEnFecha,
 } = require("./ejecutarPaseInternoGdtCore");
+const {
+  calcularJefesPendientesConocimientoPaseGdt,
+} = require("./calcularJefesPendientesConocimientoPaseGdt");
 
 const COL_HLG = "historial_laboral_grupos";
 const RX_SPG = /^spg_/i;
@@ -240,6 +243,15 @@ async function aprobarPaseGdtCore(db, input) {
     };
   }
 
+  const solicitanteId = String(pase.solicitante_persona_id || "").trim();
+  const jefesPendientes = await calcularJefesPendientesConocimientoPaseGdt(db, {
+    agentePersonaId,
+    gdtOrigenId,
+    gdtDestinoId,
+    fechaRefYmd: fechaEfectiva,
+    excluirPersonaIds: [resolventePersonaId, solicitanteId],
+  });
+
   const hlgDestinoId = `hlg_${ulid()}`;
   const hlgDestinoPayload = {
     id: hlgDestinoId,
@@ -308,7 +320,13 @@ async function aprobarPaseGdtCore(db, input) {
         resuelto_por: resolventePersonaId,
         actualizado_en: FieldValue.serverTimestamp(),
         motivo_rechazo: null,
+        // RRHH ya resolvió el externo: el acuse RRHH queda estampado en la misma tx.
         requiere_conocimiento_rrhh: true,
+        rrhh_toma_conocimiento_en: FieldValue.serverTimestamp(),
+        rrhh_toma_conocimiento_por: resolventePersonaId,
+        jefes_pendientes_conocimiento_ids: jefesPendientes,
+        jefes_acuses: {},
+        jefes_acuses_ids: [],
       };
       if (motivoRrhh) paseUpdate.motivo_rrhh = motivoRrhh;
       tx.update(paseRef, paseUpdate);

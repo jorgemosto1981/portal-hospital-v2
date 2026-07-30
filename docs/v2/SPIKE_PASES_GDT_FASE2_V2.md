@@ -176,6 +176,24 @@ Orden sugerido (todo o nada):
 Estampan acuse; **no** revierten ni reejecutan el pase.  
 Patrón: bandejas informativas Etapa 1 (TC post-hecho).
 
+**Auth / input**
+
+| Callable | Auth | Input |
+|----------|------|--------|
+| `tomarConocimientoPaseGdtRrhh` | RRHH + `persona_id` | `{ pase_id }` |
+| `tomarConocimientoPaseGdtJefe` | sesión + `persona_id` ∈ `jefes_pendientes_conocimiento_ids` | `{ pase_id }` |
+
+**Precondiciones comunes:** estado ∈ `APROBADO_INTERNO` \| `APROBADO`.
+
+**Efectos**
+
+| Callable | Update |
+|----------|--------|
+| RRHH | `rrhh_toma_conocimiento_en` / `_por` (exige `requiere_conocimiento_rrhh` y aún sin acuse) |
+| Jefe | saca su id de `jefes_pendientes_conocimiento_ids` → `jefes_acuses.{per_…} = { en, por }` (tx) |
+
+**Nota de cableado (2026-07-30):** al ejecutar interno / aprobar externo se calcula `jefes_pendientes_conocimiento_ids` (ancestros GDT + superiores). En `aprobarPaseGdt` el acuse RRHH se estampa en la misma tx (RRHH ya resolvió).
+
 ---
 
 ## 5. Toma de conocimiento (TC)

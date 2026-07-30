@@ -656,3 +656,23 @@ export function callAprobarPaseGdt(data) {
 export function callRechazarPaseGdt(data) {
   return httpsCallable(getFunctionsV2(), "rechazarPaseGdt")(data || {});
 }
+
+/** RRHH — pases internos ejecutados pendientes de toma de conocimiento. */
+export function callListarPasesGdtPendientesTcRrhh(data) {
+  return httpsCallable(getFunctionsV2(), "listarPasesGdtPendientesTcRrhh")(data || {});
+}
+
+/** Jefe — pases donde figura en jefes_pendientes_conocimiento_ids. */
+export function callListarPasesGdtPendientesTcJefe(data) {
+  return httpsCallable(getFunctionsV2(), "listarPasesGdtPendientesTcJefe")(data || {});
+}
+
+/** RRHH toma conocimiento de un pase GDT (no revierte el pase). */
+export function callTomarConocimientoPaseGdtRrhh(data) {
+  return httpsCallable(getFunctionsV2(), "tomarConocimientoPaseGdtRrhh")(data || {});
+}
+
+/** Jefe toma conocimiento de un pase GDT (sale de pendientes → jefes_acuses). */
+export function callTomarConocimientoPaseGdtJefe(data) {
+  return httpsCallable(getFunctionsV2(), "tomarConocimientoPaseGdtJefe")(data || {});
+}

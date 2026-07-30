@@ -213,7 +213,7 @@ export const MODULOS_PORTAL = [
   },
   {
     id: "pases-gdt-rrhh",
-    label: "Pases GDT pendientes",
+    label: "Pases GDT",
     path: "/portal/rrhh/pases-gdt",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
@@ -246,6 +246,14 @@ export const MODULOS_PORTAL = [
     id: "plantel-jefe-rrhh",
     label: "Plantel por GDT",
     path: "/portal/jefe/plantel",
+    estado: ESTADOS_MODULO.MVP,
+    grupo: "rrhh",
+    parentMenuId: "cosas-del-jefe-raiz",
+  },
+  {
+    id: "pases-gdt-tc-jefe",
+    label: "Pases — toma de conocimiento",
+    path: "/portal/jefe/pases-gdt-tc",
     estado: ESTADOS_MODULO.MVP,
     grupo: "rrhh",
     parentMenuId: "cosas-del-jefe-raiz",
@@ -518,6 +526,7 @@ export function resolverTabPorPath(pathname) {
   if (pathname.startsWith("/portal/configuracion") || pathname.startsWith("/configuracion")) return "configuracion";
   // Temporal: superficies jefe operadas desde menú RRHH ("Cosas del jefe").
   if (pathname.startsWith("/portal/jefe/grilla-operativa")) return "grilla-jefe-rrhh";
+  if (pathname.startsWith("/portal/jefe/pases-gdt-tc")) return "pases-gdt-tc-jefe";
   if (pathname.startsWith("/portal/jefe/plantel")) return "plantel-jefe-rrhh";
   if (pathname.startsWith("/portal/grilla") || pathname.startsWith("/grilla")) return "grilla-jefe-rrhh";
   if (pathname.startsWith("/portal/jefe/planes-turno")) return "planes-turno-jefe-rrhh";

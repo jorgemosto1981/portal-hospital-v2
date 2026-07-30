@@ -17,17 +17,25 @@
 
 - `ejecutarPaseInternoGdt`, `solicitarPaseExternoGdt`
 - `listarPasesGdtPendientesRrhh`, `aprobarPaseGdt`, `rechazarPaseGdt`
+- `tomarConocimientoPaseGdtRrhh`, `tomarConocimientoPaseGdtJefe` ✅ create 2026-07-30 + `roles/run.invoker`
+- `listarPasesGdtPendientesTcRrhh`, `listarPasesGdtPendientesTcJefe` ✅ create 2026-07-30 + invoker
 - (previos plantel) `obtenerPlantelPorGdt`, `listarArbolGdtPlantel`
+- Re-deploy 2026-07-30: `ejecutarPaseInternoGdt` / `aprobarPaseGdt` (jefes pendientes + acuse RRHH en aprobar)
 
 ## UI
 
 - Jefe plantel: `/portal/jefe/plantel` → botón **Pase** (interno o externo)
-- RRHH bandeja: `/portal/rrhh/pases-gdt` → Aprobar / Rechazar
+- RRHH bandeja: `/portal/rrhh/pases-gdt` → **A resolver** / **Tomar conocimiento** / **Ya se tomó conocimiento** (paginación 10 + orden)
+- Jefe TC: `/portal/jefe/pases-gdt-tc` → **Pendientes** / **Ya se tomó conocimiento** (paginación 10 + orden)
 
 ## Próximo átomo al retomar
 
-1. **Toma de conocimiento (TC):** `tomarConocimientoPaseGdtRrhh` / `tomarConocimientoPaseGdtJefe`, **o**
-2. Release a producción según política.
+1. ~~**Toma de conocimiento (TC):** cores + callables~~ ✅
+2. ~~Deploy `-dev` + invoker IAM~~ ✅
+3. ~~**UI bandejas TC**~~ ✅
+4. ~~Histórico TC + paginación/orden~~ ✅ (2026-07-30)
+5. Smoke visual histórico + commit atómico Fase 2 TC
+6. Release a producción según política.
 
 ## En la otra PC
 

@@ -191,6 +191,7 @@ async function solicitarPaseExternoGdtCore(db, input) {
     rrhh_toma_conocimiento_por: null,
     jefes_pendientes_conocimiento_ids: [],
     jefes_acuses: {},
+    jefes_acuses_ids: [],
     creado_en: FieldValue.serverTimestamp(),
     actualizado_en: FieldValue.serverTimestamp(),
     resuelto_en: null,

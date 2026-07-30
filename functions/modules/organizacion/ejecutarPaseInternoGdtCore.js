@@ -21,6 +21,9 @@ const {
   resolverRaicesJefe,
 } = require("./listarArbolGdtPlantelCore");
 const { resolverFechasPaseGdt } = require("./paseGdtFechas");
+const {
+  calcularJefesPendientesConocimientoPaseGdt,
+} = require("./calcularJefesPendientesConocimientoPaseGdt");
 
 const COL_HLG = "historial_laboral_grupos";
 const COL_SOL_PASES_GDT = "sol_pases_gdt";
@@ -244,6 +247,14 @@ async function ejecutarPaseInternoGdtCore(db, input) {
     };
   }
 
+  const jefesPendientes = await calcularJefesPendientesConocimientoPaseGdt(db, {
+    agentePersonaId,
+    gdtOrigenId,
+    gdtDestinoId,
+    fechaRefYmd: fechaEfectiva,
+    excluirPersonaIds: [solicitantePersonaId],
+  });
+
   const hlgDestinoId = `hlg_${ulid()}`;
   const paseId = `spg_${ulid()}`;
   const nivelOrigen =
@@ -286,8 +297,9 @@ async function ejecutarPaseInternoGdtCore(db, input) {
     requiere_conocimiento_rrhh: true,
     rrhh_toma_conocimiento_en: null,
     rrhh_toma_conocimiento_por: null,
-    jefes_pendientes_conocimiento_ids: [],
+    jefes_pendientes_conocimiento_ids: jefesPendientes,
     jefes_acuses: {},
+    jefes_acuses_ids: [],
     creado_en: FieldValue.serverTimestamp(),
     actualizado_en: FieldValue.serverTimestamp(),
     resuelto_en: FieldValue.serverTimestamp(),
