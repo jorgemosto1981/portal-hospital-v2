@@ -21,6 +21,8 @@ const CFG_ARTICULO_ID_RE = /^art_[0-9A-HJKMNP-TV-Z]{26}$/;
 /**
  * RRHH: lista documentos de `cfg_articulos/{id}/versiones` (Admin SDK).
  * El cliente no usa `getDocs` en la subcolección porque las Rules suelen fallar aunque `listarColeccion` sí funcione.
+ *
+ * `resumenOnly: true` → solo campos del strip de listado (evita serializar versiones enormes).
  */
 const listarVersionesCfgArticulo = onCall(async (request) => {
   if (runtimeFlags.OPEN_ACCESS_TEMP !== true) assertRrhh(request);
@@ -29,14 +31,52 @@ const listarVersionesCfgArticulo = onCall(async (request) => {
   if (!CFG_ARTICULO_ID_RE.test(articuloId)) {
     throw new HttpsError("invalid-argument", "[VAL-CFG-ART-VER] articuloId inválido.");
   }
+  const resumenOnly = request.data && request.data.resumenOnly === true;
   const snap = await db.collection("cfg_articulos").doc(articuloId).collection("versiones").get();
-  const items = snap.docs.map((doc) => {
-    const data = doc.data() || {};
+  const items = snap.docs.map((docSnap) => {
+    const data = docSnap.data() || {};
+    if (resumenOnly) {
+      const idNat =
+        data.bloque_identidad_naturaleza && typeof data.bloque_identidad_naturaleza === "object"
+          ? data.bloque_identidad_naturaleza
+          : {};
+      const topes =
+        data.bloque_topes_plazos_computo && typeof data.bloque_topes_plazos_computo === "object"
+          ? data.bloque_topes_plazos_computo
+          : {};
+      const publicada = data.publicada_en;
+      let publicadaOut = null;
+      if (typeof publicada === "string") publicadaOut = publicada;
+      else if (publicada && typeof publicada.toDate === "function") {
+        try {
+          publicadaOut = publicada.toDate().toISOString();
+        } catch {
+          publicadaOut = null;
+        }
+      }
+      return {
+        versionId: docSnap.id,
+        data: {
+          estado_version_id: data.estado_version_id ?? null,
+          version_semantica: data.version_semantica ?? null,
+          publicada_en: publicadaOut,
+          bloque_identidad_naturaleza: {
+            es_lao_anual: idNat.es_lao_anual === true,
+          },
+          bloque_topes_plazos_computo: {
+            correspondencia_anio:
+              topes.correspondencia_anio === null || topes.correspondencia_anio === undefined
+                ? null
+                : topes.correspondencia_anio,
+          },
+        },
+      };
+    }
     const flat = serializeFirestoreValue(data);
     const dataOut = typeof flat === "object" && flat !== null && !Array.isArray(flat) ? flat : {};
-    return { versionId: doc.id, data: dataOut };
+    return { versionId: docSnap.id, data: dataOut };
   });
-  return { items };
+  return { items, resumenOnly };
 });
 
 const listarColeccion = onCall(async (request) => {

@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import toast from "react-hot-toast";
 import { db } from "../config/firebase.js";
-import { useCatalogosArticulos } from "../hooks/useCatalogosArticulos.js";
+import { useCatalogosArticulos, CATALOGOS_ESTADO_VERSION } from "../hooks/useCatalogosArticulos.js";
 import { listarColeccion } from "../services/configuracionCatalogosService.js";
-import { loadVersionesSubcoleccion } from "../services/articuloVersionesListService.js";
+import {
+  loadVersionesSubcoleccionBatch,
+} from "../services/articuloVersionesListService.js";
 
 function estadoVersionLabel(estadoVersionId, getOptions) {
   const id = String(estadoVersionId || "").trim();
@@ -129,8 +131,18 @@ function DeshabilitarArticuloModal({ articulo, onClose, onConfirm }) {
   );
 }
 
-function VersionesVisualesStrip({ versiones, versionActualId, articuloId, getOptions, catalogosLoading }) {
-  const navigate = useNavigate();
+function VersionesVisualesStrip({
+  versiones,
+  versionActualId,
+  articuloId,
+  getOptions,
+  catalogosLoading,
+  cargandoVersiones,
+  onAbrirVersion,
+}) {
+  if (cargandoVersiones && versiones.length === 0) {
+    return <p className="text-xs text-slate-400">Cargando versiones…</p>;
+  }
   if (versiones.length === 0) {
     return (
       <p className="text-xs text-slate-400">
@@ -187,11 +199,7 @@ function VersionesVisualesStrip({ versiones, versionActualId, articuloId, getOpt
             ) : null}
             <button
               type="button"
-              onClick={() =>
-                navigate(
-                  `/portal/rrhh/configuracion-articulos/${articuloId}?versionId=${encodeURIComponent(ver.versionId)}`,
-                )
-              }
+              onClick={() => onAbrirVersion?.(articuloId, ver.versionId)}
               className="mt-0.5 inline-flex min-h-9 w-full items-center justify-center rounded-xl bg-blue-600 px-2 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
             >
               Abrir en configurador
@@ -207,39 +215,81 @@ function VersionesVisualesStrip({ versiones, versionActualId, articuloId, getOpt
 export default function ArticuloListadoGrilla() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { getOptions, loading: catalogosLoading } = useCatalogosArticulos(["cfg_estado_version_articulo"]);
+  const { getOptions, loading: catalogosLoading } = useCatalogosArticulos(CATALOGOS_ESTADO_VERSION);
   const [articulos, setArticulos] = useState([]);
   const [versionesPorArticulo, setVersionesPorArticulo] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadingVersiones, setLoadingVersiones] = useState(false);
   const [error, setError] = useState(null);
   const [deshabilitarTarget, setDeshabilitarTarget] = useState(null);
+  const versionesAbortRef = useRef(/** @type {AbortController | null} */ (null));
+
+  const abortCargaVersiones = useCallback(() => {
+    if (versionesAbortRef.current) {
+      versionesAbortRef.current.abort();
+      versionesAbortRef.current = null;
+    }
+    setLoadingVersiones(false);
+  }, []);
 
   const fetchArticulos = useCallback(async () => {
+    abortCargaVersiones();
     setLoading(true);
     setError(null);
+    setVersionesPorArticulo({});
     try {
       const items = await listarColeccion("cfg_articulos");
       const sorted = [...items].sort((a, b) => (a.codigo ?? "").localeCompare(b.codigo ?? ""));
       setArticulos(sorted);
+      // Pintar el listado de inmediato; las versiones llegan en segundo plano (abortable).
+      setLoading(false);
 
-      const settled = await Promise.allSettled(sorted.map((a) => loadVersionesSubcoleccion(a.id)));
-      const map = {};
-      sorted.forEach((a, i) => {
-        if (!a?.id) return;
-        const r = settled[i];
-        map[a.id] = r.status === "fulfilled" ? r.value : [];
-      });
-      setVersionesPorArticulo(map);
+      const ac = new AbortController();
+      versionesAbortRef.current = ac;
+      setLoadingVersiones(true);
+      await loadVersionesSubcoleccionBatch(
+        sorted.map((a) => a.id).filter(Boolean),
+        {
+          concurrency: 2,
+          signal: ac.signal,
+          onItem: (articuloId, rows) => {
+            if (ac.signal.aborted) return;
+            setVersionesPorArticulo((prev) => ({ ...prev, [articuloId]: rows }));
+          },
+        },
+      );
+      if (!ac.signal.aborted) setLoadingVersiones(false);
     } catch (err) {
       setError(err.message ?? "Error al leer cfg_articulos");
-    } finally {
       setLoading(false);
+      setLoadingVersiones(false);
     }
-  }, []);
+  }, [abortCargaVersiones]);
 
   useEffect(() => {
     void fetchArticulos();
-  }, [fetchArticulos, location.key]);
+    return () => {
+      abortCargaVersiones();
+    };
+  }, [fetchArticulos, location.key, abortCargaVersiones]);
+
+  const irAGestionar = useCallback(
+    (art, versionId) => {
+      // Cortar callables del listado ANTES de montar el configurador (evita cola saturada / “cuelgue”).
+      abortCargaVersiones();
+      const ver =
+        typeof versionId === "string" && versionId.trim()
+          ? versionId.trim()
+          : art.version_actual_id
+            ? String(art.version_actual_id).trim()
+            : "";
+      navigate(
+        `/portal/rrhh/configuracion-articulos/${art.id}` +
+          (ver ? `?versionId=${encodeURIComponent(ver)}` : ""),
+      );
+    },
+    [abortCargaVersiones, navigate],
+  );
 
   const handleReactivar = async (art) => {
     const t = toast.loading("Reactivando…");
@@ -265,9 +315,12 @@ export default function ArticuloListadoGrilla() {
               Artículos — listado
             </h1>
             <p className="mt-1 max-w-prose text-sm leading-relaxed text-slate-500">
-              Artículos ordenados por código. En cada tarjeta ves todas las versiones guardadas en Firestore; la que coincide
+              Artículos ordenados por código. En cada tarjeta ves las versiones (resumen); la que coincide
               con <span className="font-mono text-xs">version_actual_id</span> lleva el distintivo <strong>Actual</strong>.
               Tras clonar o guardar una versión nueva, pulsá <strong>Refrescar listado</strong> o volvé a entrar en esta pantalla.
+              {loadingVersiones ? (
+                <span className="mt-1 block text-blue-700">Cargando versiones en segundo plano…</span>
+              ) : null}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -284,7 +337,10 @@ export default function ArticuloListadoGrilla() {
             </button>
             <button
               type="button"
-              onClick={() => navigate("/portal/rrhh/configuracion-articulos/nuevo")}
+              onClick={() => {
+                abortCargaVersiones();
+                navigate("/portal/rrhh/configuracion-articulos/nuevo");
+              }}
               className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-transform active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
             >
               <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -298,7 +354,7 @@ export default function ArticuloListadoGrilla() {
 
       {loading && (
         <div className="flex items-center justify-center py-12">
-          <span className="text-sm text-slate-400">Cargando artículos y versiones…</span>
+          <span className="text-sm text-slate-400">Cargando artículos…</span>
         </div>
       )}
 
@@ -346,12 +402,7 @@ export default function ArticuloListadoGrilla() {
                   <div className="flex shrink-0 flex-wrap items-center gap-2 md:justify-end">
                     <button
                       type="button"
-                      onClick={() =>
-                        navigate(
-                          `/portal/rrhh/configuracion-articulos/${art.id}` +
-                            (art.version_actual_id ? `?versionId=${art.version_actual_id}` : ""),
-                        )
-                      }
+                      onClick={() => irAGestionar(art)}
                       className="inline-flex min-h-11 items-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-transform active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
                     >
                       Gestionar
@@ -391,6 +442,11 @@ export default function ArticuloListadoGrilla() {
                     articuloId={art.id}
                     getOptions={getOptions}
                     catalogosLoading={catalogosLoading}
+                    cargandoVersiones={loadingVersiones && !Object.prototype.hasOwnProperty.call(versionesPorArticulo, art.id)}
+                    onAbrirVersion={(articuloId, versionId) => {
+                      const artHit = articulos.find((a) => a.id === articuloId) || { id: articuloId };
+                      irAGestionar(artHit, versionId);
+                    }}
                   />
                 </div>
               </article>

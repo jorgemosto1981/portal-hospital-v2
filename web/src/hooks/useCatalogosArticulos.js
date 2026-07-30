@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 
 import runtimeFlags from "../../../shared/runtimeFlags.json";
@@ -8,8 +8,10 @@ import { listarColeccion } from "../services/configuracionCatalogosService.js";
 /**
  * Colecciones por defecto para selects del panel de versión de artículos (Bloque 4 y Bloque 7).
  * Referencia estable para no disparar el efecto del hook en cada render.
+ *
+ * `grupos_de_trabajo` va diferido: es el catálogo más pesado y solo se usa en elegibilidad.
  */
-export const DEFAULT_CATALOGOS_ARTICULOS_FORM = Object.freeze([
+export const CATALOGOS_ARTICULOS_CORE = Object.freeze([
   "cfg_estado_version_articulo",
   "cfg_justifica_sueldo",
   "cfg_regla_computo_dias",
@@ -31,8 +33,17 @@ export const DEFAULT_CATALOGOS_ARTICULOS_FORM = Object.freeze([
   "cfg_tipo_vinculo_laboral",
   "cfg_cargo_funcional",
   "cfg_sexo_genero",
-  "grupos_de_trabajo",
 ]);
+
+export const CATALOGOS_ARTICULOS_DIFERIDOS = Object.freeze(["grupos_de_trabajo"]);
+
+export const DEFAULT_CATALOGOS_ARTICULOS_FORM = Object.freeze([
+  ...CATALOGOS_ARTICULOS_CORE,
+  ...CATALOGOS_ARTICULOS_DIFERIDOS,
+]);
+
+/** Solo estado de versión (listados / strips). Referencia estable — no pasar arrays literales al hook. */
+export const CATALOGOS_ESTADO_VERSION = Object.freeze(["cfg_estado_version_articulo"]);
 
 /** @type {Map<string, { rows: object[], fetchedAt: number }>} */
 const cachePorColeccion = new Map();
@@ -47,6 +58,17 @@ function filasActivasOrdenadas(rows) {
       const ob = typeof b.orden === "number" ? b.orden : Number(b.orden) || 0;
       return oa - ob;
     });
+}
+
+/**
+ * Clave estable por contenido (evita bucle infinito si el caller pasa `["cfg_…"]` inline).
+ * @param {readonly string[]} colecciones
+ */
+function coleccionesKey(colecciones) {
+  return [...colecciones]
+    .filter((c) => typeof c === "string" && c.trim())
+    .map((c) => c.trim())
+    .join("\0");
 }
 
 /**
@@ -67,67 +89,103 @@ export function useCatalogosArticulos(colecciones = DEFAULT_CATALOGOS_ARTICULOS_
   const [catalogos, setCatalogos] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const loadGenRef = useRef(0);
 
-  const lista = useMemo(
-    () => [...colecciones].filter((c) => typeof c === "string" && c.trim()).map((c) => c.trim()),
-    [colecciones],
-  );
+  // Importante: clave por *contenido*. Un array literal nuevo cada render no debe recrear `cargar`.
+  const listaKey = coleccionesKey(colecciones);
+  const lista = useMemo(() => (listaKey ? listaKey.split("\0") : []), [listaKey]);
 
-  const cargar = useCallback(
-    async ({ limpiarCache } = { limpiarCache: false }) => {
-      if (lista.length === 0) {
+  const cargar = useCallback(async ({ limpiarCache } = { limpiarCache: false }) => {
+    const gen = ++loadGenRef.current;
+    const alive = () => loadGenRef.current === gen;
+
+    if (lista.length === 0) {
+      if (alive()) {
         setCatalogos({});
         setLoading(false);
         setError(null);
-        return;
       }
-      if (limpiarCache) {
-        for (const c of lista) {
-          cachePorColeccion.delete(c);
-        }
+      return;
+    }
+    if (limpiarCache) {
+      for (const c of lista) {
+        cachePorColeccion.delete(c);
       }
+    }
+    if (alive()) {
       setLoading(true);
       setError(null);
-      try {
-        if (!openAccessTemp && !authV2.currentUser) {
+    }
+    try {
+      if (!openAccessTemp && !authV2.currentUser) {
+        if (alive()) {
           setCatalogos({});
           setError(null);
-          return;
         }
-        const resultados = {};
-        await Promise.all(
-          lista.map(async (colName) => {
-            if (!limpiarCache && cachePorColeccion.has(colName)) {
-              resultados[colName] = cachePorColeccion.get(colName).rows;
-              return;
-            }
+        return;
+      }
+      /** @type {Record<string, object[]>} */
+      const resultados = {};
+      for (const colName of lista) {
+        if (!limpiarCache && cachePorColeccion.has(colName)) {
+          resultados[colName] = cachePorColeccion.get(colName).rows;
+        }
+      }
+      // UI usable de inmediato si hay caché; sin setState por cada colección (evita freezar el form).
+      if (Object.keys(resultados).length > 0 && alive()) {
+        setCatalogos({ ...resultados });
+        setLoading(false);
+      }
+
+      const pendientes = lista.filter((c) => !Object.prototype.hasOwnProperty.call(resultados, c));
+      if (pendientes.length === 0) {
+        if (alive()) setCatalogos({ ...resultados });
+      } else {
+        const CONCURRENCY = 3;
+        let cursor = 0;
+        async function worker() {
+          while (alive() && cursor < pendientes.length) {
+            const i = cursor;
+            cursor += 1;
+            const colName = pendientes[i];
             const items = await listarColeccion(colName);
+            if (!alive()) return;
             const rows = filasActivasOrdenadas(Array.isArray(items) ? items : []);
             cachePorColeccion.set(colName, { rows, fetchedAt: Date.now() });
             resultados[colName] = rows;
-          }),
-        );
-        setCatalogos(resultados);
-      } catch (err) {
-        console.error("[useCatalogosArticulos]", err);
-        setError(err instanceof Error ? err : new Error(String(err)));
-      } finally {
-        setLoading(false);
+          }
+        }
+        await Promise.all(Array.from({ length: Math.min(CONCURRENCY, pendientes.length) }, () => worker()));
+        if (alive()) setCatalogos({ ...resultados });
       }
-    },
-    [lista],
-  );
+    } catch (err) {
+      if (!alive()) return;
+      console.error("[useCatalogosArticulos]", err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+    } finally {
+      if (alive()) setLoading(false);
+    }
+  }, [lista]);
+
+  const cargarRef = useRef(cargar);
+  cargarRef.current = cargar;
 
   useEffect(() => {
     if (openAccessTemp) {
-      void cargar({ limpiarCache: false });
-      return undefined;
+      void cargarRef.current({ limpiarCache: false });
+      return () => {
+        loadGenRef.current += 1;
+      };
     }
+    // Suscripción anclada a listaKey (contenido). Callback via ref → no re-subscribe por identidad de cargar.
     const unsub = onAuthStateChanged(authV2, () => {
-      void cargar({ limpiarCache: false });
+      void cargarRef.current({ limpiarCache: false });
     });
-    return () => unsub();
-  }, [cargar]);
+    return () => {
+      loadGenRef.current += 1;
+      unsub();
+    };
+  }, [listaKey]);
 
   const getOptions = useCallback(
     (colName) => {

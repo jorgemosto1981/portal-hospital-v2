@@ -81,14 +81,16 @@ export function sortVersionRows(rows) {
 /**
  * Solo subcolección `versiones` (el núcleo del artículo debe venir de otro listado).
  * @param {string} articuloId
+ * @param {{ resumenOnly?: boolean }} [opts]
  * @returns {Promise<ReturnType<typeof mapVersionDocToRow>[]>}
  */
-export async function loadVersionesSubcoleccion(articuloId) {
+export async function loadVersionesSubcoleccion(articuloId, opts = {}) {
   const art = String(articuloId || "").trim();
   if (!/^art_/i.test(art)) {
     return [];
   }
-  const res = await callListarVersionesCfgArticulo({ articuloId: art });
+  const resumenOnly = opts.resumenOnly !== false;
+  const res = await callListarVersionesCfgArticulo({ articuloId: art, resumenOnly });
   const payload = res?.data;
   const items =
     payload && typeof payload === "object" && Array.isArray(payload.items) ? payload.items : [];
@@ -101,6 +103,54 @@ export async function loadVersionesSubcoleccion(articuloId) {
     )
     .filter((r) => /^ver_[0-9A-HJKMNP-TV-Z]{26}$/i.test(r.versionId));
   return sortVersionRows(rows);
+}
+
+/**
+ * Carga versiones de varios artículos con límite de concurrencia (evita saturar callables).
+ * Respeta `signal` (AbortSignal) para cortar al desmontar o al navegar a Gestionar.
+ *
+ * @param {string[]} articuloIds
+ * @param {{
+ *   concurrency?: number,
+ *   signal?: AbortSignal,
+ *   onItem?: (articuloId: string, rows: ReturnType<typeof mapVersionDocToRow>[]) => void,
+ * }} [opts]
+ */
+export async function loadVersionesSubcoleccionBatch(articuloIds, opts = {}) {
+  const ids = [...new Set((articuloIds || []).map((x) => String(x || "").trim()).filter((id) => /^art_/i.test(id)))];
+  const concurrency = Math.max(1, Math.min(Number(opts.concurrency) || 2, 4));
+  const onItem = typeof opts.onItem === "function" ? opts.onItem : null;
+  const signal = opts.signal;
+  /** @type {Record<string, ReturnType<typeof mapVersionDocToRow>[]>} */
+  const out = {};
+  let cursor = 0;
+
+  function aborted() {
+    return Boolean(signal && signal.aborted);
+  }
+
+  async function worker() {
+    while (!aborted() && cursor < ids.length) {
+      const i = cursor;
+      cursor += 1;
+      const id = ids[i];
+      if (aborted()) break;
+      try {
+        const rows = await loadVersionesSubcoleccion(id, { resumenOnly: true });
+        if (aborted()) break;
+        out[id] = rows;
+        if (onItem) onItem(id, rows);
+      } catch {
+        if (aborted()) break;
+        out[id] = [];
+        if (onItem) onItem(id, []);
+      }
+    }
+  }
+
+  if (ids.length === 0 || aborted()) return out;
+  await Promise.all(Array.from({ length: Math.min(concurrency, ids.length) }, () => worker()));
+  return out;
 }
 
 /**

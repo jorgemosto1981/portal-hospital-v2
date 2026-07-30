@@ -5,7 +5,7 @@ import { doc, getDoc } from "firebase/firestore";
 
 import Card from "../../../components/ui/Card.jsx";
 import { db } from "../../../config/firebase.js";
-import { DEFAULT_CATALOGOS_ARTICULOS_FORM, useCatalogosArticulos } from "../../../hooks/useCatalogosArticulos.js";
+import { useCatalogosArticulos, CATALOGOS_ARTICULOS_CORE, CATALOGOS_ARTICULOS_DIFERIDOS } from "../../../hooks/useCatalogosArticulos.js";
 import {
   artDocumentIdSchema,
   cfgArticuloVersionSchema,
@@ -444,8 +444,31 @@ const TABS = [
 export default function ArticuloConfigTabs() {
   const { articuloId: routeArticuloId } = useParams();
   const [searchParams] = useSearchParams();
-  const { loading: catalogosLoading, error: catalogosError, getOptions, refresh: refreshCatalogos } =
-    useCatalogosArticulos(DEFAULT_CATALOGOS_ARTICULOS_FORM);
+  const {
+    loading: catalogosCoreLoading,
+    error: catalogosError,
+    getOptions: getOptionsCore,
+    refresh: refreshCatalogosCore,
+  } = useCatalogosArticulos(CATALOGOS_ARTICULOS_CORE);
+  const {
+    loading: catalogosHeavyLoading,
+    getOptions: getOptionsHeavy,
+    refresh: refreshCatalogosHeavy,
+  } = useCatalogosArticulos(CATALOGOS_ARTICULOS_DIFERIDOS);
+
+  const getOptions = useCallback(
+    (colName) => {
+      if (colName === "grupos_de_trabajo") return getOptionsHeavy(colName);
+      return getOptionsCore(colName);
+    },
+    [getOptionsCore, getOptionsHeavy],
+  );
+  const refreshCatalogos = useCallback(() => {
+    void refreshCatalogosCore();
+    void refreshCatalogosHeavy();
+  }, [refreshCatalogosCore, refreshCatalogosHeavy]);
+
+  const catalogosLoading = catalogosCoreLoading;
   const [tab, setTab] = useState("principal");
   const [form, setForm] = useState(createEmptyArticuloVersionForm);
   const [parseResult, setParseResult] = useState(null);
@@ -453,7 +476,8 @@ export default function ArticuloConfigTabs() {
   const [versionDocumentId, setVersionDocumentId] = useState("");
   const [saving, setSaving] = useState(false);
   const [loadingVersion, setLoadingVersion] = useState(false);
-  const formBloqueadoPorCatalogos = catalogosLoading || Boolean(catalogosError);
+  // Bloqueo suave: solo mientras faltan catálogos core (no esperar grupos_de_trabajo).
+  const formBloqueadoPorCatalogos = catalogosCoreLoading || Boolean(catalogosError);
 
   const operadorComparacionOptions = useMemo(() => getOptions("cfg_operador_comparacion"), [getOptions]);
 
@@ -486,7 +510,6 @@ export default function ArticuloConfigTabs() {
         if (snap.exists()) {
           const template = createEmptyArticuloVersionForm();
           setForm(mergeVersionToForm(template, snap.data()));
-          toast.success("Versión cargada desde Firestore.");
         } else {
           toast("No se encontró el documento de versión. Se muestra formulario vacío.", { icon: "⚠️" });
         }
@@ -668,6 +691,13 @@ export default function ArticuloConfigTabs() {
           <p className="text-sm font-medium text-blue-900">Cargando catálogos…</p>
         </Card>
       )}
+      {!catalogosLoading && catalogosHeavyLoading ? (
+        <Card className="border-slate-100 bg-slate-50 p-3 md:p-4">
+          <p className="text-sm text-slate-700">
+            Cargando grupos de trabajo en segundo plano (elegibilidad)…
+          </p>
+        </Card>
+      ) : null}
       {catalogosError && (
         <Card className="border-amber-200 bg-amber-50 p-3 md:p-4">
           <p className="text-sm font-semibold text-amber-900">No se pudieron cargar los catálogos</p>
@@ -989,9 +1019,13 @@ export default function ArticuloConfigTabs() {
                   value={form.bloque_elegibilidad_filtros.grupo_trabajo_ids}
                   onChange={(v) => setBlock("bloque_elegibilidad_filtros", "grupo_trabajo_ids", v)}
                   options={getOptions("grupos_de_trabajo")}
-                  disabled={formBloqueadoPorCatalogos}
+                  disabled={formBloqueadoPorCatalogos || catalogosHeavyLoading}
                   required={false}
-                  helpText="Dejar vacío para que aplique a todos los grupos."
+                  helpText={
+                    catalogosHeavyLoading
+                      ? "Cargando grupos de trabajo…"
+                      : "Dejar vacío para que aplique a todos los grupos."
+                  }
                 />
                 <FieldMultiSelect
                   label={LABELS.genero_ids}

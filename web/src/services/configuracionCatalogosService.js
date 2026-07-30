@@ -21,6 +21,24 @@ export async function listarColeccion(collectionName) {
 }
 
 /**
+ * Carga varias colecciones en paralelo vía `listarColeccion` (sin callable batch).
+ * @param {string[]} collectionNames
+ * @returns {Promise<Record<string, Record<string, unknown>[]>>}
+ */
+export async function listarColeccionesBatch(collectionNames) {
+  const names = [...new Set((collectionNames || []).map((c) => String(c || "").trim()).filter(Boolean))];
+  if (names.length === 0) return {};
+  /** @type {Record<string, Record<string, unknown>[]>} */
+  const out = {};
+  await Promise.all(
+    names.map(async (name) => {
+      out[name] = await listarColeccion(name);
+    }),
+  );
+  return out;
+}
+
+/**
  * Alta / edición de opción de catálogo (callable RRHH).
  * @param {string} collectionName
  * @param {{ id: string; nombre: string; activo?: boolean; vigente_desde?: string | null; vigente_hasta?: string | null }} datos

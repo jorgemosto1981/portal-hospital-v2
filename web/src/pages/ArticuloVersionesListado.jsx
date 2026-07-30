@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { useCatalogosArticulos } from "../hooks/useCatalogosArticulos.js";
+import { useCatalogosArticulos, CATALOGOS_ESTADO_VERSION } from "../hooks/useCatalogosArticulos.js";
 import { loadArticuloVersionesList } from "../services/articuloVersionesListService.js";
 
 function estadoLabel(estadoVersionId, getOptions) {
@@ -21,9 +21,7 @@ const btnSecondary =
 export default function ArticuloVersionesListado() {
   const navigate = useNavigate();
   const { articuloId } = useParams();
-  const { getOptions, loading: catalogosLoading } = useCatalogosArticulos([
-    "cfg_estado_version_articulo",
-  ]);
+  const { getOptions, loading: catalogosLoading } = useCatalogosArticulos(CATALOGOS_ESTADO_VERSION);
 
   const [articulo, setArticulo] = useState(null);
   const [versiones, setVersiones] = useState([]);
