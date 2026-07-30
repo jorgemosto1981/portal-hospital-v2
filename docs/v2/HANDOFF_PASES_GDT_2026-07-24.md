@@ -1,8 +1,19 @@
 # Handoff — Pases GDT Fase 2 (save point 2026-07-24)
 
-**Rama:** `develop` · **HEAD esperado:** `1c3186e` (o posterior si hay commits de handoff)  
-**Remoto:** `origin/develop`  
-**Entorno:** `portal-hospital-v2-dev` (`portal-hospital-v2-dev.web.app`)
+**Rama:** `master` = `develop` = `origin/*` · **HEAD:** `21249e3`  
+**Remoto:** sincronizado  
+**Entorno −dev:** `portal-hospital-v2-dev`  
+**Entorno prod:** `portal-hospital-v2` · https://portal-hospital-v2.web.app  
+
+## Release producción (2026-07-30)
+
+| Paso | Estado |
+|------|--------|
+| Merge `develop` → `master` (FF 11 commits) | ✅ `22a4810..21249e3` |
+| Push `origin/master` | ✅ |
+| Functions plantel/pases/TC (selectivo) | ✅ create/update southamerica-east1 |
+| IAM `roles/run.invoker` allUsers (11 servicios) | ✅ Failed: 0 |
+| Hosting | ✅ https://portal-hospital-v2.web.app |
 
 ## Commits clave (átomos)
 
@@ -33,9 +44,10 @@
 1. ~~**Toma de conocimiento (TC):** cores + callables~~ ✅
 2. ~~Deploy `-dev` + invoker IAM~~ ✅
 3. ~~**UI bandejas TC**~~ ✅
-4. ~~Histórico TC + paginación/orden~~ ✅ (2026-07-30)
-5. Smoke visual histórico + commit atómico Fase 2 TC
-6. Release a producción según política.
+4. ~~Histórico TC + paginación/orden~~ ✅
+5. ~~Release prod (`master` + functions + hosting + IAM)~~ ✅ 2026-07-30
+6. Smoke UAT en prod (plantel / pases / TC) con actores piloto
+7. Restaurar stash local `wip: ruido ajeno pre-release TC` si hace falta seguir ticketera
 
 ## En la otra PC
 
