@@ -32,8 +32,12 @@ function valorExpand(sel, key) {
   return textoValor(raw);
 }
 
-/** @type {{ key: string, label: string }[]} */
-export const EXPAND_FILAS_JEFE = [
+/**
+ * Detalle técnico completo: roles administrativos (RRHH, auditoría, junta médica),
+ * que sí necesitan ids, catálogos y patrón de saldo para trazar el trámite.
+ * @type {{ key: string, label: string }[]}
+ */
+export const EXPAND_FILAS_TECNICAS = [
   { key: "solicitud_id", label: "ID solicitud" },
   { key: "estado_solicitud_id", label: "Estado (catálogo)" },
   { key: "etiqueta_estado", label: "Estado (bandeja)" },
@@ -55,6 +59,23 @@ export const EXPAND_FILAS_JEFE = [
   { key: "jefe_motivo", label: "Motivo jefatura" },
 ];
 
+/**
+ * Bandeja jefe: solo lo que necesita para decidir la autorización.
+ * Sin ids, códigos de catálogo ni patrón de saldo (eso es dato de gestión RRHH).
+ * @type {{ key: string, label: string }[]}
+ */
+export const EXPAND_FILAS_JEFE = [
+  { key: "articulo_label", label: "Solicitud" },
+  { key: "dias_solicitados", label: "Días solicitados" },
+  { key: "fecha_licencia", label: "Fechas licencia" },
+  { key: "titular_label", label: "Titular" },
+  { key: "titular_dni", label: "DNI titular" },
+  { key: "grupo_trabajo_ancla_label", label: "Grupo de trabajo" },
+  { key: "creado_en", label: "Alta del trámite" },
+  { key: "jefe_revision_en", label: "Decisión jefatura" },
+  { key: "jefe_motivo", label: "Motivo jefatura" },
+];
+
 const JEFE_KEYS_RRHH_RELABEL = new Set([
   "jefe_revision_en",
   "jefe_revision_persona_id",
@@ -63,7 +84,7 @@ const JEFE_KEYS_RRHH_RELABEL = new Set([
 
 /** @type {{ key: string, label: string }[]} */
 export const EXPAND_FILAS_RRHH = [
-  ...EXPAND_FILAS_JEFE.filter((f) => !JEFE_KEYS_RRHH_RELABEL.has(f.key)),
+  ...EXPAND_FILAS_TECNICAS.filter((f) => !JEFE_KEYS_RRHH_RELABEL.has(f.key)),
   { key: "bandeja_rrhh_modo", label: "Modo bandeja RRHH" },
   { key: "autorizacion_rrhh_sustituta", label: "Huérfana (RRHH sustituta)" },
   { key: "autorizadores_elegibles_ids", label: "Autorizadores elegibles" },
@@ -80,7 +101,7 @@ export const EXPAND_FILAS_RRHH = [
 ];
 
 export const EXPAND_FILAS_AUDITOR = [
-  ...EXPAND_FILAS_JEFE.filter((f) => !["jefe_revision_en", "jefe_revision_persona_id", "jefe_motivo", "patron_saldo"].includes(f.key)),
+  ...EXPAND_FILAS_TECNICAS.filter((f) => !["jefe_revision_en", "jefe_revision_persona_id", "jefe_motivo", "patron_saldo"].includes(f.key)),
   { key: "version_aplicada_id", label: "Versión artículo (id)" },
   { key: "es_licencia_larga", label: "Licencia larga (Art. 16/19)" },
   { key: "fase_motor", label: "Fase motor" },
@@ -93,7 +114,7 @@ export const EXPAND_FILAS_AUDITOR = [
 ];
 
 export const EXPAND_FILAS_JUNTA = [
-  ...EXPAND_FILAS_JEFE.filter((f) => !["jefe_revision_en", "jefe_revision_persona_id", "jefe_motivo", "patron_saldo"].includes(f.key)),
+  ...EXPAND_FILAS_TECNICAS.filter((f) => !["jefe_revision_en", "jefe_revision_persona_id", "jefe_motivo", "patron_saldo"].includes(f.key)),
   { key: "version_aplicada_id", label: "Versión artículo (id)" },
   { key: "auditor_observacion", label: "Observación auditor" },
   { key: "auditor_persona_id", label: "Auditor (id)" },

@@ -176,6 +176,7 @@ function assertGrupoAnclaEnGruposInvolucrados(grupoTrabajoIdAncla, gruposInvoluc
 }
 
 module.exports = {
+  etiquetaGrupoTrabajo,
   listarGruposTrabajoVigentesEnFecha,
   resolverGrupoTrabajoIdAnclaParaSolicitud,
   buildGruposTrabajoInvolucradosIdsFromVigentes,

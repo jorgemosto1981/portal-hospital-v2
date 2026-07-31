@@ -20,6 +20,7 @@ const {
   filterHlgVigentesEnFecha,
   nivelTitularEnGrupo,
 } = require("./solicitudHlgVigencia");
+const { memoAsync } = require("./solicitudAutorizacionCache");
 
 const COL_GDT = "grupos_de_trabajo";
 const MAX_DEPTH_ESCALAMIENTO = 10;
@@ -30,23 +31,27 @@ const RX_YMD = /^\d{4}-\d{2}-\d{2}$/;
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
  * @param {string} gdtId
+ * @param {ReturnType<typeof import("./solicitudAutorizacionCache").crearCacheAutorizacion>} [cache]
  */
-async function loadGrupoTrabajo(db, gdtId) {
-  const snap = await db.collection(COL_GDT).doc(gdtId).get();
-  if (!snap.exists) return null;
-  return { id: snap.id, ...(snap.data() || {}) };
+async function loadGrupoTrabajo(db, gdtId, cache) {
+  return memoAsync(cache?.grupoTrabajo, gdtId, async () => {
+    const snap = await db.collection(COL_GDT).doc(gdtId).get();
+    if (!snap.exists) return null;
+    return { id: snap.id, ...(snap.data() || {}) };
+  });
 }
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
  * @param {string} gdtId
  * @param {Set<string>} visited
+ * @param {ReturnType<typeof import("./solicitudAutorizacionCache").crearCacheAutorizacion>} [cache]
  */
-async function escalarGrupoPadre(db, gdtId, visited) {
+async function escalarGrupoPadre(db, gdtId, visited, cache) {
   const id = String(gdtId || "").trim();
   if (!RX_GDT.test(id)) return { ok: false, codigo: CODIGO_GRUPO_ANCLA_INVALIDO };
 
-  const g = await loadGrupoTrabajo(db, id);
+  const g = await loadGrupoTrabajo(db, id, cache);
   if (!g) return { ok: false, codigo: CODIGO_GRUPO_ANCLA_INVALIDO };
 
   const padre = String(g.parent_group_id || "").trim();
@@ -108,9 +113,14 @@ function reducirAutorizadoresPorMejorRango(candidatos) {
  *   nivelTitularAncla: number|null,
  *   fechaRefYmd: string,
  * }} input
+ * @param {ReturnType<typeof import("./solicitudAutorizacionCache").crearCacheAutorizacion>} [cache]
  */
-async function resolverAutorizadoresElegiblesEnGrupo(db, input) {
-  const integrantes = await loadHlgRowsPorGrupo(db, input.grupoTrabajoId);
+async function resolverAutorizadoresElegiblesEnGrupo(db, input, cache) {
+  // Se cachean las filas HLg del grupo (reusables entre titulares), no el resultado,
+  // que depende además del titular y su nivel.
+  const integrantes = await memoAsync(cache?.hlgPorGrupo, String(input.grupoTrabajoId || ""), () =>
+    loadHlgRowsPorGrupo(db, input.grupoTrabajoId),
+  );
   const vigentes = filterHlgVigentesEnFecha(integrantes, input.fechaRefYmd);
   const candidatos = autorizadoresCandidatosEnGrupo(
     vigentes,
@@ -137,10 +147,32 @@ async function resolverAutorizadoresElegiblesEnGrupo(db, input) {
  *   autorizacion_rrhh_sustituta: boolean,
  * }>}
  */
-async function resolverCadenaAutorizacion(db, input) {
+async function resolverCadenaAutorizacion(db, input, cache) {
   const titularPersonaId = String(input.titularPersonaId || "").trim();
   const grupoTrabajoIdAncla = String(input.grupoTrabajoIdAncla || "").trim();
   const fechaRefYmd = String(input.fechaRefYmd || "").slice(0, 10);
+
+  return memoAsync(
+    cache?.cadena,
+    `${titularPersonaId}|${grupoTrabajoIdAncla}|${fechaRefYmd}`,
+    () =>
+      resolverCadenaAutorizacionSinMemo(
+        db,
+        { titularPersonaId, grupoTrabajoIdAncla, fechaRefYmd },
+        cache,
+      ),
+  );
+}
+
+/**
+ * Cuerpo real de la resolución. El resultado memoizado se comparte entre llamadas:
+ * los consumidores deben tratarlo como inmutable.
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {{ titularPersonaId: string, grupoTrabajoIdAncla: string, fechaRefYmd: string }} input
+ * @param {ReturnType<typeof import("./solicitudAutorizacionCache").crearCacheAutorizacion>} [cache]
+ */
+async function resolverCadenaAutorizacionSinMemo(db, input, cache) {
+  const { titularPersonaId, grupoTrabajoIdAncla, fechaRefYmd } = input;
 
   if (!RX_PER.test(titularPersonaId)) {
     return fail(CODIGO_TITULAR_INVALIDO);
@@ -152,7 +184,9 @@ async function resolverCadenaAutorizacion(db, input) {
     return fail(CODIGO_FECHA_REF_INVALIDA);
   }
 
-  const titularHlg = await loadHlgRowsPorPersona(db, titularPersonaId);
+  const titularHlg = await memoAsync(cache?.hlgPorPersona, titularPersonaId, () =>
+    loadHlgRowsPorPersona(db, titularPersonaId),
+  );
   const titularVigentes = filterHlgVigentesEnFecha(titularHlg, fechaRefYmd);
   const nivelTitularAncla = nivelTitularEnGrupo(titularVigentes, grupoTrabajoIdAncla);
 
@@ -170,12 +204,11 @@ async function resolverCadenaAutorizacion(db, input) {
   for (let depth = 0; depth <= MAX_DEPTH_ESCALAMIENTO; depth += 1) {
     visited.add(currentGdt);
 
-    const { autorizadores_elegibles_ids } = await resolverAutorizadoresElegiblesEnGrupo(db, {
-      titularPersonaId,
-      grupoTrabajoId: currentGdt,
-      nivelTitularAncla,
-      fechaRefYmd,
-    });
+    const { autorizadores_elegibles_ids } = await resolverAutorizadoresElegiblesEnGrupo(
+      db,
+      { titularPersonaId, grupoTrabajoId: currentGdt, nivelTitularAncla, fechaRefYmd },
+      cache,
+    );
 
     if (autorizadores_elegibles_ids.length > 0) {
       return {
@@ -187,7 +220,7 @@ async function resolverCadenaAutorizacion(db, input) {
       };
     }
 
-    const esc = await escalarGrupoPadre(db, currentGdt, visited);
+    const esc = await escalarGrupoPadre(db, currentGdt, visited, cache);
     if (!esc.ok) {
       return fail(esc.codigo || CODIGO_ORGANIGRAMA_CICLICO);
     }

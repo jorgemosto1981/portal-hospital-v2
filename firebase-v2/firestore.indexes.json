@@ -123,6 +123,23 @@
       "collectionGroup": "solicitudes_articulo",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "estado_solicitud_id", "order": "ASCENDING" },
+        { "fieldPath": "fecha_desde", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "solicitudes_articulo",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "jefe_revision_persona_id", "order": "ASCENDING" },
+        { "fieldPath": "estado_solicitud_id", "order": "ASCENDING" },
+        { "fieldPath": "fecha_desde", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "solicitudes_articulo",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "titular_persona_id", "order": "ASCENDING" },
         { "fieldPath": "estado_solicitud_id", "order": "ASCENDING" },
         { "fieldPath": "fecha_inicio_reposo_estimada", "order": "ASCENDING" }

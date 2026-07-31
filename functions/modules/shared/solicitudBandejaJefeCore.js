@@ -28,6 +28,9 @@ const {
   revalidarRevisorEnAutorizadores,
 } = require("./solicitudAutorizacionJerarquicaCore");
 const { modoResolucionJefeDesdeSolicitud } = require("./modoResolucionJefe");
+const { etiquetaGrupoTrabajo } = require("./solicitudGrupoTrabajoAncla");
+const { crearCacheAutorizacion } = require("./solicitudAutorizacionCache");
+const { asyncMapLimite } = require("./asyncMapLimite");
 const {
   debeMaterializar770AlRechazar,
   materializarSol770DesdeRechazo,
@@ -63,6 +66,8 @@ const COL_SOL = "solicitudes_articulo";
 const COL_PERSONAS = "personas";
 const COL_CFG_ART = "cfg_articulos";
 const SCAN_LIMIT = 400;
+/** Lecturas en vuelo al resolver visibilidad/ítems del lote escaneado. */
+const CONCURRENCIA_RESOLUCION = 10;
 const FILTRO_JEFE_PENDIENTES = "pendientes";
 
 /**
@@ -95,8 +100,9 @@ async function loadArticuloDisplay(db, articuloId, cache) {
  * @param {import("firebase-admin/firestore").Firestore} db
  * @param {Record<string, unknown>} sol
  * @param {string} revisorPersonaId
+ * @param {ReturnType<typeof crearCacheAutorizacion>} [cache]
  */
-async function revisorVeSolicitudEnBandejaJefe(db, sol, revisorPersonaId) {
+async function revisorVeSolicitudEnBandejaJefe(db, sol, revisorPersonaId, cache) {
   if (sol.autorizacion_rrhh_sustituta === true) return false;
 
   const titularId = String(sol.titular_persona_id || "").trim();
@@ -104,11 +110,11 @@ async function revisorVeSolicitudEnBandejaJefe(db, sol, revisorPersonaId) {
   const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
   if (!/^per_/i.test(titularId) || !/^gdt_/i.test(ancla)) return false;
 
-  const cadena = await resolverCadenaAutorizacion(db, {
-    titularPersonaId: titularId,
-    grupoTrabajoIdAncla: ancla,
-    fechaRefYmd: fechaRef,
-  });
+  const cadena = await resolverCadenaAutorizacion(
+    db,
+    { titularPersonaId: titularId, grupoTrabajoIdAncla: ancla, fechaRefYmd: fechaRef },
+    cache,
+  );
   if (!cadena.ok || cadena.autorizacion_rrhh_sustituta) return false;
   return revisorPuedeAutorizarJerarquico(buildAutorizacionSnapshotFields(cadena), revisorPersonaId);
 }
@@ -133,6 +139,23 @@ async function loadPersonaBandeja(db, titularId, personaCache) {
 }
 
 /**
+ * Nombre del grupo ancla para la bandeja jefe. Devuelve null si solo se resuelve
+ * el propio id: la UI del jefe no muestra identificadores técnicos.
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {string} gdtId
+ * @param {Map<string, string | null>} cache
+ */
+async function loadGrupoAnclaLabel(db, gdtId, cache) {
+  const id = String(gdtId || "").trim();
+  if (!/^gdt_/i.test(id)) return null;
+  if (cache.has(id)) return cache.get(id);
+  const etiqueta = String(await etiquetaGrupoTrabajo(db, id)).trim();
+  const label = etiqueta && etiqueta !== id ? etiqueta : null;
+  cache.set(id, label);
+  return label;
+}
+
+/**
  * @param {string} usuario
  * @param {{ label: string, dni: string }} personaRow
  */
@@ -152,13 +175,16 @@ function personaCoincideUsuario(usuario, personaRow) {
  * @param {Map} personaCache
  * @param {Map} articuloCache
  * @param {{ puede_decidir: boolean, etiqueta_estado: string }} meta
+ * @param {Map} grupoCache
  */
-async function itemListaBandejaJefe(db, sol, personaCache, articuloCache, meta) {
+async function itemListaBandejaJefe(db, sol, personaCache, articuloCache, meta, grupoCache) {
   const titularId = String(sol.titular_persona_id || "").trim();
   const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
   const personaRow = await loadPersonaBandeja(db, titularId, personaCache);
   const artId = String(sol.articulo_id || "").trim();
   const artDisplay = await loadArticuloDisplay(db, artId, articuloCache);
+  const anclaId = String(sol.grupo_trabajo_id_ancla || "").trim();
+  const anclaLabel = await loadGrupoAnclaLabel(db, anclaId, grupoCache || new Map());
   return {
     solicitud_id: String(sol.id || ""),
     articulo_id: artId,
@@ -174,7 +200,8 @@ async function itemListaBandejaJefe(db, sol, personaCache, articuloCache, meta) 
     patron_saldo: String(sol.patron_saldo || ""),
     estado_solicitud_id: sol.estado_solicitud_id,
     creado_en: sol.creado_en || null,
-    grupo_trabajo_id_ancla: String(sol.grupo_trabajo_id_ancla || "").trim() || null,
+    grupo_trabajo_id_ancla: anclaId || null,
+    grupo_trabajo_ancla_label: anclaLabel,
     jefe_revision_en: sol.jefe_revision_en || null,
     jefe_revision_persona_id: String(sol.jefe_revision_persona_id || "").trim() || null,
     jefe_motivo: sol.jefe_motivo != null ? String(sol.jefe_motivo) : null,
@@ -211,7 +238,20 @@ async function listarSolicitudesBandejaJefe(db, opts) {
 
   const personaCache = new Map();
   const articuloCache = new Map();
+  const grupoCache = new Map();
+  const cacheAutorizacion = crearCacheAutorizacion();
   const byId = new Map();
+
+  /** Filtros baratos y sincrónicos, antes de gastar lecturas. @param {Record<string, unknown>} sol */
+  function pasaFiltrosBaratos(sol) {
+    const titularId = String(sol.titular_persona_id || "").trim();
+    const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
+    if (!/^per_/i.test(titularId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) return false;
+    if (fechaDesdeMin && fechaRef < fechaDesdeMin) return false;
+    if (fechaDesdeMax && fechaRef > fechaDesdeMax) return false;
+    if (titularIdsDni && !titularIdsDni.has(titularId)) return false;
+    return true;
+  }
 
   const incluirPendientes =
     filtroVista === FILTRO_JEFE_PENDIENTES || filtroVista === "todos";
@@ -219,27 +259,38 @@ async function listarSolicitudesBandejaJefe(db, opts) {
   const incluirRechazados = filtroVista === "rechazados_por_mi" || filtroVista === "todos";
 
   if (incluirPendientes) {
+    // orderBy alinea el recorte de SCAN_LIMIT con el eje de presentación (fecha_desde);
+    // sin él Firestore ordena por id (ULID) y trunca por fecha de alta.
     const snap = await db
       .collection(COL_SOL)
       .where("estado_solicitud_id", "==", ESTADO_SOLICITUD_EN_REVISION_JEFE)
+      .orderBy("fecha_desde")
       .limit(SCAN_LIMIT)
       .get();
-    for (const doc of snap.docs) {
-      const sol = { id: doc.id, ...(doc.data() || {}) };
+
+    const candidatos = snap.docs
+      .map((doc) => ({ id: doc.id, ...(doc.data() || {}) }))
+      .filter(pasaFiltrosBaratos);
+
+    const resueltos = await asyncMapLimite(candidatos, CONCURRENCIA_RESOLUCION, async (sol) => {
+      if (!(await revisorVeSolicitudEnBandejaJefe(db, sol, revisorPersonaId, cacheAutorizacion))) {
+        return null;
+      }
       const titularId = String(sol.titular_persona_id || "").trim();
-      const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
-      if (!/^per_/i.test(titularId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) continue;
-      if (fechaDesdeMin && fechaRef < fechaDesdeMin) continue;
-      if (fechaDesdeMax && fechaRef > fechaDesdeMax) continue;
-      if (titularIdsDni && !titularIdsDni.has(titularId)) continue;
-      if (!(await revisorVeSolicitudEnBandejaJefe(db, sol, revisorPersonaId))) continue;
       const personaRow = await loadPersonaBandeja(db, titularId, personaCache);
-      if (!personaCoincideUsuario(usuario, personaRow)) continue;
-      const item = await itemListaBandejaJefe(db, sol, personaCache, articuloCache, {
-        puede_decidir: true,
-        etiqueta_estado: "Pendiente tu decisión",
-      });
-      byId.set(item.solicitud_id, item);
+      if (!personaCoincideUsuario(usuario, personaRow)) return null;
+      return itemListaBandejaJefe(
+        db,
+        sol,
+        personaCache,
+        articuloCache,
+        { puede_decidir: true, etiqueta_estado: "Pendiente tu decisión" },
+        grupoCache,
+      );
+    });
+
+    for (const item of resueltos) {
+      if (item) byId.set(item.solicitud_id, item);
     }
   }
 
@@ -248,23 +299,30 @@ async function listarSolicitudesBandejaJefe(db, opts) {
       .collection(COL_SOL)
       .where("jefe_revision_persona_id", "==", revisorPersonaId)
       .where("estado_solicitud_id", "==", estadoId)
+      .orderBy("fecha_desde")
       .limit(SCAN_LIMIT)
       .get();
-    for (const doc of snap.docs) {
-      const sol = { id: doc.id, ...(doc.data() || {}) };
+
+    const candidatos = snap.docs
+      .map((doc) => ({ id: doc.id, ...(doc.data() || {}) }))
+      .filter(pasaFiltrosBaratos);
+
+    const resueltos = await asyncMapLimite(candidatos, CONCURRENCIA_RESOLUCION, async (sol) => {
       const titularId = String(sol.titular_persona_id || "").trim();
-      const fechaRef = String(sol.fecha_desde || "").slice(0, 10);
-      if (!/^per_/i.test(titularId) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) continue;
-      if (fechaDesdeMin && fechaRef < fechaDesdeMin) continue;
-      if (fechaDesdeMax && fechaRef > fechaDesdeMax) continue;
-      if (titularIdsDni && !titularIdsDni.has(titularId)) continue;
       const personaRow = await loadPersonaBandeja(db, titularId, personaCache);
-      if (!personaCoincideUsuario(usuario, personaRow)) continue;
-      const item = await itemListaBandejaJefe(db, sol, personaCache, articuloCache, {
-        puede_decidir: false,
-        etiqueta_estado: etiqueta,
-      });
-      byId.set(item.solicitud_id, item);
+      if (!personaCoincideUsuario(usuario, personaRow)) return null;
+      return itemListaBandejaJefe(
+        db,
+        sol,
+        personaCache,
+        articuloCache,
+        { puede_decidir: false, etiqueta_estado: etiqueta },
+        grupoCache,
+      );
+    });
+
+    for (const item of resueltos) {
+      if (item) byId.set(item.solicitud_id, item);
     }
   }
 

@@ -2,14 +2,20 @@ import { renglonPrincipalBandeja, renglonTitularDniBandeja } from "./bandejaSoli
 
 /**
  * Resumen compacto del ítem en listas bandeja jefe / RRHH (3 renglones).
- * @param {{ s: Record<string, unknown>, etiquetaClassName?: string, ocultarEtiquetaEstado?: boolean }} props
+ * @param {{
+ *   s: Record<string, unknown>,
+ *   etiquetaClassName?: string,
+ *   ocultarEtiquetaEstado?: boolean,
+ *   ocultarSolicitudId?: boolean,
+ * }} props
  */
 export default function BandejaSolicitudResumenFilas({
   s,
   etiquetaClassName = "mt-1 text-xs font-medium text-slate-700",
   ocultarEtiquetaEstado = false,
+  ocultarSolicitudId = false,
 }) {
-  const solId = String(s?.solicitud_id || "").trim();
+  const solId = ocultarSolicitudId ? "" : String(s?.solicitud_id || "").trim();
   const titularLinea = renglonTitularDniBandeja(s);
 
   return (

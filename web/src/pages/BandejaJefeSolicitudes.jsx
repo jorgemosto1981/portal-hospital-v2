@@ -57,8 +57,6 @@ export default function BandejaJefeSolicitudes() {
     if (/^sol_/i.test(fromUrl)) setSelId(fromUrl);
   }, [searchParams, lista]);
 
-  const sel = lista.find((s) => s.solicitud_id === selId) || null;
-
   const toggleSel = useCallback((id) => {
     setSelId((prev) => (prev === id ? "" : id));
     setMotivo("");
@@ -81,6 +79,10 @@ export default function BandejaJefeSolicitudes() {
     }
     if (decision === "aprobar" && extras.modalidad_goce_jefe === "sin_goce" && extras.confirma_sin_goce !== true) {
       toast.error("Confirmá la autorización sin goce (64-B).");
+      return;
+    }
+    if (decision === "rechazar" && motivo.trim().length < 3) {
+      toast.error("Para rechazar el motivo es obligatorio (mín. 3 caracteres).");
       return;
     }
     setProcesando(true);
@@ -143,26 +145,26 @@ export default function BandejaJefeSolicitudes() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6">
       <header className="space-y-2">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Bandeja — revisión jefe</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Bandeja de Evaluación</h1>
         <p className="text-sm leading-relaxed text-slate-600">
-          Filtrá por estado o titular. Orden: fecha de inicio, de la más antigua a la más próxima.
-          <span className="ml-1.5 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+          Evaluá las solicitudes de los agentes a tu cargo y decidí si las autorizás o las
+          rechazás.
+        </p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
             Ventana activa: {periodos[0]} · {periodos[1]} · {periodos[2]}
           </span>
           {bandejaCap.muestraBadgeSesionRrhh ? (
-            <span className="ml-1.5 inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800">
+            <span className="inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800">
               Sesión RRHH
             </span>
-          ) : (
-            <span className="block text-slate-500">Solo trámites donde sos autorizador jerárquico (HLg).</span>
-          )}
-        </p>
+          ) : null}
+        </div>
       </header>
 
-      <Card className="mt-4 space-y-3 p-4">
-        <p className="text-sm font-semibold text-slate-800">Filtros</p>
+      <Card className="mt-4 space-y-2 p-3">
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-slate-600">Estado / vista</span>
+          <span className="text-xs font-medium text-slate-600">Estados</span>
           <select
             value={filtroVista}
             onChange={(e) => setFiltroVista(e.target.value)}
@@ -175,7 +177,7 @@ export default function BandejaJefeSolicitudes() {
             ))}
           </select>
         </label>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-2">
           <label className="block space-y-1">
             <span className="text-xs font-medium text-slate-600">DNI titular</span>
             <input
@@ -187,7 +189,7 @@ export default function BandejaJefeSolicitudes() {
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Usuario (nombre o DNI)</span>
+            <span className="text-xs font-medium text-slate-600">Nombre</span>
             <input
               type="search"
               value={usuario}
@@ -200,7 +202,7 @@ export default function BandejaJefeSolicitudes() {
           type="button"
           onClick={aplicarFiltros}
           disabled={cargando}
-          className="min-h-11 w-full rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
+          className="min-h-11 w-full rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white active:bg-blue-800 disabled:opacity-50"
         >
           Buscar
         </button>
@@ -258,6 +260,7 @@ export default function BandejaJefeSolicitudes() {
                     <BandejaSolicitudResumenFilas
                       s={s}
                       etiquetaClassName="mt-1 text-xs font-medium text-blue-800"
+                      ocultarSolicitudId
                     />
                   </button>
                   {expanded ? (
