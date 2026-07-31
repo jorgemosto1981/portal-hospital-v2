@@ -121,7 +121,9 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md`](./RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md) | Snapshot `grupos_trabajo_involucrados_ids[]` en alta `sol_*` (implementado) |
 | [`TICKETERA_EVIDENCIA_2026-05-23_GRUPOS_INVOLUCRADOS_SNAPSHOT.md`](./TICKETERA_EVIDENCIA_2026-05-23_GRUPOS_INVOLUCRADOS_SNAPSHOT.md) | Piloto manual multigrupo + query `array-contains` |
 | [`SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md`](./SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md) | Campos `sol_*` Oleada A + estados TO-BE |
-| [`RFC_BANDEJA_JEFE_ESCALABILIDAD_LECTURA_V2.md`](./RFC_BANDEJA_JEFE_ESCALABILIDAD_LECTURA_V2.md) | **Propuesta** — retiro de `SCAN_LIMIT`, filtrado por `autorizadores_elegibles_ids`, paginación por cursor |
+| [`RFC_BANDEJA_JEFE_ESCALABILIDAD_LECTURA_V2.md`](./RFC_BANDEJA_JEFE_ESCALABILIDAD_LECTURA_V2.md) | **N1 aplicado** — memoización + `orderBy("fecha_desde")`; N3 antes que N2 tras la auditoría de snapshots |
+| **[`HANDOFF_SESION_2026-07-31_BANDEJAS_JEFE_Y_RRHH.md`](./HANDOFF_SESION_2026-07-31_BANDEJAS_JEFE_Y_RRHH.md)** | **RETOMAR AQUÍ** — bandeja de evaluación del jefe, Art. 64 desde cfg, bandeja RRHH con trazabilidad y filtros completos · desplegado dev+prod · pendientes N3/N2 |
+| [`HANDOFF_ART64_PROD_2026-07-30.md`](./HANDOFF_ART64_PROD_2026-07-30.md) | Promoción Art. 64 a prod + incidente 429 (resuelto: era cuarentena Cloud Run/GFE) |
 | [`PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md`](./PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md) | Plan código Oleada A → B → C |
 | [`ANEXO_ALINEACION_RDA_GEMINI_V6_A_V2.md`](./ANEXO_ALINEACION_RDA_GEMINI_V6_A_V2.md) | Mandato RDA diario `asi_*` + vista `vis_*` (vs Gemini V6) |
 | [`CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md`](./CONCEPTO_TICKETERA_BANDEJA_DINAMICA_V2.md) | Visión producto (incorporada en plan maestro §2) |
