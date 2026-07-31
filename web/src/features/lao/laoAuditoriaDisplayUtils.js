@@ -1,3 +1,11 @@
+import {
+  esSnapshotMotorV2,
+  resolveWorstNivel,
+  snapshotTieneAdvertencias,
+} from "../../../../shared/utils/motorSnapshotFlags.js";
+
+export { esSnapshotMotorV2, resolveWorstNivel, snapshotTieneAdvertencias };
+
 /** Orden pipeline LAO (RFC §6). */
 export const FASES_PIPELINE = [
   { id: "A", titulo: "Artículo y versión", subtitulo: "Patrón de saldo y configuración" },
@@ -9,38 +17,6 @@ export const FASES_PIPELINE = [
 ];
 
 const NIVEL_RANK = { bloqueante: 3, advertencia: 2, ok: 1, info: 0 };
-
-/**
- * @param {Record<string, unknown> | null | undefined} snapshot
- */
-export function snapshotTieneAdvertencias(snapshot) {
-  if (!snapshot || typeof snapshot !== "object") return false;
-  const warns = Array.isArray(snapshot.warnings) ? snapshot.warnings.length : 0;
-  const advChecks = (Array.isArray(snapshot.checks) ? snapshot.checks : []).filter(
-    (c) => resolveWorstNivel(c?.nivel) === "advertencia",
-  ).length;
-  return warns + advChecks > 0;
-}
-
-/**
- * @param {Record<string, unknown> | null | undefined} snapshot
- */
-export function esSnapshotMotorV2(snapshot) {
-  return Boolean(
-    snapshot &&
-      typeof snapshot === "object" &&
-      (snapshot.motor_version === "lao-preview-v2" || Array.isArray(snapshot.checks)),
-  );
-}
-
-
-/**
- * @param {string} nivel
- */
-export function resolveWorstNivel(nivel) {
-  const n = String(nivel || "").toLowerCase();
-  return NIVEL_RANK[n] != null ? n : "info";
-}
 
 /**
  * @param {Array<{ nivel?: string }>} items

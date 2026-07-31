@@ -6,7 +6,7 @@ import Card from "../components/ui/Card.jsx";
 import BandejaRrhhSolicitudDetalle from "../features/solicitudes/BandejaRrhhSolicitudDetalle.jsx";
 import BandejaSolicitudResumenFilas from "../features/solicitudes/BandejaSolicitudResumenFilas.jsx";
 import {
-  FILTROS_VISTA_RRHH,
+  GRUPOS_FILTRO_VISTA_RRHH,
   useBandejaRrhhSolicitudes,
 } from "../features/solicitudes/useBandejaRrhhSolicitudes.js";
 import {
@@ -31,13 +31,14 @@ export default function BandejaRrhhSolicitudes() {
     recargar,
     cargarMas,
     aplicarFiltros,
+    aplicarFiltrosCon,
   } = useBandejaRrhhSolicitudes();
 
   const [selId, setSelId] = useState("");
   const [motivo, setMotivo] = useState("");
   const [procesando, setProcesando] = useState(false);
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     const fromUrl = String(searchParams.get("sol_id") || "").trim();
@@ -50,6 +51,22 @@ export default function BandejaRrhhSolicitudes() {
     setSelId((prev) => (prev === id ? "" : id));
     setMotivo("");
   }, []);
+
+  /**
+   * Salto al trámite vinculado por la trazabilidad (el 77-0 derivado o el
+   * rechazo que lo originó). Se acota por DNI del titular porque el relacionado
+   * suele estar en otro estado y fuera de la vista actual.
+   */
+  const abrirRelacionada = useCallback(
+    async (id) => {
+      const dniTitular = String(sel?.titular_dni || "").replace(/\D/g, "");
+      setMotivo("");
+      setSelId(id);
+      setSearchParams({ sol_id: id });
+      await aplicarFiltrosCon({ filtroVista: "todos", dni: dniTitular, usuario: "" });
+    },
+    [sel, aplicarFiltrosCon, setSearchParams],
+  );
 
   async function registrarTomaConocimiento() {
     if (!selId || procesando) return;
@@ -98,31 +115,36 @@ export default function BandejaRrhhSolicitudes() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6">
       <header className="space-y-2">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Bandeja — revisión RRHH</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+          Bandeja de revisión de solicitudes
+        </h1>
         <p className="text-sm leading-relaxed text-slate-600">
           Filtrá por estado o titular. Orden: fecha de inicio de la licencia, de la más antigua a la más próxima.
         </p>
       </header>
 
-      <Card className="mt-4 space-y-3 p-4">
-        <p className="text-sm font-semibold text-slate-800">Filtros</p>
+      <Card className="mt-4 space-y-2.5 p-3.5">
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-slate-600">Estado / vista</span>
+          <span className="text-xs font-medium text-slate-600">Estados</span>
           <select
             value={filtroVista}
             onChange={(e) => setFiltroVista(e.target.value)}
             className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
           >
-            {FILTROS_VISTA_RRHH.map((f) => (
-              <option key={f.value} value={f.value}>
-                {f.label}
-              </option>
+            {GRUPOS_FILTRO_VISTA_RRHH.map((g) => (
+              <optgroup key={g.grupo} label={g.grupo}>
+                {g.opciones.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-2.5">
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">DNI titular</span>
+            <span className="text-xs font-medium text-slate-600">DNI</span>
             <input
               type="text"
               inputMode="numeric"
@@ -133,7 +155,7 @@ export default function BandejaRrhhSolicitudes() {
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Usuario (nombre o DNI)</span>
+            <span className="text-xs font-medium text-slate-600">Nombre</span>
             <input
               type="search"
               value={usuario}
@@ -204,6 +226,7 @@ export default function BandejaRrhhSolicitudes() {
                   >
                     <BandejaSolicitudResumenFilas
                       s={s}
+                      neutralizarFamilia64
                       etiquetaClassName="mt-1 text-xs font-medium text-violet-800"
                     />
                   </button>
@@ -215,6 +238,7 @@ export default function BandejaRrhhSolicitudes() {
                       procesando={procesando}
                       onDecidir={decidir}
                       onTomaConocimiento={registrarTomaConocimiento}
+                      onAbrirRelacionada={abrirRelacionada}
                     />
                   ) : null}
                 </li>

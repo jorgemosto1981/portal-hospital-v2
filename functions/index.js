@@ -44,6 +44,7 @@ const resolverDecisionJefeSolicitud = require("./onCall/solicitudes/resolverDeci
 const listarSolicitudesBandejaRrhh = require("./onCall/solicitudes/listarSolicitudesBandejaRrhh");
 const resolverDecisionRrhhSolicitud = require("./onCall/solicitudes/resolverDecisionRrhhSolicitud");
 const registrarTomaConocimientoRrhhSolicitud = require("./onCall/solicitudes/registrarTomaConocimientoRrhhSolicitud");
+const obtenerVeredictoMotorSolicitudRrhh = require("./onCall/solicitudes/obtenerVeredictoMotorSolicitudRrhh");
 const obtenerResumenSaldoFamilia64Agente = require("./onCall/solicitudes/obtenerResumenSaldoFamilia64Agente");
 const obtenerResumenSaldoFamilia64Jefe = require("./onCall/solicitudes/obtenerResumenSaldoFamilia64Jefe");
 const obtenerContextoAcuseRechazoAgente = require("./onCall/solicitudes/obtenerContextoAcuseRechazoAgente");
@@ -135,6 +136,7 @@ module.exports = {
   ...listarSolicitudesBandejaRrhh,
   ...resolverDecisionRrhhSolicitud,
   ...registrarTomaConocimientoRrhhSolicitud,
+  ...obtenerVeredictoMotorSolicitudRrhh,
   ...obtenerResumenSaldoFamilia64Agente,
   ...obtenerResumenSaldoFamilia64Jefe,
   ...obtenerContextoAcuseRechazoAgente,

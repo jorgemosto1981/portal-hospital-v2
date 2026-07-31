@@ -276,6 +276,11 @@ export function callListarSolicitudesBandejaRrhh(data) {
   return httpsCallable(getFunctionsV2(), "listarSolicitudesBandejaRrhh")(data || {});
 }
 
+/** Veredicto congelado del motor de un trámite: no viaja en el listado. */
+export function callObtenerVeredictoMotorSolicitudRrhh(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerVeredictoMotorSolicitudRrhh")(data || {});
+}
+
 /** Aprobar (definitivo) o rechazar solicitud en bandeja RRHH. */
 export function callResolverDecisionRrhhSolicitud(data) {
   return httpsCallable(getFunctionsV2(), "resolverDecisionRrhhSolicitud")(data);

@@ -846,5 +846,6 @@ module.exports = {
   revisorVeSolicitudEnBandejaJefe,
   loadArticuloDisplay,
   loadPersonaBandeja,
+  loadGrupoAnclaLabel,
   esHuerfanaEnRevisionJefe,
 };

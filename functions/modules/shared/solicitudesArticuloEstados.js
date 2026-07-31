@@ -9,4 +9,5 @@ module.exports = {
   ESTADO_SOLICITUD_APROBADA: "cfg_esa_aprobada",
   ESTADO_SOLICITUD_APROBADA_PENDIENTE_APLICACION: "cfg_esa_aprobada_pendiente_aplicacion",
   ESTADO_SOLICITUD_PENDIENTE_CLASIFICACION_MEDICA: "cfg_esa_pendiente_clasificacion_medica",
+  ESTADO_SOLICITUD_ESPERANDO_DICTAMEN_JUNTA: "cfg_esa_esperando_dictamen_junta",
 };

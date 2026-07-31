@@ -2,13 +2,23 @@ import { useCallback, useRef } from "react";
 
 import BandejaSolicitudExpandDatos from "./BandejaSolicitudExpandDatos.jsx";
 import BandejaRrhhMotorAuditoria from "./BandejaRrhhMotorAuditoria.jsx";
-import { snapshotTieneAdvertencias } from "../lao/laoAuditoriaDisplayUtils.js";
+import BandejaRrhhTrazabilidad from "./BandejaRrhhTrazabilidad.jsx";
+import useVeredictoMotorRrhh from "./useVeredictoMotorRrhh.js";
 
 /**
  * Panel de acción / detalle dentro del ítem expandido (bandeja RRHH).
  */
-export default function BandejaRrhhSolicitudDetalle({ sel, motivo, setMotivo, procesando, onDecidir, onTomaConocimiento }) {
+export default function BandejaRrhhSolicitudDetalle({
+  sel,
+  motivo,
+  setMotivo,
+  procesando,
+  onDecidir,
+  onTomaConocimiento,
+  onAbrirRelacionada,
+}) {
   const notasRef = useRef(null);
+  const veredicto = useVeredictoMotorRrhh(sel?.solicitud_id);
 
   const irANotas = useCallback(() => {
     notasRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -17,12 +27,11 @@ export default function BandejaRrhhSolicitudDetalle({ sel, motivo, setMotivo, pr
 
   if (!sel) return null;
 
-  const snapshot = sel.motor_snapshot && typeof sel.motor_snapshot === "object" ? sel.motor_snapshot : null;
-  const conAdvertenciasMotor = snapshotTieneAdvertencias(snapshot);
+  const conAdvertenciasMotor = sel.motor_tiene_advertencias === true;
   const puedeActuar = sel.puede_aprobar_rechazar === true || sel.puede_registrar_toma_conocimiento === true;
   const labelMotivo = conAdvertenciasMotor && sel.puede_aprobar_rechazar === true
     ? "Notas de RRHH"
-    : "Motivo (opcional)";
+    : "Detalles (opcional)";
   const placeholderMotivo = conAdvertenciasMotor
     ? "Documentá la excepción o el criterio RRHH frente a las advertencias del motor."
     : "Observación para auditoría";
@@ -36,9 +45,20 @@ export default function BandejaRrhhSolicitudDetalle({ sel, motivo, setMotivo, pr
         </div>
       </div>
 
+      <BandejaRrhhTrazabilidad
+        trazabilidad={sel.trazabilidad}
+        onAbrirRelacionada={onAbrirRelacionada}
+      />
+
       <BandejaRrhhMotorAuditoria
-        snapshot={snapshot}
-        motorValidadoEn={sel.motor_validado_en}
+        tieneVeredicto={sel.motor_tiene_veredicto === true}
+        tieneAdvertencias={conAdvertenciasMotor}
+        snapshot={veredicto.snapshot}
+        validadoEn={veredicto.validadoEn}
+        cargando={veredicto.cargando}
+        error={veredicto.error}
+        pedido={veredicto.pedido}
+        onCargar={veredicto.cargar}
         onIrANotas={puedeActuar ? irANotas : undefined}
       />
 

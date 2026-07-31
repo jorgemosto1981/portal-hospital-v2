@@ -259,7 +259,7 @@ export default function BandejaJefeSolicitudes() {
                   >
                     <BandejaSolicitudResumenFilas
                       s={s}
-                      variant="jefe"
+                      neutralizarFamilia64
                       etiquetaClassName="mt-1 text-xs font-medium text-blue-800"
                       ocultarSolicitudId
                     />

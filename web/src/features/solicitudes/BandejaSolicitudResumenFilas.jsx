@@ -1,10 +1,15 @@
 import { renglonPrincipalBandeja, renglonTitularDniBandeja } from "./bandejaSolicitudesFormat.js";
 
 /**
- * Resumen compacto del ítem en listas bandeja jefe / RRHH (3 renglones).
+ * Resumen compacto del ítem en listas bandeja jefe / RRHH / médicas.
+ *
+ * El titular va en cuerpo grande porque es el dato que se busca de un vistazo al
+ * recorrer la lista; el id del trámite baja a su propio renglón chico, que solo
+ * se lee cuando hace falta copiarlo.
+ *
  * @param {{
  *   s: Record<string, unknown>,
- *   variant?: "generico" | "jefe",
+ *   neutralizarFamilia64?: boolean,
  *   etiquetaClassName?: string,
  *   ocultarEtiquetaEstado?: boolean,
  *   ocultarSolicitudId?: boolean,
@@ -12,31 +17,24 @@ import { renglonPrincipalBandeja, renglonTitularDniBandeja } from "./bandejaSoli
  */
 export default function BandejaSolicitudResumenFilas({
   s,
-  variant = "generico",
+  neutralizarFamilia64 = false,
   etiquetaClassName = "mt-1 text-xs font-medium text-slate-700",
   ocultarEtiquetaEstado = false,
   ocultarSolicitudId = false,
 }) {
-  const esJefe = variant === "jefe";
   const solId = ocultarSolicitudId ? "" : String(s?.solicitud_id || "").trim();
   const titularLinea = renglonTitularDniBandeja(s);
 
   return (
     <>
       <p className="text-[15px] font-semibold leading-snug text-slate-900">
-        {renglonPrincipalBandeja(s, { neutralizarFamilia64: esJefe })}
+        {renglonPrincipalBandeja(s, { neutralizarFamilia64 })}
       </p>
-      {titularLinea || solId ? (
-        <p
-          className={
-            esJefe
-              ? "mt-1.5 text-base font-medium leading-snug text-slate-800"
-              : "mt-1.5 text-xs text-slate-600"
-          }
-        >
-          {titularLinea}
-          {solId ? <span className="italic text-slate-500"> ({solId})</span> : null}
-        </p>
+      {titularLinea ? (
+        <p className="mt-1.5 text-base font-medium leading-snug text-slate-800">{titularLinea}</p>
+      ) : null}
+      {solId ? (
+        <p className="mt-0.5 break-all text-xs italic leading-snug text-slate-500">{solId}</p>
       ) : null}
       {s?.etiqueta_estado && !ocultarEtiquetaEstado ? (
         <p className={etiquetaClassName}>{String(s.etiqueta_estado)}</p>

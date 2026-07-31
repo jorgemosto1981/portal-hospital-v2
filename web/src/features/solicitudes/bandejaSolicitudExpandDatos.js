@@ -87,25 +87,33 @@ export const EXPAND_FILAS_JEFE = [
   { key: "jefe_motivo", label: "Motivo jefatura" },
 ];
 
-const JEFE_KEYS_RRHH_RELABEL = new Set([
-  "jefe_revision_en",
-  "jefe_revision_persona_id",
-  "jefe_motivo",
-]);
-
-/** @type {{ key: string, label: string }[]} */
+/**
+ * Bandeja RRHH: gestión del trámite, no volcado del documento.
+ *
+ * Se sacaron los ids y los duplicados del artículo (el catálogo, el código y el
+ * nombre por separado ya están en la etiqueta), y las personas y el grupo van
+ * por nombre: el id no le dice nada a quien tiene que decidir. Lo técnico que
+ * sigue haciendo falta para trazar vive en el bloque de trazabilidad.
+ * @type {{ key: string, label: string }[]}
+ */
 export const EXPAND_FILAS_RRHH = [
-  ...EXPAND_FILAS_TECNICAS.filter((f) => !JEFE_KEYS_RRHH_RELABEL.has(f.key)),
-  { key: "bandeja_rrhh_modo", label: "Modo bandeja RRHH" },
+  { key: "solicitud_id", label: "ID solicitud" },
+  { key: "etiqueta_estado", label: "Estado" },
+  { key: "articulo_label_neutro", label: "Solicitud" },
+  { key: "dias_solicitados", label: "Días solicitados" },
+  { key: "fecha_licencia", label: "Fechas licencia" },
+  { key: "titular_label", label: "Titular" },
+  { key: "titular_dni", label: "DNI titular" },
+  { key: "grupo_trabajo_ancla_label", label: "Grupo de trabajo" },
+  { key: "creado_en", label: "Alta del trámite" },
   { key: "autorizacion_rrhh_sustituta", label: "Huérfana (RRHH sustituta)" },
-  { key: "autorizadores_elegibles_ids", label: "Autorizadores elegibles" },
+  { key: "autorizadores_elegibles_labels", label: "Autorizadores elegibles" },
   { key: "jefe_revision_en", label: "Cierre jefatura (fecha)" },
-  { key: "jefe_revision_persona_id", label: "Jefe que cerró (id)" },
+  { key: "jefe_revision_label", label: "Jefe que cerró" },
   { key: "jefe_motivo", label: "Motivo jefatura" },
   { key: "puede_aprobar_rechazar", label: "Puede aprobar/rechazar RRHH" },
   { key: "puede_registrar_toma_conocimiento", label: "Puede registrar TC" },
   { key: "rrhh_revision_en", label: "Revisión RRHH (legacy)" },
-  { key: "rrhh_revision_persona_id", label: "Revisor RRHH legacy (id)" },
   { key: "rrhh_motivo", label: "Motivo RRHH legacy" },
   { key: "rrhh_toma_conocimiento_en", label: "Toma de conocimiento RRHH" },
   { key: "rrhh_toma_conocimiento_motivo", label: "Motivo toma de conocimiento" },

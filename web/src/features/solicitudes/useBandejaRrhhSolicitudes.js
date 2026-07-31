@@ -2,15 +2,40 @@ import { useCallback, useEffect, useState } from "react";
 
 import { callListarSolicitudesBandejaRrhh } from "../../services/callables.js";
 
-export const FILTROS_VISTA_RRHH = [
-  { value: "pendientes", label: "Pendientes de autorizar (RRHH)" },
-  { value: "todos", label: "Todos (incl. aprobados y rechazados)" },
-  { value: "toma_conocimiento_pendiente", label: "Toma de conocimiento pendiente" },
-  { value: "aprobados", label: "Aprobados" },
-  { value: "rechazados", label: "Rechazados" },
-  { value: "en_revision_jefe", label: "En revisión jefatura" },
-  { value: "en_revision_rrhh", label: "En revisión RRHH (legacy)" },
+/**
+ * Vistas de la bandeja RRHH, agrupadas por para qué se usan: primero lo que
+ * espera una acción de RRHH, después el seguimiento por estado.
+ *
+ * Cubren el catálogo completo salvo el borrador, que todavía no salió del agente.
+ * @type {{ grupo: string, opciones: { value: string, label: string }[] }[]}
+ */
+export const GRUPOS_FILTRO_VISTA_RRHH = [
+  {
+    grupo: "Pendiente de RRHH",
+    opciones: [
+      { value: "pendientes", label: "Todo lo que espera una acción mía" },
+      { value: "toma_conocimiento_pendiente", label: "Toma de conocimiento pendiente" },
+      { value: "huerfanas", label: "Huérfanas — cierre sustituto RRHH" },
+      { value: "en_revision_rrhh", label: "Pendiente RRHH (legacy)" },
+    ],
+  },
+  {
+    grupo: "Seguimiento por estado",
+    opciones: [
+      { value: "en_revision_jefe", label: "En revisión de jefatura" },
+      { value: "circuito_medico", label: "En circuito médico (auditoría o junta)" },
+      { value: "aprobados", label: "Aprobadas" },
+      { value: "aprobada_pendiente_aplicacion", label: "Aprobadas — pendientes de aplicación" },
+      { value: "toma_conocimiento_ok", label: "Con toma de conocimiento registrada" },
+      { value: "rechazados", label: "Rechazadas" },
+    ],
+  },
+  {
+    grupo: "Sin filtrar",
+    opciones: [{ value: "todos", label: "Todas las solicitudes presentadas" }],
+  },
 ];
+
 
 const PAGE_SIZE = 10;
 
@@ -95,15 +120,30 @@ export function useBandejaRrhhSolicitudes() {
     }
   }, [fetchPage, hasMore, nextCursor, cargandoMas, cargando]);
 
+  /**
+   * Aplica filtros venidos de afuera del formulario (p. ej. saltar al trámite
+   * relacionado desde la trazabilidad) sincronizando también los controles.
+   * @param {{ filtroVista: string, dni?: string, usuario?: string }} filtros
+   */
+  const aplicarFiltrosCon = useCallback(
+    async (filtros) => {
+      const f = {
+        filtroVista: filtros.filtroVista,
+        dni: filtros.dni || "",
+        usuario: filtros.usuario || "",
+      };
+      setFiltroVista(f.filtroVista);
+      setDni(f.dni);
+      setUsuario(f.usuario);
+      setApplied(f);
+      await recargar(f);
+    },
+    [recargar],
+  );
+
   const aplicarFiltros = useCallback(() => {
-    const f = {
-      filtroVista,
-      dni,
-      usuario,
-    };
-    setApplied(f);
-    void recargar(f);
-  }, [filtroVista, dni, usuario, recargar]);
+    void aplicarFiltrosCon({ filtroVista, dni, usuario });
+  }, [filtroVista, dni, usuario, aplicarFiltrosCon]);
 
   return {
     lista,
@@ -121,6 +161,7 @@ export function useBandejaRrhhSolicitudes() {
     recargar: () => recargar(applied),
     cargarMas,
     aplicarFiltros,
+    aplicarFiltrosCon,
     pageSize: PAGE_SIZE,
   };
 }
