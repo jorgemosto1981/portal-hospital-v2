@@ -246,6 +246,11 @@ export function callObtenerResumenSaldoFamilia64Agente(data) {
   return httpsCallable(getFunctionsV2(), "obtenerResumenSaldoFamilia64Agente")(data || {});
 }
 
+/** Art. 64: saldo del titular para que el jefe elija modalidad con información. */
+export function callObtenerResumenSaldoFamilia64Jefe(data) {
+  return httpsCallable(getFunctionsV2(), "obtenerResumenSaldoFamilia64Jefe")(data || {});
+}
+
 /** Preview Patrón C (elegibilidad + saldo global, horas) sin crear solicitud. */
 export function callPrevisualizarSolicitudPatronC(data) {
   return httpsCallable(getFunctionsV2(), "previsualizarSolicitudPatronC")(data);

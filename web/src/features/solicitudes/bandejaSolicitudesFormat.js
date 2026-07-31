@@ -1,4 +1,5 @@
 import { formatDateDdMmAaaa } from "../../pages/datos-laborales/utils.js";
+import { nombreArticuloParaJefe } from "./familia64Label.js";
 
 export function formatRangoFechasBandeja(desde, hasta) {
   const d0 = formatDateDdMmAaaa(desde, "");
@@ -32,10 +33,18 @@ function nombreArticuloBandeja(s) {
   return label;
 }
 
-/** Renglón 1: código artículo · nombre artículo · fecha · días */
-export function renglonPrincipalBandeja(s) {
+/**
+ * Renglón 1: código artículo · nombre artículo · fecha · días
+ * @param {Record<string, unknown>} s
+ * @param {{ nombreNeutroFamilia64?: boolean }} [opts] — bandeja jefe: sin la
+ *   modalidad en el nombre mientras no esté decidida.
+ */
+export function renglonPrincipalBandeja(s, opts = {}) {
   const articulo = codigoArticuloBandeja(s);
-  const nombreArt = nombreArticuloBandeja(s);
+  const nombreCfg = nombreArticuloBandeja(s);
+  const nombreArt = opts.nombreNeutroFamilia64
+    ? nombreArticuloParaJefe(s, nombreCfg)
+    : nombreCfg;
   const fecha = formatRangoFechasBandeja(s?.fecha_desde, s?.fecha_hasta);
   const dias = diasLabelBandeja(s?.dias_solicitados);
   return [articulo, nombreArt, fecha, dias].filter(Boolean).join(" · ");

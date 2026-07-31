@@ -1,4 +1,5 @@
 import { formatInstanteBandeja, formatRangoFechasBandeja, diasLabelBandeja } from "./bandejaSolicitudesFormat.js";
+import { esFamilia64SinModalidad, nombreArticuloParaJefe } from "./familia64Label.js";
 
 /** @param {unknown} v */
 function textoValor(v) {
@@ -14,6 +15,12 @@ function textoValor(v) {
  */
 function valorExpand(sel, key) {
   const raw = sel[key];
+  if (key === "articulo_label_neutro") {
+    if (!esFamilia64SinModalidad(sel)) return textoValor(sel.articulo_label);
+    const codigo = String(sel.codigo_grilla || "").trim();
+    const nombre = nombreArticuloParaJefe(sel, "");
+    return codigo ? `${codigo} ${nombre}` : nombre;
+  }
   if (key === "fecha_licencia") {
     return formatRangoFechasBandeja(sel.fecha_desde, sel.fecha_hasta);
   }
@@ -65,7 +72,7 @@ export const EXPAND_FILAS_TECNICAS = [
  * @type {{ key: string, label: string }[]}
  */
 export const EXPAND_FILAS_JEFE = [
-  { key: "articulo_label", label: "Solicitud" },
+  { key: "articulo_label_neutro", label: "Solicitud" },
   { key: "dias_solicitados", label: "Días solicitados" },
   { key: "fecha_licencia", label: "Fechas licencia" },
   { key: "titular_label", label: "Titular" },

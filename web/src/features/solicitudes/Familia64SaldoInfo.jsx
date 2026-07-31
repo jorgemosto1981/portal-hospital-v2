@@ -42,6 +42,12 @@ export default function Familia64SaldoInfo({ resumen, cargando = false, error = 
         {" · "}
         <strong>{sin != null ? sin : "—"} sin sueldo</strong>
       </p>
+      {con == null && sin == null ? (
+        <p className={`${TICKETERA.muted} text-sm`}>
+          Todavía no hay check-in de saldo Art. 64 para este ciclo. Pedile a RRHH que cargue las
+          bolsas (con goce / sin goce) en check-in.
+        </p>
+      ) : null}
       {pendientes.length === 0 ? (
         <p className={`${TICKETERA.muted} text-sm`}>No tenés solicitudes 64 pendientes en este ciclo.</p>
       ) : (

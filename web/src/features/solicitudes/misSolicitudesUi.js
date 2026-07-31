@@ -225,6 +225,8 @@ export function tituloSolicitudAgente(sol, artElegible = null) {
   const artId = String(sol?.articulo_id || "").trim();
   const esFamilia64 =
     Boolean(mod64) ||
+    sol?.articulo_familia_64 === true ||
+    Boolean(sol?.articulo_id_con_goce && sol?.articulo_id_sin_goce) ||
     artId === ARTICULO_64A_ID ||
     artId === ARTICULO_64B_ID ||
     String(sol?.codigo_grilla || "")
@@ -233,14 +235,18 @@ export function tituloSolicitudAgente(sol, artElegible = null) {
       .startsWith("64");
 
   if (esFamilia64) {
-    const base = "64 — ASUNTOS PARTICULARES";
+    const codCfg = String(sol?.codigo_grilla || "").trim();
+    const base =
+      codCfg && !/^64(-[AB])?$/i.test(codCfg)
+        ? codCfg
+        : "64 — ASUNTOS PARTICULARES";
     if (mod64 === "sin goce de haberes") {
       return `${base} (sin goce de haberes)`;
     }
     if (mod64 === "con goce de haberes") {
       return `${base} (con goce de haberes)`;
     }
-    return base;
+    return base.includes("—") ? base : `${base} — ASUNTOS PARTICULARES`;
   }
 
   if (artElegible) {

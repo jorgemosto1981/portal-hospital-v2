@@ -1,29 +1,35 @@
 "use strict";
 
 /**
- * Cruce Patrón B Art. 64: alta unificada descuenta 64-A;
- * si el jefe autoriza sin goce, revierte bolsa A y debita bolsa B (distintas).
+ * Cruce Patrón B Art. 64: alta unificada descuenta el art. con goce del par;
+ * si el jefe autoriza sin goce, revierte bolsa A y debita bolsa B (pares por cfg).
  */
 
 const { FieldValue } = require("./context");
+const { saldoAnualDocId, pickBolsaParaConsumo } = require("./laoSaldosBolsa");
 const {
   ARTICULO_64A_ETAPA1_ID,
   ARTICULO_64B_ETAPA1_ID,
-} = require("./etapa1RuntimeConfig");
-const { saldoAnualDocId, pickBolsaParaConsumo } = require("./laoSaldosBolsa");
+  normalizeArtId,
+  resolveFamilia64Pair,
+  resolveFamilia64DesdeSolicitud,
+  resolveFamilia64PairAsync,
+  loadArticuloCore,
+} = require("./familia64Config");
 
 const COL_SALDOS = "saldos_articulo_agente";
 const COL_CFG_ART = "cfg_articulos";
 const COL_SOL = "solicitudes_articulo";
 
 /** Estados que ocupan el cupo mensual (incluye pendientes). Rechazada/cancelada liberan cupo. */
-const ESTADOS_CUENTAN_FRECUENCIA_MES_64 = new Set([
+const ESTADOS_CUENTAN_FRECUENCIA_MES_64 = Object.freeze([
   "cfg_esa_borrador",
   "cfg_esa_en_revision_jefe",
   "cfg_esa_en_revision_rrhh",
   "cfg_esa_aprobada",
   "cfg_esa_aprobada_pendiente_aplicacion",
 ]);
+const ESTADOS_CUENTAN_FRECUENCIA_MES_64_SET = new Set(ESTADOS_CUENTAN_FRECUENCIA_MES_64);
 
 /**
  * @param {import("firebase-admin/firestore").Firestore} db
@@ -31,8 +37,8 @@ const ESTADOS_CUENTAN_FRECUENCIA_MES_64 = new Set([
  * @returns {Promise<string|null>}
  */
 async function resolveVersionPublicadaId(db, articuloId) {
-  const id = String(articuloId || "").trim();
-  if (!/^art_/i.test(id)) return null;
+  const id = normalizeArtId(articuloId);
+  if (!id) return null;
   const snap = await db
     .collection(COL_CFG_ART)
     .doc(id)
@@ -45,6 +51,17 @@ async function resolveVersionPublicadaId(db, articuloId) {
 }
 
 /**
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {string} articuloId
+ * @returns {Promise<string>}
+ */
+async function codigoGrillaDesdeCore(db, articuloId) {
+  const core = await loadArticuloCore(db, articuloId);
+  const raw = String(core?.codigo || "").trim();
+  return raw || String(articuloId || "").trim();
+}
+
+/**
  * Cuenta trámites del mes para un art_* (cualquier estado “vivo”).
  * @param {import("firebase-admin/firestore").Firestore} db
  * @param {string} personaId
@@ -54,8 +71,8 @@ async function resolveVersionPublicadaId(db, articuloId) {
  * @param {string} [excludeSolId]
  */
 async function countSolicitudesMesArticulo64(db, personaId, articuloId, anio, mes, excludeSolId = "") {
-  const art = String(articuloId || "").trim();
-  if (!/^art_/i.test(art) || !/^per_/i.test(String(personaId || ""))) return 0;
+  const art = normalizeArtId(articuloId);
+  if (!art || !/^per_/i.test(String(personaId || ""))) return 0;
   const snap = await db
     .collection(COL_SOL)
     .where("titular_persona_id", "==", personaId)
@@ -69,15 +86,15 @@ async function countSolicitudesMesArticulo64(db, personaId, articuloId, anio, me
     const m = /^(\d{4})-(\d{2})-/.exec(fd);
     if (!m) continue;
     if (Number(m[1]) !== anio || Number(m[2]) !== mes) continue;
-    if (!ESTADOS_CUENTAN_FRECUENCIA_MES_64.has(String(s.estado_solicitud_id || ""))) continue;
+    if (!ESTADOS_CUENTAN_FRECUENCIA_MES_64_SET.has(String(s.estado_solicitud_id || ""))) continue;
     n += 1;
   }
   return n;
 }
 
 /**
- * Chip unificado 64: 1/mes por modalidad (A y B independientes).
- * Si A está ocupada y B libre → redirige el alta a 64-B (sin goce).
+ * Chip unificado 64: 1/mes por modalidad (con/sin goce independientes en el par cfg).
+ * Si con-goce del mes está ocupado y sin-goce libre → redirige el alta al art. sin goce del par.
  *
  * @param {import("firebase-admin/firestore").Firestore} db
  * @param {{
@@ -86,10 +103,11 @@ async function countSolicitudesMesArticulo64(db, personaId, articuloId, anio, me
  *   fecha_desde: string,
  *   tope_mes: number,
  *   exclude_sol_id?: string,
+ *   core?: Record<string, unknown> | null,
  * }} opts
  */
 async function resolverRutaFamilia64Alta(db, opts) {
-  const articuloId = String(opts.articulo_id || "").trim();
+  const articuloId = normalizeArtId(opts.articulo_id);
   const personaId = String(opts.persona_id || "").trim();
   const fechaDesde = String(opts.fecha_desde || "").slice(0, 10);
   const topeMes = Number(opts.tope_mes);
@@ -104,10 +122,18 @@ async function resolverRutaFamilia64Alta(db, opts) {
     en_mes_a: null,
     en_mes_b: null,
     redirigido: false,
+    con_goce_id: null,
+    sin_goce_id: null,
   };
 
-  if (articuloId !== ARTICULO_64A_ETAPA1_ID) return vacio;
+  if (!articuloId) return vacio;
   if (!Number.isFinite(topeMes) || topeMes <= 0) return vacio;
+
+  const pair = await resolveFamilia64PairAsync(db, articuloId, opts.core || null);
+  if (!pair.enFamilia || pair.esSinGoce || !pair.conGoceId || !pair.sinGoceId) {
+    return vacio;
+  }
+  if (articuloId !== pair.conGoceId) return vacio;
 
   const m = /^(\d{4})-(\d{2})-/.exec(fechaDesde);
   if (!m) {
@@ -118,61 +144,68 @@ async function resolverRutaFamilia64Alta(db, opts) {
       articulo_id: articuloId,
       version_id: null,
       modalidad: null,
-      mensaje_ui: null,
       en_mes_a: 0,
       en_mes_b: 0,
       redirigido: false,
+      con_goce_id: pair.conGoceId,
+      sin_goce_id: pair.sinGoceId,
     };
   }
   const anio = Number(m[1]);
   const mes = Number(m[2]);
 
   const [enA, enB] = await Promise.all([
-    countSolicitudesMesArticulo64(db, personaId, ARTICULO_64A_ETAPA1_ID, anio, mes, excludeSolId),
-    countSolicitudesMesArticulo64(db, personaId, ARTICULO_64B_ETAPA1_ID, anio, mes, excludeSolId),
+    countSolicitudesMesArticulo64(db, personaId, pair.conGoceId, anio, mes, excludeSolId),
+    countSolicitudesMesArticulo64(db, personaId, pair.sinGoceId, anio, mes, excludeSolId),
   ]);
 
   if (enA < topeMes) {
     return {
       ok: true,
-      articulo_id: ARTICULO_64A_ETAPA1_ID,
+      articulo_id: pair.conGoceId,
       version_id: null,
       modalidad: "con_goce",
       mensaje:
         enB >= topeMes
-          ? "Este mes ya tenés sin goce (64-B). Este pedido se tramita con goce de haberes (64-A)."
+          ? "Este mes ya tenés sin goce. Este pedido se tramita con goce de haberes."
           : null,
       en_mes_a: enA,
       en_mes_b: enB,
       redirigido: false,
+      con_goce_id: pair.conGoceId,
+      sin_goce_id: pair.sinGoceId,
     };
   }
 
   if (enB < topeMes) {
-    const versionB = await resolveVersionPublicadaId(db, ARTICULO_64B_ETAPA1_ID);
+    const versionB = await resolveVersionPublicadaId(db, pair.sinGoceId);
     if (!versionB) {
       return {
         ok: false,
         codigo: "VERSION_64B_NO_ENCONTRADA",
-        mensaje: "No hay versión publicada de 64-B para el pedido sin goce del mes.",
+        mensaje: "No hay versión publicada del artículo sin goce del par para este mes.",
         articulo_id: articuloId,
         version_id: null,
         modalidad: null,
         en_mes_a: enA,
         en_mes_b: enB,
         redirigido: false,
+        con_goce_id: pair.conGoceId,
+        sin_goce_id: pair.sinGoceId,
       };
     }
     return {
       ok: true,
-      articulo_id: ARTICULO_64B_ETAPA1_ID,
+      articulo_id: pair.sinGoceId,
       version_id: versionB,
       modalidad: "sin_goce",
       mensaje:
-        "Este mes ya tenés con goce (64-A). Este pedido se tramita como sin goce de haberes (64-B).",
+        "Este mes ya tenés con goce. Este pedido se tramita como sin goce de haberes.",
       en_mes_a: enA,
       en_mes_b: enB,
       redirigido: true,
+      con_goce_id: pair.conGoceId,
+      sin_goce_id: pair.sinGoceId,
     };
   }
 
@@ -180,63 +213,80 @@ async function resolverRutaFamilia64Alta(db, opts) {
     ok: false,
     codigo: "SALDO_MES",
     mensaje:
-      "Este mes ya usaste con goce (64-A) y sin goce (64-B). No podés pedir otro Art. 64 hasta el mes siguiente.",
+      "Este mes ya usaste con goce y sin goce del Art. 64. No podés pedir otro hasta el mes siguiente.",
     articulo_id: articuloId,
     version_id: null,
     modalidad: null,
     en_mes_a: enA,
     en_mes_b: enB,
     redirigido: false,
+    con_goce_id: pair.conGoceId,
+    sin_goce_id: pair.sinGoceId,
   };
 }
 
 /**
- * ¿Esta solicitud es el carril unificado 64 (entrada 64-A)?
+ * ¿Esta solicitud es el carril unificado familia 64?
  * @param {Record<string, unknown>} sol
+ * @param {Record<string, unknown> | null | undefined} [core]
  */
-function esSolicitudCarril64Unificado(sol) {
-  const art = String(sol?.articulo_id || "").trim();
-  if (art === ARTICULO_64A_ETAPA1_ID || art === ARTICULO_64B_ETAPA1_ID) return true;
-  const cod = String(sol?.codigo_grilla || "").trim().toUpperCase();
-  return cod === "64" || cod.startsWith("64");
+function esSolicitudCarril64Unificado(sol, core) {
+  return resolveFamilia64DesdeSolicitud(sol, core).enFamilia === true;
 }
 
 /**
- * En TX: si modalidad sin_goce y el pedido estaba en 64-A, mueve el débito a bolsa 64-B.
- * Lectura única del doc de saldos; un solo update con ambas bolsas.
+ * En TX: si modalidad sin_goce y el pedido estaba en con-goce, mueve el débito a bolsa sin-goce del par.
  *
  * @param {import("firebase-admin/firestore").Transaction} tx
  * @param {import("firebase-admin/firestore").Firestore} db
  * @param {Record<string, unknown>} cur
  * @param {string} titularId
- * @param {{ modalidad: string, version_64b_id: string|null }} opts
+ * @param {{ modalidad: string, version_64b_id: string|null, pair?: { conGoceId: string, sinGoceId: string } | null }} opts
  * @returns {Promise<{ ok: true, patch: Record<string, unknown> } | { ok: false, codigo: string, mensaje: string }>}
  */
 async function aplicarModalidad64EnTx(tx, db, cur, titularId, opts) {
   const modalidad = String(opts.modalidad || "").trim().toLowerCase();
-  const artActual = String(cur.articulo_id || "").trim();
+  const artActual = normalizeArtId(cur.articulo_id);
+
+  let pair = opts.pair || null;
+  if (!pair) {
+    const resolved = resolveFamilia64DesdeSolicitud(cur, null);
+    if (resolved.enFamilia && resolved.conGoceId && resolved.sinGoceId) {
+      pair = { conGoceId: resolved.conGoceId, sinGoceId: resolved.sinGoceId };
+    }
+  }
+  if (!pair && artActual) {
+    const asyncPair = await resolveFamilia64PairAsync(db, artActual, null);
+    if (asyncPair.enFamilia && asyncPair.conGoceId && asyncPair.sinGoceId) {
+      pair = { conGoceId: asyncPair.conGoceId, sinGoceId: asyncPair.sinGoceId };
+    }
+  }
 
   /** @type {Record<string, unknown>} */
   const patchBase = {};
   if (modalidad === "con_goce" || modalidad === "sin_goce") {
     patchBase.modalidad_goce_jefe = modalidad;
   }
+  if (pair) {
+    patchBase.articulo_familia_64 = true;
+    patchBase.articulo_id_con_goce = pair.conGoceId;
+    patchBase.articulo_id_sin_goce = pair.sinGoceId;
+  }
 
   if (modalidad !== "sin_goce") {
-    if (modalidad === "con_goce" && artActual === ARTICULO_64A_ETAPA1_ID) {
-      patchBase.codigo_grilla = "64-A";
+    if (modalidad === "con_goce" && pair && artActual === pair.conGoceId) {
+      patchBase.codigo_grilla = await codigoGrillaDesdeCore(db, pair.conGoceId);
     }
     return { ok: true, patch: patchBase };
   }
 
-  // Ya es 64-B (pedido legacy directo): solo snapshot de modalidad.
-  if (artActual === ARTICULO_64B_ETAPA1_ID) {
-    patchBase.codigo_grilla = "64-B";
+  // Ya es el art. sin goce del par: solo snapshot de modalidad.
+  if (pair && artActual === pair.sinGoceId) {
+    patchBase.codigo_grilla = await codigoGrillaDesdeCore(db, pair.sinGoceId);
     return { ok: true, patch: patchBase };
   }
 
-  // Pedido unificado / 64-A → cruzar a 64-B.
-  if (artActual !== ARTICULO_64A_ETAPA1_ID && !esSolicitudCarril64Unificado(cur)) {
+  if (!pair || (artActual !== pair.conGoceId && !esSolicitudCarril64Unificado(cur))) {
     return { ok: true, patch: patchBase };
   }
 
@@ -245,7 +295,7 @@ async function aplicarModalidad64EnTx(tx, db, cur, titularId, opts) {
     return {
       ok: false,
       codigo: "VERSION_64B_NO_ENCONTRADA",
-      mensaje: "No hay versión publicada de 64-B para autorizar sin goce.",
+      mensaje: "No hay versión publicada del artículo sin goce para autorizar sin goce.",
     };
   }
 
@@ -255,7 +305,7 @@ async function aplicarModalidad64EnTx(tx, db, cur, titularId, opts) {
     return {
       ok: false,
       codigo: "MOTOR_64_INCOMPLETO",
-      mensaje: "La solicitud no tiene datos de consumo de saldo para cruzar a 64-B.",
+      mensaje: "La solicitud no tiene datos de consumo de saldo para cruzar a sin goce.",
     };
   }
 
@@ -274,20 +324,20 @@ async function aplicarModalidad64EnTx(tx, db, cur, titularId, opts) {
     return {
       ok: false,
       codigo: "SALDO_64B",
-      mensaje: "No hay documento de saldo del ciclo para descontar 64-B.",
+      mensaje: "No hay documento de saldo del ciclo para descontar el artículo sin goce.",
     };
   }
 
   const salData = salSnap.data() || {};
   const bolsas = salData.bolsas && typeof salData.bolsas === "object" ? salData.bolsas : {};
   const bolsaAId = String(cur.motor_bolsa_id || "").trim();
-  const matchB = pickBolsaParaConsumo(salData, ARTICULO_64B_ETAPA1_ID, anio);
+  const matchB = pickBolsaParaConsumo(salData, pair.sinGoceId, anio);
   if (!matchB) {
     return {
       ok: false,
       codigo: "SALDO_64B",
       mensaje:
-        "No hay bolsa de 64-B (sin goce) en el ciclo. Regularizá el check-in de saldos del agente.",
+        "No hay bolsa sin goce del par en el ciclo. Regularizá el check-in de saldos del agente.",
     };
   }
 
@@ -297,7 +347,7 @@ async function aplicarModalidad64EnTx(tx, db, cur, titularId, opts) {
     return {
       ok: false,
       codigo: "SALDO_64B_INSUFICIENTE",
-      mensaje: `Saldo insuficiente en 64-B (disponible ${Number.isFinite(dispB) ? dispB : 0}, se necesitan ${dias}).`,
+      mensaje: `Saldo insuficiente en sin goce (disponible ${Number.isFinite(dispB) ? dispB : 0}, se necesitan ${dias}).`,
     };
   }
 
@@ -314,7 +364,7 @@ async function aplicarModalidad64EnTx(tx, db, cur, titularId, opts) {
       return {
         ok: false,
         codigo: "SALDO_64A_CORRUPTO",
-        mensaje: "La bolsa 64-A del trámite no tiene saldos numéricos válidos.",
+        mensaje: "La bolsa con goce del trámite no tiene saldos numéricos válidos.",
       };
     }
     salPatch[`bolsas.${bolsaAId}.disponible`] = dispA + dias;
@@ -328,14 +378,16 @@ async function aplicarModalidad64EnTx(tx, db, cur, titularId, opts) {
 
   tx.update(salRef, salPatch);
 
+  const codigoSin = await codigoGrillaDesdeCore(db, pair.sinGoceId);
+
   return {
     ok: true,
     patch: {
       ...patchBase,
-      articulo_id: ARTICULO_64B_ETAPA1_ID,
-      articulo_id_origen: artActual || ARTICULO_64A_ETAPA1_ID,
+      articulo_id: pair.sinGoceId,
+      articulo_id_origen: artActual || pair.conGoceId,
       version_id_aplicada: version64b,
-      codigo_grilla: "64-B",
+      codigo_grilla: codigoSin,
       motor_bolsa_id: matchB.bolsaId,
       motor_descuento_aplicado: true,
       motor_dias_descontados: dias,
@@ -345,14 +397,14 @@ async function aplicarModalidad64EnTx(tx, db, cur, titularId, opts) {
           bolsa_id: matchB.bolsaId,
           anio_origen: anio,
           dias,
-          articulo_id: ARTICULO_64B_ETAPA1_ID,
+          articulo_id: pair.sinGoceId,
         },
       ],
       cruce_modalidad_64: {
         de: "con_goce",
         a: "sin_goce",
-        articulo_origen_id: artActual || ARTICULO_64A_ETAPA1_ID,
-        articulo_destino_id: ARTICULO_64B_ETAPA1_ID,
+        articulo_origen_id: artActual || pair.conGoceId,
+        articulo_destino_id: pair.sinGoceId,
         bolsa_origen_id: bolsaAId || null,
         bolsa_destino_id: matchB.bolsaId,
         dias,
@@ -364,10 +416,13 @@ async function aplicarModalidad64EnTx(tx, db, cur, titularId, opts) {
 module.exports = {
   ARTICULO_64A_ETAPA1_ID,
   ARTICULO_64B_ETAPA1_ID,
-  ESTADOS_CUENTAN_FRECUENCIA_MES_64,
+  ESTADOS_CUENTAN_FRECUENCIA_MES_64: ESTADOS_CUENTAN_FRECUENCIA_MES_64_SET,
   resolveVersionPublicadaId,
   countSolicitudesMesArticulo64,
   resolverRutaFamilia64Alta,
   esSolicitudCarril64Unificado,
   aplicarModalidad64EnTx,
+  resolveFamilia64Pair,
+  resolveFamilia64DesdeSolicitud,
+  resolveFamilia64PairAsync,
 };

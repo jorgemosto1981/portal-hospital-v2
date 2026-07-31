@@ -26,9 +26,10 @@ const {
 } = require("./opcionesConsumoSolicitud");
 const { modoResolucionJefeDesdeVersion } = require("./modoResolucionJefe");
 const {
-  ARTICULO_64A_ETAPA1_ID,
-  ARTICULO_64B_ETAPA1_ID,
-} = require("./etapa1RuntimeConfig");
+  esIngresoFamilia64Oculto,
+  esIngresoFamilia64ConGoce,
+  resolveFamilia64Pair,
+} = require("./familia64Config");
 
 const CFG_EST_VER_PUBLICADA = "cfg_est_ver_publicada";
 
@@ -178,9 +179,9 @@ async function listarArticulosIngresoPatronB(params) {
 
   for (const cand of candidatos) {
     const { articuloId, core, versionData, versionId, patron } = cand;
-    // Simulación unificada Art. 64: el agente ve un solo chip (64-A);
-    // el jefe define 64-A con goce vs 64-B sin goce. 64-B no es ingresable.
-    if (String(articuloId || "").trim() === ARTICULO_64B_ETAPA1_ID) {
+    // Familia 64: el agente solo ve el art. con goce del par (cfg familia_64_par_articulo_id).
+    // El jefe elige con/sin goce; el sin goce no es ingresable.
+    if (esIngresoFamilia64Oculto(core, articuloId)) {
       continue;
     }
     const eleg = resolverElegibilidadSolicitud({
@@ -211,22 +212,37 @@ async function listarArticulosIngresoPatronB(params) {
       fechaHasta = await fechaHastaDesdeVersionPatronBAsync(db, fechaDesde, diasSolicitados, versionData);
     }
 
-    const es64Unificado = String(articuloId || "").trim() === ARTICULO_64A_ETAPA1_ID;
+    const pair64 = resolveFamilia64Pair(articuloId, core);
+    const es64Unificado = esIngresoFamilia64ConGoce(core, articuloId);
     const codigoGrillaRaw = String(core.codigo || core.nombre_corto || "").trim() || "ART";
     const nombreRaw = String(core.nombre || core.codigo || "").trim();
+    const visCodigo = String(
+      versionData?.bloque_identidad_naturaleza?.visualizacion?.codigo_grilla || "",
+    ).trim();
+    // Par ADMIN: chip unificado "64" / "ASUNTOS PARTICULARES".
+    // Par ½ carga (u otro): respeta código/nombre de cfg (distinguible en hub).
+    const esMediaCarga = /1\s*\/\s*2|media.?carga|½/i.test(`${codigoGrillaRaw} ${nombreRaw}`);
+    const codigoChip = es64Unificado
+      ? visCodigo || (esMediaCarga ? codigoGrillaRaw : "64")
+      : codigoGrillaRaw;
+    const nombreChip = es64Unificado
+      ? esMediaCarga
+        ? nombreRaw
+        : "ASUNTOS PARTICULARES"
+      : nombreRaw;
 
     const row = {
       articulo_id: articuloId,
       version_id: versionId,
-      codigo_grilla: es64Unificado ? "64" : codigoGrillaRaw,
-      nombre: es64Unificado ? "ASUNTOS PARTICULARES" : nombreRaw,
+      codigo_grilla: codigoChip,
+      nombre: nombreChip,
       modo_resolucion_jefe: modoResolucionJefeDesdeVersion(versionData),
       patron_saldo: patron || PATRON_SALDO_B,
-      ...(es64Unificado
+      ...(es64Unificado && pair64.conGoceId && pair64.sinGoceId
         ? {
             articulo_familia_64: true,
-            articulo_id_con_goce: ARTICULO_64A_ETAPA1_ID,
-            articulo_id_sin_goce: ARTICULO_64B_ETAPA1_ID,
+            articulo_id_con_goce: pair64.conGoceId,
+            articulo_id_sin_goce: pair64.sinGoceId,
           }
         : {}),
       requiere_opcion_consumo: requiereOpcion,

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import BandejaSolicitudExpandDatos from "./BandejaSolicitudExpandDatos.jsx";
+import Familia64SaldoJefe from "./Familia64SaldoJefe.jsx";
+import useSaldoFamilia64Jefe from "./useSaldoFamilia64Jefe.js";
 import { ARTICULO_64B_ID } from "../../constants/solicitudesArticuloV2.js";
 
 const MODO_TC = "toma_conocimiento";
@@ -11,12 +13,12 @@ function esSinGoceAnclado(sel) {
   if (!sel) return false;
   const art = String(sel.articulo_id || "").trim();
   const sin = String(sel.articulo_id_sin_goce || "").trim();
-  const cod = String(sel.codigo_grilla || "").trim().toUpperCase();
-  if (sin && art === sin) return true;
+  // Con el par resuelto por configuración la comparación es exacta.
+  if (sin) return art === sin;
+  // Legacy: ítems sin el par en el listado.
   if (art === ARTICULO_64B_ID) return true;
-  if (cod === "64-B" || (cod.startsWith("64-B") && cod.includes("1/2"))) return true;
-  if (cod.includes("SIN GOCE")) return true;
-  return false;
+  const cod = String(sel.codigo_grilla || "").trim().toUpperCase();
+  return cod.startsWith("64-B") || cod.includes("SIN GOCE");
 }
 
 /**
@@ -43,6 +45,18 @@ export default function BandejaJefeSolicitudDetalle({ sel, motivo, setMotivo, pr
   const [confirmaSinGoce, setConfirmaSinGoce] = useState(false);
 
   const solKey = String(sel?.solicitud_id || sel?.id || "");
+  const modo = String(sel?.modo_resolucion_jefe || "autorizacion").trim();
+  const esFamilia64 = sel?.articulo_familia_64 === true;
+  const {
+    resumen: saldo64,
+    cargando: saldoCargando,
+    error: saldoError,
+    pedido: saldoPedido,
+    cargar: cargarSaldo64,
+  } = useSaldoFamilia64Jefe(
+    solKey,
+    esFamilia64 && modo !== MODO_TC && sel?.puede_decidir === true,
+  );
 
   useEffect(() => {
     // Pedido ya anclado a sin goce del par: default sin goce.
@@ -59,21 +73,30 @@ export default function BandejaJefeSolicitudDetalle({ sel, motivo, setMotivo, pr
 
   if (!sel) return null;
 
-  const modo = String(sel.modo_resolucion_jefe || "autorizacion").trim();
   const esTc = modo === MODO_TC;
-  const codigo = String(sel.codigo_grilla || "").trim().toUpperCase();
-  const pideModalidad64 =
-    !esTc &&
-    (sel.articulo_familia_64 === true ||
-      Boolean(sel.articulo_id_con_goce && sel.articulo_id_sin_goce) ||
-      codigo === "64-A" ||
-      codigo === "64-B" ||
-      codigo.startsWith("64"));
+  const pideModalidad64 = !esTc && esFamilia64;
   /** Pedido ya anclado a sin goce: modalidad fija (no se puede pasar a con goce). */
   const modalidadFijaSinGoce = pideModalidad64 && esSinGoceAnclado(sel);
   const modalidadEfectiva = modalidadFijaSinGoce ? "sin_goce" : modalidadGoce;
   const esSinGoce = pideModalidad64 && modalidadEfectiva === "sin_goce";
   const faltaModalidad64 = pideModalidad64 && !modalidadEfectiva;
+
+  const codConGoce = String(sel.articulo_codigo_con_goce || "").trim();
+  const codSinGoce = String(sel.articulo_codigo_sin_goce || "").trim();
+  const opcionConGoce = codConGoce ? `Art. ${codConGoce} con goce de haberes` : "Con goce de haberes";
+  const opcionSinGoce = codSinGoce ? `Art. ${codSinGoce} sin goce de haberes` : "Sin goce de haberes";
+
+  /**
+   * El saldo sin goce solo se debita cuando hay cruce real con goce → sin goce.
+   * Si el trámite ya nació sin goce, el débito ocurrió en el alta y no se revalida.
+   */
+  const esCruceASinGoce = pideModalidad64 && !modalidadFijaSinGoce && modalidadEfectiva === "sin_goce";
+  const diasNecesarios = Number(saldo64?.dias_solicitados) || Number(sel.dias_solicitados) || 1;
+  const sinGoceDisponible = saldo64 ? saldo64.sin_goce_disponible : undefined;
+  const sinGoceInsuficiente =
+    esCruceASinGoce &&
+    saldo64 != null &&
+    (sinGoceDisponible == null || Number(sinGoceDisponible) < diasNecesarios);
   const motivoTrim = String(motivo || "").trim();
   const motivoOk = motivoTrim.length >= 3;
   /** El motivo solo se pide donde es obligatorio: TC, 64-B sin goce y rechazo. */
@@ -96,10 +119,12 @@ export default function BandejaJefeSolicitudDetalle({ sel, motivo, setMotivo, pr
     setConfirmSinGoce(false);
     setConfirmaSinGoce(false);
     if (next !== "sin_goce" && !esTc && !confirmRechazo) setMotivo("");
+    // Pasar a sin goce debita otra bolsa: traemos el saldo aunque no lo hayan pedido.
+    if (next === "sin_goce" && !saldoPedido) cargarSaldo64();
   }
 
   function onClickAprobar() {
-    if (faltaModalidad64) return;
+    if (faltaModalidad64 || sinGoceInsuficiente) return;
     if (esSinGoce) {
       if (!motivoOk) return;
       setConfirmaSinGoce(false);
@@ -143,18 +168,31 @@ export default function BandejaJefeSolicitudDetalle({ sel, motivo, setMotivo, pr
                 {!modalidadFijaSinGoce ? (
                   <>
                     <option value="">Seleccione modalidad del Artículo 64</option>
-                    <option value="con_goce">Art. 64-A con goce de haberes</option>
+                    <option value="con_goce">{opcionConGoce}</option>
                   </>
                 ) : null}
-                <option value="sin_goce">Art. 64-B sin goce de haberes</option>
+                <option value="sin_goce">{opcionSinGoce}</option>
               </select>
               {modalidadFijaSinGoce ? (
                 <span className="block text-xs text-slate-500">
-                  Este pedido ya está anclado a sin goce (64-B): el cupo con goce del mes está
-                  usado. No se puede cambiar a 64-A.
+                  Este pedido ya está anclado a sin goce{codSinGoce ? ` (${codSinGoce})` : ""}: el
+                  cupo con goce del mes está usado. No se puede cambiar
+                  {codConGoce ? ` a ${codConGoce}` : " a con goce"}.
                 </span>
               ) : null}
             </label>
+          ) : null}
+          {pideModalidad64 ? (
+            <Familia64SaldoJefe
+              resumen={saldo64}
+              pedido={saldoPedido}
+              cargando={saldoCargando}
+              error={saldoError}
+              onVerSaldo={cargarSaldo64}
+              codigoConGoce={codConGoce}
+              codigoSinGoce={codSinGoce}
+              sinGoceInsuficiente={sinGoceInsuficiente}
+            />
           ) : null}
           {mostrarMotivo ? (
             <label className="block space-y-1.5">
@@ -215,7 +253,9 @@ export default function BandejaJefeSolicitudDetalle({ sel, motivo, setMotivo, pr
               <>
                 <button
                   type="button"
-                  disabled={procesando || faltaModalidad64 || (esSinGoce && !motivoOk)}
+                  disabled={
+                    procesando || faltaModalidad64 || sinGoceInsuficiente || (esSinGoce && !motivoOk)
+                  }
                   onClick={onClickAprobar}
                   className="min-h-11 flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold uppercase tracking-wide text-white shadow-sm active:bg-emerald-700 disabled:opacity-50"
                 >
@@ -244,7 +284,7 @@ export default function BandejaJefeSolicitudDetalle({ sel, motivo, setMotivo, pr
               aria-labelledby="confirm-64b-title"
             >
               <p id="confirm-64b-title" className="text-sm font-semibold text-amber-950">
-                Confirmá autorización sin goce (64-B)
+                Confirmá autorización sin goce{codSinGoce ? ` (${codSinGoce})` : ""}
               </p>
               <p className="text-sm leading-relaxed text-slate-700">
                 Vas a autorizar asuntos particulares <strong>sin goce de haberes</strong>. El agente
@@ -261,7 +301,8 @@ export default function BandejaJefeSolicitudDetalle({ sel, motivo, setMotivo, pr
                   className="mt-1 h-5 w-5 shrink-0 rounded border-slate-300 text-amber-700 focus:ring-amber-200"
                 />
                 <span className="text-sm text-slate-800">
-                  Confirmo que autorizo sin goce de haberes (64-B) y el justificativo es correcto.
+                  Confirmo que autorizo sin goce de haberes{codSinGoce ? ` (${codSinGoce})` : ""} y el
+                  justificativo es correcto.
                 </span>
               </label>
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -275,7 +316,7 @@ export default function BandejaJefeSolicitudDetalle({ sel, motivo, setMotivo, pr
                 </button>
                 <button
                   type="button"
-                  disabled={procesando || !confirmaSinGoce || !motivoOk}
+                  disabled={procesando || !confirmaSinGoce || !motivoOk || sinGoceInsuficiente}
                   onClick={() => {
                     onDecidir("aprobar", {
                       modalidad_goce_jefe: "sin_goce",
@@ -285,7 +326,7 @@ export default function BandejaJefeSolicitudDetalle({ sel, motivo, setMotivo, pr
                   }}
                   className="min-h-11 flex-1 rounded-xl bg-amber-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm active:bg-amber-800 disabled:opacity-50"
                 >
-                  Confirmar 64-B sin goce
+                  Confirmar sin goce{codSinGoce ? ` ${codSinGoce}` : ""}
                 </button>
               </div>
             </div>
@@ -341,7 +382,9 @@ export default function BandejaJefeSolicitudDetalle({ sel, motivo, setMotivo, pr
           <p className="text-xs leading-relaxed text-slate-500">
             {esTc
               ? "Art. 63: el derecho nace de la causal legal. Conforme cierra el trámite; Observado exige motivo (auditoría) y deja el trámite observado para remediar (doc/causal) — no genera Art. 77-0."
-              : "Al aprobar elegí la modalidad: Art. 64-A con goce de haberes o Art. 64-B sin goce de haberes (justificativo + doble confirmación). Al rechazar se injustifica la inasistencia."}
+              : pideModalidad64
+                ? `Al aprobar elegí la modalidad: ${opcionConGoce} o ${opcionSinGoce} (justificativo + doble confirmación). Al rechazar se injustifica la inasistencia.`
+                : "Al rechazar se injustifica la inasistencia."}
           </p>
         </>
       ) : (

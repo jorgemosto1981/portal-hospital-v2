@@ -103,6 +103,7 @@ export const LABELS = Object.freeze({
   permite_retroactividad: "Permite carga retroactiva (DDJJ)",
   requiere_toma_conocimiento_superior: "Requiere toma de conocimiento del superior",
   modo_resolucion_jefe: "Modo de resolución del jefe inmediato",
+  familia_64_par_articulo_id: "Par familia 64 (artículo con/sin goce)",
   niveles_burbujeo: "Niveles de burbujeo",
 
   // --- Documentación (Bloque 7) ---

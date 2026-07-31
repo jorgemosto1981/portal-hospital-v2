@@ -17,9 +17,8 @@ const {
   validarFechasMotivoCambioDia,
 } = require("../../modules/shared/cambioDiaSolicitudCore");
 const {
-  ARTICULO_64A_ETAPA1_ID,
-  ARTICULO_64B_ETAPA1_ID,
-} = require("../../modules/shared/etapa1RuntimeConfig");
+  resolveFamilia64PairAsync,
+} = require("../../modules/shared/familia64Config");
 const { saldoAnualDocId, pickBolsaParaConsumo } = require("../../modules/shared/laoSaldosBolsa");
 
 const previsualizarSolicitudPatronB = onCall(async (request) => {
@@ -187,21 +186,24 @@ const previsualizarSolicitudPatronB = onCall(async (request) => {
     typeof d.causal_larga_duracion_id === "string" ? d.causal_larga_duracion_id.trim() : null;
 
   // Carril 64 unificado: el jefe define con/sin goce al autorizar, así que
-  // el preview informa ambas bolsas (son distintas) sin proyectar consumo.
+  // el preview informa ambas bolsas del par cfg sin proyectar consumo.
   let saldo_familia_64 = null;
-  if (articuloId === ARTICULO_64A_ETAPA1_ID && !sinBolsaCiclo) {
+  const pairPreview = await resolveFamilia64PairAsync(db, articuloId, null);
+  if (pairPreview.enFamilia && !pairPreview.esSinGoce && pairPreview.conGoceId && pairPreview.sinGoceId && !sinBolsaCiclo) {
     const anioCiclo = Number(motor.anio_ciclo_consumo) || pDesde.y;
     const salId = saldoAnualDocId(personaId, anioCiclo);
     if (salId) {
       const salSnap = await db.collection("saldos_articulo_agente").doc(salId).get();
       const salData = salSnap.exists ? salSnap.data() || {} : {};
-      const bA = pickBolsaParaConsumo(salData, ARTICULO_64A_ETAPA1_ID, anioCiclo);
-      const bB = pickBolsaParaConsumo(salData, ARTICULO_64B_ETAPA1_ID, anioCiclo);
+      const bA = pickBolsaParaConsumo(salData, pairPreview.conGoceId, anioCiclo);
+      const bB = pickBolsaParaConsumo(salData, pairPreview.sinGoceId, anioCiclo);
       saldo_familia_64 = {
         anio_ciclo_consumo: anioCiclo,
         dias_consumo: motor.dias_consumo ?? diasSolicitados,
         con_goce_disponible: bA ? Number(bA.bolsa.disponible) : null,
         sin_goce_disponible: bB ? Number(bB.bolsa.disponible) : null,
+        articulo_id_con_goce: pairPreview.conGoceId,
+        articulo_id_sin_goce: pairPreview.sinGoceId,
       };
     }
   }

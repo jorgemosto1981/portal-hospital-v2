@@ -53,6 +53,15 @@ export function filaArticuloIngresoDesdeCallable(art) {
       if (m === "toma_conocimiento" || m === "ninguno" || m === "autorizacion") return m;
       return "autorizacion";
     })(),
+    articulo_familia_64: art?.articulo_familia_64 === true,
+    articulo_id_con_goce: (() => {
+      const id = String(art?.articulo_id_con_goce || "").trim();
+      return /^art_/i.test(id) ? id : null;
+    })(),
+    articulo_id_sin_goce: (() => {
+      const id = String(art?.articulo_id_sin_goce || "").trim();
+      return /^art_/i.test(id) ? id : null;
+    })(),
   };
 }
 

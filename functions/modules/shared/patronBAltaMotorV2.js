@@ -45,8 +45,8 @@ const {
   fechaHastaDesdeVersionPatronBAsync,
 } = require("./patronBFechasSolicitud");
 const {
-  ARTICULO_64A_ETAPA1_ID,
   resolverRutaFamilia64Alta,
+  resolveFamilia64PairAsync,
 } = require("./solicitudPatronBCruceModalidad64");
 
 const MOTOR_VERSION_B = "patron-b-v2";
@@ -379,7 +379,8 @@ async function runPatronBAltaMotorV2(params) {
 
   /** @type {Record<string, unknown> | null} */
   let familia64Ruta = null;
-  if (articuloId === ARTICULO_64A_ETAPA1_ID) {
+  const pairAlta = await resolveFamilia64PairAsync(db, articuloId, null);
+  if (pairAlta.enFamilia && !pairAlta.esSinGoce && pairAlta.conGoceId === articuloId) {
     let topeMesFamilia = Number(versionData?.bloque_topes_plazos_computo?.tope_frecuencia_mensual);
     if (!Number.isFinite(topeMesFamilia) || topeMesFamilia <= 0) {
       try {
@@ -402,6 +403,8 @@ async function runPatronBAltaMotorV2(params) {
       en_mes_b: ruta.en_mes_b,
       redirigido: ruta.redirigido === true,
       articulo_id_efectivo: ruta.articulo_id,
+      con_goce_id: ruta.con_goce_id || pairAlta.conGoceId,
+      sin_goce_id: ruta.sin_goce_id || pairAlta.sinGoceId,
     };
     if (!ruta.ok) {
       return buildRejection(
@@ -423,7 +426,7 @@ async function runPatronBAltaMotorV2(params) {
       if (!verSnap.exists) {
         return buildRejection(
           ["VERSION_64B_NO_ENCONTRADA"],
-          ["No se pudo cargar la versión de 64-B para el pedido sin goce."],
+          ["No se pudo cargar la versión sin goce del par para este pedido."],
           versionData,
           versionId,
         );

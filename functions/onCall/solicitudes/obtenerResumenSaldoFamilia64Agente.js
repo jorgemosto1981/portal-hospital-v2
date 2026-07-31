@@ -22,8 +22,12 @@ const obtenerResumenSaldoFamilia64AgenteCallable = onCall(async (request) => {
   const anioRaw = Number(d.anio_ciclo);
   const anio =
     Number.isInteger(anioRaw) && anioRaw >= 1900 && anioRaw <= 2200 ? anioRaw : undefined;
+  const articuloId =
+    typeof d.articulo_id === "string" && /^art_/i.test(d.articulo_id.trim())
+      ? d.articulo_id.trim()
+      : undefined;
 
-  const result = await obtenerResumenSaldoFamilia64Agente(db, personaId, anio);
+  const result = await obtenerResumenSaldoFamilia64Agente(db, personaId, anio, articuloId);
   if (!result.ok) {
     throw new HttpsError("invalid-argument", result.mensaje || "No se pudo obtener el resumen.");
   }

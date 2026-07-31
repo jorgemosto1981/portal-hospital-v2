@@ -218,6 +218,7 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
     const diasConsumo = motor.dias_consumo;
     const sinDescuentoBolsaCiclo =
       motor.sin_descuento_bolsa_ciclo === true || esArticuloPatronBSinCupoAnualCiclo(versionData);
+    const ruta64 = motor.familia_64_ruta && typeof motor.familia_64_ruta === "object" ? motor.familia_64_ruta : null;
     const motorOkPayload = {
       estado_solicitud_id: ESTADO_SOLICITUD_EN_REVISION_JEFE,
       hlc_id_elegibilidad: motor.hlc_id || null,
@@ -226,6 +227,16 @@ const onSolicitudArticuloPatronBOnCreate = onDocumentCreated(
       actualizado_en: FieldValue.serverTimestamp(),
       motor_descuento_aplicado: false,
     };
+    // Si el motor redirigió el par (con goce → sin goce del mes), persistir art efectivo.
+    if (motor.articulo_id && String(motor.articulo_id).trim() !== articuloId) {
+      motorOkPayload.articulo_id = String(motor.articulo_id).trim();
+      if (motor.version_id) motorOkPayload.version_id_aplicada = String(motor.version_id).trim();
+    }
+    if (ruta64?.con_goce_id && ruta64?.sin_goce_id) {
+      motorOkPayload.articulo_familia_64 = true;
+      motorOkPayload.articulo_id_con_goce = String(ruta64.con_goce_id).trim();
+      motorOkPayload.articulo_id_sin_goce = String(ruta64.sin_goce_id).trim();
+    }
     if (motor.fecha_hasta && String(motor.fecha_hasta).slice(0, 10) >= String(d.fecha_desde || "").slice(0, 10)) {
       motorOkPayload.fecha_hasta = String(motor.fecha_hasta).slice(0, 10);
     }

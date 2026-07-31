@@ -31,17 +31,16 @@ const { modoResolucionJefeDesdeSolicitud } = require("./modoResolucionJefe");
 const { etiquetaGrupoTrabajo } = require("./solicitudGrupoTrabajoAncla");
 const { crearCacheAutorizacion } = require("./solicitudAutorizacionCache");
 const { asyncMapLimite } = require("./asyncMapLimite");
+const { normalizeArtId } = require("./familia64Config");
 const {
   debeMaterializar770AlRechazar,
   materializarSol770DesdeRechazo,
 } = require("./solicitudArt770DerivacionCore");
 const {
-  ARTICULO_64B_ETAPA1_ID,
   resolveVersionPublicadaId,
-  esSolicitudCarril64Unificado,
   aplicarModalidad64EnTx,
   countSolicitudesMesArticulo64,
-  ARTICULO_64A_ETAPA1_ID,
+  resolveFamilia64PairAsync,
 } = require("./solicitudPatronBCruceModalidad64");
 const { logger } = require("firebase-functions");
 
@@ -156,6 +155,43 @@ async function loadGrupoAnclaLabel(db, gdtId, cache) {
 }
 
 /**
+ * Par familia 64 del trámite, para que el jefe elija modalidad sobre los artículos
+ * que realmente le corresponden al solicitante (ADMIN vs ½ carga, etc.).
+ *
+ * Prioriza el snapshot que deja el alta; solo si falta (trámites anteriores al
+ * snapshot) resuelve contra cfg. No se usa la heurística por `codigo_grilla`,
+ * que devuelve el par canónico Etapa1 y erraría en los pares de ½ carga.
+ *
+ * @param {import("firebase-admin/firestore").Firestore} db
+ * @param {Record<string, unknown>} sol
+ * @param {Map} articuloCache
+ */
+async function loadFamilia64Bandeja(db, sol, articuloCache) {
+  const conSnap = normalizeArtId(sol.articulo_id_con_goce);
+  const sinSnap = normalizeArtId(sol.articulo_id_sin_goce);
+
+  let conGoceId = null;
+  let sinGoceId = null;
+  if (sol.articulo_familia_64 === true && conSnap && sinSnap) {
+    conGoceId = conSnap;
+    sinGoceId = sinSnap;
+  } else {
+    const artId = normalizeArtId(sol.articulo_id);
+    if (!artId) return null;
+    const pair = await resolveFamilia64PairAsync(db, artId, null);
+    if (!pair.enFamilia || !pair.conGoceId || !pair.sinGoceId) return null;
+    conGoceId = pair.conGoceId;
+    sinGoceId = pair.sinGoceId;
+  }
+
+  const [con, sin] = await Promise.all([
+    loadArticuloDisplay(db, conGoceId, articuloCache),
+    loadArticuloDisplay(db, sinGoceId, articuloCache),
+  ]);
+  return { conGoceId, sinGoceId, con, sin };
+}
+
+/**
  * @param {string} usuario
  * @param {{ label: string, dni: string }} personaRow
  */
@@ -185,6 +221,7 @@ async function itemListaBandejaJefe(db, sol, personaCache, articuloCache, meta, 
   const artDisplay = await loadArticuloDisplay(db, artId, articuloCache);
   const anclaId = String(sol.grupo_trabajo_id_ancla || "").trim();
   const anclaLabel = await loadGrupoAnclaLabel(db, anclaId, grupoCache || new Map());
+  const fam = await loadFamilia64Bandeja(db, sol, articuloCache);
   return {
     solicitud_id: String(sol.id || ""),
     articulo_id: artId,
@@ -209,6 +246,13 @@ async function itemListaBandejaJefe(db, sol, personaCache, articuloCache, meta, 
     etiqueta_estado: meta.etiqueta_estado,
     modo_resolucion_jefe: modoResolucionJefeDesdeSolicitud(sol, artDisplay.codigo_grilla),
     modalidad_goce_jefe: sol.modalidad_goce_jefe != null ? String(sol.modalidad_goce_jefe) : null,
+    articulo_familia_64: fam != null,
+    articulo_id_con_goce: fam ? fam.conGoceId : null,
+    articulo_id_sin_goce: fam ? fam.sinGoceId : null,
+    articulo_codigo_con_goce: fam ? fam.con.codigo_grilla : null,
+    articulo_codigo_sin_goce: fam ? fam.sin.codigo_grilla : null,
+    articulo_nombre_con_goce: fam ? fam.con.nombre : null,
+    articulo_nombre_sin_goce: fam ? fam.sin.nombre : null,
   };
 }
 
@@ -423,23 +467,25 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
   if (decision === "aprobar") {
     const modalidadRaw = String(opts.modalidad_goce_jefe || "").trim().toLowerCase();
     const artSol = String(sol.articulo_id || "").trim();
+    const pairSol = await resolveFamilia64PairAsync(db, artSol, null);
+    const enFamilia64 = pairSol.enFamilia === true;
     const modalidad =
       modalidadRaw === "sin_goce" || modalidadRaw === "con_goce"
         ? modalidadRaw
-        : artSol === ARTICULO_64B_ETAPA1_ID
+        : enFamilia64 && artSol === pairSol.sinGoceId
           ? "sin_goce"
-          : esSolicitudCarril64Unificado(sol)
+          : enFamilia64
             ? "con_goce"
             : "";
     const motivoTrim = String(motivo || "").trim();
 
-    // Pedido ya anclado a 64-B: no permitir cambiar a con goce.
-    if (artSol === ARTICULO_64B_ETAPA1_ID && modalidad === "con_goce") {
+    // Pedido ya anclado a sin goce del par: no permitir cambiar a con goce.
+    if (enFamilia64 && artSol === pairSol.sinGoceId && modalidad === "con_goce") {
       return {
         ok: false,
         codigo: "MODALIDAD_FIJA_SIN_GOCE",
         mensaje:
-          "Este trámite ya está anclado a sin goce (64-B). No se puede autorizar como 64-A con goce.",
+          "Este trámite ya está anclado a sin goce. No se puede autorizar como con goce.",
       };
     }
     if (modalidad === "sin_goce") {
@@ -448,7 +494,7 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
           ok: false,
           codigo: "MOTIVO_SIN_GOCE_REQUERIDO",
           mensaje:
-            "Para autorizar sin goce de haberes (64-B) el justificativo es obligatorio (mín. 3 caracteres).",
+            "Para autorizar sin goce de haberes el justificativo es obligatorio (mín. 3 caracteres).",
         };
       }
       if (opts.confirma_sin_goce !== true) {
@@ -456,21 +502,20 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
           ok: false,
           codigo: "CONFIRMA_SIN_GOCE_REQUERIDA",
           mensaje:
-            "Para autorizar sin goce de haberes (64-B) debés confirmar explícitamente la modalidad.",
+            "Para autorizar sin goce de haberes debés confirmar explícitamente la modalidad.",
         };
       }
     }
 
-    // Cupo 1/mes por modalidad: al cruzar A→B o al fijar modalidad, validar el destino.
-    if (esSolicitudCarril64Unificado(sol) && (modalidad === "sin_goce" || modalidad === "con_goce")) {
+    // Cupo 1/mes por modalidad: al cruzar o al fijar modalidad, validar el destino (tope desde cfg del art destino).
+    if (enFamilia64 && (modalidad === "sin_goce" || modalidad === "con_goce") && pairSol.conGoceId && pairSol.sinGoceId) {
       const fd = String(sol.fecha_desde || "").slice(0, 10);
       const ym = /^(\d{4})-(\d{2})-/.exec(fd);
       if (ym) {
         const anio = Number(ym[1]);
         const mes = Number(ym[2]);
         const destinoArt =
-          modalidad === "sin_goce" ? ARTICULO_64B_ETAPA1_ID : ARTICULO_64A_ETAPA1_ID;
-        // Si ya está en el art destino, no cuenta doble (exclude this sol).
+          modalidad === "sin_goce" ? pairSol.sinGoceId : pairSol.conGoceId;
         const enDestino = await countSolicitudesMesArticulo64(
           db,
           titularId,
@@ -479,27 +524,44 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
           mes,
           solId,
         );
-        if (enDestino >= 1) {
+        // tope_frecuencia_mensual se lee de la versión del art de alta; default 1 (cfg).
+        let topeMes = 1;
+        try {
+          const verIdAlta = String(sol.version_id_aplicada || "").trim();
+          if (verIdAlta) {
+            const verSnap = await db
+              .collection("cfg_articulos")
+              .doc(artSol)
+              .collection("versiones")
+              .doc(verIdAlta)
+              .get();
+            const t = Number(verSnap.data()?.bloque_topes_plazos_computo?.tope_frecuencia_mensual);
+            if (Number.isFinite(t) && t > 0) topeMes = Math.floor(t);
+          }
+        } catch {
+          /* keep 1 */
+        }
+        if (enDestino >= topeMes) {
           return {
             ok: false,
             codigo: "SALDO_MES",
             mensaje:
               modalidad === "sin_goce"
-                ? "Este mes ya hay un trámite 64-B (sin goce). No podés autorizar otro sin goce."
-                : "Este mes ya hay un trámite 64-A (con goce). No podés autorizar otro con goce.",
+                ? "Este mes ya hay un trámite sin goce del par. No podés autorizar otro sin goce."
+                : "Este mes ya hay un trámite con goce del par. No podés autorizar otro con goce.",
           };
         }
       }
     }
 
     let version64bId = null;
-    if (modalidad === "sin_goce" && esSolicitudCarril64Unificado(sol)) {
-      version64bId = await resolveVersionPublicadaId(db, ARTICULO_64B_ETAPA1_ID);
+    if (modalidad === "sin_goce" && enFamilia64 && pairSol.sinGoceId) {
+      version64bId = await resolveVersionPublicadaId(db, pairSol.sinGoceId);
       if (!version64bId) {
         return {
           ok: false,
           codigo: "VERSION_64B_NO_ENCONTRADA",
-          mensaje: "No hay versión publicada de 64-B para autorizar sin goce.",
+          mensaje: "No hay versión publicada del artículo sin goce del par.",
         };
       }
     }
@@ -532,6 +594,10 @@ async function resolverDecisionJefeSolicitud(db, solId, revisorPersonaId, decisi
         const cruce = await aplicarModalidad64EnTx(tx, db, cur, titularId, {
           modalidad,
           version_64b_id: version64bId,
+          pair:
+            pairSol.conGoceId && pairSol.sinGoceId
+              ? { conGoceId: pairSol.conGoceId, sinGoceId: pairSol.sinGoceId }
+              : null,
         });
         if (!cruce.ok) {
           cruceFail = { ok: false, codigo: cruce.codigo, mensaje: cruce.mensaje };

@@ -33,6 +33,9 @@ const solicitudPatronCTriggers = require("./triggers/solicitudArticuloPatronCOnC
 const solicitudMedAvisoTriggers = require("./triggers/solicitudArticuloMedAvisoOnCreate");
 const resolverContextoLaboralSolicitud = require("./onCall/solicitudes/resolverContextoLaboralSolicitud");
 const listarArticulosIngresoAgente = require("./onCall/solicitudes/listarArticulosIngresoAgente");
+const listarArticulosIngresoPorRol = require("./onCall/solicitudes/listarArticulosIngresoPorRol");
+const buscarPersonasNuevaSolicitudPorRol = require("./onCall/solicitudes/buscarPersonasNuevaSolicitudPorRol");
+const crearSolicitud770AltaRrhh = require("./onCall/solicitudes/crearSolicitud770AltaRrhh");
 const previsualizarSolicitudPatronB = require("./onCall/solicitudes/previsualizarSolicitudPatronB");
 const previsualizarSolicitudPatronC = require("./onCall/solicitudes/previsualizarSolicitudPatronC");
 const validarEntornoOperativoSolicitud = require("./onCall/solicitudes/validarEntornoOperativoSolicitud");
@@ -41,6 +44,12 @@ const resolverDecisionJefeSolicitud = require("./onCall/solicitudes/resolverDeci
 const listarSolicitudesBandejaRrhh = require("./onCall/solicitudes/listarSolicitudesBandejaRrhh");
 const resolverDecisionRrhhSolicitud = require("./onCall/solicitudes/resolverDecisionRrhhSolicitud");
 const registrarTomaConocimientoRrhhSolicitud = require("./onCall/solicitudes/registrarTomaConocimientoRrhhSolicitud");
+const obtenerResumenSaldoFamilia64Agente = require("./onCall/solicitudes/obtenerResumenSaldoFamilia64Agente");
+const obtenerResumenSaldoFamilia64Jefe = require("./onCall/solicitudes/obtenerResumenSaldoFamilia64Jefe");
+const obtenerContextoAcuseRechazoAgente = require("./onCall/solicitudes/obtenerContextoAcuseRechazoAgente");
+const obtenerContextoAcuseSinGoceAgente = require("./onCall/solicitudes/obtenerContextoAcuseSinGoceAgente");
+const registrarAcuseRechazoAgente = require("./onCall/solicitudes/registrarAcuseRechazoAgente");
+const registrarAcuseSinGoceAgente = require("./onCall/solicitudes/registrarAcuseSinGoceAgente");
 const reprocesarMdcSolicitudPatronB = require("./onCall/solicitudes/reprocesarMdcSolicitudPatronB");
 const obtenerVistaGrillaMesAgente = require("./onCall/grilla/obtenerVistaGrillaMesAgente");
 const obtenerResumenSolicitudArticuloGrilla = require("./onCall/grilla/obtenerResumenSolicitudArticuloGrilla");
@@ -115,6 +124,9 @@ module.exports = {
   ...solicitudMedAvisoTriggers,
   ...resolverContextoLaboralSolicitud,
   ...listarArticulosIngresoAgente,
+  ...listarArticulosIngresoPorRol,
+  ...buscarPersonasNuevaSolicitudPorRol,
+  ...crearSolicitud770AltaRrhh,
   ...previsualizarSolicitudPatronB,
   ...previsualizarSolicitudPatronC,
   ...validarEntornoOperativoSolicitud,
@@ -123,6 +135,12 @@ module.exports = {
   ...listarSolicitudesBandejaRrhh,
   ...resolverDecisionRrhhSolicitud,
   ...registrarTomaConocimientoRrhhSolicitud,
+  ...obtenerResumenSaldoFamilia64Agente,
+  ...obtenerResumenSaldoFamilia64Jefe,
+  ...obtenerContextoAcuseRechazoAgente,
+  ...obtenerContextoAcuseSinGoceAgente,
+  ...registrarAcuseRechazoAgente,
+  ...registrarAcuseSinGoceAgente,
   ...reprocesarMdcSolicitudPatronB,
   ...obtenerVistaGrillaMesAgente,
   ...obtenerResumenSolicitudArticuloGrilla,

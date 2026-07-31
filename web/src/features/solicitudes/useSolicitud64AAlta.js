@@ -13,7 +13,6 @@ import {
   esperarValidacionMotorPatronB,
 } from "../../services/solicitudesArticuloV2Service.js";
 import { enriquecerArticuloIngresoListado } from "./enriquecerArticuloIngresoListado.js";
-import { ARTICULO_64A_ID, ARTICULO_64B_ID } from "../../constants/solicitudesArticuloV2.js";
 import {
   articuloRequiereOpcionConsumo,
   articuloTieneDiasPreestablecidos,
@@ -74,8 +73,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
 
   const esFamilia64 =
     articuloSel?.articulo_familia_64 === true ||
-    String(articuloSel?.articulo_id || "").trim() === ARTICULO_64A_ID ||
-    String(articuloSel?.articulo_id || "").trim() === ARTICULO_64B_ID;
+    Boolean(articuloSel?.articulo_id_con_goce && articuloSel?.articulo_id_sin_goce);
   const requiereLicenciaMedicaLarga = articuloEsLicenciaMedicaLarga(articuloSel);
   const requiereOpcionConsumo = articuloRequiereOpcionConsumo(articuloSel) && !requiereLicenciaMedicaLarga;
 
@@ -213,6 +211,7 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
       try {
         const res = await callObtenerResumenSaldoFamilia64Agente({
           anio_ciclo: Number.isFinite(anio) ? anio : undefined,
+          articulo_id: String(articuloSel?.articulo_id || "").trim() || undefined,
         });
         if (cancelled) return;
         const data = res?.data && typeof res.data === "object" ? res.data : null;
@@ -220,7 +219,13 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
       } catch (e) {
         if (cancelled) return;
         setFamilia64Resumen(null);
-        setFamilia64Error(e?.message || "No se pudo consultar el saldo Art. 64.");
+        const code = String(e?.code || "").replace(/^functions\//, "");
+        const raw = String(e?.message || "").trim();
+        const msg =
+          code === "internal" || raw.toLowerCase() === "internal"
+            ? "No se pudo consultar el saldo Art. 64 (error del servidor). Reintentá o avisá a soporte."
+            : raw || "No se pudo consultar el saldo Art. 64.";
+        setFamilia64Error(msg);
       } finally {
         if (!cancelled) setFamilia64Cargando(false);
       }
@@ -284,8 +289,13 @@ export function useSolicitud64AAlta({ personaId, fechaDesdeInicial, articuloIdIn
       const list = (res?.data?.articulos || [])
         .map((row) => enriquecerArticuloIngresoListado(row))
         .filter(Boolean)
-        // Defensa: 64 unificado — ocultar 64-B del wizard (el jefe define la modalidad).
-        .filter((row) => String(row.articulo_id || "").trim() !== ARTICULO_64B_ID);
+        // Defensa: familia 64 — ocultar el art. sin goce del par (el jefe define la modalidad).
+        .filter((row) => {
+          const id = String(row.articulo_id || "").trim();
+          const sin = String(row.articulo_id_sin_goce || "").trim();
+          if (row.articulo_familia_64 === true && sin && id === sin) return false;
+          return true;
+        });
       setArticulos(list);
       const fijado = String(articuloIdInicial || "").trim();
       const match = fijado ? list.find((x) => String(x.articulo_id || "") === fijado) : null;

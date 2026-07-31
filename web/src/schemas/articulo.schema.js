@@ -321,6 +321,7 @@ export const cfgArticuloCoreSchema = z
     estado_articulo_id: cfgRowIdSchema,
     vigente_desde: firestoreDateLikeSchema.nullable().optional(),
     vigente_hasta: firestoreDateLikeSchema.nullable().optional(),
+    familia_64_par_articulo_id: artDocumentIdSchema.nullable().optional(),
     version_actual_id: verDocumentIdSchema,
   })
   .strict();
