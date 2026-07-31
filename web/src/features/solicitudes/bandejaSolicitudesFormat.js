@@ -1,5 +1,5 @@
 import { formatDateDdMmAaaa } from "../../pages/datos-laborales/utils.js";
-import { nombreArticuloParaJefe } from "./familia64Label.js";
+import { codigoArticuloParaJefe, nombreArticuloParaJefe } from "./familia64Label.js";
 
 export function formatRangoFechasBandeja(desde, hasta) {
   const d0 = formatDateDdMmAaaa(desde, "");
@@ -36,13 +36,16 @@ function nombreArticuloBandeja(s) {
 /**
  * Renglón 1: código artículo · nombre artículo · fecha · días
  * @param {Record<string, unknown>} s
- * @param {{ nombreNeutroFamilia64?: boolean }} [opts] — bandeja jefe: sin la
- *   modalidad en el nombre mientras no esté decidida.
+ * @param {{ neutralizarFamilia64?: boolean }} [opts] — bandeja jefe: sin la
+ *   modalidad en código ni nombre mientras no esté decidida.
  */
 export function renglonPrincipalBandeja(s, opts = {}) {
-  const articulo = codigoArticuloBandeja(s);
+  const codigoCfg = codigoArticuloBandeja(s);
   const nombreCfg = nombreArticuloBandeja(s);
-  const nombreArt = opts.nombreNeutroFamilia64
+  const articulo = opts.neutralizarFamilia64
+    ? codigoArticuloParaJefe(s, codigoCfg)
+    : codigoCfg;
+  const nombreArt = opts.neutralizarFamilia64
     ? nombreArticuloParaJefe(s, nombreCfg)
     : nombreCfg;
   const fecha = formatRangoFechasBandeja(s?.fecha_desde, s?.fecha_hasta);

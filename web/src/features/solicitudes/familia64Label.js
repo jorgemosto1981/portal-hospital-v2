@@ -1,4 +1,7 @@
-import { nombreFamilia64SinModalidad } from "../../../../shared/utils/familia64Chip.js";
+import {
+  codigoFamilia64SinModalidad,
+  nombreFamilia64SinModalidad,
+} from "../../../../shared/utils/familia64Chip.js";
 
 /**
  * Nombre neutro de la familia Art. 64 para la bandeja del jefe.
@@ -25,4 +28,14 @@ export function esFamilia64SinModalidad(s) {
  */
 export function nombreArticuloParaJefe(s, nombreCfg) {
   return esFamilia64SinModalidad(s) ? nombreFamilia64SinModalidad(nombreCfg) : nombreCfg;
+}
+
+/**
+ * Código del artículo a mostrarle al jefe. La letra del par (`64-A`) también es
+ * modalidad, así que se cae junto con el nombre hasta que haya decisión.
+ * @param {Record<string, unknown> | null | undefined} s
+ * @param {string} codigoCfg
+ */
+export function codigoArticuloParaJefe(s, codigoCfg) {
+  return esFamilia64SinModalidad(s) ? codigoFamilia64SinModalidad(codigoCfg) : codigoCfg;
 }

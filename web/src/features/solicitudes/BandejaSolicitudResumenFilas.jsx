@@ -24,7 +24,7 @@ export default function BandejaSolicitudResumenFilas({
   return (
     <>
       <p className="text-[15px] font-semibold leading-snug text-slate-900">
-        {renglonPrincipalBandeja(s, { nombreNeutroFamilia64: esJefe })}
+        {renglonPrincipalBandeja(s, { neutralizarFamilia64: esJefe })}
       </p>
       {titularLinea || solId ? (
         <p

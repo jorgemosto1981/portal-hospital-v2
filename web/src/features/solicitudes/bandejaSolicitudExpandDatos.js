@@ -1,5 +1,9 @@
 import { formatInstanteBandeja, formatRangoFechasBandeja, diasLabelBandeja } from "./bandejaSolicitudesFormat.js";
-import { esFamilia64SinModalidad, nombreArticuloParaJefe } from "./familia64Label.js";
+import {
+  codigoArticuloParaJefe,
+  esFamilia64SinModalidad,
+  nombreArticuloParaJefe,
+} from "./familia64Label.js";
 
 /** @param {unknown} v */
 function textoValor(v) {
@@ -17,7 +21,7 @@ function valorExpand(sel, key) {
   const raw = sel[key];
   if (key === "articulo_label_neutro") {
     if (!esFamilia64SinModalidad(sel)) return textoValor(sel.articulo_label);
-    const codigo = String(sel.codigo_grilla || "").trim();
+    const codigo = codigoArticuloParaJefe(sel, String(sel.codigo_grilla || "").trim());
     const nombre = nombreArticuloParaJefe(sel, textoValor(sel.articulo_nombre));
     return codigo ? `${codigo} ${nombre}`.trim() : nombre;
   }
