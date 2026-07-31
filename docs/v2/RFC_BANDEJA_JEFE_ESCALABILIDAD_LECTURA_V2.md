@@ -147,9 +147,20 @@ Opciones, en orden de preferencia:
 
 Verificado en la [doc oficial](https://firebase.google.com/docs/firestore/query-data/queries): la restricción es *"at most one `array-contains` clause per disjunction"* y *"can't combine `array-contains` with `array-contains-any`"*. Combinar `array-contains` con un `in` **sobre otro campo** es válido. El límite real es de **30 disyunciones en forma normal disyuntiva**, así que `titular_persona_id in [...]` no puede exceder 30 valores. Para `dni` alcanza de sobra (`resolverPersonaIdsPorDni` ya usa `.limit(5)`); para Nombre no es suficiente, lo que refuerza la opción (b) de 5.2.
 
-### 5.4 Backfill del snapshot — A
+### 5.4 Backfill del snapshot — R (no hace falta backfill)
 
-Sigue abierto: hay que confirmar que no queden `sol_*` en `en_revision_jefe` anteriores al snapshot A2 sin `autorizadores_elegibles_ids`. Requiere script de auditoría de solo lectura contra `-dev` y prod antes de activar N2.
+Auditado el 2026-07-31 con `scripts/seed-v2/auditar-snapshot-autorizadores.mjs` (solo lectura):
+
+| Proyecto | `sol_*` totales | En revisión jefe | Sin el campo | Arreglo vacío |
+|----------|-----------------|------------------|--------------|---------------|
+| `-dev` | 12 | 1 | 0 | 0 |
+| prod | 35 | 3 | 0 | 2 |
+
+**Cero documentos sin el campo**: el trigger A2 lo escribe siempre, así que no hay huérfanos que migrar y **no se justifica purgar datos** para habilitar N2.
+
+Los 2 arreglos vacíos de prod (`sol_01KW1RVDEQHK2AJRWPD7SVQ0YJ`, `sol_01KXK1N9CWDV6PWFM80N7F2A6G`) tienen `autorizacion_rrhh_sustituta=true`: el escalamiento se agotó sin autorizador elegible y RRHH sustituye. Es un estado de negocio válido, no un defecto de datos, y hoy ya son invisibles para el jefe porque la resolución en vivo devuelve lo mismo. N2 no cambiaría su comportamiento.
+
+**Pero son la evidencia de que N3 no es opcional.** Son exactamente el caso que N3 cubre: si más adelante se asigna un jefe a ese grupo, hoy la resolución en vivo lo detecta y el trámite aparece; con N2 no aparecería hasta refrescar el snapshot. El hueco de §3 está vivo en producción, no es hipotético.
 
 ### 5.5 Ventana activa — A
 
@@ -163,7 +174,7 @@ Con 5.1–5.3 resueltos y el diagnóstico de §1 corregido:
 
 1. **N1 ahora.** Es el que ataca el problema dominante real (costo y latencia), es reversible y no toca contrato, índices ni datos.
 2. **Arreglo puntual del eje de truncado.** Mientras N2 no exista, agregar `orderBy("fecha_desde")` a la query de pendientes alinea el recorte con el eje de presentación. Requiere índice `(estado_solicitud_id ASC, fecha_desde ASC)`. Cambia el sesgo de "altas recientes" a "licencias más lejanas", que es el correcto para una cola que se procesa por fecha de licencia.
-3. **N2 + N3 juntos**, con 5.4 cerrado previamente y la opción (b) de 5.2 implementada.
+3. **N2 + N3 juntos**, con 5.4 cerrado previamente y la opción (b) de 5.2 implementada. Cerrado 5.4 el 2026-07-31 sin backfill, el orden interno pasa a ser **N3 primero**: es el que sostiene la corrección de N2, y sin él N2 introduce una pérdida de visibilidad real (ver 5.4).
 
 **Advertencia de reuso:** el código de N1 es en buena medida *descartable* si N2 aterriza, porque la revalidación en vivo pasaría a correr sobre ≤10 documentos por página, donde el caché por invocación aporta poco. Se justifica igual por el alivio inmediato y el bajo riesgo, no como escalón hacia N2.
 
