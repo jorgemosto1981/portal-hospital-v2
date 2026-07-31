@@ -12,11 +12,9 @@ test("codigoFamilia64SinModalidad", async (t) => {
     assert.equal(codigoFamilia64SinModalidad("64-B"), "64");
   });
 
-  await t.test("conserva el calificador del par", () => {
-    assert.equal(
-      codigoFamilia64SinModalidad("64-A (Personal 1/2 carga)"),
-      "64 (Personal 1/2 carga)",
-    );
+  await t.test("saca también el calificador del par", () => {
+    assert.equal(codigoFamilia64SinModalidad("64-A (Personal 1/2 carga)"), "64");
+    assert.equal(codigoFamilia64SinModalidad("64 (Personal 1/2 carga)"), "64");
   });
 
   await t.test("no toca códigos que no llevan modalidad", () => {
@@ -46,10 +44,14 @@ test("nombreFamilia64SinModalidad", async (t) => {
     );
   });
 
-  await t.test("conserva el calificador del par", () => {
+  await t.test("saca también el calificador del par", () => {
     assert.equal(
       nombreFamilia64SinModalidad("ASUNTOS PARTICULARES CON GOCE DE HABERES (Personal 1/2 carga)"),
-      "ASUNTOS PARTICULARES (Personal 1/2 carga)",
+      "ASUNTOS PARTICULARES",
+    );
+    assert.equal(
+      nombreFamilia64SinModalidad("ASUNTOS PARTICULARES (PERSONAL 1/2 CARGA)"),
+      "ASUNTOS PARTICULARES",
     );
   });
 
