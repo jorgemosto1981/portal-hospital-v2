@@ -1,11 +1,13 @@
+import { nombreFamilia64SinModalidad } from "../../../../shared/utils/familia64Chip.js";
+
 /**
  * Nombre neutro de la familia Art. 64 para la bandeja del jefe.
  *
- * El nombre que viene de cfg incluye la modalidad ("... CON GOCE DE HABERES"),
- * que recién queda definida cuando el jefe autoriza. Mostrarlo antes adelanta
- * una decisión que todavía no se tomó.
+ * Misma regla que el chip de alta del agente: el nombre de cfg incluye la
+ * modalidad ("... CON GOCE DE HABERES"), que recién queda definida cuando el
+ * jefe autoriza. Derivarlo de cfg en vez de fijar un texto conserva el
+ * calificador del par (p. ej. "(Personal 1/2 carga)").
  */
-const NOMBRE_FAMILIA_64 = "ASUNTOS PARTICULARES";
 
 /**
  * ¿Trámite de familia 64 con la modalidad todavía sin definir?
@@ -16,11 +18,11 @@ export function esFamilia64SinModalidad(s) {
 }
 
 /**
- * Nombre del artículo a mostrarle al jefe: neutro mientras no haya modalidad,
- * y el de cfg una vez resuelta.
+ * Nombre del artículo a mostrarle al jefe: sin modalidad mientras no esté
+ * decidida, y el de cfg una vez resuelta.
  * @param {Record<string, unknown> | null | undefined} s
  * @param {string} nombreCfg
  */
 export function nombreArticuloParaJefe(s, nombreCfg) {
-  return esFamilia64SinModalidad(s) ? NOMBRE_FAMILIA_64 : nombreCfg;
+  return esFamilia64SinModalidad(s) ? nombreFamilia64SinModalidad(nombreCfg) : nombreCfg;
 }

@@ -30,6 +30,10 @@ const {
   esIngresoFamilia64ConGoce,
   resolveFamilia64Pair,
 } = require("./familia64Config");
+const {
+  codigoFamilia64SinModalidad,
+  nombreFamilia64SinModalidad,
+} = require("./familia64Chip");
 
 const CFG_EST_VER_PUBLICADA = "cfg_est_ver_publicada";
 
@@ -219,17 +223,12 @@ async function listarArticulosIngresoPatronB(params) {
     const visCodigo = String(
       versionData?.bloque_identidad_naturaleza?.visualizacion?.codigo_grilla || "",
     ).trim();
-    // Par ADMIN: chip unificado "64" / "ASUNTOS PARTICULARES".
-    // Par ½ carga (u otro): respeta código/nombre de cfg (distinguible en hub).
-    const esMediaCarga = /1\s*\/\s*2|media.?carga|½/i.test(`${codigoGrillaRaw} ${nombreRaw}`);
+    // Cualquier par familia 64: el chip va sin modalidad, que recién define el
+    // jefe. El calificador del par (p. ej. "(Personal 1/2 carga)") se conserva.
     const codigoChip = es64Unificado
-      ? visCodigo || (esMediaCarga ? codigoGrillaRaw : "64")
+      ? codigoFamilia64SinModalidad(visCodigo || codigoGrillaRaw)
       : codigoGrillaRaw;
-    const nombreChip = es64Unificado
-      ? esMediaCarga
-        ? nombreRaw
-        : "ASUNTOS PARTICULARES"
-      : nombreRaw;
+    const nombreChip = es64Unificado ? nombreFamilia64SinModalidad(nombreRaw) : nombreRaw;
 
     const row = {
       articulo_id: articuloId,

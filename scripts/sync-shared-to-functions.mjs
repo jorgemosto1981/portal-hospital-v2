@@ -60,6 +60,7 @@ const FILES_TO_SYNC = [
   "acumuladoInasistenciasInjustificadas.js",
   "avisoMedicoExclusividadPeriodoCore.js",
   "bandejaAuditorSenalesCore.js",
+  "familia64Chip.js",
 ];
 
 function esmToCjs(source, filename) {

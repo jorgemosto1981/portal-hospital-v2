@@ -18,8 +18,8 @@ function valorExpand(sel, key) {
   if (key === "articulo_label_neutro") {
     if (!esFamilia64SinModalidad(sel)) return textoValor(sel.articulo_label);
     const codigo = String(sel.codigo_grilla || "").trim();
-    const nombre = nombreArticuloParaJefe(sel, "");
-    return codigo ? `${codigo} ${nombre}` : nombre;
+    const nombre = nombreArticuloParaJefe(sel, textoValor(sel.articulo_nombre));
+    return codigo ? `${codigo} ${nombre}`.trim() : nombre;
   }
   if (key === "fecha_licencia") {
     return formatRangoFechasBandeja(sel.fecha_desde, sel.fecha_hasta);
