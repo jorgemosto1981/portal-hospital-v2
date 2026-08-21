@@ -3,7 +3,7 @@
 **Fecha de pausa:** 2026-08-21  
 **Estado:** **PAUSADO** — no hay trabajo activo en curso. El código útil está en remoto y desplegado.  
 **Motivo:** se cierra el foco de desarrollo en este repositorio para comenzar un proyecto nuevo, totalmente distinto.  
-**Rama ancla:** `develop` @ `642c9ba` (sincronizada con `origin/develop`)  
+**Rama ancla:** `develop` @ `origin/develop` (ver `git log -1` tras pull; cierre docs en commits `3284018`+)  
 **Repo remoto:** https://github.com/jorgemosto1981/portal-hospital-v2.git  
 
 > **Documento de entrada al volver.** Si alguien reabre el portal V2 en otra máquina o en otra sesión, leer **este archivo primero**. El detalle técnico de la última sesión productiva está en [`HANDOFF_SESION_2026-07-31_BANDEJAS_JEFE_Y_RRHH.md`](./HANDOFF_SESION_2026-07-31_BANDEJAS_JEFE_Y_RRHH.md).
@@ -38,16 +38,11 @@ Reglas Cursor: `.cursor/rules/` (modo atómico mobile-first, feature-first, sin 
 | Soft Launch / Etapa 1 | Soft launch acotado; no es “cerrado de producto”, pero **este repositorio queda en pausa de desarrollo** |
 | Trabajo N3 / N2 (RFC escalabilidad) | **No empezado** (diseñado y priorizado; ver §5) |
 
-### Único cambio local sin sincronizar
+### Working tree / remoto al cierre
 
-```
-M docs/v2/seeds/p4_art1619/ART16_19_P44_SPECS.json
-```
+**Al día.** `develop` == `origin/develop`. Sin archivos modificados ni untracked pendientes de commit.
 
-- **No** forma parte de la sesión de bandejas / Art. 64.  
-- Viene de otra línea (P4 Art. 16/19).  
-- **No está en el remoto.** Si se retoma Art. 16/19, decidir si se descarta o se committea aparte.  
-- Al pausar (2026-08-21) se deja **intencionalmente sin commit**.
+> Nota: existía un `M` local en `docs/v2/seeds/p4_art1619/ART16_19_P44_SPECS.json` que era **solo ruido de formato** (líneas en blanco); el contenido JSON era idéntico al de HEAD. Se descartó el 2026-08-21 al confirmar el 100 % sincronizado. El seed útil ya estaba en remoto.
 
 ---
 
@@ -114,7 +109,7 @@ Fue cuarentena Cloud Run/GFE (billing + retries), **no** bug de CORS ni del circ
 3. Test obsoleto `modoListadoArticulosIngreso` (espera `"mvp"`, whitelist vacía → `"catalogo"`). Suite ~598/599.
 4. Deploy full `firebase deploy --only functions` **aborta**: remoto tiene `listarColeccionesCfgBatch` y el repo local no. Siempre desplegar **selectivo** `--only functions:nombre,...`.
 5. `modalidad_goce_jefe` no viaja al ítem de bandeja RRHH (se infiere del artículo final + motivo).
-6. Seed local sin commit: `ART16_19_P44_SPECS.json` (ver §2).
+6. ~~Seed local sin commit `ART16_19_P44_SPECS.json`~~ — era ruido de formato; working tree limpio (2026-08-21).
 7. Soft Launch / UAT Etapa 1: backlog en handoff 2026-07-08 (independiente del hito bandejas).
 
 ### No hacer al reabrir “en caliente”
@@ -199,11 +194,11 @@ Menú (cuidado: **dos** ítems “Bandeja solic.”):
 - [x] Handoff de sesión 2026-07-31  
 - [x] Este documento de **pausa / cierre de foco** (2026-08-21)  
 - [x] Índice `docs/v2/README.md` actualizado apuntando aquí  
+- [x] Working tree limpio y `develop` == `origin/develop` (confirmado 2026-08-21)  
 - [ ] Trabajo nuevo en este repo: **no** — hasta decisión explícita de retomar  
-- [ ] `ART16_19_P44_SPECS.json` local: **fuera de sync** (consciente)
 
 **Próximo paso humano:** abrir el proyecto nuevo distinto. Este repositorio queda como archivo vivo + prod/dev operativos, sin desarrollo activo.
 
 ---
 
-*Última actualización de este cierre: 2026-08-21.*
+*Última actualización de este cierre: 2026-08-21 (confirmación 100 % sync remoto).*
