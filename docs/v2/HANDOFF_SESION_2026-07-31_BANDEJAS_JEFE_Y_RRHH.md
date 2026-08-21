@@ -242,7 +242,7 @@ Callables nuevos de la sesión, ambos con `run.invoker` para `allUsers` verifica
 
 3. **Test obsoleto** `modoListadoArticulosIngreso` ("mvp por defecto") falla: `ARTICULO_IDS_MVP` está vacío, así que `modoListadoArticulosIngreso()` devuelve `"catalogo"` y el test espera `"mvp"` de una configuración vieja. **No es una regresión.** Suite: 598/599.
 4. **`listarColeccionesCfgBatch`** en remoto sin código local — decidir si se borra o se reincorpora.
-5. **`docs/v2/seeds/p4_art1619/ART16_19_P44_SPECS.json`** quedó modificado **sin commitear** (60 inserciones / 30 borrados). Viene de antes de esta sesión y es de otra línea de trabajo; se dejó fuera a propósito. **No se sincroniza a la otra PC.**
+5. ~~`docs/v2/seeds/p4_art1619/ART16_19_P44_SPECS.json` sin commit~~ — era solo ruido de formato; descartado al confirmar sync 100 % (2026-08-21). El seed útil ya estaba en remoto.
 6. **`modalidad_goce_jefe` no llega a RRHH** — ver sección de trazabilidad.
 7. Renombre de "Etiqueta artículo" a "Solicitud" en RRHH: no se pidió explícitamente, revisar si se conserva.
 
