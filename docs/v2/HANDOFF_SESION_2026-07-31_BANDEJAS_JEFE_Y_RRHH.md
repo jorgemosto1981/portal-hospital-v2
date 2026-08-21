@@ -1,7 +1,8 @@
 # Handoff — Bandejas de jefe y RRHH + Art. 64 config-driven
 
-**Fecha pausa:** 2026-07-31 ~11:10 ART
-**Rama:** `develop` @ `2803b59` — **todo commiteado y pusheado**
+**Fecha pausa de sesión:** 2026-07-31 ~11:10 ART  
+**Cierre de foco del proyecto:** 2026-08-21 → [`CIERRE_PAUSA_PROYECTO_2026-08-21.md`](./CIERRE_PAUSA_PROYECTO_2026-08-21.md)  
+**Rama:** `develop` @ `642c9ba` (incluye este handoff) — **commiteado y pusheado**  
 **Sesión anterior:** [`HANDOFF_ART64_PROD_2026-07-30.md`](./HANDOFF_ART64_PROD_2026-07-30.md)
 
 ---

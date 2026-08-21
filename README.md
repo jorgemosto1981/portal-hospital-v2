@@ -1,5 +1,7 @@
 # Portal Hospital — versión 2 (recursos aislados)
 
+> **2026-08-21 — desarrollo PAUSADO.** Entrada: [`docs/v2/CIERRE_PAUSA_PROYECTO_2026-08-21.md`](./docs/v2/CIERRE_PAUSA_PROYECTO_2026-08-21.md). Rama `develop` · prod y -dev operativos · próximo backlog técnico al reabrir: N3 → N2 (RFC bandeja jefe).
+
 Carpeta **hermana** de `../portal-hospital-v1/`: aquí vive el **proyecto Firebase `portal-hospital-v2`**, la documentación de producto en `docs/v2/`, los scripts de semilla, reglas/índices bajo `firebase-v2/`, [`firebase.json`](./firebase.json) en la **raíz** (deploy de Functions + rutas a esas reglas), y el módulo [`src/firebaseConfig.v2.js`](./src/firebaseConfig.v2.js) (cliente web; depende de [`src/utils/logger.js`](./src/utils/logger.js) copiado desde la V1).
 
 ## App web V2 (Vite)

@@ -1,5 +1,9 @@
 # Documentación — Versión 2 del portal
 
+> **Estado del repo (2026-08-21):** desarrollo **PAUSADO**. Entrada única al reabrir o al entregar el contexto:  
+> **[`CIERRE_PAUSA_PROYECTO_2026-08-21.md`](./CIERRE_PAUSA_PROYECTO_2026-08-21.md)**  
+> Detalle técnico de la última sesión productiva: [`HANDOFF_SESION_2026-07-31_BANDEJAS_JEFE_Y_RRHH.md`](./HANDOFF_SESION_2026-07-31_BANDEJAS_JEFE_Y_RRHH.md).
+
 Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/`). La documentación histórica de la **versión 1** está en [`../portal-hospital-v1/portal-hospital/docs/referencia_v1/`](../../../portal-hospital-v1/portal-hospital/docs/referencia_v1/) (solo consulta). Mapa de la raíz V2: [README de `portal-hospital-v2`](../../README.md).
 
 **Regla de arquitectura:** la V2 no comparte proyecto Firebase / datos ni código de despliegue con la V1; ver [`PLAN_MODULOS_V2.md`](./PLAN_MODULOS_V2.md). Config de deploy en la raíz: [`firebase.json`](../../firebase.json) (reglas/índices en [`firebase-v2/`](../../firebase-v2/), código en [`functions/`](../../functions)). V1: [`../portal-hospital-v1/portal-hospital/firebase.json`](../../../portal-hospital-v1/portal-hospital/firebase.json).
@@ -121,8 +125,9 @@ Todo el **plan y contratos de la versión 2** viven bajo esta carpeta (`docs/v2/
 | [`RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md`](./RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md) | Snapshot `grupos_trabajo_involucrados_ids[]` en alta `sol_*` (implementado) |
 | [`TICKETERA_EVIDENCIA_2026-05-23_GRUPOS_INVOLUCRADOS_SNAPSHOT.md`](./TICKETERA_EVIDENCIA_2026-05-23_GRUPOS_INVOLUCRADOS_SNAPSHOT.md) | Piloto manual multigrupo + query `array-contains` |
 | [`SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md`](./SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md) | Campos `sol_*` Oleada A + estados TO-BE |
-| [`RFC_BANDEJA_JEFE_ESCALABILIDAD_LECTURA_V2.md`](./RFC_BANDEJA_JEFE_ESCALABILIDAD_LECTURA_V2.md) | **N1 aplicado** — memoización + `orderBy("fecha_desde")`; N3 antes que N2 tras la auditoría de snapshots |
-| **[`HANDOFF_SESION_2026-07-31_BANDEJAS_JEFE_Y_RRHH.md`](./HANDOFF_SESION_2026-07-31_BANDEJAS_JEFE_Y_RRHH.md)** | **RETOMAR AQUÍ** — bandeja de evaluación del jefe, Art. 64 desde cfg, bandeja RRHH con trazabilidad y filtros completos · desplegado dev+prod · pendientes N3/N2 |
+| **[`CIERRE_PAUSA_PROYECTO_2026-08-21.md`](./CIERRE_PAUSA_PROYECTO_2026-08-21.md)** | **PAUSADO** — cierre de foco del repo; estado git/deploy; backlog N3→N2; cómo reabrir |
+| [`RFC_BANDEJA_JEFE_ESCALABILIDAD_LECTURA_V2.md`](./RFC_BANDEJA_JEFE_ESCALABILIDAD_LECTURA_V2.md) | **N1 aplicado** (dev+prod); N3 antes que N2; N2/N3 en stand-by al pausar |
+| [`HANDOFF_SESION_2026-07-31_BANDEJAS_JEFE_Y_RRHH.md`](./HANDOFF_SESION_2026-07-31_BANDEJAS_JEFE_Y_RRHH.md) | Última sesión productiva — bandeja jefe, Art. 64 cfg, bandeja RRHH · desplegado |
 | [`HANDOFF_ART64_PROD_2026-07-30.md`](./HANDOFF_ART64_PROD_2026-07-30.md) | Promoción Art. 64 a prod + incidente 429 (resuelto: era cuarentena Cloud Run/GFE) |
 | [`PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md`](./PLAN_IMPLEMENTACION_RFC_AUTORIZACION_TICKETERA_V2.md) | Plan código Oleada A → B → C |
 | [`ANEXO_ALINEACION_RDA_GEMINI_V6_A_V2.md`](./ANEXO_ALINEACION_RDA_GEMINI_V6_A_V2.md) | Mandato RDA diario `asi_*` + vista `vis_*` (vs Gemini V6) |

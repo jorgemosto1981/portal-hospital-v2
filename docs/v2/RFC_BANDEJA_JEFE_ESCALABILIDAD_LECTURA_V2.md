@@ -1,6 +1,6 @@
 # RFC — Escalabilidad de lectura en bandeja jefe (retiro de `SCAN_LIMIT`)
 
-**Estado:** propuesta · sin implementar · **2026-07-31**
+**Estado:** N1 + `orderBy("fecha_desde")` **aplicados y desplegados** (dev+prod, 2026-07-31) · N3 y N2 **en stand-by** · repo **pausado** 2026-08-21 ([`CIERRE_PAUSA_PROYECTO_2026-08-21.md`](./CIERRE_PAUSA_PROYECTO_2026-08-21.md))
 **Ámbito:** `listarSolicitudesBandejaJefe` (lectura). No cambia estados, Rules ni el acto de decisión.
 **Relacionado:** [`RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md`](./RFC_TICKETERA_AUTORIZACION_TOMA_CONOCIMIENTO_V2.md) (cadena de autorización, snapshot A2) · [`RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md`](./RFC_SOLICITUD_GRUPOS_TRABAJO_INVOLUCRADOS_V2.md) (precedente `array-contains`) · [`SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md`](./SOLICITUD_ARTICULO_AUTORIZACION_CAMPOS_V2.md)
 
@@ -178,9 +178,9 @@ Con 5.1–5.3 resueltos y el diagnóstico de §1 corregido:
 
 **Advertencia de reuso:** el código de N1 es en buena medida *descartable* si N2 aterriza, porque la revalidación en vivo pasaría a correr sobre ≤10 documentos por página, donde el caché por invocación aporta poco. Se justifica igual por el alivio inmediato y el bajo riesgo, no como escalón hacia N2.
 
-### 6.1 Estado de implementación (2026-07-31, rama `develop`, entorno `-dev`)
+### 6.1 Estado de implementación (2026-07-31, rama develop; desplegado también en prod)
 
-Aprobado y aplicado el paso 1 + paso 2. N2 y N3 quedan **en stand-by** pendientes de 5.4.
+Aprobado y aplicado el paso 1 + arreglo 2. El punto **5.4 quedó cerrado** el mismo día (sin backfill). Orden vigente: **N3 antes que N2**. Ambos quedan **en stand-by** al pausar el repo (2026-08-21).
 
 | Pieza | Archivo | Nota |
 |-------|---------|------|

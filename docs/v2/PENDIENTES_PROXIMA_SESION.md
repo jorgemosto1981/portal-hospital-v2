@@ -1,9 +1,14 @@
 # Punto de Continuación — Próxima Sesión
 
+> **PAUSA TOTAL DEL REPO (2026-08-21):**  
+> [`CIERRE_PAUSA_PROYECTO_2026-08-21.md`](./CIERRE_PAUSA_PROYECTO_2026-08-21.md)  
+> No hay desarrollo activo. Al reabrir: N3 → N2 (RFC bandeja jefe).  
+> Última sesión productiva: [`HANDOFF_SESION_2026-07-31_BANDEJAS_JEFE_Y_RRHH.md`](./HANDOFF_SESION_2026-07-31_BANDEJAS_JEFE_Y_RRHH.md)
+
 > **PAUSA FORMAL — Cierre deploy Soft Launch Etapa 1 (2026-07-14):**  
 > [`HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md`](./HANDOFF_SESION_2026-07-14_CIERRE_DEPLOY_ETAPA1.md)  
 > Commit `6dee722` · hosting + functions acuse en prod · `master`=`develop`=`origin` · pelota RRHH (UAT + altas)  
-> **Próxima sesión técnica:** setup `portal-hospital-v2-dev` (Vía B)
+> **Próxima sesión técnica (histórico):** setup `portal-hospital-v2-dev` (Vía B)
 
 > **Guía estado/ruta:** [`GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md`](./GUIA_ETAPA1_ESTADO_Y_RUTA_V2.md)
 
